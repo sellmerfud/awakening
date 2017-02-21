@@ -1,0 +1,1631 @@
+
+// Labyrinth Awakening
+//
+// An scala implementation of the solo AI for the game 
+// Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
+// published by GMT Games.
+// 
+// Copyright (c) 2010-2017 Curt Sellmer
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+package awakening
+
+import scala.util.Random.{shuffle, nextInt}
+import scala.annotation.tailrec
+import scala.util.Properties.{lineSeparator, isWin}
+import scala.collection.mutable.ListBuffer
+
+object LabyrinthAwakening {
+  
+  def dieRoll = nextInt(6) + 1
+  
+  sealed trait Role
+  case object US extends Role       { override def toString() = "US" }
+  case object Jihadist extends Role { override def toString() = "Jihadist" }
+  
+  sealed trait BotDifficulty
+  // US
+  case object OffGuard  extends BotDifficulty { override def toString() = "Off Guard - Standard rules"}
+  case object Competent extends BotDifficulty { override def toString() = "Competent - Alert affects two plots in the same country"}
+  case object Adept     extends BotDifficulty { override def toString() = "Adept     - Disrupt at two or more troops awards +2 prestige"}
+  case object Vigilant  extends BotDifficulty { override def toString() = "Vigilant  - No auto recruit in Regime Change or Civil War countries"}
+  case object Ruthless  extends BotDifficulty { override def toString() = "Ruthless  - US associated events trigger on first plot"}
+  case object NoMercy   extends BotDifficulty { override def toString() = "NoMercy   - Ignore DRM penalty on War of Ideas"}
+  // Jihadist
+  case object Muddled    extends BotDifficulty { override def toString() = "Muddled    - Standard rules"}
+  case object Coherent   extends BotDifficulty { override def toString() = "Coherent   - Ignore DRM penalty during Minor Jihad"}
+  case object Attractive extends BotDifficulty { override def toString() = "Attractive - Each successful plot places two available plot markers"}
+  case object Potent     extends BotDifficulty { override def toString() = "Potent     - Each successful recruit places two available cells"}
+  case object Infectious extends BotDifficulty { override def toString() = "Infectious - US must play all cards"}
+  case object Virulent   extends BotDifficulty { override def toString() = "Virulent   - Ignore all DRM penalties"}
+  
+  sealed trait RegimeChange
+  case object NoRegimeChange    extends RegimeChange { override def toString() = "None" }
+  case object GreenRegimeChange extends RegimeChange { override def toString() = "Green" }
+  case object TanRegimeChange   extends RegimeChange { override def toString() = "Tan" }
+
+  val Canada            = "Canada"
+  val UnitedStates      = "United States"
+  val UnitedKingdom     = "United Kingdom"
+  val Serbia            = "Serbia"
+  val Israel            = "Israel"
+  val India             = "India"
+  val Scandinavia       = "Scandinavia"
+  val EasternEurope     = "Eastern Europe"
+  val Benelux           = "Benelux"
+  val Germany           = "Germany"
+  val France            = "France"
+  val Italy             = "Italy"
+  val Spain             = "Spain"
+  val Russia            = "Russia"
+  val Caucasus          = "Caucasus"
+  val China             = "China"
+  val KenyaTanzania     = "Kenya/Tanzania"
+  val Thailand          = "Thailand"
+  val Philippines       = "Philippines"
+  val Morocco           = "Morocco"
+  val AlgeriaTunisia    = "Algeria/Tunisia"
+  val Libya             = "Libya"
+  val Egypt             = "Egypt"
+  val Sudan             = "Sudan"
+  val Somalia           = "Somalia"
+  val Jordan            = "Jordan"
+  val Syria             = "Syria"
+  val CentralAsia       = "Central Asia"
+  val IndonesiaMalaysia = "Indonesia/Malaysia"
+  val Turkey            = "Turkey"
+  val Lebanon           = "Lebanon"
+  val Yemen             = "Yemen"
+  val Iraq              = "Iraq"
+  val SaudiArabia       = "Saudi Arabia"
+  val GulfStates        = "Gulf States"
+  val Pakistan          = "Pakistan"
+  val Afghanistan       = "Afghanistan"
+  val Iran              = "Iran"
+  val Mali              = "Mali"
+  val Nigeria           = "Nigeria"
+  
+  val CountryAbbreviations = Map("US" -> UnitedStates, "UK" -> UnitedKingdom)
+  
+  // Troop commitment
+  val LowIntensity = "Low Intensity"
+  val War          = "War"
+  val Overstretch  = "Overstretch"
+  val USCardDraw = Map(LowIntensity -> 9, War -> 8, Overstretch -> 7)
+  
+  // Funding level
+  val Tight    = "Tight"
+  val Moderate = "Moderate"
+  val Ample    = "Ample"
+  val JihadistCardDraw = Map(Tight -> 7, Moderate -> 8, Ample -> 9)
+  
+  // Country Types
+  val NonMuslim = "Non-Muslim"
+  val Suni      = "Suni"
+  val ShiaMix   = "Shia-Mix"
+  
+  val PostureUntested = "Untested"
+  val Soft            = "Soft"
+  val Hard            = "Hard"
+  val Even            = "Even"  // for display only
+  
+  val GovernanceUntested = 0
+  val Good               = 1
+  val Fair               = 2
+  val Poor               = 3
+  val IslamistRule       = 4
+  val GovDisplay = Map(
+    GovernanceUntested -> "Untested",
+    Good               -> "Good",
+    Fair               -> "Fair",
+    Poor               -> "Poor",
+    IslamistRule       -> "Islamist Rule")
+  
+  val Ally      = "Ally"
+  val Neutral   = "Neutral"
+  val Adversary = "Adversary"
+  
+  val Schengen      = Scandinavia :: Benelux :: Germany :: EasternEurope :: 
+                      France :: Italy :: Spain :: Nil
+  val SchengenLinks = Canada :: UnitedStates :: UnitedKingdom :: Morocco ::
+                      AlgeriaTunisia :: Libya :: Serbia :: Turkey :: Lebanon ::
+                      Russia :: Nil
+    
+  // List of names to adjacent countries
+  case class CountryData(adjacent: List[String])
+                    
+  // A country key and a list of adjacent country keys.
+  val countryData: Map[String, CountryData] = Map(
+   Canada            -> CountryData(UnitedStates :: UnitedKingdom :: Schengen),
+   UnitedStates      -> CountryData(Canada :: UnitedKingdom :: Philippines :: Schengen),
+   UnitedKingdom     -> CountryData(Canada :: UnitedStates :: Schengen),
+   Serbia            -> CountryData(Russia :: Turkey :: Schengen),
+   Israel            -> CountryData(Egypt :: Jordan :: Lebanon :: Nil),
+   India             -> CountryData(Pakistan :: IndonesiaMalaysia :: Nil),
+   Scandinavia       -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Scandinavia)),
+   EasternEurope     -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == EasternEurope)),
+   Benelux           -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Benelux)),
+   Germany           -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Germany)),
+   France            -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == France)),
+   Italy             -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Italy)),
+   Spain             -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Spain)),
+   Russia            -> CountryData(Serbia :: Turkey :: Caucasus :: CentralAsia :: Schengen),
+   Caucasus          -> CountryData(Turkey :: Russia :: CentralAsia :: Iran :: Nil),
+   China             -> CountryData(CentralAsia:: Thailand :: Nil),
+   KenyaTanzania     -> CountryData(Sudan :: Somalia :: Nigeria :: Nil),
+   Thailand          -> CountryData(China :: IndonesiaMalaysia :: Philippines :: Nil),
+   Philippines       -> CountryData(UnitedStates :: IndonesiaMalaysia :: Thailand :: Nil),
+   Morocco           -> CountryData(AlgeriaTunisia :: Mali :: Schengen),
+   AlgeriaTunisia    -> CountryData(Morocco :: Libya :: Mali :: Schengen),
+   Libya             -> CountryData(AlgeriaTunisia :: Egypt :: Sudan :: Schengen),
+   Egypt             -> CountryData(Israel :: Libya :: Sudan :: Nil),
+   Sudan             -> CountryData(Libya :: Egypt :: Somalia :: KenyaTanzania :: Nigeria :: Nil),
+   Somalia           -> CountryData(Yemen :: Sudan :: KenyaTanzania :: Nil),
+   Jordan            -> CountryData(Israel :: Syria :: Iraq :: SaudiArabia :: Nil),
+   Syria             -> CountryData(Iraq :: Lebanon :: Jordan :: Turkey :: Nil),
+   CentralAsia       -> CountryData(Russia :: Caucasus :: Iran :: Afghanistan :: China :: Nil),
+   IndonesiaMalaysia -> CountryData(Pakistan :: IndonesiaMalaysia :: Thailand :: Philippines :: Nil),
+   Turkey            -> CountryData(Serbia :: Russia :: Caucasus :: Syria :: Iran :: Schengen),
+   Lebanon           -> CountryData(Syria :: Israel :: Schengen),
+   Yemen             -> CountryData(SaudiArabia :: Somalia :: Nil),
+   Iraq              -> CountryData(GulfStates :: SaudiArabia :: Iran :: Turkey :: Syria :: Jordan :: Nil),
+   SaudiArabia       -> CountryData(Jordan :: Iraq :: GulfStates :: Yemen :: Nil),
+   GulfStates        -> CountryData(SaudiArabia :: Iraq :: Iran :: Pakistan :: Nil),
+   Pakistan          -> CountryData(GulfStates :: Iran :: Afghanistan :: IndonesiaMalaysia :: India :: Nil),
+   Afghanistan       -> CountryData(Pakistan :: Iran :: CentralAsia :: Nil),
+   Iran              -> CountryData(Afghanistan :: Pakistan :: GulfStates :: Iraq :: Turkey :: Caucasus :: CentralAsia :: Nil),
+   Mali              -> CountryData(Morocco :: AlgeriaTunisia :: Nigeria :: Nil),
+   Nigeria           -> CountryData(Mali :: Sudan :: KenyaTanzania :: Nil)
+  )
+  
+  def getAdjacent(name: String): List[String] = countryData(name).adjacent
+  def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
+
+  // Shorteds distance between countries
+  def distance(source: String, target: String): Int = {
+    def measure(current: String, visited: Set[String]): Option[Int] = {
+      if (current == target)
+        Some(0)
+      else {
+        (getAdjacent(current) filterNot visited) match {
+          case Nil       => None
+          case adjacents => 
+            val paths = adjacents.map(a => measure(a, visited ++ adjacents)).flatten.sorted
+            paths match {
+              case Nil => None
+              case x :: _ => Some(1 + x)
+            }
+        }
+      }
+    }
+    measure(source, Set.empty).get
+  }
+  
+  // Convert plot number to a name for display purposes.
+  def plotName(plot: Int): String = plot match {
+    case 4 => "Plot WMD"
+    case n => s"Plot $n"
+  }
+  
+  def plotsDisplay(plots: List[Int], humanRole: Role): String = (plots.size, humanRole) match {
+    case (0, _)        => "none"
+    case (n, Jihadist) => (plots.sorted.reverse map plotName).mkString(", ")
+    case (1, US)       => "1 plot"
+    case (x, US)       => s"$x plots"
+  }
+  
+  
+  // Used to describe event markers that represent troops.
+  case class TroopsMarker(name: String, num: Int)
+  // Order TroopsMarkers so that markers represent smaller numbers
+  // of troops come first.
+  implicit val TroopsMarkerOrdering = new Ordering[TroopsMarker] {
+    def compare(x: TroopsMarker, y: TroopsMarker) = x.num compare y.num
+  }
+  
+  
+  sealed trait Country {
+    val name: String
+    val governance: Int
+    val sleeperCells: Int
+    val activeCells: Int
+    val hasCadre: Boolean
+    val plots: List[Int]     // 1, 2, 3, 4 == WMD
+    val markers: List[String]
+    val wmdCache: Int        // Number of WMD plots cached
+    
+    def unTested: Boolean
+    def isGood    = governance == Good
+    def isFair    = governance == Fair
+    def isPoor    = governance == Poor
+    def isIslamic = governance == IslamistRule
+    
+    def totalCells = sleeperCells + activeCells
+    def hasMarker(name: String) = markers contains name
+    
+    def canAutoRecruit: Boolean
+    def hasPlots = plots.nonEmpty
+  }
+  
+  case class NonMuslimCountry(
+    name: String,
+    governance: Int             = Good,
+    sleeperCells: Int           = 0,
+    activeCells: Int            = 0,
+    hasCadre: Boolean           = false,
+    plots: List[Int]            = Nil,
+    markers: List[String]       = Nil,
+    posture: String             = PostureUntested,
+    recruitOverride: Int        = 0,
+    wmdCache: Int               = 0,  // Number of WMD plots cached
+    iranSpecialCase: Boolean    = false
+  ) extends Country {
+    override def unTested = posture == PostureUntested
+    override def canAutoRecruit = false
+    def isSchengen = Schengen contains name
+    def isHard = posture == Hard
+    def isSoft = posture == Soft
+  }
+
+  case class MuslimCountry(
+    name: String,
+    governance: Int             = GovernanceUntested,
+    sleeperCells: Int           = 0,
+    activeCells: Int            = 0,
+    hasCadre: Boolean           = false,
+    plots: List[Int]            = Nil,
+    markers: List[String]       = Nil,
+    isSunni: Boolean            = true,
+    resources: Int              = 0,
+    alignment: String           = Neutral,
+    troops: Int                 = 0,
+    militia: Int                = 0,
+    oilProducer: Boolean        = false,
+    aidMarkers: Int             = 0,
+    regimeChange: RegimeChange  = NoRegimeChange,
+    besiegedRegime: Boolean     = false,
+    civilWar: Boolean           = false,
+    caliphateCapital: Boolean   = false,
+    caliphateMember: Boolean    = false,  // caliphateCapital is also a caliphateMember
+    awakening: Int              = 0,  // 0, 1, 2, 3
+    reaction: Int               = 0,  // 0, -1, -2, -3
+    wmdCache: Int               = 0   // Number of WMD plots cached
+  ) extends Country {
+    override def unTested = governance == GovernanceUntested
+    def isAlly      = alignment == Ally
+    def isNeutral   = alignment == Neutral
+    def isAdversary = alignment == Adversary
+    
+    def inRegimeChange = regimeChange != NoRegimeChange
+    
+    def untestedWithData: Boolean = unTested && (
+      totalCells > 0            ||
+      hasCadre                  ||
+      hasPlots                  ||
+      markers.nonEmpty          ||
+      totalTroopsAndMilitia > 0 ||
+      inRegimeChange            ||
+      besiegedRegime            ||
+      civilWar                  ||
+      caliphateCandidate        ||
+      caliphateCapital          ||
+      awakening > 0             ||
+      reaction < 0
+    )
+    
+    
+    override def canAutoRecruit = isIslamic || civilWar || inRegimeChange
+    
+    // TODO: Add other markers!!
+    // The list is sorted so that markers repesent in 
+    def troopsMarkers: List[TroopsMarker] = markers collect {
+      case "NATO" => TroopsMarker("NATO", 2)
+    }
+    
+    def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
+    def totalTroops = troops + markerTroops
+    def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
+    
+    def canTakeAwakeningOrReactionMarker = !(isGood || isIslamic || civilWar)
+    def caliphateCandidate = civilWar || isIslamic || regimeChange != NoRegimeChange
+
+    // Note: The caller is responsible for handling convergence and the possible
+    //       displacement of the caliphate captial.
+    def improveGovernance(): MuslimCountry = {
+      assert(isAlly, s"improveGovernance() called on non-ally - ${name}")
+      assert(isGood, s"improveGovernance() called on Good country - ${name}")
+
+      if (governance == Poor)
+        copy(governance = Fair, awakening = (awakening - 1) max 0)
+      else
+        copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
+             militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false,
+             caliphateCapital = false, caliphateMember = false, civilWar = false)
+    }
+
+    // Note: The caller is repsonsible for adjusting funding, prestige,
+    //       and for handling convergence
+    def worsenGovernance(): MuslimCountry = {
+      assert(isIslamic, s"worsenGovernance() called on Islamist Rule country - ${name}")
+      if (governance == Good)
+        copy(governance = Fair, aidMarkers = (aidMarkers - 1) max 0)
+      else if (governance == Fair)
+        copy(governance = Poor, aidMarkers = (aidMarkers - 1) max 0, reaction = (reaction + 1) min 0)
+      else  // governance == Poor
+        copy(governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
+             aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
+             civilWar = false)
+    }
+  }
+    
+  
+  trait Scenario {
+    val name: String
+    val prestige: Int
+    val usPosture: String
+    val funding: Int
+    val availablePlots: List[Int]     // 1, 2, 3, 4 == WMD
+    val countries: List[Country]
+  }
+  
+  class Awakening2010 extends Scenario {
+    val name       = "Awakening (2010 Scenario)"
+    val prestige   = 5
+    val usPosture = Soft
+    val funding    = 5
+    val availablePlots = 1 :: 1 :: 1 :: 2 :: 2 :: 3 :: Nil
+    val countries = List(
+      NonMuslimCountry(Canada),
+      NonMuslimCountry(UnitedStates, posture = Soft),
+      NonMuslimCountry(UnitedKingdom, posture = Hard),
+      NonMuslimCountry(Serbia),
+      NonMuslimCountry(Israel, posture = Hard),
+      NonMuslimCountry(India),
+      NonMuslimCountry(Scandinavia),
+      NonMuslimCountry(EasternEurope),
+      NonMuslimCountry(Benelux, posture = Soft),
+      NonMuslimCountry(Germany),
+      NonMuslimCountry(Italy),
+      NonMuslimCountry(France, recruitOverride = 2, posture = Hard),
+      NonMuslimCountry(Spain, recruitOverride = 2),
+      NonMuslimCountry(Russia, governance = Fair),
+      NonMuslimCountry(Caucasus, governance = Fair),
+      NonMuslimCountry(China, governance = Fair),
+      NonMuslimCountry(KenyaTanzania, governance = Fair),
+      NonMuslimCountry(Thailand, governance = Fair),
+      NonMuslimCountry(Philippines, governance = Fair, recruitOverride = 3),
+      NonMuslimCountry(Iran, governance = Fair, wmdCache = 1, iranSpecialCase = true),
+      NonMuslimCountry(Nigeria, governance = Poor),
+      
+      MuslimCountry(Morocco, resources = 2),
+      MuslimCountry(AlgeriaTunisia, resources = 2, oilProducer = true,
+                    governance = Poor, alignment = Neutral, awakening = 1),
+      MuslimCountry(Libya, resources = 1, oilProducer = true),
+      MuslimCountry(Egypt, resources = 3),
+      MuslimCountry(Sudan, resources = 1, oilProducer = true),
+      MuslimCountry(Somalia, resources = 1),
+      MuslimCountry(Jordan, resources = 1),
+      MuslimCountry(Syria, resources = 2, wmdCache = 2),
+      MuslimCountry(CentralAsia, resources = 2),
+      MuslimCountry(Turkey, isSunni = false, resources = 2),
+      MuslimCountry(Lebanon, isSunni = false, resources = 1),
+      MuslimCountry(Yemen, isSunni = false, resources = 1),
+      MuslimCountry(Iraq, isSunni = false, resources = 3, oilProducer = true,
+                    governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
+      MuslimCountry(SaudiArabia, isSunni = false, resources = 3, oilProducer = true),
+      MuslimCountry(GulfStates, isSunni = false, resources = 3, oilProducer = true,
+                    governance = Fair, alignment = Ally, troops = 2),
+      MuslimCountry(Pakistan, isSunni = false, resources = 2, wmdCache = 3,
+                    governance = Fair, alignment = Neutral, sleeperCells = 2),
+      MuslimCountry(Afghanistan, isSunni = false, resources = 1, 
+                    governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
+                    regimeChange = TanRegimeChange),
+      MuslimCountry(Mali, resources = 1)
+    )
+  }
+  
+  case class GameState(
+    scenarioName: String,
+    humanRole: Role,
+    botDifficulties: List[BotDifficulty],
+    turn: Int,
+    prestige: Int,
+    usPosture: String,
+    funding: Int,
+    countries: List[Country],
+    availablePlots: List[Int] = 1 :: 1 :: 1 :: 2 :: 2 :: 3 :: Nil,
+    history: Vector[String] = Vector.empty,
+    offMapTroops: Int = 0,
+    usReserves: Int = 0,
+    jihadistReserves: Int = 0,
+    oilPriceSpikes: Int = 0,
+    resolvedPlots: List[Int] = Nil,
+    markers: List[String] = Nil,
+    lapsing: List[String] = Nil,  // Maybe a list of cards or card numbers?
+    firstPlot: Option[String] = None
+  ) {
+    
+    def botRole = if (humanRole == US) Jihadist else US
+      
+    def scenarioSummary: Seq[String] = {
+      val b = new ListBuffer[String]
+      b += s"Scenario: $scenarioName"
+      b += s"The Bot is playing the $botRole"
+      b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
+      for (difficulty <- botDifficulties)
+        b += s"  $difficulty"
+      b.toList
+    }
+      
+    def scoringSummary: Seq[String] = {
+      val b = new ListBuffer[String]
+      val adjacency = humanRole match {
+        case Jihadist => if (islamistAdjacency) "with adjacency" else "without adjacency"
+        case US       => "adjacency not necessary"
+      }
+      b += "Current Score"
+      b += separator()
+      b += f"Good/Fair Countries   : $numGoodOrFair%2d | Good Resources   : $goodResources%2d"
+      b += f"Poor/Islamic Countries: $numPoorOrIslamic%2d | Islamic Resources: $islamistResources%2d  ($adjacency)"
+      b.toList
+    }
+    
+    def worldPostureDisplay = {
+      val (worldPosture, level) = gwot
+      val levelDisp = if (worldPosture == Even) "" else level.toString
+      s"$worldPosture $levelDisp"
+    }
+    
+    def statusSummary: Seq[String] = {
+      val activePlots = countries filter (_.hasPlots)
+      val b = new ListBuffer[String]
+      b += "Status"
+      b += separator()
+      b += f"US posture      : $usPosture | World posture    : ${worldPostureDisplay}"
+      b += f"US prestige     : $prestige%2d   | Jihadist funding : $funding%2d"
+      b += f"US reserves     : $usReserves%2d   | Jihadist reserves: $jihadistReserves%2d"
+      b += f"Troops on track : $troopsAvailable%2d   | Cells on track   : $cellsOnTrack%2d"
+      b += f"Militia on track: $militiaAvailable%2d"
+      b += s"Markers         : ${if (markers.isEmpty) "None" else markers.mkString(", ")}"
+      b += s"Lapsing         : ${if (lapsing.isEmpty) "None" else lapsing.mkString(", ")}"
+      b += s"1st plot        : ${if (firstPlot.isEmpty) "None" else firstPlot.get}"
+      b += s"Resloved plots  : ${plotsDisplay(resolvedPlots, Jihadist)}"
+      b += s"Available plots : ${plotsDisplay(availablePlots, humanRole)}"
+      if (activePlots.isEmpty)
+        b += s"Active plots    : None"
+      else {
+        b += s"Active plots"
+        val fmt = "  %%-%ds: %%s".format(activePlots.map(_.name.length).max)
+        for (c <- activePlots)
+          b += fmt.format(c.name, plotsDisplay(c.plots, humanRole))
+      }
+      b.toList
+    }
+    
+    def countrySummary(name: String): Seq[String] = {
+      val b = new ListBuffer[String]
+      val items = new ListBuffer[String]
+      def item(num: Int, label: String, pluralize: Boolean = true): Unit = {
+        if (num > 0)
+          items += s"$num $label${if (num == 1 || !pluralize) "" else "s"}"
+      }
+      def addItems(): Unit = if (items.nonEmpty) b += s"  ${items.mkString(", ")}"
+
+      getCountry(name) match {
+        case n: NonMuslimCountry =>
+          val posture = if (n.iranSpecialCase) "" else s", ${n.posture}"
+          b += s"$name -- ${GovDisplay(n.governance)}$posture"
+          item(n.activeCells, "Active cell")
+          item(n.sleeperCells, "Sleeper cell")
+          if (n.hasCadre)
+            items += "Cadre marker"
+          addItems()
+          if (n.hasPlots)
+            b += s"  Plots: ${plotsDisplay(n.plots, humanRole)}"
+          if (n.markers.size > 0)
+            b += s"  Markers: ${n.markers.mkString(", ")}"
+
+        case m: MuslimCountry =>
+          val gov = if (m.unTested) "Untested" else s"${GovDisplay(m.governance)} ${m.alignment}"
+          val res = s"${m.resources} ${if (m.resources == 1) "resource" else "resources"}"
+          val oil = if (m.oilProducer) ", Oil producer" else ""
+          b += s"$name -- $gov, $res$oil"
+          item(m.activeCells, "Active cell")
+          item(m.sleeperCells, "Sleeper cell")
+          if (m.hasCadre)
+            items += "Cadre marker"
+          item(m.troops, "Troop")
+          item(m.militia, "Militia", pluralize = false)
+          addItems()
+            
+          items.clear
+          item(m.aidMarkers, "Aid marker")
+          item(m.awakening, "Awakening marker")
+          item(-m.reaction, "Reaction marker")
+          if (m.besiegedRegime)
+            items += "Besieged regime"
+          addItems()
+            
+          items.clear
+          if (m.inRegimeChange)
+            items += s"Regime Change (${m.regimeChange})"
+          if (m.civilWar)
+            items += "Civil War"
+          if (m.caliphateCapital)
+            items += "Caliphate Capital"
+          else if (m.caliphateMember)
+            items += "Caliphate member"
+          addItems()
+          if (m.hasPlots)
+            b += s"  Plots: ${plotsDisplay(m.plots, humanRole)}"
+          if (m.markers.size > 0)
+            b += s"  Markers: ${m.markers.mkString(", ")}"
+      }
+      b.toList
+    }
+    
+    def caliphateSummary: Seq[String] = {
+      val b = new ListBuffer[String]
+      b += "Caliphate"
+      b += separator()
+      muslim.find(_.caliphateCapital) match {
+        case Some(capital) =>
+          for (c <- capital :: caliphateDaisyChain(capital.name).sortBy(_.name).filterNot(_.name == capital.name))
+            b += s"${c.name}${if (c.caliphateCapital) " (Capital)" else ""}"
+          log("Reminder: cells in Caliphate countries are always active")
+        case None =>
+          b += "There is no Caliphate declared"
+      }
+      b.toList
+    }
+    
+    def civilWarSummary: Seq[String] = {
+      val b = new ListBuffer[String]
+      b += "Civil Wars"
+      b += separator()
+      val civilWars = (muslim filter (_.civilWar)).toList
+      if (civilWars.isEmpty)
+        b += "There are no counties in civil war"
+      else
+        b += (civilWars map (_.name)).mkString(", ")
+      b.toList
+    }
+    
+    
+    def bot: Role = humanRole match {
+      case US       => Jihadist
+      case Jihadist => US
+    }
+    def muslim: Iterator[MuslimCountry] =
+      countries.iterator filter (_.isInstanceOf[MuslimCountry]) map (_.asInstanceOf[MuslimCountry])
+    def nonMuslim: Iterator[NonMuslimCountry] =
+      countries.iterator filter (_.isInstanceOf[NonMuslimCountry]) map (_.asInstanceOf[NonMuslimCountry])
+    
+    def isMuslim(name: String)    = muslim exists (_.name == name)
+    def isNonMuslim(name: String) = nonMuslim exists (_.name == name)
+    
+    // The methods assume a valid name and will throw an exception if an invalid name is used!
+    def getCountry(name: String)   = (countries find (_.name == name)).get
+    def getMuslim(name: String)    = (muslim find (_.name == name)).get
+    def getNonMuslim(name: String) = (nonMuslim find (_.name == name)).get
+    
+    def getCountries(names: List[String]):  List[Country]          = names map getCountry
+    def getMuslims(names: List[String]):    List[MuslimCountry]    = names map getMuslim
+    def getNonMuslims(names: List[String]): List[NonMuslimCountry] = names map getNonMuslim
+    
+    def adjacentCountries(name: String)   = getCountries(getAdjacent(name))
+    def adjacentMuslims(name: String)     = getMuslims(getAdjacent(name) filter isMuslim)
+    def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
+  
+    // Return a list of countries comprising the daisy chain of caliphate candidates
+    // that are adjacent to the given country.
+    // The result does NOT include the starting country!
+    def caliphateDaisyChain(name: String): List[MuslimCountry] = {
+      def adjacentCandidates(x: MuslimCountry) = adjacentMuslims(x.name).filter(_.caliphateCandidate)
+      @tailrec def tryNext(candidates: List[MuslimCountry], chain: List[String]): List[MuslimCountry] = {
+        candidates match {
+          case Nil                                 => chain map getMuslim
+          case x :: xs  if (chain contains x.name) => tryNext(xs, chain)
+          case x :: xs                             => tryNext(xs ::: adjacentCandidates(x), x.name :: chain)
+        }
+      }
+      
+      val m = getMuslim(name)
+      if (m.caliphateCandidate)
+        tryNext(List(m), Nil)
+      else
+        Nil
+    }
+    
+    def setCaliphateCapital(name: String): GameState = {
+      assert(isMuslim(name), s"setCaliphateCapital() called on non-muslim country: $name")
+      val capital = getMuslim(name);
+      assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
+      
+      // First clear all caliphate flags
+      val cleared = muslim.filter(_.caliphateCandidate).map(_.copy(caliphateMember = false, caliphateCapital = false))
+      val clearedState = this.updateCountries(cleared.toList)
+      val daisyChain = clearedState.caliphateDaisyChain(name).map { x =>
+        x.copy(
+          caliphateMember  = true,
+          caliphateCapital = x.name == name,
+          activeCells      = x.totalCells,
+          sleeperCells     = 0
+        )
+      }
+      clearedState.updateCountries(daisyChain)
+    }
+    
+    def updateCountry(changed: Country): GameState =
+      this.copy(countries = changed :: (countries filterNot (_.name == changed.name)))
+    
+    // Do NOT pass multiples with the same name!
+    def updateCountries(changed: List[Country]): GameState = {
+      val names = changed.map(_.name).toSet
+      this.copy(countries = changed ::: countries filterNot (c => names contains c.name))
+    }
+    
+    def adjustPrestige(amt: Int): GameState = this.copy(prestige = (prestige + amt) max 1 min 12)
+    def adjustFunding(amt: Int): GameState  = this.copy(funding = (funding + amt) max 1 min 9)
+    
+    
+    // List of countries that are valid targets for War of Ideas
+    def woiTargets: List[Country] = countries filter {
+      case n: NonMuslimCountry => !(n.name == UnitedStates || n.name == Israel)
+      case m: MuslimCountry    => m.unTested || m.isNeutral || (m.isAlly && !m.isGood)
+    }
+    
+    
+    def prestigeModifier = prestige match {
+      case x if x <  4 => -1
+      case x if x <  7 =>  0
+      case x if x < 10 =>  2
+      case _           =>  2
+    }
+    
+    // Returns the current gwot 
+    // posture (Soft, Even, Hard)
+    // value 0, 1, 2, 3
+    def gwot: (String, Int) = {
+      val value = (nonMuslim.filterNot(_.name == UnitedStates).foldLeft(0) { 
+        case (v, c) if c.isHard => v + 1
+        case (v, c) if c.isSoft => v - 1
+        case (v, _) => v // Untested
+      })
+      val posture = if (value == 0) Even else if (value < 0) Soft else Hard
+      (posture, value.abs min 3)
+    }
+    
+    def gwotPenalty: Int = {
+      gwot match {
+        case (posture, value)  if posture != usPosture => -value
+        case _ => 0
+      }
+    }
+    
+    def troopCommitment = troopsAvailable match {
+      case x if x <  5 => Overstretch
+      case x if x < 10 => War
+      case _           => LowIntensity
+    }
+    
+    def fundingLevel = funding match {
+      case x if x < 4 => Tight
+      case x if x < 7 => Moderate
+      case _          => Ample
+    }
+    
+    def troopsAvailable  = 15 - offMapTroops - muslim.foldLeft(0) { (a, c) => a + c.troops }
+    def militiaAvailable = 15 - muslim.foldLeft(0) { (a, c) => a + c.militia }
+    
+    def trainingCampsInPlay = markers.contains("Training Camps")
+    def totalCellsInPlay = if (trainingCampsInPlay) 20 else 15
+    def cellsOnMap  = countries.foldLeft(0) { (a, c) => a + c.totalCells }
+    def cellsInCamp = if (trainingCampsInPlay) (totalCellsInPlay - cellsOnMap) min 5 else 0
+    def cellsOnTrack = totalCellsInPlay - cellsInCamp - cellsOnMap
+    
+    // Number of cells available for operations
+    def cellsAvailable = {
+      if (trainingCampsInPlay && funding == 9)
+        cellsInCamp + cellsOnTrack
+      else
+        fundingLevel match {
+          case Tight    => (cellsOnTrack - 10) max 0
+          case Moderate => (cellsOnTrack -  5) max 0
+          case _        => cellsOnTrack
+        }
+    }
+    
+    def numGoodOrFair    = muslim.filter(c => c.isGood || c.isFair).size
+    def numPoorOrIslamic = muslim.filter(c => c.isPoor || c.isIslamic).size
+    def numIslamic       = muslim.filter(c => c.isIslamic).size
+    def oilBump(c: MuslimCountry) = if (c.oilProducer) oilPriceSpikes else 0
+    def goodResources =
+      muslim.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
+    def islamistResources = 
+      muslim.filter(_.isIslamic).foldLeft(0) { (a, c) => a + c.resources + oilBump(c)} +
+      (if (muslim.exists(_.caliphateCapital)) 1 else 0)
+    // Return true if any two Islamist Rule countries are adjacent.
+    def islamistAdjacency: Boolean =
+      muslim.filter(_.isIslamic).toList.combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
+    
+  }
+  
+  def initialGameState(scenario: Scenario, humanRole: Role, botDifficulties: List[BotDifficulty]) = GameState(
+      scenario.name,
+      humanRole,
+      botDifficulties,
+      0, // Turn number, zero indicates start of game.
+      scenario.prestige,
+      scenario.usPosture,
+      scenario.funding,
+      scenario.countries)
+  
+  
+  // Global variables
+  var gameState = initialGameState(new Awakening2010, US, Muddled :: Nil)
+  var previousState: Option[GameState] = None // Used to undo the last command
+  
+  // This history of game turns, most recent first (ie in reverse order.)
+  // The current game state is NOT in the list.  It is added at the
+  // end of the turn.
+  // Allows user to roll back to a previous turn.
+  var gameTurns = List.empty[GameState]
+  
+  // Returns comma separated string with last choice separated by "or"
+  //    List("apples")                      => "apples"
+  //    List("apples", "oranges")           => "apples or oranges"
+  //    List("apples", "oranges", "grapes") => "apples, oranges or grapes"
+  def orList(x: Seq[Any]) = x match {
+    case Seq()     => ""
+    case Seq(a)    => a.toString
+    case Seq(a, b) => s"${a.toString} or ${b.toString}"
+    case _         => x.dropRight(1).mkString(", ") + " or " + x.last.toString
+  }
+  
+  // Find a match for the given string in the list of options.
+  // Any unique prefix of the given options will succeed.
+  def matchOne(s: String, options: Seq[String], abbreviations: Map[String, String] = Map.empty): Option[String] = {
+    for ((abbr, x) <- abbreviations) {
+      assert(options contains x, s"abbreviation '$abbr' maps to '$x' which is not a valid option")
+    }
+    
+    // When showing the list of options to the user, we want to group
+    // all abbreviations with the word that they represent.
+    val displayList = {
+    // (options ++ abbreviations.keys)
+      var associations = Map.empty[String, Set[String]].withDefaultValue(Set.empty)
+      for ((a, o) <- abbreviations)
+        associations += o -> (associations(o) + a)
+      options map {
+        case o if associations(o).nonEmpty => o + associations(o).toList.sorted.mkString(" (", ",", ")")
+        case o => o
+      }  
+    }
+    val normalizedAbbreviations = for ((a, v) <- abbreviations) yield (a.toLowerCase, v)  
+    val normalized = (options ++ abbreviations.keys) map (_.toLowerCase)
+    (normalized.distinct filter (_ startsWith s.toLowerCase)) match {
+      case Seq() =>
+        println(s"'$s' is not recognized. Must be one of:\n${orList(displayList)}")
+        None
+      case Seq(v)  =>
+        normalizedAbbreviations.get(v) match {
+          case Some(opt) => Some(opt)
+          case None      => Some(options(normalized.indexOf(v)))
+        }
+        
+      case many if many exists (_ == s) =>
+        normalizedAbbreviations.get(s) match {
+          case Some(opt) => Some(opt)
+          case None      => Some(options(normalized.indexOf(s)))
+        }
+      
+      case ambiguous =>
+        println(s"'$s' is ambiguous. (${orList(ambiguous)})")
+        None
+    }
+  }
+    
+  def getOneOf(prompt: String, options: Seq[Any], initial: Option[String] = None, 
+               allowNone: Boolean = true, abbreviations: Map[String, String] = Map.empty): Option[String] = {
+    @tailrec def testResponse(response: Option[String]): Option[String] = {
+      response flatMap (s => matchOne(s, options map (_.toString), abbreviations)) match {
+        case None =>
+          readLine(prompt) match {
+            case null | "" if allowNone => None
+            case null | ""              => testResponse(None)
+            case input                  => testResponse(Some(input))
+          }
+        case s => s
+      }
+    }
+    testResponse(initial)
+  }
+  
+  @tailrec def askYorN(prompt: String): Boolean = {
+    def testResponse(r: String): Option[Boolean] = {
+      if (r == null)
+        None
+      else
+        r.toLowerCase match {
+          case "n" | "no"  => Some(false)
+          case "y" | "yes" => Some(true)
+          case _           => None
+        }
+    }
+    
+    testResponse(readLine(prompt)) match {
+      case Some(result) => result
+      case None         => askYorN(prompt)
+    }
+  }
+  
+  // Use the random Muslim table.
+  // Iran and Nigeria may not yet have become Muslim countries.
+  // If they are selected and non Muslim, then we simply roll again.
+  def randomMuslimCountry: MuslimCountry = {
+    val iranIsMuslim    = gameState.isMuslim(Iran)
+    val nigeriaIsMuslim = gameState.isMuslim(Nigeria)
+    @tailrec def rollOnTable: MuslimCountry = {
+      dieRoll match {
+        case 1 | 2                    => gameState.getMuslim(CentralAsia)
+        case 3 if iranIsMuslim        => gameState.getMuslim(Iran)
+        case 4                        => gameState.getMuslim(Mali)
+        case 5 | 6 if nigeriaIsMuslim => gameState.getMuslim(Nigeria)
+        case _                        => rollOnTable
+      }
+    }
+    rollOnTable
+  }
+  
+
+  def randomShiaMixCountry: MuslimCountry = {
+    val muslimKey = List(dieRoll, dieRoll, dieRoll).sum match {
+      case 3 | 4 | 5 | 6                 => Syria
+      case 7 if gameState.isMuslim(Iran) => Iran
+      case 7                             => Syria
+      case 8                             => SaudiArabia
+      case 9                             => Turkey
+      case 10                            => Iraq
+      case 11                            => GulfStates
+      case 12                            => Yemen
+      case 13                            => Pakistan
+      case 14                            => Lebanon
+      case 15 | 16 | 17 | 18             => Afghanistan
+    }
+    gameState.getMuslim(muslimKey) 
+  }
+  
+  // Test the country if it is still untested.
+  def testCountry(name: String): Unit = {
+    val country = gameState.getCountry(name)
+    if (country.unTested) {
+      country match {
+        case m: MuslimCountry    =>
+          val newGov = if (dieRoll < 5) Poor else Fair
+          gameState = gameState.updateCountry(m.copy(governance = newGov))
+          log(s"${m.name} tested: ${GovDisplay(newGov)} Neutral")
+          
+        case n: NonMuslimCountry =>
+          val newPosture = if (dieRoll < 5) Soft else Hard
+          gameState = gameState.updateCountry(n.copy(posture = newPosture))
+          log(s"${n.name} tested: $newPosture")
+      }
+    }
+  }
+  
+  
+  
+  def modifyWoiRoll(die: Int, m: MuslimCountry, ignoreGwotPenalty: Boolean = false, silent: Boolean = false): Int = {
+    def logNotZero(value: Int, msg: String): Unit = if (!silent && value != 0) log(f"$value%2d: $msg")
+    val prestigeMod = gameState.prestige match {
+      case x if x < 4  => -1
+      case x if x < 7  =>  0
+      case x if x < 10 =>  1
+      case _           =>  2
+    }
+    val shiftToGoodMod = if (m.isAlly && m.isGood) -1 else 0
+    val gwotMod        = if (ignoreGwotPenalty) 0 else gameState.gwotPenalty
+    val aidMod         = m.aidMarkers
+    val adjToGoodMod   = if (gameState.adjacentMuslims(m.name) exists (_.isGood)) 1 else 0
+    val awakeningMod   = m.awakening
+    val reactionMod    = m.reaction
+    logNotZero(prestigeMod,    "Prestige")
+    logNotZero(shiftToGoodMod, "Shift to Good governance")
+    logNotZero(gwotMod,        "GWOT penalty")
+    logNotZero(aidMod,         "Aid")
+    logNotZero(adjToGoodMod,   "Adjacent to country at Good governance")
+    logNotZero(awakeningMod,   "Awakening")
+    logNotZero(reactionMod,    "Reaction")
+    die + (prestigeMod + shiftToGoodMod + gwotMod + aidMod + adjToGoodMod + awakeningMod + reactionMod)
+  }
+  
+  
+  // Used when selecting new caliphate capital
+  case class CaliphateSize(m: MuslimCountry) {
+    val size = gameState.caliphateDaisyChain(m.name).size
+  }
+  
+  // Sort first by daisy chain size large to small,
+  // then by non Ally before Ally
+  // then by worse governance before better governance
+  // then by worst WoI drm before better WoI drm
+  implicit val CaliphateSizeOrdering = new Ordering[CaliphateSize] {
+    def compare(x: CaliphateSize, y: CaliphateSize) = {
+      if (x.size != y.size) 
+        y.size compare x.size  // y first because we want to sort large to small.
+      else if (x.m.isAlly != y.m.isAlly)
+        x.m.isAlly compare y.m.isAlly
+      else if (x.m.governance != y.m.governance)
+        y.m.governance compare x.m.governance   // y first so worse comes first
+      else {
+        val (xMod, yMod) = (modifyWoiRoll(1, x.m, false, true), modifyWoiRoll(1, y.m, false, true))
+        xMod compare yMod
+      }
+    }
+  }
+  
+  
+  // Assumes that the gameState has already been updated to remove
+  // the caliphateCapital and caliphateMember status from the previous
+  // capital.
+  def displaceCaliphateCapital(previousCapital: String): Unit = {
+    // Caliphate capital displaced.  Attempt to move it to adjacent caliphate country.
+    val adjacents = gameState.adjacentMuslims(previousCapital) filter (_.caliphateCandidate)
+    log()
+    log("The Caliphate capital has been displaced!")
+    log(separator())
+    if (adjacents.size == 0) {
+      gameState = gameState.adjustFunding(-2).adjustPrestige(2)
+      log(s"There are no adjacent Caliphate candidates, remove Caliphate capital")
+      log(s"Reduce funding by -2 to ${gameState.funding}")
+      log(s"Increase prestige by +2 to ${gameState.prestige}")
+    }
+    else {
+      // If Jihadist is human, ask them to pick the new capital.
+      // If Jihadist is a bot, the country that connects to the 
+      // largest number of daisy chained caliphate memeber.
+      // Then pick one at random among any ties.
+      val newCapitalName = if (adjacents.size == 1)
+        adjacents.head.name
+      else if (gameState.humanRole == Jihadist) {
+        val choices = adjacents map (_.name)
+        val newName = getOneOf(s"Choose new capital (${orList(choices)}): ", choices, None, false).get
+        adjacents.find(_.name == newName).get.name
+      }
+      else {
+        val sorted = adjacents.map(CaliphateSize).sorted
+        val best = sorted.takeWhile(CaliphateSizeOrdering.compare(_, sorted.head) == 0) map (_.m)
+        shuffle(best).head.name
+      }
+      gameState = gameState.setCaliphateCapital(newCapitalName).adjustFunding(-1).adjustPrestige(1)
+      log(s"Move Caliphate capital to ${newCapitalName}")
+      log(s"Reduce funding by -1 to ${gameState.funding}")
+      log(s"Increase prestige by +1 to ${gameState.prestige}")
+      logSummary(gameState.caliphateSummary)
+    }
+  }
+  
+  // Convergence
+  def performConvergence(forCountry: String, awakening: Boolean): Unit = {
+    def randomConvergenceTarget: MuslimCountry = {
+      @tailrec def getTarget: MuslimCountry = {
+        val rmc = randomMuslimCountry
+        if (rmc.canTakeAwakeningOrReactionMarker)
+          rmc
+        else 
+          shuffle(gameState.adjacentMuslims(rmc.name) filter (_.canTakeAwakeningOrReactionMarker)) match {
+            case Nil    => getTarget  // Try again
+            case x :: _ => x
+          }
+      }
+      getTarget
+    }
+    
+    val rmc = randomConvergenceTarget
+    if (awakening) {
+      gameState = gameState.updateCountry(rmc.copy(awakening = rmc.awakening + 1))
+      log(s"Convergence for ${forCountry}: add awakening marker to ${rmc.name}")
+    }
+    else {
+      gameState = gameState.updateCountry(rmc.copy(reaction = rmc.reaction + 1))
+      log(s"Convergence for ${forCountry}: add reaction marker to ${rmc.name}")
+    }
+  }
+  
+  
+  // Perform WoI on the given country.
+  // TODO:  I think the check for invalid country should be done in the command
+  //        before calling this method.
+  def warOfIdeas(name: String, die: Int): Unit = {
+    gameState.getCountry(name) match {
+      case m: MuslimCountry if m.isAdversary => println("Cannot do War of Ideas in Adversary country")
+      case m: MuslimCountry if m.isGood => println("Cannot do War of Ideas in muslim country with Good governance")
+      case m: MuslimCountry if m.inRegimeChange && (m.troops + m.militia - m.totalCells) < 5 => 
+        println("Cannot do War of Ideas in regime change country, not enought troops + militia")
+      case m: MuslimCountry =>
+        log()
+        log(s"War of Ideas in ${m.name}")
+        log(separator())
+        testCountry(name)
+        log(s"Roll: $die")
+        val modRoll = modifyWoiRoll(die, m)
+        log(s"Modified Roll: $modRoll")
+        if (modRoll < 4)
+          log("Failed")
+        else if (modRoll == 4 && m.aidMarkers > 0)
+          log("Failed, aid marker already present")
+        else if (modRoll == 4) {
+          gameState = gameState.updateCountry(m.copy(aidMarkers = 1))
+          log("Failed, place aid marker")
+        }
+        else if (m.isNeutral) {
+          gameState = gameState.updateCountry(m.copy(alignment = Ally))
+          log("Success, shift alignment to Ally")
+        }
+        else {
+          val caliphateCapital = m.caliphateCapital
+          val improved = m.improveGovernance()
+          log(s"Success, improve governance of ${improved.name} to ${GovDisplay(improved.governance)}")
+          // TODO: perhaps log that civil war, awakening, reaction, aid, etc should be removed if improved to Good ?
+          gameState = gameState.updateCountry(improved)
+          
+          if (improved.governance == Good) {
+            performConvergence(forCountry = name, awakening = true)
+            if (caliphateCapital)
+              displaceCaliphateCapital(name)
+          }
+        }
+        
+      case n: NonMuslimCountry if n.iranSpecialCase => println("Cannot do War of Ideas in Iran")
+      case n: NonMuslimCountry =>
+        log()
+        log(s"War of Ideas in ${n.name}")
+        log(separator())
+        val newPosture = if (die > 4) Hard else Soft
+        gameState = gameState.updateCountry(n.copy(posture = newPosture))
+        log(s"Roll: $die")
+        log(s"Posture of ${n.name} is now $newPosture")
+        if (newPosture == gameState.usPosture && gameState.prestige < 12) {
+          gameState = gameState.adjustPrestige(1)
+          log(s"Increase US prestige by one to ${gameState.prestige}")
+        }
+        log(s"World Posture is now ${gameState.worldPostureDisplay}")
+    }
+  }
+  
+  var indentation = 0
+  
+  // Add a two spaces to the current indent.
+  def indentLog(): Unit = indentation += 2
+  def outdentLog(): Unit = indentation = (indentation - 2) max 0
+  def clearIndent(): Unit = indentation = 0
+  
+  // Print the line to the console and save it in the game's history.
+  def log(line: String = ""): Unit = {
+    val indentedLine = (" " * indentation) + line
+    println(indentedLine)
+    gameState = gameState.copy(history = gameState.history :+ indentedLine)
+  }
+  
+  def separator(sep: Char = '-', length: Int = 52): String = sep.toString * length
+
+  def printSummary(summary: Seq[String]): Unit = {
+    println()
+    summary foreach println
+  }
+  
+  def logSummary(summary: Seq[String]): Unit = {
+    log()
+    summary foreach log
+  }
+    
+  // Save the current game state.
+  def saveGameState(filename: String): Unit = {
+    // To be done.
+  }
+  
+  
+  def polarization(): Unit = {
+    val candidates = gameState.muslim.filter(m => (m.awakening + m.reaction).abs > 1).toList
+    log()
+    log("Polarization")
+    log(separator())
+    if (candidates.isEmpty)
+      log("No countries affected")
+    else {
+      // Remember any Caliphate capital in case it is displaced.
+      val caliphateCapital = candidates find (_.caliphateCapital) map (_.name)
+      // Work with names, because the underlying state of the countries will
+      // undergo multiple changes, thus we will need to get the current copy of 
+      // the country from the gameState each time we use it.
+      val names = candidates.map(_.name)
+      case class Converger(name: String, awakening: Boolean)
+      implicit val ConvererOrdering = new Ordering[Converger] {
+        def compare(x: Converger, y: Converger) = {
+          // Awakening first, then order by name
+          if (x.awakening == y.awakening) x.name compare y.name else -(x.awakening compare y.awakening)
+        }
+      }
+      
+      var convergers = List.empty[Converger]
+      for (name <- names; m = gameState.getMuslim(name)) {
+        (m.awakening + m.reaction) match {
+          case 2 =>
+            gameState = gameState.updateCountry(m.copy(awakening = m.awakening + 1))
+            log(s"${name}: add an awakening marker")
+
+          case -2 =>
+            gameState = gameState.updateCountry(m.copy(reaction = m.reaction - 1))
+            log(s"${name}: add a reaction marker")
+            
+          case x if x > 2 =>
+            if (m.isAlly) {
+              val improved = m.improveGovernance()
+              gameState = gameState.updateCountry(improved)
+              if (improved.isGood)
+                convergers = Converger(name, awakening = true) :: convergers
+              log(s"${name}: improve governance to ${GovDisplay(improved.governance)}")
+            }
+            else {
+              val newAlign = if (m.isNeutral) Ally else Neutral
+              gameState = gameState.updateCountry(m.copy(alignment = newAlign))
+              log(s"${name}: shift alignment to $newAlign")
+            }
+
+
+          case _ => // x < -2
+            if (m.isAdversary) {
+              val worsened = m.worsenGovernance()
+              gameState = gameState.updateCountry(worsened)
+              if (worsened.isIslamic)
+                convergers = Converger(name, awakening = false) :: convergers
+              log(s"${name}: degrade governance to ${GovDisplay(worsened.governance)}")
+            }
+            else {
+              val newAlign = if (m.isNeutral) Adversary else Neutral
+              gameState = gameState.updateCountry(m.copy(alignment = newAlign))
+              log(s"${name}: shift alignment to $newAlign")
+            }
+        }
+      }
+      
+      // Now perform convergence for each country that became Good or Islamist Rule.
+      if (convergers.nonEmpty) {
+        log()
+        for (Converger(name, awakening) <- convergers.sorted)
+          performConvergence(forCountry = name, awakening)
+      }
+
+      // Check to see if the Caliphate Capital has been displaced because its country
+      // was improved to Good governance.
+      caliphateCapital foreach { capitalName =>
+        if (gameState.getMuslim(capitalName).isGood)
+          displaceCaliphateCapital(capitalName)
+      }
+    }
+  }
+  
+  // Process the US civil war losses.
+  // If the US is human then prompt for pieces to remove.
+  // Return the number of unresolved hits
+  def usCivilWarLosses(m: MuslimCountry, hits: Int): Int = {
+    if (hits == 0 || m.totalTroops + m.militia == 0) {
+      log(s"${m.name}: The US suffer no attrition")
+      hits
+    }
+    else {
+      // Calculate the losses for the bot.
+      // If this removes all troops, troopMarkers, and militia from the country
+      // and the US is human, then we can skip prompting for losses.
+      // [Rule 13.3.7] The bot removes troops cubes first.
+      var hitsRemaining = hits
+      var troopsLost = if (m.troops >= hitsRemaining) hitsRemaining else m.troops
+      hitsRemaining -= troopsLost
+      var troopMarkersLost = for (TroopsMarker(name, num) <- m.troopsMarkers; if hitsRemaining > 0) 
+        yield {
+          hitsRemaining = (hitsRemaining - num) max 0
+          name
+        }
+      var militiaLost = if (m.militia >= hitsRemaining) hitsRemaining else m.militia
+      hitsRemaining -= militiaLost
+      
+      var updated = m.copy(
+        troops  = m.troops  - troopsLost,
+        militia = m.militia - militiaLost,
+        markers = m.markers filterNot troopMarkersLost.contains
+      )
+
+      // TODO: Allow human player to pick losses.
+      // if (gameState.human == US && updated.totalTroops + updated.militia > 0) {
+      //   hitsRemaining = hits
+      //   // ...
+      // }
+      
+      gameState = gameState.updateCountry(updated)
+      val b = new ListBuffer[String]
+      if (troopsLost > 0)            b += s"$troopsLost troops"
+      if (troopMarkersLost.nonEmpty) b += troopMarkersLost.mkString(", ")
+      if (militiaLost > 0)           b += s"$militiaLost militia"
+      log(s"${m.name}: US attrition - remove ${b.mkString(", ")}")
+      hitsRemaining    
+    }
+  }
+  
+  // Process the Jihadist civil war losses.
+  // If the Jihadist is human then prompt for pieces to remove.
+  // Return the number of unresolved losses
+  def jihadistCivilWarLosses(m: MuslimCountry, hits: Int): Int = {
+    if (hits == 0 || m.totalCells == 0) {
+      log(s"${m.name}: The Jihadists suffer no attrition")
+      hits
+    }
+    else {
+      // Remove two cells per hit is any troops present or if "Advisors" marker present.
+      val multiplier = if (m.totalTroops > 0 || m.hasMarker("Advisors")) 2 else 1
+      val losses     = hits * multiplier
+      val (activeLost, sleepersLost) = if (m.totalCells <= losses)
+        (m.activeCells, m.sleeperCells)
+      else {
+        val active = if (m.activeCells <= losses) m.activeCells else losses
+        val remaining = losses - active
+        val sleeper = if (m.sleeperCells <= remaining) m.sleeperCells else remaining
+        (active, sleeper)
+      }
+      val hitsRemaining = ((losses - activeLost - sleepersLost) max 0) / multiplier
+      
+      var updated = m.copy(
+        activeCells  = m.activeCells  - activeLost,
+        sleeperCells = m.sleeperCells - sleepersLost
+      )
+      gameState = gameState.updateCountry(updated)
+      
+      val b = new ListBuffer[String]
+      if (activeLost > 0)            b += s"$activeLost active cells"
+      if (sleepersLost > 0)           b += s"$sleepersLost sleeper cells"
+      log(s"${m.name}: Jihadist attrition - remove ${b.mkString(", ")}")
+      hitsRemaining    
+    }
+  }
+  
+  def civilWarAttrition(): Unit = {
+    val civilWars = gameState.muslim.filter(m => (m.civilWar)).toList
+    log()
+    log("Civil War Attrition")
+    log(separator())
+    if (civilWars.isEmpty)
+      log("No countries in civil war")
+    else {
+      val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
+      for (m <- civilWars) {
+        val jihadHits= m.totalCells / 6 + (if (dieRoll <= m.totalCells % 6) 1 else 0)
+        val usHits    = m.totalTroopsAndMilitia / 6 + (if (dieRoll <= m.totalTroopsAndMilitia % 6) 1 else 0)
+        if (jihadHits + usHits == 0)
+          log(s"${m.name}: no attrition suffered by either side")
+        else {
+          val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits)
+          val unfulfilledUSHits    = jihadistCivilWarLosses(m, usHits)
+          // The game state is modified by usCivilWarLosses() and jihadistCivilWarLosses()
+          // so we get a fresh copy of the muslim country.
+          val afterLosses = gameState.getMuslim(m.name)
+          if (unfulfilledJihadHits + unfulfilledUSHits > 0) {
+            if (unfulfilledJihadHits > 0) log(s"$unfulfilledJihadHits unfulfilled Jihadist hits against the US")
+            if (unfulfilledUSHits    > 0) log(s"$unfulfilledUSHits unfulfilled US hits against the Jihadist")
+            val delta = unfulfilledJihadHits - unfulfilledUSHits
+            if (delta == 0)
+              log("The unfulfilled hits are equal so there is no further action")
+            else if (delta > 0) {
+              // Shift toward Adversary/Worsen governance
+              if (afterLosses.isAdversary) {
+                val worsened = afterLosses.worsenGovernance()
+                gameState = gameState.updateCountry(worsened)
+                log(s"${worsened.name}: degrade governance to ${GovDisplay(worsened.governance)}")
+                if (worsened.isIslamic)
+                  performConvergence(forCountry = worsened.name, awakening = false)
+              }
+              else {
+                val newAlign = if (afterLosses.isNeutral) Adversary else Neutral
+                gameState = gameState.updateCountry(afterLosses.copy(alignment = newAlign))
+                log(s"${afterLosses.name}: shift alignment to $newAlign")
+              }
+            }
+            else {
+              // Shift toward Ally/Improve governance
+              if (afterLosses.isAlly) {
+                val improved = afterLosses.improveGovernance()
+                gameState = gameState.updateCountry(improved)
+                log(s"${improved.name}: improve governance to ${GovDisplay(improved.governance)}")
+                if (improved.isGood)
+                  performConvergence(forCountry = improved.name, awakening = true)
+              }
+              else {
+                val newAlign = if (afterLosses.isNeutral) Ally else Neutral
+                gameState = gameState.updateCountry(afterLosses.copy(alignment = newAlign))
+                log(s"${afterLosses.name}: shift alignment to $newAlign")
+              }
+            }
+          }
+        }
+      }
+      
+      // Check to see if the Caliphate Capital has been displaced because its country
+      // was improved to Good governance.
+      caliphateCapital foreach { capitalName =>
+        if (gameState.getMuslim(capitalName).isGood)
+          displaceCaliphateCapital(capitalName)
+      }
+    }
+  }
+  
+  def endTurn(): Unit = {
+    // TODO: resolve plots.
+    
+    log()
+    log("End of turn")
+    log(separator())
+    
+    // TODO - Also check for fracking whcih can affect funding
+    if (false) { // Check for pirates marker and Somalia or Yemen at Islamist Rule
+      log("No funding drop because Pirates is in effect")
+    }
+    else {
+      gameState = gameState.adjustFunding(-1)
+      log(s"Jihadist funding drops to ${gameState.funding}")
+    }
+    if (gameState.numIslamic > 0) {
+      gameState = gameState.adjustPrestige(-1)
+      log(s"US prestige drops to ${gameState.prestige}, at least 1 country is under Islamist Rule")
+    }
+    else
+      log(s"US prestige stays at ${gameState.prestige}, no countries under Islamist Rule")
+    
+    val (worldPosture, level) = gameState.gwot
+    if (gameState.usPosture == worldPosture && level == 3) {
+      gameState = gameState.adjustPrestige(1)
+      log(s"World posture is $worldPosture $level and US posture is $worldPosture , prestige increases ${gameState.prestige}")
+    }
+    if (gameState.humanRole == US) {
+      gameState = gameState.copy(usReserves = 0)
+      log(s"US reserves set to zero")
+    }
+    else {
+      gameState = gameState.copy(jihadistReserves = 0)
+      log(s"Jihadist reserves set to zero")
+    }
+    
+    if (gameState.resolvedPlots.nonEmpty) {
+      gameState = gameState.copy(resolvedPlots = Nil, availablePlots = gameState.availablePlots ::: gameState.resolvedPlots)
+      log("Return resolved plots to available plots box")
+    }
+    
+    polarization()
+    civilWarAttrition()
+    
+    // Calculate number of cards drawn
+    val usCards = USCardDraw(gameState.troopCommitment)
+    val jihadistCards = JihadistCardDraw(gameState.fundingLevel)
+    log()
+    log("Draw Cards")
+    log(separator())
+    log(s"US player will draw $usCards cards")
+    log(s"Jihadist player will draw $jihadistCards cards")
+    
+    if (gameState.offMapTroops > 0) {
+      log(s"Return ${gameState.offMapTroops} troops from the off map box to the troops track")
+      gameState = gameState.copy(offMapTroops = 0)
+    }
+    
+    if (gameState.lapsing.nonEmpty) {
+      log("Discard the following lapsing events:")
+      for (event <- gameState.lapsing)
+        log(s"  - $event")
+      gameState = gameState.copy(lapsing = Nil)
+    }
+    if (gameState.firstPlot.nonEmpty) {
+      log(s"Discard the firstplot card: ${gameState.firstPlot.get}")
+      gameState = gameState.copy(firstPlot = None)
+    }
+    
+    for (rc <- gameState.muslim filter (_.regimeChange == GreenRegimeChange)) {
+      log(s"  ${rc.name}: Flip regime marker to tan side")
+      gameState = gameState.updateCountry(rc.copy(regimeChange = TanRegimeChange))
+    }
+    
+    log()
+    logSummary(gameState.scoringSummary)
+    log()
+    logSummary(gameState.statusSummary)
+        
+    previousState = None  // Cannot undo at end of turn.
+    gameTurns = gameState :: gameTurns
+    saveGameState("some file name")
+    
+  }
+  
+  case object UserExit extends Exception
+  
+  // def doWarOfIdeas(country: Country)
+  def main(args: Array[String]): Unit = {
+    
+    // parse cmd line args -- to be done
+    // prompt for scenario -- to be done
+    val scenario = new Awakening2010
+    // ask which side the user wishes to play -- to be done
+    val humanRole = US
+    // val humanRole = Jihadist
+    // prompt for bot's (jihadish ideology / us resolve) difficulty level. -- to be done
+    val botDifficulties = Muddled :: Coherent :: Attractive :: Nil
+
+    gameState = initialGameState(scenario, humanRole, botDifficulties)
+    
+    logSummary(gameState.scenarioSummary)
+    logSummary(gameState.scoringSummary)
+    logSummary(gameState.statusSummary)
+    saveGameState("initial state before first turn.")
+    gameState = gameState.copy(turn = gameState.turn + 1)
+    log()
+    log()
+    log(s"Start of turn ${gameState.turn}")
+    log(separator('='))
+    try commandLoop()
+    catch {
+      case UserExit => 
+    }
+  }
+
+  
+  // ---------------------------------------------
+  // Process all top level user commands.
+  @tailrec def commandLoop(): Unit = {
+    readLine(s"\n[Turn ${gameState.turn}] ") match {
+      case null => // User pressed Ctrl-d (end of file)
+      case cmd =>
+        doCommand(cmd)
+        commandLoop()
+    }
+  }
+  
+  
+  // Parse the top level input and execute the appropriate command.
+  def doCommand(input: String): Unit = {
+    class Command(val name: String, val help: String)
+    val Commands = List(
+      new Command("quit",     "Save the current turn and quit the game"),
+      new Command("help",     "List available commands."),
+      new Command("us",       "Enter a card number for a US card play."),
+      new Command("jihadist", "Enter a card number for a Jihadist card play."),
+      new Command("summary",  "Display a summary of the current game status."),
+      new Command("status",   "Display the current game status.\n" +
+                              "  'status'            to display the entire game status.\n" +
+                              "  'status <country>'  to display the status of a single country.\n" +
+                              "  'status caliphate'  to the countries making up the Caliphate.\n" +
+                              "  'status civil wars' to show the countries in civil war."),
+      new Command("adjust",   "Adjust game settings.  No rule checking is applied."),
+      new Command("history",  "Display game history.\nType 'history save' to save as history.txt."),
+      new Command("undo",     "Roll back to the last card played."),
+      new Command("rollback", "Roll back to the start of any previous turn in the game.")
+    )
+    val CmdNames = (Commands map (_.name)).sorted
+    
+    def showCommandHelp(cmd: String) = Commands find (_.name == cmd) foreach (c => println(c.help))
+    
+    val tokens = input.split("\\s+").toList.dropWhile(_ == "")
+    tokens.headOption foreach { verb =>
+      val param = if (tokens.tail.nonEmpty) Some(tokens.tail.mkString(" ")) else None
+      matchOne(verb, CmdNames) foreach {
+        case "quit" =>
+          throw UserExit
+        case "help" if param.isEmpty =>
+          println("Available commands: (type help <command> for more detail)")
+          println(orList(CmdNames))
+        case "help"     => matchOne(param.get, CmdNames) foreach showCommandHelp
+        case "us"       => usCardPlay(param)
+        case "jihadist" => jihadistCardPlay(param)
+        case "summary"  => printSummary(gameState.scoringSummary); printSummary(gameState.statusSummary)
+        case "status"   => showGameStatus(param)
+        case "adjust"   => // adjustSettings(param)
+        case "history"  => println("Not implemented.")
+        case "undo"     => println("Not implemented.")
+        case "rollback" => println("Not implemented.")
+        case cmd        => println(s"Internal error: Command '$cmd' is not valid")
+      }
+    }
+    
+  }
+  
+  // If param is present, it can be:
+  //   caliphate
+  //   civil wars
+  //   <country name>
+  //
+  // If param is not present, we display the status of the entire game.  
+  //
+  def showGameStatus(param: Option[String]): Unit = {
+    if (param.isEmpty) {
+      def printCountries(title: String, countries: List[String]): Unit = {
+        println()
+        println(title)
+        println(separator())
+        if (countries.isEmpty)
+          println("None")
+        else
+          for (name <- countries; line <- gameState.countrySummary(name))
+            println(line)
+      }
+      
+      printSummary(gameState.scenarioSummary)
+      printCountries("Muslim Countries with Good Governance", (gameState.muslim filter(_.isGood) map (_.name)).toList.sorted)
+      printCountries("Muslim Countries with Fair Governance", (gameState.muslim filter(_.isFair) map (_.name)).toList.sorted)
+      printCountries("Muslim Countries with Poor Governance", (gameState.muslim filter(_.isPoor) map (_.name)).toList.sorted)
+      printCountries("Muslim Countries under Islamic Rule",   (gameState.muslim filter(_.isIslamic) map (_.name)).toList.sorted)
+      printCountries("Untested Muslim Countries with Data",   (gameState.muslim filter(_.untestedWithData) map (_.name)).toList.sorted)
+      printCountries("Non-Muslim Countries with Hard Posture",(gameState.nonMuslim filter (_.isHard) map (_.name)).toList.sorted)
+      printCountries("Non-Muslim Countries with Soft Posture",(gameState.nonMuslim filter (_.isSoft) map (_.name)).toList.sorted)
+      val iranSpecial = gameState.nonMuslim find (_.iranSpecialCase) map (_.name)
+      if (iranSpecial.nonEmpty)
+        printCountries("Iran Special Case", iranSpecial.toList)
+      printSummary(gameState.scoringSummary)
+      printSummary(gameState.statusSummary)
+      printSummary(gameState.civilWarSummary)
+      printSummary(gameState.caliphateSummary)
+    }
+    else {
+      val names = "caliphate" :: "civil wars" :: (gameState.countries map (_.name)).sorted
+      getOneOf("Enter status target: ", names, param, true, CountryAbbreviations) foreach {
+        case "caliphate"  => printSummary(gameState.caliphateSummary)
+        case "civil wars" => printSummary(gameState.civilWarSummary)
+        case name         => printSummary(gameState.countrySummary(name))
+      }
+    }
+  }
+  
+  def usCardPlay(number: Option[String]): Unit = {
+    println("Not implemented.")
+  }
+  
+  def jihadistCardPlay(number: Option[String]): Unit = {
+    println("Not implemented.")
+  }
+  
+  def adjustSettings(number: Option[String]): Unit = {
+    println("Not implemented.")
+  }
+  
+  
+  def cmdSaveReserves(player: Role, ops: Int): Unit = {
+    player match {
+      case US =>
+        if (gameState.usReserves == 2)
+          println(s"$player already has the maximum of 2 OPs reserved")
+        else {
+          gameState = gameState.copy(usReserves = (gameState.usReserves + ops) min 2)
+          log(s"$player reserves increased to ${gameState.usReserves}")
+        }
+      case Jihadist =>
+        if (gameState.jihadistReserves == 2)
+          println("$player already has the maximum of 2 OPs reserved")
+        else {
+          gameState = gameState.copy(jihadistReserves = (gameState.jihadistReserves + ops) min 2)
+          log(s"$player reserves increased to ${gameState.jihadistReserves}")
+        }
+    }
+  }
+}
+

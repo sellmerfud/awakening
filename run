@@ -1,0 +1,3 @@
+#! /bin/bash
+
+scala -cp classes/ awakening.LabyrinthAwakening

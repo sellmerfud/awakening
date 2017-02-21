@@ -1,0 +1,3 @@
+#! /bin/bash
+
+fsc -d classes src/scala/awakening/LabyrinthAwakening.scala
