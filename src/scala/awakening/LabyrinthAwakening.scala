@@ -821,26 +821,31 @@ object LabyrinthAwakening {
     }
     val normalizedAbbreviations = for ((a, v) <- abbreviations) yield (a.toLowerCase, v)  
     val normalized = (options ++ abbreviations.keys) map (_.toLowerCase)
-    (normalized.distinct filter (_ startsWith s.toLowerCase)) match {
-      case Seq() =>
-        println(s"'$s' is not recognized. Must be one of:\n${orList(displayList)}")
-        None
-      case Seq(v)  =>
-        normalizedAbbreviations.get(v) match {
-          case Some(opt) => Some(opt)
-          case None      => Some(options(normalized.indexOf(v)))
-        }
-        
-      case many if many exists (_ == s) =>
-        normalizedAbbreviations.get(s) match {
-          case Some(opt) => Some(opt)
-          case None      => Some(options(normalized.indexOf(s)))
-        }
-      
-      case ambiguous =>
-        println(s"'$s' is ambiguous. (${orList(ambiguous)})")
-        None
+    if (s == "?") {
+      println(s"Must be one of:\n${orList(displayList)}")
+      None
     }
+    else
+      (normalized.distinct filter (_ startsWith s.toLowerCase)) match {
+        case Seq() =>
+          println(s"'$s' is not recognized. Must be one of:\n${orList(displayList)}")
+          None
+        case Seq(v)  =>
+          normalizedAbbreviations.get(v) match {
+            case Some(opt) => Some(opt)
+            case None      => Some(options(normalized.indexOf(v)))
+          }
+        
+        case many if many exists (_ == s) =>
+          normalizedAbbreviations.get(s) match {
+            case Some(opt) => Some(opt)
+            case None      => Some(options(normalized.indexOf(s)))
+          }
+      
+        case ambiguous =>
+          println(s"'$s' is ambiguous. (${orList(ambiguous)})")
+          None
+      }
   }
     
   def getOneOf(prompt: String, options: Seq[Any], initial: Option[String] = None, 
@@ -1511,12 +1516,12 @@ object LabyrinthAwakening {
       new Command("help",     "List available commands."),
       new Command("us",       "Enter a card number for a US card play."),
       new Command("jihadist", "Enter a card number for a Jihadist card play."),
-      new Command("summary",  "Display a summary of the current game status."),
-      new Command("status",   "Display the current game status.\n" +
-                              "  'status'            to display the entire game status.\n" +
-                              "  'status <country>'  to display the status of a single country.\n" +
-                              "  'status caliphate'  to the countries making up the Caliphate.\n" +
-                              "  'status civil wars' to show the countries in civil war."),
+      new Command("show",     "Display the current game state.\n" +
+                              "  show summary    - summary of the game state.\n" +
+                              "  show <country>  - state of a single country.\n" +
+                              "  show caliphate  - countries making up the Caliphate.\n" +
+                              "  show civil wars - countries in civil war.\n" +
+                              "  show all        - entire game state.\n"),
       new Command("adjust",   "Adjust game settings.  No rule checking is applied."),
       new Command("history",  "Display game history.\nType 'history save' to save as history.txt."),
       new Command("undo",     "Roll back to the last card played."),
@@ -1538,8 +1543,7 @@ object LabyrinthAwakening {
         case "help"     => matchOne(param.get, CmdNames) foreach showCommandHelp
         case "us"       => usCardPlay(param)
         case "jihadist" => jihadistCardPlay(param)
-        case "summary"  => printSummary(gameState.scoringSummary); printSummary(gameState.statusSummary)
-        case "status"   => showGameStatus(param)
+        case "show"     => showGameState(param)
         case "adjust"   => // adjustSettings(param)
         case "history"  => println("Not implemented.")
         case "undo"     => println("Not implemented.")
@@ -1547,53 +1551,49 @@ object LabyrinthAwakening {
         case cmd        => println(s"Internal error: Command '$cmd' is not valid")
       }
     }
-    
   }
   
-  // If param is present, it can be:
-  //   caliphate
-  //   civil wars
-  //   <country name>
-  //
-  // If param is not present, we display the status of the entire game.  
-  //
-  def showGameStatus(param: Option[String]): Unit = {
-    if (param.isEmpty) {
-      def printCountries(title: String, countries: List[String]): Unit = {
-        println()
-        println(title)
-        println(separator())
-        if (countries.isEmpty)
-          println("None")
-        else
-          for (name <- countries; line <- gameState.countrySummary(name))
-            println(line)
-      }
-      
-      printSummary(gameState.scenarioSummary)
-      printCountries("Muslim Countries with Good Governance", (gameState.muslim filter(_.isGood) map (_.name)).toList.sorted)
-      printCountries("Muslim Countries with Fair Governance", (gameState.muslim filter(_.isFair) map (_.name)).toList.sorted)
-      printCountries("Muslim Countries with Poor Governance", (gameState.muslim filter(_.isPoor) map (_.name)).toList.sorted)
-      printCountries("Muslim Countries under Islamic Rule",   (gameState.muslim filter(_.isIslamic) map (_.name)).toList.sorted)
-      printCountries("Untested Muslim Countries with Data",   (gameState.muslim filter(_.untestedWithData) map (_.name)).toList.sorted)
-      printCountries("Non-Muslim Countries with Hard Posture",(gameState.nonMuslim filter (_.isHard) map (_.name)).toList.sorted)
-      printCountries("Non-Muslim Countries with Soft Posture",(gameState.nonMuslim filter (_.isSoft) map (_.name)).toList.sorted)
-      val iranSpecial = gameState.nonMuslim find (_.iranSpecialCase) map (_.name)
-      if (iranSpecial.nonEmpty)
-        printCountries("Iran Special Case", iranSpecial.toList)
-      printSummary(gameState.scoringSummary)
-      printSummary(gameState.statusSummary)
-      printSummary(gameState.civilWarSummary)
-      printSummary(gameState.caliphateSummary)
+  
+  
+  def showGameState(param: Option[String]): Unit = {
+    val options = "summary" :: "caliphate" :: "civil wars" :: (gameState.countries map (_.name)).sorted ::: List("all")
+    getOneOf("Show: ", options, param, true, CountryAbbreviations) foreach {
+      case "summary"    => printSummary(gameState.scoringSummary); printSummary(gameState.statusSummary)
+      case "caliphate"  => printSummary(gameState.caliphateSummary)
+      case "civil wars" => printSummary(gameState.civilWarSummary)
+      case "all"        => printGameState()
+      case name         => printSummary(gameState.countrySummary(name))
     }
-    else {
-      val names = "caliphate" :: "civil wars" :: (gameState.countries map (_.name)).sorted
-      getOneOf("Enter status target: ", names, param, true, CountryAbbreviations) foreach {
-        case "caliphate"  => printSummary(gameState.caliphateSummary)
-        case "civil wars" => printSummary(gameState.civilWarSummary)
-        case name         => printSummary(gameState.countrySummary(name))
-      }
+  }
+  
+  // Print the entire game state to stdout
+  def printGameState(): Unit = {
+    def printCountries(title: String, countries: List[String]): Unit = {
+      println()
+      println(title)
+      println(separator())
+      if (countries.isEmpty)
+        println("None")
+      else
+        for (name <- countries; line <- gameState.countrySummary(name))
+          println(line)
     }
+    
+    printSummary(gameState.scenarioSummary)
+    printCountries("Muslim Countries with Good Governance", (gameState.muslim filter(_.isGood) map (_.name)).toList.sorted)
+    printCountries("Muslim Countries with Fair Governance", (gameState.muslim filter(_.isFair) map (_.name)).toList.sorted)
+    printCountries("Muslim Countries with Poor Governance", (gameState.muslim filter(_.isPoor) map (_.name)).toList.sorted)
+    printCountries("Muslim Countries under Islamic Rule",   (gameState.muslim filter(_.isIslamic) map (_.name)).toList.sorted)
+    printCountries("Untested Muslim Countries with Data",   (gameState.muslim filter(_.untestedWithData) map (_.name)).toList.sorted)
+    printCountries("Non-Muslim Countries with Hard Posture",(gameState.nonMuslim filter (_.isHard) map (_.name)).toList.sorted)
+    printCountries("Non-Muslim Countries with Soft Posture",(gameState.nonMuslim filter (_.isSoft) map (_.name)).toList.sorted)
+    val iranSpecial = gameState.nonMuslim find (_.iranSpecialCase) map (_.name)
+    if (iranSpecial.nonEmpty)
+      printCountries("Iran Special Case", iranSpecial.toList)
+    printSummary(gameState.scoringSummary)
+    printSummary(gameState.statusSummary)
+    printSummary(gameState.civilWarSummary)
+    printSummary(gameState.caliphateSummary)
   }
   
   def usCardPlay(number: Option[String]): Unit = {
