@@ -260,8 +260,9 @@ object LabyrinthAwakening {
   }
   
   val GlobalMarkers = List(
-    "???", "???"
-  )
+    "NATO", "Training Camps", "Bin Ladin", "Civil War", "Facebook", "Swedish Cartoons",
+    "Iran Oil Crisis", "Arab Spring", "Oil Price Spike"
+  ).sorted
   
   val CountryMarkers = List(
     "NATO", "Training Camps"
@@ -418,6 +419,7 @@ object LabyrinthAwakening {
     val funding: Int
     val availablePlots: List[Int]     // 1, 2, 3, 4 == WMD
     val countries: List[Country]
+    val markers: List[String]
   }
   
   class Awakening2010 extends Scenario {
@@ -474,6 +476,7 @@ object LabyrinthAwakening {
                     regimeChange = TanRegimeChange),
       MuslimCountry(Mali, resources = 1)
     )
+    val markers = List.empty[String]
   }
   
   case class GameState(
@@ -485,6 +488,7 @@ object LabyrinthAwakening {
     usPosture: String,
     funding: Int,
     countries: List[Country],
+    markers: List[String],
     availablePlots: List[Int] = 1 :: 1 :: 1 :: 2 :: 2 :: 3 :: Nil,
     history: Vector[String] = Vector.empty,
     offMapTroops: Int = 0,
@@ -492,7 +496,6 @@ object LabyrinthAwakening {
     jihadistReserves: Int = 0,
     oilPriceSpikes: Int = 0,
     resolvedPlots: List[Int] = Nil,
-    markers: List[String] = Nil,
     lapsing: List[String] = Nil,  // Maybe a list of cards or card numbers?
     firstPlot: Option[String] = None
   ) {
@@ -536,15 +539,15 @@ object LabyrinthAwakening {
       b += f"US posture      : $usPosture | World posture    : ${worldPostureDisplay}"
       b += f"US prestige     : $prestige%2d   | Jihadist funding : $funding%2d"
       b += f"US reserves     : $usReserves%2d   | Jihadist reserves: $jihadistReserves%2d"
-      b += f"Troops on track : $troopsAvailable%2d   | Cells on track   : $cellsOnTrack%2d"
-      b += f"Militia on track: $militiaAvailable%2d"
-      b += s"Markers         : ${if (markers.isEmpty) "None" else markers.mkString(", ")}"
-      b += s"Lapsing         : ${if (lapsing.isEmpty) "None" else lapsing.mkString(", ")}"
-      b += s"1st plot        : ${if (firstPlot.isEmpty) "None" else firstPlot.get}"
+      b += f"Troops on track : $troopsAvailable%2d   | Troops off map   : $offMapTroops%2d"
+      b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track : $militiaAvailable%2d"
+      b += s"Markers         : ${if (markers.isEmpty) "none" else markers.mkString(", ")}"
+      b += s"Lapsing         : ${if (lapsing.isEmpty) "none" else lapsing.mkString(", ")}"
+      b += s"1st plot        : ${if (firstPlot.isEmpty) "none" else firstPlot.get}"
       b += s"Resloved plots  : ${plotsDisplay(resolvedPlots, Jihadist)}"
       b += s"Available plots : ${plotsDisplay(availablePlots, humanRole)}"
       if (activePlots.isEmpty)
-        b += s"Active plots    : None"
+        b += s"Active plots    : none"
       else {
         b += s"Active plots"
         val fmt = "  %%-%ds: %%s".format(activePlots.map(_.name.length).max)
@@ -811,7 +814,8 @@ object LabyrinthAwakening {
       scenario.prestige,
       scenario.usPosture,
       scenario.funding,
-      scenario.countries)
+      scenario.countries,
+      scenario.markers.sorted)
   
   
   // Global variables
@@ -1166,10 +1170,43 @@ object LabyrinthAwakening {
   }
   
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
-    log(s"$name adjusted from $oldValue to $newValue")
+    def normalize(x: Any) = if (x.toString.trim == "") "<none>" else x.toString.trim
+    log(s"$name adjusted from ${normalize(oldValue)} to ${normalize(newValue)}")
   }
   
   def separator(length: Int = 52, char: Char = '-'): String = char.toString * length
+
+  // Sorts a list column wise.  Returns a list of rows where
+  // eash row is a string with the items of that row lined up
+  // with a minimum of two spaces separating the columns.
+  def columnFormat(list: List[String], numCols: Int): Seq[String] = {
+    def padLeft(s: String, width: Int) = s + (" " * (width - s.length))
+    val numRows = (list.size + numCols - 1) / numCols
+    def colsInRow(row: Int) = {
+      val mod = list.size % numCols
+      if (mod == 0 || row < numRows - 1) numCols else mod
+    }
+    val rows      = Array.fill(numRows)(new ListBuffer[String])
+    val colWidths = Array.fill(numCols)(0)
+    var (row, col) = (0, 0)
+    for (entry <- list.sorted) {
+      rows(row) += entry
+      colWidths(col) = colWidths(col) max entry.length
+      if (row + 1 == numRows || col >= colsInRow(row + 1) ) {
+        row = 0; col += 1
+      }
+      else
+        row += 1
+    }
+    
+    rows map { entries =>
+      (entries.toList.zipWithIndex map { case (entry, col) => 
+        padLeft(entry, colWidths(col))
+      }).mkString("  ")
+    }
+  }
+  
+    
 
   def printSummary(summary: Seq[String]): Unit = {
     println()
@@ -1563,14 +1600,15 @@ object LabyrinthAwakening {
                                 |  show civil wars - countries in civil war
                                 |  show <country>  - state of a single country""".stripMargin),
       new Command("adjust",   """Adjust game settings <Minimal rule checking is applied>
-                                |  adjust prestige   - US prestige level
-                                |  adjust funding    - Jihadist funding level
-                                |  adjust difficulty - Jihadist ideology/US resolve
-                                |  adjust lapsing    - Current lapsing events
-                                |  adjust markers    - Current global event markers
-                                |  adjust reserves   - US and/or Jihadist reserves
-                                |  adjust plots      - Available/resolved plots
-                                |  adjust <country>  - Country specific settings""".stripMargin),
+                                |  adjust prestige      - US prestige level
+                                |  adjust funding       - Jihadist funding level
+                                |  adjust difficulty    - Jihadist ideology/US resolve
+                                |  adjust lapsing       - Current lapsing events
+                                |  adjust markers       - Current global event markers
+                                |  adjust reserves      - US and/or Jihadist reserves
+                                |  adjust plots         - Available/resolved plots
+                                |  adjust offmap troops - Number of troops in off map box.
+                                |  adjust <country>     - Country specific settings""".stripMargin),
       new Command("history",  """Display game history"""),
       new Command("undo",     """Roll back to the last card played"""),
       new Command("rollback", """Roll back to the start of any previous turn in the game""")
@@ -1623,7 +1661,7 @@ object LabyrinthAwakening {
       println(title)
       println(separator())
       if (countries.isEmpty)
-        println("None")
+        println("none")
       else
         for (name <- countries; line <- game.countrySummary(name))
           println(line)
@@ -1657,7 +1695,7 @@ object LabyrinthAwakening {
   
   def adjustSettings(param: Option[String]): Unit = {
     val options = "prestige" ::"funding" :: "difficulty" :: "lapsing" :: "markers" ::
-                  "reserves" :: "plots" :: (game.countries map (_.name)).sorted
+                  "reserves" :: "plots" :: "offmap troops" :: (game.countries map (_.name)).sorted
     getOneOf("Adjust: ", options, param, true, CountryAbbreviations) foreach {
       case "prestige"   =>
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
@@ -1669,12 +1707,18 @@ object LabyrinthAwakening {
           logAdjustment("Prestige", game.funding, value)
           game = game.copy(funding = value)
         }
-      case "difficulty" => adjustDifficulty()
-      case "lapsing"    => adjustLapsing()
-      case "markers"    => adjustMarkers()
-      case "reserves"   => adjustReserves()
-      case "plots"      => adjustPlots()
-      case name         => adjustCountry(name)
+      case "offmap troops" =>
+        adjustInt("Offmap troops", game.offMapTroops, 0 to (game.offMapTroops + game.troopsAvailable)) foreach { value =>
+          logAdjustment("Offmap troops", game.offMapTroops, value)
+          game = game.copy(offMapTroops = value)
+        }
+      
+      case "difficulty"    => adjustDifficulty()
+      case "lapsing"       => adjustLapsing()
+      case "markers"       => adjustMarkers()
+      case "reserves"      => adjustReserves()
+      case "plots"         => adjustPlots()
+      case name            => adjustCountry(name)
     }
   }
   
@@ -1760,8 +1804,40 @@ object LabyrinthAwakening {
     println("Not implemented yet")
   }
   
+    
   def adjustMarkers(): Unit = {
-    println("Not implemented yet")
+    // GlobalMarkers
+    var inPlay = game.markers
+    def available = GlobalMarkers filterNot inPlay.contains
+    def showColums(xs: List[String]): Unit = {
+      if (xs.isEmpty) println("none")
+      else columnFormat(xs, 4) foreach println
+    }
+    def getNextResponse(): Unit = {
+      println()
+      println("Global markers that are currently in play:")
+      showColums(inPlay)
+      println()
+      println("Global markers that are out of play:")
+      showColums(available)
+      println()
+      println("Enter a marker name to move it between in play and out of play.")
+      getOneOf("Marker: ", GlobalMarkers) match {
+        case None =>
+        case Some(name) if inPlay contains name =>
+          inPlay = inPlay filterNot(_ == name)
+          getNextResponse()
+        case Some(name) =>
+          inPlay = name :: inPlay
+          getNextResponse()
+      }
+    }
+    getNextResponse()
+    inPlay = inPlay.sorted
+    if (inPlay != game.markers) {
+      logAdjustment("Global Markers", game.markers.mkString(", "), inPlay.mkString(", "))
+      game = game.copy(markers = inPlay)
+    }  
   }
   
   def adjustPlots(): Unit = {
@@ -1771,8 +1847,7 @@ object LabyrinthAwakening {
   def adjustCountry(name: String): Unit = {
     println("Not implemented yet")
   }
-  
-  
+    
   def cmdSaveReserves(player: Role, ops: Int): Unit = {
     player match {
       case US =>
