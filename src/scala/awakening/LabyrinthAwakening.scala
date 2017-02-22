@@ -159,12 +159,20 @@ object LabyrinthAwakening {
   val Fair               = 2
   val Poor               = 3
   val IslamistRule       = 4
-  val GovDisplay = Map(
+  
+  val govToString = Map(
     GovernanceUntested -> "Untested",
     Good               -> "Good",
     Fair               -> "Fair",
     Poor               -> "Poor",
     IslamistRule       -> "Islamist Rule")
+    
+  val govFromString = Map(
+   "Untested"      -> GovernanceUntested,
+   "Good"          -> Good,
+   "Fair"          -> Fair,
+   "Poor"          -> Poor,
+   "Islamist Rule" -> IslamistRule)
   
   val Ally      = "Ally"
   val Neutral   = "Neutral"
@@ -574,31 +582,39 @@ object LabyrinthAwakening {
       b.toList
     }
     
-    def countrySummary(name: String): Seq[String] = {
+    // If show all is false, then some attriubtes will not be displayed
+    // if they have value of zero.
+    def countrySummary(name: String, showAll: Boolean = false): Seq[String] = {
       val b = new ListBuffer[String]
       val items = new ListBuffer[String]
       def item(num: Int, label: String, pluralize: Boolean = true): Unit = {
-        if (num > 0)
+        if (showAll || num > 0)
           items += s"$num $label${if (num == 1 || !pluralize) "" else "s"}"
       }
       def addItems(): Unit = if (items.nonEmpty) b += s"  ${items mkString ", "}"
+      def markersString(markers: List[String]): String = if (markers.isEmpty)
+        "none"
+      else
+        markers mkString ", "
 
       getCountry(name) match {
         case n: NonMuslimCountry =>
           val posture = if (n.iranSpecialCase) "" else s", ${n.posture}"
-          b += s"$name -- ${GovDisplay(n.governance)}$posture"
+          b += s"$name -- ${govToString(n.governance)}$posture"
           item(n.activeCells, "Active cell")
           item(n.sleeperCells, "Sleeper cell")
           if (n.hasCadre)
             items += "Cadre marker"
+          else if (showAll)
+            items += "No Cadre marker"
           addItems()
-          if (n.hasPlots)
+          if (showAll || n.hasPlots)
             b += s"  Plots: ${plotsDisplay(n.plots, humanRole)}"
-          if (n.markers.size > 0)
-            b += s"  Markers: ${n.markers mkString ", "}"
+          if (showAll || n.markers.size > 0)
+            b += s"  Markers: ${markersString(n.markers)}"
 
         case m: MuslimCountry =>
-          val gov = if (m.unTested) "Untested" else s"${GovDisplay(m.governance)} ${m.alignment}"
+          val gov = if (m.unTested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
           val res = s"${m.resources} ${if (m.resources == 1) "resource" else "resources"}"
           val oil = if (m.oilProducer) ", Oil producer" else ""
           b += s"$name -- $gov, $res$oil"
@@ -606,6 +622,8 @@ object LabyrinthAwakening {
           item(m.sleeperCells, "Sleeper cell")
           if (m.hasCadre)
             items += "Cadre marker"
+          else if (showAll)
+            items += "No Cadre marker"
           item(m.troops, "Troop")
           item(m.militia, "Militia", pluralize = false)
           addItems()
@@ -616,22 +634,28 @@ object LabyrinthAwakening {
           item(-m.reaction, "Reaction marker")
           if (m.besiegedRegime)
             items += "Besieged regime"
+          else if (showAll)
+            items += "No Besieged regime"
           addItems()
             
           items.clear
-          if (m.inRegimeChange)
+          if (showAll || m.inRegimeChange)
             items += s"Regime Change (${m.regimeChange})"
           if (m.civilWar)
             items += "Civil War"
+          else if (showAll)
+            items += "No Civil War"
           if (m.caliphateCapital)
             items += "Caliphate Capital"
           else if (m.caliphateMember)
             items += "Caliphate member"
+          else if (showAll)
+            items += "Not Caliphate member"
           addItems()
-          if (m.hasPlots)
+          if (showAll || m.hasPlots)
             b += s"  Plots: ${plotsDisplay(m.plots, humanRole)}"
-          if (m.markers.size > 0)
-            b += s"  Markers: ${m.markers mkString ", "}"
+          if (showAll || m.markers.size > 0)
+            b += s"  Markers: ${markersString(m.markers)}"
       }
       b.toList
     }
@@ -919,6 +943,25 @@ object LabyrinthAwakening {
     }
     testResponse(initial)
   }
+  
+  @tailrec def askYorN(prompt: String): Boolean = {
+    def testResponse(r: String): Option[Boolean] = {
+      if (r == null)
+        None
+      else
+        r.toLowerCase match {
+          case "n" | "no"  => Some(false)
+          case "y" | "yes" => Some(true)
+          case _           => None
+        }
+    }
+    
+    testResponse(readLine(prompt)) match {
+      case Some(result) => result
+      case None         => askYorN(prompt)
+    }
+  }
+  
 
   
   def getCardNumber(prompt: String, initial: Option[Int] = None, allowNone: Boolean = true): Option[Int] = {
@@ -941,24 +984,6 @@ object LabyrinthAwakening {
       }
     }
     testResponse(initial map (_.toString))
-  }
-  
-  @tailrec def askYorN(prompt: String): Boolean = {
-    def testResponse(r: String): Option[Boolean] = {
-      if (r == null)
-        None
-      else
-        r.toLowerCase match {
-          case "n" | "no"  => Some(false)
-          case "y" | "yes" => Some(true)
-          case _           => None
-        }
-    }
-    
-    testResponse(readLine(prompt)) match {
-      case Some(result) => result
-      case None         => askYorN(prompt)
-    }
   }
   
   // Use the random Muslim table.
@@ -1005,7 +1030,7 @@ object LabyrinthAwakening {
         case m: MuslimCountry    =>
           val newGov = if (dieRoll < 5) Poor else Fair
           game = game.updateCountry(m.copy(governance = newGov))
-          log(s"${m.name} tested: ${GovDisplay(newGov)} Neutral")
+          log(s"${m.name} tested: ${govToString(newGov)} Neutral")
           
         case n: NonMuslimCountry =>
           val newPosture = if (dieRoll < 5) Soft else Hard
@@ -1167,7 +1192,7 @@ object LabyrinthAwakening {
         else {
           val caliphateCapital = m.caliphateCapital
           val improved = m.improveGovernance()
-          log(s"Success, improve governance of ${improved.name} to ${GovDisplay(improved.governance)}")
+          log(s"Success, improve governance of ${improved.name} to ${govToString(improved.governance)}")
           // TODO: perhaps log that civil war, awakening, reaction, aid, etc should be removed if improved to Good ?
           game = game.updateCountry(improved)
           
@@ -1200,6 +1225,10 @@ object LabyrinthAwakening {
     value
   }
   
+  def pause() {
+      readLine("Continue ↩︎ ")
+  }
+  
   var indentation = 0
   
   // Add a two spaces to the current indent.
@@ -1216,13 +1245,16 @@ object LabyrinthAwakening {
   
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
     def normalize(value: Any) = value match {
-      case None => "<none>"
+      case None => "none"
       case Some(x) => x.toString.trim
-      case x if x.toString.trim == "" => "<none>"
+      case x if x.toString.trim == "" => "none"
       case x => x.toString.trim
     }
-    log(s"$name adjusted from ${normalize(oldValue)} to ${normalize(newValue)}")
+    log(s"$name adjusted from '${normalize(oldValue)}' to '${normalize(newValue)}'")
   }
+    
+  def logAdjustment(countryName: String, attributeName: String, oldValue: Any, newValue: Any): Unit =
+    logAdjustment(s"$countryName: $attributeName", oldValue, newValue)
   
   def separator(length: Int = 52, char: Char = '-'): String = char.toString * length
 
@@ -1313,7 +1345,7 @@ object LabyrinthAwakening {
               game = game.updateCountry(improved)
               if (improved.isGood)
                 convergers = Converger(name, awakening = true) :: convergers
-              log(s"${name}: improve governance to ${GovDisplay(improved.governance)}")
+              log(s"${name}: improve governance to ${govToString(improved.governance)}")
             }
             else {
               val newAlign = if (m.isNeutral) Ally else Neutral
@@ -1328,7 +1360,7 @@ object LabyrinthAwakening {
               game = game.updateCountry(worsened)
               if (worsened.isIslamic)
                 convergers = Converger(name, awakening = false) :: convergers
-              log(s"${name}: degrade governance to ${GovDisplay(worsened.governance)}")
+              log(s"${name}: degrade governance to ${govToString(worsened.governance)}")
             }
             else {
               val newAlign = if (m.isNeutral) Adversary else Neutral
@@ -1467,7 +1499,7 @@ object LabyrinthAwakening {
               if (afterLosses.isAdversary) {
                 val worsened = afterLosses.worsenGovernance()
                 game = game.updateCountry(worsened)
-                log(s"${worsened.name}: degrade governance to ${GovDisplay(worsened.governance)}")
+                log(s"${worsened.name}: degrade governance to ${govToString(worsened.governance)}")
                 if (worsened.isIslamic)
                   performConvergence(forCountry = worsened.name, awakening = false)
               }
@@ -1482,7 +1514,7 @@ object LabyrinthAwakening {
               if (afterLosses.isAlly) {
                 val improved = afterLosses.improveGovernance()
                 game = game.updateCountry(improved)
-                log(s"${improved.name}: improve governance to ${GovDisplay(improved.governance)}")
+                log(s"${improved.name}: improve governance to ${govToString(improved.governance)}")
                 if (improved.isGood)
                   performConvergence(forCountry = improved.name, awakening = true)
               }
@@ -2028,9 +2060,323 @@ object LabyrinthAwakening {
   }
   
   def adjustCountry(name: String): Unit = {
-    println("Not implemented yet")
+    @tailrec def getNextResponse(): Unit = {
+      println()
+      println(separator())
+      game.countrySummary(name, showAll = true) foreach println
+      println()
+        
+      if (game.isMuslim(name)) {
+        val choices = List(
+          "alignment", "governance", "active cells", "sleeper cells", "regime change",
+          "cadre", "troops", "militia", "aid", "awakening", "reaction",
+          "besieged regime", "civil war", "caliphate", "plots", "markers"
+        ).sorted
+        getOneOf("Attribute (? for list): ", choices) match {
+          case None        =>
+          case Some(attribute) =>
+            attribute match {
+              case "alignment"       => adjustAlignment(name)
+              case "governance"      => adjustGovernance(name)
+              case "active cells"    => adjustActiveCells(name)
+              case "sleeper cells"   => adjustSleeperCells(name)
+              case "cadre"           => adjustCadre(name)
+              case "troops"          => adjustTroops(name)
+              case "militia"         => adjustMilitia(name)
+              case "aid"             => adjustAid(name)
+              case "awakening"       => adjustAwakening(name)
+              case "reaction"        => adjustReaction(name)
+              case "besieged regime" => adjustBesiegedRegime(name)
+              case "regime change"   => adjustRegimeChange(name)
+              case "civil war"       => adjustCivilWar(name)
+              case "caliphate"       => adjustCaliphate(name)
+              case "plots"           => adJustCountryPlots(name)
+              case "markers"         => adjustCountryMarkers(name)
+            }
+            getNextResponse()
+        }
+      }
+      else { // Nonmuslim
+        val choices = List(
+          "posture", "active cells", "sleeper cells", "cadre", "plots", "markers"
+        ).sorted
+        getOneOf("Attribute (? for list): ", choices) match {
+          case None        =>
+          case Some(attribute) =>
+            attribute match {
+              case "posture"       => adjustPosture(name)
+              case "active cells"  => adjustActiveCells(name)
+              case "sleeper cells" => adjustSleeperCells(name)
+              case "cadre"         => adjustCadre(name)
+              case "plots"         => adJustCountryPlots(name)
+              case "markers"       => adjustCountryMarkers(name)
+            }
+            getNextResponse()
+        }
+      }
+    }
+    getNextResponse()
+  }
+  
+  def adjustPosture(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: MuslimCountry => throw new IllegalArgumentException(s"Cannot set posture of Muslim country: $name")
+      case n: NonMuslimCountry if n.iranSpecialCase =>
+        println("Iran is a special case that does not have a posture.")
+        pause()
+      case n: NonMuslimCountry =>
+        val choices = (PostureUntested::Soft::Hard::Nil) filterNot (_ == n.posture)
+        val prompt = s"New posture (${orList(choices)}): "
+        getOneOf(prompt, choices) foreach { newPosture =>
+          logAdjustment(n.name, "Prestige", n.posture, newPosture)
+          game = game.updateCountry(n.copy(posture = newPosture))
+        }
+    }
+  }
+  
+  def adjustAlignment(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot set alignment of non-Muslim country: $name")
+      case m: MuslimCountry if m.unTested =>
+        println(s"$name is untested. Set the governance first.")
+        pause()
+      case m: MuslimCountry =>
+        val choices = (Ally::Neutral::Adversary::Nil) filterNot (_ == m.alignment)
+        val prompt = s"New alignment (${orList(choices)}): "
+        getOneOf(prompt, choices) foreach { newAlignment =>
+          logAdjustment(m.name, "Alignment", m.alignment, newAlignment)
+          game = game.updateCountry(m.copy(alignment = newAlignment))
+        }
+    }
+  }
+
+  def adjustGovernance(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot set governance of non-Muslim country: $name")
+      case m: MuslimCountry =>
+        val choices = ((GovernanceUntested::Good::Fair::Poor::IslamistRule::Nil)
+                      filterNot (_ == m.governance)
+                      map govToString)
+        val prompt = s"New governance (${orList(choices)}): "
+        getOneOf(prompt, choices) map govFromString foreach { newGov =>
+          logAdjustment(m.name, "Governance", govToString(m.governance), govToString(newGov))
+          game = game.updateCountry(m.copy(governance = newGov, 
+                                           alignment  = if (m.unTested) Neutral else m.alignment))
+        }
+    }
+  }
+
+  def adjustActiveCells(name: String): Unit = {
+    val c = game.getCountry(name)
+    val maxCells = c.activeCells + game.cellsOnTrack + game.cellsInCamp
+    if (maxCells == 0) {
+      println("There a no cells available to add to this country.")
+      pause()
+    }
+    else 
+      adjustInt("Active cells", c.activeCells, 0 to maxCells) foreach { value =>
+        logAdjustment(c.name, "Active cells", c.activeCells, value)
+        c match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(activeCells = value))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(activeCells = value))
+        }
+      }
+  }
+  
+  
+  def adjustSleeperCells(name: String): Unit = {
+    val c = game.getCountry(name)
+    val maxCells = c.sleeperCells + game.cellsOnTrack + game.cellsInCamp
+    if (maxCells == 0) {
+      println("There a no cells available to add to this country.")
+      pause()
+    }
+    else 
+      adjustInt("Sleeper cells", c.sleeperCells, 0 to maxCells) foreach { value =>
+        logAdjustment(c.name, "Sleeper cells", c.sleeperCells, value)
+        c match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(sleeperCells = value))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(sleeperCells = value))
+        }
+      }
+  }
+  
+  def adjustCadre(name: String): Unit = {
+    val c = game.getCountry(name)
+    val newValue = !c.hasCadre
+    def display(v: Boolean) = if (v) "cadre" else "no cadre"
+    logAdjustment(c.name, "Cadre", display(c.hasCadre), display(newValue))
+    pause()
+    c match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = newValue))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = newValue))
+    }
   }
     
+  def adjustTroops(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add troops to non-Muslim country: $name")
+      case m: MuslimCountry =>
+        val maxTroops = m.troops + game.troopsAvailable
+        if (maxTroops == 0) {
+          println("There a no troops available to add to this country.")
+          pause()
+        }
+        else
+          adjustInt("Troops", m.troops, 0 to maxTroops) foreach { value =>
+            logAdjustment(m.name, "Troops", m.troops, value)
+            game = game.updateCountry(m.copy(troops = value))
+          }
+    }
+  }
+  
+  def adjustMilitia(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add militia to non-Muslim country: $name")
+      case m: MuslimCountry =>
+        val maxMilitia = m.militia + game.militiaAvailable
+        if (maxMilitia == 0) {
+          println("There a no troops available to add to this country.")
+          pause()
+        }
+        else
+          adjustInt("Militia", m.militia, 0 to maxMilitia) foreach { value =>
+            logAdjustment(m.name, "Militia", m.militia, value)
+            game = game.updateCountry(m.copy(militia = value))
+          }
+    }
+  }
+  
+  def adjustAid(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add aid to non-Muslim country: $name")
+      case m: MuslimCountry if m.isGood =>
+        println("Cannot add aid to a country with Good governance")
+        pause()
+      case m: MuslimCountry if m.isIslamic =>
+        println("Cannot add aid to a country under Islamist Rule")
+        pause()
+      case m: MuslimCountry =>
+        adjustInt("Aid", m.aidMarkers, 0 to 10) foreach { value =>
+          logAdjustment(m.name, "Aid", m.aidMarkers, value)
+          game = game.updateCountry(m.copy(aidMarkers = value))
+        }
+    }
+  }
+  
+  def adjustAwakening(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add awakening markers to non-Muslim country: $name")
+      case m: MuslimCountry if m.isGood =>
+        println("Cannot add awakening markers to a country with Good governance")
+        pause()
+      case m: MuslimCountry if m.isIslamic =>
+        println("Cannot add awakening markers to a country under Islamist Rule")
+        pause()
+      case m: MuslimCountry if m.civilWar =>
+        println("Cannot add awakening markers to a country in Civil War")
+        pause()
+      case m: MuslimCountry =>
+        adjustInt("Awakening markers", m.awakening, 0 to 10) foreach { value =>
+          logAdjustment(m.name, "Awakening markers", m.awakening, value)
+          game = game.updateCountry(m.copy(awakening = value))
+        }
+    }
+  }
+  
+  def adjustReaction(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add reaction markers to non-Muslim country: $name")
+      case m: MuslimCountry if m.isGood =>
+        println("Cannot add reaction markers to a country with Good governance")
+        pause()
+      case m: MuslimCountry if m.isIslamic =>
+        println("Cannot add reaction markers to a country under Islamist Rule")
+        pause()
+      case m: MuslimCountry if m.civilWar =>
+        println("Cannot add reaction markers to a country in Civil War")
+        pause()
+      case m: MuslimCountry =>
+        adjustInt("Reaction markers", -m.reaction, 0 to 10) foreach { value =>
+          logAdjustment(m.name, "Reaction markers", -m.reaction, value)
+          game = game.updateCountry(m.copy(reaction = -value))
+        }
+    }
+  }
+  
+  def adjustBesiegedRegime(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add besieged regime to non-Muslim country: $name")
+      case m: MuslimCountry if m.isGood =>
+        println("Cannot add besieged regime to a country with Good governance")
+        pause()
+      case m: MuslimCountry if m.isIslamic =>
+        println("Cannot add besieged regime to a country under Islamist Rule")
+        pause()
+      case m: MuslimCountry =>
+        val newValue = !m.besiegedRegime
+        def display(v: Boolean) = if (v) "besieged regime" else "no besieged regime"
+        logAdjustment(m.name, "Besieged regime", display(m.besiegedRegime), display(newValue))
+        pause()
+        game = game.updateCountry(m.copy(besiegedRegime = newValue))
+    }
+  }
+  
+  def adjustRegimeChange(name: String): Unit = {
+    
+  }
+  
+  def adjustCivilWar(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add Civil War to non-Muslim country: $name")
+      case m: MuslimCountry if m.isGood =>
+        println("Cannot add Civil War to a country with Good governance")
+        pause()
+      case m: MuslimCountry if m.isIslamic =>
+        println("Cannot add Civil War to a country under Islamist Rule")
+        pause()
+      case m: MuslimCountry =>
+        val newValue = !m.civilWar
+        val removeRegimeChange = (newValue && m.inRegimeChange)
+        val convertAwakening   = (newValue && m.awakening != 0)
+        val convertReaction   = (newValue && m.reaction != 0)
+        if (removeRegimeChange)
+          println("The regime change marker will be removed.")
+        if (convertAwakening)
+          println("The awakening markers will be replaced with militia.")
+        if (convertReaction)
+          println("The reaction markers will be replaced with sleeper cells.")
+        if (!(removeRegimeChange || convertAwakening || convertReaction) || askYorN(s"Do you wish continue (y/n)? ")) {
+          def display(v: Boolean) = if (v) "civil war" else "no civil war"
+          logAdjustment(m.name, "Civil War", display(m.civilWar), display(newValue))
+          var updated = m.copy(civilWar = newValue)
+          if (removeRegimeChange) {
+            logAdjustment(m.name, "Regime change", updated.regimeChange, NoRegimeChange)
+            updated = updated.copy(regimeChange = NoRegimeChange)
+          }
+          if (convertAwakening) {
+            val numMilitia = updated.militia + (updated.awakening min game.militiaAvailable)
+            logAdjustment(m.name, "Awakening markers", updated.awakening, 0)
+            logAdjustment(m.name, "Militia", updated.militia, numMilitia)
+            updated = updated.copy(awakening = 0, militia = numMilitia)
+          }
+          if (convertReaction) {
+            val numSleepers = updated.sleeperCells + (-updated.reaction min (game.cellsOnTrack + game.cellsInCamp))
+            logAdjustment(m.name, "Reaction markers", -updated.reaction, 0)
+            logAdjustment(m.name, "Sleeper cells", updated.sleeperCells, numSleepers)
+            updated = updated.copy(reaction = 0, sleeperCells = numSleepers)
+          }
+          game = game.updateCountry(updated)
+          pause()
+        }        
+    }
+  }
+  
+  def adjustCaliphate(name: String): Unit = ()
+  def adJustCountryPlots(name: String): Unit = ()
+  def adjustCountryMarkers(name: String): Unit = ()
+  
+  
   def cmdSaveReserves(player: Role, ops: Int): Unit = {
     player match {
       case US =>
