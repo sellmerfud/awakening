@@ -1217,6 +1217,7 @@ object LabyrinthAwakening {
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
     def normalize(value: Any) = value match {
       case None => "<none>"
+      case Some(x) => x.toString.trim
       case x if x.toString.trim == "" => "<none>"
       case x => x.toString.trim
     }
@@ -1679,7 +1680,7 @@ object LabyrinthAwakening {
         case "jihadist" => jihadistCardPlay(param)
         case "show"     => showGameState(param)
         case "adjust"   => adjustSettings(param)
-        case "history"  => println("Not implemented.")
+        case "history"  => game.history foreach println  // TODO: Allow > file.txt
         case "undo"     => println("Not implemented.")
         case "rollback" => println("Not implemented.")
         case cmd        => println(s"Internal error: Command '$cmd' is not valid")
@@ -1818,7 +1819,7 @@ object LabyrinthAwakening {
     // line difficulty and cannot be removed.
     val choices = List.range(1, 7) ::: (AllNames drop 1)
       
-    def getNextResponse(): Unit = {
+    @tailrec def getNextResponse(): Unit = {
       val current = s"Current $label: ${inEffect.mkString(", ")}"
       val help1 = "" :: current :: separator(current.length) :: 
                   s"Select a number for standard $label combinations" :: standard.toList
@@ -1833,11 +1834,11 @@ object LabyrinthAwakening {
         case Some(INT(x)) =>
           inEffect = AllNames take x.toInt
           getNextResponse()
+        case Some(name) if inEffect contains name =>
+          inEffect = inEffect filterNot (_ == name)
+          getNextResponse()
         case Some(name) =>
-          if (inEffect contains name)
-            inEffect = inEffect filterNot (_ == name)
-          else
-            inEffect = AllNames filter (n => (inEffect contains n) || n == name) // Maintain standard order.
+          inEffect = AllNames filter (n => (inEffect contains n) || n == name) // Maintain standard order.
           getNextResponse()
       }
     }
@@ -1852,7 +1853,7 @@ object LabyrinthAwakening {
   def adjustLapsing(): Unit = {
     var inPlay = game.lapsing
     def available = lapsingCardNumbers filterNot inPlay.contains
-    def getNextResponse(): Unit = {
+    @tailrec def getNextResponse(): Unit = {
       println()
       println("Lapsing events that are currently in play:")
       println(if (inPlay.isEmpty) "none" else cardNumsAndNames(inPlay.sorted))
@@ -1881,22 +1882,15 @@ object LabyrinthAwakening {
   
   def adjustFirstPlot(): Unit = {
     var inPlay = game.firstPlot
-    def getNextResponse(): Unit = {
-      println()
-      println(s"Current first plot card: ${inPlay map cardNumAndName getOrElse "none"}")
-      println()
-      println("Enter a card number to add or remove it as the first plot card.")
-      getCardNumber("Card #: ") match {
-        case None =>
-        case optNum if optNum == inPlay =>
-          inPlay = None
-          getNextResponse()
-        case optNum =>
-          inPlay = optNum
-          getNextResponse()
-      }
+    println()
+    println(s"Current first plot card: ${inPlay map cardNumAndName getOrElse "none"}")
+    println()
+    println("Enter a card number to add or remove it as the first plot card.")
+    getCardNumber("Card #: ") foreach {
+      case num if inPlay.exists(_ == num) => inPlay = None
+      case num                            => inPlay = Some(num)
     }
-    getNextResponse()
+    
     if (inPlay != game.firstPlot) {
       logAdjustment("First plot", game.firstPlot map cardNumAndName, inPlay map cardNumAndName)
       game = game.copy(firstPlot = inPlay)
@@ -1911,7 +1905,7 @@ object LabyrinthAwakening {
       if (xs.isEmpty) println("none")
       else columnFormat(xs, 4) foreach println
     }
-    def getNextResponse(): Unit = {
+    @tailrec def getNextResponse(): Unit = {
       println()
       println("Global markers that are currently in play:")
       showColums(inPlay)
