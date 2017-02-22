@@ -277,6 +277,23 @@ object LabyrinthAwakening {
   }
   
   
+  case class Card(number: Int, name: String) {
+    def numAndName = s"#$number $name"
+  }
+  
+  def entry(card: Card) = (card.number -> card)
+  
+  val Cards = Map(
+    entry(Card(1, "Facebook")),
+    entry(Card(2, "Bin Ladin")),
+    entry(Card(3, "Syrian Civil War"))
+  )
+  
+  def cardNumbers = Cards.keys.toList
+  def lapsingCardNumbers = List(1, 2, 3).sorted
+  def cardNumAndName(number: Int): String = Cards(number).numAndName
+  def cardNumsAndNames(xs: List[Int]): String = xs map cardNumAndName mkString ", "
+  
   sealed trait Country {
     val name: String
     val governance: Int
@@ -496,8 +513,8 @@ object LabyrinthAwakening {
     jihadistReserves: Int = 0,
     oilPriceSpikes: Int = 0,
     resolvedPlots: List[Int] = Nil,
-    lapsing: List[String] = Nil,  // Maybe a list of cards or card numbers?
-    firstPlot: Option[String] = None
+    lapsing: List[Int] = Nil,      // Card numbers
+    firstPlot: Option[Int] = None  // Card number
   ) {
     
     def botRole = if (humanRole == US) Jihadist else US
@@ -541,9 +558,9 @@ object LabyrinthAwakening {
       b += f"US reserves     : $usReserves%2d   | Jihadist reserves: $jihadistReserves%2d"
       b += f"Troops on track : $troopsAvailable%2d   | Troops off map   : $offMapTroops%2d"
       b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track : $militiaAvailable%2d"
-      b += s"Markers         : ${if (markers.isEmpty) "none" else markers.mkString(", ")}"
-      b += s"Lapsing         : ${if (lapsing.isEmpty) "none" else lapsing.mkString(", ")}"
-      b += s"1st plot        : ${if (firstPlot.isEmpty) "none" else firstPlot.get}"
+      b += s"Markers         : ${if (markers.isEmpty) "none" else markers mkString ", "}"
+      b += s"Lapsing         : ${if (lapsing.isEmpty) "none" else cardNumsAndNames(lapsing)}"
+      b += s"1st plot        : ${firstPlot map cardNumAndName getOrElse "none"}"
       b += s"Resloved plots  : ${plotsDisplay(resolvedPlots, Jihadist)}"
       b += s"Available plots : ${plotsDisplay(availablePlots, humanRole)}"
       if (activePlots.isEmpty)
@@ -564,7 +581,7 @@ object LabyrinthAwakening {
         if (num > 0)
           items += s"$num $label${if (num == 1 || !pluralize) "" else "s"}"
       }
-      def addItems(): Unit = if (items.nonEmpty) b += s"  ${items.mkString(", ")}"
+      def addItems(): Unit = if (items.nonEmpty) b += s"  ${items mkString ", "}"
 
       getCountry(name) match {
         case n: NonMuslimCountry =>
@@ -578,7 +595,7 @@ object LabyrinthAwakening {
           if (n.hasPlots)
             b += s"  Plots: ${plotsDisplay(n.plots, humanRole)}"
           if (n.markers.size > 0)
-            b += s"  Markers: ${n.markers.mkString(", ")}"
+            b += s"  Markers: ${n.markers mkString ", "}"
 
         case m: MuslimCountry =>
           val gov = if (m.unTested) "Untested" else s"${GovDisplay(m.governance)} ${m.alignment}"
@@ -614,7 +631,7 @@ object LabyrinthAwakening {
           if (m.hasPlots)
             b += s"  Plots: ${plotsDisplay(m.plots, humanRole)}"
           if (m.markers.size > 0)
-            b += s"  Markers: ${m.markers.mkString(", ")}"
+            b += s"  Markers: ${m.markers mkString ", "}"
       }
       b.toList
     }
@@ -642,7 +659,7 @@ object LabyrinthAwakening {
       if (civilWars.isEmpty)
         b += "There are no counties in civil war"
       else
-        b += (civilWars map (_.name)).mkString(", ")
+        b += civilWars map (_.name) mkString ", "
       b.toList
     }
     
@@ -902,6 +919,29 @@ object LabyrinthAwakening {
     }
     testResponse(initial)
   }
+
+  
+  def getCardNumber(prompt: String, initial: Option[Int] = None, allowNone: Boolean = true): Option[Int] = {
+    val INT = """(\d+)""".r
+    def checkNumber(input: String): Boolean = input match {
+      case INT(num) if cardNumbers contains num.toInt => true
+      case _ => 
+        println(s"'$input' is not a valid card number")
+        false
+    }
+    @tailrec def testResponse(response: Option[String]): Option[Int] = {
+      response filter checkNumber match {
+        case None =>
+          readLine(prompt) match {
+            case null | "" if allowNone => None
+            case null | ""              => testResponse(None)
+            case input                  => testResponse(Some(input))
+          }
+        case x => x map (_.toInt)
+      }
+    }
+    testResponse(initial map (_.toString))
+  }
   
   @tailrec def askYorN(prompt: String): Boolean = {
     def testResponse(r: String): Option[Boolean] = {
@@ -1154,6 +1194,11 @@ object LabyrinthAwakening {
         log(s"World Posture is now ${game.worldPostureDisplay}")
     }
   }
+
+  def inspect[T](name: String, value: T): T = {
+    println(s"DEBUG: $name == ${value.toString}")
+    value
+  }
   
   var indentation = 0
   
@@ -1170,7 +1215,11 @@ object LabyrinthAwakening {
   }
   
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
-    def normalize(x: Any) = if (x.toString.trim == "") "<none>" else x.toString.trim
+    def normalize(value: Any) = value match {
+      case None => "<none>"
+      case x if x.toString.trim == "" => "<none>"
+      case x => x.toString.trim
+    }
     log(s"$name adjusted from ${normalize(oldValue)} to ${normalize(newValue)}")
   }
   
@@ -1343,9 +1392,9 @@ object LabyrinthAwakening {
       game = game.updateCountry(updated)
       val b = new ListBuffer[String]
       if (troopsLost > 0)            b += s"$troopsLost troops"
-      if (troopMarkersLost.nonEmpty) b += troopMarkersLost.mkString(", ")
+      if (troopMarkersLost.nonEmpty) b += troopMarkersLost mkString ", "
       if (militiaLost > 0)           b += s"$militiaLost militia"
-      log(s"${m.name}: US attrition - remove ${b.mkString(", ")}")
+      log(s"${m.name}: US attrition - remove ${b mkString ", "}")
       hitsRemaining    
     }
   }
@@ -1381,7 +1430,7 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       if (activeLost > 0)            b += s"$activeLost active cells"
       if (sleepersLost > 0)           b += s"$sleepersLost sleeper cells"
-      log(s"${m.name}: Jihadist attrition - remove ${b.mkString(", ")}")
+      log(s"${m.name}: Jihadist attrition - remove ${b mkString ", "}")
       hitsRemaining    
     }
   }
@@ -1514,13 +1563,11 @@ object LabyrinthAwakening {
     }
     
     if (game.lapsing.nonEmpty) {
-      log("Discard the following lapsing events:")
-      for (event <- game.lapsing)
-        log(s"  - $event")
+      log(s"Discard the lapsing events: ${cardNumsAndNames(game.lapsing)}")
       game = game.copy(lapsing = Nil)
     }
-    if (game.firstPlot.nonEmpty) {
-      log(s"Discard the firstplot card: ${game.firstPlot.get}")
+    game.firstPlot foreach { num => 
+      log(s"Discard the firstplot card: ${cardNumAndName(num)}")
       game = game.copy(firstPlot = None)
     }
     
@@ -1604,6 +1651,7 @@ object LabyrinthAwakening {
                                 |  adjust funding       - Jihadist funding level
                                 |  adjust difficulty    - Jihadist ideology/US resolve
                                 |  adjust lapsing       - Current lapsing events
+                                |  adjust first plot    - Current first plot card
                                 |  adjust markers       - Current global event markers
                                 |  adjust reserves      - US and/or Jihadist reserves
                                 |  adjust plots         - Available/resolved plots
@@ -1694,7 +1742,7 @@ object LabyrinthAwakening {
   
   
   def adjustSettings(param: Option[String]): Unit = {
-    val options = "prestige" ::"funding" :: "difficulty" :: "lapsing" :: "markers" ::
+    val options = "prestige" ::"funding" :: "difficulty" :: "lapsing" :: "first plot" :: "markers" ::
                   "reserves" :: "plots" :: "offmap troops" :: (game.countries map (_.name)).sorted
     getOneOf("Adjust: ", options, param, true, CountryAbbreviations) foreach {
       case "prestige"   =>
@@ -1715,6 +1763,7 @@ object LabyrinthAwakening {
       
       case "difficulty"    => adjustDifficulty()
       case "lapsing"       => adjustLapsing()
+      case "first plot"    => adjustFirstPlot()
       case "markers"       => adjustMarkers()
       case "reserves"      => adjustReserves()
       case "plots"         => adjustPlots()
@@ -1801,12 +1850,61 @@ object LabyrinthAwakening {
   }
   
   def adjustLapsing(): Unit = {
-    println("Not implemented yet")
+    var inPlay = game.lapsing
+    def available = lapsingCardNumbers filterNot inPlay.contains
+    def getNextResponse(): Unit = {
+      println()
+      println("Lapsing events that are currently in play:")
+      println(if (inPlay.isEmpty) "none" else cardNumsAndNames(inPlay.sorted))
+      println()
+      println("Lapsing events that are out of play:")
+      println(if (available.isEmpty) "none" else cardNumsAndNames(available))
+      println()
+      println("Enter a card number to move it between in play and out of play.")
+      getOneOf("Card #: ", lapsingCardNumbers) map (_.toInt) match {
+        case None =>
+        case Some(num) if inPlay contains num =>
+          inPlay = inPlay filterNot(_ == num)
+          getNextResponse()
+        case Some(num) =>
+          inPlay = num :: inPlay
+          getNextResponse()
+      }
+    }
+    getNextResponse()
+    inPlay = inPlay.sorted
+    if (inPlay != game.lapsing) {
+      logAdjustment("Lapsing Events", cardNumsAndNames(game.lapsing), cardNumsAndNames(inPlay))
+      game = game.copy(lapsing = inPlay)
+    }  
+  }
+  
+  def adjustFirstPlot(): Unit = {
+    var inPlay = game.firstPlot
+    def getNextResponse(): Unit = {
+      println()
+      println(s"Current first plot card: ${inPlay map cardNumAndName getOrElse "none"}")
+      println()
+      println("Enter a card number to add or remove it as the first plot card.")
+      getCardNumber("Card #: ") match {
+        case None =>
+        case optNum if optNum == inPlay =>
+          inPlay = None
+          getNextResponse()
+        case optNum =>
+          inPlay = optNum
+          getNextResponse()
+      }
+    }
+    getNextResponse()
+    if (inPlay != game.firstPlot) {
+      logAdjustment("First plot", game.firstPlot map cardNumAndName, inPlay map cardNumAndName)
+      game = game.copy(firstPlot = inPlay)
+    }  
   }
   
     
   def adjustMarkers(): Unit = {
-    // GlobalMarkers
     var inPlay = game.markers
     def available = GlobalMarkers filterNot inPlay.contains
     def showColums(xs: List[String]): Unit = {
@@ -1840,6 +1938,8 @@ object LabyrinthAwakening {
     }  
   }
   
+  // Lists of available plots and resolved plots.
+  // Cannot select plots currently in countries.
   def adjustPlots(): Unit = {
     println("Not implemented yet")
   }
