@@ -1595,13 +1595,14 @@ object LabyrinthAwakening {
     
     // parse cmd line args -- to be done
     // prompt for scenario -- to be done
+    // prompt for bot's (jihadish ideology / us resolve) difficulty level. -- to be done
     val scenario = new Awakening2010
     // ask which side the user wishes to play -- to be done
-    val humanRole = US
-    // val humanRole = Jihadist
-    // prompt for bot's (jihadish ideology / us resolve) difficulty level. -- to be done
-    val botDifficulties = Muddled :: Coherent :: Attractive :: Nil
-
+    val (humanRole, botDifficulties) = if (false)
+      (US, Muddled :: Coherent :: Attractive :: Nil)
+    else
+      (Jihadist, OffGuard :: Competent :: Adept :: Nil)
+    
     game = initialGameState(scenario, humanRole, botDifficulties)
     
     logSummary(game.scenarioSummary)
@@ -1931,11 +1932,99 @@ object LabyrinthAwakening {
       game = game.copy(markers = inPlay)
     }  
   }
-  
-  // Lists of available plots and resolved plots.
-  // Cannot select plots currently in countries.
+
+  // If the human is the Jihadist, the all plots are visible.
+  // If the human is the US, then only resolved plots are visible.
   def adjustPlots(): Unit = {
-    println("Not implemented yet")
+    def showPlots(plots: Vector[Int], startIndex: Int): Unit = {
+      @tailrec def showNext(list: List[Int], index: Int): Unit = list match {
+        case Nil =>
+        case plot :: rest =>
+          println(s"$index) ${plotName(plot)}")
+          showNext(rest, index + 1)
+      }
+      
+      if (plots.isEmpty)
+        println("none")
+      else
+        showNext(plots.toList, startIndex)
+    }
+    
+    var available = game.availablePlots.toVector
+    var resolved  = game.resolvedPlots.toVector
+
+    if (game.humanRole == US) {
+      @tailrec def getNextResponse(): Unit = {
+        println()
+        println("Available plots:")
+        println(s"${available.size} hidden plots")
+        println()
+        println("Resolved plots:")
+        showPlots(resolved, 1)
+        println()
+        if (resolved.isEmpty)
+          println("Plots cannot be adusted at this time.")
+        else {
+          println("Select a resolved plot to make available")
+          getOneOf("Plot: ", 1 to (resolved.size )) map (_.toInt) match {
+            case None =>
+            case Some(num) =>
+              val index    = num - 1
+              val selected = resolved(index)
+              resolved  = resolved.patch(index, Vector.empty, 1)
+              available = available :+ selected
+              if (resolved.nonEmpty)
+                getNextResponse()
+          }
+        }
+      }
+      getNextResponse()
+    }
+    else { // humanRoll == Jihadist
+      @tailrec def getNextResponse(): Unit = {
+        println()
+        println("Available plots:")
+        showPlots(available, 1)
+        println()
+        println("Resolved plots:")
+        showPlots(resolved, available.size + 1)
+        println()
+        if (available.isEmpty && resolved.isEmpty)
+          println("Plots cannot be adusted at this time.")
+        else {
+          println("Select a plot to move between available and resolved")
+          getOneOf("Plot: ", 1 to (available.size + resolved.size )) map (_.toInt) match {
+            case None =>
+            case Some(num) if num <= available.size =>
+              val index    = num - 1
+              val selected = available(index)
+              available = available.patch(index, Vector.empty, 1)
+              resolved  = resolved :+ selected
+              getNextResponse()
+            
+            case Some(num) =>
+              val index    = num - available.size - 1
+              val selected = resolved(index)
+              resolved  = resolved.patch(index, Vector.empty, 1)
+              available = available :+ selected
+              getNextResponse()
+          }
+        }
+      }
+      getNextResponse()
+    }
+    val alist = available.toList.sorted
+    val rlist = resolved.toList.sorted
+    if (alist != game.availablePlots.sorted || rlist != game.resolvedPlots.sorted) {
+      logAdjustment("Available plots", 
+                    s"[${plotsDisplay(game.availablePlots, game.humanRole)}]",
+                    s"[${plotsDisplay(alist, game.humanRole)}]")
+      logAdjustment("Resolved plots", 
+                    s"[${plotsDisplay(game.resolvedPlots, Jihadist)}]",
+                    s"[${plotsDisplay(rlist, Jihadist)}]")
+      game = game.copy(availablePlots = alist, resolvedPlots = rlist)
+    }
+    
   }
   
   def adjustCountry(name: String): Unit = {
