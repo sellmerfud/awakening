@@ -84,10 +84,10 @@ object LabyrinthAwakening {
       case _ => throw new IllegalArgumentException(s"Invalid BotDifficulty name: $name")
     }
   }
-  sealed trait RegimeChange
-  case object NoRegimeChange    extends RegimeChange { override def toString() = "None" }
-  case object GreenRegimeChange extends RegimeChange { override def toString() = "Green" }
-  case object TanRegimeChange   extends RegimeChange { override def toString() = "Tan" }
+  
+  val NoRegimeChange    = "None"
+  val GreenRegimeChange = "Green"
+  val TanRegimeChange   = "Tan"
 
   val Canada            = "Canada"
   val UnitedStates      = "United States"
@@ -360,11 +360,10 @@ object LabyrinthAwakening {
     militia: Int                = 0,
     oilProducer: Boolean        = false,
     aidMarkers: Int             = 0,
-    regimeChange: RegimeChange  = NoRegimeChange,
+    regimeChange: String        = NoRegimeChange,
     besiegedRegime: Boolean     = false,
     civilWar: Boolean           = false,
     caliphateCapital: Boolean   = false,
-    caliphateMember: Boolean    = false,  // caliphateCapital is also a caliphateMember
     awakening: Int              = 0,  // 0, 1, 2, 3
     reaction: Int               = 0,  // 0, -1, -2, -3
     wmdCache: Int               = 0   // Number of WMD plots cached
@@ -385,7 +384,6 @@ object LabyrinthAwakening {
       inRegimeChange            ||
       besiegedRegime            ||
       civilWar                  ||
-      caliphateCandidate        ||
       caliphateCapital          ||
       awakening > 0             ||
       reaction < 0
@@ -405,26 +403,26 @@ object LabyrinthAwakening {
     def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
     
     def canTakeAwakeningOrReactionMarker = !(isGood || isIslamic || civilWar)
-    def caliphateCandidate = civilWar || isIslamic || regimeChange != NoRegimeChange
+    def caliphateCandidate = civilWar || isIslamic || inRegimeChange
 
     // Note: The caller is responsible for handling convergence and the possible
     //       displacement of the caliphate captial.
     def improveGovernance(): MuslimCountry = {
       assert(isAlly, s"improveGovernance() called on non-ally - ${name}")
-      assert(isGood, s"improveGovernance() called on Good country - ${name}")
+      assert(!isGood, s"improveGovernance() called on Good country - ${name}")
 
       if (governance == Poor)
         copy(governance = Fair, awakening = (awakening - 1) max 0)
       else
         copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
              militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false,
-             caliphateCapital = false, caliphateMember = false, civilWar = false)
+             caliphateCapital = false, civilWar = false)
     }
 
     // Note: The caller is repsonsible for adjusting funding, prestige,
     //       and for handling convergence
     def worsenGovernance(): MuslimCountry = {
-      assert(isIslamic, s"worsenGovernance() called on Islamist Rule country - ${name}")
+      assert(!isIslamic, s"worsenGovernance() called on Islamist Rule country - ${name}")
       if (governance == Good)
         copy(governance = Fair, aidMarkers = (aidMarkers - 1) max 0)
       else if (governance == Fair)
@@ -647,7 +645,7 @@ object LabyrinthAwakening {
             items += "No Civil War"
           if (m.caliphateCapital)
             items += "Caliphate Capital"
-          else if (m.caliphateMember)
+          else if (isCaliphateMember(m.name))
             items += "Caliphate member"
           else if (showAll)
             items += "Not Caliphate member"
@@ -664,10 +662,12 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += "Caliphate"
       b += separator()
-      muslim.find(_.caliphateCapital) match {
+      caliphateCapital match {
         case Some(capital) =>
-          for (c <- capital :: caliphateDaisyChain(capital.name).sortBy(_.name).filterNot(_.name == capital.name))
-            b += s"${c.name}${if (c.caliphateCapital) " (Capital)" else ""}"
+          // Add the capital first
+          b += s"${capital}  (Capital)"
+          for (member <- caliphateDaisyChain(capital).sorted.filterNot(_ == capital))
+            b += member
           log("Reminder: cells in Caliphate countries are always active")
         case None =>
           b += "There is no Caliphate declared"
@@ -713,14 +713,22 @@ object LabyrinthAwakening {
     def adjacentMuslims(name: String)     = getMuslims(getAdjacent(name) filter isMuslim)
     def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
   
+    def caliphateCapital: Option[String] = muslim find (_.caliphateCapital) map (_.name)
+    
+    def isCaliphateMember(name: String): Boolean = {
+      caliphateCapital match {
+        case None => false  // No Caliphate declared
+        case Some(capital) => caliphateDaisyChain(capital) contains name
+      }
+    }
+  
     // Return a list of countries comprising the daisy chain of caliphate candidates
     // that are adjacent to the given country.
-    // The result does NOT include the starting country!
-    def caliphateDaisyChain(name: String): List[MuslimCountry] = {
+    def caliphateDaisyChain(name: String): List[String] = {
       def adjacentCandidates(x: MuslimCountry) = adjacentMuslims(x.name).filter(_.caliphateCandidate)
-      @tailrec def tryNext(candidates: List[MuslimCountry], chain: List[String]): List[MuslimCountry] = {
+      @tailrec def tryNext(candidates: List[MuslimCountry], chain: List[String]): List[String] = {
         candidates match {
-          case Nil                                 => chain map getMuslim
+          case Nil                                 => chain
           case x :: xs  if (chain contains x.name) => tryNext(xs, chain)
           case x :: xs                             => tryNext(xs ::: adjacentCandidates(x), x.name :: chain)
         }
@@ -738,14 +746,13 @@ object LabyrinthAwakening {
       val capital = getMuslim(name);
       assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
       
-      // First clear all caliphate flags
-      val cleared = muslim.filter(_.caliphateCandidate).map(_.copy(caliphateMember = false, caliphateCapital = false))
-      val clearedState = this.updateCountries(cleared.toList)
-      val daisyChain = clearedState.caliphateDaisyChain(name).map { x =>
-        x.copy(
-          caliphateMember  = true,
-          caliphateCapital = x.name == name,
-          activeCells      = x.totalCells,
+      // First make sure there is no country marked as the capital
+      val clearedState = updateCountries(muslim.map(_.copy(caliphateCapital = false)).toList)
+      val daisyChain = clearedState.caliphateDaisyChain(name).map { memberName =>
+        val member = getMuslim(memberName)
+        member.copy(
+          caliphateCapital = member.name == name,
+          activeCells      = member.totalCells,  // All cells go active in caliphate members
           sleeperCells     = 0
         )
       }
@@ -1067,34 +1074,37 @@ object LabyrinthAwakening {
   }
   
   
-  // Used when selecting new caliphate capital
-  case class CaliphateSize(m: MuslimCountry) {
+  // Used when the Bot is selecting new caliphate capital
+  case class CaliphateCapitalCandidate(m: MuslimCountry) {
     val size = game.caliphateDaisyChain(m.name).size
   }
   
-  // Sort first by daisy chain size large to small,
+  // We define this outside of the CaliphateCapitalCandidateOrdering so it can
+  // easily be called by the displaceCaliphateCapital() method.
+  //
+  // Sort first by daisy chain size large to small
   // then by non Ally before Ally
   // then by worse governance before better governance
   // then by worst WoI drm before better WoI drm
-  implicit val CaliphateSizeOrdering = new Ordering[CaliphateSize] {
-    def compare(x: CaliphateSize, y: CaliphateSize) = {
-      if (x.size != y.size) 
-        y.size compare x.size  // y first because we want to sort large to small.
-      else if (x.m.isAlly != y.m.isAlly)
-        x.m.isAlly compare y.m.isAlly
-      else if (x.m.governance != y.m.governance)
-        y.m.governance compare x.m.governance   // y first so worse comes first
-      else {
-        val (xMod, yMod) = (modifyWoiRoll(1, x.m, false, true), modifyWoiRoll(1, y.m, false, true))
-        xMod compare yMod
-      }
+  def compareCapitalCandidates(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = {
+    if (x.size != y.size)                      y.size compare x.size         // y first: to sort large to small.
+    else if (x.m.isAlly != y.m.isAlly)         x.m.isAlly compare y.m.isAlly // x first: nonAlly before Ally
+    else if (x.m.governance != y.m.governance) y.m.governance compare x.m.governance // y first: because Good < Islamist Rule
+    else {
+      val (xMod, yMod) = (modifyWoiRoll(1, x.m, false, true), modifyWoiRoll(1, y.m, false, true))
+      xMod compare yMod
     }
   }
   
+  implicit val CaliphateCapitalCandidateOrdering = new Ordering[CaliphateCapitalCandidate] {
+    def compare(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = compareCapitalCandidates(x, y)
+  }
   
-  // Assumes that the game has already been updated to remove
-  // the caliphateCapital and caliphateMember status from the previous
-  // capital.
+  
+  // Important: Assumes that the game has already been updated, such that the
+  // previousCapital is no longer a caliphateCandidate! Othewise the caliphate
+  // size comparisons for the the new capital candidate would include the old
+  // capital which is wrong.
   def displaceCaliphateCapital(previousCapital: String): Unit = {
     // Caliphate capital displaced.  Attempt to move it to adjacent caliphate country.
     val adjacents = game.adjacentMuslims(previousCapital) filter (_.caliphateCandidate)
@@ -1116,13 +1126,16 @@ object LabyrinthAwakening {
         adjacents.head.name
       else if (game.humanRole == Jihadist) {
         val choices = adjacents map (_.name)
-        val newName = getOneOf(s"Choose new capital (${orList(choices)}): ", choices, None, false).get
-        adjacents.find(_.name == newName).get.name
+        getOneOf(s"Choose new capital (${orList(choices)}): ", choices, None, false).get
       }
       else {
-        val sorted = adjacents.map(CaliphateSize).sorted
-        val best = sorted.takeWhile(CaliphateSizeOrdering.compare(_, sorted.head) == 0) map (_.m)
-        shuffle(best).head.name
+        // The Bot pick the best candidate for the new capital base on
+        // the set of conditons outlined by compareCapitalCandidates().
+        // We sort the best to worst.  If more than one has the best score then 
+        // we choose randomly among them.
+        val sorted = adjacents.map(CaliphateCapitalCandidate).sorted
+        val best   = sorted.takeWhile(compareCapitalCandidates(_, sorted.head) == 0) map (_.m.name)
+        shuffle(best).head
       }
       game = game.setCaliphateCapital(newCapitalName).adjustFunding(-1).adjustPrestige(1)
       log(s"Move Caliphate capital to ${newCapitalName}")
@@ -1245,10 +1258,12 @@ object LabyrinthAwakening {
   
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
     def normalize(value: Any) = value match {
-      case None => "none"
-      case Some(x) => x.toString.trim
+      case None                       => "none"
+      case true                       => "yes"
+      case false                      => "no"
+      case Some(x)                    => x.toString.trim
       case x if x.toString.trim == "" => "none"
-      case x => x.toString.trim
+      case x                          => x.toString.trim
     }
     log(s"$name adjusted from '${normalize(oldValue)}' to '${normalize(newValue)}'")
   }
@@ -2089,7 +2104,7 @@ object LabyrinthAwakening {
               case "besieged regime" => adjustBesiegedRegime(name)
               case "regime change"   => adjustRegimeChange(name)
               case "civil war"       => adjustCivilWar(name)
-              case "caliphate"       => adjustCaliphate(name)
+              case "caliphate"       => adjustCaliphateCapital(name)
               case "plots"           => adJustCountryPlots(name)
               case "markers"         => adjustCountryMarkers(name)
             }
@@ -2128,7 +2143,7 @@ object LabyrinthAwakening {
         val choices = (PostureUntested::Soft::Hard::Nil) filterNot (_ == n.posture)
         val prompt = s"New posture (${orList(choices)}): "
         getOneOf(prompt, choices) foreach { newPosture =>
-          logAdjustment(n.name, "Prestige", n.posture, newPosture)
+          logAdjustment(name, "Prestige", n.posture, newPosture)
           game = game.updateCountry(n.copy(posture = newPosture))
         }
     }
@@ -2144,7 +2159,7 @@ object LabyrinthAwakening {
         val choices = (Ally::Neutral::Adversary::Nil) filterNot (_ == m.alignment)
         val prompt = s"New alignment (${orList(choices)}): "
         getOneOf(prompt, choices) foreach { newAlignment =>
-          logAdjustment(m.name, "Alignment", m.alignment, newAlignment)
+          logAdjustment(name, "Alignment", m.alignment, newAlignment)
           game = game.updateCountry(m.copy(alignment = newAlignment))
         }
     }
@@ -2159,9 +2174,67 @@ object LabyrinthAwakening {
                       map govToString)
         val prompt = s"New governance (${orList(choices)}): "
         getOneOf(prompt, choices) map govFromString foreach { newGov =>
-          logAdjustment(m.name, "Governance", govToString(m.governance), govToString(newGov))
-          game = game.updateCountry(m.copy(governance = newGov, 
-                                           alignment  = if (m.unTested) Neutral else m.alignment))
+          // When a country becomes Good or Islamist Rule, the country cannot contain:
+          //  aid, besiege regime, civil war, regime change, awakening, reaction
+          // Further when the country becomes Good, it cannot be the Calipate Capital.
+          val goodOrIslamist = newGov == Good || newGov == IslamistRule
+          val nixCapital      = newGov == IslamistRule && m.caliphateCapital
+          val nixAid          = goodOrIslamist && m.aidMarkers != 0
+          val nixBesieged     = goodOrIslamist && m.besiegedRegime
+          val nixCivilWar     = goodOrIslamist && m.civilWar
+          val nixRegimeChange = goodOrIslamist && m.inRegimeChange
+          val nixAwakening    = goodOrIslamist && m.awakening != 0
+          val nixReaction     = goodOrIslamist && m.reaction != 0
+          val anyWarnings     = nixCapital || nixAid || nixBesieged || nixCivilWar || 
+                                nixRegimeChange || nixAwakening || nixRegimeChange
+          def warn(condition: Boolean, message: String): Unit = if (condition) println(message)
+          warn(nixCapital, s"$name will no longer be the Caliphate Capital.\n" +
+                           "The Caliphate will be removed completely.")
+          warn(nixAid, "The aid markers will be removed.")
+          warn(nixBesieged, "The besieged regime marker will be removed.")
+          warn(nixCivilWar, "The civil war marker will be removed.")
+          warn(nixRegimeChange, "The regime change marker will be removed.")
+          warn(nixAwakening, "The awakening markers will be removed.")
+          warn(nixReaction, "The reaction markers will be removed.")
+          if (!anyWarnings || askYorN(s"Do you wish continue (y/n)? ")) {
+            var updated = m
+            if (m.unTested) {
+              logAdjustment(name, "Alignment", updated.alignment, Neutral)
+              updated = updated.copy(alignment = Neutral) 
+            }
+            logAdjustment(name, "Governance", govToString(updated.governance), govToString(newGov))
+            updated = updated.copy(governance = newGov)
+            if (nixCapital) {
+              log(s"$name lost Caliphate Capital status.  Caliphate no longer delcared.")
+              updated = updated.copy(caliphateCapital = false)
+            }
+            if (nixAid) {
+              logAdjustment(name, "Aid", updated.aidMarkers, 0)
+              updated = updated.copy(aidMarkers = 0)
+            }
+            if (nixBesieged) {
+              logAdjustment(name, "Besieged regime", updated.besiegedRegime, false)
+              updated = updated.copy(besiegedRegime = false)
+            }
+            if (nixCivilWar) {
+              logAdjustment(name, "Civil War", updated.civilWar, false)
+              updated = updated.copy(civilWar = false)
+            }
+            if (nixRegimeChange) {
+              logAdjustment(name, "Regime change", updated.regimeChange, NoRegimeChange)
+              updated = updated.copy(regimeChange = NoRegimeChange)
+            }
+            if (nixAwakening) {
+              logAdjustment(name, "Awakening markers", updated.awakening, 0)
+              updated = updated.copy(awakening = 0)
+            }
+            if (nixReaction) {
+              logAdjustment(name, "Reaction markers", updated.reaction, 0)
+              updated = updated.copy(reaction = 0)
+            }
+            game = game.updateCountry(updated)
+            pause()
+          }
         }
     }
   }
@@ -2187,7 +2260,12 @@ object LabyrinthAwakening {
   def adjustSleeperCells(name: String): Unit = {
     val c = game.getCountry(name)
     val maxCells = c.sleeperCells + game.cellsOnTrack + game.cellsInCamp
-    if (maxCells == 0) {
+    if (game.isCaliphateMember(name)) {
+      println(s"$name is a Caliphate member and therefore cannot have sleeper cells.")
+      pause()
+      
+    }
+    else if (maxCells == 0) {
       println("There a no cells available to add to this country.")
       pause()
     }
@@ -2204,8 +2282,7 @@ object LabyrinthAwakening {
   def adjustCadre(name: String): Unit = {
     val c = game.getCountry(name)
     val newValue = !c.hasCadre
-    def display(v: Boolean) = if (v) "cadre" else "no cadre"
-    logAdjustment(c.name, "Cadre", display(c.hasCadre), display(newValue))
+    logAdjustment(c.name, "Cadre", c.hasCadre, newValue)
     pause()
     c match {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = newValue))
@@ -2224,7 +2301,7 @@ object LabyrinthAwakening {
         }
         else
           adjustInt("Troops", m.troops, 0 to maxTroops) foreach { value =>
-            logAdjustment(m.name, "Troops", m.troops, value)
+            logAdjustment(name, "Troops", m.troops, value)
             game = game.updateCountry(m.copy(troops = value))
           }
     }
@@ -2241,7 +2318,7 @@ object LabyrinthAwakening {
         }
         else
           adjustInt("Militia", m.militia, 0 to maxMilitia) foreach { value =>
-            logAdjustment(m.name, "Militia", m.militia, value)
+            logAdjustment(name, "Militia", m.militia, value)
             game = game.updateCountry(m.copy(militia = value))
           }
     }
@@ -2258,7 +2335,7 @@ object LabyrinthAwakening {
         pause()
       case m: MuslimCountry =>
         adjustInt("Aid", m.aidMarkers, 0 to 10) foreach { value =>
-          logAdjustment(m.name, "Aid", m.aidMarkers, value)
+          logAdjustment(name, "Aid", m.aidMarkers, value)
           game = game.updateCountry(m.copy(aidMarkers = value))
         }
     }
@@ -2278,7 +2355,7 @@ object LabyrinthAwakening {
         pause()
       case m: MuslimCountry =>
         adjustInt("Awakening markers", m.awakening, 0 to 10) foreach { value =>
-          logAdjustment(m.name, "Awakening markers", m.awakening, value)
+          logAdjustment(name, "Awakening markers", m.awakening, value)
           game = game.updateCountry(m.copy(awakening = value))
         }
     }
@@ -2298,7 +2375,7 @@ object LabyrinthAwakening {
         pause()
       case m: MuslimCountry =>
         adjustInt("Reaction markers", -m.reaction, 0 to 10) foreach { value =>
-          logAdjustment(m.name, "Reaction markers", -m.reaction, value)
+          logAdjustment(name, "Reaction markers", -m.reaction, value)
           game = game.updateCountry(m.copy(reaction = -value))
         }
     }
@@ -2315,15 +2392,41 @@ object LabyrinthAwakening {
         pause()
       case m: MuslimCountry =>
         val newValue = !m.besiegedRegime
-        def display(v: Boolean) = if (v) "besieged regime" else "no besieged regime"
-        logAdjustment(m.name, "Besieged regime", display(m.besiegedRegime), display(newValue))
+        logAdjustment(name, "Besieged regime", m.besiegedRegime, newValue)
         pause()
         game = game.updateCountry(m.copy(besiegedRegime = newValue))
     }
   }
   
   def adjustRegimeChange(name: String): Unit = {
-    
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add Regime Change to non-Muslim country: $name")
+      case m: MuslimCountry if m.isGood =>
+        println("Cannot add Regime Change to a country with Good governance")
+        pause()
+      case m: MuslimCountry if m.isIslamic =>
+        println("Cannot add Regime Change to a country under Islamist Rule")
+        pause()
+      case m: MuslimCountry =>
+        val choices = (NoRegimeChange::GreenRegimeChange::TanRegimeChange::Nil) filterNot (_ == m.regimeChange)
+        val prompt = s"New regime change value (${orList(choices)}): "
+        getOneOf(prompt, choices) foreach { newValue =>
+          val nixCapital = newValue == NoRegimeChange && m.caliphateCapital
+          if (nixCapital)
+            println(s"$name will no longer be the Caliphate Capital.\n" +
+                     "The Caliphate will be removed completely.")
+          if (!nixCapital || askYorN(s"Do you wish continue (y/n)? ")) {
+            logAdjustment(name, "Regime change", m.regimeChange, newValue)
+            var updated = m.copy(regimeChange = newValue)
+            if (nixCapital) {
+              log(s"$name lost Caliphate Capital status.  Caliphate no longer delcared.")
+              updated = updated.copy(caliphateCapital = false)
+            }
+            game = game.updateCountry(updated)
+            pause()
+          }
+        }
+    }
   }
   
   def adjustCivilWar(name: String): Unit = {
@@ -2337,33 +2440,38 @@ object LabyrinthAwakening {
         pause()
       case m: MuslimCountry =>
         val newValue = !m.civilWar
-        val removeRegimeChange = (newValue && m.inRegimeChange)
-        val convertAwakening   = (newValue && m.awakening != 0)
-        val convertReaction   = (newValue && m.reaction != 0)
-        if (removeRegimeChange)
-          println("The regime change marker will be removed.")
-        if (convertAwakening)
-          println("The awakening markers will be replaced with militia.")
-        if (convertReaction)
-          println("The reaction markers will be replaced with sleeper cells.")
-        if (!(removeRegimeChange || convertAwakening || convertReaction) || askYorN(s"Do you wish continue (y/n)? ")) {
-          def display(v: Boolean) = if (v) "civil war" else "no civil war"
-          logAdjustment(m.name, "Civil War", display(m.civilWar), display(newValue))
+        val nixCapital       = !newValue && m.caliphateCapital
+        val nixRegimeChange  = newValue && m.inRegimeChange
+        val convertAwakening = newValue && m.awakening != 0
+        val convertReaction  = newValue && m.reaction != 0
+        val anyWarnings      = nixCapital || nixRegimeChange || convertAwakening || convertReaction
+        def warn(condition: Boolean, message: String): Unit = if (condition) println(message)
+        warn(nixCapital, s"$name will no longer be the Caliphate Capital.\n" +
+                         "The Caliphate will be removed completely.")
+        warn(nixRegimeChange, "The regime change marker will be removed.")
+        warn(convertAwakening, "The awakening markers will be replaced with militia.")
+        warn(convertReaction, "The reaction markers will be replaced with sleeper cells.")
+        if (!anyWarnings || askYorN(s"Do you wish continue (y/n)? ")) {
+          logAdjustment(name, "Civil War", m.civilWar, newValue)
           var updated = m.copy(civilWar = newValue)
-          if (removeRegimeChange) {
-            logAdjustment(m.name, "Regime change", updated.regimeChange, NoRegimeChange)
+          if (nixCapital) {
+            log(s"$name lost Caliphate Capital status.  Caliphate no longer delcared.")
+            updated = updated.copy(caliphateCapital = false)
+          }
+          if (nixRegimeChange) {
+            logAdjustment(name, "Regime change", updated.regimeChange, NoRegimeChange)
             updated = updated.copy(regimeChange = NoRegimeChange)
           }
           if (convertAwakening) {
             val numMilitia = updated.militia + (updated.awakening min game.militiaAvailable)
-            logAdjustment(m.name, "Awakening markers", updated.awakening, 0)
-            logAdjustment(m.name, "Militia", updated.militia, numMilitia)
+            logAdjustment(name, "Awakening markers", updated.awakening, 0)
+            logAdjustment(name, "Militia", updated.militia, numMilitia)
             updated = updated.copy(awakening = 0, militia = numMilitia)
           }
           if (convertReaction) {
             val numSleepers = updated.sleeperCells + (-updated.reaction min (game.cellsOnTrack + game.cellsInCamp))
-            logAdjustment(m.name, "Reaction markers", -updated.reaction, 0)
-            logAdjustment(m.name, "Sleeper cells", updated.sleeperCells, numSleepers)
+            logAdjustment(name, "Reaction markers", -updated.reaction, 0)
+            logAdjustment(name, "Sleeper cells", updated.sleeperCells, numSleepers)
             updated = updated.copy(reaction = 0, sleeperCells = numSleepers)
           }
           game = game.updateCountry(updated)
@@ -2372,8 +2480,33 @@ object LabyrinthAwakening {
     }
   }
   
-  def adjustCaliphate(name: String): Unit = ()
-  def adJustCountryPlots(name: String): Unit = ()
+  def adjustCaliphateCapital(name: String): Unit = {
+    game.getCountry(name) match {
+      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Non-Muslim cannot be the Caliphate capital: $name")
+      case m: MuslimCountry if !m.caliphateCandidate =>
+        println(s"$name is not a valid Caliphate country.  Must be one of: Islamist Rule, Regime Change, Civil War")
+        pause()
+      case m: MuslimCountry =>
+        (m.caliphateCapital, game.caliphateCapital) match {
+          case (true, _) =>
+            logAdjustment(name, "Caliphate Capital", true, false)
+            game = game.updateCountry(m.copy(caliphateCapital = false))
+          case (false, None) => 
+            logAdjustment(name, "Caliphate Capital", false, true)
+            game = game.updateCountry(m.copy(caliphateCapital = true))
+          case (false, Some(previousCapitalName)) =>
+            val previousCapital = game.getMuslim(previousCapitalName)
+            logAdjustment(previousCapitalName, "Caliphate Capital", true, false)
+            logAdjustment(name, "Caliphate Capital", false, true)
+            game = game.updateCountries(previousCapital.copy(caliphateCapital = false)::m.copy(caliphateCapital = true)::Nil)
+        }
+    }
+  }
+  
+  // Move plots between country and available/resolved
+  def adJustCountryPlots(name: String): Unit = {
+  }
+  
   def adjustCountryMarkers(name: String): Unit = ()
   
   
