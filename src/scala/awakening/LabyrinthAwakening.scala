@@ -263,8 +263,8 @@ object LabyrinthAwakening {
   def plotsDisplay(plots: List[Int], humanRole: Role): String = (plots.size, humanRole) match {
     case (0, _)        => "none"
     case (n, Jihadist) => (plots.sorted.reverse map plotName).mkString(", ")
-    case (1, US)       => "1 plot"
-    case (x, US)       => s"$x plots"
+    case (1, US)       => "1 hidden plot"
+    case (x, US)       => s"$x hidden plots"
   }
   
   val GlobalMarkers = List(
@@ -1645,10 +1645,11 @@ object LabyrinthAwakening {
     // prompt for bot's (jihadish ideology / us resolve) difficulty level. -- to be done
     val scenario = new Awakening2010
     // ask which side the user wishes to play -- to be done
-    val (humanRole, botDifficulties) = if (false)
-      (US, Muddled :: Coherent :: Attractive :: Nil)
-    else
-      (Jihadist, OffGuard :: Competent :: Adept :: Nil)
+    val (humanRole, botDifficulties) =
+      getOneOf("Which side do you wish play? (US or Jihadist) ", "US"::"Jihadist"::Nil, None, false) match {
+        case Some("US") => (US, Muddled :: Coherent :: Attractive :: Nil)
+        case _          => (Jihadist, OffGuard :: Competent :: Adept :: Nil)
+      }
     
     game = initialGameState(scenario, humanRole, botDifficulties)
     
@@ -2010,7 +2011,7 @@ object LabyrinthAwakening {
         showPlots(resolved, 1)
         println()
         if (resolved.isEmpty)
-          println("Plots cannot be adusted at this time.")
+          println("Plots cannot be adjusted at this time.")
         else {
           println("Select a resolved plot to make available")
           getOneOf("Plot: ", 1 to (resolved.size )) map (_.toInt) match {
@@ -2037,7 +2038,7 @@ object LabyrinthAwakening {
         showPlots(resolved, available.size + 1)
         println()
         if (available.isEmpty && resolved.isEmpty)
-          println("Plots cannot be adusted at this time.")
+          println("Plots cannot be adjusted at this time.")
         else {
           println("Select a plot to move between available and resolved")
           getOneOf("Plot: ", 1 to (available.size + resolved.size )) map (_.toInt) match {
@@ -2071,7 +2072,6 @@ object LabyrinthAwakening {
                     s"[${plotsDisplay(rlist, Jihadist)}]")
       game = game.copy(availablePlots = alist, resolvedPlots = rlist)
     }
-    
   }
   
   def adjustCountry(name: String): Unit = {
@@ -2280,11 +2280,11 @@ object LabyrinthAwakening {
   }
   
   def adjustCadre(name: String): Unit = {
-    val c = game.getCountry(name)
-    val newValue = !c.hasCadre
-    logAdjustment(c.name, "Cadre", c.hasCadre, newValue)
+    val country = game.getCountry(name)
+    val newValue = !country.hasCadre
+    logAdjustment(name, "Cadre", country.hasCadre, newValue)
     pause()
-    c match {
+    country match {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = newValue))
       case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = newValue))
     }
@@ -2505,6 +2505,122 @@ object LabyrinthAwakening {
   
   // Move plots between country and available/resolved
   def adJustCountryPlots(name: String): Unit = {
+    val country = game.getCountry(name)
+    def numIndexesUsed(plots: Vector[Int], hidden: Boolean) = plots.size match {
+      case 0           => 0
+      case _ if hidden => 1
+      case x           => x
+    }
+    def showPlots(plots: Vector[Int], startIndex: Int, hidden: Boolean): Unit = {
+      @tailrec def showNext(list: List[Int], index: Int): Unit = list match {
+        case Nil =>
+        case plot :: rest =>
+          println(s"$index) ${plotName(plot)}")
+          showNext(rest, index + 1)
+      }
+    
+      numIndexesUsed(plots, hidden) match {
+        case 0           => println("none")
+        case _ if hidden => println(s"$startIndex) ${plots.size} hidden plots")
+        case _           => showNext(plots.toList, startIndex)
+      }
+    }
+
+    // For hidden plot we select a random index.
+    def selectedIndex(index: Int, plots: Vector[Int], hidden: Boolean): Int =
+      if (hidden) nextInt(plots.size) else index
+
+    var countryPlots = country.plots.toVector
+    var resolved     = game.resolvedPlots.toVector
+    var available    = game.availablePlots.toVector
+    
+    @tailrec def getNextResponse(): Unit = {
+      val countryStart   = 1
+      val resolvedStart  = countryStart  + countryPlots.size
+      val availableStart = resolvedStart + resolved.size
+      println()
+      println()
+      println(s"$name plots (can be removed)")
+      println(separator(length = 25))
+      showPlots(countryPlots, countryStart, game.humanRole == US)
+      println()
+      println(s"Resolved Plots (can be added to $name)")  
+      println(separator(length = 25))
+      showPlots(resolved, resolvedStart, false)
+      println()
+      println(s"Available Plots (can be added to $name)")  
+      println(separator(length = 25))
+      showPlots(available, availableStart, game.humanRole == US)
+      println()
+      if (countryPlots.isEmpty && resolved.isEmpty && available.isEmpty)
+        println("Plots cannot be adjusted at this time.")
+      else {
+        val countryIndexes   = numIndexesUsed(countryPlots, game.humanRole == US)
+        val resolvedIndexes  = numIndexesUsed(resolved, false)
+        val availableIndexes = numIndexesUsed(available, game.humanRole == US)
+        val totalIndexes     = countryIndexes + resolvedIndexes + availableIndexes
+        println("Select the number corresponding to the plot to add/remove")
+        getOneOf("Plot: ", 1 to totalIndexes) map (_.toInt) match {
+          case None => // Cancel the adjustment
+          case Some(num) =>
+            val index = num - 1  // Actual indexes are zero based
+            if (index < countryIndexes) {
+              // Remove from country, prompt for destination (available or resolved)
+              val choices = "resolved"::"available"::Nil
+              getOneOf(s"Remove to (${orList(choices)}): ", choices) match {
+                case None => // Cancel the adjustment
+                case Some(target) =>
+                  val i = selectedIndex(index, countryPlots, game.humanRole == US)
+                  if (target == "resolved")
+                    resolved = resolved :+ countryPlots(i)
+                  else
+                    available = available :+ countryPlots(i)
+                  countryPlots = countryPlots.patch(i, Vector.empty, 1)
+                  getNextResponse()
+              }
+            }
+            else if (index < countryIndexes + resolvedIndexes) {
+              // Add from resolved to country
+              val i = selectedIndex(index - countryIndexes, resolved, false)
+              countryPlots = countryPlots :+ resolved(i)
+              resolved = resolved.patch(i, Vector.empty, 1)
+              getNextResponse()
+            }
+            else {
+              // Add from available to country
+              val i = selectedIndex(index - countryIndexes - resolvedIndexes, available, game.humanRole == US)
+              countryPlots   = countryPlots :+ available(i)
+              available = available.patch(i, Vector.empty, 1)
+              getNextResponse()
+            }
+        }
+      }
+    }
+    getNextResponse()
+    
+    val clist = countryPlots.toList.sorted
+    val rlist = resolved.toList.sorted
+    val alist = available.toList.sorted
+    if (clist != country.plots.sorted)
+      logAdjustment(name, "plots", 
+                    s"[${plotsDisplay(country.plots, game.humanRole)}]",
+                    s"[${plotsDisplay(clist, game.humanRole)}]")
+      
+    if (rlist != game.resolvedPlots.sorted)
+      logAdjustment("Resolved plots", 
+                    s"[${plotsDisplay(game.resolvedPlots, Jihadist)}]",
+                    s"[${plotsDisplay(rlist, Jihadist)}]")
+      
+    if (alist != game.availablePlots.sorted)
+      logAdjustment("Available plots", 
+                    s"[${plotsDisplay(game.availablePlots, game.humanRole)}]",
+                    s"[${plotsDisplay(alist, game.humanRole)}]")
+
+    game = game.copy(availablePlots = alist, resolvedPlots = rlist)
+    country match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = clist))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = clist))
+    }
   }
   
   def adjustCountryMarkers(name: String): Unit = ()
