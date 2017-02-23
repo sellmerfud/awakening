@@ -1259,13 +1259,15 @@ object LabyrinthAwakening {
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
     def normalize(value: Any) = value match {
       case None                       => "none"
+      case Some(x)                    => x.toString.trim
       case true                       => "yes"
       case false                      => "no"
-      case Some(x)                    => x.toString.trim
+      case s: Seq[_] if s.isEmpty     => "none"
+      case s: Seq[_]                  => s map (_.toString) mkString ", "
       case x if x.toString.trim == "" => "none"
       case x                          => x.toString.trim
     }
-    log(s"$name adjusted from '${normalize(oldValue)}' to '${normalize(newValue)}'")
+    log(s"$name adjusted from [${normalize(oldValue)}] to [${normalize(newValue)}]")
   }
     
   def logAdjustment(countryName: String, attributeName: String, oldValue: Any, newValue: Any): Unit =
@@ -1894,7 +1896,7 @@ object LabyrinthAwakening {
     getNextResponse()
     val updated = inEffect map BotDifficulty.apply
     if (updated != game.botDifficulties) {
-      logAdjustment(s"$label", game.botDifficulties.map(_.name).mkString(", "), updated.map(_.name).mkString(", "))
+      logAdjustment(s"$label", game.botDifficulties.map(_.name), updated.map(_.name))
       game = game.copy(botDifficulties = updated)
     }  
   }
@@ -1976,7 +1978,7 @@ object LabyrinthAwakening {
     getNextResponse()
     inPlay = inPlay.sorted
     if (inPlay != game.markers) {
-      logAdjustment("Global Markers", game.markers.mkString(", "), inPlay.mkString(", "))
+      logAdjustment("Global Markers", game.markers, inPlay)
       game = game.copy(markers = inPlay)
     }  
   }
@@ -2065,11 +2067,11 @@ object LabyrinthAwakening {
     val rlist = resolved.toList.sorted
     if (alist != game.availablePlots.sorted || rlist != game.resolvedPlots.sorted) {
       logAdjustment("Available plots", 
-                    s"[${plotsDisplay(game.availablePlots, game.humanRole)}]",
-                    s"[${plotsDisplay(alist, game.humanRole)}]")
+                    plotsDisplay(game.availablePlots, game.humanRole),
+                    plotsDisplay(alist, game.humanRole))
       logAdjustment("Resolved plots", 
-                    s"[${plotsDisplay(game.resolvedPlots, Jihadist)}]",
-                    s"[${plotsDisplay(rlist, Jihadist)}]")
+                    plotsDisplay(game.resolvedPlots, Jihadist),
+                    plotsDisplay(rlist, Jihadist))
       game = game.copy(availablePlots = alist, resolvedPlots = rlist)
     }
   }
@@ -2603,18 +2605,18 @@ object LabyrinthAwakening {
     val alist = available.toList.sorted
     if (clist != country.plots.sorted)
       logAdjustment(name, "plots", 
-                    s"[${plotsDisplay(country.plots, game.humanRole)}]",
-                    s"[${plotsDisplay(clist, game.humanRole)}]")
+                    plotsDisplay(country.plots, game.humanRole),
+                    plotsDisplay(clist, game.humanRole))
       
     if (rlist != game.resolvedPlots.sorted)
       logAdjustment("Resolved plots", 
-                    s"[${plotsDisplay(game.resolvedPlots, Jihadist)}]",
-                    s"[${plotsDisplay(rlist, Jihadist)}]")
+                    plotsDisplay(game.resolvedPlots, Jihadist),
+                    plotsDisplay(rlist, Jihadist))
       
     if (alist != game.availablePlots.sorted)
       logAdjustment("Available plots", 
-                    s"[${plotsDisplay(game.availablePlots, game.humanRole)}]",
-                    s"[${plotsDisplay(alist, game.humanRole)}]")
+                    plotsDisplay(game.availablePlots, game.humanRole),
+                    plotsDisplay(alist, game.humanRole))
 
     game = game.copy(availablePlots = alist, resolvedPlots = rlist)
     country match {
@@ -2623,7 +2625,43 @@ object LabyrinthAwakening {
     }
   }
   
-  def adjustCountryMarkers(name: String): Unit = ()
+  def adjustCountryMarkers(name: String): Unit = {
+    val country = game.getCountry(name)
+    var inPlay = country.markers
+    def available = CountryMarkers filterNot inPlay.contains
+    def showColums(xs: List[String]): Unit = {
+      if (xs.isEmpty) println("none")
+      else columnFormat(xs, 4) foreach println
+    }
+    @tailrec def getNextResponse(): Unit = {
+      println()
+      println(s"$name markers:")
+      showColums(inPlay)
+      println()
+      println("Country markers that are out of play:")
+      showColums(available)
+      println()
+      println(s"Enter a marker name to move it between $name and out of play.")
+      getOneOf("Marker: ", CountryMarkers) match {
+        case None =>
+        case Some(name) if inPlay contains name =>
+          inPlay = inPlay filterNot(_ == name)
+          getNextResponse()
+        case Some(name) =>
+          inPlay = name :: inPlay
+          getNextResponse()
+      }
+    }
+    getNextResponse()
+    inPlay = inPlay.sorted
+    if (inPlay != country.markers) {
+      logAdjustment(name, "Markers", country.markers, inPlay)
+      country match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(markers = inPlay))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(markers = inPlay))
+      }
+    }  
+  }
   
   
   def cmdSaveReserves(player: Role, ops: Int): Unit = {
