@@ -35,8 +35,12 @@ import scala.collection.mutable.ListBuffer
 object LabyrinthAwakening {
   
   def dieRoll = nextInt(6) + 1
+  val INTEGER = """(\d+)""".r
   
-  sealed trait Role
+  sealed trait CardAssociation
+  case object Unassociated extends CardAssociation { override def toString() = "Unassociated" }
+  
+  sealed trait Role extends CardAssociation
   case object US extends Role       { override def toString() = "US" }
   case object Jihadist extends Role { override def toString() = "Jihadist" }
   object Role {
@@ -277,28 +281,541 @@ object LabyrinthAwakening {
   )
   
   // Used to describe event markers that represent troops.
-  case class TroopsMarker(name: String, num: Int)
+  case class TroopsMarker(name: String, num: Int, prestigeLoss: Boolean)
   // Order TroopsMarkers so that markers represent smaller numbers
   // of troops come first.
   implicit val TroopsMarkerOrdering = new Ordering[TroopsMarker] {
     def compare(x: TroopsMarker, y: TroopsMarker) = x.num compare y.num
   }
   
+  type CardEvent       = Role => Unit
+  type EventConditions = Role => Boolean
+  val NoConditions: EventConditions =  _ => true
   
-  case class Card(number: Int, name: String) {
+  sealed trait CardRemoval
+  case object NoRemove       extends CardRemoval
+  case object Remove         extends CardRemoval
+  case object USRemove       extends CardRemoval
+  case object JihadistRemove extends CardRemoval
+  
+  sealed trait CardMark
+  case object NoMark       extends CardMark
+  case object Mark         extends CardMark
+  case object USMark       extends CardMark
+  case object JihadistMark extends CardMark
+  
+  sealed trait CardLapsing
+  case object NoLapsing       extends CardLapsing
+  case object Lapsing         extends CardLapsing
+  case object USLapsing       extends CardLapsing
+  case object JihadistLapsing extends CardLapsing
+  
+  class Card(
+    val number: Int,
+    val name: String,
+    val association: CardAssociation,
+    val ops: Int,
+    val remove: CardRemoval,
+    val mark: CardMark,
+    val lapsing: CardLapsing,
+    val eventConditions: EventConditions,
+    val event: CardEvent) {
+      
     def numAndName = s"#$number $name"
+    
+    def eventIsPlayable(role: Role): Boolean =
+      (association == Unassociated || association == role) && eventConditions(role)
+    
   }
   
   def entry(card: Card) = (card.number -> card)
   
   val Cards = Map(
-    entry(Card(1, "Facebook")),
-    entry(Card(2, "Bin Ladin")),
-    entry(Card(3, "Syrian Civil War"))
+    entry(new Card(121, "Advisors", US, 1,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(122, "Backlash", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(123, "Humanitarian Aid", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(124, "Pearl Roundabout", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(125, "Peshmerga", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(126, "Reaper", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(127, "Reaper", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(128, "Reaper", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(129, "Special Forces", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(130, "Special Forces", US, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(131, "Arab Spring \"Fallout\"", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(132, "Battle of Sirte", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(133, "Benghazi Falls", US, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(134, "Civil Resistance", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(135, "Delta / SEALS", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(136, "Factional Infighting", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(137, "FMS", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()  // Note: No militia allowed in Good countries!UNSCR 1973
+    )),
+    entry(new Card(138, "Intel Community", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(139, "Int'l Banking Regime", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(140, "Maersk Alabama", US, 2,
+      Remove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(141, "Malala Yousafzai", US, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(142, "Militia", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(143, "Obama Doctrine", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(144, "Operation New Dawn", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(145, "Russian Aid", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(146, "Sharia", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(147, "Strike Eagle", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(148, "Tahrir Square", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(149, "UN Nation Building", US, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(150, "UNSCR 1973", US, 2,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(151, "UNSCR 2118", US, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(152, "Congress Acts", US, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(153, "Facebook", US, 3,
+      NoRemove, NoMark, NoLapsing, _ => { game.markerInPlay("Smartphones") },
+      (role: Role) => ()
+    )),
+    entry(new Card(154, "Facebook", US, 3,
+      NoRemove, NoMark, NoLapsing, _ => { game.markerInPlay("Smartphones") },
+      (role: Role) => ()
+    )),
+    entry(new Card(155, "Fracking", US, 3,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(156, "Gulf Union", US, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(157, "Limited Deployment", US, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(158, "Mass Turnout", US, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(159, "NATO", US, 3,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(160, "Op. Neptune Spear", US, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(161, "PRISM", US, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(162, "SCAF", US, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(163, "Status Quo", US, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(164, "Bloody Thursday", Jihadist, 1,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(165, "Coup", Jihadist, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(166, "Ferguson", Jihadist, 1,
+      NoRemove, NoMark, Lapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(167, "Houthi Rebels", Jihadist, 1,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(168, "IEDs", Jihadist, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(169, "Islamic Maghreb", Jihadist, 1,
+      NoRemove, NoMark, Lapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(170, "Theft of State", Jihadist, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(171, "Abu Ghraib Jail Break", Jihadist, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(172, "Al-Shabaab", Jihadist, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(173, "Arab Winter", Jihadist, 2,
+      NoRemove, NoMark, Lapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(174, "Boston Marathon", Jihadist, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(175, "Censorship", Jihadist, 2,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(176, "Change of State", Jihadist, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(177, "Gaza Rockets", Jihadist, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(178, "Ghost Soldiers", Jihadist, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(179, "Korean Crisis", Jihadist, 2,
+      NoRemove, NoMark, Lapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(180, "Mosul Central Bank", Jihadist, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(181, "NPT Safeguards Ignored", Jihadist, 2,
+      Remove, NoMark, NoLapsing, NoConditions,  // Note: Only remove on die roll of 1-3
+      (role: Role) => ()
+    )),
+    entry(new Card(182, "Paris Attacks", Jihadist, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(183, "Pirates", Jihadist, 2,
+      Remove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(184, "Sequestration", Jihadist, 2,
+      Remove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(185, "al-Maliki", Jihadist, 3,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(186, "Boko Haram", Jihadist, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(188, "ISIL", Jihadist, 3,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(187, "Foreign Fighters", Jihadist, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(189, "Jihadist Videos", Jihadist, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(190, "Martyrdom Operation", Jihadist, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(191, "Muslim Brotherhood", Jihadist, 3,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(192, "Quagmire", Jihadist, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(193, "Regional al-Qaeda", Jihadist, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(194, "Snowden", Jihadist, 3,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(195, "Taliban Resurgent", Jihadist, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(196, "Training Camps", Jihadist, 3,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(197, "Unconfirmed", Jihadist, 3,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(198, "US Atrocities", Jihadist, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(199, "US Consulate Attacked", Jihadist, 3,
+      NoRemove, NoMark, Lapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(200, "Critical Middle", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(201, "Cross Border Support", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(202, "Cyber Warfare", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(203, "Day of Rage", Unassociated, 1,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(205, "Erdoğan Effect", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(204, "Ebola Scare", Unassociated, 1,
+      Remove, NoMark, USLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(206, "Friday of Anger", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(207, "JV / Copycat", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(208, "Kinder – Gentler", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(209, "Quds Force", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(210, "Sectarian Violence", Unassociated, 1,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(211, "Smartphones", Unassociated, 1,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(212, "Smartphones", Unassociated, 1,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(213, "Smartphones", Unassociated, 1,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(214, "3 Cups of Tea", Unassociated, 2,
+      NoRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2,
+      USRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2,
+      USRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(217, "Agitators", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(218, "Al-Nusra Front", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(219, "Ayman al-Zawahiri", Unassociated, 2,
+      USRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(220, "Daraa", Unassociated, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(221, "FlyPaper", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(222, "Hagel", Unassociated, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(223, "Iranian Elections", Unassociated, 2,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(224, "Je Suis Charlie", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(225, "Jihadi John", Unassociated, 2,
+      USRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(226, "Operation Serval", Unassociated, 2,
+      NoRemove, USMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(227, "Popular Support", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(228, "Popular Support", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(229, "Prisoner Exchange", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(230, "Sellout", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(231, "Siege of \"Kobanigrad\"", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(232, "Trade Embargo", Unassociated, 2,
+      USRemove, Mark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(233, "UN Ceasefire", Unassociated, 2,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(234, "Free Syrian Army", Unassociated, 3,
+      Remove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(235, "Qadhafi", Unassociated, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(236, "Oil Price Spike", Unassociated, 3,
+      NoRemove, NoMark, Lapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(237, "Osama bin Ladin", Unassociated, 3,
+      USRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(238, "Revolution", Unassociated, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(239, "Truce", Unassociated, 3,
+      NoRemove, Mark, Lapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(240, "US Election", Unassociated, 3,
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+        
   )
   
   def cardNumbers = Cards.keys.toList
-  def lapsingCardNumbers = List(1, 2, 3).sorted
+  val lapsingCardNumbers = (Cards.valuesIterator filter (_.lapsing != NoLapsing) map (_.number)).toList.sorted
   def cardNumAndName(number: Int): String = Cards(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs map cardNumAndName mkString ", "
   
@@ -395,7 +912,8 @@ object LabyrinthAwakening {
     // TODO: Add other markers!!
     // The list is sorted so that markers repesent in 
     def troopsMarkers: List[TroopsMarker] = markers collect {
-      case "NATO" => TroopsMarker("NATO", 2)
+      case "NATO"       => TroopsMarker("NATO", 2, true)
+      case "UNSCR 1973" => TroopsMarker("UNSCR 1973", 1, false)
     }
     
     def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
@@ -525,6 +1043,8 @@ object LabyrinthAwakening {
     
     def botRole = if (humanRole == US) Jihadist else US
       
+    def markerInPlay(name: String) = markers contains name
+    
     def scenarioSummary: Seq[String] = {
       val b = new ListBuffer[String]
       b += s"Scenario: $scenarioName"
@@ -714,7 +1234,7 @@ object LabyrinthAwakening {
     def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
   
     def caliphateCapital: Option[String] = muslim find (_.caliphateCapital) map (_.name)
-    
+    def caliphateDeclared = caliphateCapital.nonEmpty
     def isCaliphateMember(name: String): Boolean = {
       caliphateCapital match {
         case None => false  // No Caliphate declared
@@ -847,7 +1367,7 @@ object LabyrinthAwakening {
       muslim.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
     def islamistResources = 
       muslim.filter(_.isIslamic).foldLeft(0) { (a, c) => a + c.resources + oilBump(c)} +
-      (if (muslim.exists(_.caliphateCapital)) 1 else 0)
+      (if (caliphateDeclared) 1 else 0)
     // Return true if any two Islamist Rule countries are adjacent.
     def islamistAdjacency: Boolean =
       muslim.filter(_.isIslamic).toList.combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
@@ -971,10 +1491,9 @@ object LabyrinthAwakening {
   
 
   
-  def getCardNumber(prompt: String, initial: Option[Int] = None, allowNone: Boolean = true): Option[Int] = {
-    val INT = """(\d+)""".r
+  def getCardNumber(prompt: String, initial: Option[String] = None, allowNone: Boolean = true): Option[Int] = {
     def checkNumber(input: String): Boolean = input match {
-      case INT(num) if cardNumbers contains num.toInt => true
+      case INTEGER(num) if cardNumbers contains num.toInt => true
       case _ => 
         println(s"'$input' is not a valid card number")
         false
@@ -990,7 +1509,7 @@ object LabyrinthAwakening {
         case x => x map (_.toInt)
       }
     }
-    testResponse(initial map (_.toString))
+    testResponse(initial)
   }
   
   // Use the random Muslim table.
@@ -1494,6 +2013,13 @@ object LabyrinthAwakening {
       log("No countries in civil war")
     else {
       val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
+      // First if an "Advisors" marker is present in any of the countries, then 
+      // add one militia to that country.
+      for (m <- civilWars filter (_.hasMarker("Advisors")) if game.militiaAvailable) {
+        log("Add one militia to ${m.name} due to presence of Advisors")
+        game = game.updateCountry(m.copy(militia = m.militia + 1))
+      } 
+      
       for (m <- civilWars) {
         val jihadHits= m.totalCells / 6 + (if (dieRoll <= m.totalCells % 6) 1 else 0)
         val usHits    = m.totalTroopsAndMilitia / 6 + (if (dieRoll <= m.totalTroopsAndMilitia % 6) 1 else 0)
@@ -1641,7 +2167,7 @@ object LabyrinthAwakening {
   
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
-    
+
     // parse cmd line args -- to be done
     // prompt for scenario -- to be done
     // prompt for bot's (jihadish ideology / us resolve) difficulty level. -- to be done
@@ -1784,12 +2310,40 @@ object LabyrinthAwakening {
     printSummary(game.caliphateSummary)
   }
   
-  def usCardPlay(number: Option[String]): Unit = {
-    println("Not implemented.")
+  def usCardPlay(param: Option[String]): Unit = {
+    getCardNumber("US card # ", param) foreach { cardNumber =>
+      if (game.humanRole == US) {
+        // If card has event playable by the US (given the current game state)
+        // then ask if the user wants to play the card for the event or OPs.
+        
+        // If event is not playable or user chose OPS...
+        // Ask what the would like to do:
+        //   - Add reserves to available ops (and continue)
+        //   - War of Ideas (prompt for country)
+        //   - Deploy troops
+        //   - Regime change, Requires 3 Ops, US at Hard posture, etc...
+        //   - Withdraw, Requires 3 Ops, Us at Soft posture, etc...
+        //   - Disrupt cells/cadre
+        //   - Alert plots (if they have 3 OPs to use.)
+        //   - Reassessment (must be 3 Op card (no reserves) AND prompt for 2nd 3 OP card.)
+        
+        // If card(s) have playable Jihadist events, ask user if event or OPs should come first.
+      }
+      else {
+        // .... Follow bot instructions for the card.
+      }
+    }
   }
   
-  def jihadistCardPlay(number: Option[String]): Unit = {
-    println("Not implemented.")
+  def jihadistCardPlay(param: Option[String]): Unit = {
+    getCardNumber("Jihadist card # ", param) foreach { cardNumber =>
+      if (game.humanRole == US) {
+        // Prompt for card  play
+      }
+      else {
+        // ....
+      }
+    }
   }
   
   
@@ -1824,12 +2378,11 @@ object LabyrinthAwakening {
   }
   
   def adjustInt(name: String, current: Int, range: Range): Option[Int] = {
-    val INT = """(\d+)""".r
     val prompt = s"$name is $current.  Enter new value (${range.min} - ${range.max}) "
     @tailrec def getResponse(): Option[Int] =
       readLine(prompt) match {
         case null | "" => None
-        case INT(x) if range contains x.toInt => Some(x.toInt)
+        case INTEGER(x) if range contains x.toInt => Some(x.toInt)
         case input =>
           println(s"$input is not valid")
           getResponse()
@@ -1855,7 +2408,6 @@ object LabyrinthAwakening {
   
   
   def adjustDifficulty(): Unit = {
-    val INT = """(\d+)""".r
     val AllLevels = if (game.botRole == US)
       OffGuard::Competent::Adept::Vigilant::Ruthless::NoMercy::Nil
     else
@@ -1882,7 +2434,7 @@ object LabyrinthAwakening {
       help2 foreach println
       getOneOf(s"$label: ", choices) match {
         case None =>
-        case Some(INT(x)) =>
+        case Some(INTEGER(x)) =>
           inEffect = AllNames take x.toInt
           getNextResponse()
         case Some(name) if inEffect contains name =>
