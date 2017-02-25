@@ -281,6 +281,7 @@ object LabyrinthAwakening {
   )
   
   // Used to describe event markers that represent troops.
+  // prestigeLoss: if true, the marker's presence during a plot will cause loss of prestige
   case class TroopsMarker(name: String, num: Int, prestigeLoss: Boolean)
   // Order TroopsMarkers so that markers represent smaller numbers
   // of troops come first.
@@ -319,13 +320,16 @@ object LabyrinthAwakening {
     val mark: CardMark,
     val lapsing: CardLapsing,
     val eventConditions: EventConditions,
-    val event: CardEvent) {
+    val executeEvent: CardEvent) {
       
     def numAndName = s"#$number $name"
+    override def toString() = s"#$number $name (${opsString(ops)})"
     
     def eventIsPlayable(role: Role): Boolean =
       (association == Unassociated || association == role) && eventConditions(role)
-    
+      
+    def eventWillTrigger(opponentRole: Role): Boolean =
+      association == opponentRole && eventConditions(opponentRole)
   }
   
   def entry(card: Card) = (card.number -> card)
@@ -595,12 +599,12 @@ object LabyrinthAwakening {
       NoRemove, NoMark, NoLapsing, NoConditions,
       (role: Role) => ()
     )),
-    entry(new Card(188, "ISIL", Jihadist, 3,
-      Remove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
-    )),
     entry(new Card(187, "Foreign Fighters", Jihadist, 3,
       NoRemove, NoMark, NoLapsing, NoConditions,
+      (role: Role) => ()
+    )),
+    entry(new Card(188, "ISIL", Jihadist, 3,
+      Remove, NoMark, NoLapsing, NoConditions,
       (role: Role) => ()
     )),
     entry(new Card(189, "Jihadist Videos", Jihadist, 3,
@@ -810,14 +814,14 @@ object LabyrinthAwakening {
     entry(new Card(240, "US Election", Unassociated, 3,
       NoRemove, NoMark, NoLapsing, NoConditions,
       (role: Role) => ()
-    )),
-        
+    ))
   )
   
   def cardNumbers = Cards.keys.toList
   val lapsingCardNumbers = (Cards.valuesIterator filter (_.lapsing != NoLapsing) map (_.number)).toList.sorted
+  val removableCardNumbers = (Cards.valuesIterator filter (_.remove != NoRemove) map (_.number)).toList.sorted
   def cardNumAndName(number: Int): String = Cards(number).numAndName
-  def cardNumsAndNames(xs: List[Int]): String = xs map cardNumAndName mkString ", "
+  def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
   
   sealed trait Country {
     val name: String
@@ -830,10 +834,10 @@ object LabyrinthAwakening {
     val wmdCache: Int        // Number of WMD plots cached
     
     def unTested: Boolean
-    def isGood    = governance == Good
-    def isFair    = governance == Fair
-    def isPoor    = governance == Poor
-    def isIslamic = governance == IslamistRule
+    def isGood         = governance == Good
+    def isFair         = governance == Fair
+    def isPoor         = governance == Poor
+    def isIslamistRule = governance == IslamistRule
     
     def totalCells = sleeperCells + activeCells
     def hasMarker(name: String) = markers contains name
@@ -907,7 +911,7 @@ object LabyrinthAwakening {
     )
     
     
-    override def canAutoRecruit = isIslamic || civilWar || inRegimeChange
+    override def canAutoRecruit = isIslamistRule || civilWar || inRegimeChange
     
     // TODO: Add other markers!!
     // The list is sorted so that markers repesent in 
@@ -920,8 +924,8 @@ object LabyrinthAwakening {
     def totalTroops = troops + markerTroops
     def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
     
-    def canTakeAwakeningOrReactionMarker = !(isGood || isIslamic || civilWar)
-    def caliphateCandidate = civilWar || isIslamic || inRegimeChange
+    def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar)
+    def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
     // Note: The caller is responsible for handling convergence and the possible
     //       displacement of the caliphate captial.
@@ -940,7 +944,7 @@ object LabyrinthAwakening {
     // Note: The caller is repsonsible for adjusting funding, prestige,
     //       and for handling convergence
     def worsenGovernance(): MuslimCountry = {
-      assert(!isIslamic, s"worsenGovernance() called on Islamist Rule country - ${name}")
+      assert(!isIslamistRule, s"worsenGovernance() called on Islamist Rule country - ${name}")
       if (governance == Good)
         copy(governance = Fair, aidMarkers = (aidMarkers - 1) max 0)
       else if (governance == Fair)
@@ -950,6 +954,14 @@ object LabyrinthAwakening {
              aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
              civilWar = false)
     }
+    
+    def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
+    def maxDeployFrom = if (inRegimeChange)
+      if (troops - totalCells >= 5) troops - totalCells else 0
+    else
+      troops
+      
+    
   }
     
   
@@ -1020,6 +1032,18 @@ object LabyrinthAwakening {
     val markers = List.empty[String]
   }
   
+  case class PlayedCard(role:Role, card: Card, event: Boolean, card2: Option[Card] = None) {
+    override def toString() = {
+      card2 match {
+        case Some(c2) => 
+          s"$role plays ${cardNumAndName(card.number)} and ${cardNumAndName(c2.number)} for reassessment"
+        case None =>
+          val action = if (event) "the event" else s"${opsString(card.ops)}"
+          s"$role plays ${cardNumAndName(card.number)} for $action"
+      }
+    }
+  }
+  
   case class GameState(
     scenarioName: String,
     humanRole: Role,
@@ -1037,17 +1061,31 @@ object LabyrinthAwakening {
     jihadistReserves: Int = 0,
     oilPriceSpikes: Int = 0,
     resolvedPlots: List[Int] = Nil,
-    lapsing: List[Int] = Nil,      // Card numbers
-    firstPlot: Option[Int] = None  // Card number
+    cardsPlayed: List[PlayedCard] = Nil,   // Cards played during current turn (most recent first).
+    firstPlotCard: Option[Int] = None,  // Card number
+    cardsLapsing: List[Int] = Nil,       // Card numbers
+    cardsRemoved: List[Int] = Nil   // Cards removed from the game.
   ) {
     
     def botRole = if (humanRole == US) Jihadist else US
       
     def markerInPlay(name: String) = markers contains name
     
+    def cardPlaySummary: Seq[String] = {
+      val b = new ListBuffer[String]
+      b += s"Cards played this turn"
+      b += separator()
+      if (cardsPlayed.isEmpty)
+        b += "none"
+      else
+        b ++= cardsPlayed.reverse map (_.toString)
+      b.toList
+    }
+    
     def scenarioSummary: Seq[String] = {
       val b = new ListBuffer[String]
       b += s"Scenario: $scenarioName"
+      b += separator()
       b += s"The Bot is playing the $botRole"
       b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
       for (difficulty <- botDifficulties)
@@ -1085,8 +1123,8 @@ object LabyrinthAwakening {
       b += f"Troops on track : $troopsAvailable%2d   | Troops off map   : $offMapTroops%2d"
       b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track : $militiaAvailable%2d"
       b += s"Markers         : ${if (markers.isEmpty) "none" else markers mkString ", "}"
-      b += s"Lapsing         : ${if (lapsing.isEmpty) "none" else cardNumsAndNames(lapsing)}"
-      b += s"1st plot        : ${firstPlot map cardNumAndName getOrElse "none"}"
+      b += s"Lapsing         : ${if (cardsLapsing.isEmpty) "none" else cardNumsAndNames(cardsLapsing)}"
+      b += s"1st plot        : ${firstPlotCard map cardNumAndName getOrElse "none"}"
       b += s"Resloved plots  : ${plotsDisplay(resolvedPlots, Jihadist)}"
       b += s"Available plots : ${plotsDisplay(availablePlots, humanRole)}"
       if (activePlots.isEmpty)
@@ -1105,9 +1143,9 @@ object LabyrinthAwakening {
     def countrySummary(name: String, showAll: Boolean = false): Seq[String] = {
       val b = new ListBuffer[String]
       val items = new ListBuffer[String]
-      def item(num: Int, label: String, pluralize: Boolean = true): Unit = {
+      def item(num: Int, label: String, pluralLabel: Option[String] = None): Unit = {
         if (showAll || num > 0)
-          items += s"$num $label${if (num == 1 || !pluralize) "" else "s"}"
+          items += amountOf(num, label, pluralLabel)
       }
       def addItems(): Unit = if (items.nonEmpty) b += s"  ${items mkString ", "}"
       def markersString(markers: List[String]): String = if (markers.isEmpty)
@@ -1143,7 +1181,7 @@ object LabyrinthAwakening {
           else if (showAll)
             items += "No Cadre marker"
           item(m.troops, "Troop")
-          item(m.militia, "Militia", pluralize = false)
+          item(m.militia, "Militia", Some("Militia"))
           addItems()
             
           items.clear
@@ -1199,7 +1237,7 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += "Civil Wars"
       b += separator()
-      val civilWars = (muslim filter (_.civilWar)).toList
+      val civilWars = (muslims filter (_.civilWar)).toList
       if (civilWars.isEmpty)
         b += "There are no counties in civil war"
       else
@@ -1212,18 +1250,16 @@ object LabyrinthAwakening {
       case US       => Jihadist
       case Jihadist => US
     }
-    def muslim: Iterator[MuslimCountry] =
-      countries.iterator filter (_.isInstanceOf[MuslimCountry]) map (_.asInstanceOf[MuslimCountry])
-    def nonMuslim: Iterator[NonMuslimCountry] =
-      countries.iterator filter (_.isInstanceOf[NonMuslimCountry]) map (_.asInstanceOf[NonMuslimCountry])
+    def muslims    = countries filter (_.isInstanceOf[MuslimCountry]) map (_.asInstanceOf[MuslimCountry])
+    def nonMuslims = countries filter (_.isInstanceOf[NonMuslimCountry]) map (_.asInstanceOf[NonMuslimCountry])
     
-    def isMuslim(name: String)    = muslim exists (_.name == name)
-    def isNonMuslim(name: String) = nonMuslim exists (_.name == name)
+    def isMuslim(name: String)    = muslims exists (_.name == name)
+    def isNonMuslim(name: String) = nonMuslims exists (_.name == name)
     
     // The methods assume a valid name and will throw an exception if an invalid name is used!
     def getCountry(name: String)   = (countries find (_.name == name)).get
-    def getMuslim(name: String)    = (muslim find (_.name == name)).get
-    def getNonMuslim(name: String) = (nonMuslim find (_.name == name)).get
+    def getMuslim(name: String)    = (muslims find (_.name == name)).get
+    def getNonMuslim(name: String) = (nonMuslims find (_.name == name)).get
     
     def getCountries(names: List[String]):  List[Country]          = names map getCountry
     def getMuslims(names: List[String]):    List[MuslimCountry]    = names map getMuslim
@@ -1233,7 +1269,7 @@ object LabyrinthAwakening {
     def adjacentMuslims(name: String)     = getMuslims(getAdjacent(name) filter isMuslim)
     def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
   
-    def caliphateCapital: Option[String] = muslim find (_.caliphateCapital) map (_.name)
+    def caliphateCapital: Option[String] = muslims find (_.caliphateCapital) map (_.name)
     def caliphateDeclared = caliphateCapital.nonEmpty
     def isCaliphateMember(name: String): Boolean = {
       caliphateCapital match {
@@ -1267,7 +1303,7 @@ object LabyrinthAwakening {
       assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
       
       // First make sure there is no country marked as the capital
-      val clearedState = updateCountries(muslim.map(_.copy(caliphateCapital = false)).toList)
+      val clearedState = updateCountries(muslims.map(_.copy(caliphateCapital = false)))
       val daisyChain = clearedState.caliphateDaisyChain(name).map { memberName =>
         val member = getMuslim(memberName)
         member.copy(
@@ -1310,7 +1346,7 @@ object LabyrinthAwakening {
     // posture (Soft, Even, Hard)
     // value 0, 1, 2, 3
     def gwot: (String, Int) = {
-      val value = (nonMuslim.filterNot(_.name == UnitedStates).foldLeft(0) { 
+      val value = (nonMuslims.filterNot(_.name == UnitedStates).foldLeft(0) { 
         case (v, c) if c.isHard => v + 1
         case (v, c) if c.isSoft => v - 1
         case (v, _) => v // Untested
@@ -1338,8 +1374,8 @@ object LabyrinthAwakening {
       case _          => Ample
     }
     
-    def troopsAvailable  = 15 - offMapTroops - muslim.foldLeft(0) { (a, c) => a + c.troops }
-    def militiaAvailable = 15 - muslim.foldLeft(0) { (a, c) => a + c.militia }
+    def troopsAvailable  = 15 - offMapTroops - muslims.foldLeft(0) { (a, c) => a + c.troops }
+    def militiaAvailable = 15 - muslims.foldLeft(0) { (a, c) => a + c.militia }
     
     def trainingCampsInPlay = markers.contains("Training Camps")
     def totalCellsInPlay = if (trainingCampsInPlay) 20 else 15
@@ -1359,18 +1395,18 @@ object LabyrinthAwakening {
         }
     }
     
-    def numGoodOrFair    = muslim.filter(c => c.isGood || c.isFair).size
-    def numPoorOrIslamic = muslim.filter(c => c.isPoor || c.isIslamic).size
-    def numIslamic       = muslim.filter(c => c.isIslamic).size
+    def numGoodOrFair    = muslims.filter(c => c.isGood || c.isFair).size
+    def numPoorOrIslamic = muslims.filter(c => c.isPoor || c.isIslamistRule).size
+    def numIslamic       = muslims.filter(c => c.isIslamistRule).size
     def oilBump(c: MuslimCountry) = if (c.oilProducer) oilPriceSpikes else 0
     def goodResources =
-      muslim.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
+      muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
     def islamistResources = 
-      muslim.filter(_.isIslamic).foldLeft(0) { (a, c) => a + c.resources + oilBump(c)} +
+      muslims.filter(_.isIslamistRule).foldLeft(0) { (a, c) => a + c.resources + oilBump(c)} +
       (if (caliphateDeclared) 1 else 0)
     // Return true if any two Islamist Rule countries are adjacent.
     def islamistAdjacency: Boolean =
-      muslim.filter(_.isIslamic).toList.combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
+      muslims.filter(_.isIslamistRule).combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
     
   }
   
@@ -1395,6 +1431,18 @@ object LabyrinthAwakening {
   // end of the turn.
   // Allows user to roll back to a previous turn.
   var gameTurns = List.empty[GameState]
+  
+  
+  // If num is 1 use the name as is
+  // otherwise either use the plural if given or add an 's' to the name.
+  def amountOf(num: Int, name: String, plural: Option[String] = None) = 
+    (num, plural) match {
+      case (1, _)            => s"$num $name"
+      case (_, Some(plural)) => s"$num $plural"
+      case _                 => s"$num ${name}s"
+    }
+    
+  def opsString(num: Int) = amountOf(num, "Op")
   
   // Returns comma separated string with last choice separated by "or"
   //    List("apples")                      => "apples"
@@ -1429,7 +1477,7 @@ object LabyrinthAwakening {
     val normalizedAbbreviations = for ((a, v) <- abbreviations) yield (a.toLowerCase, v)  
     val normalized = (options ++ abbreviations.keys) map (_.toLowerCase)
     if (s == "?") {
-      println(s"Must be one of:\n${orList(displayList)}")
+      println(s"Enter one of:\n${orList(displayList)}")
       None
     }
     else
@@ -1488,12 +1536,19 @@ object LabyrinthAwakening {
       case None         => askYorN(prompt)
     }
   }
-  
 
-  
-  def getCardNumber(prompt: String, initial: Option[String] = None, allowNone: Boolean = true): Option[Int] = {
+  def getCardNumber(prompt: String, 
+                    initial: Option[String] = None,
+                    allowNone: Boolean = true,
+                    only3Ops: Boolean = false): Option[Int] = {
     def checkNumber(input: String): Boolean = input match {
-      case INTEGER(num) if cardNumbers contains num.toInt => true
+      case INTEGER(num) if cardNumbers contains num.toInt =>
+        if (only3Ops && Cards(num.toInt).ops != 3) {
+          println("You must enter a 3 Ops cards")
+          false
+        }
+        else
+          true
       case _ => 
         println(s"'$input' is not a valid card number")
         false
@@ -1843,7 +1898,7 @@ object LabyrinthAwakening {
   
   
   def polarization(): Unit = {
-    val candidates = game.muslim.filter(m => (m.awakening + m.reaction).abs > 1).toList
+    val candidates = game.muslims filter (m => (m.awakening + m.reaction).abs > 1)
     log()
     log("Polarization")
     log(separator())
@@ -1894,7 +1949,7 @@ object LabyrinthAwakening {
             if (m.isAdversary) {
               val worsened = m.worsenGovernance()
               game = game.updateCountry(worsened)
-              if (worsened.isIslamic)
+              if (worsened.isIslamistRule)
                 convergers = Converger(name, awakening = false) :: convergers
               log(s"${name}: degrade governance to ${govToString(worsened.governance)}")
             }
@@ -1938,7 +1993,7 @@ object LabyrinthAwakening {
       var hitsRemaining = hits
       var troopsLost = if (m.troops >= hitsRemaining) hitsRemaining else m.troops
       hitsRemaining -= troopsLost
-      var troopMarkersLost = for (TroopsMarker(name, num) <- m.troopsMarkers; if hitsRemaining > 0) 
+      var troopMarkersLost = for (TroopsMarker(name, num, _) <- m.troopsMarkers; if hitsRemaining > 0) 
         yield {
           hitsRemaining = (hitsRemaining - num) max 0
           name
@@ -2005,7 +2060,7 @@ object LabyrinthAwakening {
   }
   
   def civilWarAttrition(): Unit = {
-    val civilWars = game.muslim.filter(m => (m.civilWar)).toList
+    val civilWars = game.muslims filter (m => (m.civilWar))
     log()
     log("Civil War Attrition")
     log(separator())
@@ -2015,7 +2070,7 @@ object LabyrinthAwakening {
       val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
       // First if an "Advisors" marker is present in any of the countries, then 
       // add one militia to that country.
-      for (m <- civilWars filter (_.hasMarker("Advisors")) if game.militiaAvailable) {
+      for (m <- civilWars filter (_.hasMarker("Advisors")) if game.militiaAvailable > 0) {
         log("Add one militia to ${m.name} due to presence of Advisors")
         game = game.updateCountry(m.copy(militia = m.militia + 1))
       } 
@@ -2043,7 +2098,7 @@ object LabyrinthAwakening {
                 val worsened = afterLosses.worsenGovernance()
                 game = game.updateCountry(worsened)
                 log(s"${worsened.name}: degrade governance to ${govToString(worsened.governance)}")
-                if (worsened.isIslamic)
+                if (worsened.isIslamistRule)
                   performConvergence(forCountry = worsened.name, awakening = false)
               }
               else {
@@ -2138,16 +2193,16 @@ object LabyrinthAwakening {
       game = game.copy(offMapTroops = 0)
     }
     
-    if (game.lapsing.nonEmpty) {
-      log(s"Discard the lapsing events: ${cardNumsAndNames(game.lapsing)}")
-      game = game.copy(lapsing = Nil)
+    if (game.cardsLapsing.nonEmpty) {
+      log(s"Discard the lapsing events: ${cardNumsAndNames(game.cardsLapsing)}")
+      game = game.copy(cardsLapsing = Nil)
     }
-    game.firstPlot foreach { num => 
+    game.firstPlotCard foreach { num => 
       log(s"Discard the firstplot card: ${cardNumAndName(num)}")
-      game = game.copy(firstPlot = None)
+      game = game.copy(firstPlotCard = None)
     }
     
-    for (rc <- game.muslim filter (_.regimeChange == GreenRegimeChange)) {
+    for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
       log(s"  ${rc.name}: Flip regime marker to tan side")
       game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
     }
@@ -2200,7 +2255,11 @@ object LabyrinthAwakening {
   // ---------------------------------------------
   // Process all top level user commands.
   @tailrec def commandLoop(): Unit = {
-    readLine(s"\n[Turn ${game.turn}] ") match {
+    def prompt = {
+      val numCards = game.cardsPlayed.size
+      s"\n>>> Turn ${game.turn}, ${amountOf(numCards, "card")} played <<<\nCommand : "
+    }
+    readLine(prompt) match {
       case null => println() // User pressed Ctrl-d (end of file)
       case cmd =>
         doCommand(cmd)
@@ -2213,12 +2272,11 @@ object LabyrinthAwakening {
   def doCommand(input: String): Unit = {
     class Command(val name: String, val help: String)
     val Commands = List(
-      new Command("quit",     """Save the current turn and quit the game"""),
-      new Command("help",     """List available commands"""),
       new Command("us",       """Enter a card number for a US card play"""),
       new Command("jihadist", """Enter a card number for a Jihadist card play"""),
       new Command("show",     """Display the current game state
                                 |  show all        - entire game state
+                                |  show cards      - cards played during the current turn
                                 |  show summary    - game summary including score
                                 |  show scenario   - scenario and difficulty level
                                 |  show caliphate  - countries making up the Caliphate
@@ -2228,18 +2286,21 @@ object LabyrinthAwakening {
                                 |  adjust prestige      - US prestige level
                                 |  adjust funding       - Jihadist funding level
                                 |  adjust difficulty    - Jihadist ideology/US resolve
-                                |  adjust lapsing       - Current lapsing events
+                                |  adjust lapsing cards - Current lapsing cards
+                                |  adjust removed cards - Cards removed from the game
                                 |  adjust first plot    - Current first plot card
                                 |  adjust markers       - Current global event markers
                                 |  adjust reserves      - US and/or Jihadist reserves
                                 |  adjust plots         - Available/resolved plots
-                                |  adjust offmap troops - Number of troops in off map box.
+                                |  adjust offmap troops - Number of troops in off map box
                                 |  adjust <country>     - Country specific settings""".stripMargin),
       new Command("history",  """Display game history"""),
-      new Command("undo",     """Roll back to the last card played"""),
-      new Command("rollback", """Roll back to the start of any previous turn in the game""")
+      new Command("rollback", """Roll back card plays in the current turn or
+                                |roll back to the start of any previous turn""".stripMargin),
+      new Command("help",     """List available commands"""),
+      new Command("quit",     """Save the current turn and quit the game""")
     )
-    val CmdNames = (Commands map (_.name)).sorted
+    val CmdNames = (Commands map (_.name))
     
     def showCommandHelp(cmd: String) = Commands find (_.name == cmd) foreach (c => println(c.help))
     
@@ -2255,10 +2316,9 @@ object LabyrinthAwakening {
         case "help"     => matchOne(param.get, CmdNames) foreach showCommandHelp
         case "us"       => usCardPlay(param)
         case "jihadist" => jihadistCardPlay(param)
-        case "show"     => showGameState(param)
+        case "show"     => showCommand(param)
         case "adjust"   => adjustSettings(param)
         case "history"  => game.history foreach println  // TODO: Allow > file.txt
-        case "undo"     => println("Not implemented.")
         case "rollback" => println("Not implemented.")
         case cmd        => println(s"Internal error: Command '$cmd' is not valid")
       }
@@ -2267,10 +2327,11 @@ object LabyrinthAwakening {
   
   
   
-  def showGameState(param: Option[String]): Unit = {
-    val options = "all" ::"summary" :: "scenario" :: "caliphate" ::
+  def showCommand(param: Option[String]): Unit = {
+    val options = "all" :: "cards" :: "summary" :: "scenario" :: "caliphate" ::
                   "civil wars" :: (game.countries map (_.name)).sorted
     getOneOf("Show: ", options, param, true, CountryAbbreviations) foreach {
+      case "cards"      => printSummary(game.cardPlaySummary)
       case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
       case "scenario"   => printSummary(game.scenarioSummary)
       case "caliphate"  => printSummary(game.caliphateSummary)
@@ -2294,14 +2355,14 @@ object LabyrinthAwakening {
     }
     
     printSummary(game.scenarioSummary)
-    printCountries("Muslim Countries with Good Governance", (game.muslim filter(_.isGood) map (_.name)).toList.sorted)
-    printCountries("Muslim Countries with Fair Governance", (game.muslim filter(_.isFair) map (_.name)).toList.sorted)
-    printCountries("Muslim Countries with Poor Governance", (game.muslim filter(_.isPoor) map (_.name)).toList.sorted)
-    printCountries("Muslim Countries under Islamic Rule",   (game.muslim filter(_.isIslamic) map (_.name)).toList.sorted)
-    printCountries("Untested Muslim Countries with Data",   (game.muslim filter(_.untestedWithData) map (_.name)).toList.sorted)
-    printCountries("Non-Muslim Countries with Hard Posture",(game.nonMuslim filter (_.isHard) map (_.name)).toList.sorted)
-    printCountries("Non-Muslim Countries with Soft Posture",(game.nonMuslim filter (_.isSoft) map (_.name)).toList.sorted)
-    val iranSpecial = game.nonMuslim find (_.iranSpecialCase) map (_.name)
+    printCountries("Muslim Countries with Good Governance", (game.muslims filter(_.isGood) map (_.name)).sorted)
+    printCountries("Muslim Countries with Fair Governance", (game.muslims filter(_.isFair) map (_.name)).sorted)
+    printCountries("Muslim Countries with Poor Governance", (game.muslims filter(_.isPoor) map (_.name)).sorted)
+    printCountries("Muslim Countries under Islamic Rule",   (game.muslims filter(_.isIslamistRule) map (_.name)).sorted)
+    printCountries("Untested Muslim Countries with Data",   (game.muslims filter(_.untestedWithData) map (_.name)).sorted)
+    printCountries("Non-Muslim Countries with Hard Posture",(game.nonMuslims filter (_.isHard) map (_.name)).sorted)
+    printCountries("Non-Muslim Countries with Soft Posture",(game.nonMuslims filter (_.isSoft) map (_.name)).sorted)
+    val iranSpecial = game.nonMuslims find (_.iranSpecialCase) map (_.name)
     if (iranSpecial.nonEmpty)
       printCountries("Iran Special Case", iranSpecial.toList)
     printSummary(game.scoringSummary)
@@ -2310,31 +2371,182 @@ object LabyrinthAwakening {
     printSummary(game.caliphateSummary)
   }
   
-  def usCardPlay(param: Option[String]): Unit = {
-    getCardNumber("US card # ", param) foreach { cardNumber =>
-      if (game.humanRole == US) {
-        // If card has event playable by the US (given the current game state)
-        // then ask if the user wants to play the card for the event or OPs.
-        
-        // If event is not playable or user chose OPS...
-        // Ask what the would like to do:
-        //   - Add reserves to available ops (and continue)
-        //   - War of Ideas (prompt for country)
-        //   - Deploy troops
-        //   - Regime change, Requires 3 Ops, US at Hard posture, etc...
-        //   - Withdraw, Requires 3 Ops, Us at Soft posture, etc...
-        //   - Disrupt cells/cadre
-        //   - Alert plots (if they have 3 OPs to use.)
-        //   - Reassessment (must be 3 Op card (no reserves) AND prompt for 2nd 3 OP card.)
-        
-        // If card(s) have playable Jihadist events, ask user if event or OPs should come first.
+  sealed trait CardAction
+  case class  Event(card: Card) extends CardAction
+  case object Ops               extends CardAction
+  case object CancelCard        extends CardAction
+  
+  // Returns "Event", "Ops", or "Cancel"
+  def getCardAction(card: Card, role: Role) =
+    if (card.eventIsPlayable(role))
+      getOneOf("Event or Ops? ", "Event"::"Ops"::Nil) match {
+        case Some("Event") => Event(card)
+        case Some("Ops")   => Ops
+        case _             => CancelCard
       }
-      else {
-        // .... Follow bot instructions for the card.
+  else
+    Ops
+
+  // Return a list of actions.
+  // card2 is only used for US reassessment
+  def getActionOrder(opponent: Role, card: Card, card2: Option[Card] = None): List[CardAction] =
+    ((card :: card2.toList) filter (_.eventWillTrigger(opponent))) match {
+      case c :: Nil =>
+        println("\nThe %s event \"%s\" will trigger, which should happen first?".format(opponent, c.name))
+        val choices = List(c.name, "Operations")
+        getOneOf(s"${orList(choices)}? ", choices) match {
+          case None               => Nil
+          case Some("Operations") => List(Ops, Event(c))
+          case _                  => List(Event(c), Ops)
+        }
+        
+      case c1 :: c2 :: Nil =>
+        println("\nThe %s events \"%s\" and \"%s\" will trigger, which should happen first?".
+                format(opponent, c1.name, c2.name))
+        val choices1 = List(c1.name, c2.name, "Operations")
+        getOneOf(s"${orList(choices1)}? ", choices1) match {
+          case None => Nil
+          case Some(first) =>
+            println("Which should happen second?")
+            val choices2 = choices1 filterNot (_ == first)
+            getOneOf(s"${orList(choices2)}? ", choices2) match {
+              case None => Nil
+              case Some(second) =>
+                val third = (choices2 filterNot (_ == second)).head
+                List(first, second, third) map {
+                  case name if name == c1.name => Event(c1)
+                  case name if name == c2.name => Event(c2)
+                  case _ => Ops
+                }
+            }
+        }
+      case _ => // No events triggered
+        List(Ops)
+    }
+    
+  
+  def usCardPlay(param: Option[String]): Unit = {
+    getCardNumber("Card # ", param) foreach { cardNumber =>
+      val card = Cards(cardNumber)
+      println(s"$card")
+      game.humanRole match {
+        case US =>
+          getCardAction(card, US) match {
+            case Event(_) =>
+              val playedCard = PlayedCard(US, card, event = true)
+              log(playedCard.toString)
+              game = game.copy(cardsPlayed = playedCard :: game.cardsPlayed)
+              card.executeEvent(US)
+                
+            case Ops =>
+              usOpsCommand(card)
+
+            case CancelCard =>
+          }
+          
+        case Jihadist =>
+          // The bot plays the card
       }
     }
   }
   
+  def usOpsCommand(card: Card): Unit = {
+    val WarOfIdeas  = "War of Ideas"
+    val Deploy      = "Deploy Troops"
+    val RegimeChg   = "Regime Change"
+    val Withdraw    = "Withdraw Troops"
+    val Disrupt     = "Disrupt Cells"
+    val Alert       = "Alert Plots"
+    val Reassess    = "Reassessment"
+    val AddReserves = "Add to Reserves"
+    val UseReserves = "Expend Reserves"
+    var reservesUsed = 0
+    var inReserve = game.usReserves
+    var secondCard: Option[Card] = None   // For reassessment only
+    def opsAvailable = card.ops + reservesUsed
+    
+    @tailrec def getNextResponse(): Option[String] = {
+      val operations = List(
+        Some(WarOfIdeas),
+        if (deployPossible(opsAvailable))               Some(Deploy)     else None,
+        if (regimeChangeTargets(opsAvailable).nonEmpty) Some(RegimeChg)  else None,
+        if (withdrawTargets(opsAvailable).nonEmpty)     Some(Withdraw)   else None,
+        if (disruptTargets(opsAvailable).nonEmpty)      Some(Disrupt)    else None,
+        if (alertTarget(opsAvailable).nonEmpty)         Some(Alert)      else None,
+        if (opsAvailable == 3 && reservesUsed == 0)     Some(Reassess)   else None,
+        if (opsAvailable < 3  && reservesUsed == 0 && inReserve < 2) Some(AddReserves) else None,
+        if (opsAvailable < 3  && inReserve > 0)         Some(UseReserves) else None
+      ).flatten
+    
+      println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
+      getOneOf("US operation: ", operations, None, true, Map("woi" -> WarOfIdeas)) match {
+        case None =>  None
+        case Some(UseReserves) =>
+          reservesUsed = game.usReserves
+          inReserve    = 0
+          getNextResponse()
+        case Some(Reassess) =>
+          println("You must play a second 3 Ops card")
+          getCardNumber("Card # ", None, true, only3Ops = true) match {
+            case None => None // Cancel the operation
+            case Some(cardNum) =>
+              val card2 = Cards(cardNum)
+              println(s"$card2")
+              secondCard = Some(card2)
+              Some(Reassess)
+          }
+        case operation => operation
+      }
+    }
+    
+    getNextResponse() foreach { operation =>
+      if (operation == AddReserves) {
+        // Don't prompt for event/ops order when playing to reserves.
+        val playedCard = PlayedCard(US, card, event = false, secondCard)
+        game = game.copy(
+          cardsPlayed = playedCard :: game.cardsPlayed, 
+          usReserves  = (game.usReserves + card.ops) min 2)
+        log(playedCard.toString)
+        log(s"US adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(game.usReserves)}.")
+        if (card.eventWillTrigger(Jihadist))
+          log("Jihadist event \"%s\" triggers".format(card.name))
+          card.executeEvent(Jihadist)
+      }
+      else
+        getActionOrder(Jihadist, card, secondCard) match {
+          case Nil => // Cancel the operation
+          case actions =>
+            val playedCard = PlayedCard(US, card, event = false, secondCard)
+            log(playedCard.toString)
+            game = game.copy(cardsPlayed = playedCard :: game.cardsPlayed)
+          
+            if (reservesUsed > 0) {
+              log(s"US player expends their reserves of ${opsString(reservesUsed)}")
+              game = game.copy(usReserves = 0)
+            }
+          
+            actions foreach {
+              case Event(c) =>
+                log("Jihadist event \"%s\" triggers".format(c.name))
+                c.executeEvent(Jihadist)
+              case Ops =>
+                operation match {
+                  case WarOfIdeas    =>
+                  case Deploy   => 
+                  case RegimeChg   => 
+                  case Withdraw => 
+                  case Disrupt   => 
+                  case Alert     => 
+                  case Reassess    => 
+                  case _ => // operation cancelled
+                }
+              case _ =>
+            }
+        }
+    }
+  }
+  
+
   def jihadistCardPlay(param: Option[String]): Unit = {
     getCardNumber("Jihadist card # ", param) foreach { cardNumber =>
       if (game.humanRole == US) {
@@ -2346,10 +2558,47 @@ object LabyrinthAwakening {
     }
   }
   
+  def deployPossible(ops: Int) =
+    (game.troopsAvailable > 0 && game.muslims.exists(_.canDeployTo(ops))) ||
+    game.muslims.exists(_.maxDeployFrom > 0)
+    
+  def regimeChangeTargets(ops: Int) = 
+    if (ops == 3 && game.usPosture == Hard && (game.troopsAvailable > 5 || game.muslims.exists(_.maxDeployFrom > 5)))
+      game.muslims.filter(_.isIslamistRule)
+    else 
+      Nil
+    
+  def withdrawTargets(ops: Int) = 
+    if (ops == 3 && game.usPosture == Soft)
+      game.muslims.filter(m => m.inRegimeChange && m.troops > 0)
+    else
+      Nil
+  
+  def disruptTargets(ops: Int) = {
+    val muslims = game.muslims.filter { m =>
+      ops >= m.governance &&
+      (m.hasCadre || m.totalCells > 0) && 
+      (m.isAlly || (m.troops + m.militia) > 1)
+    }
+    val nonMuslims = game.nonMuslims.filter { n =>
+      !n.iranSpecialCase &&
+      ops >= n.governance &&
+      (n.hasCadre || n.totalCells > 0) 
+    }
+    (muslims ::: nonMuslims)
+  }
+  
+  def alertTarget(ops: Int) = 
+    if (ops == 3)
+      game.countries.filter(_.plots.nonEmpty)
+    else
+      Nil
+
   
   def adjustSettings(param: Option[String]): Unit = {
-    val options = "prestige" ::"funding" :: "difficulty" :: "lapsing" :: "first plot" :: "markers" ::
-                  "reserves" :: "plots" :: "offmap troops" :: (game.countries map (_.name)).sorted
+    val options = "prestige" ::"funding" :: "difficulty" :: "lapsing cards" :: "removed cards" :: 
+                  "first plot" :: "markers" ::"reserves" :: "plots" :: "offmap troops" :: 
+                  (game.countries map (_.name)).sorted
     getOneOf("Adjust: ", options, param, true, CountryAbbreviations) foreach {
       case "prestige"   =>
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
@@ -2368,7 +2617,8 @@ object LabyrinthAwakening {
         }
       
       case "difficulty"    => adjustDifficulty()
-      case "lapsing"       => adjustLapsing()
+      case "lapsing cards" => adjustLapsingCards()
+      case "removed cards" => adjustRemovedCards()
       case "first plot"    => adjustFirstPlot()
       case "markers"       => adjustMarkers()
       case "reserves"      => adjustReserves()
@@ -2453,8 +2703,8 @@ object LabyrinthAwakening {
     }  
   }
   
-  def adjustLapsing(): Unit = {
-    var inPlay = game.lapsing
+  def adjustLapsingCards(): Unit = {
+    var inPlay = game.cardsLapsing
     def available = lapsingCardNumbers filterNot inPlay.contains
     @tailrec def getNextResponse(): Unit = {
       println()
@@ -2476,15 +2726,40 @@ object LabyrinthAwakening {
       }
     }
     getNextResponse()
-    inPlay = inPlay.sorted
-    if (inPlay != game.lapsing) {
-      logAdjustment("Lapsing Events", cardNumsAndNames(game.lapsing), cardNumsAndNames(inPlay))
-      game = game.copy(lapsing = inPlay)
+    if (inPlay.toSet != game.cardsLapsing.toSet) {
+      logAdjustment("Lapsing Events", cardNumsAndNames(game.cardsLapsing), cardNumsAndNames(inPlay))
+      game = game.copy(cardsLapsing = inPlay)
+    }  
+  }
+
+  def adjustRemovedCards(): Unit = {
+    var outOfPlay = game.cardsRemoved
+    def available = removableCardNumbers filterNot outOfPlay.contains
+    @tailrec def getNextResponse(): Unit = {
+      println()
+      println("Cards that are currently out of play:")
+      println(if (outOfPlay.isEmpty) "none" else cardNumsAndNames(outOfPlay.sorted))
+      println()
+      println("Enter a card number to move it between in play and out of play.")
+      getCardNumber("Card #: ") match {
+        case None =>
+        case Some(num) if outOfPlay contains num =>
+          outOfPlay = outOfPlay filterNot(_ == num)
+          getNextResponse()
+        case Some(num) =>
+          outOfPlay = num :: outOfPlay
+          getNextResponse()
+      }
+    }
+    getNextResponse()
+    if (outOfPlay.toSet != game.cardsRemoved.toSet) {
+      logAdjustment("Removed Cards", cardNumsAndNames(game.cardsRemoved), cardNumsAndNames(outOfPlay))
+      game = game.copy(cardsRemoved = outOfPlay)
     }  
   }
   
   def adjustFirstPlot(): Unit = {
-    var inPlay = game.firstPlot
+    var inPlay = game.firstPlotCard
     println()
     println(s"Current first plot card: ${inPlay map cardNumAndName getOrElse "none"}")
     println()
@@ -2494,9 +2769,9 @@ object LabyrinthAwakening {
       case num                            => inPlay = Some(num)
     }
     
-    if (inPlay != game.firstPlot) {
-      logAdjustment("First plot", game.firstPlot map cardNumAndName, inPlay map cardNumAndName)
-      game = game.copy(firstPlot = inPlay)
+    if (inPlay != game.firstPlotCard) {
+      logAdjustment("First plot", game.firstPlotCard map cardNumAndName, inPlay map cardNumAndName)
+      game = game.copy(firstPlotCard = inPlay)
     }  
   }
   
@@ -2884,7 +3159,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry if m.isGood =>
         println("Cannot add aid to a country with Good governance")
         pause()
-      case m: MuslimCountry if m.isIslamic =>
+      case m: MuslimCountry if m.isIslamistRule =>
         println("Cannot add aid to a country under Islamist Rule")
         pause()
       case m: MuslimCountry =>
@@ -2901,7 +3176,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry if m.isGood =>
         println("Cannot add awakening markers to a country with Good governance")
         pause()
-      case m: MuslimCountry if m.isIslamic =>
+      case m: MuslimCountry if m.isIslamistRule =>
         println("Cannot add awakening markers to a country under Islamist Rule")
         pause()
       case m: MuslimCountry if m.civilWar =>
@@ -2921,7 +3196,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry if m.isGood =>
         println("Cannot add reaction markers to a country with Good governance")
         pause()
-      case m: MuslimCountry if m.isIslamic =>
+      case m: MuslimCountry if m.isIslamistRule =>
         println("Cannot add reaction markers to a country under Islamist Rule")
         pause()
       case m: MuslimCountry if m.civilWar =>
@@ -2941,7 +3216,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry if m.isGood =>
         println("Cannot add besieged regime to a country with Good governance")
         pause()
-      case m: MuslimCountry if m.isIslamic =>
+      case m: MuslimCountry if m.isIslamistRule =>
         println("Cannot add besieged regime to a country under Islamist Rule")
         pause()
       case m: MuslimCountry =>
@@ -2958,7 +3233,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry if m.isGood =>
         println("Cannot add Regime Change to a country with Good governance")
         pause()
-      case m: MuslimCountry if m.isIslamic =>
+      case m: MuslimCountry if m.isIslamistRule =>
         println("Cannot add Regime Change to a country under Islamist Rule")
         pause()
       case m: MuslimCountry =>
@@ -2989,7 +3264,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry if m.isGood =>
         println("Cannot add Civil War to a country with Good governance")
         pause()
-      case m: MuslimCountry if m.isIslamic =>
+      case m: MuslimCountry if m.isIslamistRule =>
         println("Cannot add Civil War to a country under Islamist Rule")
         pause()
       case m: MuslimCountry =>
@@ -3220,14 +3495,14 @@ object LabyrinthAwakening {
     player match {
       case US =>
         if (game.usReserves == 2)
-          println(s"$player already has the maximum of 2 OPs reserved")
+          println(s"$player already has the maximum of 2 Ops reserved")
         else {
           game = game.copy(usReserves = (game.usReserves + ops) min 2)
           log(s"$player reserves increased to ${game.usReserves}")
         }
       case Jihadist =>
         if (game.jihadistReserves == 2)
-          println("$player already has the maximum of 2 OPs reserved")
+          println("$player already has the maximum of 2 Ops reserved")
         else {
           game = game.copy(jihadistReserves = (game.jihadistReserves + ops) min 2)
           log(s"$player reserves increased to ${game.jihadistReserves}")
