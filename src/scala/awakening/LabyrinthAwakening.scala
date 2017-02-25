@@ -1066,6 +1066,7 @@ object LabyrinthAwakening {
   // There is a limit of 22 construction arguments for case classes
   // To work around this in the GameState, we will combine a couple of parameters
   case class CampCells(inCamp: Int, onMap: Int)
+  case class Reserves(us: Int, jihadist: Int)
   
   case class GameState(
     scenarioName: String,
@@ -1081,8 +1082,7 @@ object LabyrinthAwakening {
     availablePlots: List[Int] = 1 :: 1 :: 1 :: 2 :: 2 :: 3 :: Nil,
     history: Vector[String] = Vector.empty,
     offMapTroops: Int = 0,
-    usReserves: Int = 0,
-    jihadistReserves: Int = 0,
+    reserves: Reserves = Reserves(0, 0),
     trainingCampCells: CampCells = CampCells(0, 0),
     oilPriceSpikes: Int = 0,
     resolvedPlots: List[Int] = Nil,
@@ -1144,7 +1144,7 @@ object LabyrinthAwakening {
       b += separator()
       b += f"US posture      : $usPosture | World posture    : ${worldPostureDisplay}"
       b += f"US prestige     : $prestige%2d   | Jihadist funding : $funding%2d"
-      b += f"US reserves     : $usReserves%2d   | Jihadist reserves: $jihadistReserves%2d"
+      b += f"US reserves     : ${reserves.us}%2d   | Jihadist reserves: ${reserves.jihadist}%2d"
       b += f"Troops on track : $troopsAvailable%2d   | Troops off map   : $offMapTroops%2d"
       b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track : $militiaAvailable%2d"
       b += s"Markers         : ${if (markers.isEmpty) "none" else markers mkString ", "}"
@@ -2320,11 +2320,11 @@ object LabyrinthAwakening {
       log(s"World posture is $worldPosture $level and US posture is $worldPosture , prestige increases ${game.prestige}")
     }
     if (game.humanRole == US) {
-      game = game.copy(usReserves = 0)
+      game = game.copy(reserves = game.reserves.copy(us = 0))
       log(s"US reserves set to zero")
     }
     else {
-      game = game.copy(jihadistReserves = 0)
+      game = game.copy(reserves = game.reserves.copy(jihadist = 0))
       log(s"Jihadist reserves set to zero")
     }
     
@@ -2619,7 +2619,7 @@ object LabyrinthAwakening {
     val AddReserves = "Add to Reserves"
     val UseReserves = "Expend Reserves"
     var reservesUsed = 0
-    var inReserve = game.usReserves
+    var inReserve = game.reserves.us
     var secondCard: Option[Card] = None   // For reassessment only
     def opsAvailable = card.ops + reservesUsed
     
@@ -2633,14 +2633,14 @@ object LabyrinthAwakening {
         if (game.alertTargets(opsAvailable).nonEmpty)           Some(Alert)       else None,
         if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)    else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves) else None,
-        if (card.ops < 3 && inReserve > 0)                      Some(UseReserves) else None
+        if (card.ops < 3 && reservesUsed == 0 && inReserve > 0) Some(UseReserves) else None
       ).flatten
     
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
       getOneOf("US operation: ", operations) match {
         case None =>  None
         case Some(UseReserves) =>
-          reservesUsed = game.usReserves
+          reservesUsed = inReserve
           inReserve = 0
           getNextResponse()
         case Some(Reassess) =>
@@ -2660,12 +2660,13 @@ object LabyrinthAwakening {
     getNextResponse() foreach { operation =>
       if (operation == AddReserves) {
         // Don't prompt for event/ops order when playing to reserves.
+        inReserve += (card.ops min 2)
         val playedCard = PlayedCard(US, card, event = false, secondCard)
         game = game.copy(
-          cardsPlayed = playedCard :: game.cardsPlayed, 
-          usReserves  = (game.usReserves + card.ops) min 2)
+          cardsPlayed = playedCard :: game.cardsPlayed,
+          reserves    = game.reserves.copy(us = inReserve))
         log(playedCard.toString)
-        log(s"US adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(game.usReserves)}.")
+        log(s"US adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
         if (card.eventWillTrigger(Jihadist))
           log("Jihadist event \"%s\" triggers".format(card.name))
           card.executeEvent(Jihadist)
@@ -2680,7 +2681,7 @@ object LabyrinthAwakening {
           
             if (reservesUsed > 0) {
               log(s"US player expends their reserves of ${opsString(reservesUsed)}")
-              game = game.copy(usReserves = 0)
+              game = game.copy(reserves = game.reserves.copy(us = 0))
             }
           
             actions foreach {
@@ -2828,13 +2829,13 @@ object LabyrinthAwakening {
     for {
       roleName <- getOneOf(s"Which side (${orList(choices)}): ", choices)
       role     = Role(roleName)
-      current  = if (role == US) game.usReserves else game.jihadistReserves
+      current  = if (role == US) game.reserves.us else game.reserves.jihadist
       value    <- adjustInt(s"$role reserves", current, 0 to 2)
     } {
       logAdjustment(s"$role reserves", current, value)
       role match {
-        case US       => game = game.copy(usReserves = value)
-        case Jihadist => game = game.copy(jihadistReserves = value)
+        case US       => game = game.copy(reserves = game.reserves.copy(us = value))
+        case Jihadist => game = game.copy(reserves = game.reserves.copy(jihadist = value))
       }
     }
   }
@@ -3667,26 +3668,6 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry => game = game.updateCountry(n.copy(markers = inPlay))
       }
     }  
-  }
-  
-  
-  def cmdSaveReserves(player: Role, ops: Int): Unit = {
-    player match {
-      case US =>
-        if (game.usReserves == 2)
-          println(s"$player already has the maximum of 2 Ops reserved")
-        else {
-          game = game.copy(usReserves = (game.usReserves + ops) min 2)
-          log(s"$player reserves increased to ${game.usReserves}")
-        }
-      case Jihadist =>
-        if (game.jihadistReserves == 2)
-          println("$player already has the maximum of 2 Ops reserved")
-        else {
-          game = game.copy(jihadistReserves = (game.jihadistReserves + ops) min 2)
-          log(s"$player reserves increased to ${game.jihadistReserves}")
-        }
-    }
   }
 }
 
