@@ -35,6 +35,10 @@ import scala.collection.mutable.ListBuffer
 object LabyrinthAwakening {
   
   def dieRoll = nextInt(6) + 1
+  def humanDieRoll =
+    if (game.humanAutoRoll) dieRoll
+    else  (getOneOf("Enter die roll: ", 1 to 6, None, false) map (_.toInt)).get
+  
   val INTEGER = """(\d+)""".r
   
   sealed trait CardAssociation
@@ -135,7 +139,9 @@ object LabyrinthAwakening {
   val Nigeria           = "Nigeria"
   
   val CountryAbbreviations = Map("US" -> UnitedStates, "UK" -> UnitedKingdom)
-  
+  def countryAbbr(candidates: List[String]) = CountryAbbreviations filter {
+    case (_, name) => candidates contains name
+  }
   // Troop commitment
   val LowIntensity = "Low Intensity"
   val War          = "War"
@@ -833,7 +839,7 @@ object LabyrinthAwakening {
     val markers: List[String]
     val wmdCache: Int        // Number of WMD plots cached
     
-    def unTested: Boolean
+    def isUntested: Boolean
     def isGood         = governance == Good
     def isFair         = governance == Fair
     def isPoor         = governance == Poor
@@ -844,6 +850,7 @@ object LabyrinthAwakening {
     
     def canAutoRecruit: Boolean
     def hasPlots = plots.nonEmpty
+    def warOfIdeasOK(ops: Int): Boolean
   }
   
   case class NonMuslimCountry(
@@ -859,11 +866,12 @@ object LabyrinthAwakening {
     wmdCache: Int               = 0,  // Number of WMD plots cached
     iranSpecialCase: Boolean    = false
   ) extends Country {
-    override def unTested = posture == PostureUntested
+    override def isUntested = posture == PostureUntested
     override def canAutoRecruit = false
     def isSchengen = Schengen contains name
     def isHard = posture == Hard
     def isSoft = posture == Soft
+    override def warOfIdeasOK(ops: Int) = !(iranSpecialCase || name == UnitedStates || name == Israel)
   }
 
   case class MuslimCountry(
@@ -889,14 +897,14 @@ object LabyrinthAwakening {
     reaction: Int               = 0,  // 0, -1, -2, -3
     wmdCache: Int               = 0   // Number of WMD plots cached
   ) extends Country {
-    override def unTested = governance == GovernanceUntested
+    override def isUntested = governance == GovernanceUntested
     def isAlly      = alignment == Ally
     def isNeutral   = alignment == Neutral
     def isAdversary = alignment == Adversary
     
     def inRegimeChange = regimeChange != NoRegimeChange
     
-    def untestedWithData: Boolean = unTested && (
+    def isUntestedWithData: Boolean = isUntested && (
       totalCells > 0            ||
       hasCadre                  ||
       hasPlots                  ||
@@ -910,7 +918,11 @@ object LabyrinthAwakening {
       reaction < 0
     )
     
-    
+    // If a muslim country is untest, then it is valid a WoI target.
+    override def warOfIdeasOK(ops: Int) = 
+      (isUntested || ops >= governance) &&
+      !(isAdversary || isGood || (inRegimeChange && (troops + militia - totalCells) < 5))
+          
     override def canAutoRecruit = isIslamistRule || civilWar || inRegimeChange
     
     // TODO: Add other markers!!
@@ -960,6 +972,7 @@ object LabyrinthAwakening {
       if (troops - totalCells >= 5) troops - totalCells else 0
     else
       troops
+    def canDeployFrom = maxDeployFrom > 0
       
     
   }
@@ -1047,6 +1060,7 @@ object LabyrinthAwakening {
   case class GameState(
     scenarioName: String,
     humanRole: Role,
+    humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
     turn: Int,
     prestige: Int,
@@ -1170,7 +1184,7 @@ object LabyrinthAwakening {
             b += s"  Markers: ${markersString(n.markers)}"
 
         case m: MuslimCountry =>
-          val gov = if (m.unTested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
+          val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
           val res = s"${m.resources} ${if (m.resources == 1) "resource" else "resources"}"
           val oil = if (m.oilProducer) ", Oil producer" else ""
           b += s"$name -- $gov, $res$oil"
@@ -1331,7 +1345,7 @@ object LabyrinthAwakening {
     // List of countries that are valid targets for War of Ideas
     def woiTargets: List[Country] = countries filter {
       case n: NonMuslimCountry => !(n.name == UnitedStates || n.name == Israel)
-      case m: MuslimCountry    => m.unTested || m.isNeutral || (m.isAlly && !m.isGood)
+      case m: MuslimCountry    => m.isUntested || m.isNeutral || (m.isAlly && !m.isGood)
     }
     
     
@@ -1408,11 +1422,62 @@ object LabyrinthAwakening {
     def islamistAdjacency: Boolean =
       muslims.filter(_.isIslamistRule).combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
     
+    // Remember, troops can always deploy to the track with a 1 op card.
+    def deployPossible(ops: Int): Boolean =
+      (troopsAvailable > 0 && muslims.exists(_.canDeployTo(ops))) || muslims.exists(_.canDeployFrom)
+  
+    def deployFromTargets: List[String] = {
+      val ms = (muslims filter (_.canDeployFrom) map (_.name)).sorted
+      if (troopsAvailable > 0) "track" :: ms else ms
+    }
+    
+    def deployToTargets(ops: Int): List[String] = "track" :: (muslims filter (_.canDeployTo(ops)) map (_.name)).sorted
+    
+    def regimeChangeTargets(ops: Int): List[String] = 
+      if (ops == 3 && usPosture == Hard && (troopsAvailable > 5 || muslims.exists(_.maxDeployFrom > 5)))
+        (muslims filter (_.isIslamistRule) map (_.name)).sorted
+      else 
+        Nil
+  
+    def withdrawTargets(ops: Int): List[String] = 
+      if (ops == 3 && usPosture == Soft)
+        (muslims.filter(m => m.inRegimeChange && m.troops > 0) map (_.name)).sorted
+      else
+        Nil
+
+    def disruptTargets(ops: Int): List[String] = {
+      val muslimTargets = muslims.filter { m =>
+        ops >= m.governance &&
+        (m.hasCadre || m.totalCells > 0) && 
+        (m.isAlly || (m.troops + m.militia) > 1)
+      }
+      val nonMuslimTargets = nonMuslims.filter { n =>
+        !n.iranSpecialCase &&
+        ops >= n.governance &&
+        (n.hasCadre || n.totalCells > 0) 
+      }
+      ((muslimTargets ::: nonMuslimTargets) map (_.name)).sorted 
+    }
+
+    def alertTargets(ops: Int): List[String] = 
+      if (ops == 3)
+        (countries filter (_.plots.nonEmpty) map (_.name)).sorted
+      else
+        Nil
+    
+    def warOfIdeasTargets(ops: Int): List[String] =
+      (countries filter (_.warOfIdeasOK(ops)) map (_.name)).sorted
+    
   }
   
-  def initialGameState(scenario: Scenario, humanRole: Role, botDifficulties: List[BotDifficulty]) = GameState(
+  def initialGameState(
+    scenario: Scenario,
+    humanRole: Role,
+    humanAutoRoll: Boolean,
+    botDifficulties: List[BotDifficulty]) = GameState(
       scenario.name,
       humanRole,
+      humanAutoRoll,
       botDifficulties,
       0, // Turn number, zero indicates start of game.
       scenario.prestige,
@@ -1423,7 +1488,7 @@ object LabyrinthAwakening {
   
   
   // Global variables
-  var game = initialGameState(new Awakening2010, US, Muddled :: Nil)
+  var game = initialGameState(new Awakening2010, US, true, Muddled :: Nil)
   var previousState: Option[GameState] = None // Used to undo the last command
   
   // This history of game turns, most recent first (ie in reverse order.)
@@ -1483,7 +1548,7 @@ object LabyrinthAwakening {
     else
       (normalized.distinct filter (_ startsWith s.toLowerCase)) match {
         case Seq() =>
-          println(s"'$s' is not recognized. Must be one of:\n${orList(displayList)}")
+          println(s"'$s' is not valid. Must be one of:\n${orList(displayList)}")
           None
         case Seq(v)  =>
           normalizedAbbreviations.get(v) match {
@@ -1606,16 +1671,18 @@ object LabyrinthAwakening {
   // Test the country if it is still untested.
   def testCountry(name: String): Unit = {
     val country = game.getCountry(name)
-    if (country.unTested) {
+    if (country.isUntested) {
       country match {
         case m: MuslimCountry    =>
           val newGov = if (dieRoll < 5) Poor else Fair
           game = game.updateCountry(m.copy(governance = newGov))
+          log()
           log(s"${m.name} tested: ${govToString(newGov)} Neutral")
           
         case n: NonMuslimCountry =>
           val newPosture = if (dieRoll < 5) Soft else Hard
           game = game.updateCountry(n.copy(posture = newPosture))
+          log()
           log(s"${n.name} tested: $newPosture")
       }
     }
@@ -1624,7 +1691,8 @@ object LabyrinthAwakening {
   
   
   def modifyWoiRoll(die: Int, m: MuslimCountry, ignoreGwotPenalty: Boolean = false, silent: Boolean = false): Int = {
-    def logNotZero(value: Int, msg: String): Unit = if (!silent && value != 0) log(f"$value%2d: $msg")
+    def logNotZero(value: Int, msg: String): Unit =
+      if (!silent && value != 0) log(f"$value%+2d: $msg")
     val prestigeMod = game.prestige match {
       case x if x < 4  => -1
       case x if x < 7  =>  0
@@ -1747,18 +1815,15 @@ object LabyrinthAwakening {
   }
   
   
-  // Perform WoI on the given country.
-  // TODO:  I think the check for invalid country should be done in the command
-  //        before calling this method.
   def warOfIdeas(name: String, die: Int): Unit = {
     game.getCountry(name) match {
-      case m: MuslimCountry if m.isAdversary => println("Cannot do War of Ideas in Adversary country")
-      case m: MuslimCountry if m.isGood => println("Cannot do War of Ideas in muslim country with Good governance")
-      case m: MuslimCountry if m.inRegimeChange && (m.troops + m.militia - m.totalCells) < 5 => 
-        println("Cannot do War of Ideas in regime change country, not enought troops + militia")
       case m: MuslimCountry =>
+        assert(!m.isAdversary, "Cannot do War of Ideas in Adversary country")
+        assert(!m.isGood, "Cannot do War of Ideas in muslim country with Good governance")
+        assert(!(m.inRegimeChange && (m.troops + m.militia - m.totalCells) < 5),
+                 "Cannot do War of Ideas in regime change country, not enought troops + militia")
         log()
-        log(s"War of Ideas in ${m.name}")
+        log(s"US performs War of Ideas in ${m.name}")
         log(separator())
         testCountry(name)
         log(s"Roll: $die")
@@ -1798,10 +1863,13 @@ object LabyrinthAwakening {
         val newPosture = if (die > 4) Hard else Soft
         game = game.updateCountry(n.copy(posture = newPosture))
         log(s"Roll: $die")
-        log(s"Posture of ${n.name} is now $newPosture")
+        if (newPosture == n.posture)
+          log(s"Posture of ${n.name} stays $newPosture")
+        else
+          log(s"Posture of ${n.name} changes to $newPosture")
         if (newPosture == game.usPosture && game.prestige < 12) {
           game = game.adjustPrestige(1)
-          log(s"Increase US prestige by one to ${game.prestige}")
+          log(s"Matches US posture, so increase US prestige by one to ${game.prestige}")
         }
         log(s"World Posture is now ${game.worldPostureDisplay}")
     }
@@ -2234,7 +2302,8 @@ object LabyrinthAwakening {
         case _          => (Jihadist, OffGuard :: Competent :: Adept :: Nil)
       }
     
-    game = initialGameState(scenario, humanRole, botDifficulties)
+    val humanAutoRoll = true
+    game = initialGameState(scenario, humanRole, humanAutoRoll, botDifficulties)
     
     logSummary(game.scenarioSummary)
     logSummary(game.scoringSummary)
@@ -2257,7 +2326,7 @@ object LabyrinthAwakening {
   @tailrec def commandLoop(): Unit = {
     def prompt = {
       val numCards = game.cardsPlayed.size
-      s"\n>>> Turn ${game.turn}, ${amountOf(numCards, "card")} played <<<\nCommand : "
+      s"\n>>> Turn ${game.turn}, ${amountOf(numCards, "card")} played <<<\n${separator()}\nCommand : "
     }
     readLine(prompt) match {
       case null => println() // User pressed Ctrl-d (end of file)
@@ -2359,7 +2428,7 @@ object LabyrinthAwakening {
     printCountries("Muslim Countries with Fair Governance", (game.muslims filter(_.isFair) map (_.name)).sorted)
     printCountries("Muslim Countries with Poor Governance", (game.muslims filter(_.isPoor) map (_.name)).sorted)
     printCountries("Muslim Countries under Islamic Rule",   (game.muslims filter(_.isIslamistRule) map (_.name)).sorted)
-    printCountries("Untested Muslim Countries with Data",   (game.muslims filter(_.untestedWithData) map (_.name)).sorted)
+    printCountries("Untested Muslim Countries with Data",   (game.muslims filter(_.isUntestedWithData) map (_.name)).sorted)
     printCountries("Non-Muslim Countries with Hard Posture",(game.nonMuslims filter (_.isHard) map (_.name)).sorted)
     printCountries("Non-Muslim Countries with Soft Posture",(game.nonMuslims filter (_.isSoft) map (_.name)).sorted)
     val iranSpecial = game.nonMuslims find (_.iranSpecialCase) map (_.name)
@@ -2439,7 +2508,7 @@ object LabyrinthAwakening {
               card.executeEvent(US)
                 
             case Ops =>
-              usOpsCommand(card)
+              humanUsOpsCommand(card)
 
             case CancelCard =>
           }
@@ -2450,7 +2519,7 @@ object LabyrinthAwakening {
     }
   }
   
-  def usOpsCommand(card: Card): Unit = {
+  def humanUsOpsCommand(card: Card): Unit = {
     val WarOfIdeas  = "War of Ideas"
     val Deploy      = "Deploy Troops"
     val RegimeChg   = "Regime Change"
@@ -2468,22 +2537,22 @@ object LabyrinthAwakening {
     @tailrec def getNextResponse(): Option[String] = {
       val operations = List(
         Some(WarOfIdeas),
-        if (deployPossible(opsAvailable))               Some(Deploy)     else None,
-        if (regimeChangeTargets(opsAvailable).nonEmpty) Some(RegimeChg)  else None,
-        if (withdrawTargets(opsAvailable).nonEmpty)     Some(Withdraw)   else None,
-        if (disruptTargets(opsAvailable).nonEmpty)      Some(Disrupt)    else None,
-        if (alertTarget(opsAvailable).nonEmpty)         Some(Alert)      else None,
-        if (opsAvailable == 3 && reservesUsed == 0)     Some(Reassess)   else None,
-        if (opsAvailable < 3  && reservesUsed == 0 && inReserve < 2) Some(AddReserves) else None,
-        if (opsAvailable < 3  && inReserve > 0)         Some(UseReserves) else None
+        if (game.deployPossible(opsAvailable))                  Some(Deploy)      else None,
+        if (game.regimeChangeTargets(opsAvailable).nonEmpty)    Some(RegimeChg)   else None,
+        if (game.withdrawTargets(opsAvailable).nonEmpty)        Some(Withdraw)    else None,
+        if (game.disruptTargets(opsAvailable).nonEmpty)         Some(Disrupt)     else None,
+        if (game.alertTargets(opsAvailable).nonEmpty)           Some(Alert)       else None,
+        if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)    else None,
+        if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves) else None,
+        if (card.ops < 3 && inReserve > 0)                      Some(UseReserves) else None
       ).flatten
     
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
-      getOneOf("US operation: ", operations, None, true, Map("woi" -> WarOfIdeas)) match {
+      getOneOf("US operation: ", operations) match {
         case None =>  None
         case Some(UseReserves) =>
           reservesUsed = game.usReserves
-          inReserve    = 0
+          inReserve = 0
           getNextResponse()
         case Some(Reassess) =>
           println("You must play a second 3 Ops card")
@@ -2531,13 +2600,13 @@ object LabyrinthAwakening {
                 c.executeEvent(Jihadist)
               case Ops =>
                 operation match {
-                  case WarOfIdeas    =>
-                  case Deploy   => 
-                  case RegimeChg   => 
-                  case Withdraw => 
-                  case Disrupt   => 
-                  case Alert     => 
-                  case Reassess    => 
+                  case WarOfIdeas => humanWarOfIdeas(opsAvailable)
+                  case Deploy     => humanDeploy(opsAvailable)
+                  case RegimeChg  => 
+                  case Withdraw   => 
+                  case Disrupt    => 
+                  case Alert      => 
+                  case Reassess   => 
                   case _ => // operation cancelled
                 }
               case _ =>
@@ -2546,6 +2615,52 @@ object LabyrinthAwakening {
     }
   }
   
+  def humanWarOfIdeas(ops: Int): Unit = {
+    val candidates = game.warOfIdeasTargets(ops).sorted
+    log()
+    log(s"US attempts War of Ideas operation with ${opsString(ops)}")
+    val name = getOneOf("Select country: ", candidates, 
+                        None, false, countryAbbr(candidates)).get
+    if (game.isMuslim(name)) {
+      testCountry(name)
+      if (ops < 3 && game.getMuslim(name).isPoor)
+        log(s"Not enough Ops to complete War of Ideas in $name")
+      else
+        warOfIdeas(name, humanDieRoll)
+    }
+    else
+      warOfIdeas(name, humanDieRoll)
+  }
+  
+  // Trops can alwasy deploy to the track.
+  def humanDeploy(ops: Int): Unit = {
+    log()
+    log(s"US performs Deploy operation with ${opsString(ops)}")
+    val sourceCandidates = game.deployFromTargets
+    val source = getOneOf("Deploy from: ", sourceCandidates, None, false, countryAbbr(sourceCandidates)).get
+    val maxTroops = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
+    val numTroops = getOneOf("How many troops: ", 1 to maxTroops, None, false).map(_.toInt).get
+    val destCandidates = game.deployToTargets(ops) filterNot (_ == source)
+    val dest = getOneOf("Deploy to: ", destCandidates, None, false, countryAbbr(destCandidates)).get
+    def disp(name: String) = if (name == "track") "the troops track" else name
+    log()
+    log(s"Move ${amountOf(numTroops, "troop")} from ${disp(source)} to ${disp(dest)}")
+    if (source == "track") {
+      val d = game.getMuslim(dest)
+      game = game.updateCountry(d.copy(troops = d.troops + numTroops))
+    }
+    else if (dest == "track") {
+      val s = game.getMuslim(source)
+      game = game.updateCountry(s.copy(troops = s.troops - numTroops))
+    }
+    else {
+      val s = game.getMuslim(source)
+      val d = game.getMuslim(dest)
+      game = game.updateCountries(List(
+        s.copy(troops = s.troops - numTroops),
+        d.copy(troops = d.troops + numTroops)))
+    }
+  }
 
   def jihadistCardPlay(param: Option[String]): Unit = {
     getCardNumber("Jihadist card # ", param) foreach { cardNumber =>
@@ -2558,41 +2673,6 @@ object LabyrinthAwakening {
     }
   }
   
-  def deployPossible(ops: Int) =
-    (game.troopsAvailable > 0 && game.muslims.exists(_.canDeployTo(ops))) ||
-    game.muslims.exists(_.maxDeployFrom > 0)
-    
-  def regimeChangeTargets(ops: Int) = 
-    if (ops == 3 && game.usPosture == Hard && (game.troopsAvailable > 5 || game.muslims.exists(_.maxDeployFrom > 5)))
-      game.muslims.filter(_.isIslamistRule)
-    else 
-      Nil
-    
-  def withdrawTargets(ops: Int) = 
-    if (ops == 3 && game.usPosture == Soft)
-      game.muslims.filter(m => m.inRegimeChange && m.troops > 0)
-    else
-      Nil
-  
-  def disruptTargets(ops: Int) = {
-    val muslims = game.muslims.filter { m =>
-      ops >= m.governance &&
-      (m.hasCadre || m.totalCells > 0) && 
-      (m.isAlly || (m.troops + m.militia) > 1)
-    }
-    val nonMuslims = game.nonMuslims.filter { n =>
-      !n.iranSpecialCase &&
-      ops >= n.governance &&
-      (n.hasCadre || n.totalCells > 0) 
-    }
-    (muslims ::: nonMuslims)
-  }
-  
-  def alertTarget(ops: Int) = 
-    if (ops == 3)
-      game.countries.filter(_.plots.nonEmpty)
-    else
-      Nil
 
   
   def adjustSettings(param: Option[String]): Unit = {
@@ -2857,7 +2937,7 @@ object LabyrinthAwakening {
       }
       getNextResponse()
     }
-    else { // humanRoll == Jihadist
+    else { // humanRole == Jihadist
       @tailrec def getNextResponse(): Unit = {
         println()
         println("Available plots:")
@@ -2981,7 +3061,7 @@ object LabyrinthAwakening {
   def adjustAlignment(name: String): Unit = {
     game.getCountry(name) match {
       case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot set alignment of non-Muslim country: $name")
-      case m: MuslimCountry if m.unTested =>
+      case m: MuslimCountry if m.isUntested =>
         println(s"$name is untested. Set the governance first.")
         pause()
       case m: MuslimCountry =>
@@ -3027,7 +3107,7 @@ object LabyrinthAwakening {
           warn(nixReaction, "The reaction markers will be removed.")
           if (!anyWarnings || askYorN(s"Do you wish continue (y/n)? ")) {
             var updated = m
-            if (m.unTested) {
+            if (m.isUntested) {
               logAdjustment(name, "Alignment", updated.alignment, Neutral)
               updated = updated.copy(alignment = Neutral) 
             }
