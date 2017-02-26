@@ -93,6 +93,33 @@ object LabyrinthAwakening {
     }
   }
   
+  sealed trait Plot {
+    val number: Int
+    def name: String = s"Plot $number"
+  }
+  
+  // Order so that the most dangerous come first: WMD, 3, 2, 1
+  implicit val PlotOrdering = new Ordering[Plot] {
+    def compare(x: Plot, y: Plot) = (x, y) match {
+      case (PlotWMD, PlotWMD) =>  0
+      case (PlotWMD, _)       => -1
+      case (_, PlotWMD)       =>  1
+      case (x, y)             =>  y.number - x.number
+    }
+  }
+  case object Plot1 extends Plot {
+    val number = 1
+  }
+  case object Plot2 extends Plot {
+    val number = 2
+  }
+  case object Plot3 extends Plot {
+    val number = 3
+  }
+  case object PlotWMD extends Plot {
+    val number = 3
+    override def name = "Plot WMD"
+  }
   val NoRegimeChange    = "None"
   val GreenRegimeChange = "Green"
   val TanRegimeChange   = "Tan"
@@ -261,17 +288,10 @@ object LabyrinthAwakening {
     measure(source, Set.empty).get
   }
   
-  // Convert plot number to a name for display purposes.
-  def plotName(plot: Int): String = plot match {
-    case 4 => "Plot WMD"
-    case n => s"Plot $n"
-  }
-  
-  def plotsDisplay(plots: List[Int], humanRole: Role): String = (plots.size, humanRole) match {
+  def plotsDisplay(plots: List[Plot], humanRole: Role): String = (plots.size, humanRole) match {
     case (0, _)        => "none"
-    case (n, Jihadist) => (plots.sorted.reverse map plotName).mkString(", ")
-    case (1, US)       => "1 hidden plot"
-    case (x, US)       => s"$x hidden plots"
+    case (n, US)       => amountOf(n, "hidden plot")
+    case (_, Jihadist) => plots.sorted map (_.name) mkString ", "
   }
   
   val GlobalMarkers = List(
@@ -838,7 +858,7 @@ object LabyrinthAwakening {
     val sleeperCells: Int
     val activeCells: Int
     val hasCadre: Boolean
-    val plots: List[Int]     // 1, 2, 3, 4 == WMD
+    val plots: List[Plot]
     val markers: List[String]
     val wmdCache: Int        // Number of WMD plots cached
     
@@ -862,7 +882,7 @@ object LabyrinthAwakening {
     sleeperCells: Int           = 0,
     activeCells: Int            = 0,
     hasCadre: Boolean           = false,
-    plots: List[Int]            = Nil,
+    plots: List[Plot]           = Nil,
     markers: List[String]       = Nil,
     posture: String             = PostureUntested,
     recruitOverride: Int        = 0,
@@ -884,7 +904,7 @@ object LabyrinthAwakening {
     sleeperCells: Int           = 0,
     activeCells: Int            = 0,
     hasCadre: Boolean           = false,
-    plots: List[Int]            = Nil,
+    plots: List[Plot]           = Nil,
     markers: List[String]       = Nil,
     isSunni: Boolean            = true,
     resources: Int              = 0,
@@ -987,7 +1007,7 @@ object LabyrinthAwakening {
     val prestige: Int
     val usPosture: String
     val funding: Int
-    val availablePlots: List[Int]     // 1, 2, 3, 4 == WMD
+    val availablePlots: List[Plot]     // 1, 2, 3, 4 == WMD
     val countries: List[Country]
     val markers: List[String]
   }
@@ -997,7 +1017,7 @@ object LabyrinthAwakening {
     val prestige   = 5
     val usPosture = Soft
     val funding    = 5
-    val availablePlots = 1 :: 1 :: 1 :: 2 :: 2 :: 3 :: Nil
+    val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
     val countries = List(
       NonMuslimCountry(Canada),
       NonMuslimCountry(UnitedStates, posture = Soft),
@@ -1077,13 +1097,13 @@ object LabyrinthAwakening {
     funding: Int,
     countries: List[Country],
     markers: List[String],
-    availablePlots: List[Int] = 1 :: 1 :: 1 :: 2 :: 2 :: 3 :: Nil,
+    availablePlots: List[Plot] = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil,
     history: Vector[String] = Vector.empty,
     offMapTroops: Int = 0,
     reserves: Reserves = Reserves(0, 0),
     trainingCampCells: CampCells = CampCells(0, 0),
     oilPriceSpikes: Int = 0,
-    resolvedPlots: List[Int] = Nil,
+    resolvedPlots: List[Plot] = Nil,
     cardsPlayed: List[PlayedCard] = Nil,   // Cards played during current turn (most recent first).
     firstPlotCard: Option[Int] = None,  // Card number
     cardsLapsing: List[Int] = Nil,       // Card numbers
@@ -1136,7 +1156,7 @@ object LabyrinthAwakening {
     }
     
     def statusSummary: Seq[String] = {
-      val activePlots = countries filter (_.hasPlots)
+      val activePlotCountries = countries filter (_.hasPlots)
       val b = new ListBuffer[String]
       b += "Status"
       b += separator()
@@ -1157,12 +1177,12 @@ object LabyrinthAwakening {
       b += s"1st plot       : ${firstPlotCard map cardNumAndName getOrElse "none"}"
       b += s"Resloved plots : ${plotsDisplay(resolvedPlots, Jihadist)}"
       b += s"Available plots: ${plotsDisplay(availablePlots, humanRole)}"
-      if (activePlots.isEmpty)
+      if (activePlotCountries.isEmpty)
         b += s"Active plots   : none"
       else {
         b += s"Active plots"
-        val fmt = "  %%-%ds: %%s".format(activePlots.map(_.name.length).max)
-        for (c <- activePlots)
+        val fmt = "  %%-%ds: %%s".format(activePlotCountries.map(_.name.length).max)
+        for (c <- activePlotCountries)
           b += fmt.format(c.name, plotsDisplay(c.plots, humanRole))
       }
       b.toList
@@ -1516,11 +1536,9 @@ object LabyrinthAwakening {
       ((muslimTargets ::: nonMuslimTargets) map (_.name)).sorted 
     }
 
-    def alertTargets(ops: Int): List[String] = 
-      if (ops == 3)
-        (countries filter (_.plots.nonEmpty) map (_.name)).sorted
-      else
-        Nil
+    def alertPossible(ops: Int) = ops == 3 && alertTargets.nonEmpty
+    
+    def alertTargets: List[String] = (countries filter (_.hasPlots) map (_.name)).sorted
     
     def warOfIdeasTargets(ops: Int): List[String] =
       (countries filter (_.warOfIdeasOK(ops)) map (_.name)).sorted
@@ -2347,6 +2365,23 @@ object LabyrinthAwakening {
     }
   }
   
+  def performAlert(target: String): Unit = {
+    val c = game.getCountry(target)
+    assert(c.hasPlots, s"performAlert(): $target has no plots")
+    val (alerted :: remaining) = shuffle(c.plots)
+    val updated = c match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = remaining))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = remaining))
+    }
+    if (alerted == PlotWMD)
+      log(s"${alerted.name} alerted in $target, remove it from the game.")
+    else {
+      log(s"${alerted.name} alerted in $target, move it to the resolved plots box.")
+      game = game.copy(resolvedPlots = alerted :: game.resolvedPlots)
+    }
+  }
+
+  
   // Prestige roll used
   //   After regime change, withdraw, unblocked plot in the US, or by event.
   def rollPrestige(): Unit = {
@@ -2798,12 +2833,12 @@ object LabyrinthAwakening {
     
     @tailrec def getNextResponse(): Option[String] = {
       val operations = List(
-        Some(WarOfIdeas),
+                                                                Some(WarOfIdeas),
         if (game.deployPossible(opsAvailable))                  Some(Deploy)      else None,
         if (game.regimeChangePossible(opsAvailable))            Some(RegimeChg)   else None,
         if (game.withdrawPossible(opsAvailable))                Some(Withdraw)    else None,
         if (game.disruptTargets(opsAvailable).nonEmpty)         Some(Disrupt)     else None,
-        if (game.alertTargets(opsAvailable).nonEmpty)           Some(Alert)       else None,
+        if (game.alertPossible(opsAvailable))                   Some(Alert)       else None,
         if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)    else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves) else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve > 0) Some(UseReserves) else None
@@ -2928,15 +2963,14 @@ object LabyrinthAwakening {
   def humanDisrupt(ops: Int): Unit = {
     log()
     log(s"US performs Disrupt operation with ${opsString(ops)}")
-    val target = game.disruptTargets(ops) match {
-      case x :: Nil => println(s"Disrupt in $x"); x
-      case xs => askOneOf("Disrupt in which country: ", xs, None, false, CountryAbbreviations).get
-    }
-    performDisrupt(target)
+    performDisrupt(askCountry("Disrupt in which country: ", game.disruptTargets(ops)))
   }
   
     
   def humanAlert(): Unit = {
+    log()
+    log(s"US performs Alert operation with ${opsString(3)}")
+    performAlert(askCountry("Alert plot in which country: ", game.alertTargets))
   }
     
   def humanReassess(): Unit = {
@@ -3180,11 +3214,11 @@ object LabyrinthAwakening {
   // If the human is the Jihadist, the all plots are visible.
   // If the human is the US, then only resolved plots are visible.
   def adjustPlots(): Unit = {
-    def showPlots(plots: Vector[Int], startIndex: Int): Unit = {
-      @tailrec def showNext(list: List[Int], index: Int): Unit = list match {
+    def showPlots(plots: Vector[Plot], startIndex: Int): Unit = {
+      @tailrec def showNext(list: List[Plot], index: Int): Unit = list match {
         case Nil =>
         case plot :: rest =>
-          println(s"$index) ${plotName(plot)}")
+          println(s"$index) ${plot.name}")
           showNext(rest, index + 1)
       }
       
@@ -3698,16 +3732,16 @@ object LabyrinthAwakening {
   // Move plots between country and available/resolved
   def adJustCountryPlots(name: String): Unit = {
     val country = game.getCountry(name)
-    def numIndexesUsed(plots: Vector[Int], hidden: Boolean) = plots.size match {
+    def numIndexesUsed(plots: Vector[Plot], hidden: Boolean) = plots.size match {
       case 0           => 0
       case _ if hidden => 1
       case x           => x
     }
-    def showPlots(plots: Vector[Int], startIndex: Int, hidden: Boolean): Unit = {
-      @tailrec def showNext(list: List[Int], index: Int): Unit = list match {
+    def showPlots(plots: Vector[Plot], startIndex: Int, hidden: Boolean): Unit = {
+      @tailrec def showNext(list: List[Plot], index: Int): Unit = list match {
         case Nil =>
         case plot :: rest =>
-          println(s"$index) ${plotName(plot)}")
+          println(s"$index) ${plot.name}")
           showNext(rest, index + 1)
       }
     
@@ -3719,7 +3753,7 @@ object LabyrinthAwakening {
     }
 
     // For hidden plot we select a random index.
-    def selectedIndex(index: Int, plots: Vector[Int], hidden: Boolean): Int =
+    def selectedIndex(index: Int, plots: Vector[Plot], hidden: Boolean): Int =
       if (hidden) nextInt(plots.size) else index
 
     var countryPlots = country.plots.toVector
