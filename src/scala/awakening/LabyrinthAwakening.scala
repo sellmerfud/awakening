@@ -1387,9 +1387,10 @@ object LabyrinthAwakening {
       (posture, value.abs min 3)
     }
     
+    // 0, 1, 2, 3
     def gwotPenalty: Int = {
       gwot match {
-        case (posture, value)  if posture != usPosture => -value
+        case (posture, value)  if posture != usPosture => value
         case _ => 0
       }
     }
@@ -1451,7 +1452,7 @@ object LabyrinthAwakening {
     def islamistAdjacency: Boolean =
       muslims.filter(_.isIslamistRule).combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
     
-    // Remember, troops can always deploy to the track with a 1 op card.
+    // Remember, troops can ALWAYS deploy to the track with a 1 op card.
     def deployPossible(ops: Int): Boolean =
       (troopsAvailable > 0 && muslims.exists(_.canDeployTo(ops))) || muslims.exists(_.canDeployFrom)
   
@@ -1462,17 +1463,21 @@ object LabyrinthAwakening {
     
     def deployToTargets(ops: Int): List[String] = "track" :: (muslims filter (_.canDeployTo(ops)) map (_.name)).sorted
     
-    def regimeChangeTargets(ops: Int): List[String] = 
-      if (ops == 3 && usPosture == Hard && (troopsAvailable > 5 || muslims.exists(_.maxDeployFrom > 5)))
-        (muslims filter (_.isIslamistRule) map (_.name)).sorted
-      else 
-        Nil
+    def regimeChangeSources: List[String] = {
+      val ms = (muslims filter (_.maxDeployFrom > 5) map (_.name)).sorted
+      if (troopsAvailable > 5) "track" :: ms else ms
+    } 
+      
+    def regimeChangeTargets: List[String] = (muslims filter (_.isIslamistRule) map (_.name)).sorted
+      
+    def regimeChangePossible(ops: Int) = 
+      ops == 3 && usPosture == Hard && regimeChangeSources.nonEmpty && regimeChangeTargets.nonEmpty
   
-    def withdrawTargets(ops: Int): List[String] = 
-      if (ops == 3 && usPosture == Soft)
-        (muslims.filter(m => m.inRegimeChange && m.troops > 0) map (_.name)).sorted
-      else
-        Nil
+    def withdrawTargets: List[String] = 
+        (muslims filter (m => m.inRegimeChange && m.troops > 0) map (_.name)).sorted
+      
+    def withdrawPossible(ops: Int) = 
+        ops == 3 && usPosture == Soft && withdrawTargets.nonEmpty
 
     def disruptAffectsPrestige(name: String): Boolean = getCountry(name) match {
       case m: MuslimCountry    => (m.troops + m.militia) > 1 && m.troops > 0
@@ -1727,15 +1732,15 @@ object LabyrinthAwakening {
       country match {
         case m: MuslimCountry    =>
           val newGov = if (dieRoll < 5) Poor else Fair
-          game = game.updateCountry(m.copy(governance = newGov))
+          game = game.updateCountry(m.copy(governance = newGov, alignment = Neutral))
           log()
-          log(s"${m.name} tested: ${govToString(newGov)} Neutral")
+          log(s"${m.name} tested: Set to governance/alignment to ${govToString(newGov)}/Neutral")
           
         case n: NonMuslimCountry =>
           val newPosture = if (dieRoll < 5) Soft else Hard
           game = game.updateCountry(n.copy(posture = newPosture))
           log()
-          log(s"${n.name} tested: $newPosture")
+          log(s"${n.name} tested: Set posture to $newPosture")
       }
     }
   }
@@ -1752,7 +1757,7 @@ object LabyrinthAwakening {
       case _           =>  2
     }
     val shiftToGoodMod = if (m.isAlly && m.isGood) -1 else 0
-    val gwotMod        = if (ignoreGwotPenalty) 0 else game.gwotPenalty
+    val gwotMod        = if (ignoreGwotPenalty) 0 else -game.gwotPenalty
     val aidMod         = m.aidMarkers
     val adjToGoodMod   = if (game.adjacentMuslims(m.name) exists (_.isGood)) 1 else 0
     val awakeningMod   = m.awakening
@@ -2247,6 +2252,71 @@ object LabyrinthAwakening {
     }
   }
   
+  // Source/dest may be "track" or a muslim country.
+  // That cannot be equal: Other than that, this function does NOT do any sanity checking!
+  def moveTroops(source: String, dest: String, numTroops: Int): Unit = {
+    assert(source != dest, "The source and destination for moveTroops() cannot be the same.")
+    def disp(name: String) = if (name == "track") "the troops track" else name
+    log(s"Move ${amountOf(numTroops, "troop")} from ${disp(source)} to ${disp(dest)}")
+    (source, dest) match {
+      case ("track", dest) =>
+        val d = game.getMuslim(dest)
+        game  = game.updateCountry(d.copy(troops = d.troops + numTroops))
+      case (source, "track") =>
+        val s = game.getMuslim(source)
+        game  = game.updateCountry(s.copy(troops = s.troops - numTroops))
+      case (source, dest) =>
+        val (s, d) = (game.getMuslim(source), game.getMuslim(dest))
+        game       = game.updateCountries(List(s.copy(troops = s.troops - numTroops),
+                                               d.copy(troops = d.troops + numTroops)))
+    }
+  }
+
+  // • Deploy at least six troops into the country.
+  // • Place a green Regime Change marker on them (4.8.2). • Roll its Governance on the Country Tests table.
+  // • Shift its Alignment to Ally.
+  // • Shift any Sleeper cells there to Active (4.7.4.1).
+  // • Roll Prestige
+  def performRegimeChange(source: String, target: String, numTroops: Int): Unit = {
+    log()
+    moveTroops(source, target, numTroops)
+    val m = game.getMuslim(target)
+    val newGov = if (dieRoll < 5) Poor else Fair
+    game = game.updateCountry(m.copy(
+      governance   = newGov,
+      alignment    = Ally,
+      regimeChange = GreenRegimeChange,
+      activeCells  = m.activeCells + m.sleeperCells,
+      sleeperCells = 0
+    ))
+    log(s"Place a green regime change maker in $target")
+    log(s"Set governance of ${m.name} ${govToString(newGov)}")
+    log(s"Set alignment of ${m.name} Ally")
+    if (m.sleeperCells > 0)
+      log(s"Flip the ${amountOf(m.sleeperCells, "sleeper cell")} in ${m.name} to active")
+    rollPrestige()
+  }
+  
+  // Prestige roll used
+  //   After regime change, withdraw, unblocked plot in the US, or by event.
+  def rollPrestige(): Unit = {
+    log("Roll Prestige...")
+    val dirDie      = dieRoll
+    val shiftDice   = List(dieRoll, dieRoll)
+    val shiftAmount = if (dirDie + (if (game.gwotPenalty > 0) -1 else 0) < 5)
+       -shiftDice.min
+    else
+      shiftDice.min
+    if (game.gwotPenalty > 0)
+      log(s"Direction roll: $dirDie, -1 drm because GWOT penalty is not zero")
+    else
+      log(s"Direction roll: $dirDie")
+    log(s"Rolls for shift amount: ${shiftDice.head} and ${shiftDice.last}")
+    game = game.adjustPrestige(shiftAmount)
+    val desc = if (shiftAmount < 0) "drops" else "rises"
+    log(s"US prestige $desc by $shiftAmount to ${game.prestige}")
+  }
+  
   def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean, logPrefix: String = "") =
     addCellsToCountry(name, true, num, ignoreFunding, logPrefix)
   
@@ -2671,8 +2741,8 @@ object LabyrinthAwakening {
       val operations = List(
         Some(WarOfIdeas),
         if (game.deployPossible(opsAvailable))                  Some(Deploy)      else None,
-        if (game.regimeChangeTargets(opsAvailable).nonEmpty)    Some(RegimeChg)   else None,
-        if (game.withdrawTargets(opsAvailable).nonEmpty)        Some(Withdraw)    else None,
+        if (game.regimeChangePossible(opsAvailable))            Some(RegimeChg)   else None,
+        if (game.withdrawPossible(opsAvailable))                Some(Withdraw)    else None,
         if (game.disruptTargets(opsAvailable).nonEmpty)         Some(Disrupt)     else None,
         if (game.alertTargets(opsAvailable).nonEmpty)           Some(Alert)       else None,
         if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)    else None,
@@ -2770,34 +2840,28 @@ object LabyrinthAwakening {
   def humanDeploy(ops: Int): Unit = {
     log()
     log(s"US performs Deploy operation with ${opsString(ops)}")
-    val sourceCandidates = game.deployFromTargets
-    val source           = getOneOf("Deploy from: ", sourceCandidates, None, false, countryAbbr(sourceCandidates)).get
+    val source = game.deployFromTargets match {
+      case x :: Nil => println(s"Deploy from $x"); x
+      case xs => getOneOf("Deploy from: ", xs, None, false, countryAbbr(xs)).get
+    }
     val maxTroops        = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
     val numTroops        = getOneOf("How many troops: ", 1 to maxTroops, None, false).map(_.toInt).get
-    val destCandidates   = game.deployToTargets(ops) filterNot (_ == source)
-    val dest             = getOneOf("Deploy to: ", destCandidates, None, false, countryAbbr(destCandidates)).get
-    def disp(name: String) = if (name == "track") "the troops track" else name
-    log()
-    log(s"Move ${amountOf(numTroops, "troop")} from ${disp(source)} to ${disp(dest)}")
-    (source, dest) match {
-      case ("track", dest) =>
-        val d = game.getMuslim(dest)
-        game  = game.updateCountry(d.copy(troops = d.troops + numTroops))
-      case (source, "track") =>
-        val s = game.getMuslim(source)
-        game  = game.updateCountry(s.copy(troops = s.troops - numTroops))
-      case (source, dest) =>
-        val (s, d) = (game.getMuslim(source), game.getMuslim(dest))
-        game       = game.updateCountries(List(s.copy(troops = s.troops - numTroops),
-                                               d.copy(troops = d.troops + numTroops)))
+    val dest = game.deployToTargets(ops) filterNot (_ == source) match {
+      case x :: Nil => println(s"Deploy to $x"); x
+      case xs => getOneOf("Deploy to: ", xs, None, false, countryAbbr(xs)).get
     }
+    log()
+    moveTroops(source, dest, numTroops)
   }
+  
 
   def humanDisrupt(ops: Int): Unit = {
     log()
     log(s"US performs Disrupt operation with ${opsString(ops)}")
-    val candidates = game.disruptTargets(ops)
-    val target = getOneOf("Disrupt in which country: ", candidates, None, false, countryAbbr(candidates)).get
+    val target = game.disruptTargets(ops) match {
+      case x :: Nil => println(s"Disrupt in $x"); x
+      case xs => getOneOf("Disrupt in which country: ", xs, None, false, countryAbbr(xs)).get
+    }
     val c = game.getCountry(target)
     game.disruptLosses(target) match {
       case Left(cellsAffected) =>
@@ -2819,6 +2883,20 @@ object LabyrinthAwakening {
   }
     
   def humanRegimeChange(): Unit = {
+    log()
+    log(s"US performs Regime Change operation with ${opsString(3)}")
+    val candidates = game.regimeChangeTargets
+    val target = game.regimeChangeTargets match {
+      case x :: Nil => println(s"Regime change in $x"); x
+      case xs => getOneOf("Regime change in which country: ", xs, None, false, countryAbbr(xs)).get
+    }
+    val source = game.regimeChangeSources match {
+      case x :: Nil => println(s"Deploy troops from $x"); x
+      case xs => getOneOf("Deploy troops from which country: ", xs, None, false, countryAbbr(xs)).get
+    }
+    val maxTroops = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
+    val numTroops = getOneOf("How many troops: ", 6 to maxTroops, None, false).map(_.toInt).get
+    performRegimeChange(source, target, numTroops)
   }
     
   def humanWithdraw(): Unit = {
@@ -2847,15 +2925,20 @@ object LabyrinthAwakening {
   
   def adjustSettings(param: Option[String]): Unit = {
     val options = "prestige" ::"funding" :: "difficulty" :: "lapsing cards" :: "removed cards" :: 
-                  "first plot" :: "markers" ::"reserves" :: "plots" :: "offmap troops" :: 
+                  "first plot" :: "markers" ::"reserves" :: "plots" :: "offmap troops" :: "posture" ::
                   (game.countries map (_.name)).sorted
     getOneOf("Adjust: ", options, param, true, CountryAbbreviations) foreach {
-      case "prestige"   =>
+      case "prestige" =>
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
           logAdjustment("Prestige", game.prestige, value)
           game = game.copy(prestige = value)
         }
-      case "funding"    =>
+      case "posture" =>
+        val newValue = if (game.usPosture == Hard) Soft else Hard
+        logAdjustment("US posture", game.usPosture, newValue)
+        game = game.copy(usPosture = newValue)
+        
+      case "funding" =>
         adjustInt("Funding", game.funding, 1 to 9) foreach { value =>
           logAdjustment("Prestige", game.funding, value)
           game = game.copy(funding = value)
