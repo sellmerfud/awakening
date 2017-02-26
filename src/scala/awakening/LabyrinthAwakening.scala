@@ -139,9 +139,6 @@ object LabyrinthAwakening {
   val Nigeria           = "Nigeria"
   
   val CountryAbbreviations = Map("US" -> UnitedStates, "UK" -> UnitedKingdom)
-  def countryAbbr(candidates: List[String]) = CountryAbbreviations filter {
-    case (_, name) => candidates contains name
-  }
   // Troop commitment
   val LowIntensity = "Low Intensity"
   val War          = "War"
@@ -1350,10 +1347,9 @@ object LabyrinthAwakening {
     def updateCountry(changed: Country): GameState =
       this.copy(countries = changed :: (countries filterNot (_.name == changed.name)))
     
-    // Do NOT pass multiples with the same name!
     def updateCountries(changed: List[Country]): GameState = {
-      val names = changed.map(_.name).toSet
-      this.copy(countries = changed ::: countries filterNot (c => names contains c.name))
+      val updates = (changed map (c => (c.name -> c))).toMap
+      this.copy(countries = countries map (c => updates.getOrElse(c.name, c)))
     }
     
     def adjustPrestige(amt: Int): GameState = this.copy(prestige = (prestige + amt) max 1 min 12)
@@ -1580,29 +1576,26 @@ object LabyrinthAwakening {
   // Find a match for the given string in the list of options.
   // Any unique prefix of the given options will succeed.
   def matchOne(s: String, options: Seq[String], abbreviations: Map[String, String] = Map.empty): Option[String] = {
-    for ((abbr, x) <- abbreviations) {
-      assert(options contains x, s"abbreviation '$abbr' maps to '$x' which is not a valid option")
-    }
-    
+    // Filter out any abbreviations that do not have a match with one of the options.
+    val abbr = abbreviations filter { case (_, name) => options contains name }
     // When showing the list of options to the user, we want to group
     // all abbreviations with the word that they represent.
     val displayList = {
-    // (options ++ abbreviations.keys)
       var associations = Map.empty[String, Set[String]].withDefaultValue(Set.empty)
-      for ((a, o) <- abbreviations)
+      for ((a, o) <- abbr)
         associations += o -> (associations(o) + a)
       options map {
         case o if associations(o).nonEmpty => o + associations(o).toList.sorted.mkString(" (", ",", ")")
         case o => o
       }  
     }
-    val normalizedAbbreviations = for ((a, v) <- abbreviations) yield (a.toLowerCase, v)  
-    val normalized = (options ++ abbreviations.keys) map (_.toLowerCase)
     if (s == "?") {
       println(s"Enter one of:\n${orList(displayList)}")
       None
     }
-    else
+    else {
+      val normalizedAbbreviations = for ((a, v) <- abbr) yield (a.toLowerCase, v)  
+      val normalized = (options ++ abbr.keys) map (_.toLowerCase)
       (normalized.distinct filter (_ startsWith s.toLowerCase)) match {
         case Seq() =>
           println(s"'$s' is not valid. Must be one of:\n${orList(displayList)}")
@@ -1623,6 +1616,7 @@ object LabyrinthAwakening {
           println(s"'$s' is ambiguous. (${orList(ambiguous)})")
           None
       }
+    }
   }
     
   def getOneOf(prompt: String, options: Seq[Any], initial: Option[String] = None, 
@@ -2277,10 +2271,10 @@ object LabyrinthAwakening {
   // • Shift its Alignment to Ally.
   // • Shift any Sleeper cells there to Active (4.7.4.1).
   // • Roll Prestige
-  def performRegimeChange(source: String, target: String, numTroops: Int): Unit = {
+  def performRegimeChange(source: String, dest: String, numTroops: Int): Unit = {
     log()
-    moveTroops(source, target, numTroops)
-    val m = game.getMuslim(target)
+    moveTroops(source, dest, numTroops)
+    val m = game.getMuslim(dest)
     val newGov = if (dieRoll < 5) Poor else Fair
     game = game.updateCountry(m.copy(
       governance   = newGov,
@@ -2289,11 +2283,27 @@ object LabyrinthAwakening {
       activeCells  = m.activeCells + m.sleeperCells,
       sleeperCells = 0
     ))
-    log(s"Place a green regime change maker in $target")
+    log(s"Place a green regime change maker in $dest")
     log(s"Set governance of ${m.name} ${govToString(newGov)}")
     log(s"Set alignment of ${m.name} Ally")
     if (m.sleeperCells > 0)
       log(s"Flip the ${amountOf(m.sleeperCells, "sleeper cell")} in ${m.name} to active")
+    rollPrestige()
+  }
+  
+  // • Deploy any number troops out of the Regime Change country (regardless of cells present).
+  // • Remove any Aid markers there.
+  // • Place a Besieged Regime marker there (if there is not one already).
+  // • Roll Prestige.
+  def performWithdraw(source: String, dest: String, numTroops: Int): Unit = {
+    log()
+    moveTroops(source, dest, numTroops)
+    val m = game.getMuslim(source)
+    if (m.aidMarkers > 0)
+      log(s"Remove aid marker${if (m.aidMarkers > 1) "s" else ""} from ${m.name}")
+    if (!m.besiegedRegime)
+      log(s"Add besieged regime marker to ${m.name}")
+    game = game.updateCountry(m.copy(aidMarkers = 0,besiegedRegime = true))
     rollPrestige()
   }
   
@@ -2810,7 +2820,7 @@ object LabyrinthAwakening {
                   case RegimeChg  => humanRegimeChange()
                   case Withdraw   => humanWithdraw()
                   case Alert      => humanAlert()
-                  case Reassess   => humanReasses()
+                  case Reassess   => humanReassess()
                   case _ => // operation cancelled
                 }
               case _ =>
@@ -2820,11 +2830,10 @@ object LabyrinthAwakening {
   }
   
   def humanWarOfIdeas(ops: Int): Unit = {
-    val candidates = game.warOfIdeasTargets(ops).sorted
     log()
     log(s"US attempts War of Ideas operation with ${opsString(ops)}")
-    val name = getOneOf("Select country: ", candidates, 
-                        None, false, countryAbbr(candidates)).get
+    val name = getOneOf("Select country: ", game.warOfIdeasTargets(ops).sorted, 
+                        None, false, CountryAbbreviations).get
     if (game.isMuslim(name)) {
       testCountry(name)
       if (ops < 3 && game.getMuslim(name).isPoor)
@@ -2842,13 +2851,13 @@ object LabyrinthAwakening {
     log(s"US performs Deploy operation with ${opsString(ops)}")
     val source = game.deployFromTargets match {
       case x :: Nil => println(s"Deploy from $x"); x
-      case xs => getOneOf("Deploy from: ", xs, None, false, countryAbbr(xs)).get
+      case xs => getOneOf("Deploy from: ", xs, None, false, CountryAbbreviations).get
     }
     val maxTroops        = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
     val numTroops        = getOneOf("How many troops: ", 1 to maxTroops, None, false).map(_.toInt).get
     val dest = game.deployToTargets(ops) filterNot (_ == source) match {
       case x :: Nil => println(s"Deploy to $x"); x
-      case xs => getOneOf("Deploy to: ", xs, None, false, countryAbbr(xs)).get
+      case xs => getOneOf("Deploy to: ", xs, None, false, CountryAbbreviations).get
     }
     log()
     moveTroops(source, dest, numTroops)
@@ -2860,7 +2869,7 @@ object LabyrinthAwakening {
     log(s"US performs Disrupt operation with ${opsString(ops)}")
     val target = game.disruptTargets(ops) match {
       case x :: Nil => println(s"Disrupt in $x"); x
-      case xs => getOneOf("Disrupt in which country: ", xs, None, false, countryAbbr(xs)).get
+      case xs => getOneOf("Disrupt in which country: ", xs, None, false, CountryAbbreviations).get
     }
     val c = game.getCountry(target)
     game.disruptLosses(target) match {
@@ -2885,27 +2894,39 @@ object LabyrinthAwakening {
   def humanRegimeChange(): Unit = {
     log()
     log(s"US performs Regime Change operation with ${opsString(3)}")
-    val candidates = game.regimeChangeTargets
-    val target = game.regimeChangeTargets match {
+    val dest = game.regimeChangeTargets match {
       case x :: Nil => println(s"Regime change in $x"); x
-      case xs => getOneOf("Regime change in which country: ", xs, None, false, countryAbbr(xs)).get
+      case xs => getOneOf("Regime change in which country: ", xs, None, false, CountryAbbreviations).get
     }
     val source = game.regimeChangeSources match {
       case x :: Nil => println(s"Deploy troops from $x"); x
-      case xs => getOneOf("Deploy troops from which country: ", xs, None, false, countryAbbr(xs)).get
+      case xs => getOneOf("Deploy troops from which country: ", xs, None, false, CountryAbbreviations).get
     }
     val maxTroops = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
     val numTroops = getOneOf("How many troops: ", 6 to maxTroops, None, false).map(_.toInt).get
-    performRegimeChange(source, target, numTroops)
+    performRegimeChange(source, dest, numTroops)
   }
     
   def humanWithdraw(): Unit = {
+    log()
+    log(s"US performs Withdraw operation with ${opsString(3)}")
+    val source = game.withdrawTargets match {
+      case x :: Nil => println(s"Withdraw troops from $x"); x
+      case xs => getOneOf("Withdraw troops from which country: ", xs, None, false, CountryAbbreviations).get
+    }
+    val dest = (game.deployToTargets(ops = 3) filter (_ != source)) match {
+      case x :: Nil => println(s"Deploy withdrawn troops to $x"); x
+      case xs => getOneOf("Deploy withdrawn troops to: ", xs, None, false, CountryAbbreviations).get
+    }
+    val maxTroops = game.getMuslim(source).troops
+    val numTroops = getOneOf("How many troops: ", 1 to maxTroops, None, false).map(_.toInt).get
+    performWithdraw(source, dest, numTroops)
   }
     
   def humanAlert(): Unit = {
   }
     
-  def humanReasses(): Unit = {
+  def humanReassess(): Unit = {
   }
     
 
