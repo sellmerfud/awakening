@@ -1570,13 +1570,17 @@ object LabyrinthAwakening {
   
   // Global variables
   var game = initialGameState(new Awakening2010, US, true, Muddled :: Nil)
-  var previousState: Option[GameState] = None // Used to undo the last command
   
-  // This history of game turns, most recent first (ie in reverse order.)
+  // A history of the card plays for the current game turn, most recent first.
+  // The current game state is NOT in the list. 
+  // Allows user to roll back to a previous card play in the current turn.
+  var previousCardPlays = List.empty[GameState]
+  
+  // The history of game turns, most recent first
   // The current game state is NOT in the list.  It is added at the
   // end of the turn.
   // Allows user to roll back to a previous turn.
-  var gameTurns = List.empty[GameState]
+  var previousTurns = List.empty[GameState]
   
   
   // If num is 1 use the name as is
@@ -2742,8 +2746,8 @@ object LabyrinthAwakening {
     log()
     logSummary(game.statusSummary)
         
-    previousState = None  // Cannot undo at end of turn.
-    gameTurns = game :: gameTurns
+    previousCardPlays = Nil
+    previousTurns = game :: previousTurns
     saveGameState("some file name")
     
   }
@@ -2956,10 +2960,13 @@ object LabyrinthAwakening {
   def usCardPlay(param: Option[String]): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
       val card = Cards(cardNumber)
-      val postfix = if (card.eventIsPlayable(US)) s"  (The ${card.association} event is playable)"
-      else if (card.eventWillTrigger(Jihadist))   s"  (The ${card.association} event will be triggered)"
+      val postfix = if (card.eventIsPlayable(US))
+        s"  (The ${card.association} event is playable)"
+      else if (game.humanRole == US && card.eventWillTrigger(Jihadist))
+        s"  (The ${card.association} event will be triggered)"
       else ""
-      val savedGameState = game  // Save the game in case the user aborts the card play 
+      // Save the game state so we can roll back later 
+      previousCardPlays = game :: previousCardPlays
       // Add the card to the list of played cards for the turn
       // and clear the op targets for the current card.
       game = game.copy(
@@ -2967,16 +2974,18 @@ object LabyrinthAwakening {
         opsTargetsLastCard = game.opsTargetsThisCard,
         opsTargetsThisCard = OpsTargets()
       )
-      log(s"US plays $card${postfix}")
+      log(s"$US plays $card${postfix}")
       try game.humanRole match {
-          case US       => try humanUsCardPlay(card)
+          case US       => humanUsCardPlay(card)
           case Jihadist => // The US bot plays the card
         }
       catch {
         case AbortCardPlay =>
           println("\n>>>> Aborting the current card play <<<<")
           println(separator())
-          performRollback(savedGameState)
+          val mostRecent :: rest = previousCardPlays
+          previousCardPlays = rest
+          performRollback(mostRecent)
       }
     }
   }
@@ -3157,17 +3166,43 @@ object LabyrinthAwakening {
     performReassessment()
   }
     
-
   def jihadistCardPlay(param: Option[String]): Unit = {
-    askCardNumber("Jihadist card # ", param) foreach { cardNumber =>
-      if (game.humanRole == US) {
-        // Prompt for card  play
-      }
-      else {
-        // ....
+    askCardNumber("Card # ", param) foreach { cardNumber =>
+      val card = Cards(cardNumber)
+      val postfix = if (card.eventIsPlayable(Jihadist))
+        s"  (The ${card.association} event is playable)"
+      else if (game.humanRole == Jihadist && card.eventWillTrigger(US))
+        s"  (The ${card.association} event will be triggered)"
+      else ""
+      // Save the game state so we can roll back later 
+      previousCardPlays = game :: previousCardPlays
+      // Add the card to the list of played cards for the turn
+      // and clear the op targets for the current card.
+      game = game.copy(
+        cardsPlayed        = PlayedCard(Jihadist, card) :: game.cardsPlayed,
+        opsTargetsLastCard = game.opsTargetsThisCard,
+        opsTargetsThisCard = OpsTargets()
+      )
+      log(s"$Jihadist plays $card${postfix}")
+      try game.humanRole match {
+          case US       => // The Jihadist bot plays the card
+          case Jihadist => humanJihadistCardPlay(card)
+        }
+      catch {
+        case AbortCardPlay =>
+          println("\n>>>> Aborting the current card play <<<<")
+          println(separator())
+          val mostRecent :: rest = previousCardPlays
+          previousCardPlays = rest
+          performRollback(mostRecent)
       }
     }
   }
+  
+  def humanJihadistCardPlay(card: Card): Unit = {
+    
+  }
+
   
   def adjustSettings(param: Option[String]): Unit = {
     val options = "prestige" ::"funding" :: "difficulty" :: "lapsing cards" :: "removed cards" :: 
