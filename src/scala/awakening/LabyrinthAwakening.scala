@@ -2703,6 +2703,7 @@ object LabyrinthAwakening {
                                 |  show <country>  - state of a single country""".stripMargin),
       new Command("adjust",   """Adjust game settings <Minimal rule checking is applied>
                                 |  adjust prestige      - US prestige level
+                                |  adjust posture       - US posture
                                 |  adjust funding       - Jihadist funding level
                                 |  adjust difficulty    - Jihadist ideology/US resolve
                                 |  adjust lapsing cards - Current lapsing cards
@@ -2712,6 +2713,7 @@ object LabyrinthAwakening {
                                 |  adjust reserves      - US and/or Jihadist reserves
                                 |  adjust plots         - Available/resolved plots
                                 |  adjust offmap troops - Number of troops in off map box
+                                |  adjust auto roll     - Auto roll for human operations
                                 |  adjust <country>     - Country specific settings""".stripMargin),
       new Command("history",  """Display game history"""),
       new Command("rollback", """Roll back card plays in the current turn or
@@ -3052,7 +3054,7 @@ object LabyrinthAwakening {
   def adjustSettings(param: Option[String]): Unit = {
     val options = "prestige" ::"funding" :: "difficulty" :: "lapsing cards" :: "removed cards" :: 
                   "first plot" :: "markers" ::"reserves" :: "plots" :: "offmap troops" :: "posture" ::
-                  (game.countries map (_.name)).sorted
+                  "auto roll" :: (game.countries map (_.name)).sorted
     askOneOf("Adjust: ", options, param, true, CountryAbbreviations) foreach {
       case "prestige" =>
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
@@ -3074,6 +3076,9 @@ object LabyrinthAwakening {
           logAdjustment("Offmap troops", game.offMapTroops, value)
           game = game.copy(offMapTroops = value)
         }
+      case "auto roll" => 
+        logAdjustment("Human auto roll", game.params.humanAutoRoll, !game.params.humanAutoRoll)
+        game = game.copy(params = game.params.copy(humanAutoRoll = !game.params.humanAutoRoll))
       
       case "difficulty"    => adjustDifficulty()
       case "lapsing cards" => adjustLapsingCards()
