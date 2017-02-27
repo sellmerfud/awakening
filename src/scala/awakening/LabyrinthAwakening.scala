@@ -36,7 +36,7 @@ object LabyrinthAwakening {
   
   def dieRoll = nextInt(6) + 1
   def humanDieRoll =
-    if (game.humanAutoRoll) dieRoll
+    if (game.params.humanAutoRoll) dieRoll
     else  (askOneOf("Enter die roll: ", 1 to 6, None, false) map (_.toInt)).get
   
   val INTEGER = """(\d+)""".r
@@ -1082,15 +1082,20 @@ object LabyrinthAwakening {
   case class Reserves(us: Int, jihadist: Int)
   // Keeps track of the which countries were the target of operations
   // Some events depend on this.
-  case class OpsTargets(lastCard: Set[String] = Set.empty, thisCard: Set[String] = Set.empty) {
-    def nextCard(): OpsTargets = this.copy(lastCard = thisCard, thisCard = Set.empty)
-  }
+  case class OpsTargets(
+    any:              Set[String] = Set.empty,
+    testedOrImproved: Set[String] = Set.empty
+  )
   
-  case class GameState(
+  case class GameParameters(
     scenarioName: String,
     humanRole: Role,
     humanAutoRoll: Boolean,
-    botDifficulties: List[BotDifficulty],
+    botDifficulties: List[BotDifficulty]
+  )
+  
+  case class GameState(
+    params: GameParameters,
     turn: Int,
     prestige: Int,
     usPosture: String,
@@ -1108,9 +1113,11 @@ object LabyrinthAwakening {
     firstPlotCard: Option[Int] = None,  // Card number
     cardsLapsing: List[Int] = Nil,       // Card numbers
     cardsRemoved: List[Int] = Nil,   // Cards removed from the game.
-    opsTargets: OpsTargets = OpsTargets()
+    opsTargetsThisCard: OpsTargets = OpsTargets(),
+    opsTargetsLastCard: OpsTargets = OpsTargets()
   ) {
     
+    def humanRole = params.humanRole
     def botRole = if (humanRole == US) Jihadist else US
       
     def markerInPlay(name: String) = markers contains name
@@ -1128,11 +1135,11 @@ object LabyrinthAwakening {
     
     def scenarioSummary: Seq[String] = {
       val b = new ListBuffer[String]
-      b += s"Scenario: $scenarioName"
+      b += s"Scenario: ${params.scenarioName}"
       b += separator()
       b += s"The Bot is playing the $botRole"
       b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
-      for (difficulty <- botDifficulties)
+      for (difficulty <- params.botDifficulties)
         b += s"  $difficulty"
       b.toList
     }
@@ -1378,7 +1385,10 @@ object LabyrinthAwakening {
     def adjustFunding(amt: Int): GameState  = this.copy(funding = (funding + amt) max 1 min 9)
     
     def addOpsTarget(name: String): GameState = 
-      this.copy(opsTargets = opsTargets.copy(opsTargets.thisCard + name))
+      this.copy(opsTargetsThisCard = opsTargetsThisCard.copy(any = opsTargetsThisCard.any + name))
+    
+    def addTestedOrImproved(name: String): GameState =
+      this.copy(opsTargetsThisCard = opsTargetsThisCard.copy(testedOrImproved = opsTargetsThisCard.testedOrImproved + name))
     
     // List of countries that are valid targets for War of Ideas
     def woiTargets: List[Country] = countries filter {
@@ -1553,10 +1563,7 @@ object LabyrinthAwakening {
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty]) = GameState(
-      scenario.name,
-      humanRole,
-      humanAutoRoll,
-      botDifficulties,
+      GameParameters(scenario.name, humanRole,humanAutoRoll, botDifficulties),
       0, // Turn number, zero indicates start of game.
       scenario.prestige,
       scenario.usPosture,
@@ -1774,8 +1781,9 @@ object LabyrinthAwakening {
     game.getMuslim(muslimKey) 
   }
   
-  // Test the country if it is still untested.
-  def testCountry(name: String): Unit = {
+  // If the country is untested, test it and return true
+  // otherwise return false.
+  def testCountry(name: String): Boolean = {
     val country = game.getCountry(name)
     if (country.isUntested) {
       country match {
@@ -1791,7 +1799,10 @@ object LabyrinthAwakening {
           log()
           log(s"${n.name} tested: Set posture to $newPosture")
       }
+      true
     }
+    else
+      false
   }
   
   
@@ -2831,10 +2842,10 @@ object LabyrinthAwakening {
       val savedGameState = game  // Save the game in case the user aborts the card play 
       // Add the card to the list of played cards for the turn
       // and clear the op targets for the current card.
-      
       game = game.copy(
-        cardsPlayed = PlayedCard(US, card) :: game.cardsPlayed,
-        opsTargets  = game.opsTargets.nextCard
+        cardsPlayed        = PlayedCard(US, card) :: game.cardsPlayed,
+        opsTargetsLastCard = game.opsTargetsThisCard,
+        opsTargetsThisCard = OpsTargets()
       )
       log(s"US plays $card${postfix}")
       try game.humanRole match {
@@ -2958,6 +2969,7 @@ object LabyrinthAwakening {
     log(s"US attempts War of Ideas operation with ${opsString(ops)}")
     val target = askCountry("War of Ideas in which country: ", game.warOfIdeasTargets(ops)) 
     if (game.isMuslim(target)) {
+      // If an untested country tests to Poor the user may not have enough Ops...
       testCountry(target)
       if (ops < 3 && game.getMuslim(target).isPoor)
         log(s"Not enough Ops to complete War of Ideas in $target")
@@ -3110,7 +3122,7 @@ object LabyrinthAwakening {
     else
       Muddled::Coherent::Attractive::Potent::Infectious::Virulent::Nil
     val AllNames = AllLevels map (_.name)
-    var inEffect = game.botDifficulties map (_.name)
+    var inEffect = game.params.botDifficulties map (_.name)
     
     val label = if (game.botRole == US) "US resolve" else "Jihadist ideology"
     val standard = for (num <- 1 to AllNames.size; included = AllNames take num)
@@ -3144,9 +3156,9 @@ object LabyrinthAwakening {
     }
     getNextResponse()
     val updated = inEffect map BotDifficulty.apply
-    if (updated != game.botDifficulties) {
-      logAdjustment(s"$label", game.botDifficulties.map(_.name), updated.map(_.name))
-      game = game.copy(botDifficulties = updated)
+    if (updated != game.params.botDifficulties) {
+      logAdjustment(s"$label", game.params.botDifficulties.map(_.name), updated.map(_.name))
+      game = game.copy(params = game.params.copy(botDifficulties = updated))
     }  
   }
   
