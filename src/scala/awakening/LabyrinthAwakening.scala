@@ -1080,6 +1080,11 @@ object LabyrinthAwakening {
   // To work around this in the GameState, we will combine a couple of parameters
   case class CampCells(inCamp: Int, onMap: Int)
   case class Reserves(us: Int, jihadist: Int)
+  // Keeps track of the which countries were the target of operations
+  // Some events depend on this.
+  case class OpsTargets(lastCard: Set[String] = Set.empty, thisCard: Set[String] = Set.empty) {
+    def nextCard(): OpsTargets = this.copy(lastCard = thisCard, thisCard = Set.empty)
+  }
   
   case class GameState(
     scenarioName: String,
@@ -1102,7 +1107,8 @@ object LabyrinthAwakening {
     cardsPlayed: List[PlayedCard] = Nil,   // Cards played during current turn (most recent first).
     firstPlotCard: Option[Int] = None,  // Card number
     cardsLapsing: List[Int] = Nil,       // Card numbers
-    cardsRemoved: List[Int] = Nil   // Cards removed from the game.
+    cardsRemoved: List[Int] = Nil,   // Cards removed from the game.
+    opsTargets: OpsTargets = OpsTargets()
   ) {
     
     def botRole = if (humanRole == US) Jihadist else US
@@ -1371,6 +1377,8 @@ object LabyrinthAwakening {
     def adjustPrestige(amt: Int): GameState = this.copy(prestige = (prestige + amt) max 1 min 12)
     def adjustFunding(amt: Int): GameState  = this.copy(funding = (funding + amt) max 1 min 9)
     
+    def addOpsTarget(name: String): GameState = 
+      this.copy(opsTargets = opsTargets.copy(opsTargets.thisCard + name))
     
     // List of countries that are valid targets for War of Ideas
     def woiTargets: List[Country] = countries filter {
@@ -2266,6 +2274,7 @@ object LabyrinthAwakening {
         assert(!m.isGood, "Cannot do War of Ideas in muslim country with Good governance")
         assert(!(m.inRegimeChange && (m.troops + m.militia - m.totalCells) < 5),
                  "Cannot do War of Ideas in regime change country, not enought troops + militia")
+        game = game.addOpsTarget(name)
         log()
         log(s"US performs War of Ideas in ${m.name}")
         log(separator())
@@ -2329,6 +2338,7 @@ object LabyrinthAwakening {
     moveTroops(source, dest, numTroops)
     val m = game.getMuslim(dest)
     val newGov = if (dieRoll < 5) Poor else Fair
+    game = game.addOpsTarget(dest)
     game = game.updateCountry(m.copy(
       governance   = newGov,
       alignment    = Ally,
@@ -2350,6 +2360,7 @@ object LabyrinthAwakening {
   // • Roll Prestige.
   def performWithdraw(source: String, dest: String, numTroops: Int): Unit = {
     log()
+    game = game.addOpsTarget(dest)
     moveTroops(source, dest, numTroops)
     val m = game.getMuslim(source)
     if (m.aidMarkers > 0)
@@ -2362,6 +2373,7 @@ object LabyrinthAwakening {
   
   def performDisrupt(target: String): Unit = {
     val bumpPrestige = game.disruptAffectsPrestige(target)
+    game = game.addOpsTarget(target)
     game.disruptLosses(target) match {
       case Some(Left((sleepers, actives))) =>
         flipSleeperCells(target, sleepers)
@@ -2381,6 +2393,7 @@ object LabyrinthAwakening {
   def performAlert(target: String): Unit = {
     val c = game.getCountry(target)
     assert(c.hasPlots, s"performAlert(): $target has no plots")
+    game = game.addOpsTarget(target)
     val (alerted :: remaining) = shuffle(c.plots)
     val updated = c match {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = remaining))
@@ -2590,7 +2603,11 @@ object LabyrinthAwakening {
       game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
     }
     
-    game = game.copy(cardsPlayed = Nil) // Reset history of cards for current turn.
+    // Reset history of cards for current turn
+    // Move the current turn Ops targets to the previous 
+    // TODO: Should the OpsTargets be cleared at the end of the turn?
+    game = game.copy(turn = game.turn + 1, cardsPlayed = Nil)
+    
     log()
     logSummary(game.scoringSummary)
     log()
@@ -2661,6 +2678,10 @@ object LabyrinthAwakening {
     val Commands = List(
       new Command("us",       """Enter a card number for a US card play"""),
       new Command("jihadist", """Enter a card number for a Jihadist card play"""),
+      new Command("end turn", """End the current turn.
+                                |This should be done after the last US card play.
+                                |Any plots will be resolved and the end of turn
+                                |actions will be conducted."""),
       new Command("show",     """Display the current game state
                                 |  show all        - entire game state
                                 |  show played     - cards played during the current turn
@@ -2695,18 +2716,19 @@ object LabyrinthAwakening {
     tokens.headOption foreach { verb =>
       val param = if (tokens.tail.nonEmpty) Some(tokens.tail.mkString(" ")) else None
       matchOne(verb, CmdNames) foreach {
+        case "us"       => usCardPlay(param)
+        case "jihadist" => jihadistCardPlay(param)
+        case "end turn" => endTurn()
+        case "show"     => showCommand(param)
+        case "adjust"   => adjustSettings(param)
+        case "history"  => game.history foreach println  // TODO: Allow > file.txt
+        case "rollback" => println("Not implemented.")
         case "quit" =>
           throw ExitGame
         case "help" if param.isEmpty =>
           println("Available commands: (type help <command> for more detail)")
           println(orList(CmdNames))
         case "help"     => matchOne(param.get, CmdNames) foreach showCommandHelp
-        case "us"       => usCardPlay(param)
-        case "jihadist" => jihadistCardPlay(param)
-        case "show"     => showCommand(param)
-        case "adjust"   => adjustSettings(param)
-        case "history"  => game.history foreach println  // TODO: Allow > file.txt
-        case "rollback" => println("Not implemented.")
         case cmd        => println(s"Internal error: Command '$cmd' is not valid")
       }
     }
@@ -2807,8 +2829,13 @@ object LabyrinthAwakening {
       else if (card.eventWillTrigger(Jihadist))   s"  (The ${card.association} event will be triggered)"
       else ""
       val savedGameState = game  // Save the game in case the user aborts the card play 
-      // Add to the list of played cards for the turn
-      game = game.copy(cardsPlayed = PlayedCard(US, card) :: game.cardsPlayed)
+      // Add the card to the list of played cards for the turn
+      // and clear the op targets for the current card.
+      
+      game = game.copy(
+        cardsPlayed = PlayedCard(US, card) :: game.cardsPlayed,
+        opsTargets  = game.opsTargets.nextCard
+      )
       log(s"US plays $card${postfix}")
       try game.humanRole match {
           case US       => try humanUsCardPlay(card)
