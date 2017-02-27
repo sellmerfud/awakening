@@ -1206,10 +1206,6 @@ object LabyrinthAwakening {
           items += amountOf(num, label, pluralLabel)
       }
       def addItems(): Unit = if (items.nonEmpty) b += s"  ${items mkString ", "}"
-      def markersString(markers: List[String]): String = if (markers.isEmpty)
-        "none"
-      else
-        markers mkString ", "
 
       getCountry(name) match {
         case n: NonMuslimCountry =>
@@ -1767,7 +1763,7 @@ object LabyrinthAwakening {
   def randomShiaMixCountry: MuslimCountry = {
     val muslimKey = List(dieRoll, dieRoll, dieRoll).sum match {
       case 3 | 4 | 5 | 6                 => Syria
-      case 7 if game.isMuslim(Iran) => Iran
+      case 7 if game.isMuslim(Iran)      => Iran
       case 7                             => Syria
       case 8                             => SaudiArabia
       case 9                             => Turkey
@@ -1776,7 +1772,7 @@ object LabyrinthAwakening {
       case 12                            => Yemen
       case 13                            => Pakistan
       case 14                            => Lebanon
-      case 15 | 16 | 17 | 18             => Afghanistan
+      case _  /* 15 | 16 | 17 | 18 */    => Afghanistan
     }
     game.getMuslim(muslimKey) 
   }
@@ -1805,7 +1801,6 @@ object LabyrinthAwakening {
     else
       false
   }
-  
   
   
   def modifyWoiRoll(die: Int, m: MuslimCountry, ignoreGwotPenalty: Boolean = false, silent: Boolean = false): Int = {
@@ -1974,6 +1969,11 @@ object LabyrinthAwakening {
   
   def separator(length: Int = 52, char: Char = '-'): String = char.toString * length
 
+  def markersString(markers: List[String]): String = if (markers.isEmpty)
+    "none"
+  else
+    markers mkString ", "
+
   // Sorts a list column wise.  Returns a list of rows where
   // eash row is a string with the items of that row lined up
   // with a minimum of two spaces separating the columns.
@@ -2021,10 +2021,126 @@ object LabyrinthAwakening {
     // To be done.
   }
   
+  // Display a list of what needs to be done to get the game board into
+  // the proper state when going from one state to another.
+  def displayGameStateDifferences(from: GameState, to: GameState, heading: String = ""): Unit = {
+    def show(oldValue: Any, newValue: Any, msg: String) =
+      if (oldValue != newValue) println(msg)
+    
+    if (heading.nonEmpty) {
+      println()
+      println("The following changes should be made to the game board")
+      println(separator())
+    }
+    show(from.params.botDifficulties, to.params.botDifficulties, 
+        "Set the bot difficulties to %s".format(to.params.botDifficulties map (_.name) mkString ", ")) 
+    show(from.goodResources, to.goodResources, s"Set Good Resources to ${to.goodResources}")
+    show(from.islamistResources, to.islamistResources, s"Set Islamic Resources to ${to.islamistResources}")
+    show(from.numGoodOrFair, to.numGoodOrFair, s"Set Good/Fair Countries to ${to.numGoodOrFair}")
+    show(from.numPoorOrIslamic, to.numPoorOrIslamic, s"Set Poor/Islamic Countries to ${to.numPoorOrIslamic}")
+    show(from.prestige, to.prestige, s"Set prestige to ${to.prestige}")
+    show(from.usPosture, to.usPosture, s"Set US posture to ${to.usPosture}")
+    show(from.gwot, to.gwot, s"Set World posture to ${to.worldPostureDisplay}")
+    show(from.reserves.us, to.reserves.us, s"Set US reserves to ${to.reserves.us}")
+    show(from.reserves.jihadist, to.reserves.jihadist, s"Set Jihadist reserves to ${to.reserves.jihadist}")
+    show(from.troopsAvailable, to.troopsAvailable, 
+          s"Set troops on the track to ${to.troopsAvailable} (${to.troopCommitment})") 
+    show(from.offMapTroops, to.offMapTroops, s"Set troops in of map box to ${to.offMapTroops}")
+    show(from.militiaAvailable, to.militiaAvailable, s"Set available militia to ${to.militiaAvailable}")
+    show(from.reserves.jihadist, to.reserves.jihadist, s"Set Jihadist reserves to ${to.reserves.jihadist}")
+    show(from.funding, to.funding, s"Set jihadist funding to ${to.funding} (${to.fundingLevel})")
+    show(from.cellsOnTrack, to.cellsOnTrack, s"Set cells on the funding track to ${to.cellsOnTrack}")
+    show(from.trainingCampCells.inCamp, to.trainingCampCells.inCamp, s"Set cells in training camp to ${to.trainingCampCells}")
+    show(from.resolvedPlots.sorted, to.resolvedPlots.sorted, 
+          s"Set resolvedPlots plots to ${plotsDisplay(to.resolvedPlots, Jihadist)}")
+    show(from.availablePlots.sorted, to.availablePlots.sorted, 
+          s"Set available plots to ${plotsDisplay(to.availablePlots, to.params.humanRole)}")
+    show(from.markers.sorted,  to.markers.sorted, 
+            s"  Set global event markers to: ${markersString(to.markers)}" )
+    (from.firstPlotCard, to.firstPlotCard) match {
+      case (x, y) if x == y =>  // No change
+      case (_, Some(c))     => println(s"Set ${cardNumAndName(c)} as the first plot card")
+      case (_, None)        => println("There should be no first plot card")
+    }
+    if (from.cardsLapsing.sorted != to.cardsLapsing.sorted) {
+      println("The following cards are lapsing:")
+        to.cardsLapsing.sorted foreach (c => println(s"  ${cardNumAndName(c)}"))
+    }
+    if (from.cardsRemoved.sorted != to.cardsRemoved.sorted) {
+      println("The following cards have been removed from play:")
+      to.cardsRemoved.sorted foreach (c => println(s"  ${cardNumAndName(c)}"))
+    }
+    
+    
+    for (fromC <- from.muslims; toC = to.getMuslim(fromC.name)) {
+      val b = new ListBuffer[String]
+      def showC(oldValue: Any, newValue: Any, msg: String) = if (oldValue != newValue) b += msg
+      def showBool(oldValue: Boolean, newValue: Boolean, marker: String) = 
+        (oldValue, newValue) match {
+          case (true, false) => b += s"  Remove $marker"
+          case (false, true) => b += s"  Add $marker"
+          case _ => // No change
+          
+        }
+      show(fromC.governance, toC.governance, s"  Set governance to ${govToString(toC.governance)}")    
+      show(fromC.alignment, toC.alignment, s"  Set alignment to ${toC.alignment}")    
+      show(fromC.sleeperCells, toC.sleeperCells, s"  Set active cells to ${toC.sleeperCells}")
+      show(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
+      showBool(fromC.hasCadre, toC.hasCadre, "cadre marker")
+      show(fromC.troops, toC.troops, s"  Set troops to ${toC.troops}")
+      show(fromC.militia, toC.militia, s"  Set militia to ${toC.militia}")
+      show(fromC.aidMarkers, toC.aidMarkers, s"  Set aid markers to ${toC.aidMarkers}")
+      show(fromC.awakening, toC.awakening, s"  Set awakening markers to ${toC.awakening}")
+      show(fromC.reaction, toC.reaction, s"  Set reaction markers to ${-toC.reaction}")
+      showBool(fromC.besiegedRegime, toC.besiegedRegime, "besieged regime marker")
+      if (fromC.regimeChange != toC.regimeChange) {
+        toC.regimeChange match {
+          case NoRegimeChange => b += "  Remove regime change marker"
+          case x              => b += s"  Add ${x} regime change marker"
+        }
+      }
+      showBool(fromC.caliphateCapital, toC.caliphateCapital, "Caliphate capital marker")
+      showBool(from.isCaliphateMember(fromC.name), to.isCaliphateMember(toC.name), "Caliphate member marker")
+      show(fromC.plots.sorted, toC.plots.sorted, 
+            s"  Set plots to ${plotsDisplay(toC.plots, to.params.humanRole)}")
+      show(fromC.markers.sorted,  toC.markers.sorted, 
+        s"  Set markers to: ${markersString(toC.markers)}" )
+      
+      if (b.nonEmpty) {
+        b.prepend(s"\n${toC.name} changes:\n${separator()}")
+        b foreach println
+      }
+    }
+    
+    for (fromC <- from.nonMuslims; toC = to.getNonMuslim(fromC.name)) {
+      val b = new ListBuffer[String]
+      def showC(oldValue: Any, newValue: Any, msg: String) = if (oldValue != newValue) b += msg
+          
+      show(fromC.posture, toC.posture, s"  Set posture to ${toC.posture}")
+      show(fromC.sleeperCells, toC.sleeperCells, s"  Set active cells to ${toC.sleeperCells}")
+      show(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
+      (fromC.hasCadre, toC.hasCadre) match {
+        case (true, false) => b += "  Remove cadre marker"
+        case (false, true) => b += "  Add cadre marker"
+        case _ => // No change
+      }
+      show(fromC.plots.sorted, toC.plots.sorted, 
+            s"  Set plots to ${plotsDisplay(toC.plots, to.params.humanRole)}")
+      show(fromC.markers.sorted,  toC.markers.sorted, 
+        s"  Set markers to: ${markersString(toC.markers)}" )
+      
+      if (b.nonEmpty) {
+        b.prepend(s"\n${toC.name} changes:\n${separator()}")
+        b foreach println
+      }
+    }
+  }
+  
+  
   // Change the current game state and print to the console all
   // ajdustments that need to be made to the game 
   def performRollback(previousGameState: GameState): Unit = {
-    // TODO: Need to print adjustments to the console.
+    displayGameStateDifferences(game, previousGameState)
     game = previousGameState
   }
   
@@ -2604,7 +2720,7 @@ object LabyrinthAwakening {
     
     if (game.cardsLapsing.nonEmpty) {
       log(s"Discard the lapsing events: ${cardNumsAndNames(game.cardsLapsing)}")
-      game = game.copy(cardsLapsing = Nil)
+      game = game.copy(cardsLapsing = Nil, oilPriceSpikes = 0)
     }
     game.firstPlotCard foreach { num => 
       log(s"Discard the firstplot card: ${cardNumAndName(num)}")
