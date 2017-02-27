@@ -361,6 +361,13 @@ object LabyrinthAwakening {
       association == opponentRole && eventConditions(opponentRole)
   }
   
+  // Used to keep track of cards played during the current turn.
+  case class PlayedCard(role:Role, card: Card) {
+    override def toString() = s"$role played ${cardNumAndName(card.number)}"
+  }
+  
+  
+  
   def entry(card: Card) = (card.number -> card)
   
   val Cards = Map(
@@ -1069,18 +1076,6 @@ object LabyrinthAwakening {
     val markers = List.empty[String]
   }
   
-  case class PlayedCard(role:Role, card: Card, event: Boolean, card2: Option[Card] = None) {
-    override def toString() = {
-      card2 match {
-        case Some(c2) => 
-          s"$role plays ${cardNumAndName(card.number)} and ${cardNumAndName(c2.number)} for Reassessment"
-        case None =>
-          val action = if (event) "the event" else s"${opsString(card.ops)}"
-          s"$role plays ${cardNumAndName(card.number)} for $action"
-      }
-    }
-  }
-  
   // There is a limit of 22 construction arguments for case classes
   // To work around this in the GameState, we will combine a couple of parameters
   case class CampCells(inCamp: Int, onMap: Int)
@@ -1675,22 +1670,34 @@ object LabyrinthAwakening {
     }
   }
 
-  def askCountry(prompt: String, candidates: List[String]): String = {
+  def askCountry(prompt: String, candidates: List[String], allowAbort: Boolean = true): String = {
     assert(candidates.nonEmpty, s"askCountry(): list of candidates cannot be empty")
     // If only one candidate then don't bother to ask
-    candidates match {
-      case x :: Nil => println(s"$prompt $x"); x
-      case xs => askOneOf(prompt, xs, None, false, CountryAbbreviations).get
+    @tailrec def askOnce: String = candidates match {
+      case x :: Nil           => println(s"$prompt $x"); x
+      case xs  if !allowAbort => askOneOf(prompt, xs, None, false, CountryAbbreviations).get
+      case xs =>
+        askOneOf(prompt, xs ::: List(AbortCard), None, false, CountryAbbreviations).get match {
+          case AbortCard => if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else askOnce
+          case x         => x
+        }
     }
+    askOnce
   }
   
-  def askTroops(prompt: String, maxTroops: Int): Int = {
+  def askTroops(prompt: String, maxTroops: Int, allowAbort: Boolean = true): Int = {
     assert(maxTroops > 0, "askTroops(): maxTroops must be > 0")
     // If max is one then don't bother to ask
-    maxTroops match {
-      case 1 => println(s"$prompt 1"); 1
-      case n => askOneOf("How many troops: ", 1 to maxTroops, None, false).map(_.toInt).get
+    @tailrec def askOnce: Int = maxTroops match {
+      case 1                => println(s"$prompt 1"); 1
+      case n if !allowAbort => askOneOf("How many troops: ", 1 to maxTroops, None, false).map(_.toInt).get
+      case n => 
+        askOneOf("How many troops: ", (1 to maxTroops).toList ::: List(AbortCard), None, false).get match {
+          case AbortCard => if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else askOnce
+          case x         => x.toInt
+        }
     }
+    askOnce
   }
 
   def askCardNumber(prompt: String, 
@@ -1994,6 +2001,12 @@ object LabyrinthAwakening {
     // To be done.
   }
   
+  // Change the current game state and print to the console all
+  // ajdustments that need to be made to the game 
+  def performRollback(previousGameState: GameState): Unit = {
+    // TODO: Need to print adjustments to the console.
+    game = previousGameState
+  }
   
   def polarization(): Unit = {
     val candidates = game.muslims filter (m => (m.awakening + m.reaction).abs > 1)
@@ -2577,6 +2590,7 @@ object LabyrinthAwakening {
       game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
     }
     
+    game = game.copy(cardsPlayed = Nil) // Reset history of cards for current turn.
     log()
     logSummary(game.scoringSummary)
     log()
@@ -2588,7 +2602,9 @@ object LabyrinthAwakening {
     
   }
   
-  case object UserExit extends Exception
+  val AbortCard = "abort card"
+  case object ExitGame extends Exception
+  case object AbortCardPlay extends Exception
   
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
@@ -2618,7 +2634,7 @@ object LabyrinthAwakening {
     log(separator(char = '='))
     try commandLoop()
     catch {
-      case UserExit => 
+      case ExitGame => 
     }
   }
 
@@ -2680,7 +2696,7 @@ object LabyrinthAwakening {
       val param = if (tokens.tail.nonEmpty) Some(tokens.tail.mkString(" ")) else None
       matchOne(verb, CmdNames) foreach {
         case "quit" =>
-          throw UserExit
+          throw ExitGame
         case "help" if param.isEmpty =>
           println("Available commands: (type help <command> for more detail)")
           println(orList(CmdNames))
@@ -2787,26 +2803,42 @@ object LabyrinthAwakening {
   def usCardPlay(param: Option[String]): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
       val card = Cards(cardNumber)
-      log(s"US plays $card")
-      log(s"The event is ${if (card.eventIsPlayable(US)) "" else "not "}playable")
-      game.humanRole match {
-        case US       => humanUsCardPlay(card)
-        case Jihadist => // The US bot plays the card
+      val postfix = if (card.eventIsPlayable(US)) s"  (The ${card.association} event is playable)"
+      else if (card.eventWillTrigger(Jihadist))   s"  (The ${card.association} event will be triggered)"
+      else ""
+      val savedGameState = game  // Save the game in case the user aborts the card play 
+      // Add to the list of played cards for the turn
+      game = game.copy(cardsPlayed = PlayedCard(US, card) :: game.cardsPlayed)
+      log(s"US plays $card${postfix}")
+      try game.humanRole match {
+          case US       => try humanUsCardPlay(card)
+          case Jihadist => // The US bot plays the card
+        }
+      catch {
+        case AbortCardPlay =>
+          println("\n>>>> Aborting the current card play <<<<")
+          println(separator())
+          performRollback(savedGameState)
       }
     }
   }
   
+  // If the user enters a return with an empty command line we simply abort the
+  // command.  In this case no game state has been changed.
+  // Once the user enters a valid command (other than using reserves), then in order to
+  // abort the command in progress they must type 'abort' at any prompt during the turn.
+  // We will then roll back to the game state as it was before the card play.
   def humanUsCardPlay(card: Card): Unit = {
-    val ExecuteEvent = "Event"
-    val WarOfIdeas   = "War of Ideas"
-    val Deploy       = "Deploy Troops"
-    val RegimeChg    = "Regime Change"
-    val Withdraw     = "Withdraw Troops"
-    val Disrupt      = "Disrupt Cells"
-    val Alert        = "Alert Plots"
-    val Reassess     = "Reassessment"
-    val AddReserves  = "Add to Reserves"
-    val UseReserves  = "Expend Reserves"
+    val ExecuteEvent = "event"
+    val WarOfIdeas   = "war of ideas"
+    val Deploy       = "deploy troops"
+    val RegimeChg    = "regime change"
+    val Withdraw     = "withdraw troops"
+    val Disrupt      = "disrupt cells"
+    val Alert        = "alert plots"
+    val Reassess     = "reassessment"
+    val AddReserves  = "add to reserves"
+    val UseReserves  = "expend reserves"
     var reservesUsed = 0
     var inReserve = game.reserves.us
     var secondCard: Option[Card] = None   // For reassessment only
@@ -2823,12 +2855,14 @@ object LabyrinthAwakening {
         if (game.alertPossible(opsAvailable))                   Some(Alert)        else None,
         if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)     else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves)  else None,
-        if (card.ops < 3 && reservesUsed == 0 && inReserve > 0) Some(UseReserves)  else None
+        if (card.ops < 3 && reservesUsed == 0 && inReserve > 0) Some(UseReserves)  else None,
+                                                                Some(AbortCard)
       ).flatten
     
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
-      askOneOf("US action: ", actions) match {
-        case None =>  None
+      askOneOf("US action: ", actions, allowNone = false) match {
+        case Some(AbortCard) => 
+          if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else getNextResponse()
         case Some(UseReserves) =>
           reservesUsed = inReserve
           inReserve = 0
@@ -2839,6 +2873,8 @@ object LabyrinthAwakening {
             case None => None // Cancel the operation
             case Some(cardNum) =>
               val card2 = Cards(cardNum)
+              // Add to the list of played cards for the turn
+              game = game.copy(cardsPlayed = PlayedCard(US, card2) :: game.cardsPlayed)
               secondCard = Some(card2)
               log(s"US plays $card2")
               Some(Reassess)
@@ -2851,16 +2887,13 @@ object LabyrinthAwakening {
       if (action == AddReserves) {
         // Don't prompt for event/ops order when playing to reserves.
         inReserve += (card.ops min 2)
-        game = game.copy(
-          cardsPlayed = PlayedCard(US, card, event = false) :: game.cardsPlayed,
-          reserves    = game.reserves.copy(us = inReserve))
+        game = game.copy(reserves = game.reserves.copy(us = inReserve))
         log(s"US adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
         if (card.eventWillTrigger(Jihadist))
           log("Jihadist event \"%s\" triggers".format(card.name))
           card.executeEvent(Jihadist)
       }
       else if (action == ExecuteEvent) {
-        game = game.copy(cardsPlayed = PlayedCard(US, card, event = true) :: game.cardsPlayed)
         log(s"US executes the ${card.name} event")
         card.executeEvent(US)
       }
@@ -2868,7 +2901,6 @@ object LabyrinthAwakening {
         getActionOrder(Jihadist, card, secondCard) match {
           case Nil => // Cancel the operation
           case actions =>
-            game = game.copy(cardsPlayed = PlayedCard(US, card, event = false, secondCard) :: game.cardsPlayed)
             if (reservesUsed > 0) {
               log(s"US player expends their reserves of ${opsString(reservesUsed)}")
               game = game.copy(reserves = game.reserves.copy(us = 0))
