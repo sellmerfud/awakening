@@ -2300,7 +2300,7 @@ object LabyrinthAwakening {
           log(s"Posture of ${n.name} changes from ${n.posture} to $newPosture")
         if (newPosture == game.usPosture && game.prestige < 12) {
           game = game.adjustPrestige(1)
-          log(s"Matches US posture, so increase US prestige by one to ${game.prestige}")
+          log(s"Matches US posture, so increase US prestige by +1 to ${game.prestige}")
         }
         log(s"World Posture is now ${game.worldPostureDisplay}")
     }
@@ -2745,19 +2745,7 @@ object LabyrinthAwakening {
   sealed trait CardAction
   case class  Event(card: Card) extends CardAction
   case object Ops               extends CardAction
-  case object CancelCard        extends CardAction
   
-  // Returns "Event", "Ops", or "Cancel"
-  def getCardAction(card: Card, role: Role) =
-    if (card.eventIsPlayable(role))
-      askOneOf("Event or Ops? ", "Event"::"Ops"::Nil) match {
-        case Some("Event") => Event(card)
-        case Some("Ops")   => Ops
-        case _             => CancelCard
-      }
-  else
-    Ops
-
   // Return a list of actions.
   // card2 is only used for US reassessment
   def getActionOrder(opponent: Role, card: Card, card2: Option[Card] = None): List[CardAction] =
@@ -2799,56 +2787,47 @@ object LabyrinthAwakening {
   def usCardPlay(param: Option[String]): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
       val card = Cards(cardNumber)
+      log(s"US plays $card")
+      log(s"The event is ${if (card.eventIsPlayable(US)) "" else "not "}playable")
       game.humanRole match {
-        case US =>
-          log(s"US plays $card")
-          getCardAction(card, US) match {
-            case Event(_) =>
-              game = game.copy(cardsPlayed = PlayedCard(US, card, event = true) :: game.cardsPlayed)
-              card.executeEvent(US)
-                
-            case Ops =>
-              humanUsOpsCommand(card)
-
-            case CancelCard =>
-          }
-          
-        case Jihadist =>
-          // The bot plays the card
+        case US       => humanUsCardPlay(card)
+        case Jihadist => // The US bot plays the card
       }
     }
   }
   
-  def humanUsOpsCommand(card: Card): Unit = {
-    val WarOfIdeas  = "War of Ideas"
-    val Deploy      = "Deploy Troops"
-    val RegimeChg   = "Regime Change"
-    val Withdraw    = "Withdraw Troops"
-    val Disrupt     = "Disrupt Cells"
-    val Alert       = "Alert Plots"
-    val Reassess    = "Reassessment"
-    val AddReserves = "Add to Reserves"
-    val UseReserves = "Expend Reserves"
+  def humanUsCardPlay(card: Card): Unit = {
+    val ExecuteEvent = "Event"
+    val WarOfIdeas   = "War of Ideas"
+    val Deploy       = "Deploy Troops"
+    val RegimeChg    = "Regime Change"
+    val Withdraw     = "Withdraw Troops"
+    val Disrupt      = "Disrupt Cells"
+    val Alert        = "Alert Plots"
+    val Reassess     = "Reassessment"
+    val AddReserves  = "Add to Reserves"
+    val UseReserves  = "Expend Reserves"
     var reservesUsed = 0
     var inReserve = game.reserves.us
     var secondCard: Option[Card] = None   // For reassessment only
     def opsAvailable = card.ops + reservesUsed
     
     @tailrec def getNextResponse(): Option[String] = {
-      val operations = List(
+      val actions = List(
+        if (card.eventIsPlayable(US) && reservesUsed == 0)      Some(ExecuteEvent) else None,
                                                                 Some(WarOfIdeas),
-        if (game.deployPossible(opsAvailable))                  Some(Deploy)      else None,
-        if (game.regimeChangePossible(opsAvailable))            Some(RegimeChg)   else None,
-        if (game.withdrawPossible(opsAvailable))                Some(Withdraw)    else None,
-        if (game.disruptTargets(opsAvailable).nonEmpty)         Some(Disrupt)     else None,
-        if (game.alertPossible(opsAvailable))                   Some(Alert)       else None,
-        if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)    else None,
-        if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves) else None,
-        if (card.ops < 3 && reservesUsed == 0 && inReserve > 0) Some(UseReserves) else None
+        if (game.deployPossible(opsAvailable))                  Some(Deploy)       else None,
+        if (game.regimeChangePossible(opsAvailable))            Some(RegimeChg)    else None,
+        if (game.withdrawPossible(opsAvailable))                Some(Withdraw)     else None,
+        if (game.disruptTargets(opsAvailable).nonEmpty)         Some(Disrupt)      else None,
+        if (game.alertPossible(opsAvailable))                   Some(Alert)        else None,
+        if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)     else None,
+        if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves)  else None,
+        if (card.ops < 3 && reservesUsed == 0 && inReserve > 0) Some(UseReserves)  else None
       ).flatten
     
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
-      askOneOf("US operation: ", operations) match {
+      askOneOf("US action: ", actions) match {
         case None =>  None
         case Some(UseReserves) =>
           reservesUsed = inReserve
@@ -2868,8 +2847,8 @@ object LabyrinthAwakening {
       }
     }
     
-    getNextResponse() foreach { operation =>
-      if (operation == AddReserves) {
+    getNextResponse() foreach { action =>
+      if (action == AddReserves) {
         // Don't prompt for event/ops order when playing to reserves.
         inReserve += (card.ops min 2)
         game = game.copy(
@@ -2879,6 +2858,11 @@ object LabyrinthAwakening {
         if (card.eventWillTrigger(Jihadist))
           log("Jihadist event \"%s\" triggers".format(card.name))
           card.executeEvent(Jihadist)
+      }
+      else if (action == ExecuteEvent) {
+        game = game.copy(cardsPlayed = PlayedCard(US, card, event = true) :: game.cardsPlayed)
+        log(s"US executes the ${card.name} event")
+        card.executeEvent(US)
       }
       else
         getActionOrder(Jihadist, card, secondCard) match {
@@ -2894,7 +2878,7 @@ object LabyrinthAwakening {
                 log("Jihadist event \"%s\" triggers".format(c.name))
                 c.executeEvent(Jihadist)
               case Ops =>
-                operation match {
+                action match {
                   case WarOfIdeas => humanWarOfIdeas(opsAvailable)
                   case Deploy     => humanDeploy(opsAvailable)
                   case Disrupt    => humanDisrupt(opsAvailable)
