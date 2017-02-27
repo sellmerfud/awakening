@@ -1786,6 +1786,7 @@ object LabyrinthAwakening {
   def testCountry(name: String): Boolean = {
     val country = game.getCountry(name)
     if (country.isUntested) {
+      game = game.addTestedOrImproved(name)
       country match {
         case m: MuslimCountry    =>
           val newGov = if (dieRoll < 5) Poor else Fair
@@ -2311,6 +2312,7 @@ object LabyrinthAwakening {
           log(s"Success, improve governance of ${improved.name} to ${govToString(improved.governance)}")
           // TODO: perhaps log that civil war, awakening, reaction, aid, etc should be removed if improved to Good ?
           game = game.updateCountry(improved)
+          game = game.addTestedOrImproved(name)
           
           if (improved.governance == Good) {
             performConvergence(forCountry = name, awakening = true)
