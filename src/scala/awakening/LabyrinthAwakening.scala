@@ -35,9 +35,9 @@ import scala.collection.mutable.ListBuffer
 object LabyrinthAwakening {
   
   def dieRoll = nextInt(6) + 1
-  def humanDieRoll =
+  def humanDieRoll(prompt: String = "Enter die roll: ") =
     if (game.params.humanAutoRoll) dieRoll
-    else  (askOneOf("Enter die roll: ", 1 to 6, None, false) map (_.toInt)).get
+    else  (askOneOf(prompt, 1 to 6, None, false) map (_.toInt)).get
   
   val INTEGER = """(\d+)""".r
   
@@ -93,9 +93,11 @@ object LabyrinthAwakening {
     }
   }
   
-  sealed trait Plot {
-    val number: Int
-    def name: String = s"Plot $number"
+  trait Plot {
+    val diceRolled: Int    // Dice rolled against governance in muslim countries
+    val opsToPlace: Int    // Min number of ops needed to place this plot.
+    val name: String 
+    override def toString() = name
   }
   
   // Order so that the most dangerous come first: WMD, 3, 2, 1
@@ -104,22 +106,23 @@ object LabyrinthAwakening {
       case (PlotWMD, PlotWMD) =>  0
       case (PlotWMD, _)       => -1
       case (_, PlotWMD)       =>  1
-      case (x, y)             =>  y.number - x.number
+      case (x, y)             =>  y.diceRolled - x.diceRolled
     }
   }
-  case object Plot1 extends Plot {
-    val number = 1
-  }
-  case object Plot2 extends Plot {
-    val number = 2
-  }
-  case object Plot3 extends Plot {
-    val number = 3
-  }
   case object PlotWMD extends Plot {
-    val number = 3
-    override def name = "Plot WMD"
+    override val diceRolled = 3
+    override val opsToPlace = 1
+    override val name = "Plot WMD"
   }
+  class NumberedPlot(number: Int) extends Plot {
+    override val diceRolled = number
+    override val opsToPlace = number
+    override val name: String = s"Plot $number"
+  }
+  case object Plot1 extends NumberedPlot(1)
+  case object Plot2 extends NumberedPlot(2)
+  case object Plot3 extends NumberedPlot(3)
+
   val NoRegimeChange    = "None"
   val GreenRegimeChange = "Green"
   val TanRegimeChange   = "Tan"
@@ -878,9 +881,11 @@ object LabyrinthAwakening {
     def totalCells = sleeperCells + activeCells
     def hasMarker(name: String) = markers contains name
     
-    def canAutoRecruit: Boolean
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int): Boolean
+    def recruitOK: Boolean = hasCadre || totalCells > 0
+    def autoRecruit: Boolean
+    def recruitSucceeds(roll: Int): Boolean
   }
   
   case class NonMuslimCountry(
@@ -897,12 +902,14 @@ object LabyrinthAwakening {
     iranSpecialCase: Boolean    = false
   ) extends Country {
     override def isUntested = posture == PostureUntested
-    override def canAutoRecruit = false
     def isSchengen = Schengen contains name
     def isHard = posture == Hard
     def isSoft = posture == Soft
     override def warOfIdeasOK(ops: Int) = 
       ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
+      
+    def autoRecruit = false
+    def recruitSucceeds(roll: Int) = roll <= recruitOverride || roll <= governance
   }
 
   case class MuslimCountry(
@@ -924,8 +931,8 @@ object LabyrinthAwakening {
     besiegedRegime: Boolean     = false,
     civilWar: Boolean           = false,
     caliphateCapital: Boolean   = false,
-    awakening: Int              = 0,  // 0, 1, 2, 3
-    reaction: Int               = 0,  // 0, -1, -2, -3
+    awakening: Int              = 0,  // number of awakening markers
+    reaction: Int               = 0,  // number of reaction markers
     wmdCache: Int               = 0   // Number of WMD plots cached
   ) extends Country {
     override def isUntested = governance == GovernanceUntested
@@ -946,7 +953,7 @@ object LabyrinthAwakening {
       civilWar                  ||
       caliphateCapital          ||
       awakening > 0             ||
-      reaction < 0
+      reaction > 0
     )
     
     // If a muslim country is untest, then it is valid a WoI target.
@@ -954,7 +961,8 @@ object LabyrinthAwakening {
       (isUntested || ops >= governance) &&
       !(isAdversary || isGood || (inRegimeChange && (troops + militia - totalCells) < 5))
           
-    override def canAutoRecruit = isIslamistRule || civilWar || inRegimeChange
+    def autoRecruit = isIslamistRule || civilWar || inRegimeChange
+    def recruitSucceeds(roll: Int) = autoRecruit || roll <= governance
     
     // TODO: Add other markers!!
     // The list is sorted so that markers repesent in 
@@ -991,7 +999,7 @@ object LabyrinthAwakening {
       if (governance == Good)
         copy(governance = Fair, aidMarkers = (aidMarkers - 1) max 0)
       else if (governance == Fair)
-        copy(governance = Poor, aidMarkers = (aidMarkers - 1) max 0, reaction = (reaction + 1) min 0)
+        copy(governance = Poor, aidMarkers = (aidMarkers - 1) max 0, reaction = (reaction - 1) max 0)
       else  // governance == Poor
         copy(governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
              aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
@@ -1005,6 +1013,9 @@ object LabyrinthAwakening {
       troops
     def canDeployFrom = maxDeployFrom > 0
       
+    def jihadOK = !isIslamistRule && totalCells > 0
+    def majorJihadOK(ops: Int) = 
+      jihadOK && (totalCells - (troops + militia) >= 5) && (ops > 1 || besiegedRegime)
     
   }
     
@@ -1174,6 +1185,7 @@ object LabyrinthAwakening {
       b += f"Troops on track: $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"
       b += f"Cells on track : $cellsOnTrack%2d   | Militia on track  : $militiaAvailable%2d"
       b += f"Cells in camp  : ${trainingCampCells.inCamp}%2d   | Camp cells on map: ${trainingCampCells.onMap}%2d" 
+      b += f"Cells available: ${cellsAvailable()}%2d   | Funding level ${fundingLevel}"
       if (trainingCampsInPlay && trainingCampCapacity == 5)
       b += s"Training camp  : In Caliphate country (capacity $trainingCampCapacity)"
       if (trainingCampsInPlay && trainingCampCapacity == 5)
@@ -1222,6 +1234,9 @@ object LabyrinthAwakening {
             b += s"  Plots: ${plotsDisplay(n.plots, humanRole)}"
           if (showAll || n.markers.size > 0)
             b += s"  Markers: ${markersString(n.markers)}"
+          if (n.wmdCache > 0)
+            b += s"  WMD cache: ${amountOf(n.wmdCache, "WMD plot")}"
+          
 
         case m: MuslimCountry =>
           val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
@@ -1241,7 +1256,7 @@ object LabyrinthAwakening {
           items.clear
           item(m.aidMarkers, "Aid marker")
           item(m.awakening, "Awakening marker")
-          item(-m.reaction, "Reaction marker")
+          item(m.reaction, "Reaction marker")
           if (m.besiegedRegime)
             items += "Besieged regime"
           else if (showAll)
@@ -1266,6 +1281,8 @@ object LabyrinthAwakening {
             b += s"  Plots: ${plotsDisplay(m.plots, humanRole)}"
           if (showAll || m.markers.size > 0)
             b += s"  Markers: ${markersString(m.markers)}"
+          if (m.wmdCache > 0)
+            b += s"  WMD cache: ${amountOf(m.wmdCache, "WMD plot")}"
       }
       b.toList
     }
@@ -1552,6 +1569,22 @@ object LabyrinthAwakening {
     def warOfIdeasTargets(ops: Int): List[String] =
       (countries filter (_.warOfIdeasOK(ops)) map (_.name)).sorted
     
+    def recruitTargets: List[String] = (countries filter (_.recruitOK) map (_.name)).sorted
+    
+    def recruitPossible(ignoreFunding: Boolean) = cellsAvailable(ignoreFunding) > 0 && recruitTargets.nonEmpty
+    
+    def jihadTargets: List[String] = (muslims filter (_.jihadOK) map (_.name)).sorted
+    def jihadPossible = jihadTargets.nonEmpty
+    
+    def majorJihadTargets(ops: Int) = (muslims filter (_.majorJihadOK(ops)) map (_.name)).sorted
+    def majorJihadPossible(ops: Int) = majorJihadTargets(ops).nonEmpty
+    
+    def plotTargets: List[String] = {
+      val muslimTargets = muslims filter (m => !m.isIslamistRule && m.totalCells > 0)
+      val nonMuslimTargets = nonMuslims filter (_.totalCells > 0)
+      ((muslimTargets ::: nonMuslimTargets) map (_.name)).sorted 
+    }
+    def plotPossible(ops: Int) = (availablePlots exists (_.opsToPlace <= ops)) && plotTargets.nonEmpty
   }
   
   def initialGameState(
@@ -1816,12 +1849,12 @@ object LabyrinthAwakening {
       case x if x < 10 =>  1
       case _           =>  2
     }
-    val shiftToGoodMod = if (m.isAlly && m.isGood) -1 else 0
+    val shiftToGoodMod = if (m.isAlly && m.isFair) -1 else 0
     val gwotMod        = if (ignoreGwotPenalty) 0 else -game.gwotPenalty
     val aidMod         = m.aidMarkers
     val adjToGoodMod   = if (game.adjacentMuslims(m.name) exists (_.isGood)) 1 else 0
     val awakeningMod   = m.awakening
-    val reactionMod    = m.reaction
+    val reactionMod    = -m.reaction
     logNotZero(prestigeMod,    "Prestige")
     logNotZero(shiftToGoodMod, "Shift to Good governance")
     logNotZero(gwotMod,        "GWOT penalty")
@@ -1923,11 +1956,11 @@ object LabyrinthAwakening {
     val rmc = randomConvergenceTarget
     if (awakening) {
       game = game.updateCountry(rmc.copy(awakening = rmc.awakening + 1))
-      log(s"Convergence for ${forCountry}: add awakening marker to ${rmc.name}")
+      log(s"Convergence for ${forCountry}: add 1 awakening marker to ${rmc.name}")
     }
     else {
       game = game.updateCountry(rmc.copy(reaction = rmc.reaction + 1))
-      log(s"Convergence for ${forCountry}: add reaction marker to ${rmc.name}")
+      log(s"Convergence for ${forCountry}: add 1 reaction marker to ${rmc.name}")
     }
   }
   
@@ -1977,6 +2010,15 @@ object LabyrinthAwakening {
     "none"
   else
     markers mkString ", "
+
+  // Get ordinal number.  Good for 1 to 20.
+  def ordinal(i: Int): String = i match {
+    case 1 => "1st"
+    case 2 => "2nd"
+    case 3 => "3rd"
+    case x if x > 20 => throw new IllegalArgumentException("ordinal() only good for numbers <= 20")
+    case x => s"${x}th"
+  }
 
   // Sorts a list column wise.  Returns a list of rows where
   // eash row is a string with the items of that row lined up
@@ -2075,7 +2117,6 @@ object LabyrinthAwakening {
       to.cardsRemoved.sorted foreach (c => println(s"  ${cardNumAndName(c)}"))
     }
     
-    
     for (fromC <- from.muslims; toC = to.getMuslim(fromC.name)) {
       val b = new ListBuffer[String]
       def showC(oldValue: Any, newValue: Any, msg: String) = if (oldValue != newValue) b += msg
@@ -2095,7 +2136,7 @@ object LabyrinthAwakening {
       show(fromC.militia, toC.militia, s"  Set militia to ${toC.militia}")
       show(fromC.aidMarkers, toC.aidMarkers, s"  Set aid markers to ${toC.aidMarkers}")
       show(fromC.awakening, toC.awakening, s"  Set awakening markers to ${toC.awakening}")
-      show(fromC.reaction, toC.reaction, s"  Set reaction markers to ${-toC.reaction}")
+      show(fromC.reaction, toC.reaction, s"  Set reaction markers to ${toC.reaction}")
       showBool(fromC.besiegedRegime, toC.besiegedRegime, "besieged regime marker")
       if (fromC.regimeChange != toC.regimeChange) {
         toC.regimeChange match {
@@ -2109,6 +2150,7 @@ object LabyrinthAwakening {
             s"  Set plots to ${plotsDisplay(toC.plots, to.params.humanRole)}")
       show(fromC.markers.sorted,  toC.markers.sorted, 
         s"  Set markers to: ${markersString(toC.markers)}" )
+      show(fromC.wmdCache, toC.wmdCache, s"  Set WMD cache to ${amountOf(toC.wmdCache, "WMD plot")}")
       
       if (b.nonEmpty) {
         b.prepend(s"\n${toC.name} changes:\n${separator()}")
@@ -2132,6 +2174,7 @@ object LabyrinthAwakening {
             s"  Set plots to ${plotsDisplay(toC.plots, to.params.humanRole)}")
       show(fromC.markers.sorted,  toC.markers.sorted, 
         s"  Set markers to: ${markersString(toC.markers)}" )
+      show(fromC.wmdCache, toC.wmdCache, s"  Set WMD cache to ${amountOf(toC.wmdCache, "WMD plot")}")
       
       if (b.nonEmpty) {
         b.prepend(s"\n${toC.name} changes:\n${separator()}")
@@ -2149,7 +2192,7 @@ object LabyrinthAwakening {
   }
   
   def polarization(): Unit = {
-    val candidates = game.muslims filter (m => (m.awakening + m.reaction).abs > 1)
+    val candidates = game.muslims filter (m => (m.awakening - m.reaction).abs > 1)
     log()
     log("Polarization")
     log(separator())
@@ -2172,13 +2215,13 @@ object LabyrinthAwakening {
       
       var convergers = List.empty[Converger]
       for (name <- names; m = game.getMuslim(name)) {
-        (m.awakening + m.reaction) match {
+        (m.awakening - m.reaction) match {
           case 2 =>
             game = game.updateCountry(m.copy(awakening = m.awakening + 1))
             log(s"${name}: add an awakening marker")
 
           case -2 =>
-            game = game.updateCountry(m.copy(reaction = m.reaction - 1))
+            game = game.updateCountry(m.copy(reaction = m.reaction + 1))
             log(s"${name}: add a reaction marker")
             
           case x if x > 2 =>
@@ -2408,7 +2451,7 @@ object LabyrinthAwakening {
                  "Cannot do War of Ideas in regime change country, not enought troops + militia")
         game = game.addOpsTarget(name)
         log()
-        log(s"US performs War of Ideas in ${m.name}")
+        log(s"$US performs War of Ideas in ${m.name}")
         log(separator())
         testCountry(name)
         log(s"Roll: $die")
@@ -2430,7 +2473,19 @@ object LabyrinthAwakening {
           val caliphateCapital = m.caliphateCapital
           val improved = m.improveGovernance()
           log(s"Success, improve governance of ${improved.name} to ${govToString(improved.governance)}")
-          // TODO: perhaps log that civil war, awakening, reaction, aid, etc should be removed if improved to Good ?
+          if (improved.isFair) {
+            if (m.awakening > 0) log(s"Remove 1 awakening maker")
+          }
+          else {  // improved.isGood
+            if (m.aidMarkers > 0) log(s"Remove ${amountOf(m.aidMarkers, "aid marker")}")
+            if (m.awakening > 0) log(s"Remove ${amountOf(m.awakening, "awakening marker")}")
+            if (m.reaction > 0) log(s"Remove ${amountOf(m.reaction, "reaction marker")}")
+            if (m.militia > 0) log(s"Remove ${m.militia} militia")
+            if (m.inRegimeChange) log(s"Remove the regime change marker")
+            if (m.besiegedRegime) log(s"Remove the besieged regime marker")
+            if (m.civilWar) log(s"Remove the civil war marker")
+            if (m.caliphateCapital) log(s"Remove the Caliphate Capital marker")
+          }
           game = game.updateCountry(improved)
           game = game.addTestedOrImproved(name)
           
@@ -2444,7 +2499,7 @@ object LabyrinthAwakening {
       case n: NonMuslimCountry if n.iranSpecialCase => println("Cannot do War of Ideas in Iran")
       case n: NonMuslimCountry =>
         log()
-        log(s"US performs War of Ideas in ${n.name}")
+        log(s"$US performs War of Ideas in ${n.name}")
         log(separator())
         val newPosture = if (die > 4) Hard else Soft
         game = game.updateCountry(n.copy(posture = newPosture))
@@ -2512,7 +2567,7 @@ object LabyrinthAwakening {
         flipSleeperCells(target, sleepers)
         removeActiveCellsFromCountry(target, actives)
       case Some(Right(_)) =>
-         removeCadre(target)
+        removeCadre(target)
       case None =>
         throw new IllegalStateException(s"performDisrupt(): $target has no cells or cadre")
     }
@@ -2563,13 +2618,13 @@ object LabyrinthAwakening {
     log(s"Rolls for shift amount: ${shiftDice.head} and ${shiftDice.last}")
     game = game.adjustPrestige(shiftAmount)
     val desc = if (shiftAmount < 0) "drops" else "rises"
-    log(s"US prestige $desc by $shiftAmount to ${game.prestige}")
+    log(s"$US prestige $desc by $shiftAmount to ${game.prestige}")
   }
   
-  def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean, logPrefix: String = "") =
+  def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean = false, logPrefix: String = "") =
     addCellsToCountry(name, true, num, ignoreFunding, logPrefix)
   
-  def addSleeperCellsToCountry(name: String, num: Int, ignoreFunding: Boolean, logPrefix: String = "") =
+  def addSleeperCellsToCountry(name: String, num: Int, ignoreFunding: Boolean = false, logPrefix: String = "") =
     addCellsToCountry(name, false, num, ignoreFunding, logPrefix)
   
   // Move cells from the track (or training camp) to a country on the map.
@@ -2583,9 +2638,9 @@ object LabyrinthAwakening {
       val fromCamp  = game.trainingCampCells.inCamp min num
       val fromTrack = num - fromCamp
       (fromCamp, fromTrack) match {
-        case (0, trk)   => log("%sAdd %s from the track to %s".format(logPrefix, amountOf(trk, cellType), name))
-        case (cmp, 0)   => log("%sAdd %s from the training camp to %s.".format(logPrefix, amountOf(cmp, cellType), name))
-        case (cmp, trk) => log("%sAdd %s to %s. %d from the track and %d from the training camp.".format(
+        case (0, trk)   => log("%sMove %s to %s from the funding track".format(logPrefix, amountOf(trk, cellType), name))
+        case (cmp, 0)   => log("%sMove %s to %s from the training camp".format(logPrefix, amountOf(cmp, cellType), name))
+        case (cmp, trk) => log("%sMove %s to %s. %d from the funding track and %d from the training camp".format(
                                 logPrefix, amountOf(num, cellType), name, trk, cmp))
       }
       if (game.getCountry(name).hasCadre)
@@ -2681,10 +2736,10 @@ object LabyrinthAwakening {
     }
     if (game.numIslamic > 0) {
       game = game.adjustPrestige(-1)
-      log(s"US prestige drops to ${game.prestige}, at least 1 country is under Islamist Rule")
+      log(s"$US prestige drops to ${game.prestige}, at least 1 country is under Islamist Rule")
     }
     else
-      log(s"US prestige stays at ${game.prestige}, no countries under Islamist Rule")
+      log(s"$US prestige stays at ${game.prestige}, no countries under Islamist Rule")
     
     val (worldPosture, level) = game.gwot
     if (game.usPosture == worldPosture && level == 3) {
@@ -2693,7 +2748,7 @@ object LabyrinthAwakening {
     }
     if (game.humanRole == US) {
       game = game.copy(reserves = game.reserves.copy(us = 0))
-      log(s"US reserves set to zero")
+      log(s"$US reserves set to zero")
     }
     else {
       game = game.copy(reserves = game.reserves.copy(jihadist = 0))
@@ -2714,7 +2769,7 @@ object LabyrinthAwakening {
     log()
     log("Draw Cards")
     log(separator())
-    log(s"US player will draw $usCards cards")
+    log(s"$US player will draw $usCards cards")
     log(s"Jihadist player will draw $jihadistCards cards")
     
     if (game.offMapTroops > 0) {
@@ -2770,7 +2825,7 @@ object LabyrinthAwakening {
         case _          => (Jihadist, OffGuard :: Competent :: Adept :: Nil)
       }
     
-    val humanAutoRoll = true
+    val humanAutoRoll = false
     game = initialGameState(scenario, humanRole, humanAutoRoll, botDifficulties)
     
     logSummary(game.scenarioSummary)
@@ -2990,8 +3045,6 @@ object LabyrinthAwakening {
     }
   }
   
-  // If the user enters a return with an empty command line we simply abort the
-  // command.  In this case no game state has been changed.
   // Once the user enters a valid command (other than using reserves), then in order to
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
@@ -3007,7 +3060,7 @@ object LabyrinthAwakening {
     val AddReserves  = "add to reserves"
     val UseReserves  = "expend reserves"
     var reservesUsed = 0
-    var inReserve = game.reserves.us
+    def inReserve    = game.reserves.us
     var secondCard: Option[Card] = None   // For reassessment only
     def opsAvailable = card.ops + reservesUsed
     
@@ -3022,17 +3075,18 @@ object LabyrinthAwakening {
         if (game.alertPossible(opsAvailable))                   Some(Alert)        else None,
         if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)     else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves)  else None,
-        if (card.ops < 3 && reservesUsed == 0 && inReserve > 0) Some(UseReserves)  else None,
+        if (card.ops < 3 && inReserve > 0)                      Some(UseReserves)  else None,
                                                                 Some(AbortCard)
       ).flatten
     
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
-      askOneOf("US action: ", actions, allowNone = false) match {
+      askOneOf(s"$US action: ", actions, allowNone = false) match {
         case Some(AbortCard) => 
           if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else getNextResponse()
         case Some(UseReserves) =>
           reservesUsed = inReserve
-          inReserve = 0
+          log(s"$US player expends their reserves of ${opsString(reservesUsed)}")
+          game = game.copy(reserves = game.reserves.copy(us = 0))
           getNextResponse()
         case Some(Reassess) =>
           println("You must play a second 3 Ops card")
@@ -3043,38 +3097,33 @@ object LabyrinthAwakening {
               // Add to the list of played cards for the turn
               game = game.copy(cardsPlayed = PlayedCard(US, card2) :: game.cardsPlayed)
               secondCard = Some(card2)
-              log(s"US plays $card2")
+              log(s"$US plays $card2")
               Some(Reassess)
           }
-        case operation => operation
+        case action => action
       }
     }
     
     getNextResponse() foreach { action =>
       if (action == AddReserves) {
         // Don't prompt for event/ops order when playing to reserves.
-        inReserve += (card.ops min 2)
-        game = game.copy(reserves = game.reserves.copy(us = inReserve))
-        log(s"US adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
+        game = game.copy(reserves = game.reserves.copy(us = card.ops))
+        log(s"$US adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
         if (card.eventWillTrigger(Jihadist))
-          log("Jihadist event \"%s\" triggers".format(card.name))
+          log("%s event \"%s\" triggers".format(Jihadist, card.name))
           card.executeEvent(Jihadist)
       }
       else if (action == ExecuteEvent) {
-        log(s"US executes the ${card.name} event")
+        log(s"$US executes the ${card.name} event")
         card.executeEvent(US)
       }
       else
         getActionOrder(Jihadist, card, secondCard) match {
           case Nil => // Cancel the operation
           case actions =>
-            if (reservesUsed > 0) {
-              log(s"US player expends their reserves of ${opsString(reservesUsed)}")
-              game = game.copy(reserves = game.reserves.copy(us = 0))
-            }          
             actions foreach {
               case Event(c) =>
-                log("Jihadist event \"%s\" triggers".format(c.name))
+                log("% event \"%s\" triggers".format(Jihadist, c.name))
                 c.executeEvent(Jihadist)
               case Ops =>
                 action match {
@@ -3085,7 +3134,7 @@ object LabyrinthAwakening {
                   case Withdraw   => humanWithdraw()
                   case Alert      => humanAlert()
                   case Reassess   => humanReassess()
-                  case _ => // operation cancelled
+                  case _ => throw new IllegalStateException(s"Invalid US action: $action")
                 }
               case _ =>
             }
@@ -3095,7 +3144,7 @@ object LabyrinthAwakening {
   
   def humanWarOfIdeas(ops: Int): Unit = {
     log()
-    log(s"US attempts War of Ideas operation with ${opsString(ops)}")
+    log(s"$US attempts War of Ideas operation with ${opsString(ops)}")
     val target = askCountry("War of Ideas in which country: ", game.warOfIdeasTargets(ops)) 
     if (game.isMuslim(target)) {
       // If an untested country tests to Poor the user may not have enough Ops...
@@ -3103,16 +3152,16 @@ object LabyrinthAwakening {
       if (ops < 3 && game.getMuslim(target).isPoor)
         log(s"Not enough Ops to complete War of Ideas in $target")
       else
-        performWarOfIdeas(target, humanDieRoll)
+        performWarOfIdeas(target, humanDieRoll())
     }
     else
-      performWarOfIdeas(target, humanDieRoll)
+      performWarOfIdeas(target, humanDieRoll())
   }
   
   // Trops can alwasy deploy to the track.
   def humanDeploy(ops: Int): Unit = {
     log()
-    log(s"US performs Deploy operation with ${opsString(ops)}")
+    log(s"$US performs Deploy operation with ${opsString(ops)}")
     log(separator())
     val source    = askCountry("Deploy troops from: ", game.deployFromTargets)
     val dest      = askCountry("Deploy troops to: ", game.deployToTargets(ops) filterNot (_ == source))
@@ -3125,7 +3174,7 @@ object LabyrinthAwakening {
     
   def humanRegimeChange(): Unit = {
     log()
-    log(s"US performs Regime Change operation with ${opsString(3)}")
+    log(s"$US performs Regime Change operation with ${opsString(3)}")
     log(separator())
     val dest      = askCountry("Regime change in which country: ", game.regimeChangeTargets)
     val source    = askCountry("Deploy troops from: ", game.regimeChangeSources)
@@ -3136,7 +3185,7 @@ object LabyrinthAwakening {
   
   def humanWithdraw(): Unit = {
     log()
-    log(s"US performs Withdraw operation with ${opsString(3)}")
+    log(s"$US performs Withdraw operation with ${opsString(3)}")
     log(separator())
     val source = askCountry("Withdraw troops from which country: ", game.withdrawTargets)
     val dest   = askCountry("Deploy withdrawn troops to: ", (game.deployToTargets(ops = 3) filter (_ != source)))
@@ -3146,7 +3195,7 @@ object LabyrinthAwakening {
 
   def humanDisrupt(ops: Int): Unit = {
     log()
-    log(s"US performs Disrupt operation with ${opsString(ops)}")
+    log(s"$US performs Disrupt operation with ${opsString(ops)}")
     log(separator())
     performDisrupt(askCountry("Disrupt in which country: ", game.disruptTargets(ops)))
   }
@@ -3154,14 +3203,14 @@ object LabyrinthAwakening {
     
   def humanAlert(): Unit = {
     log()
-    log(s"US performs Alert operation with ${opsString(3)}")
+    log(s"$US performs Alert operation with ${opsString(3)}")
     log(separator())
     performAlert(askCountry("Alert plot in which country: ", game.alertTargets))
   }
     
   def humanReassess(): Unit = {
     log()
-    log(s"US performs a Reassessment operation with ${opsString(6)}")
+    log(s"$US performs a Reassessment operation with ${opsString(6)}")
     log(separator())
     performReassessment()
   }
@@ -3199,9 +3248,178 @@ object LabyrinthAwakening {
     }
   }
   
+  // Once the user enters a valid command (other than using reserves), then in order to
+  // abort the command in progress they must type 'abort' at any prompt during the turn.
+  // We will then roll back to the game state as it was before the card play.
   def humanJihadistCardPlay(card: Card): Unit = {
-    
+    val ExecuteEvent = "event"
+    val Recruit      = "recruit"
+    val Travel       = "travel"
+    val Jihad        = "jihad"
+    val MajorJihad   = "major jihad"
+    val PlotAction   = "plot"
+    val RemoveCadre  = "remove cadre"
+    val AddReserves  = "add to reserves"
+    val UseReserves  = "expend reserves"
+    var reservesUsed = 0
+    def inReserve    = game.reserves.jihadist
+    def opsAvailable = card.ops + reservesUsed
+  
+    @tailrec def getNextResponse(): Option[String] = {
+      val actions = List(
+        if (card.eventIsPlayable(Jihadist) && reservesUsed == 0) Some(ExecuteEvent) else None,
+        if (game.recruitPossible(ignoreFunding = false))         Some(Recruit)      else None,
+         /* Travel must be possible or the Jihadist has lost */  Some(Travel),
+        if (game.jihadPossible)                                  Some(Jihad)        else None,
+        if (game.majorJihadPossible(opsAvailable))               Some(MajorJihad)   else None,
+        if (game.plotPossible(opsAvailable))                     Some(PlotAction)   else None,
+        if (game.countries exists (_.hasCadre))                  Some(RemoveCadre)  else None,
+        if (card.ops < 3 && reservesUsed == 0 && inReserve < 2)  Some(AddReserves)  else None,
+        if (card.ops < 3 && inReserve > 0)                       Some(UseReserves)  else None,
+                                                                 Some(AbortCard)
+      ).flatten
+  
+      println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
+      askOneOf(s"$Jihadist action: ", actions, allowNone = false) match {
+        case Some(AbortCard) => 
+          if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else getNextResponse()
+        case Some(UseReserves) =>
+          reservesUsed = inReserve
+          log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}")
+          game = game.copy(reserves = game.reserves.copy(jihadist = 0))
+          getNextResponse()
+        case Some(RemoveCadre) =>
+          humanRemoveCadre()
+          getNextResponse()
+        case action => action
+      }
+    }
+
+    getNextResponse() foreach { action =>
+      if (action == AddReserves) {
+        // Don't prompt for event/ops order when playing to reserves.
+        game = game.copy(reserves = game.reserves.copy(jihadist = card.ops))
+        log(s"$Jihadist adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
+        if (card.eventWillTrigger(US))
+          log("%s event \"%s\" triggers".format(US, card.name))
+          card.executeEvent(US)
+      }
+      else if (action == ExecuteEvent) {
+        log(s"$Jihadist executes the ${card.name} event")
+        card.executeEvent(Jihadist)
+      }
+      else
+        getActionOrder(Jihadist, card) match {
+          case Nil => // Cancel the operation
+          case actions =>
+            actions foreach {
+              case Event(c) =>
+                log("%s event \"%s\" triggers".format(US, c.name))
+                c.executeEvent(Jihadist)
+              case Ops =>
+                action match {
+                  case Recruit      => humanRecruit(opsAvailable)
+                  case Travel       => humanTravel(opsAvailable)
+                  case Jihad        => humanJihad(opsAvailable)
+                  case MajorJihad   => humanMajorJihad(opsAvailable)
+                  case PlotAction   => humanPlot(opsAvailable)
+                  case _ => throw new IllegalStateException(s"Invalid Jihadist action: $action")
+                }
+              case _ =>
+            }
+        }
+    }
+  }    
+
+  // The Jihadist play can voluntarily remove cadre markers on the map
+  // (To avoid giving the US an easy prestige bump)
+  def humanRemoveCadre(): Unit = {
+    val candidates = (game.countries filter (_.hasCadre) map (_.name)).sorted
+    val target = askCountry(s"Remove cadre in which country: ", candidates)
+    game.getCountry(target) match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+    }
+    log()
+    log(separator())
+    log(s"$Jihadist voluntarily removes a cadre from $target")
   }
+
+  def humanRecruit(ops: Int): Unit = {
+    val availableCells = game.cellsAvailable()
+    log()
+    log(s"$Jihadist performs a Recruit operation with ${opsString(ops)}")
+    log(separator())
+    log(s"There are $availableCells cells available for recruitment")
+    // All of the target destinations must be declared before rolling any dice.
+    val targets = for (i <- 1 to ops) yield {
+      val ord  = ordinal(i)
+      val dest = askCountry(s"$ord Recruit destination: ", game.recruitTargets)
+      (ord, dest)
+    }
+    val results = for ((ord, dest) <- targets; c = game.getCountry(dest)) yield {
+      if (c.autoRecruit)
+        (dest, true, s"$ord Recruit automatically succeeds in $dest")
+      else {
+        val roll    = humanDieRoll(s"Die roll for $ord recruit in $dest: ")
+        val success = c.recruitSucceeds(roll)
+        val result  = if (success) "succeeds" else "fails"
+        (dest, success, s"$ord Recruit $result in $dest with a roll of $roll")
+      }
+    }
+    // Log the results (after all of the dice have been rolled)
+    for ((_, _, msg) <- results) log(msg)
+    val successes = (for ((dest, success, _) <- results; if success) yield dest).toList
+    def allTheSame(l: List[String]) = l match {
+      case Nil => false
+      case x::xs => xs forall (_ == x)
+    }
+    // If we have more successes than there are available cells, then we must
+    // allow the user to choose where to put the cells.  
+    if (successes.size > availableCells) {
+        // But if all of the success targets are the same country, then
+        // just add all available cell there without asking.
+      if (allTheSame(successes))
+        addSleeperCellsToCountry(successes.head, availableCells)
+      else {
+        println(s"You have ${successes.size} successful recruits, but only $availableCells available cells")
+        println("Specify where to put the cells:")
+        def ask(dest: String) = askOneOf(s"1 cell in $dest (place or skip): ", Seq("place", "skip"), None, false).get
+        // Keep asking until all of the available cells have been placed or until 
+        // the remaining target destination are all the same.
+        @tailrec def placeNext(dests: List[String], skipped: List[String], cellsLeft: Int): Unit =
+          if (cellsLeft != 0)
+            (dests, skipped) match {
+              case (Nil, Nil)                  =>  // should not get here
+              case (Nil, sk) if allTheSame(sk) => addSleeperCellsToCountry(sk.head, cellsLeft)
+              case (Nil, sk)                   => placeNext(sk.reverse, Nil, cellsLeft) // Go around again
+              case (ds, _) if allTheSame(ds)   => addSleeperCellsToCountry(ds.head, cellsLeft)
+              case (d :: ds, sk)               => ask(d) match {
+                                                    case "place" => addSleeperCellsToCountry(d, 1)
+                                                                    placeNext(ds, sk, cellsLeft - 1)
+                                                    case _       => placeNext(ds, d :: sk, cellsLeft)
+                                                  }
+            }
+        placeNext(successes, Nil, availableCells)
+      }
+    }
+    else // We have enough cells to place one in all destinations
+      for ((dest, num) <- successes groupBy (dest => dest) map { case (dest, xs) => (dest -> xs.size) })
+        addSleeperCellsToCountry(dest, num)
+  }
+  
+  def humanTravel(ops: Int): Unit = {
+  }
+  
+  def humanJihad(ops: Int): Unit = {
+  }
+  
+  def humanMajorJihad(ops: Int): Unit = {
+  }
+  
+  def humanPlot(ops: Int): Unit = {
+  }
+  
 
   
   def adjustSettings(param: Option[String]): Unit = {
@@ -3530,7 +3748,7 @@ object LabyrinthAwakening {
       if (game.isMuslim(name)) {
         val choices = List(
           "alignment", "governance", "active cells", "sleeper cells", "regime change",
-          "cadre", "troops", "militia", "aid", "awakening", "reaction",
+          "cadre", "troops", "militia", "aid", "awakening", "reaction", "wmd cache",
           "besieged regime", "civil war", "caliphate", "plots", "markers"
         ).sorted
         askOneOf("Attribute (? for list): ", choices) match {
@@ -3553,6 +3771,7 @@ object LabyrinthAwakening {
               case "caliphate"       => adjustCaliphateCapital(name)
               case "plots"           => adJustCountryPlots(name)
               case "markers"         => adjustCountryMarkers(name)
+              case "wmd cache"       => adjustCountryWMDCache(name)
             }
             getNextResponse()
         }
@@ -3817,9 +4036,9 @@ object LabyrinthAwakening {
         println("Cannot add reaction markers to a country in Civil War")
         pause()
       case m: MuslimCountry =>
-        adjustInt("Reaction markers", -m.reaction, 0 to 10) foreach { value =>
-          logAdjustment(name, "Reaction markers", -m.reaction, value)
-          game = game.updateCountry(m.copy(reaction = -value))
+        adjustInt("Reaction markers", m.reaction, 0 to 10) foreach { value =>
+          logAdjustment(name, "Reaction markers", m.reaction, value)
+          game = game.updateCountry(m.copy(reaction = value))
         }
     }
   }
@@ -3912,7 +4131,7 @@ object LabyrinthAwakening {
             updated = updated.copy(awakening = 0, militia = numMilitia)
           }
           if (convertReaction) {
-            val addedSleepers = (-updated.reaction min game.cellsAvailable(ignoreFunding = true))
+            val addedSleepers = (updated.reaction min game.cellsAvailable(ignoreFunding = true))
             if (addedSleepers > 0)
               addSleeperCellsToCountry(name, addedSleepers, true)
           }
@@ -4101,6 +4320,21 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry => game = game.updateCountry(n.copy(markers = inPlay))
       }
     }  
+  }
+  
+  def adjustCountryWMDCache(name: String): Unit = {
+    game.getCountry(name) match {
+      case n: NonMuslimCountry => 
+      adjustInt("WMD cache", n.wmdCache, 0 to 3) foreach { value =>
+        logAdjustment(name, "WMD cache", n.wmdCache, value)
+        game = game.updateCountry(n.copy(wmdCache = value))
+      }
+      case m: MuslimCountry =>
+        adjustInt("WMD cache", m.wmdCache, 0 to 3) foreach { value =>
+          logAdjustment(name, "WMD cache", m.wmdCache, value)
+          game = game.updateCountry(m.copy(wmdCache = value))
+        }
+    }    
   }
 }
 
