@@ -2862,15 +2862,16 @@ object LabyrinthAwakening {
   
   // Parse the top level input and execute the appropriate command.
   def doCommand(input: String): Unit = {
-    class Command(val name: String, val help: String)
+    case class Command(val name: String, val help: String)
     val Commands = List(
-      new Command("us",       """Enter a card number for a US card play"""),
-      new Command("jihadist", """Enter a card number for a Jihadist card play"""),
-      new Command("end turn", """End the current turn.
+      Command("us",           """Enter a card number for a US card play"""),
+      Command("jihadist",     """Enter a card number for a Jihadist card play"""),
+      Command("remove cadre", """Voluntarily remove a cadre from the map"""),
+      Command("end turn",     """End the current turn.
                                 |This should be done after the last US card play.
                                 |Any plots will be resolved and the end of turn
                                 |actions will be conducted."""),
-      new Command("show",     """Display the current game state
+      Command("show",         """Display the current game state
                                 |  show all        - entire game state
                                 |  show played     - cards played during the current turn
                                 |  show summary    - game summary including score
@@ -2878,7 +2879,7 @@ object LabyrinthAwakening {
                                 |  show caliphate  - countries making up the Caliphate
                                 |  show civil wars - countries in civil war
                                 |  show <country>  - state of a single country""".stripMargin),
-      new Command("adjust",   """Adjust game settings <Minimal rule checking is applied>
+      Command("adjust",       """Adjust game settings <Minimal rule checking is applied>
                                 |  adjust prestige      - US prestige level
                                 |  adjust posture       - US posture
                                 |  adjust funding       - Jihadist funding level
@@ -2892,12 +2893,16 @@ object LabyrinthAwakening {
                                 |  adjust offmap troops - Number of troops in off map box
                                 |  adjust auto roll     - Auto roll for human operations
                                 |  adjust <country>     - Country specific settings""".stripMargin),
-      new Command("history",  """Display game history"""),
-      new Command("rollback", """Roll back card plays in the current turn or
+      Command("history",      """Display game history"""),
+      Command("rollback",     """Roll back card plays in the current turn or
                                 |roll back to the start of any previous turn""".stripMargin),
-      new Command("help",     """List available commands"""),
-      new Command("quit",     """Save the current turn and quit the game""")
-    )
+      Command("help",         """List available commands"""),
+      Command("quit",         """Save the current turn and quit the game""")
+    ) filter { 
+      case Command("remove cadre", _) => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
+      case _                          => true
+    } 
+
     val CmdNames = (Commands map (_.name))
     
     def showCommandHelp(cmd: String) = Commands find (_.name == cmd) foreach (c => println(c.help))
@@ -2906,13 +2911,14 @@ object LabyrinthAwakening {
     tokens.headOption foreach { verb =>
       val param = if (tokens.tail.nonEmpty) Some(tokens.tail.mkString(" ")) else None
       matchOne(verb, CmdNames) foreach {
-        case "us"       => usCardPlay(param)
-        case "jihadist" => jihadistCardPlay(param)
-        case "end turn" => endTurn()
-        case "show"     => showCommand(param)
-        case "adjust"   => adjustSettings(param)
-        case "history"  => game.history foreach println  // TODO: Allow > file.txt
-        case "rollback" => println("Not implemented.")
+        case "us"           => usCardPlay(param)
+        case "jihadist"     => jihadistCardPlay(param)
+        case "remove cadre" => humanRemoveCadre()
+        case "end turn"     => endTurn()
+        case "show"         => showCommand(param)
+        case "adjust"       => adjustSettings(param)
+        case "history"      => game.history foreach println  // TODO: Allow > file.txt
+        case "rollback"     => println("Not implemented.")
         case "quit" =>
           throw ExitGame
         case "help" if param.isEmpty =>
@@ -2924,6 +2930,19 @@ object LabyrinthAwakening {
     }
   }
   
+  // The Jihadist play can voluntarily remove cadre markers on the map
+  // (To avoid giving the US an easy prestige bump)
+  def humanRemoveCadre(): Unit = {
+    val candidates = (game.countries filter (_.hasCadre) map (_.name)).sorted
+    val target = askCountry(s"Remove cadre in which country: ", candidates)
+    game.getCountry(target) match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+    }
+    log()
+    log(separator())
+    log(s"$Jihadist voluntarily removes a cadre from $target")
+  }
   
   
   def showCommand(param: Option[String]): Unit = {
@@ -3258,7 +3277,6 @@ object LabyrinthAwakening {
     val Jihad        = "jihad"
     val MajorJihad   = "major jihad"
     val PlotAction   = "plot"
-    val RemoveCadre  = "remove cadre"
     val AddReserves  = "add to reserves"
     val UseReserves  = "expend reserves"
     var reservesUsed = 0
@@ -3273,7 +3291,6 @@ object LabyrinthAwakening {
         if (game.jihadPossible)                                  Some(Jihad)        else None,
         if (game.majorJihadPossible(opsAvailable))               Some(MajorJihad)   else None,
         if (game.plotPossible(opsAvailable))                     Some(PlotAction)   else None,
-        if (game.countries exists (_.hasCadre))                  Some(RemoveCadre)  else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve < 2)  Some(AddReserves)  else None,
         if (card.ops < 3 && inReserve > 0)                       Some(UseReserves)  else None,
                                                                  Some(AbortCard)
@@ -3287,9 +3304,6 @@ object LabyrinthAwakening {
           reservesUsed = inReserve
           log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}")
           game = game.copy(reserves = game.reserves.copy(jihadist = 0))
-          getNextResponse()
-        case Some(RemoveCadre) =>
-          humanRemoveCadre()
           getNextResponse()
         case action => action
       }
@@ -3330,20 +3344,6 @@ object LabyrinthAwakening {
         }
     }
   }    
-
-  // The Jihadist play can voluntarily remove cadre markers on the map
-  // (To avoid giving the US an easy prestige bump)
-  def humanRemoveCadre(): Unit = {
-    val candidates = (game.countries filter (_.hasCadre) map (_.name)).sorted
-    val target = askCountry(s"Remove cadre in which country: ", candidates)
-    game.getCountry(target) match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
-    }
-    log()
-    log(separator())
-    log(s"$Jihadist voluntarily removes a cadre from $target")
-  }
 
   def humanRecruit(ops: Int): Unit = {
     val availableCells = game.cellsAvailable()
@@ -3863,10 +3863,6 @@ object LabyrinthAwakening {
           warn(nixReaction, "The reaction markers will be removed.")
           if (!anyWarnings || askYorN(s"Do you wish continue (y/n)? ")) {
             var updated = m
-            if (m.isUntested) {
-              logAdjustment(name, "Alignment", updated.alignment, Neutral)
-              updated = updated.copy(alignment = Neutral) 
-            }
             logAdjustment(name, "Governance", govToString(updated.governance), govToString(newGov))
             updated = updated.copy(governance = newGov)
             if (nixCapital) {
