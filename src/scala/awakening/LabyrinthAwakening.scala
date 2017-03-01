@@ -1662,7 +1662,7 @@ object LabyrinthAwakening {
   def askOneOf(prompt: String, options: Seq[Any], initial: Option[String] = None, 
                allowNone: Boolean = true, abbreviations: Map[String, String] = Map.empty): Option[String] = {
     @tailrec def testResponse(response: Option[String]): Option[String] = {
-      response flatMap (s => matchOne(s, options map (_.toString), abbreviations)) match {
+      response flatMap (s => matchOne(s.trim, options map (_.toString), abbreviations)) match {
         case None =>
           readLine(prompt) match {
             case null | "" if allowNone => None
@@ -1680,7 +1680,7 @@ object LabyrinthAwakening {
       if (r == null)
         None
       else
-        r.toLowerCase match {
+        r.trim.toLowerCase match {
           case "n" | "no"  => Some(false)
           case "y" | "yes" => Some(true)
           case _           => None
@@ -1769,7 +1769,7 @@ object LabyrinthAwakening {
             case null | ""              => testResponse(None)
             case input                  => testResponse(Some(input))
           }
-        case x => x map (_.toInt)
+        case x => x map (_.trim.toInt)
       }
     }
     testResponse(initial)
@@ -3062,7 +3062,7 @@ object LabyrinthAwakening {
     readLine(prompt) match {
       case null => println() // User pressed Ctrl-d (end of file)
       case cmd =>
-        doCommand(cmd)
+        doCommand(cmd.trim)
         commandLoop()
     }
   }
@@ -3531,6 +3531,15 @@ object LabyrinthAwakening {
       else if (action == ExecuteEvent) {
         log(s"$Jihadist executes the ${card.name} event")
         card.executeEvent(Jihadist)
+      }
+      else if (action == PlotAction && game.firstPlotCard.isEmpty) {
+        println()
+        println(separator())
+        log(s"Place the $card card in the first plot box")
+        if (card.eventWillTrigger(US))
+          log("%s event \"%s\" does not trigger".format(US, card.name))
+        game = game.copy(firstPlotCard = Some(card.number))
+        humanPlot(opsAvailable)
       }
       else
         getActionOrder(US, card) match {
