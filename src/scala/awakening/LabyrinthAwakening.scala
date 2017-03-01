@@ -1556,7 +1556,8 @@ object LabyrinthAwakening {
       val nonMuslimTargets = nonMuslims filter (_.totalCells > 0)
       countryNames(muslimTargets ::: nonMuslimTargets) 
     }
-    def plotPossible(ops: Int) = (availablePlots exists (_.opsToPlace <= ops)) && plotTargets.nonEmpty
+    def plotsAvailableWith(ops: Int) = availablePlots filter (_.opsToPlace <= ops)
+    def plotPossible(ops: Int) = plotsAvailableWith(ops).nonEmpty && plotTargets.nonEmpty
   }
   
   def initialGameState(
@@ -1693,7 +1694,7 @@ object LabyrinthAwakening {
   }
 
 
-  def askInt(prompt: String, low: Int, high: Int, default: Option[Int]): Int = {
+  def askInt(prompt: String, low: Int, high: Int, default: Option[Int] = None): Int = {
     assert(low <= high, "askInt() low cannot be greater than high")
     if (low == high)
       low
@@ -3558,7 +3559,10 @@ object LabyrinthAwakening {
     log()
     log(s"$Jihadist performs a Recruit operation with ${opsString(ops)}")
     log(separator())
-    log(s"There are $availableCells cells available for recruitment")
+    if (availableCells == 1)
+      log(s"There is 1 cell available for recruitment")
+    else
+      log(s"There are $availableCells cells available for recruitment")
     // All of the target destinations must be declared before rolling any dice.
     val targets = for (i <- 1 to ops) yield {
       val ord  = ordinal(i)
@@ -3622,7 +3626,7 @@ object LabyrinthAwakening {
     log()
     log(s"$Jihadist performs a Travel operation with ${opsString(ops)}")
     log(separator())
-    log(s"There are ${game.cellsOnMap} cells on the map")
+    log(s"There are ${{amountOf(game.cellsOnMap, "cell")}} on the map")
     val maxRolls = ops min game.cellsOnMap
     val numRolls = askInt("How many dice do you wish to roll?", 1, maxRolls, Some(maxRolls))
     // Keep track of where cells have been selected. They can only be selected once!
@@ -3664,7 +3668,6 @@ object LabyrinthAwakening {
 
     // Now we can roll the die for each one see what happens and log the result.
     for ((ord, srcName, destName, active) <- attempts) {
-      val cellName = if (active) "active cell" else "sleeper cell"
       if (srcName == destName || areAdjacent(srcName, destName)) {
         log(s"$ord Travel from $srcName to $destName succeeds automatically")
         moveCellsBetweenCountries(srcName, destName, 1, active)
@@ -3752,6 +3755,95 @@ object LabyrinthAwakening {
   }
   
   def humanPlot(ops: Int): Unit = {
+    val Active  = true
+    val numPlots       = game.plotsAvailableWith(ops).size // Can only use WMD Plots or Plot with number <= ops
+    val maxCells       = (game.plotTargets map (name => game.getCountry(name).totalCells)).sum
+    val plotCandidates = game.plotTargets
+    log()
+    log(s"$Jihadist performs a Plot operation with ${opsString(ops)}")
+    log(separator())
+    if (maxCells == 1)
+      println("There is one cell on the map that can plot")
+    else
+      println(s"There are ${{amountOf(maxCells, "cell")}} on the map that can plot")
+    if (numPlots == 1)
+      println(s"There is 1 plot available for this operation")
+    else
+      println(s"There are $numPlots plots available for this operation")
+    
+    val maxRolls = ops min numPlots min maxCells
+    val numRolls = askInt("How many dice do you wish to roll?", 1, maxRolls, Some(maxRolls))
+    // Keep track of where cells have been selected. They can only be selected once!
+    case class Target(name: String, sleepers: Int, actives: Int)
+    var targetCountries = 
+      (game.countries
+        filter (_.totalCells > 0) 
+        map (c => c.name -> Target(c.name, c.sleeperCells, c.activeCells))
+      ).toMap
+    
+    // All of the plotting cells must be declared before rolling any dice.
+    val attempts = for (i <- (1 to numRolls).toList) yield {
+      println()
+      val ord        = ordinal(i)
+      val candidates = targetCountries.keys.toList.sorted
+      val target     = targetCountries(askCountry(s"$ord Plot in which country: ", candidates))
+      val cellType   = if (target.sleepers > 0 && target.actives > 0) {
+        val prompt = s"$ord Plot with (active or sleeper) cell. Default = active: "
+        askOneOf(prompt, List("active", "sleeper")) match {
+          case None    => Active
+          case Some(x) => x == "active"
+        } 
+      }
+      else {
+        println(s"$ord Plot cell will be ${if (target.actives > 0) "an active cell" else "a sleeper cell"}")
+        target.actives > 0
+      }
+        
+      // Remove the selected cell so that it cannot be selected twice.
+      if (target.sleepers + target.actives == 1)
+        targetCountries -= target.name
+      else if (cellType == Active)
+        targetCountries += target.name -> target.copy(actives = target.actives - 1)
+      else
+        targetCountries += target.name -> target.copy(sleepers = target.sleepers - 1)
+      (ord, target.name, cellType)
+    }
+
+    def showPlots(plots: Vector[Plot]): Unit = {
+      @tailrec def showNext(list: List[Plot], index: Int): Unit = list match {
+        case Nil =>
+        case plot :: rest =>
+          println(s"$index) ${plot.name}")
+          showNext(rest, index + 1)
+      }
+      showNext(plots.toList, 1)
+    }
+    
+    var available = game.plotsAvailableWith(ops).sorted.toVector
+    // Now we can roll the die for each one see what happens and log the result.
+    for ((ord, name, active) <- attempts) {
+      val c       = game.getCountry(name)
+      println()
+      println(separator())
+      if (!active)  
+        flipSleeperCells(name, 1)
+      val die     = humanDieRoll(s"Die roll for $ord plot int $name: ")
+      val success = die <= c.governance
+      val result  = if (success) "succeeds" else "fails"
+      
+      log(s"$ord Plot in $name $result with a roll of $die")
+      if (success) {
+        val plotIndex = if (available.size == 1) 0
+        else {
+          showPlots(available)
+          askInt(s"Select plot to place in $name: ", 1, available.size) - 1
+        }
+        val plot = available(plotIndex)
+        available = available.patch(plotIndex, Vector.empty, 1)
+        log(s"Place $plot in $name")
+      }
+    }
+    game = game.copy(availablePlots = available.toList.sorted)
   }
   
 
