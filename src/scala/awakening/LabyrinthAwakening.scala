@@ -94,7 +94,7 @@ object LabyrinthAwakening {
   }
   
   trait Plot {
-    val diceRolled: Int    // Dice rolled against governance in muslim countries
+    val number: Int        // Dice rolled against governance in muslim countries
     val opsToPlace: Int    // Min number of ops needed to place this plot.
     val name: String 
     override def toString() = name
@@ -106,18 +106,17 @@ object LabyrinthAwakening {
       case (PlotWMD, PlotWMD) =>  0
       case (PlotWMD, _)       => -1
       case (_, PlotWMD)       =>  1
-      case (x, y)             =>  y.diceRolled - x.diceRolled
+      case (x, y)             =>  y.number - x.number
     }
   }
   case object PlotWMD extends Plot {
-    override val diceRolled = 3
-    override val opsToPlace = 1
-    override val name = "Plot WMD"
+    val number     = 3
+    val opsToPlace = 1
+    val name = "Plot WMD"
   }
-  class NumberedPlot(number: Int) extends Plot {
-    override val diceRolled = number
-    override val opsToPlace = number
-    override val name: String = s"Plot $number"
+  class NumberedPlot(val number: Int) extends Plot {
+    val opsToPlace = number
+    val name: String = s"Plot $number"
   }
   case object Plot1 extends NumberedPlot(1)
   case object Plot2 extends NumberedPlot(2)
@@ -953,7 +952,8 @@ object LabyrinthAwakening {
       civilWar                  ||
       caliphateCapital          ||
       awakening > 0             ||
-      reaction > 0
+      reaction > 0              ||
+      wmdCache > 0
     )
     
     // If a muslim country is untest, then it is valid a WoI target.
@@ -1214,7 +1214,7 @@ object LabyrinthAwakening {
 
         case m: MuslimCountry =>
           val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
-          val res = s"${m.resources} ${if (m.resources == 1) "resource" else "resources"}"
+          val res = amountOf(m.resources, "resource")
           val oil = if (m.oilProducer) ", Oil producer" else ""
           b += s"$name -- $gov, $res$oil"
           item(m.activeCells, "Active cell")
@@ -1458,7 +1458,7 @@ object LabyrinthAwakening {
     }
     def numGoodOrFair    = muslims.filter(c => c.isGood || c.isFair).size
     def numPoorOrIslamic = muslims.filter(c => c.isPoor || c.isIslamistRule).size
-    def numIslamic       = muslims.filter(c => c.isIslamistRule).size
+    def numIslamistRule  = muslims.filter(c => c.isIslamistRule).size
     def oilBump(c: MuslimCountry) = if (c.oilProducer) oilPriceSpikes else 0
     def goodResources =
       muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
@@ -1809,6 +1809,17 @@ object LabyrinthAwakening {
       case _  /* 15 | 16 | 17 | 18 */    => Afghanistan
     }
     game.getMuslim(muslimKey) 
+  }
+  
+  def randomSchengenCountry: NonMuslimCountry = {
+    dieRoll match {
+      case 1 => game.getNonMuslim(Scandinavia)
+      case 2 => game.getNonMuslim(Benelux)
+      case 3 => game.getNonMuslim(Germany)
+      case 4 => game.getNonMuslim(France)
+      case 5 => game.getNonMuslim(Spain)
+      case _ => game.getNonMuslim(Italy)
+    }
   }
   
   // If the country is untested, test it and return true
@@ -2926,6 +2937,141 @@ object LabyrinthAwakening {
     }
   }
   
+  def resolvePlots(): Unit = {
+    case class Unblocked(country: Country, plot: Plot)
+    val unblocked = for (c <- game.countries filter (_.hasPlots); p <- c.plots)
+      yield Unblocked(c, p)
+    log()
+    log("Reslove plots")
+    if (unblocked.isEmpty) {
+      log(separator())
+      log("There are no unblocked plots on the map")
+    }
+    else if (unblocked exists (ub => ub.country.name == UnitedStates && ub.plot == PlotWMD)) {
+      // If there is a WMD in the United States reslove it first as it will end the game.
+      log(separator())
+      log("An unblocked WMD plot was resolved in the United States")
+      log("Game Over - Jihadist automatic victory!")
+    }
+    else {
+      for (Unblocked(country, plot) <- unblocked) {
+        val name = country.name
+        log(separator())
+        log(s"Unblocked $plot in $name")
+        country match {
+          //------------------------------------------------------------------
+          case m: MuslimCountry =>
+            // Funding
+            if (m.isGood) {
+              game = game.adjustFunding(2)
+              log(s"Increase funding by +2 to ${game.funding} (Muslim country at Good governance)")
+            }
+            else {
+              game = game.adjustFunding(1)
+              log(s"Increase funding by +1 to ${game.funding} (Muslim country at worse than Good governance)")
+            }
+            // Prestige
+            if (m.troops > 0 && plot == PlotWMD) {
+              game = game.copy(prestige = 1)
+              log(s"Set prestige to 1 (Troops present with WMD)")
+            }
+            else if (m.troops > 0) {
+              game = game.adjustPrestige(-1)
+              log(s"Decrease prestige by -1 to ${game.prestige} (Troops present)")
+            }
+            val dice = List.fill(plot.number)(dieRoll)
+            val successes = (dice filter (_ <= m.governance)).size
+            val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
+            log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
+            degradeGovernance(name, successes, removeAid = true)
+            
+          //------------------------------------------------------------------
+          case n: NonMuslimCountry =>
+            // Funding
+            if (n.iranSpecialCase) {
+              game = game.adjustFunding(1)
+              log(s"Increase funding by +1 to ${game.funding} (Iran at Fair governance)")
+            }
+            else if (name == UnitedStates) {
+              game = game.copy(funding = 9)
+              log(s"Set funding to 9.  (Plot in the United States)")
+            }
+            else if (plot == PlotWMD) {
+              game = game.copy(funding = 9)
+              log(s"Set funding to 9.  (WMD plot in a non-Muslim country)")
+            }
+            else if (n.isGood) {
+              game = game.adjustFunding(plot.number * 2)
+              log(s"Increase funding by +${plot.number * 2} to ${game.funding} (Plot number times 2, non-Muslim Good country)")
+            }
+            else {
+              game = game.adjustFunding(plot.number)
+              log(s"Increase funding by +${plot.number} to ${game.funding} (Plot number, non-Muslim country)")
+            }
+            
+            // Posture
+            if (name == UnitedStates) {
+              val die = dieRoll
+              val newPosture = if (die + 1 > 4) Hard else Soft
+              log(s"Posture roll for $name is $die + 1")
+              if (game.usPosture == newPosture)
+                log(s"US posture remains $newPosture")
+              else {
+                log(s"Set US posture to $newPosture")
+                game = game.copy(usPosture = newPosture)
+              }
+            }
+            else {
+              def rollCountryPosture(n: NonMuslimCountry): Unit = {
+                val die = dieRoll
+                val newPosture = if (die > 4) Hard else Soft
+                log(s"Posture roll for ${n.name} is $die")
+                if (n.posture == newPosture)
+                  log(s"${n.name} posture remains $newPosture")
+                else {
+                  log(s"Set posture of ${n.name} to $newPosture")
+                  game = game.updateCountry(n.copy(posture = newPosture))
+                }
+                rollCountryPosture(n)
+                if (n.isSchengen)
+                  if (game.botRole == Jihadist) {
+                    val s1 = randomSchengenCountry
+                    var s2 = randomSchengenCountry
+                    while (s2.name == s1.name) s2 = randomSchengenCountry
+                    log(s"Jihadist selects two other Schengen countries: ${s1.name} and ${s2.name}")
+                    rollCountryPosture(s1)
+                    rollCountryPosture(s2)
+                  }
+                  else {
+                    println("Select two other Schengen countries for posture rolls")
+                    val s1 = game.getNonMuslim(askCountry("First Schengen country: ",
+                      Schengen, allowAbort = false))
+                    val s2 = game.getNonMuslim(askCountry("Second Schengen country: ",
+                      Schengen filterNot (_ == s1.name), allowAbort = false))
+                    log(s"Jihadist selects two other Schengen countries: ${s1.name} and ${s2.name}")
+                    rollCountryPosture(s1)
+                    rollCountryPosture(s2)
+                  }
+              }
+            }
+            // Prestige
+            if (name == UnitedStates)
+              rollPrestige()
+        }
+        log() // blank line before next one
+      }
+      log(s"The world posture is now ${game.worldPostureDisplay}")
+      // Move all of the plots to the resolved plots box.
+      println("Put the plots in the resolved plots box")
+    
+      (game.countries filter (_.hasPlots)) foreach {
+        case m: MuslimCountry    =>
+           game = game.updateCountry(m.copy(plots = Nil)).copy(resolvedPlots = m.plots ::: game.resolvedPlots)
+        case n: NonMuslimCountry => 
+          game = game.updateCountry(n.copy(plots = Nil)).copy(resolvedPlots = n.plots ::: game.resolvedPlots)
+      }
+    }
+  }
   
   def endTurn(): Unit = {
     // TODO: resolve plots.
@@ -2935,25 +3081,35 @@ object LabyrinthAwakening {
     log(separator())
     
     // TODO - Also check for fracking whcih can affect funding
-    if (false) { // Check for pirates marker and Somalia or Yemen at Islamist Rule
+    if (game.markerInPlay("Pirates")) { // Check for pirates marker and Somalia or Yemen at Islamist Rule
       log("No funding drop because Pirates is in effect")
     }
     else {
       game = game.adjustFunding(-1)
-      log(s"Jihadist funding drops to ${game.funding}")
+      log(s"Jihadist funding drops -1 to ${game.funding}")
     }
-    if (game.numIslamic > 0) {
+    if (game.numIslamistRule > 0) {
       game = game.adjustPrestige(-1)
-      log(s"$US prestige drops to ${game.prestige}, at least 1 country is under Islamist Rule")
+      log(s"US prestige drops -1 to ${game.prestige} (At least 1 country is under Islamist Rule)")
     }
     else
-      log(s"$US prestige stays at ${game.prestige}, no countries under Islamist Rule")
+      log(s"US prestige stays at ${game.prestige} (No countries under Islamist Rule)")
     
     val (worldPosture, level) = game.gwot
     if (game.usPosture == worldPosture && level == 3) {
       game = game.adjustPrestige(1)
-      log(s"World posture is $worldPosture $level and US posture is $worldPosture , prestige increases to ${game.prestige}")
+      log(s"US prestige increases +1 to ${game.prestige} (World posture is $worldPosture $level and US posture is ${game.usPosture})")
     }
+    
+    if (game.cardsLapsing.nonEmpty) {
+      log(s"Discard the lapsing events: ${cardNumsAndNames(game.cardsLapsing)}")
+      game = game.copy(cardsLapsing = Nil, oilPriceSpikes = 0)
+    }
+    game.firstPlotCard foreach { num => 
+      log(s"Discard the firstplot card: ${cardNumAndName(num)}")
+      game = game.copy(firstPlotCard = None)
+    }
+    // The Bot's reserves are not cleared
     if (game.humanRole == US) {
       game = game.copy(reserves = game.reserves.copy(us = 0))
       log(s"$US reserves set to zero")
@@ -2965,7 +3121,7 @@ object LabyrinthAwakening {
     
     if (game.resolvedPlots.nonEmpty) {
       game = game.copy(resolvedPlots = Nil, availablePlots = game.availablePlots ::: game.resolvedPlots)
-      log("Return resolved plots to available plots box")
+      log("Return all resolved plots to the available plots box")
     }
     
     polarization()
@@ -2985,27 +3141,15 @@ object LabyrinthAwakening {
       game = game.copy(offMapTroops = 0)
     }
     
-    if (game.cardsLapsing.nonEmpty) {
-      log(s"Discard the lapsing events: ${cardNumsAndNames(game.cardsLapsing)}")
-      game = game.copy(cardsLapsing = Nil, oilPriceSpikes = 0)
-    }
-    game.firstPlotCard foreach { num => 
-      log(s"Discard the firstplot card: ${cardNumAndName(num)}")
-      game = game.copy(firstPlotCard = None)
-    }
-    
     for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
-      log(s"  ${rc.name}: Flip regime marker to tan side")
       game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
+      log(s"Flip green regime change marker in ${rc.name} to its tan side")
     }
     
     // Reset history of cards for current turn
     // Move the current turn Ops targets to the previous 
-    // TODO: Should the OpsTargets be cleared at the end of the turn?
     game = game.copy(turn = game.turn + 1, cardsPlayed = Nil)
     
-    log()
-    logSummary(game.scoringSummary)
     log()
     logSummary(game.statusSummary)
         
@@ -3037,8 +3181,8 @@ object LabyrinthAwakening {
     game = initialGameState(scenario, humanRole, humanAutoRoll, botDifficulties)
     
     logSummary(game.scenarioSummary)
-    logSummary(game.scoringSummary)
-    logSummary(game.statusSummary)
+    printSummary(game.scoringSummary)
+    printSummary(game.statusSummary)
     saveGameState("initial state before first turn.")
     game = game.copy(turn = game.turn + 1)
     log()
@@ -3075,6 +3219,7 @@ object LabyrinthAwakening {
       Command("us",           """Enter a card number for a US card play"""),
       Command("jihadist",     """Enter a card number for a Jihadist card play"""),
       Command("remove cadre", """Voluntarily remove a cadre from the map"""),
+      Command("resolve plots","""Resolve any unblocked plots on the map"""),
       Command("end turn",     """End the current turn.
                                 |This should be done after the last US card play.
                                 |Any plots will be resolved and the end of turn
@@ -3119,14 +3264,15 @@ object LabyrinthAwakening {
     tokens.headOption foreach { verb =>
       val param = if (tokens.tail.nonEmpty) Some(tokens.tail.mkString(" ")) else None
       matchOne(verb, CmdNames) foreach {
-        case "us"           => usCardPlay(param)
-        case "jihadist"     => jihadistCardPlay(param)
-        case "remove cadre" => humanRemoveCadre()
-        case "end turn"     => endTurn()
-        case "show"         => showCommand(param)
-        case "adjust"       => adjustSettings(param)
-        case "history"      => game.history foreach println  // TODO: Allow > file.txt
-        case "rollback"     => println("Not implemented.")
+        case "us"            => usCardPlay(param)
+        case "jihadist"      => jihadistCardPlay(param)
+        case "remove cadre"  => humanRemoveCadre()
+        case "resolve plots" => resolvePlots()
+        case "end turn"      => endTurn()
+        case "show"          => showCommand(param)
+        case "adjust"        => adjustSettings(param)
+        case "history"       => game.history foreach println  // TODO: Allow > file.txt
+        case "rollback"      => println("Not implemented.")
         case "quit" =>
           throw ExitGame
         case "help" if param.isEmpty =>
@@ -3848,8 +3994,12 @@ object LabyrinthAwakening {
           askInt(s"Select plot to place in $name: ", 1, available.size) - 1
         }
         val plot = available(plotIndex)
-        available = available.patch(plotIndex, Vector.empty, 1)
         log(s"Place $plot in $name")
+        available = available.patch(plotIndex, Vector.empty, 1)
+        c match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = plot :: m.plots))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = plot :: n.plots))
+        }
       }
     }
     game = game.copy(availablePlots = available.toList.sorted)
@@ -4212,9 +4362,13 @@ object LabyrinthAwakening {
         }
       }
       else { // Nonmuslim
-        val choices = List(
-          "posture", "active cells", "sleeper cells", "cadre", "plots", "markers"
-        ).sorted
+        val choices = {
+          var xs = List("posture", "active cells", "sleeper cells", "cadre", "plots", "markers").sorted
+          if (name == UnitedStates || name == Israel || name == Iran)
+            xs filterNot (_ == "posture")
+          else
+            xs
+        }
         askOneOf("Attribute (? for list): ", choices) match {
           case None        =>
           case Some(attribute) =>
