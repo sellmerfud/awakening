@@ -647,6 +647,10 @@ object LabyrinthAwakening {
       
     def markerInPlay(name: String) = markers contains name
     
+    def cardRemoved(num: Int) = cardsRemoved contains num
+    def cardLapsing(num: Int) = cardsLapsing contains num
+    def isFirstPlot(num: Int) = firstPlotCard == Some(num)
+    
     def cardPlaySummary: Seq[String] = {
       val b = new ListBuffer[String]
       b += s"Cards played this turn"
@@ -1288,7 +1292,8 @@ object LabyrinthAwakening {
   def askCardNumber(prompt: String, 
                     initial: Option[String] = None,
                     allowNone: Boolean = true,
-                    only3Ops: Boolean = false): Option[Int] = {
+                    only3Ops: Boolean = false,
+                    removedLapsingOK: Boolean = false): Option[Int] = {
     def checkNumber(input: String): Boolean = input match {
       case INTEGER(num) if deck.isValidCardNumber(num.toInt) =>
         if (only3Ops && deck(num.toInt).ops != 3) {
@@ -1302,6 +1307,22 @@ object LabyrinthAwakening {
         false
     }
     @tailrec def testResponse(response: Option[String]): Option[Int] = {
+      def outOfPlay(x: String): Boolean = {
+        val num  = x.trim.toInt
+        val name = cardNumAndName(num)
+        removedLapsingOK match {
+          case false if game.cardRemoved(num) =>
+            println(s"$name has been removed from from the game")
+            true
+          case false if game.cardLapsing(num) =>
+            println(s"$name is currently lapsing")
+            true
+          case false if game.isFirstPlot(num) =>
+            println(s"$name is currently the first plot card")
+            true
+          case _ => false
+        }
+      }
       response filter checkNumber match {
         case None =>
           readLine(prompt) match {
@@ -1309,7 +1330,9 @@ object LabyrinthAwakening {
             case null | ""              => testResponse(None)
             case input                  => testResponse(Some(input))
           }
-        case x => x map (_.trim.toInt)
+        case Some(n) if outOfPlay(n) =>
+          if (askYorN("Play it anyway (y/n)? ")) Some(n.trim.toInt) else None
+        case n => n map (_.trim.toInt)
       }
     }
     testResponse(initial)
@@ -2204,6 +2227,36 @@ object LabyrinthAwakening {
     }
   }
   
+  def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Unit = {
+    if (triggered)
+      log("\n%s event \"%s\" triggers".format(role, card.name))
+    else
+      log(s"$role executes the ${card.name} event")
+    card.executeEvent(role)
+    
+    val remove = (card.remove, role) match {
+      case (Remove, _)                => true
+      case (USRemove, US)             => true
+      case (JihadistRemove, Jihadist) => true
+      case _                          => false
+    }
+    val lapsing = (card.lapsing, role) match {
+      case (Lapsing, _)                => true
+      case (USLapsing, US)             => true
+      case (JihadistLapsing, Jihadist) => true
+      case _                           => false
+    }
+    
+    if (remove) {
+      log("Remove the \"%s\" card from the game".format(card.name))
+      game = game.copy(cardsRemoved = card.number :: game.cardsRemoved)
+    }
+    else if (lapsing) {
+      log("Mark the \"%s\" card as lapsing".format(card.name))
+      game = game.copy(cardsLapsing = card.number :: game.cardsLapsing)
+    }
+  }
+  
   // Prestige roll used
   //   After regime change, withdraw, unblocked plot in the US, or by event.
   def rollPrestige(): Unit = {
@@ -2919,7 +2972,7 @@ object LabyrinthAwakening {
   
   // Return a list of actions.
   // card2 is only used for US reassessment
-  def getActionOrder(opponent: Role, card: Card, card2: Option[Card] = None): List[CardAction] =
+  def getActionOrder(card: Card, opponent: Role, card2: Option[Card] = None): List[CardAction] =
     ((card :: card2.toList) filter (_.eventWillTrigger(opponent))) match {
       case c :: Nil =>
         println("\nThe %s event \"%s\" will trigger, which should happen first?".format(opponent, c.name))
@@ -3056,21 +3109,17 @@ object LabyrinthAwakening {
         game = game.copy(reserves = game.reserves.copy(us = card.ops))
         log(s"$US adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
         if (card.eventWillTrigger(Jihadist))
-          log("\n%s event \"%s\" triggers".format(Jihadist, card.name))
-          card.executeEvent(Jihadist)
+          performCardEvent(card, Jihadist, triggered = true)
       }
-      else if (action == ExecuteEvent) {
-        log(s"$US executes the ${card.name} event")
-        card.executeEvent(US)
-      }
+      else if (action == ExecuteEvent)
+        performCardEvent(card, US)
       else
-        getActionOrder(Jihadist, card, secondCard) match {
+        getActionOrder(card, opponent = Jihadist, secondCard) match {
           case Nil => // Cancel the operation
           case actions =>
             actions foreach {
               case Event(c) =>
-                log("\n% event \"%s\" triggers".format(Jihadist, c.name))
-                c.executeEvent(Jihadist)
+                performCardEvent(card, Jihadist, triggered = true)
               case Ops =>
                 action match {
                   case WarOfIdeas => humanWarOfIdeas(opsAvailable)
@@ -3241,13 +3290,10 @@ object LabyrinthAwakening {
         game = game.copy(reserves = game.reserves.copy(jihadist = card.ops))
         log(s"$Jihadist adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
         if (card.eventWillTrigger(US))
-          log("\n%s event \"%s\" triggers".format(US, card.name))
-          card.executeEvent(US)
+          performCardEvent(card, US, triggered = true)
       }
-      else if (action == ExecuteEvent) {
-        log(s"$Jihadist executes the ${card.name} event")
-        card.executeEvent(Jihadist)
-      }
+      else if (action == ExecuteEvent)
+        performCardEvent(card, Jihadist)
       else if (action == PlotAction && game.firstPlotCard.isEmpty) {
         println()
         println(separator())
@@ -3258,13 +3304,12 @@ object LabyrinthAwakening {
         humanPlot(opsAvailable)
       }
       else
-        getActionOrder(US, card) match {
+        getActionOrder(card, opponent = US) match {
           case Nil => // Cancel the operation
           case actions =>
             actions foreach {
               case Event(c) =>
-                log("\n%s event \"%s\" triggers".format(US, c.name))
-                c.executeEvent(Jihadist)
+                performCardEvent(card, US, triggered = true)
               case Ops =>
                 action match {
                   case Recruit      => humanRecruit(opsAvailable)
@@ -3694,44 +3739,39 @@ object LabyrinthAwakening {
   }
   
   def adjustLapsingCards(): Unit = {
-    var inPlay = game.cardsLapsing
-    def available = lapsingCardNumbers filterNot inPlay.contains
+    var lapsing = game.cardsLapsing
     @tailrec def getNextResponse(): Unit = {
       println()
-      println("Lapsing events that are currently in play:")
-      println(if (inPlay.isEmpty) "none" else cardNumsAndNames(inPlay.sorted))
+      println("Cards that are currently lapsing:")
+      println(if (lapsing.isEmpty) "none" else cardNumsAndNames(lapsing.sorted))
       println()
-      println("Lapsing events that are out of play:")
-      println(if (available.isEmpty) "none" else cardNumsAndNames(available))
-      println()
-      println("Enter a card number to move it between in play and out of play.")
-      askOneOf("Card #: ", lapsingCardNumbers) map (_.toInt) match {
+      println("Enter a card number to move it between lapsing and not lapsing.")
+      askCardNumber("Card #: ", removedLapsingOK = true) match {
         case None =>
-        case Some(num) if inPlay contains num =>
-          inPlay = inPlay filterNot(_ == num)
+        case Some(num) if lapsing contains num =>
+          lapsing = lapsing filterNot(_ == num)
           getNextResponse()
         case Some(num) =>
-          inPlay = num :: inPlay
+          lapsing = num :: lapsing
           getNextResponse()
       }
     }
     getNextResponse()
-    if (inPlay.toSet != game.cardsLapsing.toSet) {
-      logAdjustment("Lapsing Events", cardNumsAndNames(game.cardsLapsing), cardNumsAndNames(inPlay))
-      game = game.copy(cardsLapsing = inPlay)
+    if (lapsing.toSet != game.cardsLapsing.toSet) {
+      logAdjustment("Lapsing Events", cardNumsAndNames(game.cardsLapsing), cardNumsAndNames(lapsing))
+      game = game.copy(cardsLapsing = lapsing)
     }  
   }
 
   def adjustRemovedCards(): Unit = {
     var outOfPlay = game.cardsRemoved
-    def available = removableCardNumbers filterNot outOfPlay.contains
     @tailrec def getNextResponse(): Unit = {
       println()
       println("Cards that are currently out of play:")
       println(if (outOfPlay.isEmpty) "none" else cardNumsAndNames(outOfPlay.sorted))
       println()
       println("Enter a card number to move it between in play and out of play.")
-      askCardNumber("Card #: ") match {
+      askCardNumber("Card #: ", removedLapsingOK = true) match {
         case None =>
         case Some(num) if outOfPlay contains num =>
           outOfPlay = outOfPlay filterNot(_ == num)
@@ -3754,7 +3794,7 @@ object LabyrinthAwakening {
     println(s"Current first plot card: ${inPlay map cardNumAndName getOrElse "none"}")
     println()
     println("Enter a card number to add or remove it as the first plot card.")
-    askCardNumber("Card #: ") foreach {
+    askCardNumber("Card #: ", removedLapsingOK = true) foreach {
       case num if inPlay.exists(_ == num) => inPlay = None
       case num                            => inPlay = Some(num)
     }
