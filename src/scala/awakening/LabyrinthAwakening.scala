@@ -2954,6 +2954,7 @@ object LabyrinthAwakening {
       log("Game Over - Jihadist automatic victory!")
     }
     else {
+      var postureChanged = false
       for (Unblocked(country, plot) <- unblocked) {
         val name = country.name
         log(separator())
@@ -3017,6 +3018,7 @@ object LabyrinthAwakening {
               if (game.usPosture == newPosture)
                 log(s"US posture remains $newPosture")
               else {
+                postureChanged = true
                 log(s"Set US posture to $newPosture")
                 game = game.copy(usPosture = newPosture)
               }
@@ -3029,6 +3031,7 @@ object LabyrinthAwakening {
                 if (n.posture == newPosture)
                   log(s"${n.name} posture remains $newPosture")
                 else {
+                  postureChanged = true
                   log(s"Set posture of ${n.name} to $newPosture")
                   game = game.updateCountry(n.copy(posture = newPosture))
                 }
@@ -3060,7 +3063,8 @@ object LabyrinthAwakening {
         }
         log() // blank line before next one
       }
-      log(s"The world posture is now ${game.worldPostureDisplay}")
+      if (postureChanged)
+        log(s"The world posture is now ${game.worldPostureDisplay}")
       // Move all of the plots to the resolved plots box.
       println("Put the plots in the resolved plots box")
     
@@ -3195,11 +3199,40 @@ object LabyrinthAwakening {
     }
   }
 
+  // Check to see if any automatic victory condition has been met.
+  // Note: The WMD resolved in United States condition is checked by resolvePlots()
+  def checkAutomaticVictory(): Unit = {
+    def gameOver(victor: Role, reason: String) = {
+      log()
+      log(separator())
+      log(reason)
+      log(s"Game Over - $victor automatic victory!")
+    }
+    if (game.goodResources >= 12)
+      gameOver(US, s"${game.numGoodOrFair} resources controlled by countries with Good governance")
+    else if (game.numGoodOrFair >= 15)
+      gameOver(US, s"${game.numGoodOrFair} Muslim countries have Fair or Good governance")
+    else if (game.cellsOnMap == 0 && game.humanRole == Jihadist)
+      gameOver(US, s"There are no cells on the map")
+    else if (game.islamistResources >= 6 && game.botRole == Jihadist)
+      gameOver(Jihadist, s"${game.islamistResources} resources controlled by countries with Islamist Rule governance")
+    else if (game.islamistResources >= 6 && game.islamistAdjacency) {
+      val reason = s"${game.islamistResources} resources controlled by countries with Islamist Rule governance\n" +
+                    "and at least two of the countries are adjacent"
+      gameOver(Jihadist, reason)
+    }
+    else if (game.numPoorOrIslamic >= 15 && game.prestige == 1) {
+      val reason = s"${game.numPoorOrIslamic} Muslim countries have Poor or Islamist rule governance " +
+                    "and US prestige is 1"
+      gameOver(US, reason)
+    }
+  }
   
   // ---------------------------------------------
   // Process all top level user commands.
   @tailrec def commandLoop(): Unit = {
-    def prompt = {
+    checkAutomaticVictory()
+    val prompt = {
       val numCards = game.cardsPlayed.size
       s"\n>>> Turn ${game.turn}, ${amountOf(numCards, "card")} played <<<\n${separator()}\nCommand : "
     }
