@@ -35,7 +35,11 @@ import LabyrinthAwakening._
 object AwakeningCards extends CardDeck {
   val cardMap = Map(
     entry(new Card(121, "Advisors", US, 1,
-      NoRemove, Mark, NoLapsing, NoConditions,
+      NoRemove, Mark, NoLapsing,
+      (role: Role) => {
+        (game.muslims count (_.hasMarker("Advisors"))) < 3 &&
+        game.hasMuslim(m=> !m.isAdversary && m.civilWar && m.troops == 0 && !m.hasMarker("Advisors"))
+      },
       (role: Role) => ()
     )),
     entry(new Card(122, "Backlash", US, 1,

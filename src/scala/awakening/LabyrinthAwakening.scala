@@ -446,6 +446,9 @@ object LabyrinthAwakening {
       
     def autoRecruit = false
     def recruitSucceeds(die: Int) = die <= recruitOverride || die <= governance
+    def addMarker(name: String): NonMuslimCountry = this.copy(markers = name :: markers)
+    def removeMarker(name: String): NonMuslimCountry = this.copy(markers = markers filterNot (_ == name))
+    
   }
 
   case class MuslimCountry(
@@ -528,6 +531,9 @@ object LabyrinthAwakening {
         (isPoor && (ops  > 1 || besiegedRegime)) || 
         (isFair && (ops == 3 || (ops == 2 && besiegedRegime)))
       )
+      
+    def addMarker(name: String): MuslimCountry = this.copy(markers = name :: markers)
+    def removeMarker(name: String): MuslimCountry = this.copy(markers = markers filterNot (_ == name))
   }
     
   
@@ -651,6 +657,280 @@ object LabyrinthAwakening {
     def cardLapsing(num: Int) = cardsLapsing contains num
     def isFirstPlot(num: Int) = firstPlotCard == Some(num)
     
+    def bot: Role = humanRole match {
+      case US       => Jihadist
+      case Jihadist => US
+    }
+    def muslims    = countries filter (_.isInstanceOf[MuslimCountry]) map (_.asInstanceOf[MuslimCountry])
+    def nonMuslims = countries filter (_.isInstanceOf[NonMuslimCountry]) map (_.asInstanceOf[NonMuslimCountry])
+    
+    def isMuslim(name: String)    = muslims exists (_.name == name)
+    def isNonMuslim(name: String) = nonMuslims exists (_.name == name)
+    
+    // The methods assume a valid name and will throw an exception if an invalid name is used!
+    def getCountry(name: String)   = (countries find (_.name == name)).get
+    def getMuslim(name: String)    = (muslims find (_.name == name)).get
+    def getNonMuslim(name: String) = (nonMuslims find (_.name == name)).get
+    
+    def getCountries(names: List[String]):  List[Country]          = names map getCountry
+    def getMuslims(names: List[String]):    List[MuslimCountry]    = names map getMuslim
+    def getNonMuslims(names: List[String]): List[NonMuslimCountry] = names map getNonMuslim
+    
+    def hasMuslim(test: (MuslimCountry) => Boolean) = muslims exists test
+    
+    def adjacentCountries(name: String)   = getCountries(getAdjacent(name))
+    def adjacentMuslims(name: String)     = getMuslims(getAdjacent(name) filter isMuslim)
+    def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
+  
+    def caliphateCapital: Option[String] = muslims find (_.caliphateCapital) map (_.name)
+    def caliphateDeclared = caliphateCapital.nonEmpty
+    def isCaliphateMember(name: String): Boolean = {
+      caliphateCapital match {
+        case None => false  // No Caliphate declared
+        case Some(capital) => caliphateDaisyChain(capital) contains name
+      }
+    }
+  
+    // Return a list of countries comprising the daisy chain of caliphate candidates
+    // that are adjacent to the given country.
+    def caliphateDaisyChain(name: String): List[String] = {
+      def adjacentCandidates(x: MuslimCountry) = adjacentMuslims(x.name).filter(_.caliphateCandidate)
+      @tailrec def tryNext(candidates: List[MuslimCountry], chain: List[String]): List[String] = {
+        candidates match {
+          case Nil                                 => chain
+          case x :: xs  if (chain contains x.name) => tryNext(xs, chain)
+          case x :: xs                             => tryNext(xs ::: adjacentCandidates(x), x.name :: chain)
+        }
+      }
+      
+      val m = getMuslim(name)
+      if (m.caliphateCandidate)
+        tryNext(List(m), Nil)
+      else
+        Nil
+    }
+    
+    def setCaliphateCapital(name: String): GameState = {
+      assert(isMuslim(name), s"setCaliphateCapital() called on non-muslim country: $name")
+      val capital = getMuslim(name);
+      assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
+      
+      // First make sure there is no country marked as the capital
+      val clearedState = updateCountries(muslims.map(_.copy(caliphateCapital = false)))
+      val daisyChain = clearedState.caliphateDaisyChain(name).map { memberName =>
+        val member = getMuslim(memberName)
+        member.copy(
+          caliphateCapital = member.name == name,
+          activeCells      = member.totalCells,  // All cells go active in caliphate members
+          sleeperCells     = 0
+        )
+      }
+      clearedState.updateCountries(daisyChain)
+    }
+    
+    def updateCountry(changed: Country): GameState =
+      this.copy(countries = changed :: (countries filterNot (_.name == changed.name)))
+    
+    def updateCountries(changed: List[Country]): GameState = {
+      val updates = (changed map (c => (c.name -> c))).toMap
+      this.copy(countries = countries map (c => updates.getOrElse(c.name, c)))
+    }
+    
+    def adjustPrestige(amt: Int): GameState = this.copy(prestige = (prestige + amt) max 1 min 12)
+    def adjustFunding(amt: Int): GameState  = this.copy(funding = (funding + amt) max 1 min 9)
+    
+    def addMarker(name: String): GameState = this.copy(markers = name :: markers)
+    def removeMarker(name: String): GameState = this.copy(markers = markers filterNot (_ == name))
+    
+    def addOpsTarget(name: String): GameState = 
+      this.copy(opsTargetsThisCard = opsTargetsThisCard.copy(any = opsTargetsThisCard.any + name))
+    
+    def addTestedOrImproved(name: String): GameState =
+      this.copy(opsTargetsThisCard = opsTargetsThisCard.copy(testedOrImproved = opsTargetsThisCard.testedOrImproved + name))
+    
+    // List of countries that are valid targets for War of Ideas
+    def woiTargets: List[Country] = countries filter {
+      case n: NonMuslimCountry => !(n.name == UnitedStates || n.name == Israel)
+      case m: MuslimCountry    => m.isUntested || m.isNeutral || (m.isAlly && !m.isGood)
+    }
+    
+    
+    def prestigeModifier = prestige match {
+      case x if x <  4 => -1
+      case x if x <  7 =>  0
+      case x if x < 10 =>  2
+      case _           =>  2
+    }
+    
+    // Returns the current gwot 
+    // posture (Soft, Even, Hard)
+    // value 0, 1, 2, 3
+    def gwot: (String, Int) = {
+      val value = (nonMuslims.filterNot(_.name == UnitedStates).foldLeft(0) { 
+        case (v, c) if c.isHard => v + 1
+        case (v, c) if c.isSoft => v - 1
+        case (v, _) => v // Untested
+      })
+      val posture = if (value == 0) Even else if (value < 0) Soft else Hard
+      (posture, value.abs min 3)
+    }
+    
+    // 0, 1, 2, 3
+    def gwotPenalty: Int = {
+      gwot match {
+        case (posture, value)  if posture != usPosture => value
+        case _ => 0
+      }
+    }
+    
+    def troopCommitment = troopsAvailable match {
+      case x if x <  5 => Overstretch
+      case x if x < 10 => War
+      case _           => LowIntensity
+    }
+    
+    def fundingLevel = funding match {
+      case x if x < 4 => Tight
+      case x if x < 7 => Moderate
+      case _          => Ample
+    }
+    
+    def troopsAvailable  = 15 - offMapTroops - muslims.foldLeft(0) { (a, c) => a + c.troops }
+    def militiaAvailable = 15 - muslims.foldLeft(0) { (a, c) => a + c.militia }
+    
+    // If the "Training Camps" marker is in a country we add 3 extra cells available cells.
+    // (Only useful when funding is as 9 or by event or civil war attrition)
+    // If some of those cells are on the map and the training camp is removed, those
+    // extra cells remain on the map until eliminated.
+    // We use the trainingCampCells field to keep track of the training camp status:
+    // inCamp -- the number of training camp cells currently in camp.
+    //           when the mark is placed this will be set to 3 (or 5)
+    // onMap  -- the number of training camp cell on the map.
+    //           It is adjusted as cells are added to or removed from the map.
+    // Training camp cells are always the last to be placed on the map and the first
+    // to be removed.
+    
+    def trainingCamp        = muslims find (_.hasMarker("Training Camps")) map (_.name)
+    def trainingCampsInPlay = trainingCamp.nonEmpty
+    def trainingCampCapacity= trainingCamp map (tc => if (isCaliphateMember(tc)) 5 else 3) getOrElse 0 
+    def totalCellsInPlay    = 15 + trainingCampCells.inCamp + trainingCampCells.onMap
+    def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.totalCells }
+    def cellsOnTrack        = (15 - cellsOnMap) max 0  // Don't allow it to go negative due to camp cells
+    // Number of cells available for operations
+    def cellsAvailable(ignoreFunding: Boolean = false) = {
+      if (ignoreFunding || (trainingCampsInPlay && funding == 9))
+        trainingCampCells.inCamp + cellsOnTrack
+      else
+        fundingLevel match {
+          case Tight    => (cellsOnTrack - 10) max 0
+          case Moderate => (cellsOnTrack -  5) max 0
+          case _        => cellsOnTrack
+        }
+    }
+    def numGoodOrFair    = muslims count (c => c.isGood || c.isFair)
+    def numPoorOrIslamic = muslims count (c => c.isPoor || c.isIslamistRule)
+    def numIslamistRule  = muslims count (c => c.isIslamistRule)
+    def oilBump(c: MuslimCountry) = if (c.oilProducer) oilPriceSpikes else 0
+    def goodResources =
+      muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
+    def islamistResources = 
+      muslims.filter(_.isIslamistRule).foldLeft(0) { (a, c) => a + c.resources + oilBump(c)} +
+      (if (caliphateDeclared) 1 else 0)
+    // Return true if any two Islamist Rule countries are adjacent.
+    def islamistAdjacency: Boolean =
+      muslims.filter(_.isIslamistRule).combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
+    
+    // Remember, troops can ALWAYS deploy to the track with a 1 op card.
+    def deployPossible(ops: Int): Boolean =
+      (troopsAvailable > 0 && muslims.exists(_.canDeployTo(ops))) || muslims.exists(_.canDeployFrom)
+  
+    def deployFromTargets: List[String] = {
+      val ms = countryNames(muslims filter (_.canDeployFrom))
+      if (troopsAvailable > 0) "track" :: ms else ms
+    }
+    
+    def deployToTargets(ops: Int): List[String] = "track" :: countryNames(muslims filter (_.canDeployTo(ops)))
+    
+    def regimeChangeSources: List[String] = {
+      val ms = countryNames(muslims filter (_.maxDeployFrom > 5))
+      if (troopsAvailable > 5) "track" :: ms else ms
+    } 
+      
+    def regimeChangeTargets: List[String] = countryNames(muslims filter (_.isIslamistRule))
+      
+    def regimeChangePossible(ops: Int) = 
+      ops == 3 && usPosture == Hard && regimeChangeSources.nonEmpty && regimeChangeTargets.nonEmpty
+  
+    def withdrawTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
+      
+    def withdrawPossible(ops: Int) = 
+        ops == 3 && usPosture == Soft && withdrawTargets.nonEmpty
+
+    def disruptAffectsPrestige(name: String): Boolean = getCountry(name) match {
+      case m: MuslimCountry    => (m.troops + m.militia) > 1 && m.troops > 0
+      case _: NonMuslimCountry => false
+    }
+    
+    // Returns the losses that would occur iif this country is the 
+    // target of a disrupt operation.
+    // Some(Either((sleepers, actives), ())) or None
+    def disruptLosses(name: String): Option[Either[(Int, Int), Unit]] = {
+      val c = getCountry(name) 
+      val maxLosses = c match {
+        case m: MuslimCountry =>
+          if ((m.troops + m.militia) > 1 && (m.troops > 0 || m.hasMarker("Advisors"))) 2 else 1
+        case n: NonMuslimCountry => if (n.isHard) 2 else 1
+      }
+      if (c.totalCells > 0) {
+        val sleepers = maxLosses min c.sleeperCells
+        val actives = (maxLosses - sleepers) min c.activeCells
+        Some(Left((sleepers, actives)))
+      }
+      else if (c.hasCadre)
+        Some(Right())
+      else
+        None
+    } 
+    
+    def disruptTargets(ops: Int): List[String] = {
+      val muslimTargets = muslims.filter { m =>
+        ops >= m.governance &&
+        (m.hasCadre || m.totalCells > 0) && 
+        (m.isAlly || (m.troops + m.militia) > 1)
+      }
+      val nonMuslimTargets = nonMuslims.filter { n =>
+        !n.iranSpecialCase &&
+        ops >= n.governance &&
+        (n.hasCadre || n.totalCells > 0) 
+      }
+      countryNames(muslimTargets ::: nonMuslimTargets) 
+    }
+
+    def alertPossible(ops: Int) = ops == 3 && alertTargets.nonEmpty
+    
+    def alertTargets: List[String] = countryNames(countries filter (_.hasPlots))
+    
+    def warOfIdeasTargets(ops: Int): List[String] = countryNames(countries filter (_.warOfIdeasOK(ops)))
+    
+    def recruitTargets: List[String] = countryNames(countries filter (_.recruitOK))
+    
+    def recruitPossible(ignoreFunding: Boolean) = cellsAvailable(ignoreFunding) > 0 && recruitTargets.nonEmpty
+    
+    def jihadTargets: List[String] = countryNames(muslims filter (_.jihadOK))
+    def jihadPossible = jihadTargets.nonEmpty
+    
+    def majorJihadTargets(ops: Int) = countryNames(muslims filter (_.majorJihadOK(ops)))
+    def majorJihadPossible(ops: Int) = majorJihadTargets(ops).nonEmpty
+    
+    def plotTargets: List[String] = {
+      val muslimTargets = muslims filter (m => !m.isIslamistRule && m.totalCells > 0)
+      val nonMuslimTargets = nonMuslims filter (_.totalCells > 0)
+      countryNames(muslimTargets ::: nonMuslimTargets) 
+    }
+    def plotsAvailableWith(ops: Int) = availablePlots filter (_.opsToPlace <= ops)
+    def plotPossible(ops: Int) = plotsAvailableWith(ops).nonEmpty && plotTargets.nonEmpty
+    
+    // --- Summaries --------------------------------------
     def cardPlaySummary: Seq[String] = {
       val b = new ListBuffer[String]
       b += s"Cards played this turn"
@@ -833,275 +1113,6 @@ object LabyrinthAwakening {
         b += civilWars map (_.name) mkString ", "
       b.toList
     }
-    
-    
-    def bot: Role = humanRole match {
-      case US       => Jihadist
-      case Jihadist => US
-    }
-    def muslims    = countries filter (_.isInstanceOf[MuslimCountry]) map (_.asInstanceOf[MuslimCountry])
-    def nonMuslims = countries filter (_.isInstanceOf[NonMuslimCountry]) map (_.asInstanceOf[NonMuslimCountry])
-    
-    def isMuslim(name: String)    = muslims exists (_.name == name)
-    def isNonMuslim(name: String) = nonMuslims exists (_.name == name)
-    
-    // The methods assume a valid name and will throw an exception if an invalid name is used!
-    def getCountry(name: String)   = (countries find (_.name == name)).get
-    def getMuslim(name: String)    = (muslims find (_.name == name)).get
-    def getNonMuslim(name: String) = (nonMuslims find (_.name == name)).get
-    
-    def getCountries(names: List[String]):  List[Country]          = names map getCountry
-    def getMuslims(names: List[String]):    List[MuslimCountry]    = names map getMuslim
-    def getNonMuslims(names: List[String]): List[NonMuslimCountry] = names map getNonMuslim
-    
-    def adjacentCountries(name: String)   = getCountries(getAdjacent(name))
-    def adjacentMuslims(name: String)     = getMuslims(getAdjacent(name) filter isMuslim)
-    def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
-  
-    def caliphateCapital: Option[String] = muslims find (_.caliphateCapital) map (_.name)
-    def caliphateDeclared = caliphateCapital.nonEmpty
-    def isCaliphateMember(name: String): Boolean = {
-      caliphateCapital match {
-        case None => false  // No Caliphate declared
-        case Some(capital) => caliphateDaisyChain(capital) contains name
-      }
-    }
-  
-    // Return a list of countries comprising the daisy chain of caliphate candidates
-    // that are adjacent to the given country.
-    def caliphateDaisyChain(name: String): List[String] = {
-      def adjacentCandidates(x: MuslimCountry) = adjacentMuslims(x.name).filter(_.caliphateCandidate)
-      @tailrec def tryNext(candidates: List[MuslimCountry], chain: List[String]): List[String] = {
-        candidates match {
-          case Nil                                 => chain
-          case x :: xs  if (chain contains x.name) => tryNext(xs, chain)
-          case x :: xs                             => tryNext(xs ::: adjacentCandidates(x), x.name :: chain)
-        }
-      }
-      
-      val m = getMuslim(name)
-      if (m.caliphateCandidate)
-        tryNext(List(m), Nil)
-      else
-        Nil
-    }
-    
-    def setCaliphateCapital(name: String): GameState = {
-      assert(isMuslim(name), s"setCaliphateCapital() called on non-muslim country: $name")
-      val capital = getMuslim(name);
-      assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
-      
-      // First make sure there is no country marked as the capital
-      val clearedState = updateCountries(muslims.map(_.copy(caliphateCapital = false)))
-      val daisyChain = clearedState.caliphateDaisyChain(name).map { memberName =>
-        val member = getMuslim(memberName)
-        member.copy(
-          caliphateCapital = member.name == name,
-          activeCells      = member.totalCells,  // All cells go active in caliphate members
-          sleeperCells     = 0
-        )
-      }
-      clearedState.updateCountries(daisyChain)
-    }
-    
-    def updateCountry(changed: Country): GameState =
-      this.copy(countries = changed :: (countries filterNot (_.name == changed.name)))
-    
-    def updateCountries(changed: List[Country]): GameState = {
-      val updates = (changed map (c => (c.name -> c))).toMap
-      this.copy(countries = countries map (c => updates.getOrElse(c.name, c)))
-    }
-    
-    def adjustPrestige(amt: Int): GameState = this.copy(prestige = (prestige + amt) max 1 min 12)
-    def adjustFunding(amt: Int): GameState  = this.copy(funding = (funding + amt) max 1 min 9)
-    
-    def addOpsTarget(name: String): GameState = 
-      this.copy(opsTargetsThisCard = opsTargetsThisCard.copy(any = opsTargetsThisCard.any + name))
-    
-    def addTestedOrImproved(name: String): GameState =
-      this.copy(opsTargetsThisCard = opsTargetsThisCard.copy(testedOrImproved = opsTargetsThisCard.testedOrImproved + name))
-    
-    // List of countries that are valid targets for War of Ideas
-    def woiTargets: List[Country] = countries filter {
-      case n: NonMuslimCountry => !(n.name == UnitedStates || n.name == Israel)
-      case m: MuslimCountry    => m.isUntested || m.isNeutral || (m.isAlly && !m.isGood)
-    }
-    
-    
-    def prestigeModifier = prestige match {
-      case x if x <  4 => -1
-      case x if x <  7 =>  0
-      case x if x < 10 =>  2
-      case _           =>  2
-    }
-    
-    // Returns the current gwot 
-    // posture (Soft, Even, Hard)
-    // value 0, 1, 2, 3
-    def gwot: (String, Int) = {
-      val value = (nonMuslims.filterNot(_.name == UnitedStates).foldLeft(0) { 
-        case (v, c) if c.isHard => v + 1
-        case (v, c) if c.isSoft => v - 1
-        case (v, _) => v // Untested
-      })
-      val posture = if (value == 0) Even else if (value < 0) Soft else Hard
-      (posture, value.abs min 3)
-    }
-    
-    // 0, 1, 2, 3
-    def gwotPenalty: Int = {
-      gwot match {
-        case (posture, value)  if posture != usPosture => value
-        case _ => 0
-      }
-    }
-    
-    def troopCommitment = troopsAvailable match {
-      case x if x <  5 => Overstretch
-      case x if x < 10 => War
-      case _           => LowIntensity
-    }
-    
-    def fundingLevel = funding match {
-      case x if x < 4 => Tight
-      case x if x < 7 => Moderate
-      case _          => Ample
-    }
-    
-    def troopsAvailable  = 15 - offMapTroops - muslims.foldLeft(0) { (a, c) => a + c.troops }
-    def militiaAvailable = 15 - muslims.foldLeft(0) { (a, c) => a + c.militia }
-    
-    // If the "Training Camps" marker is in a country we add 3 extra cells available cells.
-    // (Only useful when funding is as 9 or by event or civil war attrition)
-    // If some of those cells are on the map and the training camp is removed, those
-    // extra cells remain on the map until eliminated.
-    // We use the trainingCampCells field to keep track of the training camp status:
-    // inCamp -- the number of training camp cells currently in camp.
-    //           when the mark is placed this will be set to 3 (or 5)
-    // onMap  -- the number of training camp cell on the map.
-    //           It is adjusted as cells are added to or removed from the map.
-    // Training camp cells are always the last to be placed on the map and the first
-    // to be removed.
-    
-    def trainingCamp        = muslims find (_.hasMarker("Training Camps")) map (_.name)
-    def trainingCampsInPlay = trainingCamp.nonEmpty
-    def trainingCampCapacity= trainingCamp map (tc => if (isCaliphateMember(tc)) 5 else 3) getOrElse 0 
-    def totalCellsInPlay    = 15 + trainingCampCells.inCamp + trainingCampCells.onMap
-    def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.totalCells }
-    def cellsOnTrack        = (15 - cellsOnMap) max 0  // Don't allow it to go negative due to camp cells
-    // Number of cells available for operations
-    def cellsAvailable(ignoreFunding: Boolean = false) = {
-      if (ignoreFunding || (trainingCampsInPlay && funding == 9))
-        trainingCampCells.inCamp + cellsOnTrack
-      else
-        fundingLevel match {
-          case Tight    => (cellsOnTrack - 10) max 0
-          case Moderate => (cellsOnTrack -  5) max 0
-          case _        => cellsOnTrack
-        }
-    }
-    def numGoodOrFair    = muslims.filter(c => c.isGood || c.isFair).size
-    def numPoorOrIslamic = muslims.filter(c => c.isPoor || c.isIslamistRule).size
-    def numIslamistRule  = muslims.filter(c => c.isIslamistRule).size
-    def oilBump(c: MuslimCountry) = if (c.oilProducer) oilPriceSpikes else 0
-    def goodResources =
-      muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
-    def islamistResources = 
-      muslims.filter(_.isIslamistRule).foldLeft(0) { (a, c) => a + c.resources + oilBump(c)} +
-      (if (caliphateDeclared) 1 else 0)
-    // Return true if any two Islamist Rule countries are adjacent.
-    def islamistAdjacency: Boolean =
-      muslims.filter(_.isIslamistRule).combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
-    
-    // Remember, troops can ALWAYS deploy to the track with a 1 op card.
-    def deployPossible(ops: Int): Boolean =
-      (troopsAvailable > 0 && muslims.exists(_.canDeployTo(ops))) || muslims.exists(_.canDeployFrom)
-  
-    def deployFromTargets: List[String] = {
-      val ms = countryNames(muslims filter (_.canDeployFrom))
-      if (troopsAvailable > 0) "track" :: ms else ms
-    }
-    
-    def deployToTargets(ops: Int): List[String] = "track" :: countryNames(muslims filter (_.canDeployTo(ops)))
-    
-    def regimeChangeSources: List[String] = {
-      val ms = countryNames(muslims filter (_.maxDeployFrom > 5))
-      if (troopsAvailable > 5) "track" :: ms else ms
-    } 
-      
-    def regimeChangeTargets: List[String] = countryNames(muslims filter (_.isIslamistRule))
-      
-    def regimeChangePossible(ops: Int) = 
-      ops == 3 && usPosture == Hard && regimeChangeSources.nonEmpty && regimeChangeTargets.nonEmpty
-  
-    def withdrawTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
-      
-    def withdrawPossible(ops: Int) = 
-        ops == 3 && usPosture == Soft && withdrawTargets.nonEmpty
-
-    def disruptAffectsPrestige(name: String): Boolean = getCountry(name) match {
-      case m: MuslimCountry    => (m.troops + m.militia) > 1 && m.troops > 0
-      case _: NonMuslimCountry => false
-    }
-    
-    // Returns the losses that would occur iif this country is the 
-    // target of a disrupt operation.
-    // Some(Either((sleepers, actives), ())) or None
-    def disruptLosses(name: String): Option[Either[(Int, Int), Unit]] = {
-      val c = getCountry(name) 
-      val maxLosses = c match {
-        case m: MuslimCountry =>
-          if ((m.troops + m.militia) > 1 && (m.troops > 0 || m.hasMarker("Advisors"))) 2 else 1
-        case n: NonMuslimCountry => if (n.isHard) 2 else 1
-      }
-      if (c.totalCells > 0) {
-        val sleepers = maxLosses min c.sleeperCells
-        val actives = (maxLosses - sleepers) min c.activeCells
-        Some(Left((sleepers, actives)))
-      }
-      else if (c.hasCadre)
-        Some(Right())
-      else
-        None
-    } 
-    
-    def disruptTargets(ops: Int): List[String] = {
-      val muslimTargets = muslims.filter { m =>
-        ops >= m.governance &&
-        (m.hasCadre || m.totalCells > 0) && 
-        (m.isAlly || (m.troops + m.militia) > 1)
-      }
-      val nonMuslimTargets = nonMuslims.filter { n =>
-        !n.iranSpecialCase &&
-        ops >= n.governance &&
-        (n.hasCadre || n.totalCells > 0) 
-      }
-      countryNames(muslimTargets ::: nonMuslimTargets) 
-    }
-
-    def alertPossible(ops: Int) = ops == 3 && alertTargets.nonEmpty
-    
-    def alertTargets: List[String] = countryNames(countries filter (_.hasPlots))
-    
-    def warOfIdeasTargets(ops: Int): List[String] = countryNames(countries filter (_.warOfIdeasOK(ops)))
-    
-    def recruitTargets: List[String] = countryNames(countries filter (_.recruitOK))
-    
-    def recruitPossible(ignoreFunding: Boolean) = cellsAvailable(ignoreFunding) > 0 && recruitTargets.nonEmpty
-    
-    def jihadTargets: List[String] = countryNames(muslims filter (_.jihadOK))
-    def jihadPossible = jihadTargets.nonEmpty
-    
-    def majorJihadTargets(ops: Int) = countryNames(muslims filter (_.majorJihadOK(ops)))
-    def majorJihadPossible(ops: Int) = majorJihadTargets(ops).nonEmpty
-    
-    def plotTargets: List[String] = {
-      val muslimTargets = muslims filter (m => !m.isIslamistRule && m.totalCells > 0)
-      val nonMuslimTargets = nonMuslims filter (_.totalCells > 0)
-      countryNames(muslimTargets ::: nonMuslimTargets) 
-    }
-    def plotsAvailableWith(ops: Int) = availablePlots filter (_.opsToPlace <= ops)
-    def plotPossible(ops: Int) = plotsAvailableWith(ops).nonEmpty && plotTargets.nonEmpty
   }
   
   def initialGameState(
@@ -1819,11 +1830,8 @@ object LabyrinthAwakening {
               if (game.getMuslim(name).isGood)
                 convergers = Converger(name, awakening = true) :: convergers
             }
-            else {
-              val newAlign = if (m.isNeutral) Ally else Neutral
-              game = game.updateCountry(m.copy(alignment = newAlign))
-              log(s"Shift the alignment of $name to $newAlign")
-            }
+            else 
+              shiftAlignment(m.name, if (m.isNeutral) Ally else Neutral)
 
 
           case _ => // x < -2
@@ -1832,11 +1840,8 @@ object LabyrinthAwakening {
               if (game.getMuslim(name).isIslamistRule)
                 convergers = Converger(name, awakening = false) :: convergers
             }
-            else {
-              val newAlign = if (m.isNeutral) Adversary else Neutral
-              game = game.updateCountry(m.copy(alignment = newAlign))
-              log(s"Shift the alignment of $name to $newAlign")
-            }
+            else 
+              shiftAlignment(m.name, if (m.isNeutral) Adversary else Neutral)
         }
       }
       
@@ -1972,10 +1977,9 @@ object LabyrinthAwakening {
                 case (_, Neutral)   => (1, Adversary)
                 case _              => (2, Adversary)
               }
-              if (shifts > 0) {
-                game = game.updateCountry(mAfterLosses.copy(alignment = newAlign))
-                log(s"Shift alignment to $newAlign")
-              }
+              
+              if (shifts > 0)
+                shiftAlignment(m.name, newAlign)
               val steps = delta - shifts
               if (steps > 0) {
                 degradeGovernance(m.name, steps)
@@ -1991,10 +1995,8 @@ object LabyrinthAwakening {
                 case (_, Neutral)   => (1, Ally)
                 case _              => (2, Ally)
               }
-              if (shifts > 0) {
-                game = game.updateCountry(mAfterLosses.copy(alignment = newAlign))
-                log(s"Shift alignment to $newAlign")
-              }
+              if (shifts > 0)
+                shiftAlignment(m.name, newAlign)
               val steps = delta - shifts
               if (steps > 0) {
                 improveGovernance(m.name, steps)
@@ -2030,15 +2032,16 @@ object LabyrinthAwakening {
         log(s"Die roll: $die")
         val modRoll = modifyWoiRoll(die, m)
         if (modRoll <= 4) {
-          log(s"Failure, $name remains ${govToString(m.governance)} ${m.alignment}")
+          log("Failure")
+          log(s"$name remains ${govToString(m.governance)} ${m.alignment}")
           if (modRoll == 4 && m.aidMarkers == 0) {
             game = game.updateCountry(m.copy(aidMarkers = 1))
             log(s"Place an aid marker in $name")
           }
         }
         else if (m.isNeutral) {
-          game = game.updateCountry(m.copy(alignment = Ally))
-          log(s"Success, shift alignment of $name to Ally")
+          log("Success")
+          shiftAlignment(name, Ally)
         }
         else {
           val caliphateCapital = m.caliphateCapital
@@ -2191,7 +2194,7 @@ object LabyrinthAwakening {
       val modRoll = modifyJihadRoll(die, m)
       modRoll <= m.governance
     }
-    val successes = (results filter (_ == true)).size
+    val successes = results count (_ == true)
     val failures  = numDice - successes
     val majorSuccess = majorJihad && (
       (m.isPoor && (successes  > 1 || m.besiegedRegime)) || 
@@ -2218,12 +2221,17 @@ object LabyrinthAwakening {
     if (majorJihad && !majorSuccess && m.governance == Poor && numDice == 3) {
       val updated = game.getMuslim(name)
       log(s"Major Jihad failure with three dice in a Poor country:")
-      if (updated.besiegedRegime) log(s"Besieged regime marker already present in $name")
-      else                        log(s"Add besieged regime marker to $name")
+      if (updated.besiegedRegime)
+        log(s"Besieged regime marker already present in $name")
+      else {
+        log(s"Add besieged regime marker to $name")
+        game = game.updateCountry(updated.copy(besiegedRegime = true))
+      }
       val newAlignment = if (updated.alignment == Adversary) Neutral else Ally
-      if (m.alignment == newAlignment) log(s"No shift in Aligment, $name is already at Ally.")
-      else                             log(s"Shift alignment of $name to $newAlignment")
-      game = game.updateCountry(updated.copy(besiegedRegime = true, alignment = newAlignment))
+      if (m.alignment == newAlignment)
+        log(s"No shift in Aligment, $name is already at Ally.")
+      else
+        shiftAlignment(name, newAlignment)
     }
   }
   
@@ -2231,7 +2239,8 @@ object LabyrinthAwakening {
     if (triggered)
       log("\n%s event \"%s\" triggers".format(role, card.name))
     else
-      log(s"$role executes the ${card.name} event")
+      log("\n%s executes the \"%s\" event".format(role, card.name))
+    
     card.executeEvent(role)
     
     val remove = (card.remove, role) match {
@@ -2297,9 +2306,10 @@ object LabyrinthAwakening {
         if (m.reaction > 0    ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0     ) log(s"Remove ${m.militia} miltia from $name")
         if (m.caliphateCapital) log(s"Remove Caliphate Capital maker from $name")
+        if (m.hasMarker("Advisors")) log("Remove \"Advisors\" marker from %s".format(name))
         m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
                militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false,
-               caliphateCapital = false, civilWar = false)
+               caliphateCapital = false, civilWar = false).removeMarker("Advisors")
       }
       else {
         log(s"Improve the governance of $name to ${govToString(newGov)}")
@@ -2335,9 +2345,13 @@ object LabyrinthAwakening {
         if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0   ) log(s"Remove ${m.militia} miltia from $name")
         if (m.wmdCache > 0  ) log(s"Move ${amountOf(m.wmdCache, "WMD Plot")} from the $name cache to available plots")
-        (m.copy(governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
-             aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
-             civilWar = false, wmdCache = 0), m.wmdCache)
+        if (m.hasMarker("Advisors")) log("Remove \"Advisors\" marker from %s".format(name))
+        val mm = m.copy(
+          governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
+          aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
+          civilWar = false, wmdCache = 0
+        ).removeMarker("Advisors")
+        (mm, m.wmdCache)
       }
       else if (delta == 0) {
         // There was no change in governance.  ie: Poor and canShiftToIR == false 
@@ -2362,6 +2376,19 @@ object LabyrinthAwakening {
     }
   }
 
+  def shiftAlignment(name: String, newAlign: String): Unit = {
+    var m = game.getMuslim(name)
+    if (m.alignment != newAlign) {
+      log(s"Shift the alignment of $name to $newAlign")
+      m = m.copy(alignment = newAlign)
+      if (m.hasMarker("Advisors")) {
+        log("Remove the \"Advisors\" marker from %s".format(name))
+        m = m.removeMarker("Advisors")
+      }
+      game = game.updateCountry(m)
+    }
+  }
+
   
   // Source/dest may be "track" or a muslim country.
   // That cannot be equal: Other than that, this function does NOT do any sanity checking!
@@ -2369,17 +2396,15 @@ object LabyrinthAwakening {
     assert(source != dest, "The source and destination for moveTroops() cannot be the same.")
     def disp(name: String) = if (name == "track") "the troops track" else name
     log(s"Move ${amountOf(numTroops, "troop")} from ${disp(source)} to ${disp(dest)}")
-    (source, dest) match {
-      case ("track", dest) =>
-        val d = game.getMuslim(dest)
-        game  = game.updateCountry(d.copy(troops = d.troops + numTroops))
-      case (source, "track") =>
-        val s = game.getMuslim(source)
-        game  = game.updateCountry(s.copy(troops = s.troops - numTroops))
-      case (source, dest) =>
-        val (s, d) = (game.getMuslim(source), game.getMuslim(dest))
-        game       = game.updateCountries(List(s.copy(troops = s.troops - numTroops),
-                                               d.copy(troops = d.troops + numTroops)))
+    if (source != "track") {
+      val s = game.getMuslim(source)
+      game  = game.updateCountry(s.copy(troops = s.troops - numTroops))
+    }
+    if (dest != "track") {
+      val d = game.getMuslim(dest)
+      if (d.hasMarker("Advisors"))
+        log("Remove \"Advisors\" marker from %s".format(dest))
+      game = game.updateCountry(d.copy(troops  = d.troops + numTroops).removeMarker("Advisors"))
     }
   }
   
@@ -2571,7 +2596,7 @@ object LabyrinthAwakening {
               log(s"Decrease prestige by -1 to ${game.prestige} (Troops present)")
             }
             val dice = List.fill(plot.number)(dieRoll)
-            val successes = (dice filter (_ <= m.governance)).size
+            val successes = dice count (_ <= m.governance)
             val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
             log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
             degradeGovernance(name, successes, removeAid = true)
@@ -4078,7 +4103,9 @@ object LabyrinthAwakening {
             }
             if (nixCivilWar) {
               logAdjustment(name, "Civil War", updated.civilWar, false)
-              updated = updated.copy(civilWar = false)
+              if (updated.markers contains "Advisors")
+                logAdjustment(name, "Markers", updated.markers, updated.markers filterNot(_ == "Advisors"))
+              updated = updated.copy(civilWar = false).removeMarker("Advisors")
             }
             if (nixRegimeChange) {
               logAdjustment(name, "Regime change", updated.regimeChange, NoRegimeChange)
@@ -4296,6 +4323,7 @@ object LabyrinthAwakening {
         val newValue = !m.civilWar
         val nixCapital       = !newValue && m.caliphateCapital
         val nixRegimeChange  = newValue && m.inRegimeChange
+        val nixAdvisors      = !newValue && m.hasMarker("Advisors")
         val convertAwakening = newValue && m.awakening != 0
         val convertReaction  = newValue && m.reaction != 0
         val anyWarnings      = nixCapital || nixRegimeChange || convertAwakening || convertReaction
@@ -4315,6 +4343,11 @@ object LabyrinthAwakening {
           if (nixRegimeChange) {
             logAdjustment(name, "Regime change", updated.regimeChange, NoRegimeChange)
             updated = updated.copy(regimeChange = NoRegimeChange)
+          }
+          if (nixAdvisors) {            
+            val orig = updated.markers
+            updated = updated.removeMarker("Advisors")
+            logAdjustment(name, "Markers", orig, updated.markers)
           }
           if (convertAwakening) {
             val numMilitia = updated.militia + (updated.awakening min game.militiaAvailable)
