@@ -368,11 +368,15 @@ object LabyrinthAwakening {
     override def toString() = s"$role played ${cardNumAndName(card.number)}"
   }
   
+  val LabyrinthDeck = "Labyrinth Deck"  // For future support…
+  val AwakeningDeck = "Awakening Deck"
   
+  type CardDeck = Map[Int, Card]
   
+  // Convenience method for add a card to the deck.
   def entry(card: Card) = (card.number -> card)
   
-  val Cards = Map(
+  val AwakeningCards: CardDeck = Map(
     entry(new Card(121, "Advisors", US, 1,
       NoRemove, Mark, NoLapsing, NoConditions,
       (role: Role) => ()
@@ -855,10 +859,12 @@ object LabyrinthAwakening {
     ))
   )
   
-  def cardNumbers = Cards.keys.toList
-  val lapsingCardNumbers = (Cards.valuesIterator filter (_.lapsing != NoLapsing) map (_.number)).toList.sorted
-  val removableCardNumbers = (Cards.valuesIterator filter (_.remove != NoRemove) map (_.number)).toList.sorted
-  def cardNumAndName(number: Int): String = Cards(number).numAndName
+  val CardDecks = Map(AwakeningDeck -> AwakeningCards)
+  def cards       = CardDecks(game.params.cardDeckName)
+  def cardNumbers = cards.keys.toList
+  val lapsingCardNumbers = (cards.valuesIterator filter (_.lapsing != NoLapsing) map (_.number)).toList.sorted
+  val removableCardNumbers = (cards.valuesIterator filter (_.remove != NoRemove) map (_.number)).toList.sorted
+  def cardNumAndName(number: Int): String = cards(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
   
   sealed trait Country {
@@ -996,6 +1002,7 @@ object LabyrinthAwakening {
   
   trait Scenario {
     val name: String
+    val cardDeckName: String
     val prestige: Int
     val usPosture: String
     val funding: Int
@@ -1005,10 +1012,11 @@ object LabyrinthAwakening {
   }
   
   class Awakening2010 extends Scenario {
-    val name       = "Awakening (2010 Scenario)"
-    val prestige   = 5
-    val usPosture = Soft
-    val funding    = 5
+    val name           = "Awakening (2010 Scenario)"
+    val cardDeckName   = AwakeningDeck
+    val prestige       = 5
+    val usPosture      = Soft
+    val funding        = 5
     val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
     val countries = List(
       NonMuslimCountry(Canada),
@@ -1074,6 +1082,7 @@ object LabyrinthAwakening {
   
   case class GameParameters(
     scenarioName: String,
+    cardDeckName: String,
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty]
@@ -1565,7 +1574,7 @@ object LabyrinthAwakening {
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty]) = GameState(
-      GameParameters(scenario.name, humanRole,humanAutoRoll, botDifficulties),
+      GameParameters(scenario.name, scenario.cardDeckName, humanRole,humanAutoRoll, botDifficulties),
       0, // Turn number, zero indicates start of game.
       scenario.prestige,
       scenario.usPosture,
@@ -1751,7 +1760,7 @@ object LabyrinthAwakening {
                     only3Ops: Boolean = false): Option[Int] = {
     def checkNumber(input: String): Boolean = input match {
       case INTEGER(num) if cardNumbers contains num.toInt =>
-        if (only3Ops && Cards(num.toInt).ops != 3) {
+        if (only3Ops && cards(num.toInt).ops != 3) {
           println("You must enter a 3 Ops card")
           false
         }
@@ -1889,38 +1898,35 @@ object LabyrinthAwakening {
     modRoll
   }
   
-  // Used when the Bot is selecting new caliphate capital
-  case class CaliphateCapitalCandidate(m: MuslimCountry) {
-    val size = game.caliphateDaisyChain(m.name).size
-  }
-  
-  // We define this outside of the CaliphateCapitalCandidateOrdering so it can
-  // easily be called by the displaceCaliphateCapital() method.
-  //
-  // Sort first by daisy chain size large to small
-  // then by non Ally before Ally
-  // then by worse governance before better governance
-  // then by worst WoI drm before better WoI drm
-  def compareCapitalCandidates(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = {
-    if (x.size != y.size)                      y.size compare x.size         // y first: to sort large to small.
-    else if (x.m.isAlly != y.m.isAlly)         x.m.isAlly compare y.m.isAlly // x first: nonAlly before Ally
-    else if (x.m.governance != y.m.governance) y.m.governance compare x.m.governance // y first: because Good < Islamist Rule
-    else {
-      val (xMod, yMod) = (modifyWoiRoll(1, x.m, false, true), modifyWoiRoll(1, y.m, false, true))
-      xMod compare yMod
-    }
-  }
-  
-  implicit val CaliphateCapitalCandidateOrdering = new Ordering[CaliphateCapitalCandidate] {
-    def compare(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = compareCapitalCandidates(x, y)
-  }
-  
   
   // Important: Assumes that the game has already been updated, such that the
   // previousCapital is no longer a caliphateCandidate! Othewise the caliphate
   // size comparisons for the the new capital candidate would include the old
   // capital which is wrong.
   def displaceCaliphateCapital(previousCapital: String): Unit = {
+    // Used when the Bot is selecting new caliphate capital
+    case class CaliphateCapitalCandidate(m: MuslimCountry) {
+      val size = game.caliphateDaisyChain(m.name).size
+    }
+    // We define this outside of the CaliphateCapitalCandidateOrdering so it can
+    // easily be called by the displaceCaliphateCapital() method.
+    //
+    // Sort first by daisy chain size large to small
+    // then by non Ally before Ally
+    // then by worse governance before better governance
+    // then by worst WoI drm before better WoI drm
+    def compareCapitalCandidates(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = {
+      if (x.size != y.size)                      y.size compare x.size         // y first: to sort large to small.
+      else if (x.m.isAlly != y.m.isAlly)         x.m.isAlly compare y.m.isAlly // x first: nonAlly before Ally
+      else if (x.m.governance != y.m.governance) y.m.governance compare x.m.governance // y first: because Good < Islamist Rule
+      else {
+        val (xMod, yMod) = (modifyWoiRoll(1, x.m, false, true), modifyWoiRoll(1, y.m, false, true))
+        xMod compare yMod
+      }
+    }
+    implicit val CaliphateCapitalCandidateOrdering = new Ordering[CaliphateCapitalCandidate] {
+      def compare(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = compareCapitalCandidates(x, y)
+    }
     // Caliphate capital displaced.  Attempt to move it to adjacent caliphate country.
     val adjacents = game.adjacentMuslims(previousCapital) filter (_.caliphateCandidate)
     log()
@@ -3422,7 +3428,7 @@ object LabyrinthAwakening {
   
   def usCardPlay(param: Option[String]): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
-      val card    = Cards(cardNumber)
+      val card    = cards(cardNumber)
       val trigger = card.eventWillTrigger(Jihadist)
       val postfix = if (card.eventIsPlayable(US))
         s"  (The ${card.association} event is playable)"
@@ -3502,7 +3508,7 @@ object LabyrinthAwakening {
           askCardNumber("Card # ", None, true, only3Ops = true) match {
             case None => None // Cancel the operation
             case Some(cardNum) =>
-              val card2 = Cards(cardNum)
+              val card2 = cards(cardNum)
               // Add to the list of played cards for the turn
               game = game.copy(cardsPlayed = PlayedCard(US, card2) :: game.cardsPlayed)
               secondCard = Some(card2)
@@ -3626,7 +3632,7 @@ object LabyrinthAwakening {
         
   def jihadistCardPlay(param: Option[String]): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
-      val card    = Cards(cardNumber)
+      val card    = cards(cardNumber)
       val trigger = card.eventWillTrigger(US)
       val postfix = if (card.eventIsPlayable(Jihadist))
         s"  (The ${card.association} event is playable)"
