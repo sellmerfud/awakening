@@ -35,9 +35,9 @@ import scala.collection.mutable.ListBuffer
 object LabyrinthAwakening {
   
   def dieRoll = nextInt(6) + 1
-  def humanDieRoll(prompt: String = "Enter die roll: ") =
+  def humanDieRoll(prompt: String = "Enter die roll: ", allowAbort: Boolean = false) =
     if (game.params.humanAutoRoll) dieRoll
-    else  (askOneOf(prompt, 1 to 6, None, false) map (_.toInt)).get
+    else  (askOneOf(prompt, 1 to 6, allowAbort = allowAbort) map (_.toInt)).get
   
   val INTEGER = """(\d+)""".r
   
@@ -1235,15 +1235,19 @@ object LabyrinthAwakening {
   }
     
   def askOneOf(prompt: String, options: Seq[Any], initial: Option[String] = None, 
-               allowNone: Boolean = true, abbreviations: Map[String, String] = Map.empty): Option[String] = {
+               allowNone: Boolean = false, allowAbort: Boolean = false, 
+               abbr: Map[String, String] = Map.empty): Option[String] = {
+    val choices = if (allowAbort) options ++ List(AbortCard) else options
     @tailrec def testResponse(response: Option[String]): Option[String] = {
-      response flatMap (s => matchOne(s.trim, options map (_.toString), abbreviations)) match {
+      response flatMap (s => matchOne(s.trim, choices map (_.toString), abbr)) match {
         case None =>
           readLine(prompt) match {
             case null | "" if allowNone => None
             case null | ""              => testResponse(None)
             case input                  => testResponse(Some(input))
           }
+        case Some(AbortCard) if allowAbort => 
+          if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else testResponse(None)
         case s => s
       }
     }
@@ -1269,7 +1273,7 @@ object LabyrinthAwakening {
   }
 
 
-  def askInt(prompt: String, low: Int, high: Int, default: Option[Int] = None): Int = {
+  def askInt(prompt: String, low: Int, high: Int, default: Option[Int] = None, allowAbort: Boolean = true): Int = {
     assert(low <= high, "askInt() low cannot be greater than high")
     if (low == high)
       low
@@ -1278,13 +1282,13 @@ object LabyrinthAwakening {
       default match {
         case Some(d) =>
           val p = "%s (%s) Default = %d: ".format(prompt, orList(choices), d)
-          askOneOf(p, choices) map (_.toInt) match {
+          askOneOf(p, choices, allowNone = true, allowAbort = allowAbort) map (_.toInt) match {
             case None    => d
             case Some(x) => x
           }
         case None => 
           val p = "%s (%s): ".format(prompt, orList(choices))
-          (askOneOf(p, choices, None, false) map (_.toInt)).get
+          (askOneOf(p, choices, None, allowAbort = allowAbort) map (_.toInt)).get
       }
     }
   }
@@ -1293,33 +1297,12 @@ object LabyrinthAwakening {
   def askCountry(prompt: String, candidates: List[String], allowAbort: Boolean = true): String = {
     assert(candidates.nonEmpty, s"askCountry(): list of candidates cannot be empty")
     // If only one candidate then don't bother to ask
-    @tailrec def askOnce: String = candidates match {
-      case x :: Nil           => println(s"$prompt $x"); x
-      case xs  if !allowAbort => askOneOf(prompt, xs, None, false, CountryAbbreviations).get
-      case xs =>
-        askOneOf(prompt, xs ::: List(AbortCard), None, false, CountryAbbreviations).get match {
-          case AbortCard => if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else askOnce
-          case x         => x
-        }
+    candidates match {
+      case x :: Nil => println(s"$prompt $x"); x
+      case xs       => askOneOf(prompt, xs, allowAbort = allowAbort, abbr = CountryAbbreviations).get
     }
-    askOnce
   }
   
-  def askTroops(prompt: String, maxTroops: Int, allowAbort: Boolean = true): Int = {
-    assert(maxTroops > 0, "askTroops(): maxTroops must be > 0")
-    // If max is one then don't bother to ask
-    @tailrec def askOnce: Int = maxTroops match {
-      case 1                => println(s"$prompt 1"); 1
-      case n if !allowAbort => askOneOf("How many troops: ", 1 to maxTroops, None, false).map(_.toInt).get
-      case n => 
-        askOneOf("How many troops: ", (1 to maxTroops).toList ::: List(AbortCard), None, false).get match {
-          case AbortCard => if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else askOnce
-          case x         => x.toInt
-        }
-    }
-    askOnce
-  }
-
   def askCardNumber(prompt: String, 
                     initial: Option[String] = None,
                     allowNone: Boolean = true,
@@ -1549,7 +1532,7 @@ object LabyrinthAwakening {
         adjacents.head.name
       else if (game.humanRole == Jihadist) {
         val choices = adjacents map (_.name)
-        askOneOf(s"Choose new capital (${orList(choices)}): ", choices, None, false).get
+        askOneOf(s"Choose new capital (${orList(choices)}): ", choices).get
       }
       else {
         // The Bot pick the best candidate for the new capital base on
@@ -1775,16 +1758,16 @@ object LabyrinthAwakening {
           case _ => // No change
           
         }
-      show(fromC.governance, toC.governance, s"  Set governance to ${govToString(toC.governance)}")    
-      show(fromC.alignment, toC.alignment, s"  Set alignment to ${toC.alignment}")    
-      show(fromC.sleeperCells, toC.sleeperCells, s"  Set active cells to ${toC.sleeperCells}")
-      show(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
+      showC(fromC.governance, toC.governance, s"  Set governance to ${govToString(toC.governance)}")    
+      showC(fromC.alignment, toC.alignment, s"  Set alignment to ${toC.alignment}")    
+      showC(fromC.sleeperCells, toC.sleeperCells, s"  Set active cells to ${toC.sleeperCells}")
+      showC(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
       showBool(fromC.hasCadre, toC.hasCadre, "cadre marker")
-      show(fromC.troops, toC.troops, s"  Set troops to ${toC.troops}")
-      show(fromC.militia, toC.militia, s"  Set militia to ${toC.militia}")
-      show(fromC.aidMarkers, toC.aidMarkers, s"  Set aid markers to ${toC.aidMarkers}")
-      show(fromC.awakening, toC.awakening, s"  Set awakening markers to ${toC.awakening}")
-      show(fromC.reaction, toC.reaction, s"  Set reaction markers to ${toC.reaction}")
+      showC(fromC.troops, toC.troops, s"  Set troops to ${toC.troops}")
+      showC(fromC.militia, toC.militia, s"  Set militia to ${toC.militia}")
+      showC(fromC.aidMarkers, toC.aidMarkers, s"  Set aid markers to ${toC.aidMarkers}")
+      showC(fromC.awakening, toC.awakening, s"  Set awakening markers to ${toC.awakening}")
+      showC(fromC.reaction, toC.reaction, s"  Set reaction markers to ${toC.reaction}")
       showBool(fromC.besiegedRegime, toC.besiegedRegime, "besieged regime marker")
       if (fromC.regimeChange != toC.regimeChange) {
         toC.regimeChange match {
@@ -1794,11 +1777,11 @@ object LabyrinthAwakening {
       }
       showBool(fromC.caliphateCapital, toC.caliphateCapital, "Caliphate capital marker")
       showBool(from.isCaliphateMember(fromC.name), to.isCaliphateMember(toC.name), "Caliphate member marker")
-      show(fromC.plots.sorted, toC.plots.sorted, 
+      showC(fromC.plots.sorted, toC.plots.sorted, 
             s"  Set plots to ${mapPlotsDisplay(toC.plots, to.params.humanRole)}")
-      show(fromC.markers.sorted,  toC.markers.sorted, 
+      showC(fromC.markers.sorted,  toC.markers.sorted, 
         s"  Set markers to: ${markersString(toC.markers)}" )
-      show(fromC.wmdCache, toC.wmdCache, s"  Set WMD cache to ${amountOf(toC.wmdCache, "WMD plot")}")
+      showC(fromC.wmdCache, toC.wmdCache, s"  Set WMD cache to ${amountOf(toC.wmdCache, "WMD plot")}")
       
       if (b.nonEmpty) {
         b.prepend(s"\n${toC.name} changes:\n${separator()}")
@@ -1810,19 +1793,19 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       def showC(oldValue: Any, newValue: Any, msg: String) = if (oldValue != newValue) b += msg
           
-      show(fromC.posture, toC.posture, s"  Set posture to ${toC.posture}")
-      show(fromC.sleeperCells, toC.sleeperCells, s"  Set active cells to ${toC.sleeperCells}")
-      show(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
+      showC(fromC.posture, toC.posture, s"  Set posture to ${toC.posture}")
+      showC(fromC.sleeperCells, toC.sleeperCells, s"  Set active cells to ${toC.sleeperCells}")
+      showC(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
       (fromC.hasCadre, toC.hasCadre) match {
         case (true, false) => b += "  Remove cadre marker"
         case (false, true) => b += "  Add cadre marker"
         case _ => // No change
       }
-      show(fromC.plots.sorted, toC.plots.sorted, 
+      showC(fromC.plots.sorted, toC.plots.sorted, 
             s"  Set plots to ${mapPlotsDisplay(toC.plots, to.params.humanRole)}")
-      show(fromC.markers.sorted,  toC.markers.sorted, 
+      showC(fromC.markers.sorted,  toC.markers.sorted, 
         s"  Set markers to: ${markersString(toC.markers)}" )
-      show(fromC.wmdCache, toC.wmdCache, s"  Set WMD cache to ${amountOf(toC.wmdCache, "WMD plot")}")
+      showC(fromC.wmdCache, toC.wmdCache, s"  Set WMD cache to ${amountOf(toC.wmdCache, "WMD plot")}")
       
       if (b.nonEmpty) {
         b.prepend(s"\n${toC.name} changes:\n${separator()}")
@@ -2853,7 +2836,7 @@ object LabyrinthAwakening {
     val scenario = new Awakening2010
     // ask which side the user wishes to play -- to be done
     val (humanRole, botDifficulties) =
-      askOneOf("Which side do you wish play? (US or Jihadist) ", "US"::"Jihadist"::Nil, None, false) match {
+      askOneOf("Which side do you wish play? (US or Jihadist) ", "US"::"Jihadist"::Nil) match {
         case Some("US") => (US, Muddled :: Coherent :: Attractive :: Nil)
         case _          => (Jihadist, OffGuard :: Competent :: Adept :: Nil)
       }
@@ -3012,7 +2995,7 @@ object LabyrinthAwakening {
   def showCommand(param: Option[String]): Unit = {
     val options = "all" :: "cards" :: "summary" :: "scenario" :: "caliphate" ::
                   "civil wars" :: countryNames(game.countries)
-    askOneOf("Show: ", options, param, true, CountryAbbreviations) foreach {
+    askOneOf("Show: ", options, param, allowNone = true, abbr = CountryAbbreviations) foreach {
       case "cards"      => printSummary(game.cardPlaySummary)
       case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
       case "scenario"   => printSummary(game.scenarioSummary)
@@ -3065,7 +3048,7 @@ object LabyrinthAwakening {
         println("\nThe %s event \"%s\" will trigger, which should happen first?".format(opponent, c.name))
         println(separator())
         val choices = List("event", "operations")
-        askOneOf(s"${orList(choices)}? ", choices) match {
+        askOneOf(s"${orList(choices)}? ", choices, allowAbort = true) match {
           case None               => Nil
           case Some("operations") => List(Ops, Event(c))
           case _                  => List(Event(c), Ops)
@@ -3076,12 +3059,12 @@ object LabyrinthAwakening {
                 format(opponent, c1.name, c2.name))
         println(separator())
         val choices1 = List("1st event", "2nd event", "operations")
-        askOneOf(s"${orList(choices1)}? ", choices1) match {
+        askOneOf(s"${orList(choices1)}? ", choices1, allowAbort = true) match {
           case None => Nil
           case Some(first) =>
             println("Which should happen second?")
             val choices2 = choices1 filterNot (_ == first)
-            askOneOf(s"${orList(choices2)}? ", choices2) match {
+            askOneOf(s"${orList(choices2)}? ", choices2, allowAbort = true) match {
               case None => Nil
               case Some(second) =>
                 val third = (choices2 filterNot (_ == second)).head
@@ -3154,14 +3137,11 @@ object LabyrinthAwakening {
         if (game.alertPossible(opsAvailable))                   Some(Alert)        else None,
         if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)     else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves)  else None,
-        if (card.ops < 3 && inReserve > 0)                      Some(UseReserves)  else None,
-                                                                Some(AbortCard)
+        if (card.ops < 3 && inReserve > 0)                      Some(UseReserves)  else None
       ).flatten
     
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
-      askOneOf(s"$US action: ", actions, allowNone = false) match {
-        case Some(AbortCard) => 
-          if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else getNextResponse()
+      askOneOf(s"$US action: ", actions, allowAbort = true) match {
         case Some(UseReserves) =>
           reservesUsed = inReserve
           log(s"$US player expends their reserves of ${opsString(reservesUsed)}")
@@ -3227,10 +3207,10 @@ object LabyrinthAwakening {
       if (ops < 3 && game.getMuslim(target).isPoor)
         log(s"Not enough Ops to complete War of Ideas in $target")
       else
-        performWarOfIdeas(target, humanDieRoll())
+        performWarOfIdeas(target, humanDieRoll(allowAbort = true))
     }
     else
-      performWarOfIdeas(target, humanDieRoll())
+      performWarOfIdeas(target, humanDieRoll(allowAbort = true))
   }
   
   // Trops can alwasy deploy to the track.
@@ -3241,7 +3221,7 @@ object LabyrinthAwakening {
     val source    = askCountry("Deploy troops from: ", game.deployFromTargets)
     val dest      = askCountry("Deploy troops to: ", game.deployToTargets(ops) filterNot (_ == source))
     val maxTroops = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
-    val numTroops = askTroops("How many troops: ", maxTroops)
+    val numTroops = askInt("How many troops: ", 1, maxTroops)
     log()
     moveTroops(source, dest, numTroops)
   }
@@ -3254,7 +3234,7 @@ object LabyrinthAwakening {
     val dest      = askCountry("Regime change in which country: ", game.regimeChangeTargets)
     val source    = askCountry("Deploy troops from: ", game.regimeChangeSources)
     val maxTroops = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
-    val numTroops = askTroops("How many troops: ", maxTroops)
+    val numTroops = askInt("How many troops: ", 6, maxTroops)
     performRegimeChange(source, dest, numTroops)
   }
   
@@ -3264,7 +3244,7 @@ object LabyrinthAwakening {
     log(separator())
     val source = askCountry("Withdraw troops from which country: ", game.withdrawTargets)
     val dest   = askCountry("Deploy withdrawn troops to: ", (game.deployToTargets(ops = 3) filter (_ != source)))
-    val numTroops = askTroops("How many troops: ", game.getMuslim(source).troops)
+    val numTroops = askInt("How many troops: ", 1, game.getMuslim(source).troops)
     performWithdraw(source, dest, numTroops)
   }
 
@@ -3341,14 +3321,11 @@ object LabyrinthAwakening {
         if (game.jihadPossible)                                  Some(Jihad)        else None,
         if (game.plotPossible(opsAvailable))                     Some(PlotAction)   else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve < 2)  Some(AddReserves)  else None,
-        if (card.ops < 3 && inReserve > 0)                       Some(UseReserves)  else None,
-                                                                 Some(AbortCard)
+        if (card.ops < 3 && inReserve > 0)                       Some(UseReserves)  else None
       ).flatten
   
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
-      askOneOf(s"$Jihadist action: ", actions, allowNone = false) match {
-        case Some(AbortCard) => 
-          if (askYorN("Really abort (y/n)? ")) throw AbortCardPlay else getNextResponse()
+      askOneOf(s"$Jihadist action: ", actions, allowAbort = true) match {
         case Some(UseReserves) =>
           reservesUsed = inReserve
           log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}")
@@ -3417,7 +3394,7 @@ object LabyrinthAwakening {
       if (c.autoRecruit)
         (dest, true, s"$ord Recruit automatically succeeds in $dest")
       else {
-        val die     = humanDieRoll(s"Die roll for $ord Recruit in $dest: ")
+        val die     = humanDieRoll(s"Die roll for $ord Recruit in $dest: ", allowAbort = true)
         val success = c.recruitSucceeds(die)
         val result  = if (success) "succeeds" else "fails"
         (dest, success, s"$ord Recruit $result in $dest with a roll of $die")
@@ -3440,7 +3417,7 @@ object LabyrinthAwakening {
       else {
         println(s"You have ${successes.size} successful recruits, but only $availableCells available cells")
         println("Specify where to put the cells:")
-        def ask(dest: String) = askOneOf(s"1 cell in $dest (place or skip): ", Seq("place", "skip"), None, false).get
+        def ask(dest: String) = askOneOf(s"1 cell in $dest (place or skip): ", Seq("place", "skip"), allowAbort = true).get
         // Keep asking until all of the available cells have been placed or until 
         // the remaining target destination are all the same.
         @tailrec def placeNext(dests: List[String], skipped: List[String], cellsLeft: Int): Unit =
@@ -3489,7 +3466,7 @@ object LabyrinthAwakening {
       val src        = sourceCountries(askCountry(s"$ord Travel from which country: ", candidates))
       val cellType   = if (src.sleepers > 0 && src.actives > 0) {
         val prompt = s"$ord Travel which cell (active or sleeper) Default = active: "
-        askOneOf(prompt, List("active", "sleeper")) match {
+        askOneOf(prompt, List("active", "sleeper"), allowNone = true, allowAbort = true) match {
           case None    => Active
           case Some(x) => x == "active"
         } 
@@ -3519,7 +3496,7 @@ object LabyrinthAwakening {
       else {
         println()
         testCountry(destName)
-        val die    = humanDieRoll(s"Die roll for $ord Travel from $srcName to $destName: ")
+        val die    = humanDieRoll(s"Die roll for $ord Travel from $srcName to $destName: ", allowAbort = true)
         performTravel(srcName, destName, active, die, s"$ord ")
       }
     }
@@ -3590,7 +3567,7 @@ object LabyrinthAwakening {
         if (dieNumber > numDice) Nil
         else {
           val ord = ordinal(dieNumber)
-          val die = humanDieRoll(s"$ord Die roll for $jihad in $name: ")
+          val die = humanDieRoll(s"$ord Die roll for $jihad in $name: ", allowAbort = true)
           die :: getDieRolls(dieNumber + 1)
         }
       }
@@ -3633,7 +3610,7 @@ object LabyrinthAwakening {
       val target     = targetCountries(askCountry(s"$ord Plot in which country: ", candidates))
       val cellType   = if (target.sleepers > 0 && target.actives > 0) {
         val prompt = s"$ord Plot with (active or sleeper) cell. Default = active: "
-        askOneOf(prompt, List("active", "sleeper")) match {
+        askOneOf(prompt, List("active", "sleeper"), allowNone = true, allowAbort = true) match {
           case None    => Active
           case Some(x) => x == "active"
         } 
@@ -3671,7 +3648,7 @@ object LabyrinthAwakening {
       println(separator())
       if (!active)  
         flipSleeperCells(name, 1)
-      val die     = humanDieRoll(s"Die roll for $ord plot int $name: ")
+      val die     = humanDieRoll(s"Die roll for $ord plot int $name: ", allowAbort = true)
       val success = die <= c.governance
       val result  = if (success) "succeeds" else "fails"
       
@@ -3700,7 +3677,7 @@ object LabyrinthAwakening {
     val options = "prestige" ::"funding" :: "difficulty" :: "lapsing cards" :: "removed cards" :: 
                   "first plot" :: "markers" ::"reserves" :: "plots" :: "offmap troops" :: "posture" ::
                   "auto roll" :: countryNames(game.countries)
-    askOneOf("Adjust: ", options, param, true, CountryAbbreviations) foreach {
+    askOneOf("Adjust: ", options, param, allowNone = true, abbr = CountryAbbreviations) foreach {
       case "prestige" =>
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
           logAdjustment("Prestige", game.prestige, value)
@@ -3752,7 +3729,7 @@ object LabyrinthAwakening {
   def adjustReserves(): Unit = {
     val choices = List(US.toString, Jihadist.toString)
     for {
-      roleName <- askOneOf(s"Which side (${orList(choices)}): ", choices)
+      roleName <- askOneOf(s"Which side (${orList(choices)}): ", choices, allowNone = true)
       role     = Role(roleName)
       current  = if (role == US) game.reserves.us else game.reserves.jihadist
       value    <- adjustInt(s"$role reserves", current, 0 to 2)
@@ -3791,7 +3768,7 @@ object LabyrinthAwakening {
       
       help1 foreach println
       help2 foreach println
-      askOneOf(s"$label: ", choices) match {
+      askOneOf(s"$label: ", choices, allowNone = true) match {
         case None =>
         case Some(INTEGER(x)) =>
           inEffect = AllNames take x.toInt
@@ -3896,7 +3873,7 @@ object LabyrinthAwakening {
       showColums(available)
       println()
       println("Enter a marker name to move it between in play and out of play.")
-      askOneOf("Marker: ", GlobalMarkers) match {
+      askOneOf("Marker: ", GlobalMarkers, allowNone = true) match {
         case None =>
         case Some(name) if inPlay contains name =>
           inPlay = inPlay filterNot(_ == name)
@@ -3947,7 +3924,7 @@ object LabyrinthAwakening {
           println("Plots cannot be adjusted at this time.")
         else {
           println("Select a resolved plot to make available")
-          askOneOf("Plot: ", 1 to (resolved.size )) map (_.toInt) match {
+          askOneOf("Plot: ", 1 to (resolved.size ), allowNone = true) map (_.toInt) match {
             case None =>
             case Some(num) =>
               val index    = num - 1
@@ -3974,7 +3951,7 @@ object LabyrinthAwakening {
           println("Plots cannot be adjusted at this time.")
         else {
           println("Select a plot to move between available and resolved")
-          askOneOf("Plot: ", 1 to (available.size + resolved.size )) map (_.toInt) match {
+          askOneOf("Plot: ", 1 to (available.size + resolved.size ), allowNone = true) map (_.toInt) match {
             case None =>
             case Some(num) if num <= available.size =>
               val index    = num - 1
@@ -4020,7 +3997,7 @@ object LabyrinthAwakening {
           "cadre", "troops", "militia", "aid", "awakening", "reaction", "wmd cache",
           "besieged regime", "civil war", "caliphate", "plots", "markers"
         ).sorted
-        askOneOf("Attribute (? for list): ", choices) match {
+        askOneOf("Attribute (? for list): ", choices, allowNone = true) match {
           case None        =>
           case Some(attribute) =>
             attribute match {
@@ -4053,7 +4030,7 @@ object LabyrinthAwakening {
           else
             xs
         }
-        askOneOf("Attribute (? for list): ", choices) match {
+        askOneOf("Attribute (? for list): ", choices, allowNone = true) match {
           case None        =>
           case Some(attribute) =>
             attribute match {
@@ -4080,7 +4057,7 @@ object LabyrinthAwakening {
       case n: NonMuslimCountry =>
         val choices = (PostureUntested::Soft::Hard::Nil) filterNot (_ == n.posture)
         val prompt = s"New posture (${orList(choices)}): "
-        askOneOf(prompt, choices) foreach { newPosture =>
+        askOneOf(prompt, choices, allowNone = true) foreach { newPosture =>
           logAdjustment(name, "Prestige", n.posture, newPosture)
           game = game.updateCountry(n.copy(posture = newPosture))
         }
@@ -4096,7 +4073,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry =>
         val choices = (Ally::Neutral::Adversary::Nil) filterNot (_ == m.alignment)
         val prompt = s"New alignment (${orList(choices)}): "
-        askOneOf(prompt, choices) foreach { newAlignment =>
+        askOneOf(prompt, choices, allowNone = true) foreach { newAlignment =>
           logAdjustment(name, "Alignment", m.alignment, newAlignment)
           game = game.updateCountry(m.copy(alignment = newAlignment))
         }
@@ -4111,7 +4088,7 @@ object LabyrinthAwakening {
                       filterNot (_ == m.governance)
                       map govToString)
         val prompt = s"New governance (${orList(choices)}): "
-        askOneOf(prompt, choices) map govFromString foreach { newGov =>
+        askOneOf(prompt, choices, allowNone = true) map govFromString foreach { newGov =>
           // When a country becomes Good or Islamist Rule, the country cannot contain:
           //  aid, besiege regime, civil war, regime change, awakening, reaction
           // Further when the country becomes Good, it cannot be the Calipate Capital.
@@ -4341,7 +4318,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry =>
         val choices = (NoRegimeChange::GreenRegimeChange::TanRegimeChange::Nil) filterNot (_ == m.regimeChange)
         val prompt = s"New regime change value (${orList(choices)}): "
-        askOneOf(prompt, choices) foreach { newValue =>
+        askOneOf(prompt, choices, allowNone = true) foreach { newValue =>
           val nixCapital = newValue == NoRegimeChange && m.caliphateCapital
           if (nixCapital)
             println(s"$name will no longer be the Caliphate Capital.\n" +
@@ -4508,14 +4485,14 @@ object LabyrinthAwakening {
         val availableIndexes = numIndexesUsed(available.size, game.humanRole == US)
         val totalIndexes     = countryIndexes + resolvedIndexes + availableIndexes
         println("Select the number corresponding to the plot to add/remove")
-        askOneOf("Plot: ", 1 to totalIndexes) map (_.toInt) match {
+        askOneOf("Plot: ", 1 to totalIndexes, allowNone = true) map (_.toInt) match {
           case None => // Cancel the adjustment
           case Some(num) =>
             val index = num - 1  // Actual indexes are zero based
             if (index < countryIndexes) {
               // Remove from country, prompt for destination (available or resolved)
               val choices = "resolved"::"available"::Nil
-              askOneOf(s"Remove to (${orList(choices)}): ", choices) match {
+              askOneOf(s"Remove to (${orList(choices)}): ", choices, allowNone = true) match {
                 case None => // Cancel the adjustment
                 case Some(target) =>
                   val i = selectedIndex(index, countryPlots.size, game.humanRole == US)
@@ -4588,7 +4565,7 @@ object LabyrinthAwakening {
       showColums(available)
       println()
       println(s"Enter a marker name to move it between $name and out of play.")
-      askOneOf("Marker: ", CountryMarkers) match {
+      askOneOf("Marker: ", CountryMarkers, allowNone = true) match {
         case None =>
         case Some(name) if inPlay contains name =>
           inPlay = inPlay filterNot(_ == name)

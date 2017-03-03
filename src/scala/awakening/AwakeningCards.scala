@@ -42,17 +42,7 @@ object AwakeningCards extends CardDeck {
   val canTakeHumanitarianAid = (m: MuslimCountry) => !m.isGood && !m.isIslamistRule && m.totalCells > 0
   val canTakePeshmerga = (m: MuslimCountry) => (m.name == Iraq || m.name == Syria) && m.totalCells > 0
   
-  // Shared actions
-  val performReaper = (_: Role) => {
-    if (game.humanRole == US) {
-      // Ask: Remove cells or discard Jihadist card?
-    }
-    else {
-      // TODO: Check Bot instructions…
-    }
-  }
-  
-  val cardMap = Map(
+  val cardMap: Map[Int, Card] = Map(
     entry(new Card(121, "Advisors", US, 1,
       NoRemove, Mark, NoLapsing,
       (_: Role) => (game.muslims count (_.hasMarker("Advisors"))) < 3 && (game hasMuslim canTakeAdvisors)
@@ -142,13 +132,24 @@ object AwakeningCards extends CardDeck {
       }
     )),
     entry(new Card(126, "Reaper", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions, performReaper
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (_: Role) => {
+        if (game.humanRole == US) {
+          askOneOf("Remove cells or Jihidist discard? ", Seq("remove cells", "jihadist discard"), allowNone = false, allowAbort = true)
+          // Ask: Remove cells or discard Jihadist card?
+        }
+        else {
+          // TODO: Check Bot instructions…
+        }
+      }
     )),
     entry(new Card(127, "Reaper", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions, performReaper
+      NoRemove, NoMark, NoLapsing, NoConditions,
+      (r: Role) => cardMap(126).executeEvent(r)
     )),
     entry(new Card(128, "Reaper", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions, performReaper
+      NoRemove, NoMark, NoLapsing, NoConditions, 
+      (r: Role) => cardMap(126).executeEvent(r)
     )),
     entry(new Card(129, "Special Forces", US, 1,
       NoRemove, NoMark, NoLapsing, NoConditions,
