@@ -42,6 +42,16 @@ object AwakeningCards extends CardDeck {
   val canTakeHumanitarianAid = (m: MuslimCountry) => !m.isGood && !m.isIslamistRule && m.totalCells > 0
   val canTakePeshmerga = (m: MuslimCountry) => (m.name == Iraq || m.name == Syria) && m.totalCells > 0
   
+  def specialForcesTargets: List[String] = {
+    // First find all muslim countries with troops or "Advisors"
+    val withForces = (game.muslims filter (m => m.troops > 0 || m.hasMarker("Advisors"))) map (_.name)
+    // Next get all countries that contain any cells and filter out the ones are are not 
+    // within to of a country with forces.
+    countryNames(game.countries filter { country =>
+      country.totalCells > 0 && (withForces exists (forces => distance(forces, country.name) <= 2))
+    })
+  }
+  
   val cardMap: Map[Int, Card] = Map(
     entry(new Card(121, "Advisors", US, 1,
       NoRemove, Mark, NoLapsing,
@@ -135,21 +145,22 @@ object AwakeningCards extends CardDeck {
       NoRemove, NoMark, NoLapsing, NoConditions,
       (_: Role) => {
         if (game.humanRole == US) {
-          val prompt = "Remove cells or make Jihidist discard? "
-          val choices = Seq("remove cells", "jihadist discard")
-          askOneOf(prompt, choices, allowAbort = true) match {
-            case Some("jihadist discard") =>
-              log("Discard the top card in the Jihadist hand")
-            case _ =>
-              val candidates = game.muslims filter (_.totalCells > 0)
-              val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
-              val (actives, sleepers) = askCells(target, 2)
-              val m = game.getMuslim(target)
-              game = game.updateCountry(m.copy(activeCells  = m.activeCells - actives,
-                                               sleeperCells = m.sleeperCells - sleepers))
-              if (sleepers > 0) log(s"Remove ${amountOf(sleepers, "sleeper cell")} from $target")
-              if (actives  > 0) log(s"Remove ${amountOf(actives, "active cell")} from $target")
+          if (game.muslims exists (_.totalCells > 0)) {
+            val prompt = "Remove cells or make Jihidist discard? "
+            val choices = Seq("remove cells", "jihadist discard")
+            askOneOf(prompt, choices, allowAbort = true) match {
+              case Some("jihadist discard") =>
+                log("Discard the top card in the Jihadist hand")
+              case _ =>
+                val candidates = game.muslims filter (_.totalCells > 0)
+                val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
+                val (actives, sleepers) = askCells(target, 2)
+                removeActiveCellsFromCountry(target, actives, addCadre = true)
+                removeSleeperCellsFromCountry(target, sleepers, addCadre = true)
+            }
           }
+          else
+            log("Discard the top card in the Jihadist hand")
         }
         else {
           // TODO: Check Bot instructions…
@@ -165,12 +176,21 @@ object AwakeningCards extends CardDeck {
       (r: Role) => cardMap(126).executeEvent(r)
     )),
     entry(new Card(129, "Special Forces", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing,
+      (_: Role) => specialForcesTargets.nonEmpty
+      ,
+      (_: Role) => {
+        val target = askCountry("Remove cell in which country: ", specialForcesTargets)
+        val (actives, sleepers) = askCells(target, 1)
+        removeActiveCellsFromCountry(target, actives, addCadre = true)
+        removeSleeperCellsFromCountry(target, sleepers, addCadre = true)
+      }
     )),
     entry(new Card(130, "Special Forces", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing,
+      (_: Role) => specialForcesTargets.nonEmpty
+      ,
+      (r: Role) => cardMap(129).executeEvent(r)
     )),
     entry(new Card(131, "Arab Spring \"Fallout\"", US, 2,
       NoRemove, NoMark, NoLapsing, NoConditions,

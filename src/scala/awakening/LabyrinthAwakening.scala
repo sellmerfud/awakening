@@ -275,7 +275,7 @@ object LabyrinthAwakening {
   def getAdjacent(name: String): List[String] = countryData(name).adjacent
   def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
 
-  // Shorteds distance between countries
+  // Shortest distance between countries
   def distance(source: String, target: String): Int = {
     def measure(current: String, visited: Set[String]): Option[Int] = {
       if (current == target)
