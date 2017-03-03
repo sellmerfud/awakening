@@ -2463,7 +2463,45 @@ object LabyrinthAwakening {
       game = game.updateCountry(m)
     }
   }
+  
+  def setCountryPosture(name: String, newPosture: String): Unit = {
+    val n = game.getNonMuslim(name)
+    assert(n.canChangePosture, s"Cannot set posture in $name")
+    if (n.posture != newPosture) {
+      log(s"Set posture of $name to $newPosture")
+      game = game.updateCountry(n.copy(posture = newPosture))
+    }
+  }
 
+  
+  def startCivilWar(name: String): Unit = {
+    val m = game.getMuslim(name)
+    if (!m.civilWar) {
+      game = game.updateCountry(m.copy(civilWar = true, regimeChange = NoRegimeChange))
+      log(s"Add civil war marker to $name")
+      if (m.inRegimeChange)
+        log(s"Remove regime change marker from $name")
+      removeAwakeningMarker(name, m.awakening)
+      addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
+      removeReactionMarker(name, m.reaction)
+      val newSleepers = m.reaction min game.cellsAvailable(ignoreFunding = true)
+      addSleeperCellsToCountry(name, newSleepers, ignoreFunding = true)
+    }
+  }
+  
+  def endCivilWar(name: String): Unit = {
+    val m = game.getMuslim(name)
+    if (m.civilWar) {
+      game = game.updateCountry(m.copy(civilWar = false, caliphateCapital = false).removeMarker("Advisors"))
+      log(s"Remove civil war marker from $name")
+      if (m.hasMarker("Advisors"))
+        log(s"Remove the Advisors marker from $name")
+      if (m.caliphateCapital) {
+        log(s"Remove the Caliphate Capital marker from $name")
+        displaceCaliphateCapital(m.name)
+      }
+    }
+  }
   
   // Source/dest may be "track" or a muslim country.
   // The source cannot be the same as the dest or an exception is thrown.
@@ -2489,18 +2527,22 @@ object LabyrinthAwakening {
   
   // Must be enough available militia on track or an exception is thrown.
   def addMilitiaToCountry(name: String, num: Int): Unit = {
-    assert(game.militiaAvailable >= num, "addMilitiaToCountry(): Not enough militia available on track")
-    val m = game.getMuslim(name)
-    game = game.updateCountry(m.copy(militia = m.militia + num))
-    log(s"Add $num militia to $name from the track")
+    if (num > 0) {
+      assert(game.militiaAvailable >= num, "addMilitiaToCountry(): Not enough militia available on track")
+      val m = game.getMuslim(name)
+      game = game.updateCountry(m.copy(militia = m.militia + num))
+      log(s"Add $num militia to $name from the track")
+    }
   }
   
   // Must be enough militia in country or an exception is thrown.
-  def removeilitiaFromCountry(name: String, num: Int): Unit = {
-    val m = game.getMuslim(name)
-    assert(m.militia >= num, s"removeilitiaFromCountry(): Not enough militia in $name")
-    game = game.updateCountry(m.copy(militia = m.militia - num))
-    log(s"Remove $num militia from $name to the track")
+  def removeMilitiaFromCountry(name: String, num: Int): Unit = {
+    if (num > 0) {
+      val m = game.getMuslim(name)
+      assert(m.militia >= num, s"removeilitiaFromCountry(): Not enough militia in $name")
+      game = game.updateCountry(m.copy(militia = m.militia - num))
+      log(s"Remove $num militia from $name to the track")
+    }
   }
   
   def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean, logPrefix: String = "") =
@@ -2656,15 +2698,37 @@ object LabyrinthAwakening {
   }
   
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
-    val m = game.getMuslim(target)
-    game = game.updateCountry(m.copy(awakening = m.awakening + num))
-    log(s"Add ${amountOf(num, "awakening marker")} to $target")
+    if (num > 0) {
+      val m = game.getMuslim(target)
+      game = game.updateCountry(m.copy(awakening = m.awakening + num))
+      log(s"Add ${amountOf(num, "awakening marker")} to $target")
+    }
+  }
+  
+  def removeAwakeningMarker(target: String, num: Int = 1): Unit = {
+    if (num > 0) {
+      val m = game.getMuslim(target)
+      assert(m.awakening >= num, "removeAwakeningMarker() not enough markers")
+      game = game.updateCountry(m.copy(awakening = m.awakening - num))
+      log(s"Remove ${amountOf(num, "awakening marker")} from $target")
+    }
   }
   
   def addReactionMarker(target: String, num: Int = 1): Unit = {
-    val m = game.getMuslim(target)
-    game = game.updateCountry(m.copy(reaction = m.reaction + num))
-    log(s"Add ${amountOf(num, "reaction marker")} to $target")
+    if (num > 0) {
+      val m = game.getMuslim(target)
+      game = game.updateCountry(m.copy(reaction = m.reaction + num))
+      log(s"Add ${amountOf(num, "reaction marker")} to $target")
+    }
+  }
+  
+  def removeReactionMarker(target: String, num: Int = 1): Unit = {
+    if (num > 0) {
+      val m = game.getMuslim(target)
+      assert(m.reaction >= num, "removeReactionMarker() not enough markers")
+      game = game.updateCountry(m.copy(reaction = m.reaction - num))
+      log(s"Remove ${amountOf(num, "reaction marker")} from $target")
+    }
   }
   
   def resolvePlots(): Unit = {

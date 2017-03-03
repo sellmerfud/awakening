@@ -260,14 +260,26 @@ object AwakeningCards extends CardDeck {
           else (0, 0)
         }
         removeCellsFromCountry(target, active, sleeper, addCadre = true)
-        if ((game.militiaAvailable min 2) > 0)
-          addMilitiaToCountry(target, game.militiaAvailable min 2)
+        addMilitiaToCountry(target, game.militiaAvailable min 2)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(133, "Benghazi Falls", US, 2,
-      Remove, NoMark, NoLapsing, NoConditions,
-      (_: Role) => ()
+      Remove, NoMark, NoLapsing,
+      (_: Role) => {
+       val libya = game.getMuslim(Libya)
+       val italy = game.getNonMuslim(Italy)
+       // Conditions must be met AND the event must have some effect
+       ((libya :: game.adjacentMuslims(Libya)) exists (_.awakening > 0)) &&
+       (!libya.civilWar || game.militiaAvailable > 0 || italy.posture != Hard)
+      }
+      ,
+      (_: Role) => {
+        testCountry(Libya)
+        startCivilWar(Libya)
+        addMilitiaToCountry(Libya, game.militiaAvailable min 2)
+        setCountryPosture(Italy, Hard)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(134, "Civil Resistance", US, 2,
