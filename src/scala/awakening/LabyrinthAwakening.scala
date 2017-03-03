@@ -2626,6 +2626,18 @@ object LabyrinthAwakening {
     }
   }
   
+  def addAwakeningMarker(target: String, num: Int = 1): Unit = {
+    val m = game.getMuslim(target)
+    game = game.updateCountry(m.copy(awakening = m.awakening + num))
+    log(s"Add ${amountOf(num, "awakening marker")} to $target")
+  }
+  
+  def addReactionMarker(target: String, num: Int = 1): Unit = {
+    val m = game.getMuslim(target)
+    game = game.updateCountry(m.copy(reaction = m.reaction + num))
+    log(s"Add ${amountOf(num, "reaction marker")} to $target")
+  }
+  
   def resolvePlots(): Unit = {
     case class Unblocked(country: Country, mapPlot: PlotOnMap)
     def chng(amt: Int) = if (amt > 0) "Increase" else "Decrease"
