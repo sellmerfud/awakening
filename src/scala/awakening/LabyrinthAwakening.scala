@@ -2465,21 +2465,41 @@ object LabyrinthAwakening {
 
   
   // Source/dest may be "track" or a muslim country.
-  // That cannot be equal: Other than that, this function does NOT do any sanity checking!
-  def moveTroops(source: String, dest: String, numTroops: Int): Unit = {
+  // The source cannot be the same as the dest or an exception is thrown.
+  // The must be enough troops available in the source or an exception is thrown
+  def moveTroops(source: String, dest: String, num: Int): Unit = {
     assert(source != dest, "The source and destination for moveTroops() cannot be the same.")
     def disp(name: String) = if (name == "track") "the troops track" else name
-    log(s"Move ${amountOf(numTroops, "troop")} from ${disp(source)} to ${disp(dest)}")
-    if (source != "track") {
-      val s = game.getMuslim(source)
-      game  = game.updateCountry(s.copy(troops = s.troops - numTroops))
+    log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to ${disp(dest)}")
+    if (source == "track")
+      assert(game.troopsAvailable >= num, "moveTroop(): Not enough troops available on track")
+    else {
+      val m = game.getMuslim(source)
+      assert(m.troops >= num, s"moveTroop(): Not enough troops available in $source")
+      game  = game.updateCountry(m.copy(troops = m.troops - num))
     }
     if (dest != "track") {
-      val d = game.getMuslim(dest)
-      if (d.hasMarker("Advisors"))
+      val m = game.getMuslim(dest)
+      if (m.hasMarker("Advisors"))
         log("Remove \"Advisors\" marker from %s".format(dest))
-      game = game.updateCountry(d.copy(troops  = d.troops + numTroops).removeMarker("Advisors"))
+      game = game.updateCountry(m.copy(troops = m.troops + num).removeMarker("Advisors"))
     }
+  }
+  
+  // Must be enough available militia on track or an exception is thrown.
+  def addMilitiaToCountry(name: String, num: Int): Unit = {
+    assert(game.militiaAvailable >= num, "addMilitiaToCountry(): Not enough militia available on track")
+    val m = game.getMuslim(name)
+    game = game.updateCountry(m.copy(militia = m.militia + num))
+    log(s"Add $num militia to $name from the track")
+  }
+  
+  // Must be enough militia in country or an exception is thrown.
+  def removeilitiaFromCountry(name: String, num: Int): Unit = {
+    val m = game.getMuslim(name)
+    assert(m.militia >= num, s"removeilitiaFromCountry(): Not enough militia in $name")
+    game = game.updateCountry(m.copy(militia = m.militia - num))
+    log(s"Remove $num militia from $name to the track")
   }
   
   def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean, logPrefix: String = "") =
