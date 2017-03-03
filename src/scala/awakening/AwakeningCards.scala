@@ -167,8 +167,7 @@ object AwakeningCards extends CardDeck {
                 val candidates = game.muslims filter (_.totalCells > 0)
                 val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
                 val (actives, sleepers) = askCells(target, 2)
-                removeActiveCellsFromCountry(target, actives, addCadre = true)
-                removeSleeperCellsFromCountry(target, sleepers, addCadre = true)
+                removeCellsFromCountry(target, actives, sleepers, addCadre = true)
             }
           }
           else
@@ -198,8 +197,7 @@ object AwakeningCards extends CardDeck {
         if (game.humanRole == US) {
           val target = askCountry("Remove cell in which country: ", specialForcesTargets)
           val (actives, sleepers) = askCells(target, 1)
-          removeActiveCellsFromCountry(target, actives, addCadre = true)
-          removeSleeperCellsFromCountry(target, sleepers, addCadre = true)
+          removeCellsFromCountry(target, actives, sleepers, addCadre = true)
         }
         else {
           log("!!! Bot command not yet implemented !!!")
@@ -261,10 +259,9 @@ object AwakeningCards extends CardDeck {
           else if (m.activeCells > 0) (1, 0)
           else (0, 0)
         }
-        removeActiveCellsFromCountry(target, active, addCadre = true)
-        removeSleeperCellsFromCountry(target, sleeper, addCadre = true)
-        if ((2 min game.militiaAvailable) > 0)
-          addMilitiaToCountry(target, 2 min game.militiaAvailable)
+        removeCellsFromCountry(target, active, sleeper, addCadre = true)
+        if ((game.militiaAvailable min 2) > 0)
+          addMilitiaToCountry(target, game.militiaAvailable min 2)
       }
     )),
     // ------------------------------------------------------------------------
