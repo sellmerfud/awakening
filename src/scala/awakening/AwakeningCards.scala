@@ -30,45 +30,125 @@ package awakening
 // Card definitions for the the deck of cards in the
 // Awakening expansion.
 
+import scala.util.Random.shuffle
 import LabyrinthAwakening._
 
 object AwakeningCards extends CardDeck {
+  
+  def notBlockedBy(marker: String): Boolean = !(game markerInPlay marker)
+  def eventInPlay(marker: String): Boolean = (game markerInPlay marker)
+  // Various tests used by the card events
+  val canTakeAdvisors = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.troops == 0 && !m.hasMarker("Advisors")
+  val canTakeHumanitarianAid = (m: MuslimCountry) => !m.isGood && !m.isIslamistRule && m.totalCells > 0
+  val canTakePeshmerga = (m: MuslimCountry) => (m.name == Iraq || m.name == Syria) && m.totalCells > 0
+  
+  // Shared actions
+  val performReaper = (_: Role) => {
+    if (game.humanRole == US) {
+      // Ask: Remove cells or discard Jihadist card?
+    }
+    else {
+      // TODO: Check Bot instructions…
+    }
+  }
+  
   val cardMap = Map(
     entry(new Card(121, "Advisors", US, 1,
       NoRemove, Mark, NoLapsing,
-      (role: Role) => {
-        (game.muslims count (_.hasMarker("Advisors"))) < 3 &&
-        game.hasMuslim(m=> !m.isAdversary && m.civilWar && m.troops == 0 && !m.hasMarker("Advisors"))
-      },
-      (role: Role) => ()
+      (_: Role) => (game.muslims count (_.hasMarker("Advisors"))) < 3 && (game hasMuslim canTakeAdvisors)
+      ,
+      (_: Role) => {
+        val candidates = game.muslims filter canTakeAdvisors
+        val target = if (game.humanRole == US)
+          askCountry(s"Advisors in which country: ", countryNames(candidates))
+        else {
+          // TODO: Bot implementation
+          candidates.head.name
+        }
+        testCountry(target)
+        game = game.updateCountry(game.getMuslim(target).addMarker("Advisors"))
+        log(s"Place Advisors marker in $target")
+        
+      }
     )),
     entry(new Card(122, "Backlash", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing,
+      (_: Role) => game hasCountry (_.plots exists (p => !p.backlashed))
+      ,
+      (_: Role) => {
+        val candidates = game.countries filter (_.plots exists (p => !p.backlashed))
+        val countryName = if (game.humanRole == US)
+          askCountry(s"Backlash in which country: ", countryNames(candidates))
+        else {
+          // TODO: Bot implementation
+          candidates.head.name
+        }
+        // Pick a random plot in the country
+        val country = game.getCountry(countryName)
+        val PlotOnMap(target, _) :: remaining = shuffle(country.plots)
+        country match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(target, true) :: remaining))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = PlotOnMap(target, true) :: remaining))
+        }
+        log(s"Backlash applied to a plot in $countryName")
+      }
     )),
     entry(new Card(123, "Humanitarian Aid", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing, 
+      (_: Role) => game hasMuslim canTakeHumanitarianAid
+      ,
+      (_: Role) => {
+        val candidates = game.muslims filter canTakeHumanitarianAid
+        val countryName = if (game.humanRole == US)
+          askCountry(s"Humanitarian Aid in which country: ", countryNames(candidates))
+        else {
+          // TODO: Bot implementation
+          candidates.head.name
+        }
+        val m = game.getMuslim(countryName)
+        game = game.updateCountry(m.copy(aidMarkers = m.aidMarkers + 1))
+        log(s"Place an aid marker in $countryName")
+      }
     )),
     entry(new Card(124, "Pearl Roundabout", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing,
+      (_: Role) => notBlockedBy("Bloody Thursday")
+      ,
+      (_: Role) => {
+        testCountry(GulfStates)
+        val m = game.getMuslim(GulfStates)
+        game = game.updateCountry(m.copy(awakening = m.awakening + 1))
+        log(s"Place an awakening marker in $GulfStates")
+      }
     )),
     entry(new Card(125, "Peshmerga", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing,
+      (_: Role) => (game hasMuslim canTakePeshmerga) && game.militiaAvailable > 0
+      ,
+      (_: Role) => {
+        val candidates = game.muslims filter canTakePeshmerga
+        val target = if (candidates.size == 1)
+          candidates.head.name
+        else if (game.humanRole == US)
+          askCountry(s"Target which which country: ", countryNames(candidates))
+        else {
+          // TODO: Bot implementation
+          candidates.head.name
+        }
+        val numPlaced = 2 min game.militiaAvailable
+        val m = game.getMuslim(target)
+        game = game.updateCountry(m.copy(militia = m.militia + numPlaced))
+        log(s"Place $numPlaced militia in $target")
+      }
     )),
     entry(new Card(126, "Reaper", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing, NoConditions, performReaper
     )),
     entry(new Card(127, "Reaper", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing, NoConditions, performReaper
     )),
     entry(new Card(128, "Reaper", US, 1,
-      NoRemove, NoMark, NoLapsing, NoConditions,
-      (role: Role) => ()
+      NoRemove, NoMark, NoLapsing, NoConditions, performReaper
     )),
     entry(new Card(129, "Special Forces", US, 1,
       NoRemove, NoMark, NoLapsing, NoConditions,
@@ -167,11 +247,15 @@ object AwakeningCards extends CardDeck {
       (role: Role) => ()
     )),
     entry(new Card(153, "Facebook", US, 3,
-      NoRemove, NoMark, NoLapsing, _ => { game.markerInPlay("Smartphones") },
+      NoRemove, NoMark, NoLapsing, 
+      (_: Role) => eventInPlay("Smartphones")
+      ,
       (role: Role) => ()
     )),
     entry(new Card(154, "Facebook", US, 3,
-      NoRemove, NoMark, NoLapsing, _ => { game.markerInPlay("Smartphones") },
+      NoRemove, NoMark, NoLapsing,
+      (_: Role) => eventInPlay("Smartphones")
+      ,
       (role: Role) => ()
     )),
     entry(new Card(155, "Fracking", US, 3,
