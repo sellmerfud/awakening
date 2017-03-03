@@ -135,8 +135,21 @@ object AwakeningCards extends CardDeck {
       NoRemove, NoMark, NoLapsing, NoConditions,
       (_: Role) => {
         if (game.humanRole == US) {
-          askOneOf("Remove cells or Jihidist discard? ", Seq("remove cells", "jihadist discard"), allowNone = false, allowAbort = true)
-          // Ask: Remove cells or discard Jihadist card?
+          val prompt = "Remove cells or make Jihidist discard? "
+          val choices = Seq("remove cells", "jihadist discard")
+          askOneOf(prompt, choices, allowAbort = true) match {
+            case Some("jihadist discard") =>
+              log("Discard the top card in the Jihadist hand")
+            case _ =>
+              val candidates = game.muslims filter (_.totalCells > 0)
+              val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
+              val (actives, sleepers) = askCells(target, 2)
+              val m = game.getMuslim(target)
+              game = game.updateCountry(m.copy(activeCells  = m.activeCells - actives,
+                                               sleeperCells = m.sleeperCells - sleepers))
+              if (sleepers > 0) log(s"Remove ${amountOf(sleepers, "sleeper cell")} from $target")
+              if (actives  > 0) log(s"Remove ${amountOf(actives, "active cell")} from $target")
+          }
         }
         else {
           // TODO: Check Bot instructions…

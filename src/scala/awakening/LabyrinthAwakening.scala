@@ -1293,13 +1293,49 @@ object LabyrinthAwakening {
     }
   }
 
-
   def askCountry(prompt: String, candidates: List[String], allowAbort: Boolean = true): String = {
     assert(candidates.nonEmpty, s"askCountry(): list of candidates cannot be empty")
     // If only one candidate then don't bother to ask
     candidates match {
       case x :: Nil => println(s"$prompt $x"); x
       case xs       => askOneOf(prompt, xs, allowAbort = allowAbort, abbr = CountryAbbreviations).get
+    }
+  }
+  
+  // Returns (actives, sleepers)
+  def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean = true): (Int, Int) = {
+    val c = game.getCountry(countryName)
+    val maxCells = numCells min c.totalCells
+    
+    if (maxCells == c.totalCells) (c.activeCells, c.sleeperCells)
+    else if (c.activeCells  == 0) (0, maxCells)
+    else if (c.sleeperCells == 0) (maxCells, 0)
+    else {
+      val (a, s) = (amountOf(c.activeCells, "active cell"), amountOf(c.sleeperCells, "sleeper cell"))
+      println(s"$countryName has $a and $s")
+      
+      if (maxCells == 1) {
+        val prompt = if (sleeperFocus) "Which cell (sleeper or active)? "
+        else "Which cell (active or sleeper)? "
+        askOneOf(prompt, List("active", "sleeper"), allowAbort = true) match {
+          case Some("active") => (1, 0)
+          case _              => (0, 1)
+        }
+      }
+      else {
+        if (sleeperFocus) {
+          val smax     = maxCells min c.sleeperCells
+          val prompt   = s"How many sleeper cells (Default = $smax): "
+          val sleepers = askInt(prompt, 1, smax, Some(smax), allowAbort = true)
+          (maxCells - sleepers , sleepers)
+        }
+        else {
+          val amax    = maxCells min c.activeCells
+          val prompt  = s"How many active cells (Default = $amax): "
+          val actives = askInt(prompt, 1, amax, Some(amax), allowAbort = true)
+          (actives, maxCells - actives)
+        }
+      }
     }
   }
   
@@ -3440,7 +3476,6 @@ object LabyrinthAwakening {
       for ((dest, num) <- successes groupBy (dest => dest) map { case (dest, xs) => (dest -> xs.size) })
         addSleeperCellsToCountry(dest, num, ignoreFunding = false)
   }
-  
   
   def humanTravel(ops: Int): Unit = {
     val Active  = true
