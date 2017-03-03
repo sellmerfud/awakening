@@ -1568,7 +1568,7 @@ object LabyrinthAwakening {
         adjacents.head.name
       else if (game.humanRole == Jihadist) {
         val choices = adjacents map (_.name)
-        askOneOf(s"Choose new capital (${orList(choices)}): ", choices).get
+        askCountry(s"Choose new Caliphate capital (${orList(choices)}): ", choices, allowAbort = false)
       }
       else {
         // The Bot pick the best candidate for the new capital base on
@@ -2371,7 +2371,7 @@ object LabyrinthAwakening {
       val newGov = (m.governance - levels) max Good
       val delta  = m.governance - newGov
       val improved = if (newGov == Good) {
-        log(s"Improve governance of $name to ${govToString(newGov)} Adversary")
+        log(s"Improve governance of $name to ${govToString(newGov)}")
         if (m.inRegimeChange  ) log(s"Remove regime change marker from $name")
         if (m.besiegedRegime  ) log(s"Remove besieged regime marker from $name")
         if (m.civilWar        ) log(s"Remove civil war marker from $name")
