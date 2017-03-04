@@ -311,15 +311,6 @@ object LabyrinthAwakening {
     }
   }
   
-  val GlobalMarkers = List(
-    "Bin Ladin", "Civil War", "Facebook", "Swedish Cartoons",
-    "Iran Oil Crisis", "Arab Spring", "Oil Price Spike"
-  ).sorted
-  
-  val CountryMarkers = List(
-    "NATO", "Training Camps"
-  )
-  
   // Used to describe event markers that represent troops.
   // prestigeLoss: if true, the marker's presence during a plot will cause loss of prestige
   case class TroopsMarker(name: String, num: Int, prestigeLoss: Boolean)
@@ -337,19 +328,18 @@ object LabyrinthAwakening {
   
   type CardEvent       = Role => Unit
   type EventConditions = Role => Boolean
-  val NoConditions: EventConditions =  _ => true
+  val AlwaysPlayable: EventConditions =  _ => true
+  
+  sealed trait CardMarker
+  case object NoMarker      extends CardMarker
+  case object GlobalMarker  extends CardMarker
+  case object CountryMarker extends CardMarker
   
   sealed trait CardRemoval
   case object NoRemove       extends CardRemoval
   case object Remove         extends CardRemoval
   case object USRemove       extends CardRemoval
   case object JihadistRemove extends CardRemoval
-  
-  sealed trait CardMark
-  case object NoMark       extends CardMark
-  case object Mark         extends CardMark
-  case object USMark       extends CardMark
-  case object JihadistMark extends CardMark
   
   sealed trait CardLapsing
   case object NoLapsing       extends CardLapsing
@@ -366,7 +356,7 @@ object LabyrinthAwakening {
     val association: CardAssociation,
     val ops: Int,
     val remove: CardRemoval,
-    val mark: CardMark,
+    val marker: CardMarker,   // Only used by the adjust routines
     val lapsing: CardLapsing,
     val autoTrigger: Boolean,
     val eventConditions: EventConditions,
@@ -2363,6 +2353,8 @@ object LabyrinthAwakening {
       log("Mark the \"%s\" card as lapsing".format(card.name))
       game = game.copy(cardsLapsing = card.number :: game.cardsLapsing)
     }
+    
+    
   }
   
   // Prestige roll used
@@ -2948,13 +2940,16 @@ object LabyrinthAwakening {
     log("End of turn")
     log(separator())
     
-    // TODO - Also check for fracking whcih can affect funding
     if (game.markerInPlay("Pirates")) { // Check for pirates marker and Somalia or Yemen at Islamist Rule
       log("No funding drop because Pirates is in effect")
     }
     else {
       game = game.adjustFunding(-1)
       log(s"Jihadist funding drops -1 to ${game.funding}")
+    }
+    if (game.markerInPlay("Fracking")) {
+      game = game.adjustFunding(-1)
+      log(s"Jihadist funding drops -1 to ${game.funding} because Fracking is in effect")
     }
     if (game.numIslamistRule > 0) {
       game = game.adjustPrestige(-1)
@@ -4093,8 +4088,9 @@ object LabyrinthAwakening {
   
     
   def adjustMarkers(): Unit = {
+    val globalMarkers = (deck.cards filter (_.marker == GlobalMarker) map (_.name)).sorted
     var inPlay = game.markers
-    def available = GlobalMarkers filterNot inPlay.contains
+    def available = globalMarkers filterNot inPlay.contains
     def showColums(xs: List[String]): Unit = {
       if (xs.isEmpty) println("none")
       else columnFormat(xs, 4) foreach println
@@ -4108,7 +4104,7 @@ object LabyrinthAwakening {
       showColums(available)
       println()
       println("Enter a marker name to move it between in play and out of play.")
-      askOneOf("Marker: ", GlobalMarkers, allowNone = true) match {
+      askOneOf("Marker: ", globalMarkers, allowNone = true) match {
         case None =>
         case Some(name) if inPlay contains name =>
           inPlay = inPlay filterNot(_ == name)
@@ -4784,9 +4780,10 @@ object LabyrinthAwakening {
   }
   
   def adjustCountryMarkers(name: String): Unit = {
+    val countryMarkers = (deck.cards filter (_.marker == CountryMarker) map (_.name)).sorted
     val country = game.getCountry(name)
     var inPlay = country.markers
-    def available = CountryMarkers filterNot inPlay.contains
+    def available = countryMarkers filterNot inPlay.contains
     def showColums(xs: List[String]): Unit = {
       if (xs.isEmpty) println("none")
       else columnFormat(xs, 4) foreach println
@@ -4800,7 +4797,7 @@ object LabyrinthAwakening {
       showColums(available)
       println()
       println(s"Enter a marker name to move it between $name and out of play.")
-      askOneOf("Marker: ", CountryMarkers, allowNone = true) match {
+      askOneOf("Marker: ", countryMarkers, allowNone = true) match {
         case None =>
         case Some(name) if inPlay contains name =>
           inPlay = inPlay filterNot(_ == name)
