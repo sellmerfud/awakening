@@ -284,7 +284,32 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(134, "Civil Resistance", US, 2,
       NoRemove, NoMark, NoLapsing, NoConditions,
-      (_: Role) => ()
+      (_: Role) => {
+        val sunnis = countryNames(game.muslims filter (m=> m.isSunni && m.canTakeAwakeningOrReactionMarker))
+        if (sunnis.nonEmpty) {  // This should never happen, but let's be defensive
+          val sunniTarget = if (game.humanRole == US)
+            askCountry("Select a Sunni country: ", sunnis)
+          else {
+            log("!!! Bot command not yet implemented !!!")
+            sunnis.head
+          }
+          testCountry(sunniTarget)
+          addAwakeningMarker(sunniTarget)
+        }
+        
+        if (randomShiaMixList exists (_.canTakeAwakeningOrReactionMarker)) {
+          def doRandomShiaMix: Unit = {
+            val shiaMix = randomShiaMixCountry
+            if (shiaMix.canTakeAwakeningOrReactionMarker) {
+              testCountry(shiaMix.name)
+              addAwakeningMarker(shiaMix.name)
+            }
+            else
+              doRandomShiaMix
+          }
+          doRandomShiaMix
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(135, "Delta / SEALS", US, 2,

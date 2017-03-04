@@ -1406,7 +1406,11 @@ object LabyrinthAwakening {
     rollOnTable
   }
   
-
+  def randomShiaMixList: List[MuslimCountry] = {
+    val xs = List(Syria, SaudiArabia, Turkey, Iraq, GulfStates, Yemen, Pakistan, Lebanon, Afghanistan)
+    (if (game.isMuslim(Iran)) Iran :: xs else xs) map game.getMuslim
+  }  
+    
   def randomShiaMixCountry: MuslimCountry = {
     val muslimKey = List(dieRoll, dieRoll, dieRoll).sum match {
       case 3 | 4 | 5 | 6                 => Syria
