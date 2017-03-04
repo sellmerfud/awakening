@@ -399,8 +399,20 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(137, "FMS", US, 2,
-      NoRemove, NoMark, NoLapsing, NoAutoTrigger, NoConditions,
-      (_: Role) => ()  // Note: No militia allowed in Good countries!UNSCR 1973
+      NoRemove, NoMark, NoLapsing, NoAutoTrigger,
+      // Note: No militia allowed in Good countries!
+      (_: Role) => game.militiaAvailable > 0 && (game hasMuslim (m => m.isAlly && !m.isGood))
+      ,
+      (_: Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.isAlly && !m.isGood))
+        val target = if (game.humanRole == US)
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        addMilitiaToCountry(target, game.militiaAvailable min 3)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(138, "Intel Community", US, 2,
