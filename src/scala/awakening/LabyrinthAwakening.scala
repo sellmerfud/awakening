@@ -1146,7 +1146,8 @@ object LabyrinthAwakening {
       scenario.usPosture,
       scenario.funding,
       scenario.countries,
-      scenario.markers.sorted)
+      scenario.markers.sorted,
+      scenario.availablePlots.sorted)
   
   
   // Global variables
@@ -2219,12 +2220,15 @@ object LabyrinthAwakening {
       shuffle(c.plots filterNot (_.backlashed))
     else
       shuffle(c.plots)
+    val prestigeDelta = if (alerted.plot == PlotWMD) 1 else 0
     val updated = c match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = remaining))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = remaining))
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = remaining)).adjustPrestige(prestigeDelta)
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = remaining)).adjustPrestige(prestigeDelta)
     }
-    if (alerted.plot == PlotWMD)
+    if (alerted.plot == PlotWMD) {
       log(s"$alerted alerted in $target, remove it from the game.")
+      log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot")
+    }
     else {
       log(s"$alerted alerted in $target, move it to the resolved plots box.")
       game = game.copy(resolvedPlots = alerted.plot :: game.resolvedPlots)

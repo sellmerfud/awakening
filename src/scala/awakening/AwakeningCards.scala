@@ -314,7 +314,60 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(135, "Delta / SEALS", US, 2,
       NoRemove, NoMark, NoLapsing, NoConditions,
-      (_: Role) => ()
+      (_: Role) => {
+        if (game.humanRole == US) {
+          println("You may either reveal all WMD plots and remove one (if any), or")
+          println("You may make the Jihadist Bot discard a card")
+          askOneOf("Choose (reveal WMD or discard) ", Seq("reveal WMD", "discard")) match {
+            case Some("discard") =>
+              log("Discard the top card in the Jihadist Bot's hand")
+            case _ =>
+              val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
+                yield c.name
+              val wmdAvailable = game.availablePlots takeWhile (_ == PlotWMD)
+              if (wmdOnMap.isEmpty && wmdAvailable.isEmpty)
+                log("There are no WMD plots on the map or in the available plots box")
+              else {
+                log(s"WMD plots in the available plots box: ${wmdAvailable.size}")
+                val onMapDisplay = if (wmdOnMap.isEmpty) "none" else wmdOnMap.mkString(", ")
+                log(s"WMD plots on the map: " + onMapDisplay)
+                val target = if (wmdOnMap.isEmpty) "available"
+                else if (wmdAvailable.isEmpty)
+                  askCountry("Select country with WMD: ", wmdOnMap)
+                else
+                  askCountry("Select 'available' or country with WMD: ", "available" :: wmdOnMap)
+                
+                if (target == "available") {
+                  log(s"Permanently remove one $PlotWMD from the available plots box")
+                  game = game.copy(availablePlots = game.availablePlots.sorted.tail).adjustPrestige(1)
+                }
+                else {
+                  log(s"Permanently remove one $PlotWMD from the $target")
+                  game.getCountry(target) match {
+                    case m: MuslimCountry =>
+                      game = game.updateCountry(m.copy(plots = m.plots.sorted.tail)).adjustPrestige(1)
+                    case n: NonMuslimCountry =>
+                      game = game.updateCountry(n.copy(plots = n.plots.sorted.tail)).adjustPrestige(1)
+                  }
+                }
+                log(s"Increase prestige by +1 to ${game.prestige} for removing an WMD plot.")
+              }
+          }
+        }
+        else {
+          // If there are any WMD plots in the available box, the bot
+          // will remove one. Otherwise the US player must discard a random card.
+          if (game.availablePlots contains PlotWMD) {
+            // The sort order for plots put WMD's first.
+            game = game.copy(availablePlots = game.availablePlots.sorted.tail).adjustPrestige(1)
+            log(s"Permanently remove one $PlotWMD from the available plots box")
+            log(s"Increase prestige by +1 to ${game.prestige} for removing an WMD plot.")
+          }
+          else
+            log("Discard one card at randome from the Jihadist player's hand.")
+        }
+        
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(136, "Factional Infighting", US, 2,
