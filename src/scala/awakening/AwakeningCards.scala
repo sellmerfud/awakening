@@ -70,9 +70,7 @@ object AwakeningCards extends CardDeck {
           candidates.head.name
         }
         testCountry(target)
-        game = game.updateCountry(game.getMuslim(target).addMarker("Advisors"))
-        log(s"Place Advisors marker in $target")
-        
+        addEventMarkerToCountry(target, "Advisors")
       }
     )),
     // ------------------------------------------------------------------------
@@ -117,7 +115,7 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(124, "Pearl Roundabout", US, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
-      (_: Role) => eventNotInPlay("Bloody Thursday")
+      (_: Role) => globalEventNotInPlay("Bloody Thursday")
       ,
       (_: Role) => {
         testCountry(GulfStates)
@@ -444,17 +442,44 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(140, "Maersk Alabama", US, 2,
       Remove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (_: Role) => ()
+      (_: Role) => {
+        if (game.reserves.us < 2) {
+          game = game.copy(reserves = game.reserves.copy(us = game.reserves.us + 1))
+          log(s"Add 1 Ops value to US reserves")
+        }
+        else
+          log(s"US reserves are already at max of 2 Ops")
+        increasePrestige(1)
+        addGlobalEventMarker("Maersk Alabama")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(141, "Malala Yousafzai", US, 2,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (_: Role) => ()
+      Remove, NoMarker, NoLapsing, NoAutoTrigger,
+      (_: Role) => globalEventNotInPlay("3 Cups of Tea") &&  // If not blocked and can have at least one effect
+        (game.funding > 1 || game.prestige < 12 || game.getMuslim(Pakistan).canTakeAwakeningOrReactionMarker)
+      ,
+      (_: Role) => {
+        increasePrestige(1)
+        decreaseFunding(1)
+        addAwakeningMarker(Pakistan)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(142, "Militia", US, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (_: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (_: Role) => game hasMuslim (m => (m.civilWar || m.inRegimeChange) && game.militiaAvailable > 0)
+      ,
+      (_: Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.civilWar || m.inRegimeChange))
+        val target = if (game.humanRole == US)
+          askCountry("Place militia in which country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        addMilitiaToCountry(target, game.getMuslim(target).resources min game.militiaAvailable)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(143, "Obama Doctrine", US, 2,
@@ -509,14 +534,14 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(153, "Facebook", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
-      (_: Role) => eventInPlay("Smartphones")
+      (_: Role) => globalEventInPlay("Smartphones")
       ,
       (_: Role) => ()
     )),
     // ------------------------------------------------------------------------
     entry(new Card(154, "Facebook", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
-      (_: Role) => eventInPlay("Smartphones")
+      (_: Role) => globalEventInPlay("Smartphones")
       ,
       (_: Role) => ()
     )),
@@ -664,7 +689,9 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(183, "Pirates", Jihadist, 2,
-      Remove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
+      Remove, GlobalMarker, NoLapsing, NoAutoTrigger,
+      (_: Role) => globalEventNotInPlay("Maersk Alabama")
+      ,
       (_: Role) => ()
     )),
     // ------------------------------------------------------------------------

@@ -1484,10 +1484,6 @@ object LabyrinthAwakening {
       false
   }
   
-  def eventInPlay(marker: String): Boolean = (game markerInPlay marker)
-  
-  def eventNotInPlay(marker: String): Boolean = !eventInPlay(marker)
-  
   
   def modifyWoiRoll(die: Int, m: MuslimCountry, ignoreGwotPenalty: Boolean = false, silent: Boolean = false): Int = {
     def logNotZero(value: Int, msg: String): Unit =
@@ -2397,7 +2393,7 @@ object LabyrinthAwakening {
         if (m.reaction > 0    ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0     ) log(s"Remove ${m.militia} miltia from $name")
         if (m.caliphateCapital) log(s"Remove Caliphate Capital maker from $name")
-        if (m.hasMarker("Advisors")) log("Remove \"Advisors\" marker from %s".format(name))
+        if (m.hasMarker("Advisors")) log(s"Remove Advisors marker from $name")
         m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
                militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false,
                caliphateCapital = false, civilWar = false).removeMarker("Advisors")
@@ -2436,7 +2432,7 @@ object LabyrinthAwakening {
         if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0   ) log(s"Remove ${m.militia} miltia from $name")
         if (m.wmdCache > 0  ) log(s"Move ${amountOf(m.wmdCache, "WMD Plot")} from the $name cache to available plots")
-        if (m.hasMarker("Advisors")) log("Remove \"Advisors\" marker from %s".format(name))
+        if (m.hasMarker("Advisors")) log(s"Remove Advisors marker from $name")
         val mm = m.copy(
           governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
           aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
@@ -2471,12 +2467,9 @@ object LabyrinthAwakening {
     var m = game.getMuslim(name)
     if (m.alignment != newAlign) {
       log(s"Shift the alignment of $name to $newAlign")
-      m = m.copy(alignment = newAlign)
-      if (m.hasMarker("Advisors")) {
-        log("Remove the \"Advisors\" marker from %s".format(name))
-        m = m.removeMarker("Advisors")
-      }
-      game = game.updateCountry(m)
+      game = game.updateCountry(m.copy(alignment = newAlign))
+      if (newAlign == Adversary)
+        removeEventMarkerFromCountry(name, "Advisors")
     }
   }
   
@@ -2486,6 +2479,46 @@ object LabyrinthAwakening {
     if (n.posture != newPosture) {
       log(s"Set posture of $name to $newPosture")
       game = game.updateCountry(n.copy(posture = newPosture))
+    }
+  }
+  
+  def globalEventInPlay(marker: String): Boolean = (game markerInPlay marker)
+  def globalEventNotInPlay(marker: String): Boolean = !globalEventInPlay(marker)
+  
+  
+  def addGlobalEventMarker(marker: String): Unit = {
+    if (!(game markerInPlay marker)) {
+      game = game.addMarker(marker)
+      log(s"Place $marker marker in the Events In Play box")
+    }
+  }
+  
+  def removeGlobalEventMarker(marker: String): Unit = {
+    if (game markerInPlay marker) {
+      game = game.removeMarker(marker)
+      log(s"Remove $marker marker from the Events In Play box")
+    }
+  }
+  
+  def addEventMarkerToCountry(countryName: String, marker: String): Unit = {
+    val c = game.getCountry(countryName)
+    if (!(c hasMarker marker)) {
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.addMarker(marker))
+        case n: NonMuslimCountry => game = game.updateCountry(n.addMarker(marker))
+      }
+      log(s"Place $marker marker in $countryName")
+    }
+  }
+
+  def removeEventMarkerFromCountry(countryName: String, marker: String): Unit = {
+    val c = game.getCountry(countryName)
+    if (c hasMarker marker) {
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.removeMarker(marker))
+        case n: NonMuslimCountry => game = game.updateCountry(n.removeMarker(marker))
+      }
+      log(s"Remove $marker marker from $countryName")
     }
   }
 
@@ -2508,10 +2541,10 @@ object LabyrinthAwakening {
   def endCivilWar(name: String): Unit = {
     val m = game.getMuslim(name)
     if (m.civilWar) {
-      game = game.updateCountry(m.copy(civilWar = false, caliphateCapital = false).removeMarker("Advisors"))
+      game = game.updateCountry(m.copy(civilWar = false, caliphateCapital = false))
       log(s"Remove civil war marker from $name")
-      if (m.hasMarker("Advisors"))
-        log(s"Remove the Advisors marker from $name")
+      removeMilitiaFromCountry(name, m.militia)
+      removeEventMarkerFromCountry(name, "Advisors")
       if (m.caliphateCapital) {
         log(s"Remove the Caliphate Capital marker from $name")
         displaceCaliphateCapital(m.name)
@@ -2535,9 +2568,8 @@ object LabyrinthAwakening {
     }
     if (dest != "track") {
       val m = game.getMuslim(dest)
-      if (m.hasMarker("Advisors"))
-        log("Remove \"Advisors\" marker from %s".format(dest))
-      game = game.updateCountry(m.copy(troops = m.troops + num).removeMarker("Advisors"))
+      game = game.updateCountry(m.copy(troops = m.troops + num))
+      removeEventMarkerFromCountry(dest, "Advisors")
     }
   }
   
