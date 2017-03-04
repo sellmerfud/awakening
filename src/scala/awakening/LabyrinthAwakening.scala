@@ -357,6 +357,9 @@ object LabyrinthAwakening {
   case object USLapsing       extends CardLapsing
   case object JihadistLapsing extends CardLapsing
   
+  val AutoTrigger   = true
+  val NoAutoTrigger = false
+  
   class Card(
     val number: Int,
     val name: String,
@@ -365,6 +368,7 @@ object LabyrinthAwakening {
     val remove: CardRemoval,
     val mark: CardMark,
     val lapsing: CardLapsing,
+    val autoTrigger: Boolean,
     val eventConditions: EventConditions,
     val executeEvent: CardEvent) {
       
@@ -3229,7 +3233,7 @@ object LabyrinthAwakening {
   // Return a list of actions.
   // card2 is only used for US reassessment
   def getActionOrder(card: Card, opponent: Role, card2: Option[Card] = None): List[CardAction] =
-    ((card :: card2.toList) filter (_.eventWillTrigger(opponent))) match {
+    ((card :: card2.toList) filter (c => c.autoTrigger || c.eventWillTrigger(opponent))) match {
       case c :: Nil =>
         println("\nThe %s event \"%s\" will trigger, which should happen first?".format(opponent, c.name))
         println(separator())
