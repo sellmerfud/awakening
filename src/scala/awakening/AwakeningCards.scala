@@ -34,9 +34,6 @@ import scala.util.Random.shuffle
 import LabyrinthAwakening._
 
 object AwakeningCards extends CardDeck {
-  
-  def notBlockedBy(marker: String): Boolean = !(game markerInPlay marker)
-  def eventInPlay(marker: String): Boolean = (game markerInPlay marker)
   // Various tests used by the card events
   val canTakeAdvisors = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.troops == 0 && !m.hasMarker("Advisors")
   val canTakeHumanitarianAid = (m: MuslimCountry) => !m.isGood && !m.isIslamistRule && m.totalCells > 0
@@ -120,7 +117,7 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(124, "Pearl Roundabout", US, 1,
       NoRemove, NoMark, NoLapsing, NoAutoTrigger,
-      (_: Role) => notBlockedBy("Bloody Thursday")
+      (_: Role) => eventNotInPlay("Bloody Thursday")
       ,
       (_: Role) => {
         testCountry(GulfStates)
@@ -416,8 +413,24 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(138, "Intel Community", US, 2,
-      NoRemove, NoMark, NoLapsing, NoAutoTrigger, NoConditions,
-      (_: Role) => ()
+      NoRemove, NoMark, NoLapsing, NoAutoTrigger,
+      (role: Role) => game.humanRole == US  // The bot treats this as unplayable
+      ,
+      (_: Role) => {
+        log("US player may inspect the Jihadist hand.")
+        val cadres = countryNames(game.countries filter (_.hasCadre))
+        if (cadres.isEmpty)
+          log("No cadres on the map to remove")
+        else 
+          removeCadre(askCountry("Select country with cadre: ", cadres))
+        
+        // US player conducts a 1 Op operations.
+        println()
+        log("US player conducts an operation with 1 Op")
+        humanExecuteOperation(1)
+        println()
+        log("US player may now play an extra card in this action phase")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(139, "Int'l Banking Regime", US, 2,
