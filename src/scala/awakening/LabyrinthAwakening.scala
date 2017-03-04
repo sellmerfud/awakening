@@ -2205,10 +2205,8 @@ object LabyrinthAwakening {
         throw new IllegalStateException(s"performDisrupt(): $target has no cells or cadre")
     }
     
-    if (bumpPrestige) {
-      game = game.adjustPrestige(1)
-      log(s"Increase prestige by +1 to ${game.prestige}")
-    }
+    if (bumpPrestige)
+      increasePrestige(1)
   }
   
   def performAlert(target: String): Unit = {
@@ -2705,9 +2703,19 @@ object LabyrinthAwakening {
     }
   }
   
+  def addAidMarker(target: String, num: Int = 1): Unit = {
+    if (num > 0) {
+      val m = game.getMuslim(target)
+      assert(!m.isGood && !m.isIslamistRule, s"$target cannot take an aid marker")
+      game = game.updateCountry(m.copy(aidMarkers = m.aidMarkers + num))
+      log(s"Add ${amountOf(num, "aid marker")} to $target")
+    }
+  }
+  
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
       val m = game.getMuslim(target)
+      assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
       game = game.updateCountry(m.copy(awakening = m.awakening + num))
       log(s"Add ${amountOf(num, "awakening marker")} to $target")
     }
@@ -2725,6 +2733,7 @@ object LabyrinthAwakening {
   def addReactionMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
       val m = game.getMuslim(target)
+      assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
       game = game.updateCountry(m.copy(reaction = m.reaction + num))
       log(s"Add ${amountOf(num, "reaction marker")} to $target")
     }
@@ -2736,6 +2745,34 @@ object LabyrinthAwakening {
       assert(m.reaction >= num, "removeReactionMarker() not enough markers")
       game = game.updateCountry(m.copy(reaction = m.reaction - num))
       log(s"Remove ${amountOf(num, "reaction marker")} from $target")
+    }
+  }
+  
+  def increaseFunding(amount: Int): Unit = {
+    if (amount > 0) {
+      game = game.adjustFunding(amount)
+      log(s"Increase funding by +$amount to ${game.funding}")
+    }
+  }
+  
+  def decreaseFunding(amount: Int): Unit = {
+    if (amount > 0) {
+      game = game.adjustFunding(-amount)
+      log(s"Decrease funding by -$amount to ${game.funding}")
+    }
+  }
+  
+  def increasePrestige(amount: Int): Unit = {
+    if (amount > 0) {
+      game = game.adjustPrestige(amount)
+      log(s"Increase prestige by +$amount to ${game.prestige}")
+    }
+  }
+  
+  def decreasePrestige(amount: Int): Unit = {
+    if (amount > 0) {
+      game = game.adjustPrestige(-amount)
+      log(s"Decrease prestige by -$amount to ${game.prestige}")
     }
   }
   
@@ -3261,19 +3298,19 @@ object LabyrinthAwakening {
   // We will then roll back to the game state as it was before the card play.
   def humanUsCardPlay(card: Card): Unit = {
     val ExecuteEvent = "event"
-    val WarOfIdeas   = "war of ideas"
-    val Deploy       = "deploy troops"
+    val WarOfIdeas   = "woi"
+    val Deploy       = "deploy"
     val RegimeChg    = "regime change"
-    val Withdraw     = "withdraw troops"
-    val Disrupt      = "disrupt cells"
-    val Alert        = "alert plots"
+    val Withdraw     = "withdraw"
+    val Disrupt      = "disrupt"
+    val Alert        = "alert"
     val Reassess     = "reassessment"
     val AddReserves  = "add to reserves"
     val UseReserves  = "expend reserves"
     var reservesUsed = 0
     def inReserve    = game.reserves.us
     var secondCard: Option[Card] = None   // For reassessment only
-    def opsAvailable = card.ops + reservesUsed
+    def opsAvailable = (card.ops + reservesUsed) min 3
     
     @tailrec def getNextResponse(): Option[String] = {
       val actions = List(
@@ -3290,6 +3327,7 @@ object LabyrinthAwakening {
       ).flatten
     
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
+      println(s"Available actions: ${actions.mkString(", ")}")
       askOneOf(s"$US action: ", actions, allowAbort = true) match {
         case Some(UseReserves) =>
           reservesUsed = inReserve
@@ -3460,7 +3498,7 @@ object LabyrinthAwakening {
     val UseReserves  = "expend reserves"
     var reservesUsed = 0
     def inReserve    = game.reserves.jihadist
-    def opsAvailable = card.ops + reservesUsed
+    def opsAvailable = (card.ops + reservesUsed) min 3
   
     @tailrec def getNextResponse(): Option[String] = {
       val actions = List(
@@ -3474,6 +3512,7 @@ object LabyrinthAwakening {
       ).flatten
   
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
+      println(s"Available actions: ${actions.mkString(", ")}")
       askOneOf(s"$Jihadist action: ", actions, allowAbort = true) match {
         case Some(UseReserves) =>
           reservesUsed = inReserve

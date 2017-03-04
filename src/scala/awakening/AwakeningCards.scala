@@ -69,7 +69,7 @@ object AwakeningCards extends CardDeck {
         val target = if (game.humanRole == US)
           askCountry(s"Advisors in which country: ", countryNames(candidates))
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
           candidates.head.name
         }
         testCountry(target)
@@ -88,7 +88,7 @@ object AwakeningCards extends CardDeck {
         val countryName = if (game.humanRole == US)
           askCountry(s"Backlash in which country: ", countryNames(candidates))
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
           candidates.head.name
         }
         // Pick a random plot in the country
@@ -111,12 +111,10 @@ object AwakeningCards extends CardDeck {
         val countryName = if (game.humanRole == US)
           askCountry(s"Humanitarian Aid in which country: ", countryNames(candidates))
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
           candidates.head.name
         }
-        val m = game.getMuslim(countryName)
-        game = game.updateCountry(m.copy(aidMarkers = m.aidMarkers + 1))
-        log(s"Place an aid marker in $countryName")
+        addAidMarker(countryName)
       }
     )),
     // ------------------------------------------------------------------------
@@ -143,7 +141,7 @@ object AwakeningCards extends CardDeck {
         else if (game.humanRole == US)
           askCountry(s"Target which which country: ", countryNames(candidates))
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
           candidates.head.name
         }
         val numPlaced = 2 min game.militiaAvailable
@@ -174,7 +172,7 @@ object AwakeningCards extends CardDeck {
             log("Discard the top card in the Jihadist hand")
         }
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
         }
       }
     )),
@@ -200,7 +198,7 @@ object AwakeningCards extends CardDeck {
           removeCellsFromCountry(target, actives, sleepers, addCadre = true)
         }
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
         }
       }
     )),
@@ -226,7 +224,7 @@ object AwakeningCards extends CardDeck {
           first::second::Nil
         }
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
           shuffle(candidates) take 2
         }
         
@@ -246,13 +244,13 @@ object AwakeningCards extends CardDeck {
         val target = if (game.humanRole == US)
           askCountry("Select civil war country: ", candidates)
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
         val (active, sleeper) = if (game.humanRole == US)
           askCells(target, 1)
         else {
-          log("!!! Bot command not yet implemented !!!")
+          log("!!! Bot event not yet implemented !!!")
           val m = game.getMuslim(target)
           // TODO: This will probably become a botSelectCels() funcion as it is likely to be common.
           if (m.sleeperCells > 0) (0, 1)
@@ -290,7 +288,7 @@ object AwakeningCards extends CardDeck {
           val sunniTarget = if (game.humanRole == US)
             askCountry("Select a Sunni country: ", sunnis)
           else {
-            log("!!! Bot command not yet implemented !!!")
+            log("!!! Bot event not yet implemented !!!")
             sunnis.head
           }
           testCountry(sunniTarget)
@@ -372,7 +370,32 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(136, "Factional Infighting", US, 2,
       NoRemove, NoMark, NoLapsing, NoConditions,
-      (_: Role) => ()
+      (_: Role) => {
+        val candidates = countryNames(game.muslims filter (m => !m.isIslamistRule && m.totalCells > 0))
+        if (candidates.nonEmpty) {
+          val target = if (game.humanRole == US)
+            askCountry("Select a country: ", candidates)
+          else {
+            log("!!! Bot event not yet implemented !!!")
+            candidates.head
+          }
+          val m = game.getMuslim(target)
+          val (actives, sleepers) = if (m.totalCells <= 2)
+            (m.activeCells, m.sleeperCells)
+          else if (m.sleeperCells == 0)
+            (2, 0)
+          else {
+            // We have 3 or more cells and at least one is a sleeper
+            val sleepers = (m.sleeperCells - 1) min 2  // resereve 1 sleeper to flip to active
+            (2 - sleepers, sleepers)
+          }
+          removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+          if (game.getMuslim(target).sleeperCells > 0)
+            flipSleeperCells(target, 1)
+        }
+        // Also, decrease funding by 1 even if no cells affected.
+        decreaseFunding(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(137, "FMS", US, 2,
