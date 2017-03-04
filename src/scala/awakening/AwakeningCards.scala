@@ -31,6 +31,7 @@ package awakening
 // Awakening expansion.
 
 import scala.util.Random.shuffle
+import scala.collection.immutable.ListMap
 import LabyrinthAwakening._
 
 object AwakeningCards extends CardDeck {
@@ -151,16 +152,16 @@ object AwakeningCards extends CardDeck {
       (_: Role) => {
         if (game.humanRole == US) {
           if (game.muslims exists (_.totalCells > 0)) {
-            val prompt = "Remove cells or make Jihidist discard? "
-            val choices = Seq("remove cells", "jihadist discard")
-            askOneOf(prompt, choices, allowAbort = true) match {
-              case Some("jihadist discard") =>
-                log("Discard the top card in the Jihadist hand")
+            val choices = ListMap(
+              "remove"  -> "Remove up to 2 cell in one Muslim country",
+              "discard" -> "Randomly discard 1 card from the Jihadist hand")
+            askMenu(choices).head match {
+              case "discard" => log("Discard the top card in the Jihadist hand")
               case _ =>
-                val candidates = game.muslims filter (_.totalCells > 0)
-                val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
-                val (actives, sleepers) = askCells(target, 2)
-                removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+              val candidates = game.muslims filter (_.totalCells > 0)
+              val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
+              val (actives, sleepers) = askCells(target, 2)
+              removeCellsFromCountry(target, actives, sleepers, addCadre = true)
             }
           }
           else
@@ -309,11 +310,11 @@ object AwakeningCards extends CardDeck {
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
       (_: Role) => {
         if (game.humanRole == US) {
-          println("You may either reveal all WMD plots and remove one (if any), or")
-          println("You may make the Jihadist Bot discard a card")
-          askOneOf("Choose (reveal WMD or discard) ", Seq("reveal WMD", "discard")) match {
-            case Some("discard") =>
-              log("Discard the top card in the Jihadist Bot's hand")
+          val choices = ListMap(
+            "reveal"  -> "Reveal all WMD plots and remove one",
+            "discard" -> "Randomly discard 1 card from the Jihadist hand")
+          askMenu(choices).head match {
+            case "discard" => log("Discard the top card in the Jihadist Bot's hand")
             case _ =>
               val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
                 yield c.name
@@ -329,7 +330,7 @@ object AwakeningCards extends CardDeck {
                   askCountry("Select country with WMD: ", wmdOnMap)
                 else
                   askCountry("Select 'available' or country with WMD: ", "available" :: wmdOnMap)
-                
+              
                 if (target == "available") {
                   log(s"Permanently remove one $PlotWMD from the available plots box")
                   game = game.copy(availablePlots = game.availablePlots.sorted.tail).adjustPrestige(1)
@@ -357,7 +358,7 @@ object AwakeningCards extends CardDeck {
             log(s"Increase prestige by +1 to ${game.prestige} for removing an WMD plot.")
           }
           else
-            log("Discard one card at randome from the Jihadist player's hand.")
+            log("Discard one card at random from the Jihadist player's hand.")
         }
         
       }

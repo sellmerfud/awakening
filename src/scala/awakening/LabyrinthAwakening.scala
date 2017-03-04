@@ -30,6 +30,7 @@ package awakening
 import scala.util.Random.{shuffle, nextInt}
 import scala.annotation.tailrec
 import scala.util.Properties.{lineSeparator, isWin}
+import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 
 object LabyrinthAwakening {
@@ -1392,6 +1393,34 @@ object LabyrinthAwakening {
     }
     testResponse(initial)
   }
+  
+  // Present a numbered menu of choices
+  // Allow the user to choose 1 or more choices and return
+  // a list of keys to the chosen items.
+  // Caller should println() a brief description of what is being chosen.
+  def askMenu(items: ListMap[String, String], numChoices: Int = 1, repeatsOK: Boolean = false): List[String] = {
+    def nextChoice(num: Int, itemsRemaining: ListMap[String, String], choicesRemaining: Int): List[String] = {
+      if (itemsRemaining.isEmpty || choicesRemaining == 0)
+        Nil
+      else if (itemsRemaining.size == 1)
+        itemsRemaining.keys.head :: Nil
+      else {
+        println()
+        val indexMap = (itemsRemaining.keys.zipWithIndex map (_.swap)).toMap
+        for ((key, i) <- itemsRemaining.keys.zipWithIndex)
+          println(s"${i+1}) ${itemsRemaining(key)}")
+        val prompt = if (numChoices > 1) s"${ordinal(num)} selection. Choose one: "
+        else "Choose one: "
+        val choice = askOneOf(prompt, 1 to itemsRemaining.size, allowAbort = true).get.toInt
+        val index  = choice - 1
+        val key    = indexMap(index)
+        val remain = if (repeatsOK) itemsRemaining else itemsRemaining - key
+        indexMap(index) :: nextChoice(num + 1, remain, choicesRemaining - 1)
+      }
+    }
+    nextChoice(1, items, numChoices).reverse
+  }
+  
   
   // Use the random Muslim table.
   // Iran and Nigeria may not yet have become Muslim countries.
