@@ -528,6 +528,7 @@ object LabyrinthAwakening {
     def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
     
     def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar)
+    def canTakeAidMarker = !(isGood || isIslamistRule)
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
     def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
@@ -1399,26 +1400,27 @@ object LabyrinthAwakening {
   // a list of keys to the chosen items.
   // Caller should println() a brief description of what is being chosen.
   def askMenu(items: ListMap[String, String], numChoices: Int = 1, repeatsOK: Boolean = false): List[String] = {
-    def nextChoice(num: Int, itemsRemaining: ListMap[String, String], choicesRemaining: Int): List[String] = {
-      if (itemsRemaining.isEmpty || choicesRemaining == 0)
+    def nextChoice(num: Int, itemsRemaining: ListMap[String, String]): List[String] = {
+      if (itemsRemaining.isEmpty || num > numChoices)
         Nil
       else if (itemsRemaining.size == 1)
         itemsRemaining.keys.head :: Nil
       else {
-        println()
+        println(separator())
         val indexMap = (itemsRemaining.keys.zipWithIndex map (_.swap)).toMap
-        for ((key, i) <- itemsRemaining.keys.zipWithIndex)
+        for ((key, i) <- itemsRemaining.keysIterator.zipWithIndex)
           println(s"${i+1}) ${itemsRemaining(key)}")
-        val prompt = if (numChoices > 1) s"${ordinal(num)} selection. Choose one: "
-        else "Choose one: "
+        val prompt = if (numChoices > 1) s"${ordinal(num)} Selection: "
+        else "Selection: "
         val choice = askOneOf(prompt, 1 to itemsRemaining.size, allowAbort = true).get.toInt
+        println()
         val index  = choice - 1
         val key    = indexMap(index)
         val remain = if (repeatsOK) itemsRemaining else itemsRemaining - key
-        indexMap(index) :: nextChoice(num + 1, remain, choicesRemaining - 1)
+        indexMap(index) :: nextChoice(num + 1, remain)
       }
     }
-    nextChoice(1, items, numChoices).reverse
+    nextChoice(1, items)
   }
   
   
@@ -2505,7 +2507,9 @@ object LabyrinthAwakening {
   def setCountryPosture(name: String, newPosture: String): Unit = {
     val n = game.getNonMuslim(name)
     assert(n.canChangePosture, s"Cannot set posture in $name")
-    if (n.posture != newPosture) {
+    if (n.posture == newPosture) 
+      log(s"The posture of $name reamins $newPosture")
+    else {
       log(s"Set posture of $name to $newPosture")
       game = game.updateCountry(n.copy(posture = newPosture))
     }

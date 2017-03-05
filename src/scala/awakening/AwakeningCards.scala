@@ -37,7 +37,7 @@ import LabyrinthAwakening._
 object AwakeningCards extends CardDeck {
   // Various tests used by the card events
   val canTakeAdvisors = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.troops == 0 && !m.hasMarker("Advisors")
-  val canTakeHumanitarianAid = (m: MuslimCountry) => !m.isGood && !m.isIslamistRule && m.totalCells > 0
+  val canTakeHumanitarianAid = (m: MuslimCountry) => m.canTakeAidMarker && m.totalCells > 0
   val canTakePeshmerga = (m: MuslimCountry) => (m.name == Iraq || m.name == Syria) && m.totalCells > 0
   val canArabSpringFallout = (m: MuslimCountry) => {
     m.awakening == 0 &&
@@ -484,8 +484,47 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(143, "Obama Doctrine", US, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (_: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (_: Role) => game.usPosture == Soft
+      ,
+      (_: Role) => {
+        if (game.humanRole == US) {
+          def item(test: Boolean, x: (String, String)) = if (test) Some(x) else None
+          val canAwakening = game hasMuslim (_.canTakeAwakeningOrReactionMarker)
+          val canAid       = game hasMuslim (_.canTakeAidMarker)
+          val items = List(
+            item(canAwakening,       "awakening" -> "Place 1 Awakening marker"),
+            item(canAid,             "aid"       -> "Place 1 Aid marker"),
+            item(game.prestige < 12, "prestige"  -> "+1 Prestige"),
+            item(game.funding > 1,   "funding"   -> "-1 Funding"),
+            item(true,               "posture"   -> "Select posture of 1 Schengen country"),
+            item(true,               "draw"      -> "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
+          ).flatten 
+          println("Do any 2 of the following:")
+          askMenu(ListMap(items:_*), 2, repeatsOK = false) foreach { action =>
+            println()
+            action match {
+              case "awakening" =>
+                addAwakeningMarker(askCountry("Place awakening marker in which country: ",
+                             countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))))
+              case "aid" =>
+                addAidMarker(askCountry("Place aid marker in which country: ",
+                             countryNames(game.muslims filter (_.canTakeAidMarker))))
+              case "prestige" => increasePrestige(1)
+              case "funding"  => decreaseFunding(1)
+              case "posture" =>
+                setCountryPosture(
+                  askCountry("Select posture of which Schengen country: ", Schengen),
+                  askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard), allowAbort = true).get)
+              case _ =>
+                log("Select Reaper, Operation New Dawn, or Advisors from discard pile")
+            }
+          }
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(144, "Operation New Dawn", US, 2,
