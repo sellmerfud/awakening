@@ -64,13 +64,14 @@ object AwakeningCards extends CardDeck {
       (_: Role) => (game.muslims count (_.hasMarker("Advisors"))) < 3 && (game hasMuslim canTakeAdvisors)
       ,
       (_: Role) => {
-        val candidates = game.muslims filter canTakeAdvisors
+        val candidates = countryNames(game.muslims filter canTakeAdvisors)
         val target = if (game.humanRole == US)
-          askCountry(s"Advisors in which country: ", countryNames(candidates))
+          askCountry(s"Advisors in which country: ", candidates)
         else {
           log("!!! Bot event not yet implemented !!!")
-          candidates.head.name
+          candidates.head
         }
+        println()
         testCountry(target)
         addEventMarkersToCountry(target, "Advisors")
       }
@@ -81,12 +82,12 @@ object AwakeningCards extends CardDeck {
       (_: Role) => game hasCountry (_.plots exists (p => !p.backlashed))
       ,
       (_: Role) => {
-        val candidates = game.countries filter (_.plots exists (p => !p.backlashed))
+        val candidates = countryNames(game.countries filter (_.plots exists (p => !p.backlashed)))
         val countryName = if (game.humanRole == US)
-          askCountry(s"Backlash in which country: ", countryNames(candidates))
+          askCountry(s"Backlash in which country: ", candidates)
         else {
           log("!!! Bot event not yet implemented !!!")
-          candidates.head.name
+          candidates.head
         }
         // Pick a random plot in the country
         val country = game.getCountry(countryName)
@@ -95,6 +96,7 @@ object AwakeningCards extends CardDeck {
           case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(target, true) :: remaining))
           case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = PlotOnMap(target, true) :: remaining))
         }
+        println()
         log(s"Backlash applied to a plot in $countryName")
       }
     )),
@@ -104,13 +106,14 @@ object AwakeningCards extends CardDeck {
       (_: Role) => game hasMuslim canTakeHumanitarianAid
       ,
       (_: Role) => {
-        val candidates = game.muslims filter canTakeHumanitarianAid
+        val candidates = countryNames(game.muslims filter canTakeHumanitarianAid)
         val countryName = if (game.humanRole == US)
-          askCountry(s"Humanitarian Aid in which country: ", countryNames(candidates))
+          askCountry(s"Humanitarian Aid in which country: ", candidates)
         else {
           log("!!! Bot event not yet implemented !!!")
-          candidates.head.name
+          candidates.head
         }
+        println()
         addAidMarker(countryName)
       }
     )),
@@ -120,6 +123,7 @@ object AwakeningCards extends CardDeck {
       (_: Role) => globalEventNotInPlay("Bloody Thursday")
       ,
       (_: Role) => {
+        println()
         testCountry(GulfStates)
         addAwakeningMarker(GulfStates)
       }
@@ -130,15 +134,14 @@ object AwakeningCards extends CardDeck {
       (_: Role) => (game hasMuslim canTakePeshmerga) && game.militiaAvailable > 0
       ,
       (_: Role) => {
-        val candidates = game.muslims filter canTakePeshmerga
-        val target = if (candidates.size == 1)
-          candidates.head.name
-        else if (game.humanRole == US)
-          askCountry(s"Select country: ", countryNames(candidates))
+        val candidates = countryNames(game.muslims filter canTakePeshmerga)
+        val target = if (game.humanRole == US)
+          askCountry(s"Select country: ", candidates)
         else {
           log("!!! Bot event not yet implemented !!!")
-          candidates.head.name
+          candidates.head
         }
+        println()
         addMilitiaToCountry(target, 2 min game.militiaAvailable)
       }
     )),
@@ -157,6 +160,7 @@ object AwakeningCards extends CardDeck {
               val candidates = game.muslims filter (_.totalCells > 0)
               val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
               val (actives, sleepers) = askCells(target, 2)
+              println()
               removeCellsFromCountry(target, actives, sleepers, addCadre = true)
             }
           }
@@ -187,6 +191,7 @@ object AwakeningCards extends CardDeck {
         if (game.humanRole == US) {
           val target = askCountry("Remove cell in which country: ", specialForcesTargets)
           val (actives, sleepers) = askCells(target, 1)
+          println()
           removeCellsFromCountry(target, actives, sleepers, addCadre = true)
         }
         else {
@@ -220,6 +225,7 @@ object AwakeningCards extends CardDeck {
           shuffle(candidates) take 2
         }
         
+        println()
         targets foreach { target =>
           testCountry(target)
           addAwakeningMarker(target)
@@ -249,6 +255,7 @@ object AwakeningCards extends CardDeck {
           else if (m.activeCells > 0) (1, 0)
           else (0, 0)
         }
+        println()
         removeCellsFromCountry(target, active, sleeper, addCadre = true)
         addMilitiaToCountry(target, game.militiaAvailable min 2)
       }
@@ -265,6 +272,7 @@ object AwakeningCards extends CardDeck {
       }
       ,
       (_: Role) => {
+        println()
         testCountry(Libya)
         startCivilWar(Libya)
         addMilitiaToCountry(Libya, game.militiaAvailable min 2)
@@ -283,6 +291,7 @@ object AwakeningCards extends CardDeck {
             log("!!! Bot event not yet implemented !!!")
             sunnis.head
           }
+          println()
           testCountry(sunniTarget)
           addAwakeningMarker(sunniTarget)
         }
@@ -291,6 +300,7 @@ object AwakeningCards extends CardDeck {
           def doRandomShiaMix: Unit = {
             val shiaMix = randomShiaMixCountry
             if (shiaMix.canTakeAwakeningOrReactionMarker) {
+              println()
               testCountry(shiaMix.name)
               addAwakeningMarker(shiaMix.name)
             }
@@ -381,6 +391,7 @@ object AwakeningCards extends CardDeck {
             val sleepers = (m.sleeperCells - 1) min 2  // resereve 1 sleeper to flip to active
             (2 - sleepers, sleepers)
           }
+          println()
           removeCellsFromCountry(target, actives, sleepers, addCadre = true)
           if (game.getMuslim(target).sleeperCells > 0)
             flipSleeperCells(target, 1)
@@ -403,6 +414,7 @@ object AwakeningCards extends CardDeck {
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
+        println()
         addMilitiaToCountry(target, game.militiaAvailable min 3)
       }
     )),
@@ -433,6 +445,7 @@ object AwakeningCards extends CardDeck {
       (_: Role) => {
         val die = dieRoll
         log(s"Die roll: $die")
+        println()
         decreaseFunding((die + 1) / 2)  // Half rounded up
       }
     )),
@@ -446,6 +459,7 @@ object AwakeningCards extends CardDeck {
         }
         else
           log(s"US reserves are already at max of 2 Ops")
+        println()
         increasePrestige(1)
         addGlobalEventMarker("Maersk Alabama")
       }
@@ -457,6 +471,7 @@ object AwakeningCards extends CardDeck {
         (game.funding > 1 || game.prestige < 12 || game.getMuslim(Pakistan).canTakeAwakeningOrReactionMarker)
       ,
       (_: Role) => {
+        println()
         increasePrestige(1)
         decreaseFunding(1)
         testCountry(Pakistan)
@@ -476,6 +491,7 @@ object AwakeningCards extends CardDeck {
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
+        println()
         addMilitiaToCountry(target, game.getMuslim(target).resources min game.militiaAvailable)
       }
     )),
@@ -541,6 +557,7 @@ object AwakeningCards extends CardDeck {
           candidates.head
         }
         val num = 2 min game.getMuslim(target).troops min game.militiaAvailable
+        println()
         takeTroopsOffMap(target, num)
         addMilitiaToCountry(target, num)      
       }
@@ -558,6 +575,7 @@ object AwakeningCards extends CardDeck {
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
+        println()
         addMilitiaToCountry(target, 1 min game.militiaAvailable)
         addAidMarker(target)
       }
@@ -584,6 +602,7 @@ object AwakeningCards extends CardDeck {
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
+        println()
         testCountry(target)
         removeBesiegedRegimeMarker(target)
         if (game.getMuslim(target).canTakeAwakeningOrReactionMarker)
@@ -605,6 +624,7 @@ object AwakeningCards extends CardDeck {
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
+        println()
         removeCachedWMD(target)
         if (game.cellsAvailable(ignoreFunding = true) > 0)
           addSleeperCellsToCountry(Israel, 1, ignoreFunding = true)
@@ -861,8 +881,27 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(196, "Training Camps", Jihadist, 3,
-      NoRemove, CountryMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (_: Role) => ()
+      NoRemove, CountryMarker, NoLapsing, NoAutoTrigger,
+      (_: Role) => game hasMuslim (m => !(m.isUntested || m.isGood))
+      ,
+      (_: Role) => {
+        val candidates = countryNames(game.muslims filter (m => !(m.isUntested || m.isGood)))
+        val target = if (game.humanRole == Jihadist)
+          askCountry("Place Training Camps in which country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        println()
+        val priorCapacity = game.trainingCampCapacity
+        game.trainingCamp foreach { name => 
+          removeEventMarkersFromCountry(name, "Training Camps")
+        }
+        addEventMarkersToCountry(target, "Training Camps")
+        updateTrainingCampCapacity(priorCapacity)
+        val cellsToAdd = game.cellsAvailable(ignoreFunding = true) min 2
+        addSleeperCellsToCountry(target, cellsToAdd, ignoreFunding = true)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(197, "Unconfirmed", Jihadist, 3,
