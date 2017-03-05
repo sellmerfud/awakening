@@ -2605,8 +2605,8 @@ object LabyrinthAwakening {
     if (capacity != priorCapacity) {
       game.trainingCampCapacity match {
         case 0 => log("Training Camps is no longer in play")
-        case 3 => log("Training Camps is now in play in a non Caliphate country")
-        case 5 => log("Training Camps is now in play in a Caliphate country")
+        case 3 => log("Training Camps is now in a non Caliphate country")
+        case 5 => log("Training Camps is now in a Caliphate country")
         case x => throw new IllegalStateException(s"Invalid training camp capacity: $x")
       }
       log(s"The training camps available area now has a capacity of ${game.trainingCampCapacity} cells")
@@ -2618,8 +2618,8 @@ object LabyrinthAwakening {
       else if (inCamp > capacity) {
         val delta = inCamp - capacity  // We do NOT remove training camp cells from the map!
         inCamp match {
-          case 1 => log("Remove the cell in the training camps available area from the game")
-          case n => log(s"Remove the $n cells in the training camps available area from the game")
+          case 1 => log("Remove the cell in the training camps available area to out of play")
+          case n => log(s"Remove the $n cells in the training camps available area to out of play")
         }
       }
       game = game.copy(trainingCampCells = game.trainingCampCells.copy(inCamp = 0))
@@ -2729,27 +2729,87 @@ object LabyrinthAwakening {
       val cellType = if (active) "active cell" else "sleeper cell"
       val available = game.cellsAvailable(ignoreFunding)
       assert(available >= num, s"not enough available cells have: $available, need $num")
-      val fromCamp  = game.trainingCampCells.inCamp min num
-      val fromTrack = num - fromCamp
-      (fromCamp, fromTrack) match {
-        case (0, trk)   => log("%sMove %s to %s from the funding track".format(logPrefix, amountOf(trk, cellType), name))
-        case (cmp, 0)   => log("%sMove %s to %s from the training camp available area".format(logPrefix, amountOf(cmp, cellType), name))
-        case (cmp, trk) => log("%sMove %s to %s. %d from the funding track and %d from the training camp available area".format(
-                                logPrefix, amountOf(num, cellType), name, trk, cmp))
+      
+      val CampCells(campCellsInCamp, campCellsOnMap) = game.trainingCampCells
+      val fromTrack = num min game.cellsOnTrack  // Take as many as possible from the track first
+      val fromCamp  = num - game.cellsOnTrack    // Any left over come from the camp
+      
+      // The number on the track is calculated, so it does not need to be set here.
+      val newCampCells = CampCells(campCellsInCamp - fromCamp, campCellsOnMap + fromCamp)
+      val updated = game.getCountry(name) match {
+        case m: MuslimCountry if active    => m.copy(activeCells  = m.activeCells  + num, hasCadre = false)
+        case m: MuslimCountry              => m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false)
+        case n: NonMuslimCountry if active => n.copy(activeCells  = n.activeCells  + num, hasCadre = false)
+        case n: NonMuslimCountry           => n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false)
       }
+      game = game.copy(trainingCampCells = newCampCells).updateCountry(updated)
+      
       if (game.getCountry(name).hasCadre)
         log("%sRemove cadre marker from %s.".format(logPrefix, name))
-      // The number on the track is calculated, so it does not need to be set here.
-      game = game.copy(trainingCampCells = CampCells(game.trainingCampCells.inCamp - fromCamp,
-                                                     game.trainingCampCells.onMap  + fromCamp))
-      game.getCountry(name) match {
-        case m: MuslimCountry if active    => game = game.updateCountry(m.copy(activeCells  = m.activeCells  + num, hasCadre = false))
-        case m: MuslimCountry              => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false))
-        case n: NonMuslimCountry if active => game = game.updateCountry(n.copy(activeCells  = n.activeCells  + num, hasCadre = false))
-        case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))
+      if (fromTrack > 0)
+        log("%sMove %s to %s from the funding track".format(logPrefix, amountOf(fromTrack, cellType), name))
+      if (fromCamp > 0)
+        log("%sMove %s to %s from the training camp available area".format(logPrefix, amountOf(fromCamp, cellType), name))
+    }
+  }
+
+  
+  def removeActiveCellsFromCountry(name: String, num: Int, addCadre: Boolean, logPrefix: String = "") =
+    removeCellsFromCountry(name, num, 0, addCadre, logPrefix)
+    
+  def removeSleeperCellsFromCountry(name: String, num: Int, addCadre: Boolean, logPrefix: String = "") =
+    removeCellsFromCountry(name, 0, num, addCadre, logPrefix)
+    
+  // Remove cells from the a country.
+  // The removed cells will moved to:
+  // 1. Out of play if there are cells on the map that came from the training camp and
+  //    the training camp is currently at capacity.  This can happen if the training camp
+  //    was previously in play then subsequently removed from play. (Or was in a Caliphate
+  //    Country that is no longer part of the Caliphate)
+  // 2. The training camp if it is in play and not a full capacity
+  // 3. The funding track.  This is a calculated value, so in effect the cell are simply
+  //    removed from the country and no further fields are updated.
+  // Caller should ensure there are enough cells of the requested type to satisfy
+  // the removal, otherwise the function will throw an exception!
+  // Removing zero is OK and will not do anything.
+  def removeCellsFromCountry(name: String, actives: Int, sleepers: Int, addCadre: Boolean, logPrefix: String = ""): Unit = {
+    val c = game.getCountry(name)
+    if (actives + sleepers > 0) {
+      assert(c.activeCells >= actives, s"removeCellsFromCountry(): not enough active cells present")
+      assert(c.sleeperCells >= sleepers, s"removeCellsFromCountry(): not enough sleeper cells present")
+
+      val cadreAdded = addCadre && c.totalCells == (actives + sleepers)
+      for ((num, active) <- List((actives, true), (sleepers, false)); if num > 0) {
+        val cellType = if (active) "active cell" else "sleeper cell"
+        val CampCells(campCellsInCamp, campCellsOnMap) = game.trainingCampCells
+        val campCellsRemoved = num min campCellsInCamp
+        val campCapacity     = game.trainingCampCapacity
+        val roomInCamp       = campCapacity - campCellsInCamp
+        val toOutOfPlay      = if (roomInCamp == 0) (campCellsOnMap min num) else 0
+        val toCamp           = (num - toOutOfPlay) min roomInCamp
+        val toTrack          = num - toOutOfPlay - toCamp  // The remainder to the track
+        // The number on the track is calculated, so it does not need to be set here.
+        val newCampCells = CampCells(campCellsInCamp + toCamp, campCellsOnMap - campCellsRemoved)
+        val updated = game.getCountry(name) match {
+          case m: MuslimCountry if active    => m.copy(activeCells  = m.activeCells  - num, hasCadre = cadreAdded)
+          case m: MuslimCountry              => m.copy(sleeperCells = m.sleeperCells - num, hasCadre = cadreAdded)
+          case n: NonMuslimCountry if active => n.copy(activeCells  = n.activeCells  - num, hasCadre = cadreAdded)
+          case n: NonMuslimCountry           => n.copy(sleeperCells = n.sleeperCells - num, hasCadre = cadreAdded)
+        }
+        game = game.copy(trainingCampCells = newCampCells).updateCountry(updated)
+        
+        if (toOutOfPlay > 0)
+           log("%sRemove %s from %s to out of play".format(logPrefix, amountOf(toOutOfPlay, cellType), name))
+        if (toCamp > 0)
+          log("%sRemove %s from %s to the training camp available area".format(logPrefix, amountOf(toCamp, cellType), name))
+        if (toTrack > 0)
+          log("%sRemove %s from %s to the funding track".format(logPrefix, amountOf(toTrack, cellType), name))
+        if (cadreAdded)
+          log("%sAdd cadre marker to %s.".format(logPrefix, name))
       }
     }
   }
+  
   
   def moveCellsBetweenCountries(fromName: String, toName: String, num: Int, active: Boolean): Unit = {
     val cellType = if (active) "active cell" else "sleeper cell"
@@ -2784,57 +2844,6 @@ object LabyrinthAwakening {
       case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))
     }
   }
-  
-  def removeActiveCellsFromCountry(name: String, num: Int, addCadre: Boolean, logPrefix: String = "") =
-    removeCellsFromCountry(name, num, 0, addCadre, logPrefix)
-    
-  def removeSleeperCellsFromCountry(name: String, num: Int, addCadre: Boolean, logPrefix: String = "") =
-    removeCellsFromCountry(name, 0, num, addCadre, logPrefix)
-    
-  // Move cells from the a country on the map to the track (or training camp).
-  // Caller should ensure there are enough cells of the requested type to satisfy
-  // the removal, otherwise the function will throw an exception!
-  // Removing zero is OK and will not do anything.
-  def removeCellsFromCountry(name: String, actives: Int, sleepers: Int, addCadre: Boolean, logPrefix: String = ""): Unit = {
-    val c = game.getCountry(name)
-    if (actives + sleepers > 0) {
-      assert(c.activeCells >= actives, s"removeCellsFromCountry(): not enough active cells present")
-      assert(c.sleeperCells >= sleepers, s"removeCellsFromCountry(): not enough sleeper cells present")
-      
-      val cadreAdded = addCadre && c.totalCells == (actives + sleepers)
-      for ((num, active) <- List((actives, true), (sleepers, false)); if num > 0) {
-        val cellType = if (active) "active cell" else "sleeper cell"
-        // TODO: check if inCamp == trainingCampCapacity AND onMap > 0
-        //       if so we must decrease onMap, but no increase inCamp
-        //       AND log the number removed from the game.
-        val toCamp   = (game.trainingCampCapacity - game.trainingCampCells.inCamp) max 0 min num
-        val toTrack  = num - toCamp
-        (toCamp, toTrack) match {
-          case (0, trk)   => log("%sRemove %s from %s to the funding track".format(logPrefix, amountOf(trk, cellType), name))
-          case (cmp, 0)   => log("%sRemove %s from %s to the training camp available area".format(logPrefix, amountOf(cmp, cellType), name))
-          case (cmp, trk) => log("%sRemove %s from %s. %d to the training camp available area and %d to the funding track".format(
-                                  logPrefix, amountOf(num, cellType), name, cmp, trk))
-        }
-        // The number on the track is calculated, so it does not need to be set here.
-        game = game.copy(trainingCampCells = CampCells(game.trainingCampCells.inCamp + toCamp,
-                                                       game.trainingCampCells.onMap  - toCamp))
-        game.getCountry(name) match {
-          case m: MuslimCountry if active    => game = game.updateCountry(m.copy(activeCells  = m.activeCells  - num))
-          case m: MuslimCountry              => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells - num))
-          case n: NonMuslimCountry if active => game = game.updateCountry(n.copy(activeCells  = n.activeCells  - num))
-          case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells - num))
-        }
-      }
-      if (cadreAdded) {
-        log("%sAdd cadre marker to %s.".format(logPrefix, name))
-        game.getCountry(name) match {
-          case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = true))
-          case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = true))
-        }
-      }
-    }
-  }
-  
   def flipSleeperCells(name: String, num: Int): Unit = {
     if (num > 0) {
       val c = game.getCountry(name)
