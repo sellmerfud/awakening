@@ -456,8 +456,8 @@ object LabyrinthAwakening {
       
     def autoRecruit = false
     def recruitSucceeds(die: Int) = die <= recruitOverride || die <= governance
-    def addMarker(name: String): NonMuslimCountry = this.copy(markers = name :: markers)
-    def removeMarker(name: String): NonMuslimCountry = this.copy(markers = markers filterNot (_ == name))
+    def addMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers ++ names)
+    def removeMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers filterNot names.contains)
     // US posture is stored in the GameState
     def canChangePosture = !(iranSpecialCase || name == UnitedStates || name == Israel)
     
@@ -545,8 +545,8 @@ object LabyrinthAwakening {
         (isFair && (ops == 3 || (ops == 2 && besiegedRegime)))
       )
       
-    def addMarker(name: String): MuslimCountry = this.copy(markers = name :: markers)
-    def removeMarker(name: String): MuslimCountry = this.copy(markers = markers filterNot (_ == name))
+      def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
+      def removeMarkers(names: String*): MuslimCountry = this.copy(markers = markers filterNot names.contains)
   }
     
   
@@ -814,8 +814,12 @@ object LabyrinthAwakening {
     def troopsAvailable  = 15 - offMapTroops - muslims.foldLeft(0) { (a, c) => a + c.troops }
     def militiaAvailable = 15 - muslims.foldLeft(0) { (a, c) => a + c.militia }
     
+    def troopsOnMap   = muslims.foldLeft(0) { (a, m) => a + m.troops }
+    def militiaOnMap  = muslims.foldLeft(0) { (a, m) => a + m.militia }
+    
     // If the "Training Camps" marker is in a country we add 3 extra cells available cells.
-    // (Only useful when funding is as 9 or by event or civil war attrition)
+    // (5 cells if the "Training Camps" is in a caliphate country.)
+    // Training Camp cells are only useable when funding is as 9 or by event or civil war attrition.
     // If some of those cells are on the map and the training camp is removed, those
     // extra cells remain on the map until eliminated.
     // We use the trainingCampCells field to keep track of the training camp status:
@@ -1192,7 +1196,7 @@ object LabyrinthAwakening {
     case Seq()     => ""
     case Seq(a)    => a.toString
     case Seq(a, b) => s"${a.toString} or ${b.toString}"
-    case _         => x.dropRight(1).mkString(", ") + " or " + x.last.toString
+    case _         => x.dropRight(1).mkString(", ") + ", or " + x.last.toString
   }
   
   // Find a match for the given string in the list of options.
@@ -1908,6 +1912,7 @@ object LabyrinthAwakening {
     else {
       // Remember any Caliphate capital in case it is displaced.
       val caliphateCapital = candidates find (_.caliphateCapital) map (_.name)
+      val priorCampCapacity = game.trainingCampCapacity
       // Work with names, because the underlying state of the countries will
       // undergo multiple changes, thus we will need to get the current copy of 
       // the country from the game each time we use it.
@@ -1965,11 +1970,14 @@ object LabyrinthAwakening {
       // Check to see if the Caliphate Capital has been displaced because its country
       // was improved to Good governance.
       caliphateCapital foreach { capitalName =>
-        if (game.getMuslim(capitalName).caliphateCapital == false)
+        if (game.getMuslim(capitalName).caliphateCapital == false) {
           displaceCaliphateCapital(capitalName)
+          updateTrainingCampCapacity(priorCampCapacity)
+        }
       }
     }
   }
+
   
   // Process the US civil war losses.
   // If the US is human then prompt for pieces to remove.
@@ -2053,6 +2061,7 @@ object LabyrinthAwakening {
       log("No countries in civil war")
     else {
       val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
+      val priorCampCapacity = game.trainingCampCapacity
       // First if an "Advisors" marker is present in any of the countries, then 
       // add one militia to that country.
       for (m <- civilWars filter (_.hasMarker("Advisors")) if game.militiaAvailable > 0) {
@@ -2120,13 +2129,15 @@ object LabyrinthAwakening {
       // Check to see if the Caliphate Capital has been displaced because its country
       // was improved to Good governance.
       caliphateCapital foreach { capitalName =>
-        if (game.getMuslim(capitalName).caliphateCapital == false)
+        if (game.getMuslim(capitalName).caliphateCapital == false) {
           displaceCaliphateCapital(capitalName)
+          updateTrainingCampCapacity(priorCampCapacity)
+        }
       }
     }
   }
 
-  def performWarOfIdeas(name: String, die: Int): Unit = {
+  def performWarOfIdeas(name: String, die: Int, ignoreGwotPenalty: Boolean = false): Unit = {
     game.getCountry(name) match {
       case m: MuslimCountry =>
         assert(!m.isAdversary, "Cannot do War of Ideas in Adversary country")
@@ -2139,7 +2150,7 @@ object LabyrinthAwakening {
         log(separator())
         testCountry(name)
         log(s"Die roll: $die")
-        val modRoll = modifyWoiRoll(die, m)
+        val modRoll = modifyWoiRoll(die, m, ignoreGwotPenalty)
         if (modRoll <= 4) {
           log("Failure")
           log(s"$name remains ${govToString(m.governance)} ${m.alignment}")
@@ -2154,13 +2165,16 @@ object LabyrinthAwakening {
         }
         else {
           val caliphateCapital = m.caliphateCapital
+          val priorCampCapacity = game.trainingCampCapacity
           log("Success")
           improveGovernance(name)
           game = game.addTestedOrImproved(name)
           if (game.getMuslim(name).isGood) {
             performConvergence(forCountry = name, awakening = true)
-            if (caliphateCapital)
+            if (caliphateCapital) {
               displaceCaliphateCapital(name)
+              updateTrainingCampCapacity(priorCampCapacity)
+            }
           }
         }
         
@@ -2285,6 +2299,7 @@ object LabyrinthAwakening {
       removeActiveCellsFromCountry(fromName, 1, addCadre = false)
     else
       removeSleeperCellsFromCountry(fromName, 1, addCadre = false)
+    removeTrainingCamp_?(fromName)
   }
   
   def performJihad(name: String,
@@ -2407,13 +2422,15 @@ object LabyrinthAwakening {
   // Note: The caller is responsible for handling convergence and the possible
   //       displacement of the caliphate captial.
   def improveGovernance(name: String, levels: Int = 1): Unit = {
-      val m = game.getMuslim(name)
+    val m = game.getMuslim(name)
     if (levels > 0) {
       assert(m.isAlly, s"improveGovernance() called on non-ally - $name")
       assert(!m.isGood, s"improveGovernance() called on Good country - $name")
       val newGov = (m.governance - levels) max Good
       val delta  = m.governance - newGov
       val improved = if (newGov == Good) {
+        // Note: "Training Camps" marker is handle specially.
+        val markersToRemove = "Advisors"::Nil
         log(s"Improve governance of $name to ${govToString(newGov)}")
         if (m.inRegimeChange  ) log(s"Remove regime change marker from $name")
         if (m.besiegedRegime  ) log(s"Remove besieged regime marker from $name")
@@ -2424,10 +2441,12 @@ object LabyrinthAwakening {
         if (m.reaction > 0    ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0     ) log(s"Remove ${m.militia} miltia from $name")
         if (m.caliphateCapital) log(s"Remove Caliphate Capital maker from $name")
-        if (m.hasMarker("Advisors")) log(s"Remove Advisors marker from $name")
+        for (marker <- markersToRemove)
+          if (m.hasMarker(marker)) log(s"Remove $marker marker from $name")
+
         m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
                militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false,
-               caliphateCapital = false, civilWar = false).removeMarker("Advisors")
+               caliphateCapital = false, civilWar = false).removeMarkers(markersToRemove:_*)
       }
       else {
         log(s"Improve the governance of $name to ${govToString(newGov)}")
@@ -2437,6 +2456,7 @@ object LabyrinthAwakening {
                awakening  = (m.awakening - delta) max 0) // One awakening for each level actually improved
       }
       game = game.updateCountry(improved)
+      removeTrainingCamp_?(name)
     }
   }
 
@@ -2468,7 +2488,7 @@ object LabyrinthAwakening {
           governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
           aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
           civilWar = false, wmdCache = 0
-        ).removeMarker("Advisors")
+        ).removeMarkers("Advisors")
         (mm, m.wmdCache)
       }
       else if (delta == 0) {
@@ -2500,7 +2520,7 @@ object LabyrinthAwakening {
       log(s"Shift the alignment of $name to $newAlign")
       game = game.updateCountry(m.copy(alignment = newAlign))
       if (newAlign == Adversary)
-        removeEventMarkerFromCountry(name, "Advisors")
+        removeEventMarkersFromCountry(name, "Advisors")
     }
   }
   
@@ -2533,25 +2553,76 @@ object LabyrinthAwakening {
     }
   }
   
-  def addEventMarkerToCountry(countryName: String, marker: String): Unit = {
-    val c = game.getCountry(countryName)
-    if (!(c hasMarker marker)) {
-      c match {
-        case m: MuslimCountry    => game = game.updateCountry(m.addMarker(marker))
-        case n: NonMuslimCountry => game = game.updateCountry(n.addMarker(marker))
+  def addEventMarkersToCountry(countryName: String, markers: String*): Unit = {
+    for (marker <- markers) {
+      val c = game.getCountry(countryName)
+      if (!(c hasMarker marker)) {
+        log(s"Place $marker marker in $countryName")
+        c match {
+          case m: MuslimCountry    => game = game.updateCountry(m.addMarkers(marker))
+          case n: NonMuslimCountry => game = game.updateCountry(n.addMarkers(marker))
+        }
       }
-      log(s"Place $marker marker in $countryName")
     }
   }
 
-  def removeEventMarkerFromCountry(countryName: String, marker: String): Unit = {
-    val c = game.getCountry(countryName)
-    if (c hasMarker marker) {
-      c match {
-        case m: MuslimCountry    => game = game.updateCountry(m.removeMarker(marker))
-        case n: NonMuslimCountry => game = game.updateCountry(n.removeMarker(marker))
+  def removeEventMarkersFromCountry(countryName: String, markers: String*): Unit = {
+    for (marker <- markers) {
+      val c = game.getCountry(countryName)
+      if (c hasMarker marker) {
+        log(s"Remove $marker marker from $countryName")
+        c match {
+          case m: MuslimCountry    => game = game.updateCountry(m.removeMarkers(marker))
+          case n: NonMuslimCountry => game = game.updateCountry(n.removeMarkers(marker))
+        }
       }
-      log(s"Remove $marker marker from $countryName")
+    }
+  }
+
+  // Check to see if the given country has the "Training Camps".
+  // If it does, but no longer meets the requirements for housing
+  // the "Training Camps", the remove it and log all necessary 
+  // changes to the game.
+  def removeTrainingCamp_?(name: String): Unit = {
+    if (game.isMuslim(name)) {
+      val m = game.getMuslim(name)
+      if (m.hasMarker("Training Camps") && (m.isGood || (m.totalCells == 0 && !m.hasCadre))) {
+        val priorCapacity  = game.trainingCampCapacity
+        removeEventMarkersFromCountry(name, "Training Camps")
+        updateTrainingCampCapacity(priorCapacity)
+      }
+    }
+  }
+
+  // Check to see if the current training camp capacity is different from 
+  // the prior capacity that is given as a parameter.
+  // If so log the update the game.trainingCampCells and log the changes.
+  // The capacity can be 0, 3, or 5
+  
+  def updateTrainingCampCapacity(priorCapacity: Int): Unit = {
+    val CampCells(inCamp, onMap) = game.trainingCampCells
+    val capacity = game.trainingCampCapacity
+    if (capacity != priorCapacity) {
+      game.trainingCampCapacity match {
+        case 0 => log("Training Camps is no longer in play")
+        case 3 => log("Training Camps is now in play in a non Caliphate country")
+        case 5 => log("Training Camps is now in play in a Caliphate country")
+        case x => throw new IllegalStateException(s"Invalid training camp capacity: $x")
+      }
+      log(s"The training camps available area now has a capacity of ${game.trainingCampCapacity} cells")
+      val delta = capacity - (inCamp + onMap)
+      if (capacity > inCamp + onMap) {
+        val delta = capacity - (inCamp + onMap)
+        log(s"Add ${amountOf(delta, "out of play cell")} to the training camps available area")
+      }
+      else if (inCamp > capacity) {
+        val delta = inCamp - capacity  // We do NOT remove training camp cells from the map!
+        inCamp match {
+          case 1 => log("Remove the cell in the training camps available area from the game")
+          case n => log(s"Remove the $n cells in the training camps available area from the game")
+        }
+      }
+      game = game.copy(trainingCampCells = game.trainingCampCells.copy(inCamp = 0))
     }
   }
 
@@ -2573,14 +2644,17 @@ object LabyrinthAwakening {
   
   def endCivilWar(name: String): Unit = {
     val m = game.getMuslim(name)
+    val priorCampCapacity = game.trainingCampCapacity
     if (m.civilWar) {
       game = game.updateCountry(m.copy(civilWar = false, caliphateCapital = false))
       log(s"Remove civil war marker from $name")
       removeMilitiaFromCountry(name, m.militia)
-      removeEventMarkerFromCountry(name, "Advisors")
+      removeEventMarkersFromCountry(name, "Advisors")
       if (m.caliphateCapital) {
         log(s"Remove the Caliphate Capital marker from $name")
         displaceCaliphateCapital(m.name)
+        updateTrainingCampCapacity(priorCampCapacity)
+        
       }
     }
   }
@@ -2602,8 +2676,23 @@ object LabyrinthAwakening {
     if (dest != "track") {
       val m = game.getMuslim(dest)
       game = game.updateCountry(m.copy(troops = m.troops + num))
-      removeEventMarkerFromCountry(dest, "Advisors")
+      removeEventMarkersFromCountry(dest, "Advisors")
     }
+  }
+  
+  def takeTroopsOffMap(source: String, num: Int): Unit = {
+    def disp(name: String) = if (name == "track") "the troops track" else name
+      log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to the off map box")
+      // Note: No need to "remove" them from the track as the number on the track is
+      // calcualted base on those on the map and in the off map box.
+      if (source == "track")
+        assert(game.troopsAvailable >= num, "takeTroopsOffMap(): Not enough troops available on track")
+      else {
+        val m = game.getMuslim(source)
+        assert(m.troops >= num, s"takeTroopsOffMap(): Not enough troops available in $source")
+        game  = game.updateCountry(m.copy(troops = m.troops - num))
+      }
+      game = game.copy(offMapTroops = game.offMapTroops + num)
   }
   
   // Must be enough available militia on track or an exception is thrown.
@@ -2644,8 +2733,8 @@ object LabyrinthAwakening {
       val fromTrack = num - fromCamp
       (fromCamp, fromTrack) match {
         case (0, trk)   => log("%sMove %s to %s from the funding track".format(logPrefix, amountOf(trk, cellType), name))
-        case (cmp, 0)   => log("%sMove %s to %s from the training camp".format(logPrefix, amountOf(cmp, cellType), name))
-        case (cmp, trk) => log("%sMove %s to %s. %d from the funding track and %d from the training camp".format(
+        case (cmp, 0)   => log("%sMove %s to %s from the training camp available area".format(logPrefix, amountOf(cmp, cellType), name))
+        case (cmp, trk) => log("%sMove %s to %s. %d from the funding track and %d from the training camp available area".format(
                                 logPrefix, amountOf(num, cellType), name, trk, cmp))
       }
       if (game.getCountry(name).hasCadre)
@@ -2715,12 +2804,15 @@ object LabyrinthAwakening {
       val cadreAdded = addCadre && c.totalCells == (actives + sleepers)
       for ((num, active) <- List((actives, true), (sleepers, false)); if num > 0) {
         val cellType = if (active) "active cell" else "sleeper cell"
+        // TODO: check if inCamp == trainingCampCapacity AND onMap > 0
+        //       if so we must decrease onMap, but no increase inCamp
+        //       AND log the number removed from the game.
         val toCamp   = (game.trainingCampCapacity - game.trainingCampCells.inCamp) max 0 min num
         val toTrack  = num - toCamp
         (toCamp, toTrack) match {
           case (0, trk)   => log("%sRemove %s from %s to the funding track".format(logPrefix, amountOf(trk, cellType), name))
-          case (cmp, 0)   => log("%sRemove %s from %s to the training camp.".format(logPrefix, amountOf(cmp, cellType), name))
-          case (cmp, trk) => log("%sRemove %s from %s. %d to the training camp and %d to the funding track.".format(
+          case (cmp, 0)   => log("%sRemove %s from %s to the training camp available area".format(logPrefix, amountOf(cmp, cellType), name))
+          case (cmp, trk) => log("%sRemove %s from %s. %d to the training camp available area and %d to the funding track".format(
                                   logPrefix, amountOf(num, cellType), name, cmp, trk))
         }
         // The number on the track is calculated, so it does not need to be set here.
@@ -2778,6 +2870,24 @@ object LabyrinthAwakening {
     }
   }
   
+  def addBesiegedRegimeMarker(name: String): Unit = {
+    val m = game.getMuslim(name)
+    if (m.besiegedRegime)
+      log(s"$name already has a besieged regime marker")
+    else {
+      log(s"Add a besieged regime marker to $name")
+      game = game.updateCountry(m.copy(besiegedRegime = true))
+    }
+  }
+  
+  def removeBesiegedRegimeMarker(name: String): Unit = {
+    val m = game.getMuslim(name)
+    if (m.besiegedRegime) {
+      log(s"Remove besieged regime marker from $name")
+      game = game.updateCountry(m.copy(besiegedRegime = false))
+    }
+  }
+  
   def addAidMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
       val m = game.getMuslim(target)
@@ -2820,6 +2930,21 @@ object LabyrinthAwakening {
       assert(m.reaction >= num, "removeReactionMarker() not enough markers")
       game = game.updateCountry(m.copy(reaction = m.reaction - num))
       log(s"Remove ${amountOf(num, "reaction marker")} from $target")
+    }
+  }
+
+  
+  def removeCachedWMD(name: String, bumpPrestige: Boolean = true): Unit = {
+    val c = game.getCountry(name)
+    assert(c.wmdCache > 0, s"removeCachedWMD(): no WMD in $name")
+    c match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = m.wmdCache - 1))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = n.wmdCache - 1))
+    }
+    log(s"Remove 1 unavailable WMD plot from $name")
+    if (bumpPrestige) {
+      game = game.adjustPrestige(1)
+      log(s"Increase prestige by +1 to ${game.prestige} for removing a WMD plot")
     }
   }
   
@@ -4396,8 +4521,9 @@ object LabyrinthAwakening {
           val nixRegimeChange = goodOrIslamist && m.inRegimeChange
           val nixAwakening    = goodOrIslamist && m.awakening != 0
           val nixReaction     = goodOrIslamist && m.reaction != 0
+          val nixTrainingCamps= newGov == Good && m.hasMarker("Training Camps")
           val anyWarnings     = nixCapital || nixAid || nixBesieged || nixCivilWar || 
-                                nixRegimeChange || nixAwakening || nixRegimeChange
+                                nixRegimeChange || nixAwakening || nixRegimeChange || nixTrainingCamps
           def warn(condition: Boolean, message: String): Unit = if (condition) println(message)
           warn(nixCapital, s"$name will no longer be the Caliphate Capital.\n" +
                            "The Caliphate will be removed completely.")
@@ -4407,6 +4533,7 @@ object LabyrinthAwakening {
           warn(nixRegimeChange, "The regime change marker will be removed.")
           warn(nixAwakening, "The awakening markers will be removed.")
           warn(nixReaction, "The reaction markers will be removed.")
+          warn(nixTrainingCamps, "The Training Camps marker will be removed")
           if (!anyWarnings || askYorN(s"Do you wish continue (y/n)? ")) {
             var updated = m
             logAdjustment(name, "Governance", govToString(updated.governance), govToString(newGov))
@@ -4427,7 +4554,7 @@ object LabyrinthAwakening {
               logAdjustment(name, "Civil War", updated.civilWar, false)
               if (updated.markers contains "Advisors")
                 logAdjustment(name, "Markers", updated.markers, updated.markers filterNot(_ == "Advisors"))
-              updated = updated.copy(civilWar = false).removeMarker("Advisors")
+              updated = updated.copy(civilWar = false).removeMarkers("Advisors")
             }
             if (nixRegimeChange) {
               logAdjustment(name, "Regime change", updated.regimeChange, NoRegimeChange)
@@ -4442,6 +4569,7 @@ object LabyrinthAwakening {
               updated = updated.copy(reaction = 0)
             }
             game = game.updateCountry(updated)
+            removeTrainingCamp_?(name)
           }
         }
     }
@@ -4668,7 +4796,7 @@ object LabyrinthAwakening {
           }
           if (nixAdvisors) {            
             val orig = updated.markers
-            updated = updated.removeMarker("Advisors")
+            updated = updated.removeMarkers("Advisors")
             logAdjustment(name, "Markers", orig, updated.markers)
           }
           if (convertAwakening) {
