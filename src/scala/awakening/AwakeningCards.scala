@@ -902,8 +902,30 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(157, "Limited Deployment", US, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => game.usPosture == Hard && (game hasMuslim (_.civilWar))
+      ,
+      (role : Role) => {
+        val candidates = countryNames(game.muslims filter (_.civilWar))
+        val (target, adjacent) = if (role == game.humanRole) {
+          val t = askCountry("Select country: ", candidates)
+          val adjacents = getAdjacentMuslims(t) filter (n => game.getMuslim(n).canTakeAwakeningOrReactionMarker)
+          if (adjacents.nonEmpty)
+            (t, Some(askCountry("Place awakening marker in which adjacent country: ", adjacents)))
+          else
+            (t, None)
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          val t = candidates.head
+          val a = (getAdjacentMuslims(t) filter (n => game.getMuslim(n).canTakeAwakeningOrReactionMarker)).headOption
+          (t, a)
+        }
+        
+        moveTroops("track", target, 2 min game.troopsAvailable)
+        addAidMarker(target)
+        adjacent foreach { m => addAwakeningMarker(m) }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(158, "Mass Turnout", US, 3,

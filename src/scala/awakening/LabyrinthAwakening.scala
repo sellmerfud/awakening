@@ -274,6 +274,8 @@ object LabyrinthAwakening {
   )
   
   def getAdjacent(name: String): List[String] = countryData(name).adjacent
+  def getAdjacentMuslims(name: String) = getAdjacent(name) filter game.isMuslim
+  def getAdjacentNonMuslims(name: String) = getAdjacent(name) filter game.isNonMuslim
   def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
 
   // Shortest distance between countries
@@ -2686,21 +2688,24 @@ object LabyrinthAwakening {
   // Source/dest may be "track" or a muslim country.
   // The source cannot be the same as the dest or an exception is thrown.
   // The must be enough troops available in the source or an exception is thrown
+  // It is OK to specify zero troops, in which case nothing happens.
   def moveTroops(source: String, dest: String, num: Int): Unit = {
-    assert(source != dest, "The source and destination for moveTroops() cannot be the same.")
-    def disp(name: String) = if (name == "track") "the troops track" else name
-    log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to ${disp(dest)}")
-    if (source == "track")
-      assert(game.troopsAvailable >= num, "moveTroop(): Not enough troops available on track")
-    else {
-      val m = game.getMuslim(source)
-      assert(m.troops >= num, s"moveTroop(): Not enough troops available in $source")
-      game  = game.updateCountry(m.copy(troops = m.troops - num))
-    }
-    if (dest != "track") {
-      val m = game.getMuslim(dest)
-      game = game.updateCountry(m.copy(troops = m.troops + num))
-      removeEventMarkersFromCountry(dest, "Advisors")
+    if (num > 0) {
+      assert(source != dest, "The source and destination for moveTroops() cannot be the same.")
+      def disp(name: String) = if (name == "track") "the troops track" else name
+      log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to ${disp(dest)}")
+      if (source == "track")
+        assert(game.troopsAvailable >= num, "moveTroop(): Not enough troops available on track")
+      else {
+        val m = game.getMuslim(source)
+        assert(m.troops >= num, s"moveTroop(): Not enough troops available in $source")
+        game  = game.updateCountry(m.copy(troops = m.troops - num))
+      }
+      if (dest != "track") {
+        val m = game.getMuslim(dest)
+        game = game.updateCountry(m.copy(troops = m.troops + num))
+        removeEventMarkersFromCountry(dest, "Advisors")
+      }
     }
   }
   
