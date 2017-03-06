@@ -747,22 +747,43 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(152, "Congress Acts", US, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => (game markerInPlay "Sequestration") || (
+        game.troopsAvailable >= 6 && (game hasMuslim (m => m.civilWar && !m.inRegimeChange))
+      )
+      ,
+      (role : Role) => {
+        removeGlobalEventMarker("Sequestration")
+        val candidates = countryNames(game.muslims filter (m => m.civilWar && !m.inRegimeChange))
+        if (game.troopsAvailable >= 6 && candidates.nonEmpty) {
+          val (target, numTroops) = if (role == game.humanRole) {
+            val t = askCountry("Select country: ", candidates)
+            val n = askInt("Deploy how many troops from the track: ", 6, game.troopsAvailable, Some(6))
+            (t, n)
+          }
+          else {
+            log("!!! Bot event not yet implemented !!!")
+            (candidates.head, 6)
+          }
+          performRegimeChange("track", target, numTroops)
+          endCivilWar(target)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(153, "Facebook", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
       (role : Role) => globalEventInPlay("Smartphones")
       ,
-      (role : Role) => ()
+      (role : Role) => {
+        
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(154, "Facebook", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
-      (role : Role) => globalEventInPlay("Smartphones")
-      ,
-      (role : Role) => ()
+      (role: Role) => cardMap(153).eventConditions(role),
+      (role: Role) => cardMap(153).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(155, "Fracking", US, 3,
