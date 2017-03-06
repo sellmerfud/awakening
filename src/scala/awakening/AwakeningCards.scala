@@ -54,7 +54,7 @@ object AwakeningCards extends CardDeck {
     // Or in any other civil war country that does not have the maker.
     (m.hasMarker("UNSCR 1973") && m.totalCells > 0) || (m.civilWar && !m.hasMarker("UNSCR 1973"))
   }
-  
+  val massTurnoutCandidate = (m: MuslimCountry) => m.inRegimeChange && m.awakening > 0
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -929,8 +929,19 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(158, "Mass Turnout", US, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => game hasMuslim massTurnoutCandidate
+      ,
+      (role : Role) => {
+        val candidates = countryNames(game.muslims filter massTurnoutCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select regime change country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        improveGovernance(target)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(159, "NATO", US, 3,
