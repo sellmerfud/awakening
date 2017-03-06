@@ -35,6 +35,8 @@ import scala.collection.immutable.ListMap
 import LabyrinthAwakening._
 
 object AwakeningCards extends CardDeck {
+  val GulfUnionCountries = List(GulfStates, SaudiArabia, Yemen, Jordan, Morocco).sorted
+  
   // Various tests used by the card events
   val advisorsCandidate = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.totalTroops == 0 && !m.hasMarker("Advisors")
   val humanitarianAidCandidate = (m: MuslimCountry) => m.canTakeAidMarker && m.totalCells > 0
@@ -811,12 +813,92 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(155, "Fracking", US, 3,
       NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      (role : Role) => {
+        addGlobalEventMarker("Fracking")
+        rollPrestige()
+        log("US player draws a card.")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(156, "Gulf Union", US, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => game.militiaAvailable > 0 || 
+             (GulfUnionCountries exists (name => game.getMuslim(name).militia > 0))
+      ,
+      (role : Role) => {
+        // Card allow placing militia or respositioning militia in the Gulf Union countries.
+        val existingMilitia = (GulfUnionCountries exists (name => game.getMuslim(name).militia > 0))
+        val actions = List(
+          if (game.militiaAvailable > 0) Some("place")      else None,
+          if (existingMilitia)           Some("reposition") else None
+        ).flatten
+        val choices = ListMap(
+          "place"      -> "Place up to 4 militia in one Gulf Union (or adjacent) country",
+          "reposition" -> "Repositon militia in Gulf Union countries")
+        val maxMilitia = 4 min game.militiaAvailable
+        val placeCandidates = (GulfUnionCountries.foldLeft(Set.empty[String]) { (candidates, name) =>
+          candidates + name ++ (getAdjacent(name) filter (n => game.isMuslim(n) && n != Iran))
+        }).toList.sorted
+          
+        if (role == game.humanRole) {
+          val action = if (actions.size == 1) actions.head 
+          else askMenu(choices).head
+          action match {
+            case "place" =>
+              val target = askCountry("Place militia in which country: ", placeCandidates)
+              val num    = askInt(s"Place how many militia in $target", 1, maxMilitia, Some(maxMilitia))
+              testCountry(target)
+              addMilitiaToCountry(target, num)
+              
+            case _ => // Reposition militia with the Gulf Union countries
+              val totalMilitia = GulfUnionCountries.foldLeft(0) { (sum, name) =>
+                sum + game.getMuslim(name).militia
+              }
+              println(s"There are a total of $totalMilitia militia in the Gulf Union countries.")
+              println("Assume that we start by taking all of those militia off of the map.")
+              println("You will be prompted with the name of each Gulf Union country one by one.")
+              println("Specify the number of militia that you would like in each country:")
+              case class GulfUnion(name: String, newMilitia: Int) {
+                val muslim = game.getMuslim(name)
+                def hasLess = newMilitia < muslim.militia
+                def noChange = newMilitia == muslim.militia
+              }
+              def nextCountry(members: List[String], remaining: Int): List[GulfUnion] = {
+                members match {
+                  case Nil                     => Nil
+                  case x::Nil                  => GulfUnion(x, remaining) :: Nil
+                  case x::xs if remaining == 0 => GulfUnion(x, 0) :: nextCountry(xs, 0)
+                  case x::xs                   =>
+                    val num = askInt(s"How many militia in $x", 0, remaining)
+                    GulfUnion(x, num) :: nextCountry(xs, remaining - num)
+                }
+              }
+              val placements = nextCountry(GulfUnionCountries, maxMilitia) filterNot (_.noChange)
+              if (placements.isEmpty)
+                log("No change to the position of the existing militia in the Gulf Union")
+              else {
+                for (p <- placements; if p.hasLess) {
+                  testCountry(p.name)
+                  val m = game.getMuslim(p.name) // Get fresh copy after testCountry()
+                  game = game.updateCountry(m.copy(militia = p.newMilitia))
+                  log(s"Remove ${p.muslim.militia - p.newMilitia} militia from ${p.name}")
+                }
+                for (p <- placements; if !p.hasLess) {
+                  testCountry(p.name)
+                  val m = game.getMuslim(p.name) // Get fresh copy after testCountry()
+                  game = game.updateCountry(m.copy(militia = p.newMilitia))
+                  log(s"Add ${p.newMilitia - p.muslim.militia} militia to ${p.name}")
+                }
+              }
+          } 
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          val target = shuffle(GulfUnionCountries).head
+          testCountry(target)
+          addMilitiaToCountry(target, maxMilitia)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(157, "Limited Deployment", US, 3,

@@ -1299,13 +1299,19 @@ object LabyrinthAwakening {
       val choices = (low to high).toList
       default match {
         case Some(d) =>
-          val p = "%s (%s) Default = %d: ".format(prompt, orList(choices), d)
+          val p = if (choices.size > 6)
+            "%s (%d - %d) Default = %d: ".format(prompt, choices.head, choices.last, d)
+          else
+            "%s (%s) Default = %d: ".format(prompt, orList(choices), d)
           askOneOf(p, choices, allowNone = true, allowAbort = allowAbort) map (_.toInt) match {
             case None    => d
             case Some(x) => x
           }
         case None => 
-          val p = "%s (%s): ".format(prompt, orList(choices))
+          val p = if (choices.size > 6)
+            "%s (%d - %d): ".format(prompt, choices.head, choices.last)
+          else
+            "%s (%s): ".format(prompt, orList(choices))
           (askOneOf(p, choices, None, allowAbort = allowAbort) map (_.toInt)).get
       }
     }
@@ -2425,11 +2431,13 @@ object LabyrinthAwakening {
        -shiftDice.min
     else
       shiftDice.min
-    if (game.gwotPenalty > 0)
-      log(s"Direction roll: $dirDie, -1 drm because GWOT penalty is not zero")
-    else
-      log(s"Direction roll: $dirDie")
-    log(s"Rolls for shift amount: ${shiftDice.head} and ${shiftDice.last}")
+    
+    log(s"Direction roll: $dirDie")
+    if (game.gwotPenalty > 0) {
+      log(s"-1: GWOT penalty is not zero")
+      log(s"Modified roll: ${dirDie - 1}")
+    }
+    log(s"Rolls for shift amount: ${shiftDice.head} and ${shiftDice.last} (lowest value is used)")
     game = game.adjustPrestige(shiftAmount)
     val desc = if (shiftAmount < 0) "drops" else "rises"
     log(s"$US prestige $desc by $shiftAmount to ${game.prestige}")
