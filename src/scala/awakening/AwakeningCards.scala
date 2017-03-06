@@ -53,6 +53,7 @@ object AwakeningCards extends CardDeck {
     (m.hasMarker("UNSCR 1973") && m.totalCells > 0) || (m.civilWar && !m.hasMarker("UNSCR 1973"))
   }
   
+  // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
     val withForces = (game.muslims filter (m => m.totalTroops > 0 || m.hasMarker("Advisors"))) map (_.name)
@@ -62,6 +63,12 @@ object AwakeningCards extends CardDeck {
       country.totalCells > 0 && (withForces exists (forces => distance(forces, country.name) <= 2))
     })
   }
+  
+  // Countries with an awakening maker or adjacent to a country with an awakening marker.
+  def faceBookCandidates: List[String] = countryNames(game.muslims filter { m =>
+    m.awakening > 0 || (game.adjacentMuslims(m.name) exists (_.awakening > 0))
+  })
+  
   
   val cardMap: Map[Int, Card] = Map(
     // ------------------------------------------------------------------------
@@ -670,12 +677,10 @@ object AwakeningCards extends CardDeck {
       (role : Role) => game hasMuslim (m => m.inRegimeChange || m.civilWar)
       ,
       (role : Role) => {
-        // TODO: Not sure if we should allow the WoI if the country is an Adversary (shifting to neutal)
-        //       or regime change with not enough troops ????
         val candidates = countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
         val (target, die) = if (role == game.humanRole) {
           val t = askCountry("Select country: ", candidates)
-          val d = if (game.getMuslim(t).warOfIdeasOK(3)) 
+          val d = if (game.getMuslim(t).warOfIdeasOK(3, ignoreRegimeChange = true)) 
             humanDieRoll("Enter War of Ideas die roll: ", allowAbort = true)
           else
             0
@@ -687,7 +692,7 @@ object AwakeningCards extends CardDeck {
         }
         
         addAidMarker(target)
-        if (game.getMuslim(target).warOfIdeasOK(3))
+        if (game.getMuslim(target).warOfIdeasOK(3, ignoreRegimeChange = true))
           performWarOfIdeas(target, die, ignoreGwotPenalty = true)
         else
           log(s"$target does not meet the requirements for War of Ideas")
@@ -748,7 +753,7 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(152, "Congress Acts", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
-      (role : Role) => (game markerInPlay "Sequestration") || (
+      (role : Role) => globalEventInPlay("Sequestration") || (
         game.troopsAvailable >= 6 && (game hasMuslim (m => m.civilWar && !m.inRegimeChange))
       )
       ,
@@ -773,10 +778,28 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(153, "Facebook", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
-      (role : Role) => globalEventInPlay("Smartphones")
+      (role : Role) => globalEventInPlay("Smartphones") && faceBookCandidates.nonEmpty
       ,
       (role : Role) => {
-        
+        val candidates = faceBookCandidates
+        val targets = if (candidates.size < 4)
+          candidates
+        else if (role == game.humanRole) {
+          // Choose three targets
+          def nextTarget(num: Int, possibles: List[String]): List[String] = {
+            if (num > 3) Nil
+            else {
+              val target = askCountry(s"${ordinal(num)} country: ", possibles)
+              target :: nextTarget(num + 1, possibles filterNot(_ == target))
+            }
+          }
+          nextTarget(1, candidates)
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates take 3
+        }
+        targets foreach (target => addAwakeningMarker(target))
       }
     )),
     // ------------------------------------------------------------------------

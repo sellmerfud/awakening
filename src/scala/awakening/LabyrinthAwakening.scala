@@ -428,7 +428,7 @@ object LabyrinthAwakening {
     def hasMarker(name: String) = markers contains name
     
     def hasPlots = plots.nonEmpty
-    def warOfIdeasOK(ops: Int): Boolean
+    def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
     def recruitOK: Boolean = hasCadre || totalCells > 0
     def autoRecruit: Boolean
     def recruitSucceeds(die: Int): Boolean
@@ -451,7 +451,7 @@ object LabyrinthAwakening {
     def isSchengen = Schengen contains name
     def isHard = posture == Hard
     def isSoft = posture == Soft
-    override def warOfIdeasOK(ops: Int) = 
+    override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) = 
       ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
       
     def autoRecruit = false
@@ -509,10 +509,11 @@ object LabyrinthAwakening {
     )
     
     // If a muslim country is untest, then it is valid a WoI target.
-    override def warOfIdeasOK(ops: Int) = 
-      (isUntested || ops >= governance) &&
-      !(isAdversary || isGood || (inRegimeChange && (troops + militia - totalCells) < 5))
-          
+    override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) =
+      (isUntested      || ops >= governance)  &&
+      !(isAdversary    || (isGood && isAlly)) &&
+      (!inRegimeChange || ignoreRegimeChange || (totalTroopsAndMilitia - totalCells) < 5)
+    
     def autoRecruit = isIslamistRule || civilWar || inRegimeChange || hasMarker("Training Camps")
     def recruitSucceeds(die: Int) = autoRecruit || die <= governance
     
@@ -1255,7 +1256,7 @@ object LabyrinthAwakening {
                allowNone: Boolean = false, allowAbort: Boolean = false, 
                abbr: Map[String, String] = Map.empty): Option[String] = {
     val choices = if (allowAbort) options ++ List(AbortCard) else options
-    @tailrec def testResponse(response: Option[String]): Option[String] = {
+    def testResponse(response: Option[String]): Option[String] = {
       response flatMap (s => matchOne(s.trim, choices map (_.toString), abbr)) match {
         case None =>
           readLine(prompt) match {
@@ -1271,7 +1272,7 @@ object LabyrinthAwakening {
     testResponse(initial)
   }
   
-  @tailrec def askYorN(prompt: String): Boolean = {
+  def askYorN(prompt: String): Boolean = {
     def testResponse(r: String): Option[Boolean] = {
       if (r == null)
         None
@@ -1373,7 +1374,7 @@ object LabyrinthAwakening {
         println(s"'$input' is not a valid card number")
         false
     }
-    @tailrec def testResponse(response: Option[String]): Option[Int] = {
+    def testResponse(response: Option[String]): Option[Int] = {
       def outOfPlay(x: String): Boolean = {
         val num  = x.trim.toInt
         val name = cardNumAndName(num)
@@ -4310,7 +4311,7 @@ object LabyrinthAwakening {
   
     
   def adjustMarkers(): Unit = {
-    val globalMarkers = (deck.cards filter (_.marker == GlobalMarker) map (_.name)).sorted
+    val globalMarkers = (deck.cards filter (_.marker == GlobalMarker) map (_.name)).sorted.distinct
     var inPlay = game.markers
     def available = globalMarkers filterNot inPlay.contains
     def showColums(xs: List[String]): Unit = {
@@ -4319,6 +4320,7 @@ object LabyrinthAwakening {
     }
     @tailrec def getNextResponse(): Unit = {
       println()
+      println(separator())
       println("Global markers that are currently in play:")
       showColums(inPlay)
       println()
@@ -4967,7 +4969,7 @@ object LabyrinthAwakening {
   }
   
   def adjustCountryMarkers(name: String): Unit = {
-    val countryMarkers = (deck.cards filter (_.marker == CountryMarker) map (_.name)).sorted
+    val countryMarkers = (deck.cards filter (_.marker == CountryMarker) map (_.name)).sorted.distinct
     val country = game.getCountry(name)
     val priorCampCapacity = game.trainingCampCapacity
     var inPlay = country.markers
