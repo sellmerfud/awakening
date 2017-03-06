@@ -632,7 +632,7 @@ object AwakeningCards extends CardDeck {
           candidates.head
         }
         println()
-        removeCachedWMD(target)
+        removeCachedWMD(target, 1)
         if (game.cellsAvailable(ignoreFunding = true) > 0)
           addSleeperCellsToCountry(Israel, 1, ignoreFunding = true)
         increaseFunding(1)
@@ -670,6 +670,8 @@ object AwakeningCards extends CardDeck {
       (role : Role) => game hasMuslim (m => m.inRegimeChange || m.civilWar)
       ,
       (role : Role) => {
+        // TODO: Not sure if we should allow the WoI if the country is an Adversary (shifting to neutal)
+        //       or regime change with not enough troops ????
         val candidates = countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
         val (target, die) = if (role == game.humanRole) {
           val t = askCountry("Select country: ", candidates)
@@ -732,8 +734,16 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(151, "UNSCR 2118", US, 2,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      Remove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => {
+        val syria = game.getMuslim(Syria)
+        !syria.isUntested && syria.wmdCache > 0
+      }
+      ,
+      (role : Role) => {
+        val syria = game.getMuslim(Syria)
+        removeCachedWMD(Syria, if (syria.isAlly) syria.wmdCache else 1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(152, "Congress Acts", US, 3,

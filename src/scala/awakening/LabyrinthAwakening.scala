@@ -2962,17 +2962,17 @@ object LabyrinthAwakening {
   }
 
   
-  def removeCachedWMD(name: String, bumpPrestige: Boolean = true): Unit = {
+  def removeCachedWMD(name: String, num: Int, bumpPrestige: Boolean = true): Unit = {
     val c = game.getCountry(name)
-    assert(c.wmdCache > 0, s"removeCachedWMD(): no WMD in $name")
+    assert(c.wmdCache >= num, s"removeCachedWMD(): not enough WMD in $name")
     c match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = m.wmdCache - 1))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = n.wmdCache - 1))
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = m.wmdCache - num))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = n.wmdCache - num))
     }
-    log(s"Remove 1 unavailable WMD plot from $name")
+    log(s"Remove ${amountOf(num, "unavailable WMD plot")} from $name")
     if (bumpPrestige) {
-      game = game.adjustPrestige(1)
-      log(s"Increase prestige by +1 to ${game.prestige} for removing a WMD plot")
+      game = game.adjustPrestige(num)
+      log(s"Increase prestige by +$num to ${game.prestige} for removing a WMD plots")
     }
   }
   
