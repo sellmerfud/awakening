@@ -36,7 +36,7 @@ import LabyrinthAwakening._
 
 object AwakeningCards extends CardDeck {
   // Various tests used by the card events
-  val advisorsCandidate = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.troops == 0 && !m.hasMarker("Advisors")
+  val advisorsCandidate = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.totalTroops == 0 && !m.hasMarker("Advisors")
   val humanitarianAidCandidate = (m: MuslimCountry) => m.canTakeAidMarker && m.totalCells > 0
   val peshmergaCandidate = (m: MuslimCountry) => (m.name == Iraq || m.name == Syria) && m.totalCells > 0
   val arabSpringFalloutCandidate = (m: MuslimCountry) => {
@@ -47,12 +47,17 @@ object AwakeningCards extends CardDeck {
   val strikeEagleCandidate = (m: MuslimCountry) => m.name != Pakistan && m.isPoor && !m.isAlly && m.wmdCache > 0
   val tahrirCandidate = (m: MuslimCountry) => m.name != Egypt && m.canTakeAwakeningOrReactionMarker && m.awakening == 0
   
+  val unscr1973Candidate = (m: MuslimCountry) => {
+    // Can play in country that already has the marker if it also contains at least one cell.
+    // Or in any other civil war country that does not have the maker.
+    (m.hasMarker("UNSCR 1973") && m.totalCells > 0) || (m.civilWar && !m.hasMarker("UNSCR 1973"))
+  }
   
-  def specialForcesTargets: List[String] = {
+  def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
-    val withForces = (game.muslims filter (m => m.troops > 0 || m.hasMarker("Advisors"))) map (_.name)
+    val withForces = (game.muslims filter (m => m.totalTroops > 0 || m.hasMarker("Advisors"))) map (_.name)
     // Next get all countries that contain any cells and filter out the ones are are not 
-    // within to of a country with forces.
+    // within two of a country with forces.
     countryNames(game.countries filter { country =>
       country.totalCells > 0 && (withForces exists (forces => distance(forces, country.name) <= 2))
     })
@@ -188,11 +193,11 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(129, "Special Forces", US, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
-      (_ : Role) => specialForcesTargets.nonEmpty
+      (_ : Role) => specialForcesCandidates.nonEmpty
       ,
       (role : Role) => {
         if (role == game.humanRole) {
-          val target = askCountry("Remove cell in which country: ", specialForcesTargets)
+          val target = askCountry("Remove cell in which country: ", specialForcesCandidates)
           val (actives, sleepers) = askCells(target, 1)
           println()
           removeCellsFromCountry(target, actives, sleepers, addCadre = true)
@@ -553,7 +558,7 @@ object AwakeningCards extends CardDeck {
       (role : Role) => {
         val candidates = countryNames(game.muslims filter (_.troops > 0))
         val target = if (role == game.humanRole)
-          askCountry("Replace trroops in which country: ", candidates)
+          askCountry("Replace troops in which country: ", candidates)
         else {
           log("!!! Bot event not yet implemented !!!")
           candidates.head
@@ -688,8 +693,42 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(150, "UNSCR 1973", US, 2,
-      NoRemove, CountryMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, CountryMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => game hasMuslim unscr1973Candidate
+      ,
+      (role : Role) => {
+        val candidates = countryNames(game.muslims filter unscr1973Candidate)
+        val target = if (role == game.humanRole)
+          askCountry("Place UNSCR 1973 in which country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        val m = game.getMuslim(target)
+        // If the target already contains the marker, then
+        // we only remove a cell.
+        val sameCountry = m.hasMarker("UNSCR 1973")
+
+        if (!sameCountry) {
+          // If marker is already on the map, remove it first.
+          game.muslims find (_.hasMarker("UNSCR 1973")) foreach { c =>
+            removeEventMarkersFromCountry(c.name, "UNSCR 1973")
+          }
+        }
+
+        if (m.totalCells > 0) {
+          val (actives, sleepers) = if (role == game.humanRole)
+            askCells(target, 1, sleeperFocus = true)
+          else {
+            log("!!! Bot event not yet implemented !!!")
+            if (m.sleeperCells > 0) (0, 1) else (1, 0)
+          }
+          removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+        }
+
+        if (!sameCountry)
+          addEventMarkersToCountry(target, "UNSCR 1973")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(151, "UNSCR 2118", US, 2,

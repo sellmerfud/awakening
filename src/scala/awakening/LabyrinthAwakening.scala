@@ -524,8 +524,12 @@ object LabyrinthAwakening {
     }
     
     def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
+    def markerTroopsThatAffectPrestige: Int =
+      troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
     def totalTroops = troops + markerTroops
+    def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
     def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
+    def disruptAffectsPrestige = totalTroopsAndMilitia > 1 && totalTroopsThatAffectPrestige > 0
     
     def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar)
     def canTakeAidMarker = !(isGood || isIslamistRule)
@@ -897,7 +901,7 @@ object LabyrinthAwakening {
         ops == 3 && usPosture == Soft && withdrawFromTargets.nonEmpty
 
     def disruptAffectsPrestige(name: String): Boolean = getCountry(name) match {
-      case m: MuslimCountry    => (m.troops + m.militia) > 1 && m.troops > 0
+      case m: MuslimCountry    => m.disruptAffectsPrestige
       case _: NonMuslimCountry => false
     }
     
@@ -908,7 +912,7 @@ object LabyrinthAwakening {
       val c = getCountry(name) 
       val maxLosses = c match {
         case m: MuslimCountry =>
-          if ((m.troops + m.militia) > 1 && (m.troops > 0 || m.hasMarker("Advisors"))) 2 else 1
+          if ((m.totalTroopsAndMilitia) > 1 && (m.totalTroops > 0 || m.hasMarker("Advisors"))) 2 else 1
         case n: NonMuslimCountry => if (n.isHard) 2 else 1
       }
       if (c.totalCells > 0) {
@@ -926,7 +930,7 @@ object LabyrinthAwakening {
       val muslimTargets = muslims.filter { m =>
         ops >= m.governance &&
         (m.hasCadre || m.totalCells > 0) && 
-        (m.isAlly || (m.troops + m.militia) > 1)
+        (m.isAlly || (m.totalTroopsAndMilitia) > 1)
       }
       val nonMuslimTargets = nonMuslims.filter { n =>
         !n.iranSpecialCase &&
@@ -1994,6 +1998,7 @@ object LabyrinthAwakening {
       // If this removes all troops, troopMarkers, and militia from the country
       // and the US is human, then we can skip prompting for losses.
       // [Rule 13.3.7] The bot removes troops cubes first.
+      // TODO: Allow human player to select losses if there are any troops markers present.
       var hitsRemaining = hits
       var troopsLost = if (m.troops >= hitsRemaining) hitsRemaining else m.troops
       hitsRemaining -= troopsLost
@@ -2144,7 +2149,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry =>
         assert(!m.isAdversary, "Cannot do War of Ideas in Adversary country")
         assert(!m.isGood, "Cannot do War of Ideas in muslim country with Good governance")
-        assert(!(m.inRegimeChange && (m.troops + m.militia - m.totalCells) < 5),
+        assert(!(m.inRegimeChange && (m.totalTroopsAndMilitia - m.totalCells) < 5),
                  "Cannot do War of Ideas in regime change country, not enought troops + militia")
         game = game.addOpsTarget(name)
         log()
@@ -2438,9 +2443,8 @@ object LabyrinthAwakening {
       assert(!m.isGood, s"improveGovernance() called on Good country - $name")
       val newGov = (m.governance - levels) max Good
       val delta  = m.governance - newGov
-      val improved = if (newGov == Good) {
+      if (newGov == Good) {
         // Note: "Training Camps" marker is handle specially.
-        val markersToRemove = "Advisors"::Nil
         log(s"Improve governance of $name to ${govToString(newGov)}")
         if (m.inRegimeChange  ) log(s"Remove regime change marker from $name")
         if (m.besiegedRegime  ) log(s"Remove besieged regime marker from $name")
@@ -2451,22 +2455,22 @@ object LabyrinthAwakening {
         if (m.reaction > 0    ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0     ) log(s"Remove ${m.militia} miltia from $name")
         if (m.caliphateCapital) log(s"Remove Caliphate Capital maker from $name")
-        for (marker <- markersToRemove)
-          if (m.hasMarker(marker)) log(s"Remove $marker marker from $name")
 
-        m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
+        val improved = m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
                militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false,
-               caliphateCapital = false, civilWar = false).removeMarkers(markersToRemove:_*)
+               caliphateCapital = false)
+        game = game.updateCountry(improved)
+        removeTrainingCamp_?(name)
+        endCivilWar(name)
       }
       else {
         log(s"Improve the governance of $name to ${govToString(newGov)}")
         if (m.awakening > 0)
           log(s"Remove ${amountOf(delta min m.awakening, "awakening marker")} from $name")
-        m.copy(governance = newGov, 
+        val improved = m.copy(governance = newGov, 
                awakening  = (m.awakening - delta) max 0) // One awakening for each level actually improved
+        game = game.updateCountry(improved)
       }
-      game = game.updateCountry(improved)
-      removeTrainingCamp_?(name)
     }
   }
 
@@ -2482,7 +2486,7 @@ object LabyrinthAwakening {
       val maxGov = if (canShiftToIR) IslamistRule else Poor
       val newGov = (m.governance + levels) min maxGov
       val delta  = newGov - m.governance
-      val (degraded, wmds) = if (newGov == IslamistRule) {
+      if (newGov == IslamistRule) {
         log(s"Set governance of $name to ${govToString(newGov)}")
         // Always remove aid when degraded to IR
         if (m.inRegimeChange) log(s"Remove regime change marker from $name")
@@ -2493,13 +2497,14 @@ object LabyrinthAwakening {
         if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0   ) log(s"Remove ${m.militia} miltia from $name")
         if (m.wmdCache > 0  ) log(s"Move ${amountOf(m.wmdCache, "WMD Plot")} from the $name cache to available plots")
-        if (m.hasMarker("Advisors")) log(s"Remove Advisors marker from $name")
-        val mm = m.copy(
+        val degraded = m.copy(
           governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
           aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
-          civilWar = false, wmdCache = 0
-        ).removeMarkers("Advisors")
-        (mm, m.wmdCache)
+          wmdCache = 0
+        )
+        game = game.updateCountry(degraded).copy(
+          availablePlots = List.fill(m.wmdCache)(PlotWMD) ::: game.availablePlots)
+        endCivilWar(name)
       }
       else if (delta == 0) {
         // There was no change in governance.  ie: Poor and canShiftToIR == false 
@@ -2507,7 +2512,8 @@ object LabyrinthAwakening {
         log(s"The governance of $name remains ${govToString(m.governance)}")
         if (removeAid && m.aidMarkers > 0)
           log(s"Remove ${amountOf(levels min m.aidMarkers, "aid marker")} from $name")
-        (m.copy(aidMarkers = (m.aidMarkers - levels) max 0), 0)
+        game = game.updateCountry(m.copy(aidMarkers = (m.aidMarkers - levels) max 0))
+        
       }
       else {
         log(s"Degrade the governance of $name to ${govToString(newGov)}")
@@ -2515,12 +2521,11 @@ object LabyrinthAwakening {
           log(s"Remove ${amountOf(levels min m.aidMarkers, "aid marker")} from $name")
         if (m.reaction > 0)
           log(s"Remove ${amountOf(delta min m.reaction, "reaction marker")} from $name")
-        (m.copy(governance = newGov, 
-               aidMarkers = (m.aidMarkers - levels) max 0,     // One aid for each level (ie success die)
-               reaction   = (m.reaction   - delta)  max 0), 0) // One reaction for each level actually degraded
+        val degraded = m.copy(governance = newGov, 
+               aidMarkers = (m.aidMarkers - levels) max 0, // One aid for each level (ie success die)
+               reaction   = (m.reaction   - delta)  max 0) // One reaction for each level actually degraded
+        game = game.updateCountry(degraded)
       }
-      game = game.updateCountry(degraded).
-                  copy(availablePlots = List.fill(wmds)(PlotWMD) ::: game.availablePlots)
     }
   }
 
@@ -2651,20 +2656,20 @@ object LabyrinthAwakening {
       addSleeperCellsToCountry(name, newSleepers, ignoreFunding = true)
     }
   }
-  
+    
   def endCivilWar(name: String): Unit = {
+    val markersRemovedWhenCivilWarEnds = List("Advisors", "UNSCR 1973")
     val m = game.getMuslim(name)
     val priorCampCapacity = game.trainingCampCapacity
     if (m.civilWar) {
       game = game.updateCountry(m.copy(civilWar = false, caliphateCapital = false))
       log(s"Remove civil war marker from $name")
       removeMilitiaFromCountry(name, m.militia)
-      removeEventMarkersFromCountry(name, "Advisors")
+      removeEventMarkersFromCountry(name, markersRemovedWhenCivilWarEnds:_*)
       if (m.caliphateCapital) {
         log(s"Remove the Caliphate Capital marker from $name")
         displaceCaliphateCapital(m.name)
         updateTrainingCampCapacity(priorCampCapacity)
-        
       }
     }
   }
@@ -3041,11 +3046,11 @@ object LabyrinthAwakening {
               log(f"${chng(delta)} funding by $delta%+d to ${game.funding} (Muslim country at worse than Good governance)")
             }
             // Prestige
-            if (m.troops > 0 && mapPlot.plot == PlotWMD) {
+            if (m.totalTroopsThatAffectPrestige > 0 && mapPlot.plot == PlotWMD) {
               game = game.copy(prestige = 1)
               log(s"Set prestige to 1 (Troops present with WMD)")
             }
-            else if (m.troops > 0) {
+            else if (m.totalTroopsThatAffectPrestige > 0) {
               game = game.adjustPrestige(-1)
               log(s"Decrease prestige by -1 to ${game.prestige} (Troops present)")
             }
@@ -3655,7 +3660,9 @@ object LabyrinthAwakening {
       performWarOfIdeas(target, humanDieRoll(allowAbort = true))
   }
   
-  // Trops can alwasy deploy to the track.
+  // Troops can alwasy deploy to the track.
+  // TODO: Troops markers can deploy out of countries and are take out of play.
+  //       We should prompt the user if any troops makers are present...
   def humanDeploy(ops: Int): Unit = {
     log()
     log(s"$US performs Deploy operation with ${opsString(ops)}")
@@ -4577,9 +4584,7 @@ object LabyrinthAwakening {
             }
             if (nixCivilWar) {
               logAdjustment(name, "Civil War", updated.civilWar, false)
-              if (updated.markers contains "Advisors")
-                logAdjustment(name, "Markers", updated.markers, updated.markers filterNot(_ == "Advisors"))
-              updated = updated.copy(civilWar = false).removeMarkers("Advisors")
+              endCivilWar(name)
             }
             if (nixRegimeChange) {
               logAdjustment(name, "Regime change", updated.regimeChange, NoRegimeChange)
@@ -4796,47 +4801,11 @@ object LabyrinthAwakening {
         pause()
       case m: MuslimCountry =>
         val newValue = !m.civilWar
-        val nixCapital       = !newValue && m.caliphateCapital
-        val nixRegimeChange  = newValue && m.inRegimeChange
-        val nixAdvisors      = !newValue && m.hasMarker("Advisors")
-        val convertAwakening = newValue && m.awakening != 0
-        val convertReaction  = newValue && m.reaction != 0
-        val anyWarnings      = nixCapital || nixRegimeChange || convertAwakening || convertReaction
-        def warn(condition: Boolean, message: String): Unit = if (condition) println(message)
-        warn(nixCapital, s"$name will no longer be the Caliphate Capital.\n" +
-                         "The Caliphate will be removed completely.")
-        warn(nixRegimeChange, "The regime change marker will be removed.")
-        warn(convertAwakening, "The awakening markers will be replaced with militia.")
-        warn(convertReaction, "The reaction markers will be replaced with sleeper cells.")
-        if (!anyWarnings || askYorN(s"Do you wish continue (y/n)? ")) {
-          logAdjustment(name, "Civil War", m.civilWar, newValue)
-          var updated = m.copy(civilWar = newValue)
-          if (nixCapital) {
-            log(s"$name lost Caliphate Capital status.  Caliphate no longer delcared.")
-            updated = updated.copy(caliphateCapital = false)
-          }
-          if (nixRegimeChange) {
-            logAdjustment(name, "Regime change", updated.regimeChange, NoRegimeChange)
-            updated = updated.copy(regimeChange = NoRegimeChange)
-          }
-          if (nixAdvisors) {            
-            val orig = updated.markers
-            updated = updated.removeMarkers("Advisors")
-            logAdjustment(name, "Markers", orig, updated.markers)
-          }
-          if (convertAwakening) {
-            val numMilitia = updated.militia + (updated.awakening min game.militiaAvailable)
-            logAdjustment(name, "Awakening markers", updated.awakening, 0)
-            logAdjustment(name, "Militia", updated.militia, numMilitia)
-            updated = updated.copy(awakening = 0, militia = numMilitia)
-          }
-          if (convertReaction) {
-            val addedSleepers = (updated.reaction min game.cellsAvailable(ignoreFunding = true))
-            if (addedSleepers > 0)
-              addSleeperCellsToCountry(name, addedSleepers, ignoreFunding = true)
-          }
-          game = game.updateCountry(updated)
-        }        
+        logAdjustment(name, "Civil War", m.civilWar, newValue)
+        if (newValue)
+          startCivilWar(name)
+        else
+          endCivilWar(name)
     }
   }
   
