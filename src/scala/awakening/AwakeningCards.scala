@@ -67,7 +67,7 @@ object AwakeningCards extends CardDeck {
     
   val islamicMaghrebCountry = Set(AlgeriaTunisia, Libya, Mali, Morocco, Nigeria)
   val islamicMaghrebCandidate = (m: MuslimCountry) => islamicMaghrebCountry(m.name) && m.isPoor
-  
+  val theftOfStateCandidate = (m: MuslimCountry) => m.isPoor && m.awakening > 0
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -1196,18 +1196,91 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(170, "Theft of State", Jihadist, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game hasMuslim theftOfStateCandidate
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter theftOfStateCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        removeAwakeningMarker(target)
+        addReactionMarker(target)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(171, "Abu Ghraib Jail Break", Jihadist, 2,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        testCountry(Iraq)
+        addActiveCellsToCountry(Iraq, 1 min game.cellsAvailable)
+        addReactionMarker(Iraq)
+        decreasePrestige(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(172, "Al-Shabaab", Jihadist, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        if (role == game.humanRole) {
+          val candidates = Somalia :: getAdjacent(Somalia).sorted
+          val reactionCandidates = candidates filter game.isMuslim filter { name =>
+            game.getMuslim(name).canTakeAwakeningOrReactionMarker
+          }
+          val besiegeCandidates = candidates filter game.isMuslim filter { name =>
+            !(game.getMuslim(name).canTakeAwakeningOrReactionMarker ||
+              game.getMuslim(name).besiegedRegime)
+          }
+          val canReaction = reactionCandidates.nonEmpty
+          val canCell     = game.cellsAvailable > 0
+          val canPlot1    = game.availablePlots exists (_ == Plot1)
+          val canPlot2    = game.availablePlots exists (_ == Plot2)
+          val canBesiege  = besiegeCandidates.nonEmpty
+          def item(test: Boolean, x: (String, String)) = if (test) Some(x) else None
+          val items = List(
+            item(canReaction,"reaction" -> "Place 1 Reaction marker"),
+            item(canCell,    "cell"     -> "Place 1 cell"),
+            item(canPlot1,   "plot1"    -> "Place a level 1 plot"),
+            item(canPlot2,   "plot2"    -> "Place a level 2 plot"),
+            item(canBesiege, "besiege"  -> "Place a besieged regime marker"),
+            item(true,       "draw"     -> "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
+          ).flatten 
+          println("Do any 2 of the following:")
+          askMenu(ListMap(items:_*), 2, repeatsOK = false) foreach { action =>
+            println()
+            action match {
+              case "reaction" =>
+                val target = askCountry("Place reaction marker in which country: ", reactionCandidates)
+                testCountry(target)
+                addReactionMarker(target)
+              case "cell" =>
+                val target = askCountry("Place a cell in which country: ", candidates)
+                testCountry(target)
+                addSleeperCellsToCountry(target, 1)
+              case "plot1" =>
+                val target = askCountry("Place a level 1 plot in which country: ", candidates)
+                testCountry(target)
+                addAvailablePlotToCountry(target, Plot1)
+              case "plot2" =>
+                val target = askCountry("Place a level 2 plot in which country: ", candidates)
+                testCountry(target)
+                addAvailablePlotToCountry(target, Plot2)
+              case "besiege"  =>
+              val target = askCountry("Place besieged regime marker in which country: ", besiegeCandidates)
+              testCountry(target)
+              addBesiegedRegimeMarker(target)
+              case _ =>
+                log("Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
+            }
+          }
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(173, "Arab Winter", Jihadist, 2,

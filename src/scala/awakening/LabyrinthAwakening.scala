@@ -2812,7 +2812,7 @@ object LabyrinthAwakening {
     }
   }
   
-  def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean, logPrefix: String = "") =
+  def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean = false, logPrefix: String = "") =
     addCellsToCountry(name, true, num, ignoreFunding, logPrefix)
   
   def addSleeperCellsToCountry(name: String, num: Int, ignoreFunding: Boolean = false, logPrefix: String = "") =
@@ -2821,7 +2821,7 @@ object LabyrinthAwakening {
   // Move cells from the track (or training camp) to a country on the map.
   // Caller should ensure there are enough available cells to satisfy the move.
   // otherwise the function will throw an exception!
-  def addCellsToCountry(name: String, active: Boolean, num: Int, ignoreFunding: Boolean, logPrefix: String = ""): Unit = {
+  def addCellsToCountry(name: String, active: Boolean, num: Int, ignoreFunding: Boolean = false, logPrefix: String = ""): Unit = {
     if (num > 0) {
       val cellType = if (active) "active cell" else "sleeper cell"
       val available = game.cellsAvailable(ignoreFunding)
@@ -4229,18 +4229,26 @@ object LabyrinthAwakening {
           showPlots(available)
           askInt(s"Select plot to place in $name: ", 1, available.size) - 1
         }
-        val plot = available(plotIndex)
-        log(s"Place $plot in $name")
+        addAvailablePlotToCountry(name, available(plotIndex))
         available = available.patch(plotIndex, Vector.empty, 1)
-        c match {
-          case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(plot) :: m.plots))
-          case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = PlotOnMap(plot) :: n.plots))
-        }
       }
     }
-    game = game.copy(availablePlots = available.toList.sorted)
   }
-  
+
+  def addAvailablePlotToCountry(name: String, plot: Plot): Unit = {
+    val index = game.availablePlots.indexOf(plot)
+    assert(index >= 0, s"addAvailablePlotToCountry(): $plot is not available")
+    val newAvail = game.availablePlots.take(index) ::: game.availablePlots.drop(index + 1)
+    game = game.copy(availablePlots = newAvail)
+    game.getCountry(name) match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(plot) :: m.plots))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = PlotOnMap(plot) :: n.plots))
+    }
+    if (game.humanRole == Jihadist)
+      log(s"Add $plot to $name")
+    else
+      log(s"Add a hidden plot to $name")
+  }
 
   
   def adjustSettings(param: Option[String]): Unit = {
