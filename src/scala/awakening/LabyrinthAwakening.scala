@@ -2534,6 +2534,11 @@ object LabyrinthAwakening {
       val delta  = newGov - m.governance
       if (newGov == IslamistRule) {
         log(s"Set governance of $name to ${govToString(newGov)}")
+        increaseFunding(m.resources)
+        if (m.totalTroopsThatAffectPrestige > 0) {
+          log(s"Set US prestige to 1  (troops present)")
+          game = game.copy(prestige = 1)
+        }
         // Always remove aid when degraded to IR
         if (m.inRegimeChange) log(s"Remove regime change marker from $name")
         if (m.besiegedRegime) log(s"Remove besieged regime marker from $name")
@@ -3057,6 +3062,7 @@ object LabyrinthAwakening {
     def chng(amt: Int) = if (amt > 0) "Increase" else "Decrease"
     val unblocked = for (c <- game.countries filter (_.hasPlots); p <- c.plots)
       yield Unblocked(c, p)
+    var wmdsInCivilWars = Set.empty[String]
     log()
     log("Reslove plots")
     if (unblocked.isEmpty) {
@@ -3083,7 +3089,7 @@ object LabyrinthAwakening {
               game = game.copy(funding = 1)
               log(s"Set funding to 1.  (WMD Plot that was backlashed)")
             }
-            if (m.isGood) {
+            else if (m.isGood) {
               val delta = if (mapPlot.backlashed) -2 else 2
               game = game.adjustFunding(delta)
               log(f"${chng(delta)} funding by $delta%+d to ${game.funding} (Muslim country at Good governance)")
@@ -3102,11 +3108,27 @@ object LabyrinthAwakening {
               game = game.adjustPrestige(-1)
               log(s"Decrease prestige by -1 to ${game.prestige} (Troops present)")
             }
-            val dice = List.fill(mapPlot.plot.number)(dieRoll)
-            val successes = dice count (_ <= m.governance)
-            val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
-            log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
-            degradeGovernance(name, successes, removeAid = true)
+            // rule 11.2.6
+            // If second WMD in the same civil war.  Shift immediately to Islamist Rule.
+            if (mapPlot == PlotWMD && m.civilWar && (wmdsInCivilWars contains m.name))
+              degradeGovernance(m.name, 3, canShiftToIR = true) // 3 levels guarantees shift to IR
+            else {
+              if (mapPlot == PlotWMD && m.civilWar) {
+                // First WMD in civil war, remove a militia.
+                wmdsInCivilWars += m.name
+                if (m.militia > 0) {
+                  log("A WMD plot in a civil war country removes a militia")
+                  removeMilitiaFromCountry(m.name, 1)
+                }
+              }
+              
+              // roll plot dice
+              val dice = List.fill(mapPlot.plot.number)(dieRoll)
+              val successes = dice count (_ <= m.governance)
+              val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
+              log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
+              degradeGovernance(name, successes, removeAid = true)
+            }
             
           //------------------------------------------------------------------
           case n: NonMuslimCountry =>
@@ -3196,7 +3218,10 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry => 
           game = game.updateCountry(n.copy(plots = Nil)).copy(resolvedPlots = (n.plots map (_.plot)) ::: game.resolvedPlots)
       }
-    } // else ...
+    }
+    // Rule 11.2.6
+    // Two or more WMD plots were resolved in the same muslim country,
+    // then it is set to Islamist Rule 
   }
   
   def endTurn(): Unit = {
