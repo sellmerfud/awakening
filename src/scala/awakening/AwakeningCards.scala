@@ -982,7 +982,78 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(161, "PRISM", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      (role : Role) => {
+        val actions = List(
+          if (game.sleeperCellsOnMap > 0) Some("activate") else None,
+          if (game.alertTargets.nonEmpty) Some("alert") else None
+        ).flatten
+        val choices = ListMap(
+          "activate" -> "Activate half (rounded up) of all sleeper cells on the map",
+          "alert"    -> "Alert all plots on the map"
+        )
+          
+        if (role == game.humanRole) {
+          if (actions.nonEmpty) {
+            val action = if (actions.size == 1)
+              actions.head
+            else 
+              askMenu(choices).head
+
+            if (action == "activate") {
+              val numToFlip = (game.sleeperCellsOnMap + 1) / 2  // half rounded up
+              // Ask which cells to activate
+              // If all sleepers on the map are in a single country then, don't bother.
+              case class WithSleepers(name: String, num: Int)
+              val withSleepers = for (c <- game.countries; if c.sleeperCells > 0)
+                yield WithSleepers(c.name, c.sleeperCells)
+              
+              def nextFlip(targets: List[WithSleepers], mustFlip: Int): List[WithSleepers] = {
+                targets match {
+                  case _  if mustFlip == 0 => Nil  // The required number have been flipped
+                  case t::Nil              => WithSleepers(t.name, mustFlip) :: Nil // Last country remaining
+                  case _ =>
+                    val maxName = (targets map (_.name.length)).max
+                    val fmt = "%%-%ds  (%%s)".format(maxName)
+                    def disp(t: WithSleepers) = fmt.format(t.name, amountOf(t.num, "sleeper cell"))
+                    val opts = targets map (t => t.name -> disp(t))
+                    val choices = ListMap(opts:_*)
+                    println()
+                    println(s"${amountOf(mustFlip, "activation")} remaining, choose country")
+                    // println("Choose next country to activate sleeper cells")
+                    val name  = askMenu(choices).head
+                    val limit = (targets find (_.name == name)).get.num min mustFlip
+                    val num   = askInt("Activate how many", 1, limit)
+                    val newTargets = targets map { t => if (t.name == name) t.copy(num = t.num - num) else t }
+                    WithSleepers(name, num) :: nextFlip(newTargets filterNot (_.num == 0), mustFlip - num)
+                }
+              }
+              
+              println(s"Activate a total of ${amountOf(numToFlip, "sleeper cell")}")
+              val toFlip = nextFlip(withSleepers.sortBy(_.name), numToFlip)
+                // It is possible that the same country was chosen multiple times
+                // Consolidate them so we do 1 flip per country.
+              def flipNextBatch(remaining: List[WithSleepers]): Unit = {
+                if (remaining.nonEmpty) {
+                  val name = remaining.head.name
+                  val (batch, next) = remaining.partition(_.name == name)
+                  val total = batch.foldLeft(0) { (sum, x) => sum + x.num }
+                  flipSleeperCells(name, total)
+                  flipNextBatch(next)
+                }
+              }
+              flipNextBatch(toFlip.sortBy(_.name))
+            }
+            else
+              for (c <- game.countries; p <- c.plots) // Alert all plots on the map
+                performAlert(c.name)
+          }
+          // Even of neither action above was possible.
+          decreasePrestige(1)
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(162, "SCAF", US, 3,
