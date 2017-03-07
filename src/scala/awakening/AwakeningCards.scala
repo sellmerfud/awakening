@@ -64,6 +64,10 @@ object AwakeningCards extends CardDeck {
   val coupCandidate = (m: MuslimCountry) => 
     m.resources == 1 && (m.isPoor || m.isGood) && 
     m.totalCells >= 2 && !(m.civilWar && m.besiegedRegime)
+    
+  val islamicMaghrebCountry = Set(AlgeriaTunisia, Libya, Mali, Morocco, Nigeria)
+  val islamicMaghrebCandidate = (m: MuslimCountry) => islamicMaghrebCountry(m.name) && m.isPoor
+  
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -1159,13 +1163,36 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(168, "IEDs", Jihadist, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game hasMuslim (m =>
+        (m.inRegimeChange || m.civilWar) && m.totalCells > 0 && m.totalTroops > 0
+      )
+      ,  
+      (role: Role) => {
+        log("US player randomly discards one card")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(169, "Islamic Maghreb", Jihadist, 1,
-      NoRemove, NoMarker, Lapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, Lapsing, NoAutoTrigger,
+      (role: Role) => (game hasMuslim islamicMaghrebCandidate) &&
+                      (game.funding < 9 || game.cellsAvailable > 0)
+      ,  
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter islamicMaghrebCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        
+        val num = if (game.getMuslim(target).civilWar || game.isCaliphateMember(target)) 2 else 1
+        addSleeperCellsToCountry(target, num min game.cellsAvailable)
+        increaseFunding(num)
+        rollCountryPosture(Serbia)
+        log("Travel to/within Schengen countries requires a roll for the rest this turn")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(170, "Theft of State", Jihadist, 1,

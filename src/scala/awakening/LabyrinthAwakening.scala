@@ -671,6 +671,7 @@ object LabyrinthAwakening {
     def botRole = if (humanRole == US) Jihadist else US
       
     def markerInPlay(name: String) = markers contains name
+    def lapsingInPlay(name: String) = cardsLapsing exists (num => deck(num).name == name)
     
     def cardRemoved(num: Int) = cardsRemoved contains num
     def cardLapsing(num: Int) = cardsLapsing contains num
@@ -1539,11 +1540,27 @@ object LabyrinthAwakening {
           val newPosture = if (dieRoll < 5) Soft else Hard
           game = game.updateCountry(n.copy(posture = newPosture))
           log(s"${n.name} tested: Set posture to $newPosture")
+          logWorldPosture()
       }
       true
     }
     else
       false
+  }
+  
+  def rollCountryPosture(name: String): Unit = {
+    val n = game.getNonMuslim(name)
+    val die = dieRoll
+    log(s"Roll posture of $name")
+    log(s"Die roll: $die")
+    val newPosture = if (die < 5) Soft else Hard
+    if (n.posture == newPosture)
+      log(s"The posture of $name remains $newPosture")
+    else {
+      game = game.updateCountry(n.copy(posture = newPosture))
+      log(s"Set the posture of $name to $newPosture")
+      logWorldPosture()
+    }
   }
   
   
@@ -1789,6 +1806,10 @@ object LabyrinthAwakening {
   }
   
     
+  def logWorldPosture(): Unit = {
+    log(s"World Posture is ${game.worldPostureDisplay}  (GWOT penalty ${game.gwotPenalty})")
+  }
+  
 
   def printSummary(summary: Seq[String]): Unit = {
     println()
@@ -2191,7 +2212,7 @@ object LabyrinthAwakening {
     }
   }
 
-  def performWarOfIdeas(name: String, die: Int, ignoreGwotPenalty: Boolean = false): Unit = {
+  def performWarOfIdeas(name: String, ops: Int, ignoreGwotPenalty: Boolean = false): Unit = {
     game.getCountry(name) match {
       case m: MuslimCountry =>
         assert(!m.isAdversary, "Cannot do War of Ideas in Adversary country")
@@ -2200,55 +2221,60 @@ object LabyrinthAwakening {
                  "Cannot do War of Ideas in regime change country, not enought troops + militia")
         game = game.addOpsTarget(name)
         log()
-        log(s"$US performs War of Ideas in $name")
-        log(separator())
         testCountry(name)
-        log(s"Die roll: $die")
-        val modRoll = modifyWoiRoll(die, m, ignoreGwotPenalty)
-        if (modRoll <= 4) {
-          log("Failure")
-          log(s"$name remains ${govToString(m.governance)} ${m.alignment}")
-          if (modRoll == 4 && m.aidMarkers == 0) {
-            game = game.updateCountry(m.copy(aidMarkers = 1))
-            log(s"Place an aid marker in $name")
-          }
-        }
-        else if (m.isNeutral) {
-          log("Success")
-          shiftAlignment(name, Ally)
-        }
+        val tested = game.getMuslim(name)
+        if (ops < 3 && tested.isPoor)
+          log(s"Not enough Ops to complete War of Ideas in $name")
         else {
-          val caliphateCapital = m.caliphateCapital
-          val priorCampCapacity = game.trainingCampCapacity
-          log("Success")
-          improveGovernance(name)
-          game = game.addTestedOrImproved(name)
-          if (game.getMuslim(name).isGood) {
-            performConvergence(forCountry = name, awakening = true)
-            if (caliphateCapital) {
-              displaceCaliphateCapital(name)
-              updateTrainingCampCapacity(priorCampCapacity)
-            }
+          log(s"$US performs War of Ideas in $name")
+          log(separator())
+          val die = humanDieRoll(allowAbort = true)
+          log(s"Die roll: $die")
+          val modRoll = modifyWoiRoll(die, tested, ignoreGwotPenalty)
+          if (modRoll <= 4) {
+            log("Failure")
+            log(s"$name remains ${govToString(tested.governance)} ${tested.alignment}")
+            if (modRoll == 4 && tested.aidMarkers == 0)
+              addAidMarker(name)
           }
-        }
+          else if (tested.isNeutral) {
+            log("Success")
+            shiftAlignment(name, Ally)
+          }
+          else {
+            val caliphateCapital = tested.caliphateCapital
+            val priorCampCapacity = game.trainingCampCapacity
+            log("Success")
+            improveGovernance(name)
+            game = game.addTestedOrImproved(name)
+            if (game.getMuslim(name).isGood) {
+              performConvergence(forCountry = name, awakening = true)
+              if (caliphateCapital) {
+                displaceCaliphateCapital(name)
+                updateTrainingCampCapacity(priorCampCapacity)
+              }
+            }
+          }          
+        }  
         
       case n: NonMuslimCountry if n.iranSpecialCase => println("Cannot do War of Ideas in Iran")
       case n: NonMuslimCountry =>
         log()
         log(s"$US performs War of Ideas in $name")
         log(separator())
+        val die = humanDieRoll(allowAbort = true)
         val newPosture = if (die > 4) Hard else Soft
         game = game.updateCountry(n.copy(posture = newPosture))
         log(s"Die roll: $die")
         if (newPosture == n.posture)
-          log(s"Posture of $name stays $newPosture")
-        else
+          log(s"Posture of $name remains $newPosture")
+        else 
           log(s"Change posture of $name from ${n.posture} to $newPosture")
         if (newPosture == game.usPosture && game.prestige < 12) {
           game = game.adjustPrestige(1)
           log(s"New posture matches US posture, increase US prestige by +1 to ${game.prestige}")
         }
-        log(s"World Posture is now ${game.worldPostureDisplay}")
+        logWorldPosture()
     }
   }
 
@@ -2597,14 +2623,15 @@ object LabyrinthAwakening {
     if (n.posture == newPosture) 
       log(s"The posture of $name reamins $newPosture")
     else {
-      log(s"Set posture of $name to $newPosture")
       game = game.updateCountry(n.copy(posture = newPosture))
+      log(s"Set posture of $name to $newPosture")
+      logWorldPosture()
     }
   }
   
-  def globalEventInPlay(marker: String): Boolean = (game markerInPlay marker)
-  def globalEventNotInPlay(marker: String): Boolean = !globalEventInPlay(marker)
-  
+  def globalEventInPlay(name: String)    = (game markerInPlay name)
+  def globalEventNotInPlay(name: String) = !globalEventInPlay(name)
+  def lapsingEventInPlay(name: String)   = (game lapsingInPlay name)
   
   def addGlobalEventMarker(marker: String): Unit = {
     if (!(game markerInPlay marker)) {
@@ -3183,19 +3210,6 @@ object LabyrinthAwakening {
               }
             }
             else {
-              def rollCountryPosture(name: String): Unit = {
-                val n = game.getNonMuslim(name)
-                val die = dieRoll
-                val newPosture = if (die > 4) Hard else Soft
-                log(s"Posture roll for $name is $die")
-                if (n.posture == newPosture)
-                  log(s"$name posture remains $newPosture")
-                else {
-                  postureChanged = true
-                  log(s"Set posture of $name to $newPosture")
-                  game = game.updateCountry(n.copy(posture = newPosture))
-                }
-              }  
               rollCountryPosture(n.name)
               if (n.isSchengen)
                 if (game.botRole == Jihadist) {
@@ -3731,17 +3745,8 @@ object LabyrinthAwakening {
   def humanWarOfIdeas(ops: Int): Unit = {
     log()
     log(s"$US attempts War of Ideas operation with ${opsString(ops)}")
-    val target = askCountry("War of Ideas in which country: ", game.warOfIdeasTargets(ops)) 
-    if (game.isMuslim(target)) {
-      // If an untested country tests to Poor the user may not have enough Ops...
-      testCountry(target)
-      if (ops < 3 && game.getMuslim(target).isPoor)
-        log(s"Not enough Ops to complete War of Ideas in $target")
-      else
-        performWarOfIdeas(target, humanDieRoll(allowAbort = true))
-    }
-    else
-      performWarOfIdeas(target, humanDieRoll(allowAbort = true))
+    val target = askCountry("War of Ideas in which country: ", game.warOfIdeasTargets(ops))
+    performWarOfIdeas(target, ops)
   }
   
   // Troops can alwasy deploy to the track.
@@ -3942,7 +3947,9 @@ object LabyrinthAwakening {
       val dest = askCountry(s"$ord Recruit destination: ", game.recruitTargets)
       (ord, dest)
     }
+    
     val results = for ((ord, dest) <- targets; c = game.getCountry(dest)) yield {
+      game = game.addOpsTarget(dest)
       if (c.autoRecruit) {
         log(s"$ord Recruit automatically succeeds in $dest")
         (dest, true)
@@ -3995,6 +4002,13 @@ object LabyrinthAwakening {
         addSleeperCellsToCountry(dest, num)
   }
   
+  def travelIsAutomatic(src: String, dest: String): Boolean = {
+    if (lapsingEventInPlay("Islamic Maghreb") && (Schengen contains dest))
+      false
+    else
+      src == dest || areAdjacent(src, dest)
+  }
+  
   def humanTravel(ops: Int): Unit = {
     val Active  = true
     log()
@@ -4039,10 +4053,12 @@ object LabyrinthAwakening {
         sourceCountries += src.name -> src.copy(sleepers = src.sleepers - 1)
       (ord, src.name, dest, cellType)
     }
-
+    
     // Now we can roll the die for each one see what happens and log the result.
     for ((ord, srcName, destName, active) <- attempts) {
-      if (srcName == destName || areAdjacent(srcName, destName)) {
+      game = game.addOpsTarget(destName)
+      
+      if (travelIsAutomatic(srcName, destName)) {
         log(s"$ord Travel from $srcName to $destName succeeds automatically")
         moveCellsBetweenCountries(srcName, destName, 1, active)
       }
@@ -4113,6 +4129,7 @@ object LabyrinthAwakening {
     // Now resolve all jihad targets.
     // Now we can roll the die for each one see what happens and log the result.
     for (Target(name, major, actives, sleepers) <- targets) {
+      game = game.addOpsTarget(name)
       val jihad = if (major) "Major Jihad" else "Jihad"
       val numDice = actives + sleepers
       println()
@@ -4172,7 +4189,7 @@ object LabyrinthAwakening {
         println(s"$ord Plot cell will be ${if (target.actives > 0) "an active cell" else "a sleeper cell"}")
         target.actives > 0
       }
-        
+      game = game.addOpsTarget(target.name)
       // Remove the selected cell so that it cannot be selected twice.
       if (target.sleepers + target.actives == 1)
         targetCountries -= target.name
