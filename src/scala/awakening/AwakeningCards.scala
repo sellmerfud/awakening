@@ -1308,7 +1308,11 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(174, "Boston Marathon", Jihadist, 2,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        rollUSPosture()
+        increaseFunding(1)
+        rollCountryPosture(Caucasus)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(175, "Censorship", Jihadist, 2,
