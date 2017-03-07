@@ -60,7 +60,10 @@ object AwakeningCards extends CardDeck {
     (!m.isAlly || !m.isFair || m.totalCells > 0)
   val statusQuoCandidate = (m: MuslimCountry) => 
     m.regimeChange == TanRegimeChange && (m.totalTroopsAndMilitia / 2) > m.totalCells
-    
+  
+  val coupCandidate = (m: MuslimCountry) => 
+    m.resources == 1 && (m.isPoor || m.isGood) && 
+    m.totalCells >= 2 && !(m.civilWar && m.besiegedRegime)
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -1101,13 +1104,37 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(164, "Bloody Thursday", Jihadist, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
+      (role : Role) => {
+        addGlobalEventMarker("Bloody Thursday")
+        val candidates = countryNames(game.muslims filter (_.awakening > 0))
+        if (candidates.nonEmpty) {
+          val target = if (role == game.humanRole)
+            askCountry("Select country with awakening marker: ", candidates)
+          else {
+            log("!!! Bot event not yet implemented !!!")
+            candidates.head
+          }
+          removeAwakeningMarker(target)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(165, "Coup", Jihadist, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => game hasMuslim coupCandidate
+      ,
+      (role : Role) => {
+        val candidates = countryNames(game.muslims filter coupCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        startCivilWar(target)
+        addBesiegedRegimeMarker(target)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(166, "Ferguson", Jihadist, 1,
