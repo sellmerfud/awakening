@@ -972,7 +972,12 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(160, "Operation Neptune Spear", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      (role : Role) => {
+        val cards = List("Ayman al-Zawahiri", "Abu Bakr al-Baghdadi", "Abu Sayyaf (ISIL)",
+                         "Jihadi John", "Osama bin Ladin")
+        log("US player takes one of the following cards from the discard pile:")
+        log(orList(cards))
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(161, "PRISM", US, 3,
