@@ -843,7 +843,7 @@ object LabyrinthAwakening {
       ((15 + trainingCampCapacity) - cellsOnMap - trainingCampCells.inCamp) max 0
     }
     // Number of cells available for operations
-    def cellsAvailable(ignoreFunding: Boolean = false) = {
+    def cellsAvailable(implicit ignoreFunding: Boolean = false) = {
       if (ignoreFunding || (trainingCampsInPlay && funding == 9))
         trainingCampCells.inCamp + cellsOnTrack
       else
@@ -1023,7 +1023,7 @@ object LabyrinthAwakening {
       b += separator()
       b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track  : $militiaAvailable%2d"
       b += f"Cells in camp   : ${trainingCampCells.inCamp}%2d   | Camp cells on map : ${trainingCampCells.onMap}%2d" 
-      b += f"Cells available : ${cellsAvailable()}%2d   | Funding level     : ${fundingLevel}"
+      b += f"Cells available : ${cellsAvailable}%2d   | Funding level     : ${fundingLevel}"
       b += separator()
       (trainingCamp, trainingCampCapacity) match {
         case (Some(c), 3) => b += s"Training camps  : $c (Capacity 3, non-Caliphate country)"
@@ -2788,7 +2788,7 @@ object LabyrinthAwakening {
   def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean, logPrefix: String = "") =
     addCellsToCountry(name, true, num, ignoreFunding, logPrefix)
   
-  def addSleeperCellsToCountry(name: String, num: Int, ignoreFunding: Boolean, logPrefix: String = "") =
+  def addSleeperCellsToCountry(name: String, num: Int, ignoreFunding: Boolean = false, logPrefix: String = "") =
     addCellsToCountry(name, false, num, ignoreFunding, logPrefix)
   
   // Move cells from the track (or training camp) to a country on the map.
@@ -3928,7 +3928,7 @@ object LabyrinthAwakening {
   }    
 
   def humanRecruit(ops: Int): Unit = {
-    val availableCells = game.cellsAvailable()
+    val availableCells = game.cellsAvailable
     log()
     log(s"$Jihadist performs a Recruit operation with ${opsString(ops)}")
     log(separator())
@@ -3967,7 +3967,7 @@ object LabyrinthAwakening {
         // But if all of the success targets are the same country, then
         // just add all available cell there without asking.
       if (allTheSame(successes))
-        addSleeperCellsToCountry(successes.head, availableCells, ignoreFunding = false)
+        addSleeperCellsToCountry(successes.head, availableCells)
       else {
         log(s"${successes.size} successful recruits, but only $availableCells available cells")
         println("Specify where to put the cells:")
@@ -3978,11 +3978,11 @@ object LabyrinthAwakening {
           if (cellsLeft != 0)
             (dests, skipped) match {
               case (Nil, Nil)                  =>  // should not get here
-              case (Nil, sk) if allTheSame(sk) => addSleeperCellsToCountry(sk.head, cellsLeft, ignoreFunding = false)
+              case (Nil, sk) if allTheSame(sk) => addSleeperCellsToCountry(sk.head, cellsLeft)
               case (Nil, sk)                   => placeNext(sk.reverse, Nil, cellsLeft) // Go around again
-              case (ds, _) if allTheSame(ds)   => addSleeperCellsToCountry(ds.head, cellsLeft, ignoreFunding = false)
+              case (ds, _) if allTheSame(ds)   => addSleeperCellsToCountry(ds.head, cellsLeft)
               case (d :: ds, sk)               => ask(d) match {
-                                                    case "place" => addSleeperCellsToCountry(d, 1, ignoreFunding = false)
+                                                    case "place" => addSleeperCellsToCountry(d, 1)
                                                                     placeNext(ds, sk, cellsLeft - 1)
                                                     case _       => placeNext(ds, d :: sk, cellsLeft)
                                                   }
@@ -3992,7 +3992,7 @@ object LabyrinthAwakening {
     }
     else // We have enough cells to place one in all destinations
       for ((dest, num) <- successes groupBy (dest => dest) map { case (dest, xs) => (dest -> xs.size) })
-        addSleeperCellsToCountry(dest, num, ignoreFunding = false)
+        addSleeperCellsToCountry(dest, num)
   }
   
   def humanTravel(ops: Int): Unit = {
