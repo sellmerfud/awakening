@@ -55,6 +55,10 @@ object AwakeningCards extends CardDeck {
     (m.hasMarker("UNSCR 1973") && m.totalCells > 0) || (m.civilWar && !m.hasMarker("UNSCR 1973"))
   }
   val massTurnoutCandidate = (m: MuslimCountry) => m.inRegimeChange && m.awakening > 0
+  val scafCandidate = (m: MuslimCountry) => 
+    m.name != Iran && m.name != Syria && m.awakening > 0 && m.reaction > 0 &&
+    (!m.isAlly || !m.isFair || m.totalCells > 0)
+  
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -1057,8 +1061,24 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(162, "SCAF", US, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => game hasMuslim scafCandidate
+      ,
+      (role : Role) => {
+        val candidates = countryNames(game.muslims filter scafCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        val m = game.getMuslim(target)
+        shiftAlignment(target, Ally)
+        if (m.isPoor)
+          improveGovernance(target, 1)
+        removeCellsFromCountry(target, m.activeCells, m.sleeperCells, addCadre = true)
+        addReactionMarker(target, m.totalCells)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(163, "Status Quo", US, 3,

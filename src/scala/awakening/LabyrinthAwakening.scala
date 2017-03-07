@@ -2829,7 +2829,7 @@ object LabyrinthAwakening {
     
   def removeSleeperCellsFromCountry(name: String, num: Int, addCadre: Boolean, logPrefix: String = "") =
     removeCellsFromCountry(name, 0, num, addCadre, logPrefix)
-    
+  
   // Remove cells from the a country.
   // The removed cells will moved to:
   // 1. Out of play if there are cells on the map that came from the training camp and
