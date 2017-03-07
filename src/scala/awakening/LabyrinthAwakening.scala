@@ -1013,7 +1013,7 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += "Status"
       b += separator()
-      b += f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}"
+      b += f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}  (GWOT penalty $gwotPenalty)"
       b += f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d"
       b += f"US reserves     : ${reserves.us}%2d   | Jihadist reserves : ${reserves.jihadist}%2d"
       b += f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"

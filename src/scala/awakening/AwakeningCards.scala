@@ -945,8 +945,29 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(159, "NATO", US, 3,
-      NoRemove, CountryMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, CountryMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => game.gwotPenalty == 0 && (game hasMuslim (m => m.inRegimeChange || m.civilWar))
+      ,
+      (role : Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
+        val target = if (role == game.humanRole)
+          askCountry("Select country for NATO: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        
+        addAidMarker(target)
+        (game.muslims find (_.hasMarker("NATO")) map (_.name)) match {
+          case Some(`target`) =>
+            log(s"NATO marker remains in $target")
+          case Some(current) =>
+            removeEventMarkersFromCountry(current, "NATO")
+            addEventMarkersToCountry(target, "NATO")
+          case None =>
+            addEventMarkersToCountry(target, "NATO")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(160, "Operation Neptune Spear", US, 3,
