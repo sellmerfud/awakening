@@ -1548,7 +1548,24 @@ object LabyrinthAwakening {
       false
   }
   
+  def rollUSPosture(): Unit = {
+    val die = dieRoll
+    val newPosture = if (die + 1 > 4) Hard else Soft
+    log(s"Roll United States posture")
+    log(s"Die roll: $die")
+    log("+1: Rolling US posture")
+    log(s"Modified roll: ${die + 1}")
+    if (game.usPosture == newPosture)
+      log(s"US posture remains $newPosture")
+    else {
+      game = game.copy(usPosture = newPosture)
+      log(s"Set US posture to $newPosture")
+      logWorldPosture()
+    }
+  }
+  
   def rollCountryPosture(name: String): Unit = {
+    assert(name != UnitedStates, "rollCountryPosture() called for United States.  Use RollUSPosture()")
     val n = game.getNonMuslim(name)
     val die = dieRoll
     log(s"Roll posture of $name")
@@ -3020,10 +3037,14 @@ object LabyrinthAwakening {
   
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
-      val m = game.getMuslim(target)
-      assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
-      game = game.updateCountry(m.copy(awakening = m.awakening + num))
-      log(s"Add ${amountOf(num, "awakening marker")} to $target")
+      if (lapsingEventInPlay("Arab Winter")) 
+        log(s"${amountOf(num, "awakening marker")} NOT added to $target because Arab Winter is in effect")
+      else {
+        val m = game.getMuslim(target)
+        assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
+        game = game.updateCountry(m.copy(awakening = m.awakening + num))
+        log(s"Add ${amountOf(num, "awakening marker")} to $target")
+      }
     }
   }
   
@@ -3116,7 +3137,6 @@ object LabyrinthAwakening {
       log("Game Over - Jihadist automatic victory!")
     }
     else {
-      var postureChanged = false
       for (Unblocked(country, mapPlot) <- unblocked) {
         val name = country.name
         log(separator())
@@ -3197,18 +3217,8 @@ object LabyrinthAwakening {
             }
             
             // Posture
-            if (name == UnitedStates) {
-              val die = dieRoll
-              val newPosture = if (die + 1 > 4) Hard else Soft
-              log(s"Posture roll for $name is $die + 1")
-              if (game.usPosture == newPosture)
-                log(s"US posture remains $newPosture")
-              else {
-                postureChanged = true
-                log(s"Set US posture to $newPosture")
-                game = game.copy(usPosture = newPosture)
-              }
-            }
+            if (name == UnitedStates)
+              rollUSPosture()
             else {
               rollCountryPosture(n.name)
               if (n.isSchengen)
@@ -3235,8 +3245,6 @@ object LabyrinthAwakening {
               rollPrestige()
           log() // blank line before next one
       } // for 
-      if (postureChanged)
-        log(s"The world posture is now ${game.worldPostureDisplay}")
       // Move all of the plots to the resolved plots box.
       println("Put the plots in the resolved plots box")
       (game.countries filter (_.hasPlots)) foreach {

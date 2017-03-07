@@ -1285,7 +1285,25 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(173, "Arab Winter", Jihadist, 2,
       NoRemove, NoMarker, Lapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.awakening > 0))
+        if (candidates.isEmpty)
+          log(s"There are no reaction markers on the map")
+        else {
+          val targets = if (candidates.size == 1)
+            candidates
+          else if (role == game.humanRole) {
+            val target1 = askCountry("Select first country: ", candidates)
+            val target2 = askCountry("Select second country: ", candidates filterNot (_ == target1))
+            (target1::target2::Nil)
+          }
+          else {
+            log("!!! Bot event not yet implemented !!!")
+            candidates take 2
+          }
+          targets foreach (removeAwakeningMarker(_))
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(174, "Boston Marathon", Jihadist, 2,
