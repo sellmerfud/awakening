@@ -58,7 +58,9 @@ object AwakeningCards extends CardDeck {
   val scafCandidate = (m: MuslimCountry) => 
     m.name != Iran && m.name != Syria && m.awakening > 0 && m.reaction > 0 &&
     (!m.isAlly || !m.isFair || m.totalCells > 0)
-  
+  val statusQuoCandidate = (m: MuslimCountry) => 
+    m.regimeChange == TanRegimeChange && (m.totalTroopsAndMilitia / 2) > m.totalCells
+    
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -1082,8 +1084,20 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(163, "Status Quo", US, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role : Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role : Role) => game hasMuslim statusQuoCandidate
+      ,  
+      (role : Role) => {
+        val candidates = countryNames(game.muslims filter statusQuoCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        removeRegimeChangeMarker(target)
+        shiftAlignment(target, Ally)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(164, "Bloody Thursday", Jihadist, 1,

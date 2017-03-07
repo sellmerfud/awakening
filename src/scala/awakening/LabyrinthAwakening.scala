@@ -2945,11 +2945,22 @@ object LabyrinthAwakening {
     }
   }
   
-  def removeCadre(target: String): Unit = {
-    log(s"Remove cadre marker in $target.")
-    game.getCountry(target) match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+  def removeCadre(name: String): Unit = {
+    val c = game.getCountry(name)
+    if (c.hasCadre) {
+      log(s"Remove cadre marker from $name.")
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+      }
+    }
+  }
+  
+  def removeRegimeChangeMarker(name: String): Unit = {
+    val m = game.getMuslim(name)
+    if (m.inRegimeChange) {
+      log(s"Remove regime change marker from $name.")
+      game = game.updateCountry(m.copy(regimeChange = NoRegimeChange))
     }
   }
   
