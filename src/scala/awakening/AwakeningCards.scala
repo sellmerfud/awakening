@@ -1316,8 +1316,25 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(175, "Censorship", Jihadist, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.awakening > 0))
+        if (candidates.isEmpty)
+          log(s"There are no reaction markers on the map")
+        else {
+          val target = if (role == game.humanRole) 
+            askCountry("Select country: ", candidates)
+          else {
+            log("!!! Bot event not yet implemented !!!")
+            candidates.head
+          }
+          val m = game.getMuslim(target)
+          removeAwakeningMarker(target, 2 min m.awakening)
+        }
+        
+        removeGlobalEventMarker("Smartphones")
+        addGlobalEventMarker("Censorship")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(176, "Change of State", Jihadist, 2,
@@ -1520,7 +1537,12 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(211, "Smartphones", Unassociated, 1,
       NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // TODO: Need to flesh this out.
+        removeGlobalEventMarker("Censorship")
+        addGlobalEventMarker("Smartphones")
+      }
+      
     )),
     // ------------------------------------------------------------------------
     entry(new Card(212, "Smartphones", Unassociated, 1,
