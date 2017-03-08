@@ -1412,14 +1412,35 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(180, "Mosul Central Bank", Jihadist, 2,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game hasMuslim (m => m.civilWar && m.totalCells > 0)
+      ,
+      (role: Role) => increaseFunding(2)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(181, "NPT Safeguards Ignored", Jihadist, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,  
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,  
+      (role: Role) => globalEventNotInPlay("Trade Embargo (US)") &&
+                      game.getCountry(Iran).totalCells > 0 &&
+                      game.getCountry(Iran).wmdCache > 0
+      ,
       (role: Role) => {
-        // Note: Remove on die roll of 1-3
+        val die = if (role == game.humanRole) humanDieRoll(allowAbort = true) else dieRoll
+        val success = die < 4
+        log(s"Die roll: $die")
+        if (success) {
+          log("Success")
+          moveWMDCachedToAvailable(Iran)
+          removeCardFromGame(181)
+        }
+        else {
+          log("Failure")
+          val c = game.getCountry(Iran)
+          if (c.activeCells > 0)
+            removeActiveCellsFromCountry(Iran, 1, addCadre = true)
+          else
+            removeSleeperCellsFromCountry(Iran, 1, addCadre = true)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -1701,7 +1722,9 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(232, "Trade Embargo", Unassociated, 2,
       USRemove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // Mark as either "Trade Embargo (US)" or "Trade Embargo (Jihadist)"
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(233, "UN Ceasefire", Unassociated, 2,

@@ -2571,16 +2571,20 @@ object LabyrinthAwakening {
       case _                           => false
     }
     
-    if (remove) {
-      log("Remove the \"%s\" card from the game".format(card.name))
-      game = game.copy(cardsRemoved = card.number :: game.cardsRemoved)
-    }
-    else if (lapsing) {
-      log("Mark the \"%s\" card as lapsing".format(card.name))
-      game = game.copy(cardsLapsing = card.number :: game.cardsLapsing)
-    }
-    
-    
+    if (remove)
+      removeCardFromGame(card.number)
+    else if (lapsing)
+      markCardAsLapsing(card.number)
+  }
+  
+  def removeCardFromGame(cardNumber: Int): Unit = {
+    log("Remove the \"%s\" card from the game".format(deck(cardNumber).name))
+    game = game.copy(cardsRemoved = cardNumber :: game.cardsRemoved)
+  }
+  
+  def markCardAsLapsing(cardNumber: Int): Unit = {
+    log("Mark the \"%s\" card as lapsing".format(deck(cardNumber).name))
+    game = game.copy(cardsLapsing = cardNumber :: game.cardsLapsing)
   }
   
   // Prestige roll used
@@ -2662,20 +2666,18 @@ object LabyrinthAwakening {
           game = game.copy(prestige = 1)
         }
         // Always remove aid when degraded to IR
-        if (m.inRegimeChange) log(s"Remove regime change marker from $name")
         if (m.besiegedRegime) log(s"Remove besieged regime marker from $name")
         if (m.aidMarkers > 0) log(s"Remove ${amountOf(m.aidMarkers, "aid marker")} from $name")
         if (m.awakening > 0 ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name")
         if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0   ) log(s"Remove ${m.militia} miltia from $name")
-        if (m.wmdCache > 0  ) log(s"Move ${amountOf(m.wmdCache, "WMD Plot")} from the $name cache to available plots")
         val degraded = m.copy(
           governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
-          aidMarkers = 0, militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false, 
-          wmdCache = 0
-        )
+          aidMarkers = 0, militia = 0, besiegedRegime = false)
         game = game.updateCountry(degraded).copy(
           availablePlots = List.fill(m.wmdCache)(PlotWMD) ::: game.availablePlots)
+        moveWMDCachedToAvailable(name)
+        endRegimeChange(name)
         endCivilWar(name)
         flipCaliphateSleepers()
       }
@@ -2883,7 +2885,7 @@ object LabyrinthAwakening {
       log(s"Remove civil war marker from $name")
       removeMilitiaFromCountry(name, m.militia)
       removeEventMarkersFromCountry(name, markersRemovedWhenCivilWarEnds:_*)
-      if (m.caliphateCapital && !m.inRegimeChange) {
+      if (m.caliphateCapital && !m.isIslamistRule && !m.inRegimeChange) {
         game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
         log(s"Remove the Caliphate Capital marker from $name")
         displaceCaliphateCapital(m.name)
@@ -2898,7 +2900,7 @@ object LabyrinthAwakening {
     if (m.inRegimeChange) {
       game = game.updateCountry(m.copy(regimeChange = NoRegimeChange))
       log(s"Remove regime change marker from $name")
-      if (m.caliphateCapital && !m.civilWar) {
+      if (m.caliphateCapital && !m.isIslamistRule && !m.civilWar) {
         game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
         log(s"Remove the Caliphate Capital marker from $name")
         displaceCaliphateCapital(m.name)
@@ -3220,6 +3222,17 @@ object LabyrinthAwakening {
     }
   }
 
+  def moveWMDCachedToAvailable(name: String): Unit = {
+    val c = game.getCountry(name)
+    if (c.wmdCache > 0) {
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = 0))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = 0))
+      }
+      log(s"Move ${amountOf(c.wmdCache, "unavailable WMD Plot")} from $name to available plots")
+      game = game.copy(availablePlots = List.fill(c.wmdCache)(PlotWMD) ::: game.availablePlots)
+    }
+  }
   
   def removeCachedWMD(name: String, num: Int, bumpPrestige: Boolean = true): Unit = {
     val c = game.getCountry(name)
