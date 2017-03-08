@@ -631,11 +631,16 @@ object LabyrinthAwakening {
   // To work around this in the GameState, we will combine a couple of parameters
   case class CampCells(inCamp: Int, onMap: Int)
   case class Reserves(us: Int, jihadist: Int)
-  // Keeps track of the which countries were the target of operations
+  // Keeps track of the which countries were the target of
+  // operations
+  // events
+  // improved or tested
+  // 
   // Some events depend on this.
-  case class OpsTargets(
-    any:              Set[String] = Set.empty,
-    testedOrImproved: Set[String] = Set.empty
+  case class CardTargets(
+    ops:              Set[String] = Set.empty,
+    testedOrImproved: Set[String] = Set.empty,
+    event:            Set[String] = Set.empty
   )
   
   case class GameParameters(
@@ -665,8 +670,8 @@ object LabyrinthAwakening {
     firstPlotCard: Option[Int] = None,  // Card number
     cardsLapsing: List[Int] = Nil,       // Card numbers
     cardsRemoved: List[Int] = Nil,   // Cards removed from the game.
-    opsTargetsThisCard: OpsTargets = OpsTargets(),
-    opsTargetsLastCard: OpsTargets = OpsTargets()
+    targetsThisCard: CardTargets = CardTargets(),
+    targetsLastCard: CardTargets = CardTargets()
   ) {
     
     def humanRole = params.humanRole
@@ -761,12 +766,6 @@ object LabyrinthAwakening {
     
     def addMarker(name: String): GameState = this.copy(markers = name :: markers)
     def removeMarker(name: String): GameState = this.copy(markers = markers filterNot (_ == name))
-    
-    def addOpsTarget(name: String): GameState = 
-      this.copy(opsTargetsThisCard = opsTargetsThisCard.copy(any = opsTargetsThisCard.any + name))
-    
-    def addTestedOrImproved(name: String): GameState =
-      this.copy(opsTargetsThisCard = opsTargetsThisCard.copy(testedOrImproved = opsTargetsThisCard.testedOrImproved + name))
     
     // List of countries that are valid targets for War of Ideas
     def woiTargets: List[Country] = countries filter {
@@ -1558,12 +1557,27 @@ object LabyrinthAwakening {
     }
   }
   
+  def addOpsTarget(name: String): Unit = {
+    val targets = game.targetsThisCard
+    game = game.copy(targetsThisCard = targets.copy(ops = targets.ops + name))
+  }
+  
+  def addTestedOrImproved(name: String): Unit = {
+    val targets = game.targetsThisCard
+    game = game.copy(targetsThisCard = targets.copy(testedOrImproved = targets.testedOrImproved + name))
+  }
+  
+  def addEventTarget(names: String*): Unit = {
+    val targets = game.targetsThisCard
+    game = game.copy(targetsThisCard = targets.copy(event = targets.event ++ names))
+  }
+  
   // If the country is untested, test it and return true
   // otherwise return false.
   def testCountry(name: String): Boolean = {
     val country = game.getCountry(name)
     if (country.isUntested) {
-      game = game.addTestedOrImproved(name)
+      addTestedOrImproved(name)
       country match {
         case m: MuslimCountry    =>
           val newGov = if (dieRoll < 5) Poor else Fair
@@ -2313,7 +2327,7 @@ object LabyrinthAwakening {
         assert(!m.isGood, "Cannot do War of Ideas in muslim country with Good governance")
         assert(!(m.inRegimeChange && (m.totalTroopsAndMilitia - m.totalCells) < 5),
                  "Cannot do War of Ideas in regime change country, not enought troops + militia")
-        game = game.addOpsTarget(name)
+        addOpsTarget(name)
         log()
         testCountry(name)
         val tested = game.getMuslim(name)
@@ -2340,7 +2354,6 @@ object LabyrinthAwakening {
             val priorCampCapacity = game.trainingCampCapacity
             log("Success")
             improveGovernance(name)
-            game = game.addTestedOrImproved(name)
             if (game.getMuslim(name).isGood) {
               performConvergence(forCountry = name, awakening = true)
               if (caliphateCapital) {
@@ -2382,7 +2395,7 @@ object LabyrinthAwakening {
     moveTroops(source, dest, numTroops)
     val m = game.getMuslim(dest)
     val newGov = if (dieRoll < 5) Poor else Fair
-    game = game.addOpsTarget(dest)
+    addOpsTarget(dest)
     game = game.updateCountry(m.copy(
       governance   = newGov,
       alignment    = Ally,
@@ -2406,7 +2419,7 @@ object LabyrinthAwakening {
   // • Roll Prestige.
   def performWithdraw(source: String, dest: String, numTroops: Int): Unit = {
     log()
-    game = game.addOpsTarget(dest)
+    addOpsTarget(dest)
     moveTroops(source, dest, numTroops)
     val m = game.getMuslim(source)
     if (m.aidMarkers > 0)
@@ -2419,7 +2432,7 @@ object LabyrinthAwakening {
   
   def performDisrupt(target: String): Unit = {
     val bumpPrestige = game.disruptAffectsPrestige(target)
-    game = game.addOpsTarget(target)
+    addOpsTarget(target)
     game.disruptLosses(target) match {
       case Some(Left((sleepers, actives))) =>
         flipSleeperCells(target, sleepers)
@@ -2437,7 +2450,7 @@ object LabyrinthAwakening {
   def performAlert(target: String): Unit = {
     val c = game.getCountry(target)
     assert(c.hasPlots, s"performAlert(): $target has no plots")
-    game = game.addOpsTarget(target)
+    addOpsTarget(target)
     // Any any are backlashed, then don't add them to the list unless that is all there is.
     val (alerted :: remaining) = if (c.plots exists (_.backlashed))
       shuffle(c.plots filterNot (_.backlashed))
@@ -2616,6 +2629,7 @@ object LabyrinthAwakening {
     if (levels > 0) {
       assert(m.isAlly, s"improveGovernance() called on non-ally - $name")
       assert(!m.isGood, s"improveGovernance() called on Good country - $name")
+      addTestedOrImproved(name)
       val newGov = (m.governance - levels) max Good
       val delta  = m.governance - newGov
       if (newGov == Good) {
@@ -3766,8 +3780,8 @@ object LabyrinthAwakening {
       // and clear the op targets for the current card.
       game = game.copy(
         cardsPlayed        = PlayedCard(US, card) :: game.cardsPlayed,
-        opsTargetsLastCard = game.opsTargetsThisCard,
-        opsTargetsThisCard = OpsTargets()
+        targetsLastCard = game.targetsThisCard,
+        targetsThisCard = CardTargets()
       )
       logCardPlay(US, card)
       try game.humanRole match {
@@ -3998,8 +4012,8 @@ object LabyrinthAwakening {
       // and clear the op targets for the current card.
       game = game.copy(
         cardsPlayed        = PlayedCard(Jihadist, card) :: game.cardsPlayed,
-        opsTargetsLastCard = game.opsTargetsThisCard,
-        opsTargetsThisCard = OpsTargets()
+        targetsLastCard = game.targetsThisCard,
+        targetsThisCard = CardTargets()
       )
       logCardPlay(Jihadist, card)
       try game.humanRole match {
@@ -4112,7 +4126,7 @@ object LabyrinthAwakening {
     }
     
     val results = for ((ord, dest) <- targets; c = game.getCountry(dest)) yield {
-      game = game.addOpsTarget(dest)
+      addOpsTarget(dest)
       if (c.autoRecruit) {
         log(s"$ord Recruit automatically succeeds in $dest")
         (dest, true)
@@ -4219,7 +4233,7 @@ object LabyrinthAwakening {
     
     // Now we can roll the die for each one see what happens and log the result.
     for ((ord, srcName, destName, active) <- attempts) {
-      game = game.addOpsTarget(destName)
+      addOpsTarget(destName)
       
       if (travelIsAutomatic(srcName, destName)) {
         log(s"$ord Travel from $srcName to $destName succeeds automatically")
@@ -4292,7 +4306,7 @@ object LabyrinthAwakening {
     // Now resolve all jihad targets.
     // Now we can roll the die for each one see what happens and log the result.
     for (Target(name, major, actives, sleepers) <- targets) {
-      game = game.addOpsTarget(name)
+      addOpsTarget(name)
       val jihad = if (major) "Major Jihad" else "Jihad"
       val numDice = actives + sleepers
       println()
@@ -4352,7 +4366,7 @@ object LabyrinthAwakening {
         println(s"$ord Plot cell will be ${if (target.actives > 0) "an active cell" else "a sleeper cell"}")
         target.actives > 0
       }
-      game = game.addOpsTarget(target.name)
+      addOpsTarget(target.name)
       // Remove the selected cell so that it cannot be selected twice.
       if (target.sleepers + target.actives == 1)
         targetCountries -= target.name
