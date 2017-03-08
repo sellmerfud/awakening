@@ -1620,8 +1620,24 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(185, "al-Maliki", Jihadist, 3,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game hasMuslim (_.totalTroops > 0)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.totalTroops > 0))
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        val m = game.getMuslim(target)
+        moveTroops(target, "track", m.troops)
+        removeAllTroopsMarkers(target)
+        shiftAlignment(target, Neutral)
+        addAidMarker(target)
+        endRegimeChange(target)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(186, "Boko Haram", Jihadist, 3,

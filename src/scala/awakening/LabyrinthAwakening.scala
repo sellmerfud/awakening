@@ -2962,6 +2962,11 @@ object LabyrinthAwakening {
     }
   }
   
+  def removeAllTroopsMarkers(name: String): Unit = {
+    val markers = game.getMuslim(name).troopsMarkers map (_.name)
+    removeEventMarkersFromCountry(name: String, markers:_*)
+  }
+  
   def takeTroopsOffMap(source: String, num: Int): Unit = {
     if (num > 0) {
       def disp(name: String) = if (name == "track") "the troops track" else name
