@@ -1457,6 +1457,38 @@ object LabyrinthAwakening {
     nextChoice(1, items)
   }
   
+  // Name of country and number of items in that country.
+  case class MapItem(country: String, num: Int)
+  // This method is used when a number of items such as troops, sleeper cells, etc.
+  // must be selected from the map.
+  // targets     - a list MapItem instances where items can be selected.
+  // numItems    - the number that must be selectd
+  // name        - should be the singular name of the item being selected (troop, sleeper cell)
+  // Returns the list if MapItems with the results.
+  // Before calling this, the caller should print a line to the terminal describing
+  // what is being selected.
+  def askMapItems(targets: List[MapItem], numItems: Int, name: String): List[MapItem] = {
+    targets match {
+      case _  if numItems == 0 => Nil  // The required number have been selected
+      case target :: Nil       => MapItem(target.country, numItems) :: Nil // Last country remaining
+      case _ =>
+        val maxLen = (targets map (_.country.length)).max
+        val fmt = "%%-%ds  (%%s)".format(maxLen)
+        def disp(t: MapItem) = {fmt.format(t.country, amountOf(t.num, name))}
+        val opts = targets.map(t => t.country -> disp(t))
+        val choices = ListMap(opts:_*)
+        println()
+        println(s"${amountOf(numItems, name)} remaining, choose country")
+        // println("Choose next country to activate sleeper cells")
+        val country = askMenu(choices).head
+        val limit   = (targets find (_.country == country)).get.num min numItems
+        val num     = askInt("How many", 1, limit)
+        val newTargets = targets map { t => 
+          if (t.country == country) t.copy(num = t.num - num) else t
+        } filterNot (_.num == 0)
+        MapItem(country, num) :: askMapItems(newTargets, numItems - num, name)
+    }
+  }
   
   // Use the random Muslim table.
   // Iran and Nigeria may not yet have become Muslim countries.
@@ -2900,18 +2932,20 @@ object LabyrinthAwakening {
   }
   
   def takeTroopsOffMap(source: String, num: Int): Unit = {
-    def disp(name: String) = if (name == "track") "the troops track" else name
-      log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to the off map box")
-      // Note: No need to "remove" them from the track as the number on the track is
-      // calcualted base on those on the map and in the off map box.
-      if (source == "track")
-        assert(game.troopsAvailable >= num, "takeTroopsOffMap(): Not enough troops available on track")
-      else {
-        val m = game.getMuslim(source)
-        assert(m.troops >= num, s"takeTroopsOffMap(): Not enough troops available in $source")
-        game  = game.updateCountry(m.copy(troops = m.troops - num))
-      }
-      game = game.copy(offMapTroops = game.offMapTroops + num)
+    if (num > 0) {
+      def disp(name: String) = if (name == "track") "the troops track" else name
+        log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to the off map box")
+        // Note: No need to "remove" them from the track as the number on the track is
+        // calcualted base on those on the map and in the off map box.
+        if (source == "track")
+          assert(game.troopsAvailable >= num, "takeTroopsOffMap(): Not enough troops available on track")
+        else {
+          val m = game.getMuslim(source)
+          assert(m.troops >= num, s"takeTroopsOffMap(): Not enough troops available in $source")
+          game  = game.updateCountry(m.copy(troops = m.troops - num))
+        }
+        game = game.copy(offMapTroops = game.offMapTroops + num)
+    }
   }
   
   // Must be enough available militia on track or an exception is thrown.
@@ -3330,7 +3364,7 @@ object LabyrinthAwakening {
             // Posture
             if (name == UnitedStates)
               rollUSPosture()
-            else if (!(name == Israel || name == Iran)) {
+            else if (n.canChangePosture) {
               rollCountryPosture(n.name)
               if (n.isSchengen)
                 if (game.botRole == Jihadist) {

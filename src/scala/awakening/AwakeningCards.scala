@@ -1024,46 +1024,23 @@ object AwakeningCards extends CardDeck {
             if (action == "activate") {
               val numToFlip = (game.sleeperCellsOnMap + 1) / 2  // half rounded up
               // Ask which cells to activate
-              // If all sleepers on the map are in a single country then, don't bother.
-              case class WithSleepers(name: String, num: Int)
               val withSleepers = for (c <- game.countries; if c.sleeperCells > 0)
-                yield WithSleepers(c.name, c.sleeperCells)
-              
-              def nextFlip(targets: List[WithSleepers], mustFlip: Int): List[WithSleepers] = {
-                targets match {
-                  case _  if mustFlip == 0 => Nil  // The required number have been flipped
-                  case t::Nil              => WithSleepers(t.name, mustFlip) :: Nil // Last country remaining
-                  case _ =>
-                    val maxName = (targets map (_.name.length)).max
-                    val fmt = "%%-%ds  (%%s)".format(maxName)
-                    def disp(t: WithSleepers) = fmt.format(t.name, amountOf(t.num, "sleeper cell"))
-                    val opts = targets map (t => t.name -> disp(t))
-                    val choices = ListMap(opts:_*)
-                    println()
-                    println(s"${amountOf(mustFlip, "activation")} remaining, choose country")
-                    // println("Choose next country to activate sleeper cells")
-                    val name  = askMenu(choices).head
-                    val limit = (targets find (_.name == name)).get.num min mustFlip
-                    val num   = askInt("Activate how many", 1, limit)
-                    val newTargets = targets map { t => if (t.name == name) t.copy(num = t.num - num) else t }
-                    WithSleepers(name, num) :: nextFlip(newTargets filterNot (_.num == 0), mustFlip - num)
-                }
-              }
-              
+                yield MapItem(c.name, c.sleeperCells)
               println(s"Activate a total of ${amountOf(numToFlip, "sleeper cell")}")
-              val toFlip = nextFlip(withSleepers.sortBy(_.name), numToFlip)
-                // It is possible that the same country was chosen multiple times
-                // Consolidate them so we do 1 flip per country.
-              def flipNextBatch(remaining: List[WithSleepers]): Unit = {
+              val toFlip = askMapItems(withSleepers.sortBy(_.country), numToFlip, "sleeper cell")
+              
+              // It is possible that the same country was chosen multiple times
+              // Consolidate them so we do 1 flip per country.
+              def flipNextBatch(remaining: List[MapItem]): Unit = {
                 if (remaining.nonEmpty) {
-                  val name = remaining.head.name
-                  val (batch, next) = remaining.partition(_.name == name)
+                  val name = remaining.head.country
+                  val (batch, next) = remaining.partition(_.country == name)
                   val total = batch.foldLeft(0) { (sum, x) => sum + x.num }
                   flipSleeperCells(name, total)
                   flipNextBatch(next)
                 }
               }
-              flipNextBatch(toFlip.sortBy(_.name))
+              flipNextBatch(toFlip)
             }
             else
               for (c <- game.countries; p <- c.plots) // Alert all plots on the map
@@ -1405,8 +1382,33 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(179, "Korean Crisis", Jihadist, 2,
-      NoRemove, NoMarker, Lapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, Lapsing, NoAutoTrigger,
+      (role: Role) => (game.troopsAvailable + game.troopsOnMap) > 0
+      ,
+      (role: Role) => {
+        // Take troops from available if possible, otherwise we must 
+        // ask the user where to take them from.
+        val numToRemove  = 2 min (game.troopsAvailable + game.troopsOnMap)
+        val numFromTrack = numToRemove min game.troopsAvailable
+        val numFromMap   = numToRemove - numFromTrack
+        case class Troops(name: String, num: Int)
+        
+        val countries = if (numFromMap == 0)
+          Nil
+        else if (role == game.humanRole) {
+          val targets = game.muslims filter (_.troops > 0) map (m => MapItem(m.name, m.troops))
+          println(s"Select ${amountOf(numFromMap, "troop")} from the map to remove")
+          askMapItems(targets.sortBy(_.country), numFromMap, "troop")
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          Nil
+        }
+        
+        for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries)
+          takeTroopsOffMap(name, num)
+        setCountryPosture(China, if (game.usPosture == Soft) Hard else Soft)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(180, "Mosul Central Bank", Jihadist, 2,
