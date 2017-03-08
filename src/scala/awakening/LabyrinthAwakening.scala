@@ -3330,7 +3330,7 @@ object LabyrinthAwakening {
             // Posture
             if (name == UnitedStates)
               rollUSPosture()
-            else {
+            else if (!(name == Israel || name == Iran)) {
               rollCountryPosture(n.name)
               if (n.isSchengen)
                 if (game.botRole == Jihadist) {
@@ -3408,11 +3408,11 @@ object LabyrinthAwakening {
       game = game.copy(firstPlotCard = None)
     }
     // The Bot's reserves are not cleared
-    if (game.humanRole == US) {
+    if (game.humanRole == US && game.reserves.us > 0) {
       game = game.copy(reserves = game.reserves.copy(us = 0))
       log(s"$US reserves set to zero")
     }
-    else {
+    else if (game.humanRole == Jihadist && game.reserves.jihadist > 0) {
       game = game.copy(reserves = game.reserves.copy(jihadist = 0))
       log(s"Jihadist reserves set to zero")
     }
@@ -3448,9 +3448,6 @@ object LabyrinthAwakening {
     // Move the current turn Ops targets to the previous 
     game = game.copy(turn = game.turn + 1, cardsPlayed = Nil)
     
-    log()
-    logSummary(game.statusSummary)
-        
     previousCardPlays = Nil
     previousTurns = game :: previousTurns
     saveGameState("some file name")
