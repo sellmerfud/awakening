@@ -823,6 +823,8 @@ object AwakeningCards extends CardDeck {
       ,
       (role: Role) => {
         removeGlobalEventMarker("Sequestration")
+        returnSequestrationTroopsToAvailable()
+        
         val candidates = countryNames(game.muslims filter (m => m.civilWar && !m.inRegimeChange))
         if (game.troopsAvailable >= 6 && candidates.nonEmpty) {
           val (target, numTroops) = if (role == game.humanRole) {
@@ -1462,7 +1464,6 @@ object AwakeningCards extends CardDeck {
         val numToRemove  = 2 min (game.troopsAvailable + game.troopsOnMap)
         val numFromTrack = numToRemove min game.troopsAvailable
         val numFromMap   = numToRemove - numFromTrack
-        case class Troops(name: String, num: Int)
         
         val countries = if (numFromMap == 0)
           Nil
@@ -1477,7 +1478,8 @@ object AwakeningCards extends CardDeck {
         }
         
         for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries) {
-          addEventTarget(name)
+          if (name != "track")
+            addEventTarget(name)
           takeTroopsOffMap(name, num)
         }
         addEventTarget(China)
@@ -1579,14 +1581,42 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(183, "Pirates", Jihadist, 2,
       Remove, GlobalMarker, NoLapsing, NoAutoTrigger,
-      (role: Role) => globalEventNotInPlay("Maersk Alabama")
+      (role: Role) => globalEventNotInPlay("Maersk Alabama") && piratesConditionsInEffect
       ,
-      (role: Role) => ()
+      (role: Role) => addGlobalEventMarker("Pirates")
     )),
     // ------------------------------------------------------------------------
     entry(new Card(184, "Sequestration", Jihadist, 2,
-      Remove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, GlobalMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game.usPosture == Soft
+      ,
+      (role: Role) => {
+        // Take troops from available if possible, otherwise we must 
+        // ask the user where to take them from.
+        val numToRemove  = 3 min (game.troopsAvailable + game.troopsOnMap)
+        val numFromTrack = numToRemove min game.troopsAvailable
+        val numFromMap   = numToRemove - numFromTrack
+        
+        val countries = if (numFromMap == 0)
+          Nil
+        else if (role == game.humanRole) {
+          val targets = game.muslims filter (_.troops > 0) map (m => MapItem(m.name, m.troops))
+          println(s"Select ${amountOf(numFromMap, "troop")} from the map to remove")
+          askMapItems(targets.sortBy(_.country), numFromMap, "troop")
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          Nil
+        }
+        
+        for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries) {
+          if (name != "track")
+            addEventTarget(name)
+          takeTroopsOffMap(name, num)
+        }
+        game = game.copy(eventParams = game.eventParams.copy(sequestrationTroops = true))
+        addGlobalEventMarker("Sequestration")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(185, "al-Maliki", Jihadist, 3,

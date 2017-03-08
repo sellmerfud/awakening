@@ -585,7 +585,7 @@ object LabyrinthAwakening {
     val prestige       = 5
     val usPosture      = Soft
     val funding        = 5
-    val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
+    val availablePlots = PlotWMD::Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
     val countries = List(
       NonMuslimCountry(Canada),
       NonMuslimCountry(UnitedStates, posture = Soft),
@@ -661,6 +661,11 @@ object LabyrinthAwakening {
     botDifficulties: List[BotDifficulty]
   )
   
+  case class EventParameters(
+    oilPriceSpikes: Int = 0,              // Number of Oil Price Spikes in effect
+    sequestrationTroops: Boolean = false  // true if 3 troops off map due to Sequestration event
+  )
+  
   case class GameState(
     params: GameParameters,
     turn: Int,
@@ -674,7 +679,7 @@ object LabyrinthAwakening {
     offMapTroops: Int = 0,
     reserves: Reserves = Reserves(0, 0),
     trainingCampCells: CampCells = CampCells(0, 0),
-    oilPriceSpikes: Int = 0,
+    eventParams: EventParameters = EventParameters(),
     resolvedPlots: List[Plot] = Nil,
     cardsPlayed: List[PlayedCard] = Nil,   // Cards played during current turn (most recent first).
     firstPlotCard: Option[Int] = None,  // Card number
@@ -870,7 +875,7 @@ object LabyrinthAwakening {
     def numGoodOrFair    = muslims count (c => c.isGood || c.isFair)
     def numPoorOrIslamic = muslims count (c => c.isPoor || c.isIslamistRule)
     def numIslamistRule  = muslims count (c => c.isIslamistRule)
-    def oilBump(c: MuslimCountry) = if (c.oilProducer) oilPriceSpikes else 0
+    def oilBump(c: MuslimCountry) = if (c.oilProducer) eventParams.oilPriceSpikes else 0
     def goodResources =
       muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
     def islamistResources = 
@@ -3350,12 +3355,18 @@ object LabyrinthAwakening {
               game = game.adjustPrestige(-1)
               log(s"Decrease prestige by -1 to ${game.prestige} (Troops present)")
             }
+            // Sequestration
+            if (mapPlot.plot == PlotWMD && game.eventParams.sequestrationTroops) {
+              log("Resolved WMD plot releases the troops off map for Sequestration")
+              returnSequestrationTroopsToAvailable()
+            }
+            
             // rule 11.2.6
             // If second WMD in the same civil war.  Shift immediately to Islamist Rule.
-            if (mapPlot == PlotWMD && m.civilWar && (wmdsInCivilWars contains m.name))
+            if (mapPlot.plot == PlotWMD && m.civilWar && (wmdsInCivilWars contains m.name))
               degradeGovernance(m.name, 3, canShiftToIR = true) // 3 levels guarantees shift to IR
             else {
-              if (mapPlot == PlotWMD && m.civilWar) {
+              if (mapPlot.plot == PlotWMD && m.civilWar) {
                 // First WMD in civil war, remove a militia.
                 wmdsInCivilWars += m.name
                 if (m.militia > 0) {
@@ -3369,7 +3380,7 @@ object LabyrinthAwakening {
               val successes = dice count (_ <= m.governance)
               val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
               log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
-              degradeGovernance(name, successes, removeAid = true)
+              degradeGovernance(name, successes, removeAid = true, canShiftToIR = false)
             }
             
           //------------------------------------------------------------------
@@ -3421,11 +3432,16 @@ object LabyrinthAwakening {
                   rollCountryPosture(s2)
                 }
             }
-        } // match
+            // Sequestration
+            if (mapPlot.plot == PlotWMD && game.eventParams.sequestrationTroops) {
+              log("Resolved WMD plot releases the troops off map for Sequestration")
+              returnSequestrationTroopsToAvailable()
+            }
             // Prestige
             if (name == UnitedStates)
               rollPrestige()
-          log() // blank line before next one
+        } // match
+        log() // blank line before next one
       } // for 
       // Move all of the plots to the resolved plots box.
       println("Put the plots in the resolved plots box")
@@ -3436,9 +3452,20 @@ object LabyrinthAwakening {
           game = game.updateCountry(n.copy(plots = Nil)).copy(resolvedPlots = (n.plots map (_.plot)) ::: game.resolvedPlots)
       }
     }
-    // Rule 11.2.6
-    // Two or more WMD plots were resolved in the same muslim country,
-    // then it is set to Islamist Rule 
+  }
+  
+  def piratesConditionsInEffect: Boolean = List(Somalia, Yemen) map game.getMuslim exists { m =>
+    (m.isPoor && m.isAdversary) || m.isIslamistRule
+  }
+  
+    // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
+    // then return the troops to available.
+  def returnSequestrationTroopsToAvailable(): Unit = {
+    if (game.eventParams.sequestrationTroops) {
+      log("Return 3 (Sequestration) troops from the off map box to the troops track")
+      game = game.copy(offMapTroops = game.offMapTroops - 3,
+                       eventParams = game.eventParams.copy(sequestrationTroops = false))
+    }
   }
   
   def endTurn(): Unit = {
@@ -3446,7 +3473,7 @@ object LabyrinthAwakening {
     log("End of turn")
     log(separator())
     
-    if (game.markerInPlay("Pirates")) { // Check for pirates marker and Somalia or Yemen at Islamist Rule
+    if (game.markerInPlay("Pirates") && piratesConditionsInEffect) {
       log("No funding drop because Pirates is in effect")
     }
     else {
@@ -3472,7 +3499,7 @@ object LabyrinthAwakening {
     
     if (game.cardsLapsing.nonEmpty) {
       log(s"Discard the lapsing events: ${cardNumsAndNames(game.cardsLapsing)}")
-      game = game.copy(cardsLapsing = Nil, oilPriceSpikes = 0)
+      game = game.copy(cardsLapsing = Nil, eventParams = game.eventParams.copy(oilPriceSpikes = 0))
     }
     game.firstPlotCard foreach { num => 
       log(s"Discard the firstplot card: ${cardNumAndName(num)}")
@@ -3505,9 +3532,18 @@ object LabyrinthAwakening {
     log(s"$US player will draw $usCards cards")
     log(s"Jihadist player will draw $jihadistCards cards")
     
-    if (game.offMapTroops > 0) {
-      log(s"Return ${game.offMapTroops} troops from the off map box to the troops track")
-      game = game.copy(offMapTroops = 0)
+    // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
+    // then return the troops to available.
+    if (game.eventParams.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
+      log("There is a 3 Resource Mulim country at Islamist Rule and")
+      log("troops off map for Sequestration")
+      returnSequestrationTroopsToAvailable()
+    }
+    
+    val offMapTroopsToReturn = game.offMapTroops - (if (game.eventParams.sequestrationTroops) 3 else 0)
+    if (offMapTroopsToReturn > 0) {
+      log(s"Return ${offMapTroopsToReturn} troops from the off map box to the troops track")
+      game = game.copy(offMapTroops = game.offMapTroops - offMapTroopsToReturn)
     }
     
     for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
