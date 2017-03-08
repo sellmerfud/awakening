@@ -76,6 +76,13 @@ object AwakeningCards extends CardDeck {
     !(m.isGood || m.isIslamistRule || m.civilWar || m.inRegimeChange)
   }
   val ghostSoldiersCandidate = (m: MuslimCountry) => m.militia > 0 && (m.civilWar || m.inRegimeChange)
+
+
+  def parisAttacksPossible: Boolean = {
+    val list = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
+    (game.cellsAvailable > 0 || game.availablePlots.nonEmpty) &&
+    (list exists (name => game.getNonMuslim(name).isHard))
+  }
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -500,7 +507,7 @@ object AwakeningCards extends CardDeck {
     entry(new Card(139, "Int'l Banking Regime", US, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
       (role: Role) => {
-        val die = dieRoll
+        val die = getDieRoll(role)
         log(s"Die roll: $die")
         println()
         decreaseFunding((die + 1) / 2)  // Half rounded up
@@ -735,7 +742,7 @@ object AwakeningCards extends CardDeck {
         val (target, die) = if (role == game.humanRole) {
           val t = askCountry("Select country: ", candidates)
           val d = if (game.getMuslim(t).warOfIdeasOK(3, ignoreRegimeChange = true)) 
-            humanDieRoll("Enter War of Ideas die roll: ", allowAbort = true)
+            humanDieRoll("Enter War of Ideas die roll: ")
           else
             0
           (t, d)
@@ -1493,7 +1500,7 @@ object AwakeningCards extends CardDeck {
       ,
       (role: Role) => {
         addEventTarget(Iran)
-        val die = if (role == game.humanRole) humanDieRoll(allowAbort = true) else dieRoll
+        val die = getDieRoll(role)
         val success = die < 4
         log(s"Die roll: $die")
         if (success) {
@@ -1513,8 +1520,61 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(182, "Paris Attacks", Jihadist, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => parisAttacksPossible
+      ,
+      (role: Role) => {
+        // Note: There is a slight chance that the Bot could execute this event,
+        // and get a black die roll for only plots or only cells and there are 
+        // plot/cells available.
+        val countries = List(UnitedStates, Canada, UnitedKingdom, Benelux, France)
+        val validSchengen = for (s <- Schengen; if game.getNonMuslim(s).isHard) yield s
+        println()
+        val tanDie     = getDieRoll(role, "Enter tan die: ")
+        val blackDie   = getDieRoll(role, "Enter black die: ")
+        val (plots, activeCells) = blackDie match {
+          case 1 => (Plot1::Plot2::Nil, 0)
+          case 2 => (Plot3::Nil, 2)
+          case 3 => (Plot2::Nil, 1)
+          case 4 => (Plot2::Nil, 0)
+          case 5 => (Plot1::Nil, 1)
+          case _ => (Plot1::Nil, 0)
+        }
+        def isHard(name: String) = game.getNonMuslim(name).isHard
+        def getTarget(list: List[String]): Option[String] = {
+          list.drop(tanDie - 1) match {
+            case Nil if validSchengen.nonEmpty => Some("Schengen")
+            case Nil                           => None
+            case x::xs if isHard(x)            => Some(x)
+            case x::xs                         => getTarget(xs)
+          }
+        }
+        def placePlots(name: String, plotList: List[Plot]): Unit = plotList match {
+          case Nil =>
+          case p::ps =>
+            if (game.availablePlots contains p)
+              addAvailablePlotToCountry(name, p)
+            placePlots(name, ps)
+        }
+        
+        log(s"Tan die: $tanDie,  Black die: $blackDie")
+        val target = getTarget(countries drop (tanDie - 1)) map {
+          case "Schengen" if role == game.humanRole =>
+            askCountry("Choose a Hard Schengen country: ", validSchengen)
+          case "Schengen" => shuffle(validSchengen).head // Bot selects randomly
+          case name => name
+        }
+        
+        target match {
+          case None =>
+            log("No Hard country was selected for the Paris Attacks event")
+          case Some(name) =>
+            addEventTarget(name)
+            log(s"$name is the target of the Paris Attacks event")
+            placePlots(name, plots)
+            addActiveCellsToCountry(name, activeCells min game.cellsAvailable)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(183, "Pirates", Jihadist, 2,

@@ -36,9 +36,19 @@ import scala.collection.mutable.ListBuffer
 object LabyrinthAwakening {
   
   def dieRoll = nextInt(6) + 1
-  def humanDieRoll(prompt: String = "Enter die roll: ", allowAbort: Boolean = false) =
-    if (game.params.humanAutoRoll) dieRoll
-    else  (askOneOf(prompt, 1 to 6, allowAbort = allowAbort) map (_.toInt)).get
+  def humanDieRoll(prompt: String = "Enter die roll: ", allowAbort: Boolean = true) =
+    if (game.params.humanAutoRoll)
+      dieRoll
+    else
+      (askOneOf(prompt, 1 to 6, allowAbort = allowAbort) map (_.toInt)).get
+  
+  // If the given role is human the prompt if necessary otherwise produce the roll automatically
+  def getDieRoll(role: Role, prompt: String = "Enter die roll: ", allowAbort: Boolean = true): Int = {
+    if (role == game.humanRole)
+      humanDieRoll(prompt, allowAbort)
+    else
+      dieRoll
+  }
   
   val INTEGER = """(\d+)""".r
   
@@ -2336,7 +2346,7 @@ object LabyrinthAwakening {
         else {
           log(s"$US performs War of Ideas in $name")
           log(separator())
-          val die = humanDieRoll(allowAbort = true)
+          val die = humanDieRoll()
           log(s"Die roll: $die")
           val modRoll = modifyWoiRoll(die, tested, ignoreGwotPenalty)
           if (modRoll <= 4) {
@@ -2369,7 +2379,7 @@ object LabyrinthAwakening {
         log()
         log(s"$US performs War of Ideas in $name")
         log(separator())
-        val die = humanDieRoll(allowAbort = true)
+        val die = humanDieRoll()
         val newPosture = if (die > 4) Hard else Soft
         game = game.updateCountry(n.copy(posture = newPosture))
         log(s"Die roll: $die")
@@ -4132,7 +4142,7 @@ object LabyrinthAwakening {
         (dest, true)
       }
       else {
-        val die     = humanDieRoll(s"Die roll for $ord Recruit in $dest: ", allowAbort = true)
+        val die     = humanDieRoll(s"Die roll for $ord Recruit in $dest: ")
         val success = c.recruitSucceeds(die)
         val result  = if (success) "succeeds" else "fails"
         log(s"$ord Recruit $result in $dest with a roll of $die")
@@ -4242,7 +4252,7 @@ object LabyrinthAwakening {
       else {
         println()
         testCountry(destName)
-        val die    = humanDieRoll(s"Die roll for $ord Travel from $srcName to $destName: ", allowAbort = true)
+        val die    = humanDieRoll(s"Die roll for $ord Travel from $srcName to $destName: ")
         performTravel(srcName, destName, active, die, s"$ord ")
       }
     }
@@ -4314,7 +4324,7 @@ object LabyrinthAwakening {
         if (dieNumber > numDice) Nil
         else {
           val ord = ordinal(dieNumber)
-          val die = humanDieRoll(s"$ord Die roll for $jihad in $name: ", allowAbort = true)
+          val die = humanDieRoll(s"$ord Die roll for $jihad in $name: ")
           die :: getDieRolls(dieNumber + 1)
         }
       }
@@ -4395,7 +4405,7 @@ object LabyrinthAwakening {
       println(separator())
       if (!active)  
         flipSleeperCells(name, 1)
-      val die     = humanDieRoll(s"Die roll for $ord plot int $name: ", allowAbort = true)
+      val die     = humanDieRoll(s"Die roll for $ord plot int $name: ")
       val success = die <= c.governance
       val result  = if (success) "succeeds" else "fails"
       
