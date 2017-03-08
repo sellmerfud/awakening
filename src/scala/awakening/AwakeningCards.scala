@@ -62,12 +62,16 @@ object AwakeningCards extends CardDeck {
     m.regimeChange == TanRegimeChange && (m.totalTroopsAndMilitia / 2) > m.totalCells
   
   val coupCandidate = (m: MuslimCountry) => 
-    m.resources == 1 && (m.isPoor || m.isGood) && 
-    m.totalCells >= 2 && !(m.civilWar && m.besiegedRegime)
+    m.resources == 1 && m.totalCells >= 2 && !(m.civilWar && m.besiegedRegime)
     
   val islamicMaghrebCountry = Set(AlgeriaTunisia, Libya, Mali, Morocco, Nigeria)
   val islamicMaghrebCandidate = (m: MuslimCountry) => islamicMaghrebCountry(m.name) && m.isPoor
   val theftOfStateCandidate = (m: MuslimCountry) => m.isPoor && m.awakening > 0
+  val changeOfStateCandidate = (m: MuslimCountry) => {
+    (m.isShiaMix || m.name == Jordan || m.name == Morocco) && !m.isUntested &&
+    !(m.isGood || m.isIslamistRule || m.civilWar || m.inRegimeChange)
+  }
+  
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -1102,7 +1106,7 @@ object AwakeningCards extends CardDeck {
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
-        removeRegimeChangeMarker(target)
+        endRegimeChange(target)
         shiftAlignment(target, Ally)
       }
     )),
@@ -1338,8 +1342,20 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(176, "Change of State", Jihadist, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game hasMuslim changeOfStateCandidate
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter changeOfStateCandidate)
+        val target = if (role == game.humanRole) 
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        // Strip the country of all markers and make it Untested
+        setCountryToUntested(target)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(177, "Gaza Rockets", Jihadist, 2,

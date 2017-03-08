@@ -188,7 +188,7 @@ object LabyrinthAwakening {
   
   // Country Types
   val NonMuslim = "Non-Muslim"
-  val Suni      = "Suni"
+  val Sunni     = "Sunni"
   val ShiaMix   = "Shia-Mix"
   
   val PostureUntested = "Untested"
@@ -493,6 +493,7 @@ object LabyrinthAwakening {
     def isNeutral   = alignment == Neutral
     def isAdversary = alignment == Adversary
     
+    def isShiaMix = !isSunni
     def inRegimeChange = regimeChange != NoRegimeChange
     
     def isUntestedWithData: Boolean = isUntested && (
@@ -505,6 +506,7 @@ object LabyrinthAwakening {
       besiegedRegime            ||
       civilWar                  ||
       caliphateCapital          ||
+      aidMarkers > 0            ||
       awakening > 0             ||
       reaction > 0              ||
       wmdCache > 0
@@ -514,7 +516,7 @@ object LabyrinthAwakening {
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) =
       (isUntested      || ops >= governance)  &&
       !(isAdversary    || (isGood && isAlly)) &&
-      (!inRegimeChange || ignoreRegimeChange || (totalTroopsAndMilitia - totalCells) < 5)
+      (!inRegimeChange || ignoreRegimeChange || (totalTroopsAndMilitia - totalCells) >= 5)
     
     def autoRecruit = isIslamistRule || civilWar || inRegimeChange || hasMarker("Training Camps")
     def recruitSucceeds(die: Int) = autoRecruit || die <= governance
@@ -1623,6 +1625,35 @@ object LabyrinthAwakening {
       log(s"Modified roll: $modRoll")
     modRoll
   }
+
+  // Throws an exception if a Caliphate already exists
+  def declareCaliphate(capital: String): Unit = {
+    assert(!game.caliphateDeclared, "declareCaliphate() called and a Caliphate Capital already on the map")
+    log(s"A Caliphate is declared with $capital as the Capital")
+    setCaliphateCapital(capital)
+    increaseFunding(2)
+    logSummary(game.caliphateSummary)
+    
+  }
+  
+  def setCaliphateCapital(name: String): Unit = {
+    assert(game.isMuslim(name), s"setCaliphateCapital() called on non-muslim country: $name")
+    val capital = game.getMuslim(name);
+    assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
+    // First make sure there is no country marked as the capital
+    game = game.updateCountries(game.muslims.map(_.copy(caliphateCapital = false)))
+    val daisyChain = game.caliphateDaisyChain(name).map { memberName =>
+      val member = game.getMuslim(memberName)
+      if (member.sleeperCells > 0)
+        log(s"Activate all sleeper cells in $memberName")
+      member.copy(
+        caliphateCapital = member.name == name,
+        activeCells      = member.totalCells,  // All cells go active in caliphate members
+        sleeperCells     = 0
+      )
+    }
+    game = game.updateCountries(daisyChain)
+  }
   
   
   // Important: Assumes that the game has already been updated, such that the
@@ -1689,6 +1720,20 @@ object LabyrinthAwakening {
       log(s"Reduce funding by -1 to ${game.funding}")
       log(s"Increase prestige by +1 to ${game.prestige}")
       logSummary(game.caliphateSummary)
+    }
+  }
+  
+  // Check to see if there are any sleeper cells in any caliphate members
+  // and flip them to active
+  def flipCaliphateSleepers(): Unit = {
+    for {
+      capital <- game.caliphateCapital
+      member  <- game.caliphateDaisyChain(capital)
+      m       =  game.getMuslim(member)
+      if m.sleeperCells > 0
+    } {
+      game = game.updateCountry(m.copy(sleeperCells = 0, activeCells = m.totalCells))
+      log(s"$member is now a caliphate member, flip all sleeper cells to active")
     }
   }
   
@@ -2319,6 +2364,8 @@ object LabyrinthAwakening {
     if (m.sleeperCells > 0)
       log(s"Flip the ${amountOf(m.sleeperCells, "sleeper cell")} in ${m.name} to active")
     rollPrestige()
+    flipCaliphateSleepers()
+    
   }
   
   // • Deploy any number troops out of the Regime Change country (regardless of cells present).
@@ -2538,20 +2585,18 @@ object LabyrinthAwakening {
       if (newGov == Good) {
         // Note: "Training Camps" marker is handle specially.
         log(s"Improve governance of $name to ${govToString(newGov)}")
-        if (m.inRegimeChange  ) log(s"Remove regime change marker from $name")
         if (m.besiegedRegime  ) log(s"Remove besieged regime marker from $name")
         if (m.aidMarkers > 0  ) log(s"Remove ${amountOf(m.aidMarkers, "aid marker")} from $name")
         if (m.awakening > 0   ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name")
         if (m.reaction > 0    ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.reaction > 0    ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
         if (m.militia > 0     ) log(s"Remove ${m.militia} miltia from $name")
-        if (m.caliphateCapital) log(s"Remove Caliphate Capital maker from $name")
 
         val improved = m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
-               militia = 0, regimeChange = NoRegimeChange, besiegedRegime = false,
-               caliphateCapital = false)
+               militia = 0, besiegedRegime = false)
         game = game.updateCountry(improved)
         removeTrainingCamp_?(name)
+        endRegimeChange(name)
         endCivilWar(name)
       }
       else {
@@ -2600,6 +2645,7 @@ object LabyrinthAwakening {
         game = game.updateCountry(degraded).copy(
           availablePlots = List.fill(m.wmdCache)(PlotWMD) ::: game.availablePlots)
         endCivilWar(name)
+        flipCaliphateSleepers()
       }
       else if (delta == 0) {
         // There was no change in governance.  ie: Poor and canShiftToIR == false 
@@ -2624,6 +2670,43 @@ object LabyrinthAwakening {
     }
   }
 
+  // Remove all markers from the country (except any wmd cache)
+  // and make it untested.
+  def setCountryToUntested(name: String): Unit = {
+    log(s"Revert $name to an untested country")
+    log(separator())
+    if (game isMuslim name) {
+      val m = game.getMuslim(name)
+      removeCellsFromCountry(name, m.activeCells, m.sleeperCells, addCadre = false)
+      removeCadre(name)
+      moveTroops(name, "track", m.troops)
+      removeMilitiaFromCountry(name, m.militia)
+      for (p <- m.plots)
+        removePlotFromCountry(name, p, toAvailable = true)
+      removeEventMarkersFromCountry(name, m.markers:_*)
+      removeBesiegedRegimeMarker(name)
+      removeAidMarker(name, m.aidMarkers)
+      removeAwakeningMarker(name, m.awakening)
+      removeReactionMarker(name, m.reaction)
+      // Ending the regime change orcivil war will also remove the caliphateCapital
+      // status if it is in effect
+      endRegimeChange(name)
+      endCivilWar(name)
+      game = game.updateCountry(game.getMuslim(name).copy(governance = GovernanceUntested))
+      log(s"Remove the ${govToString(m.governance)} governance marker from $name")
+    }
+    else {
+      val n = game.getNonMuslim(name)
+      removeCellsFromCountry(name, n.activeCells, n.sleeperCells, addCadre = false)
+      removeCadre(name)
+      for (p <- n.plots)
+        removePlotFromCountry(name, p, toAvailable = true)
+      removeEventMarkersFromCountry(name, n.markers:_*)
+      game = game.updateCountry(game.getNonMuslim(name).copy(posture = PostureUntested))
+      log(s"Remove the ${n.posture} posture marker from $name")
+    }
+  }
+  
   def shiftAlignment(name: String, newAlign: String): Unit = {
     var m = game.getMuslim(name)
     if (m.alignment != newAlign) {
@@ -2741,6 +2824,11 @@ object LabyrinthAwakening {
   def startCivilWar(name: String): Unit = {
     val m = game.getMuslim(name)
     if (!m.civilWar) {
+      testCountry(name)
+      if (m.isGood)
+        degradeGovernance(name, 1)
+      else if (m.isIslamistRule)
+        improveGovernance(name, 1)
       game = game.updateCountry(m.copy(civilWar = true, regimeChange = NoRegimeChange))
       log(s"Add civil war marker to $name")
       if (m.inRegimeChange)
@@ -2750,6 +2838,7 @@ object LabyrinthAwakening {
       removeReactionMarker(name, m.reaction)
       val newSleepers = m.reaction min game.cellsAvailable(ignoreFunding = true)
       addSleeperCellsToCountry(name, newSleepers, ignoreFunding = true)
+      flipCaliphateSleepers()
     }
   }
     
@@ -2758,11 +2847,27 @@ object LabyrinthAwakening {
     val m = game.getMuslim(name)
     val priorCampCapacity = game.trainingCampCapacity
     if (m.civilWar) {
-      game = game.updateCountry(m.copy(civilWar = false, caliphateCapital = false))
+      game = game.updateCountry(m.copy(civilWar = false))
       log(s"Remove civil war marker from $name")
       removeMilitiaFromCountry(name, m.militia)
       removeEventMarkersFromCountry(name, markersRemovedWhenCivilWarEnds:_*)
-      if (m.caliphateCapital) {
+      if (m.caliphateCapital && !m.inRegimeChange) {
+        game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
+        log(s"Remove the Caliphate Capital marker from $name")
+        displaceCaliphateCapital(m.name)
+        updateTrainingCampCapacity(priorCampCapacity)
+      }
+    }
+  }
+  
+  def endRegimeChange(name: String): Unit = {
+    val m = game.getMuslim(name)
+    val priorCampCapacity = game.trainingCampCapacity
+    if (m.inRegimeChange) {
+      game = game.updateCountry(m.copy(regimeChange = NoRegimeChange))
+      log(s"Remove regime change marker from $name")
+      if (m.caliphateCapital && !m.civilWar) {
+        game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
         log(s"Remove the Caliphate Capital marker from $name")
         displaceCaliphateCapital(m.name)
         updateTrainingCampCapacity(priorCampCapacity)
@@ -2840,7 +2945,8 @@ object LabyrinthAwakening {
   // otherwise the function will throw an exception!
   def addCellsToCountry(name: String, active: Boolean, num: Int, ignoreFunding: Boolean = false, logPrefix: String = ""): Unit = {
     if (num > 0) {
-      val cellType = if (active) "active cell" else "sleeper cell"
+      val isActive = active || game.isCaliphateMember(name)
+      val cellType = if (isActive) "active cell" else "sleeper cell"
       val available = game.cellsAvailable(ignoreFunding)
       assert(available >= num, s"not enough available cells have: $available, need $num")
       
@@ -2851,10 +2957,10 @@ object LabyrinthAwakening {
       // The number on the track is calculated, so it does not need to be set here.
       val newCampCells = CampCells(campCellsInCamp - fromCamp, campCellsOnMap + fromCamp)
       val updated = game.getCountry(name) match {
-        case m: MuslimCountry if active    => m.copy(activeCells  = m.activeCells  + num, hasCadre = false)
-        case m: MuslimCountry              => m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false)
-        case n: NonMuslimCountry if active => n.copy(activeCells  = n.activeCells  + num, hasCadre = false)
-        case n: NonMuslimCountry           => n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false)
+        case m: MuslimCountry if isActive    => m.copy(activeCells  = m.activeCells  + num, hasCadre = false)
+        case m: MuslimCountry                => m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false)
+        case n: NonMuslimCountry if isActive => n.copy(activeCells  = n.activeCells  + num, hasCadre = false)
+        case n: NonMuslimCountry             => n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false)
       }
       game = game.copy(trainingCampCells = newCampCells).updateCountry(updated)
       
@@ -2927,7 +3033,9 @@ object LabyrinthAwakening {
   
   
   def moveCellsBetweenCountries(fromName: String, toName: String, num: Int, active: Boolean): Unit = {
-    val cellType = if (active) "active cell" else "sleeper cell"
+    val makeActive = game.isCaliphateMember(toName)
+    val fromType = if (active)     "active cell" else "sleeper cell"
+    val toType   = if (makeActive) "active" else "sleeper"
     val (from, to) = (game.getCountry(fromName), game.getCountry(toName))
     if (active)
       assert(from.activeCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num active cells")
@@ -2936,13 +3044,13 @@ object LabyrinthAwakening {
     
     if (fromName == toName)
       num match {
-        case 1 => log(s"1 $cellType in $fromName travels in place and becomes a sleeper cell")
-        case n => log(s"$n ${cellType}s in $fromName travel in place and become a sleeper cells")
+        case 1 => log(s"1 $fromType in $fromName travels in place and becomes a $toType cell")
+        case n => log(s"$n ${fromType}s in $fromName travel in place and become $toType cells")
       }
     else {
       num match {
-        case 1 => log(s"Move 1 $cellType from $fromName to $toName as a sleeper cell")
-        case n => log(s"Move $n ${cellType}s from $fromName to $toName as a sleeper cells")
+        case 1 => log(s"Move 1 $fromType from $fromName to $toName as a $toType cell")
+        case n => log(s"Move $n ${fromType}s from $fromName to $toName as $toType cells")
       }
       if (to.hasCadre)
         log(s"Remove the cadre marker in $toName")
@@ -2955,8 +3063,10 @@ object LabyrinthAwakening {
       case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells - num))
     }
     to match {
-      case m: MuslimCountry              => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false))
-      case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))
+      case m: MuslimCountry if makeActive    => game = game.updateCountry(m.copy(activeCells = m.activeCells + num, hasCadre = false))
+      case m: MuslimCountry                  => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false))
+      case n: NonMuslimCountry if makeActive => game = game.updateCountry(n.copy(activeCells = n.activeCells + num, hasCadre = false))
+      case n: NonMuslimCountry               => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))
     }
     removeTrainingCamp_?(fromName)
   }
@@ -3000,14 +3110,6 @@ object LabyrinthAwakening {
     }
   }
   
-  def removeRegimeChangeMarker(name: String): Unit = {
-    val m = game.getMuslim(name)
-    if (m.inRegimeChange) {
-      log(s"Remove regime change marker from $name.")
-      game = game.updateCountry(m.copy(regimeChange = NoRegimeChange))
-    }
-  }
-  
   def addBesiegedRegimeMarker(name: String): Unit = {
     val m = game.getMuslim(name)
     if (m.besiegedRegime)
@@ -3032,6 +3134,15 @@ object LabyrinthAwakening {
       assert(!m.isGood && !m.isIslamistRule, s"$target cannot take an aid marker")
       game = game.updateCountry(m.copy(aidMarkers = m.aidMarkers + num))
       log(s"Add ${amountOf(num, "aid marker")} to $target")
+    }
+  }
+  
+  def removeAidMarker(target: String, num: Int = 1): Unit = {
+    if (num > 0) {
+      val m = game.getMuslim(target)
+      assert(m.aidMarkers >= num, "removeAidMarker() not enough markers")
+      game = game.updateCountry(m.copy(aidMarkers = m.aidMarkers - num))
+      log(s"Remove ${amountOf(num, "aid marker")} from $target")
     }
   }
   
@@ -4256,6 +4367,26 @@ object LabyrinthAwakening {
       log(s"Add $plot to $name")
     else
       log(s"Add a hidden plot to $name")
+  }
+  
+  // The plot will be moved to the resolved plots box unless toAvailable is true
+  def removePlotFromCountry(name: String, mapPlot: PlotOnMap, toAvailable: Boolean = false): Unit = {
+    val c = game.getCountry(name)
+    val index = c.plots.indexOf(mapPlot)
+    assert(index >= 0, s"removePlotFromCountry(): $mapPlot is not present in $name")
+    val newPlots = c.plots.take(index) ::: c.plots.drop(index + 1)
+    c match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = newPlots))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = newPlots))
+    }
+    if (toAvailable) {
+      game = game.copy(availablePlots = mapPlot.plot :: game.availablePlots)
+      log(s"Move $mapPlot to the available plots box")
+    }
+    else {
+      game = game.copy(resolvedPlots = mapPlot.plot :: game.resolvedPlots)
+      log(s"Move $mapPlot to the resolved plots box")
+    }
   }
 
   
