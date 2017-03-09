@@ -599,7 +599,7 @@ object AwakeningCards extends CardDeck {
               case "funding"  => decreaseFunding(1)
               case "posture" =>
                 val target  = askCountry("Select posture of which Schengen country: ", Schengen)
-                val posture = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard), allowAbort = true).get
+                val posture = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
                 addEventTarget(target)
                 setCountryPosture(target, posture)
               case _ =>
@@ -829,7 +829,7 @@ object AwakeningCards extends CardDeck {
         if (game.troopsAvailable >= 6 && candidates.nonEmpty) {
           val (target, numTroops) = if (role == game.humanRole) {
             val t = askCountry("Select country: ", candidates)
-            val n = askInt("Deploy how many troops from the track: ", 6, game.troopsAvailable, Some(6))
+            val n = askInt("Deploy how many troops from the track", 6, game.troopsAvailable, Some(6))
             (t, n)
           }
           else {
@@ -1286,8 +1286,8 @@ object AwakeningCards extends CardDeck {
           }
           val canReaction = reactionCandidates.nonEmpty
           val canCell     = game.cellsAvailable > 0
-          val canPlot1    = game.availablePlots exists (_ == Plot1)
-          val canPlot2    = game.availablePlots exists (_ == Plot2)
+          val canPlot1    = game.availablePlots contains Plot1
+          val canPlot2    = game.availablePlots contains Plot2
           val canBesiege  = besiegeCandidates.nonEmpty
           def item(test: Boolean, x: (String, String)) = if (test) Some(x) else None
           val items = List(
@@ -1424,7 +1424,7 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(177, "Gaza Rockets", Jihadist, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
-      (role: Role) => (game.availablePlots exists (_ == Plot1)) &&
+      (role: Role) => (game.availablePlots contains Plot1) &&
                       (role == game.humanRole || game.funding < 9) // Bot unplayable if funding == 9
       ,
       (role: Role) => {
@@ -1631,6 +1631,7 @@ object AwakeningCards extends CardDeck {
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
+        addEventTarget(target)
         val m = game.getMuslim(target)
         moveTroops(target, "track", m.troops)
         removeAllTroopsMarkers(target)
@@ -1641,8 +1642,50 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(186, "Boko Haram", Jihadist, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => (game.availablePlots exists (p => p == Plot2 || p == Plot3)) ||
+                      game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        addEventTarget(Nigeria)
+        testCountry(Nigeria)
+        if (role == game.humanRole) {
+          val havePlots = game.availablePlots exists (p => p == Plot2 || p == Plot3)
+          val haveCells = game.cellsAvailable > 0
+          val choices = List(
+            if (havePlots) Some("plot"  -> "Place a level 2 or level 3 Plot in Nigeria") else None,
+            if (haveCells) Some("cells" -> "Place up to 3 cells in Nigeria") else None
+          ).flatten
+          if (choices.size > 1)
+            println("Choose one of:")
+          askMenu(ListMap(choices:_*)).head match {
+            case "plot" =>
+              val options = Seq(Plot2, Plot3) filter game.availablePlots.contains map {
+                case Plot2 => "2"
+                case Plot3 => "3"
+              }
+              val plotNum = if (options.size == 1)
+                options.head
+              else
+                askOneOf("What level plot? (2 or 3) ", options).get
+              plotNum match {
+                case "2" => addAvailablePlotToCountry(Nigeria, Plot2)
+                case "3" => addAvailablePlotToCountry(Nigeria, Plot3)
+              }
+              
+            case "cells" =>
+              val maxCells = 3 min game.cellsAvailable
+              val num = askInt("Place how many cells", 1, maxCells, Some(maxCells))
+              addSleeperCellsToCountry(Nigeria, 3)
+          }
+          log()
+          log("Jihadist player may return Boko Haram to hand by")
+          log("discarding a non-US associated 3 Ops card")
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(187, "Foreign Fighters", Jihadist, 3,
