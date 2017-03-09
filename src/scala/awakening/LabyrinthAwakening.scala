@@ -189,7 +189,12 @@ object LabyrinthAwakening {
   val War          = "War"
   val Overstretch  = "Overstretch"
   val USCardDraw = Map(LowIntensity -> 9, War -> 8, Overstretch -> 7)
-  
+
+  // Prestige Level
+  val Low      = "Low"
+  val Medium   = "Medium"
+  val High     = "High"  
+  val VeryHigh = "Very High"  
   // Funding level
   val Tight    = "Tight"
   val Moderate = "Moderate"
@@ -821,6 +826,13 @@ object LabyrinthAwakening {
       case x if x <  5 => Overstretch
       case x if x < 10 => War
       case _           => LowIntensity
+    }
+    
+    def prestigeLevel = prestige match {
+      case x if x <  4 =>  Low
+      case x if x <  7 => Medium
+      case x if x < 10 => High
+      case _           => VeryHigh
     }
     
     def fundingLevel = funding match {
@@ -1628,6 +1640,10 @@ object LabyrinthAwakening {
     log(s"Die roll: $die")
     log("+1: Rolling US posture")
     log(s"Modified roll: ${die + 1}")
+    setUSPosture(newPosture)
+  }
+  
+  def setUSPosture(newPosture: String): Unit = {
     if (game.usPosture == newPosture)
       log(s"US posture remains $newPosture")
     else {
@@ -2592,7 +2608,7 @@ object LabyrinthAwakening {
       log("\n%s event \"%s\" triggers".format(role, card.name))
     else
       log("\n%s executes the \"%s\" event".format(role, card.name))
-    
+    log(separator())
     card.executeEvent(role)
     
     val remove = (card.remove, role) match {

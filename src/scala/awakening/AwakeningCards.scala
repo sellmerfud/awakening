@@ -1806,6 +1806,7 @@ object AwakeningCards extends CardDeck {
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))
+        
         val other2 = if (role == game.humanRole) {
           val o1 = askCountry("Select 1st country: ", candidates)
           val o2 = askCountry("Select 2nd country: ", candidates)
@@ -1818,8 +1819,10 @@ object AwakeningCards extends CardDeck {
         
         val targets = if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker)
           Egypt :: other2
-        else
+        else {
+          log("Egypt cannot currently take a reaction marker.")
           other2
+        }
         for (target <- targets) {
           addEventTarget(target)
           testCountry(target)
@@ -1829,8 +1832,33 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(192, "Quagmire", Jihadist, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => (game.prestigeLevel == Medium || game.prestigeLevel == Low) &&
+                      (game hasMuslim (m => m.inRegimeChange && m.totalCells > 0))
+      ,
+      (role: Role) => {
+        val opponent = if (role == Jihadist) US else Jihadist
+        log("US randomly discards 2 cards")
+        log("Playable Jihadist events on the discards are triggered")
+        
+        def nextDiscard(num: Int): List[Int] = {
+          if (num > 2)
+            Nil
+          else {
+            val prompt = s"Number of the ${ordinal(num)} discard (or blank if none) "
+            askCardNumber(prompt) match {
+              case None         => Nil
+              case Some(cardNo) =>  cardNo :: nextDiscard(num + 1)
+            }
+          }
+        }
+        
+        for (n <- nextDiscard(1); card = deck(n))
+          if (card.eventWillTrigger(Jihadist))
+            performCardEvent(card, Jihadist, triggered = true)
+        
+        setUSPosture(Soft)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(193, "Regional al-Qaeda", Jihadist, 3,
