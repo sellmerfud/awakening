@@ -78,6 +78,7 @@ object AwakeningCards extends CardDeck {
   val ghostSoldiersCandidate = (m: MuslimCountry) => m.militia > 0 && (m.civilWar || m.inRegimeChange)
   val martyrdomCandidate = (c: Country) => c.totalCells > 0 && 
     !(game.isMuslim(c.name) && game.getMuslim(c.name).isIslamistRule)
+  val regionalAlQaedaCandidate = (m: MuslimCountry) => m.name != Iran && m.isUntested
 
   def parisAttacksPossible: Boolean = {
     val list = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
@@ -702,7 +703,7 @@ object AwakeningCards extends CardDeck {
         println()
         addEventTarget(target)
         removeCachedWMD(target, 1)
-        if (game.cellsAvailable(ignoreFunding = true) > 0)
+        if (game.cellsAvailable > 0)
           addSleeperCellsToCountry(Israel, 1, ignoreFunding = true)
         increaseFunding(1)
       }
@@ -1748,7 +1749,7 @@ object AwakeningCards extends CardDeck {
               addEventTarget(target)
               testCountry(target)
               val c = game.getCountry(target)
-              if (game.cellsAvailable(ignoreFunding = true) > 0) {
+              if (game.cellsAvailable > 0) {
                 if (c.autoRecruit) {
                   log(s"Recruit in $target succeeds automatically")
                   addSleeperCellsToCountry(target, 1, ignoreFunding = true)
@@ -1862,8 +1863,46 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(193, "Regional al-Qaeda", Jihadist, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game.cellsAvailable > 0 && (game.muslims count regionalAlQaedaCandidate) >= 2
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter regionalAlQaedaCandidate)
+        val maxPer = if (game hasMuslim (_.isIslamistRule)) 2 else 1
+        case class Target(name: String, cells: Int)
+        if (role == game.humanRole) {
+          val targets = if (game.cellsAvailable == 1) {
+            val name = askCountry("Select country: ", candidates)
+            Target(name, 1)::Nil
+          }
+          else if (maxPer == 2 && game.cellsAvailable < 4) {
+            println(s"There are only ${game.cellsAvailable} available cells")
+            val name1 = askCountry("Select 1st country: ", candidates)
+            val num1  = askInt(s"Place how many cells in $name1", 1, 2)
+            val remain = game.cellsAvailable - num1
+            if (remain == 0)
+              Target(name1, num1)::Nil
+            else {
+              val name2 = askCountry("Select 2nd country: ", candidates filterNot (_ == name1))
+              Target(name1, num1):: Target(name2, remain)::Nil
+            }
+          }
+          else {
+            val name1 = askCountry("Select 1st country: ", candidates)
+            val name2 = askCountry("Select 2nd country: ", candidates filterNot (_ == name1))
+            Target(name1, maxPer):: Target(name2, maxPer)::Nil
+          }
+          
+          for (Target(name, num) <- targets) {
+            addEventTarget(name)
+            testCountry(name)
+            addSleeperCellsToCountry(name, num)
+          }
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(194, "Snowden", Jihadist, 3,
@@ -1895,7 +1934,7 @@ object AwakeningCards extends CardDeck {
         }
         addEventMarkersToCountry(target, "Training Camps")
         updateTrainingCampCapacity(priorCapacity)
-        val cellsToAdd = game.cellsAvailable(ignoreFunding = true) min 2
+        val cellsToAdd = game.cellsAvailable min 2
         addSleeperCellsToCountry(target, cellsToAdd, ignoreFunding = true)
       }
     )),
@@ -2084,6 +2123,7 @@ object AwakeningCards extends CardDeck {
       USRemove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
       (role: Role) => {
         // Mark as either "Trade Embargo (US)" or "Trade Embargo (Jihadist)"
+        // If Iran becomes Neutral or Ally, remove any Trade Embargo marker. [11.3.3.1]
       }
     )),
     // ------------------------------------------------------------------------

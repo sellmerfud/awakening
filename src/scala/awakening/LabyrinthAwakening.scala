@@ -871,10 +871,14 @@ object LabyrinthAwakening {
       // Don't allow it to go negative due to camp cells that are on the map
       ((15 + trainingCampCapacity) - cellsOnMap - trainingCampCells.inCamp) max 0
     }
-    // Number of cells available for operations
-    def cellsAvailable(implicit ignoreFunding: Boolean = false) = {
-      if (ignoreFunding || (trainingCampsInPlay && funding == 9))
-        trainingCampCells.inCamp + cellsOnTrack
+    
+    // Cells available regardless of funding. For use by events.
+    def cellsAvailable = cellsOnTrack + trainingCampCells.inCamp
+
+    // Number of cells available for recruit operations.
+    def cellsToRecruit = {
+      if (funding == 9)
+        cellsAvailable
       else
         fundingLevel match {
           case Tight    => (cellsOnTrack - 10) max 0
@@ -981,7 +985,7 @@ object LabyrinthAwakening {
     
     def recruitTargets: List[String] = countryNames(countries filter (_.recruitOK))
     
-    def recruitPossible(ignoreFunding: Boolean) = cellsAvailable(ignoreFunding) > 0 && recruitTargets.nonEmpty
+    def recruitPossible = cellsToRecruit > 0 && recruitTargets.nonEmpty
     
     def jihadTargets: List[String] = countryNames(muslims filter (_.jihadOK))
     def jihadPossible = jihadTargets.nonEmpty
@@ -1052,7 +1056,7 @@ object LabyrinthAwakening {
       b += separator()
       b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track  : $militiaAvailable%2d"
       b += f"Cells in camp   : ${trainingCampCells.inCamp}%2d   | Camp cells on map : ${trainingCampCells.onMap}%2d" 
-      b += f"Cells available : ${cellsAvailable}%2d   | Funding level     : ${fundingLevel}"
+      b += f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}"
       b += separator()
       (trainingCamp, trainingCampCapacity) match {
         case (Some(c), 3) => b += s"Training camps  : $c (Capacity 3, non-Caliphate country)"
@@ -2924,7 +2928,7 @@ object LabyrinthAwakening {
       removeAwakeningMarker(name, m.awakening)
       addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
       removeReactionMarker(name, m.reaction)
-      val newSleepers = m.reaction min game.cellsAvailable(ignoreFunding = true)
+      val newSleepers = m.reaction min game.cellsAvailable
       addSleeperCellsToCountry(name, newSleepers, ignoreFunding = true)
       flipCaliphateSleepers()
     }
@@ -3042,7 +3046,7 @@ object LabyrinthAwakening {
     if (num > 0) {
       val isActive = active || game.isCaliphateMember(name)
       val cellType = if (isActive) "active cell" else "sleeper cell"
-      val available = game.cellsAvailable(ignoreFunding)
+      val available = game.cellsAvailable
       assert(available >= num, s"not enough available cells have: $available, need $num")
       
       val CampCells(campCellsInCamp, campCellsOnMap) = game.trainingCampCells
@@ -4140,7 +4144,7 @@ object LabyrinthAwakening {
     @tailrec def getNextResponse(): Option[String] = {
       val actions = List(
         if (card.eventIsPlayable(Jihadist) && reservesUsed == 0) Some(ExecuteEvent) else None,
-        if (game.recruitPossible(ignoreFunding = false))         Some(Recruit)      else None,
+        if (game.recruitPossible)                                Some(Recruit)      else None,
          /* Travel must be possible or the Jihadist has lost */  Some(Travel),
         if (game.jihadPossible)                                  Some(Jihad)        else None,
         if (game.plotPossible(opsAvailable))                     Some(PlotAction)   else None,
@@ -4201,7 +4205,7 @@ object LabyrinthAwakening {
   }    
 
   def humanRecruit(ops: Int): Unit = {
-    val availableCells = game.cellsAvailable
+    val availableCells = game.cellsToRecruit
     log()
     log(s"$Jihadist performs a Recruit operation with ${opsString(ops)}")
     log(separator())
@@ -5022,7 +5026,7 @@ object LabyrinthAwakening {
 
   def adjustActiveCells(name: String): Unit = {
     val c = game.getCountry(name)
-    val maxCells = c.activeCells + game.cellsAvailable(ignoreFunding = true)
+    val maxCells = c.activeCells + game.cellsAvailable
     if (maxCells == 0) {
       println("There a no cells available to add to this country.")
       pause()
@@ -5038,7 +5042,7 @@ object LabyrinthAwakening {
   
   def adjustSleeperCells(name: String): Unit = {
     val c = game.getCountry(name)
-    val maxCells = c.sleeperCells + game.cellsAvailable(ignoreFunding = true)
+    val maxCells = c.sleeperCells + game.cellsAvailable
     if (game.isCaliphateMember(name)) {
       println(s"$name is a Caliphate member and therefore cannot have sleeper cells.")
       pause()
