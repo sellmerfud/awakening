@@ -76,7 +76,8 @@ object AwakeningCards extends CardDeck {
     !(m.isGood || m.isIslamistRule || m.civilWar || m.inRegimeChange)
   }
   val ghostSoldiersCandidate = (m: MuslimCountry) => m.militia > 0 && (m.civilWar || m.inRegimeChange)
-
+  val martyrdomCandidate = (c: Country) => c.totalCells > 0 && 
+    !(game.isMuslim(c.name) && game.getMuslim(c.name).isIslamistRule)
 
   def parisAttacksPossible: Boolean = {
     val list = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
@@ -202,8 +203,9 @@ object AwakeningCards extends CardDeck {
         if (role == game.humanRole) {
           if (game.muslims exists (_.totalCells > 0)) {
             val choices = ListMap(
-              "remove"  -> "Remove up to 2 cell in one Muslim country",
+              "remove"  -> "Remove up to 2 cells in one Muslim country",
               "discard" -> "Randomly discard 1 card from the Jihadist hand")
+            println("Choose one:")
             askMenu(choices).head match {
               case "discard" => log("Discard the top card in the Jihadist hand")
               case _ =>
@@ -377,6 +379,7 @@ object AwakeningCards extends CardDeck {
           val choices = ListMap(
             "reveal"  -> "Reveal all WMD plots and remove one",
             "discard" -> "Randomly discard 1 card from the Jihadist hand")
+          println("Choose one:")
           askMenu(choices).head match {
             case "discard" => log("Discard the top card in the Jihadist Bot's hand")
             case _ =>
@@ -908,7 +911,10 @@ object AwakeningCards extends CardDeck {
           
         if (role == game.humanRole) {
           val action = if (actions.size == 1) actions.head 
-          else askMenu(choices).head
+          else {
+            println("Choose one:")
+            askMenu(choices).head
+          }
           action match {
             case "place" =>
               val target = askCountry("Place militia in which country: ", placeCandidates)
@@ -1069,8 +1075,10 @@ object AwakeningCards extends CardDeck {
           if (actions.nonEmpty) {
             val action = if (actions.size == 1)
               actions.head
-            else 
+            else {
+              println("Choose one:")
               askMenu(choices).head
+            }
 
             if (action == "activate") {
               val numToFlip = (game.sleeperCellsOnMap + 1) / 2  // half rounded up
@@ -1773,8 +1781,25 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(190, "Martyrdom Operation", Jihadist, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game.availablePlots.nonEmpty && (game hasCountry martyrdomCandidate)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.countries filter martyrdomCandidate)
+        if (role == game.humanRole) {
+          val target = askCountry("Select country: ", candidates)
+          val (active, sleeper) = askCells(target, 1)
+          val plots = askAvailablePlots(2, ops = 3)
+          
+          addEventTarget(target)
+          removeCellsFromCountry(target, active, sleeper, addCadre = false)
+          for (plot <- plots)
+            addAvailablePlotToCountry(target, plot)
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(191, "Muslim Brotherhood", Jihadist, 3,

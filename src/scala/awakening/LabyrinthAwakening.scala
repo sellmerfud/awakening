@@ -585,7 +585,7 @@ object LabyrinthAwakening {
     val prestige       = 5
     val usPosture      = Soft
     val funding        = 5
-    val availablePlots = PlotWMD::Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
+    val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
     val countries = List(
       NonMuslimCountry(Canada),
       NonMuslimCountry(UnitedStates, posture = Soft),
@@ -1392,6 +1392,16 @@ object LabyrinthAwakening {
         }
       }
     }
+  }
+  
+  // Ask the user to select a number of available plots
+  def askAvailablePlots(num: Int, ops: Int): List[Plot] = {
+    val plotList = for ((p, i) <- game.availablePlots.sorted.zipWithIndex if ops >= p.opsToPlace) yield
+      (i.toString -> p)
+    val plotMap = ListMap(plotList:_*)
+    val choices = plotMap map { case (key, plot) => (key -> plot.name)}
+    println(s"Select ${amountOf(num, "available plot")}:")
+    askMenu(choices, num) map plotMap
   }
   
   def askCardNumber(prompt: String, 
@@ -4391,15 +4401,15 @@ object LabyrinthAwakening {
     val Active  = true
     val numPlots       = game.plotsAvailableWith(ops).size // Can only use WMD Plots or Plot with number <= ops
     val maxCells       = (game.plotTargets map (name => game.getCountry(name).totalCells)).sum
-    val plotCandidates = game.plotTargets
     log()
     log(s"$Jihadist performs a Plot operation with ${opsString(ops)}")
     log(separator())
     if (maxCells == 1)
       println("There is one cell on the map that can plot")
     else
-      println(s"There are ${{amountOf(maxCells, "cell")}} on the map that can plot")
+      println(s"There are $maxCells cells on the map that can plot")
     if (numPlots == 1)
+      
       println(s"There is 1 plot available for this operation")
     else
       println(s"There are $numPlots plots available for this operation")
