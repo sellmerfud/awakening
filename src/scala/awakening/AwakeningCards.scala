@@ -1689,8 +1689,25 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(187, "Foreign Fighters", Jihadist, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game hasMuslim (m => m.inRegimeChange || m.civilWar)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates.head
+        }
+        addEventTarget(target)
+        val m = game.getMuslim(target)
+        addSleeperCellsToCountry(target, 5 min game.cellsAvailable)
+        if (m.aidMarkers > 0)
+          removeAidMarker(target, 1)
+        else if (!m.besiegedRegime)
+          addBesiegedRegimeMarker(target)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(188, "ISIL", Jihadist, 3,
