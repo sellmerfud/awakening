@@ -1804,7 +1804,28 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(191, "Muslim Brotherhood", Jihadist, 3,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))
+        val other2 = if (role == game.humanRole) {
+          val o1 = askCountry("Select 1st country: ", candidates)
+          val o2 = askCountry("Select 2nd country: ", candidates)
+          o1::o2::Nil
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+          candidates take 2
+        }
+        
+        val targets = if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker)
+          Egypt :: other2
+        else
+          other2
+        for (target <- targets) {
+          addEventTarget(target)
+          testCountry(target)
+          addReactionMarker(target)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(192, "Quagmire", Jihadist, 3,
