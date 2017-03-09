@@ -1492,7 +1492,7 @@ object AwakeningCards extends CardDeck {
           takeTroopsOffMap(name, num)
         }
         addEventTarget(China)
-        setCountryPosture(China, if (game.usPosture == Soft) Hard else Soft)
+        setCountryPosture(China, oppositePosture(game.usPosture))
       }
     )),
     // ------------------------------------------------------------------------
@@ -1906,8 +1906,18 @@ object AwakeningCards extends CardDeck {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(194, "Snowden", Jihadist, 3,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing, NoAutoTrigger,
+      (role: Role) => game.prestige > 1                                    ||
+                      game.usPosture != game.getNonMuslim(Russia).posture  ||
+                      game.usPosture != game.getNonMuslim(Germany).posture
+      ,
+      (role: Role) => {
+        decreasePrestige(2)
+        addEventTarget(Russia)
+        addEventTarget(Germany)
+        setCountryPosture(Russia, oppositePosture(game.usPosture))
+        setCountryPosture(Germany, oppositePosture(game.usPosture))
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(195, "Taliban Resurgent", Jihadist, 3,

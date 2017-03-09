@@ -211,6 +211,11 @@ object LabyrinthAwakening {
   val Hard            = "Hard"
   val Even            = "Even"  // for display only
   
+  def oppositePosture(p: String): String = {
+    if (p != Hard && p != Soft)
+      throw new IllegalArgumentException(s"oppositePosture($p)")
+    if (p == Hard) Soft else Hard
+  }
   val GovernanceUntested = 0
   val Good               = 1
   val Fair               = 2
@@ -2516,7 +2521,7 @@ object LabyrinthAwakening {
   }
   
   def performReassessment(): Unit = {
-    val newPosture = if (game.usPosture == Hard) Soft else Hard
+    val newPosture = oppositePosture(game.usPosture)
     log(s"Change US posture from ${game.usPosture} to $newPosture")
     game = game.copy(usPosture = newPosture)
   }
@@ -3518,96 +3523,97 @@ object LabyrinthAwakening {
   }
   
   def endTurn(): Unit = {
-    log()
-    log("End of turn")
-    log(separator())
+    if (askYorN("Really end the turn (y/n)? ")) {
+      log()
+      log("End of turn")
+      log(separator())
     
-    if (game.markerInPlay("Pirates") && piratesConditionsInEffect) {
-      log("No funding drop because Pirates is in effect")
-    }
-    else {
-      game = game.adjustFunding(-1)
-      log(s"Jihadist funding drops -1 to ${game.funding}")
-    }
-    if (game.markerInPlay("Fracking")) {
-      game = game.adjustFunding(-1)
-      log(s"Jihadist funding drops -1 to ${game.funding} because Fracking is in effect")
-    }
-    if (game.numIslamistRule > 0) {
-      game = game.adjustPrestige(-1)
-      log(s"US prestige drops -1 to ${game.prestige} (At least 1 country is under Islamist Rule)")
-    }
-    else
-      log(s"US prestige stays at ${game.prestige} (No countries under Islamist Rule)")
+      if (game.markerInPlay("Pirates") && piratesConditionsInEffect) {
+        log("No funding drop because Pirates is in effect")
+      }
+      else {
+        game = game.adjustFunding(-1)
+        log(s"Jihadist funding drops -1 to ${game.funding}")
+      }
+      if (game.markerInPlay("Fracking")) {
+        game = game.adjustFunding(-1)
+        log(s"Jihadist funding drops -1 to ${game.funding} because Fracking is in effect")
+      }
+      if (game.numIslamistRule > 0) {
+        game = game.adjustPrestige(-1)
+        log(s"US prestige drops -1 to ${game.prestige} (At least 1 country is under Islamist Rule)")
+      }
+      else
+        log(s"US prestige stays at ${game.prestige} (No countries under Islamist Rule)")
     
-    val (worldPosture, level) = game.gwot
-    if (game.usPosture == worldPosture && level == 3) {
-      game = game.adjustPrestige(1)
-      log(s"US prestige increases +1 to ${game.prestige} (World posture is $worldPosture $level and US posture is ${game.usPosture})")
+      val (worldPosture, level) = game.gwot
+      if (game.usPosture == worldPosture && level == 3) {
+        game = game.adjustPrestige(1)
+        log(s"US prestige increases +1 to ${game.prestige} (World posture is $worldPosture $level and US posture is ${game.usPosture})")
+      }
+    
+      if (game.cardsLapsing.nonEmpty) {
+        log(s"Discard the lapsing events: ${cardNumsAndNames(game.cardsLapsing)}")
+        game = game.copy(cardsLapsing = Nil, eventParams = game.eventParams.copy(oilPriceSpikes = 0))
+      }
+      game.firstPlotCard foreach { num => 
+        log(s"Discard the firstplot card: ${cardNumAndName(num)}")
+        game = game.copy(firstPlotCard = None)
+      }
+      // The Bot's reserves are not cleared
+      if (game.humanRole == US && game.reserves.us > 0) {
+        game = game.copy(reserves = game.reserves.copy(us = 0))
+        log(s"$US reserves set to zero")
+      }
+      else if (game.humanRole == Jihadist && game.reserves.jihadist > 0) {
+        game = game.copy(reserves = game.reserves.copy(jihadist = 0))
+        log(s"Jihadist reserves set to zero")
+      }
+    
+      if (game.resolvedPlots.nonEmpty) {
+        game = game.copy(resolvedPlots = Nil, availablePlots = game.availablePlots ::: game.resolvedPlots)
+        log("Return all resolved plots to the available plots box")
+      }
+    
+      polarization()
+      civilWarAttrition()
+    
+      // Calculate number of cards drawn
+      val usCards = USCardDraw(game.troopCommitment)
+      val jihadistCards = JihadistCardDraw(game.fundingLevel)
+      log()
+      log("Draw Cards")
+      log(separator())
+      log(s"$US player will draw $usCards cards")
+      log(s"Jihadist player will draw $jihadistCards cards")
+    
+      // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
+      // then return the troops to available.
+      if (game.eventParams.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
+        log("There is a 3 Resource Mulim country at Islamist Rule and")
+        log("troops off map for Sequestration")
+        returnSequestrationTroopsToAvailable()
+      }
+    
+      val offMapTroopsToReturn = game.offMapTroops - (if (game.eventParams.sequestrationTroops) 3 else 0)
+      if (offMapTroopsToReturn > 0) {
+        log(s"Return ${offMapTroopsToReturn} troops from the off map box to the troops track")
+        game = game.copy(offMapTroops = game.offMapTroops - offMapTroopsToReturn)
+      }
+    
+      for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
+        game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
+        log(s"Flip green regime change marker in ${rc.name} to its tan side")
+      }
+    
+      // Reset history of cards for current turn
+      // Move the current turn Ops targets to the previous 
+      game = game.copy(turn = game.turn + 1, cardsPlayed = Nil)
+    
+      previousCardPlays = Nil
+      previousTurns = game :: previousTurns
+      saveGameState("some file name")      
     }
-    
-    if (game.cardsLapsing.nonEmpty) {
-      log(s"Discard the lapsing events: ${cardNumsAndNames(game.cardsLapsing)}")
-      game = game.copy(cardsLapsing = Nil, eventParams = game.eventParams.copy(oilPriceSpikes = 0))
-    }
-    game.firstPlotCard foreach { num => 
-      log(s"Discard the firstplot card: ${cardNumAndName(num)}")
-      game = game.copy(firstPlotCard = None)
-    }
-    // The Bot's reserves are not cleared
-    if (game.humanRole == US && game.reserves.us > 0) {
-      game = game.copy(reserves = game.reserves.copy(us = 0))
-      log(s"$US reserves set to zero")
-    }
-    else if (game.humanRole == Jihadist && game.reserves.jihadist > 0) {
-      game = game.copy(reserves = game.reserves.copy(jihadist = 0))
-      log(s"Jihadist reserves set to zero")
-    }
-    
-    if (game.resolvedPlots.nonEmpty) {
-      game = game.copy(resolvedPlots = Nil, availablePlots = game.availablePlots ::: game.resolvedPlots)
-      log("Return all resolved plots to the available plots box")
-    }
-    
-    polarization()
-    civilWarAttrition()
-    
-    // Calculate number of cards drawn
-    val usCards = USCardDraw(game.troopCommitment)
-    val jihadistCards = JihadistCardDraw(game.fundingLevel)
-    log()
-    log("Draw Cards")
-    log(separator())
-    log(s"$US player will draw $usCards cards")
-    log(s"Jihadist player will draw $jihadistCards cards")
-    
-    // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
-    // then return the troops to available.
-    if (game.eventParams.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
-      log("There is a 3 Resource Mulim country at Islamist Rule and")
-      log("troops off map for Sequestration")
-      returnSequestrationTroopsToAvailable()
-    }
-    
-    val offMapTroopsToReturn = game.offMapTroops - (if (game.eventParams.sequestrationTroops) 3 else 0)
-    if (offMapTroopsToReturn > 0) {
-      log(s"Return ${offMapTroopsToReturn} troops from the off map box to the troops track")
-      game = game.copy(offMapTroops = game.offMapTroops - offMapTroopsToReturn)
-    }
-    
-    for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
-      game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
-      log(s"Flip green regime change marker in ${rc.name} to its tan side")
-    }
-    
-    // Reset history of cards for current turn
-    // Move the current turn Ops targets to the previous 
-    game = game.copy(turn = game.turn + 1, cardsPlayed = Nil)
-    
-    previousCardPlays = Nil
-    previousTurns = game :: previousTurns
-    saveGameState("some file name")
-    
   }
   
   val AbortCard = "abort card"
@@ -3680,8 +3686,12 @@ object LabyrinthAwakening {
   @tailrec def commandLoop(): Unit = {
     checkAutomaticVictory()
     val prompt = {
-      val numCards = game.cardsPlayed.size
-      s"\n>>> Turn ${game.turn}, ${amountOf(numCards, "card")} played <<<\n${separator()}\nCommand : "
+      val cards = game.cardsPlayed.size
+      val plots = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
+      s"""
+         |>>> Turn ${game.turn}  (${amountOf(cards, "card")} played, ${amountOf(plots, "unresolved plot")}) <<<
+         |${separator()}
+         |Command : """.stripMargin
     }
     readLine(prompt) match {
       case null => println() // User pressed Ctrl-d (end of file)
@@ -4554,7 +4564,7 @@ object LabyrinthAwakening {
           game = game.copy(prestige = value)
         }
       case "posture" =>
-        val newValue = if (game.usPosture == Hard) Soft else Hard
+        val newValue = oppositePosture(game.usPosture)
         logAdjustment("US posture", game.usPosture, newValue)
         game = game.copy(usPosture = newValue)
         
