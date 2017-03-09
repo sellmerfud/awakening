@@ -1712,7 +1712,19 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(188, "ISIL", Jihadist, 3,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        def canCivilWar(m: MuslimCountry) =
+          !m.civilWar       && 
+          !m.isIslamistRule &&
+          !m.isGood         &&
+          m.totalTroopsAndMilitia <= m.totalCells
+          
+        for (name <- Seq(Syria, Iraq); if canCivilWar(game.getMuslim(name))) {
+          addEventTarget(name)
+          startCivilWar(name)
+        }
+        decreasePrestige(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(189, "Jihadist Videos", Jihadist, 3,
