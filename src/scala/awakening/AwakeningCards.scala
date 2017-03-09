@@ -1729,7 +1729,47 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(189, "Jihadist Videos", Jihadist, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        val candidates = countryNames(game.countries filter (_.totalCells == 0))
+        
+        if (role == game.humanRole) {
+          def nextCountry(targets: List[String], num: Int): Unit = num match {
+            case 4 =>
+            case n =>
+              val target = askCountry(s"Select ${ordinal(n)} country: ", targets)
+              addEventTarget(target)
+              testCountry(target)
+              val c = game.getCountry(target)
+              if (game.cellsAvailable(ignoreFunding = true) > 0) {
+                if (c.autoRecruit) {
+                  log(s"Recruit in $target succeeds automatically")
+                  addSleeperCellsToCountry(target, 1, ignoreFunding = true)
+                }
+                else {
+                  val die = getDieRoll(role)
+                  log(s"Die roll: $die")
+                  if (die <= c.governance) {
+                    log(s"Recruit in $target succeeds with a die roll of $die")
+                    addSleeperCellsToCountry(target, 1, ignoreFunding = true)
+                  }
+                  else {
+                    log(s"Recruit in $target fails with a die roll of $die")
+                    addCadre(target)
+                  }
+                }
+              }
+              else
+                addCadre(target)
+              
+              nextCountry(targets filterNot (_ == target), num + 1)
+          }
+          nextCountry(candidates, 1)
+          
+        }
+        else {
+          log("!!! Bot event not yet implemented !!!")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(190, "Martyrdom Operation", Jihadist, 3,

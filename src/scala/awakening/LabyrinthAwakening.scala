@@ -1751,10 +1751,9 @@ object LabyrinthAwakening {
     log("The Caliphate capital has been displaced!")
     log(separator())
     if (adjacents.size == 0) {
-      game = game.adjustFunding(-2).adjustPrestige(2)
       log(s"There are no adjacent Caliphate candidates, remove Caliphate capital")
-      log(s"Reduce funding by -2 to ${game.funding}")
-      log(s"Increase prestige by +2 to ${game.prestige}")
+      decreaseFunding(2)
+      increasePrestige(2)
     }
     else {
       // If Jihadist is human, ask them to pick the new capital.
@@ -1776,10 +1775,10 @@ object LabyrinthAwakening {
         val best   = sorted.takeWhile(compareCapitalCandidates(_, sorted.head) == 0) map (_.m.name)
         shuffle(best).head
       }
-      game = game.setCaliphateCapital(newCapitalName).adjustFunding(-1).adjustPrestige(1)
+      game = game.setCaliphateCapital(newCapitalName)
       log(s"Move Caliphate capital to ${newCapitalName}")
-      log(s"Reduce funding by -1 to ${game.funding}")
-      log(s"Increase prestige by +1 to ${game.prestige}")
+      decreaseFunding(1)
+      increasePrestige(1)
       logSummary(game.caliphateSummary)
     }
   }
@@ -3168,6 +3167,21 @@ object LabyrinthAwakening {
       }
     }
   }
+  
+  def addCadre(name: String): Unit = {
+    val c = game.getCountry(name)
+    if (c.hasCadre) 
+      log(s"$name already has a cadre marker")
+    else {
+      log(s"Add cadre marker to $name.")
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = true))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = true))
+      }
+    }
+    
+  }
+  
   
   def removeCadre(name: String): Unit = {
     val c = game.getCountry(name)
