@@ -642,6 +642,7 @@ object LabyrinthAwakening {
       MuslimCountry(Afghanistan, isSunni = false, resources = 1, 
                     governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
                     regimeChange = TanRegimeChange),
+      MuslimCountry(IndonesiaMalaysia, resources = 3, oilProducer = true),
       MuslimCountry(Mali, resources = 1)
     )
     val markers = List.empty[String]
@@ -1534,11 +1535,29 @@ object LabyrinthAwakening {
         MapItem(country, num) :: askMapItems(newTargets, numItems - num, name)
     }
   }
-  
+    
   // Use the random Muslim table.
+  val randomMuslimTable = Vector(
+    Vector(Morocco,        Syria,       ""),
+    Vector(AlgeriaTunisia, Jordan,      IndonesiaMalaysia),
+    Vector(Libya,          Turkey,      Lebanon),
+    Vector(Egypt,          SaudiArabia, Iraq),
+    Vector(Sudan,          GulfStates,  Afghanistan),
+    Vector(Somalia,        Yemen,       Pakistan))
+    
+  def randomMuslimCountry: MuslimCountry = {
+    val row = dieRoll - 1        // tan die
+    val col = (dieRoll - 1) / 2  // black die
+    if (row == 0 && col == 2)
+      secondaryRandomMuslimCountry
+    else
+      game.getMuslim(randomMuslimTable(row)(col))
+  }
+  
+  // Secondary, Muslim table
   // Iran and Nigeria may not yet have become Muslim countries.
   // If they are selected and non Muslim, then we simply roll again.
-  def randomMuslimCountry: MuslimCountry = {
+  def secondaryRandomMuslimCountry: MuslimCountry = {
     val iranIsMuslim    = game.isMuslim(Iran)
     val nigeriaIsMuslim = game.isMuslim(Nigeria)
     @tailrec def rollOnTable: MuslimCountry = {
@@ -2139,11 +2158,9 @@ object LabyrinthAwakening {
           case 2 =>
             game = game.updateCountry(m.copy(awakening = m.awakening + 1))
             log(s"Add an awakening marker to ${name}")
-
           case -2 =>
             game = game.updateCountry(m.copy(reaction = m.reaction + 1))
             log(s"Add a reaction marker to ${name}")
-            
           case x if x > 2 =>
             if (m.isAlly) {
               improveGovernance(name)
@@ -2152,8 +2169,6 @@ object LabyrinthAwakening {
             }
             else 
               shiftAlignment(m.name, if (m.isNeutral) Ally else Neutral)
-
-
           case _ => // x < -2
             if (m.isAdversary) {
               degradeGovernance(name)
@@ -3623,6 +3638,9 @@ object LabyrinthAwakening {
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
 
+    for (i <- 1 to 20)
+      println(randomMuslimCountry.name)
+    sys.exit(0)
     // parse cmd line args -- to be done
     // prompt for scenario -- to be done
     // prompt for bot's (jihadish ideology / us resolve) difficulty level. -- to be done

@@ -1942,6 +1942,7 @@ object AwakeningCards extends CardDeck {
         game.trainingCamp foreach { name => 
           removeEventMarkersFromCountry(name, "Training Camps")
         }
+        addEventTarget(target)
         addEventMarkersToCountry(target, "Training Camps")
         updateTrainingCampCapacity(priorCapacity)
         val cellsToAdd = game.cellsAvailable min 2
