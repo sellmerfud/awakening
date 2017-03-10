@@ -566,13 +566,14 @@ object LabyrinthAwakening {
       troops
     def canDeployFrom = maxDeployFrom > 0
       
+    def jihadDRM = reaction - awakening
     def jihadOK = !isIslamistRule && totalCells > 0
     def majorJihadOK(ops: Int) = 
-      totalCells - (troops + militia) >= 5 && (
+      totalCells - totalTroopsAndMilitia >= 5 && (
         (isPoor && (ops  > 1 || besiegedRegime)) || 
         (isFair && (ops == 3 || (ops == 2 && besiegedRegime)))
       )
-      
+    
       def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
       def removeMarkers(names: String*): MuslimCountry = this.copy(markers = markers filterNot names.contains)
   }
