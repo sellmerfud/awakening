@@ -475,9 +475,10 @@ object LabyrinthAwakening {
     def isSoft = posture == Soft
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) = 
       ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
-      
+
+    val recruitNumber = governance max recruitOverride
     def autoRecruit = false
-    def recruitSucceeds(die: Int) = die <= recruitOverride || die <= governance
+    def recruitSucceeds(die: Int) = die <= recruitNumber
     def addMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers ++ names)
     def removeMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers filterNot names.contains)
     // US posture is stored in the GameState
@@ -640,7 +641,7 @@ object LabyrinthAwakening {
                     governance = Fair, alignment = Ally, troops = 2),
       MuslimCountry(Pakistan, isSunni = false, resources = 2, wmdCache = 3,
                     governance = Fair, alignment = Neutral, sleeperCells = 2),
-      MuslimCountry(Afghanistan, isSunni = false, resources = 1, 
+      MuslimCountry(Afghanistan, isSunni = false, resources = 1,
                     governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
                     regimeChange = TanRegimeChange),
       MuslimCountry(IndonesiaMalaysia, resources = 3, oilProducer = true),
@@ -734,6 +735,9 @@ object LabyrinthAwakening {
     def adjacentMuslims(name: String)     = getMuslims(getAdjacent(name) filter isMuslim)
     def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
   
+    def adjacentToGoodAlly(name: String)     = game.adjacentMuslims(name) exists (m => m.isGood && m.isAlly)
+    def adjacentToIslamistRule(name: String) = game.adjacentMuslims(name) exists (_.isIslamistRule)
+    
     def caliphateCapital: Option[String] = muslims find (_.caliphateCapital) map (_.name)
     def caliphateDeclared = caliphateCapital.nonEmpty
     def isCaliphateMember(name: String): Boolean = {
@@ -1708,22 +1712,22 @@ object LabyrinthAwakening {
       case x if x < 10 =>  1
       case _           =>  2
     }
-    val shiftToGoodMod = if (m.isAlly && m.isFair) -1 else 0
-    val gwotMod        = if (ignoreGwotPenalty) 0 else -game.gwotPenalty
-    val aidMod         = m.aidMarkers
-    val adjToGoodMod   = if (game.adjacentMuslims(m.name) exists (_.isGood)) 1 else 0
-    val awakeningMod   = m.awakening
-    val reactionMod    = -m.reaction
-    logNotZero(prestigeMod,    "Prestige")
-    logNotZero(shiftToGoodMod, "Shift to Good governance")
-    logNotZero(gwotMod,        "GWOT penalty")
-    logNotZero(aidMod,         "Aid")
-    logNotZero(adjToGoodMod,   "Adjacent to country at Good governance")
-    logNotZero(awakeningMod,   "Awakening")
-    logNotZero(reactionMod,    "Reaction")
-    val modRoll = die + (prestigeMod + shiftToGoodMod + gwotMod + aidMod + adjToGoodMod + awakeningMod + reactionMod)
+    val shiftToGoodMod   = if (m.isAlly && m.isFair) -1 else 0
+    val gwotMod          = if (ignoreGwotPenalty) 0 else -game.gwotPenalty
+    val aidMod           = m.aidMarkers
+    val adjToGoodAllyMod = if (game.adjacentToGoodAlly(m.name)) 1 else 0
+    val awakeningMod     = m.awakening
+    val reactionMod      = -m.reaction
+    logNotZero(prestigeMod,      "Prestige")
+    logNotZero(shiftToGoodMod,   "Shift to Good governance")
+    logNotZero(gwotMod,          "GWOT penalty")
+    logNotZero(aidMod,           "Aid")
+    logNotZero(adjToGoodAllyMod, "Adjacent to Good Ally")
+    logNotZero(awakeningMod,     "Awakening")
+    logNotZero(reactionMod,      "Reaction")
+    val modRoll = die + (prestigeMod + shiftToGoodMod + gwotMod + aidMod + adjToGoodAllyMod + awakeningMod + reactionMod)
     val anyMods = (prestigeMod.abs + shiftToGoodMod.abs + gwotMod.abs + aidMod.abs + 
-                   adjToGoodMod.abs + awakeningMod.abs + reactionMod.abs) > 0
+                   adjToGoodAllyMod.abs + awakeningMod.abs + reactionMod.abs) > 0
     if (!silent && anyMods)
       log(s"Modified roll: $modRoll")
     modRoll
@@ -3644,10 +3648,6 @@ object LabyrinthAwakening {
   
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
-
-    for (i <- 1 to 20)
-      println(randomMuslimCountry.name)
-    sys.exit(0)
     // parse cmd line args -- to be done
     // prompt for scenario -- to be done
     // prompt for bot's (jihadish ideology / us resolve) difficulty level. -- to be done
@@ -3713,8 +3713,9 @@ object LabyrinthAwakening {
     val prompt = {
       val cards = game.cardsPlayed.size
       val plots = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
+      val plotDisp = if (plots == 0) "" else s", ${amountOf(plots, "unresolved plot")}"
       s"""
-         |>>> Turn ${game.turn}  (${amountOf(cards, "card")} played, ${amountOf(plots, "unresolved plot")}) <<<
+         |>>> Turn ${game.turn}  (${amountOf(cards, "card")} played$plotDisp) <<<
          |${separator()}
          |Command : """.stripMargin
     }
