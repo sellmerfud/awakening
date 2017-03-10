@@ -1741,6 +1741,12 @@ object LabyrinthAwakening {
     modRoll
   }
 
+  def askDeclareCaliphate(capital: String): Unit = {
+    if (!game.caliphateDeclared && 
+        askYorN(s"Do you wish to declare a Caliphate with $capital as the the Captial (y/n)? "))
+      declareCaliphate(capital)
+  }
+
   // Throws an exception if a Caliphate already exists
   def declareCaliphate(capital: String): Unit = {
     assert(!game.caliphateDeclared, "declareCaliphate() called and a Caliphate Capital already on the map")

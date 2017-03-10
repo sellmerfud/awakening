@@ -1685,7 +1685,9 @@ object AwakeningCards extends CardDeck {
             case "cells" =>
               val maxCells = 3 min game.cellsAvailable
               val num = askInt("Place how many cells", 1, maxCells, Some(maxCells))
-              addSleeperCellsToCountry(Nigeria, 3)
+              addSleeperCellsToCountry(Nigeria, num)
+              if (num == 3 && !game.caliphateDeclared && game.isMuslim(Nigeria))
+                askDeclareCaliphate(Nigeria)
           }
           log()
           log("Jihadist player may return Boko Haram to hand by")
@@ -1711,11 +1713,14 @@ object AwakeningCards extends CardDeck {
         }
         addEventTarget(target)
         val m = game.getMuslim(target)
-        addSleeperCellsToCountry(target, 5 min game.cellsAvailable)
+        val numCells = 5 min game.cellsAvailable
+        addSleeperCellsToCountry(target, numCells)
         if (m.aidMarkers > 0)
           removeAidMarker(target, 1)
         else if (!m.besiegedRegime)
           addBesiegedRegimeMarker(target)
+        if (numCells >= 3 && !game.caliphateDeclared)
+          askDeclareCaliphate(target)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1972,7 +1977,9 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(201, "Cross Border Support", Unassociated, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => ()  
+      // Can possibly declare Caliphate (only Mali or Muslim Nigeria)
+      // Only if played by the Jihadist
     )),
     // ------------------------------------------------------------------------
     entry(new Card(202, "Cyber Warfare", Unassociated, 1,
@@ -2047,7 +2054,9 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2,
       USRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => () 
+      // Can possibly declare Caliphate, only in Syria or Iraq
+      // Only by Jihadist play
     )),
     // ------------------------------------------------------------------------
     entry(new Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2,
@@ -2077,7 +2086,7 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(221, "FlyPaper", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => ()  // Can possibly declare Caliphate, by either player
     )),
     // ------------------------------------------------------------------------
     entry(new Card(222, "Hagel", Unassociated, 2,
