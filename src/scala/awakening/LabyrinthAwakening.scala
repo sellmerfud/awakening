@@ -601,7 +601,7 @@ object LabyrinthAwakening {
     val countries = List(
       NonMuslimCountry(Canada),
       NonMuslimCountry(UnitedStates, posture = Soft),
-      NonMuslimCountry(UnitedKingdom, posture = Hard),
+      NonMuslimCountry(UnitedKingdom, recruitOverride = 2, posture = Hard),
       NonMuslimCountry(Serbia),
       NonMuslimCountry(Israel, posture = Hard),
       NonMuslimCountry(India),
@@ -2569,8 +2569,9 @@ object LabyrinthAwakening {
     game = game.copy(usPosture = newPosture)
   }
 
-  def performTravel(fromName: String, toName: String, activeCell: Boolean, die: Int, prefix: String = ""): Unit = {
-    testCountry(toName)
+  // Return true if the travel succeeds.
+  def performTravel(fromName: String, toName: String, activeCell: Boolean, die: Int, prefix: String = ""): Boolean = {
+    log(s"${prefix}Travel from $fromName to $toName")
     log(s"Die roll: $die")
     val modRoll = if (game.isTrainingCamp(fromName)) {
       log(s"-1: Travelling from Training Camps")
@@ -2580,15 +2581,25 @@ object LabyrinthAwakening {
     else
       die
     val success = modRoll <= game.getCountry(toName).governance
-    val result  = if (success) "succeeds" else "fails"
+    log(if (success) "Succeeds" else "Fails")
       
-    log(s"${prefix}Travel from $fromName to $toName $result")
-    if (success)
-      moveCellsBetweenCountries(fromName, toName, 1, activeCell)
+    if (success) {
+      if (fromName == toName) {
+        // We may have had to roll for adjacent travel or travel within a Schengen country
+        // if Islamic Maghreb event is in play
+        if (activeCell)
+          hideActiveCells(toName, 1)
+        else
+          log("Travelling a sleeper cell within the same country has no further effect")
+      }
+      else
+        moveCellsBetweenCountries(fromName, toName, 1, activeCell)
+    }
     else if (activeCell)
       removeActiveCellsFromCountry(fromName, 1, addCadre = false)
     else
       removeSleeperCellsFromCountry(fromName, 1, addCadre = false)
+    success
   }
   
   def performJihad(name: String,
@@ -3180,42 +3191,44 @@ object LabyrinthAwakening {
   
   
   def moveCellsBetweenCountries(fromName: String, toName: String, num: Int, active: Boolean): Unit = {
-    val makeActive = game.isCaliphateMember(toName)
-    val fromType = if (active)     "active cell" else "sleeper cell"
-    val toType   = if (makeActive) "active" else "sleeper"
-    val (from, to) = (game.getCountry(fromName), game.getCountry(toName))
-    if (active)
-      assert(from.activeCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num active cells")
-    else
-      assert(from.sleeperCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num sleeper cells")
+    if (num > 0) {
+      val makeActive = game.isCaliphateMember(toName)
+      val fromType = if (active)     "active cell" else "sleeper cell"
+      val toType   = if (makeActive) "active" else "sleeper"
+      val (from, to) = (game.getCountry(fromName), game.getCountry(toName))
+      if (active)
+        assert(from.activeCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num active cells")
+      else
+        assert(from.sleeperCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num sleeper cells")
     
-    if (fromName == toName)
-      num match {
-        case 1 => log(s"1 $fromType in $fromName travels in place and becomes a $toType cell")
-        case n => log(s"$n ${fromType}s in $fromName travel in place and become $toType cells")
+      if (fromName == toName)
+        num match {
+          case 1 => log(s"1 $fromType in $fromName travels in place and becomes a $toType cell")
+          case n => log(s"$n ${fromType}s in $fromName travel in place and become $toType cells")
+        }
+      else {
+        num match {
+          case 1 => log(s"Move 1 $fromType from $fromName to $toName as a $toType cell")
+          case n => log(s"Move $n ${fromType}s from $fromName to $toName as $toType cells")
+        }
+        if (to.hasCadre)
+          log(s"Remove the cadre marker in $toName")
       }
-    else {
-      num match {
-        case 1 => log(s"Move 1 $fromType from $fromName to $toName as a $toType cell")
-        case n => log(s"Move $n ${fromType}s from $fromName to $toName as $toType cells")
-      }
-      if (to.hasCadre)
-        log(s"Remove the cadre marker in $toName")
-    }
     
-    from match {
-      case m: MuslimCountry if active    => game = game.updateCountry(m.copy(activeCells  = m.activeCells  - num))
-      case m: MuslimCountry              => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells - num))
-      case n: NonMuslimCountry if active => game = game.updateCountry(n.copy(activeCells  = n.activeCells  - num))
-      case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells - num))
+      from match {
+        case m: MuslimCountry if active    => game = game.updateCountry(m.copy(activeCells  = m.activeCells  - num))
+        case m: MuslimCountry              => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells - num))
+        case n: NonMuslimCountry if active => game = game.updateCountry(n.copy(activeCells  = n.activeCells  - num))
+        case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells - num))
+      }
+      to match {
+        case m: MuslimCountry if makeActive    => game = game.updateCountry(m.copy(activeCells = m.activeCells + num, hasCadre = false))
+        case m: MuslimCountry                  => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false))
+        case n: NonMuslimCountry if makeActive => game = game.updateCountry(n.copy(activeCells = n.activeCells + num, hasCadre = false))
+        case n: NonMuslimCountry               => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))
+      }
+      removeTrainingCamp_?(fromName)      
     }
-    to match {
-      case m: MuslimCountry if makeActive    => game = game.updateCountry(m.copy(activeCells = m.activeCells + num, hasCadre = false))
-      case m: MuslimCountry                  => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false))
-      case n: NonMuslimCountry if makeActive => game = game.updateCountry(n.copy(activeCells = n.activeCells + num, hasCadre = false))
-      case n: NonMuslimCountry               => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))
-    }
-    removeTrainingCamp_?(fromName)
   }
   
   
@@ -3242,6 +3255,23 @@ object LabyrinthAwakening {
           m.copy(sleeperCells = 0, activeCells  = m.activeCells + m.sleeperCells))
         case n: NonMuslimCountry => game = game.updateCountry(
           n.copy(sleeperCells = 0, activeCells  = n.activeCells + n.sleeperCells))
+      }
+    }
+  }
+  
+  def hideActiveCells(name: String, num: Int): Unit = {
+    if (num > 0) {
+      val c = game.getCountry(name)
+      assert(c.activeCells >= num, s"Cannot hide $num active cells in $name, only ${c.activeCells} present")
+      if (num == 1)
+        log(s"Flip 1 active cell in $name to a sleeper cell")
+      else 
+        log(s"Flip $num active cells in $name to a sleeper cells")
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(
+          m.copy(sleeperCells = m.sleeperCells + num, activeCells = m.activeCells - num))
+        case n: NonMuslimCountry => game = game.updateCountry(
+          n.copy(sleeperCells = n.sleeperCells + num, activeCells = n.activeCells - num))
       }
     }
   }
@@ -3877,8 +3907,8 @@ object LabyrinthAwakening {
   }
   
   sealed trait CardAction
-  case class  Event(card: Card) extends CardAction
-  case object Ops               extends CardAction
+  case class  TriggeredEvent(card: Card) extends CardAction
+  case object Ops                        extends CardAction
   
   // Return a list of actions.
   // card2 is only used for US reassessment
@@ -3890,8 +3920,8 @@ object LabyrinthAwakening {
         val choices = List("event", "operations")
         askOneOf(s"${orList(choices)}? ", choices) match {
           case None               => Nil
-          case Some("operations") => List(Ops, Event(c))
-          case _                  => List(Event(c), Ops)
+          case Some("operations") => List(Ops, TriggeredEvent(c))
+          case _                  => List(TriggeredEvent(c), Ops)
         }
         
       case c1 :: c2 :: Nil =>
@@ -3909,8 +3939,8 @@ object LabyrinthAwakening {
               case Some(second) =>
                 val third = (choices2 filterNot (_ == second)).head
                 List(first, second, third) map {
-                  case "1st event" => Event(c1)
-                  case "2nd event" => Event(c2)
+                  case "1st event" => TriggeredEvent(c1)
+                  case "2nd event" => TriggeredEvent(c2)
                   case _           => Ops
                 }
             }
@@ -4010,7 +4040,7 @@ object LabyrinthAwakening {
         // Don't prompt for event/ops order when playing to reserves.
         addToReserves(US, card.ops)
         if (card.eventWillTrigger(Jihadist))
-          performCardEvent(card, Jihadist, triggered = true)
+          JihadistBot.performTriggeredEvent(card)
       }
       else if (action == ExecuteEvent)
         performCardEvent(card, US)
@@ -4019,8 +4049,8 @@ object LabyrinthAwakening {
           case Nil => // Cancel the operation
           case actions =>
             actions foreach {
-              case Event(c) =>
-                performCardEvent(card, Jihadist, triggered = true)
+              case TriggeredEvent(c) =>
+                JihadistBot.performTriggeredEvent(card)
               case Ops =>
                 action match {
                   case WarOfIdeas => humanWarOfIdeas(opsAvailable)
@@ -4222,7 +4252,7 @@ object LabyrinthAwakening {
         // Don't prompt for event/ops order when playing to reserves.
         addToReserves(Jihadist, card.ops)
         if (card.eventWillTrigger(US))
-          performCardEvent(card, US, triggered = true)
+          performCardEvent(card, US, triggered = true) // TODO: use USBot.performTriggeredEvent(card)
       }
       else if (action == ExecuteEvent)
         performCardEvent(card, Jihadist)
@@ -4240,8 +4270,8 @@ object LabyrinthAwakening {
           case Nil => // Cancel the operation
           case actions =>
             actions foreach {
-              case Event(c) =>
-                performCardEvent(card, US, triggered = true)
+              case TriggeredEvent(c) =>
+                performCardEvent(card, US, triggered = true) // TODO: use USBot.performTriggeredEvent(card)
               case Ops =>
                 action match {
                   case Recruit      => humanRecruit(opsAvailable)
@@ -4381,15 +4411,20 @@ object LabyrinthAwakening {
     // Now we can roll the die for each one see what happens and log the result.
     for ((ord, srcName, destName, active) <- attempts) {
       addOpsTarget(destName)
-      
+      testCountry(destName)
+      log()
       if (travelIsAutomatic(srcName, destName)) {
         log(s"$ord Travel from $srcName to $destName succeeds automatically")
-        moveCellsBetweenCountries(srcName, destName, 1, active)
+        if (srcName == destName)
+          if (active)
+            hideActiveCells(destName, 1)
+          else
+            log("Travelling a sleeper cell within the same country has no further effect")
+        else
+          moveCellsBetweenCountries(srcName, destName, 1, active)
       }
       else {
-        println()
-        testCountry(destName)
-        val die    = humanDieRoll(s"Die roll for $ord Travel from $srcName to $destName: ")
+        val die = humanDieRoll(s"Die roll for $ord Travel from $srcName to $destName: ")
         performTravel(srcName, destName, active, die, s"$ord ")
       }
     }
@@ -4599,7 +4634,7 @@ object LabyrinthAwakening {
     val options = "prestige"::"funding"::"difficulty"::"lapsing cards"::"removed cards"::
                   "first plot"::"markers" ::"reserves"::"plots"::"offmap troops"::"posture"::
                   "auto roll"::"bot logging"::countryNames(game.countries)
-    askOneOf("Adjust: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
+    askOneOf("[Adjust] (? for list): ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
       case "prestige" =>
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
           logAdjustment("Prestige", game.prestige, value)
@@ -4927,29 +4962,29 @@ object LabyrinthAwakening {
         val choices = List(
           "alignment", "governance", "active cells", "sleeper cells", "regime change",
           "cadre", "troops", "militia", "aid", "awakening", "reaction", "wmd cache",
-          "besieged regime", "civil war", "caliphate", "plots", "markers"
+          "besieged regime", "civil war", "caliphate capital", "plots", "markers"
         ).sorted
-        askOneOf("Attribute (? for list): ", choices, allowNone = true, allowAbort = false) match {
+        askOneOf(s"[$name attribute] (? for list): ", choices, allowNone = true, allowAbort = false) match {
           case None        =>
           case Some(attribute) =>
             attribute match {
-              case "alignment"       => adjustAlignment(name)
-              case "governance"      => adjustGovernance(name)
-              case "active cells"    => adjustActiveCells(name)
-              case "sleeper cells"   => adjustSleeperCells(name)
-              case "cadre"           => adjustCadre(name)
-              case "troops"          => adjustTroops(name)
-              case "militia"         => adjustMilitia(name)
-              case "aid"             => adjustAid(name)
-              case "awakening"       => adjustAwakening(name)
-              case "reaction"        => adjustReaction(name)
-              case "besieged regime" => adjustBesiegedRegime(name)
-              case "regime change"   => adjustRegimeChange(name)
-              case "civil war"       => adjustCivilWar(name)
-              case "caliphate"       => adjustCaliphateCapital(name)
-              case "plots"           => adJustCountryPlots(name)
-              case "markers"         => adjustCountryMarkers(name)
-              case "wmd cache"       => adjustCountryWMDCache(name)
+              case "alignment"         => adjustAlignment(name)
+              case "governance"        => adjustGovernance(name)
+              case "active cells"      => adjustActiveCells(name)
+              case "sleeper cells"     => adjustSleeperCells(name)
+              case "cadre"             => adjustCadre(name)
+              case "troops"            => adjustTroops(name)
+              case "militia"           => adjustMilitia(name)
+              case "aid"               => adjustAid(name)
+              case "awakening"         => adjustAwakening(name)
+              case "reaction"          => adjustReaction(name)
+              case "besieged regime"   => adjustBesiegedRegime(name)
+              case "regime change"     => adjustRegimeChange(name)
+              case "civil war"         => adjustCivilWar(name)
+              case "caliphate capital" => adjustCaliphateCapital(name)
+              case "plots"             => adJustCountryPlots(name)
+              case "markers"           => adjustCountryMarkers(name)
+              case "wmd cache"         => adjustCountryWMDCache(name)
             }
             getNextResponse()
         }
@@ -4962,7 +4997,7 @@ object LabyrinthAwakening {
           else
             xs
         }
-        askOneOf("Attribute (? for list): ", choices, allowNone = true, allowAbort = false) match {
+        askOneOf(s"[$name attribute] (? for list): ", choices, allowNone = true, allowAbort = false) match {
           case None        =>
           case Some(attribute) =>
             attribute match {
