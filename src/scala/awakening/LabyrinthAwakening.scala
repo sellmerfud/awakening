@@ -671,7 +671,8 @@ object LabyrinthAwakening {
     cardDeckName: String,
     humanRole: Role,
     humanAutoRoll: Boolean,
-    botDifficulties: List[BotDifficulty]
+    botDifficulties: List[BotDifficulty],
+    botLogging: Boolean = true  // TODO:  Set this to false after development
   )
   
   case class EventParameters(
@@ -2129,6 +2130,22 @@ object LabyrinthAwakening {
     }
   }
   
+  def addToReserves(role: Role, ops: Int): Unit = {
+    role match {
+      case US =>
+        val opsAdded = ops max (2 - game.reserves.us)
+        if (opsAdded > 0) {
+          game = game.copy(reserves = game.reserves.copy(us = game.reserves.us + opsAdded))
+          log(s"$US adds ${opsString(opsAdded)} to reserves.  Reserves now ${opsString(game.reserves.us)}.")
+        }
+      case Jihadist =>
+        val opsAdded = ops max (2 - game.reserves.jihadist)
+        if (opsAdded > 0) {
+          game = game.copy(reserves = game.reserves.copy(jihadist = game.reserves.jihadist + opsAdded))
+          log(s"$Jihadist adds ${opsString(opsAdded)} to reserves.  Reserves now ${opsString(game.reserves.jihadist)}.")
+        }
+    }
+  }
   
   // Change the current game state and print to the console all
   // ajdustments that need to be made to the game 
@@ -3916,9 +3933,10 @@ object LabyrinthAwakening {
       )
       logCardPlay(US, card)
       try game.humanRole match {
-          case US       => humanUsCardPlay(card)
-          case Jihadist => // The US bot plays the card
-        }
+        case US => humanUsCardPlay(card)
+        case _  => // USBot.cardPlay(card)
+          log("US Bot has not been implemented!!!")
+      }
       catch {
         case AbortCardPlay =>
           println("\n>>>> Aborting the current card play <<<<")
@@ -3990,8 +4008,7 @@ object LabyrinthAwakening {
     getNextResponse() foreach { action =>
       if (action == AddReserves) {
         // Don't prompt for event/ops order when playing to reserves.
-        game = game.copy(reserves = game.reserves.copy(us = card.ops))
-        log(s"$US adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
+        addToReserves(US, card.ops)
         if (card.eventWillTrigger(Jihadist))
           performCardEvent(card, Jihadist, triggered = true)
       }
@@ -4142,15 +4159,15 @@ object LabyrinthAwakening {
       // Add the card to the list of played cards for the turn
       // and clear the op targets for the current card.
       game = game.copy(
-        cardsPlayed        = PlayedCard(Jihadist, card) :: game.cardsPlayed,
+        cardsPlayed     = PlayedCard(Jihadist, card) :: game.cardsPlayed,
         targetsLastCard = game.targetsThisCard,
         targetsThisCard = CardTargets()
       )
       logCardPlay(Jihadist, card)
       try game.humanRole match {
-          case US       => // The Jihadist bot plays the card
-          case Jihadist => humanJihadistCardPlay(card)
-        }
+        case Jihadist => humanJihadistCardPlay(card)
+        case _        => JihadistBot.cardPlay(card)
+      }
       catch {
         case AbortCardPlay =>
           println("\n>>>> Aborting the current card play <<<<")
@@ -4203,8 +4220,7 @@ object LabyrinthAwakening {
     getNextResponse() foreach { action =>
       if (action == AddReserves) {
         // Don't prompt for event/ops order when playing to reserves.
-        game = game.copy(reserves = game.reserves.copy(jihadist = card.ops))
-        log(s"$Jihadist adds ${opsString(card.ops)} to reserves.  Reserves are now ${opsString(inReserve)}.")
+        addToReserves(Jihadist, card.ops)
         if (card.eventWillTrigger(US))
           performCardEvent(card, US, triggered = true)
       }
@@ -4241,14 +4257,14 @@ object LabyrinthAwakening {
   }    
 
   def humanRecruit(ops: Int): Unit = {
-    val availableCells = game.cellsToRecruit
+    val recruitCells = game.cellsToRecruit
     log()
     log(s"$Jihadist performs a Recruit operation with ${opsString(ops)}")
     log(separator())
-    if (availableCells == 1)
+    if (recruitCells == 1)
       log(s"There is 1 cell available for recruitment")
     else
-      log(s"There are $availableCells cells available for recruitment")
+      log(s"There are $recruitCells cells available for recruitment")
     // All of the target destinations must be declared before rolling any dice.
     val targets = for (i <- 1 to ops) yield {
       val ord  = ordinal(i)
@@ -4278,13 +4294,13 @@ object LabyrinthAwakening {
     }
     // If we have more successes than there are available cells, then we must
     // allow the user to choose where to put the cells.  
-    if (successes.size > availableCells) {
+    if (successes.size > recruitCells) {
         // But if all of the success targets are the same country, then
         // just add all available cell there without asking.
       if (allTheSame(successes))
-        addSleeperCellsToCountry(successes.head, availableCells)
+        addSleeperCellsToCountry(successes.head, recruitCells)
       else {
-        log(s"${successes.size} successful recruits, but only $availableCells available cells")
+        log(s"${successes.size} successful recruits, but only $recruitCells available cells")
         println("Specify where to put the cells:")
         def ask(dest: String) = askOneOf(s"1 cell in $dest (place or skip): ", Seq("place", "skip")).get
         // Keep asking until all of the available cells have been placed or until 
@@ -4302,7 +4318,7 @@ object LabyrinthAwakening {
                                                     case _       => placeNext(ds, d :: sk, cellsLeft)
                                                   }
             }
-        placeNext(successes, Nil, availableCells)
+        placeNext(successes, Nil, recruitCells)
       }
     }
     else // We have enough cells to place one in all destinations
@@ -4580,9 +4596,9 @@ object LabyrinthAwakening {
 
   
   def adjustSettings(param: Option[String]): Unit = {
-    val options = "prestige" ::"funding" :: "difficulty" :: "lapsing cards" :: "removed cards" :: 
-                  "first plot" :: "markers" ::"reserves" :: "plots" :: "offmap troops" :: "posture" ::
-                  "auto roll" :: countryNames(game.countries)
+    val options = "prestige"::"funding"::"difficulty"::"lapsing cards"::"removed cards"::
+                  "first plot"::"markers" ::"reserves"::"plots"::"offmap troops"::"posture"::
+                  "auto roll"::"bot logging"::countryNames(game.countries)
     askOneOf("Adjust: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
       case "prestige" =>
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
@@ -4609,6 +4625,7 @@ object LabyrinthAwakening {
         game = game.copy(params = game.params.copy(humanAutoRoll = !game.params.humanAutoRoll))
       
       case "difficulty"    => adjustDifficulty()
+      case "bot logging"   => adjustBotLogging()
       case "lapsing cards" => adjustLapsingCards()
       case "removed cards" => adjustRemovedCards()
       case "first plot"    => adjustFirstPlot()
@@ -4693,6 +4710,13 @@ object LabyrinthAwakening {
       logAdjustment(s"$label", game.params.botDifficulties.map(_.name), updated.map(_.name))
       game = game.copy(params = game.params.copy(botDifficulties = updated))
     }  
+  }
+  
+  def adjustBotLogging(): Unit = {
+    val newValue = !game.params.botLogging
+    logAdjustment("Bot logging", game.params.botLogging, newValue)
+    pause()
+    game = game.copy(params = game.params.copy(botLogging = newValue))
   }
   
   def adjustLapsingCards(): Unit = {
