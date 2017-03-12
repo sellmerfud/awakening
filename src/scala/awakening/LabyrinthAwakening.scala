@@ -2133,16 +2133,16 @@ object LabyrinthAwakening {
   def addToReserves(role: Role, ops: Int): Unit = {
     role match {
       case US =>
-        val opsAdded = ops max (2 - game.reserves.us)
+        val opsAdded = ops min (2 - game.reserves.us)
         if (opsAdded > 0) {
           game = game.copy(reserves = game.reserves.copy(us = game.reserves.us + opsAdded))
-          log(s"$US adds ${opsString(opsAdded)} to reserves.  Reserves now ${opsString(game.reserves.us)}.")
+          log(s"$US adds ${opsString(opsAdded)} to reserves.  Reserves now ${opsString(game.reserves.us)}")
         }
       case Jihadist =>
-        val opsAdded = ops max (2 - game.reserves.jihadist)
+        val opsAdded = ops min (2 - game.reserves.jihadist)
         if (opsAdded > 0) {
           game = game.copy(reserves = game.reserves.copy(jihadist = game.reserves.jihadist + opsAdded))
-          log(s"$Jihadist adds ${opsString(opsAdded)} to reserves.  Reserves now ${opsString(game.reserves.jihadist)}.")
+          log(s"$Jihadist adds ${opsString(opsAdded)} to reserves.  Reserves now ${opsString(game.reserves.jihadist)}")
         }
     }
   }
@@ -4474,7 +4474,6 @@ object LabyrinthAwakening {
     else
       println(s"There are $maxCells cells on the map that can plot")
     if (numPlots == 1)
-      
       println(s"There is 1 plot available for this operation")
     else
       println(s"There are $numPlots plots available for this operation")

@@ -582,7 +582,7 @@ object JihadistBot {
     assert(game.reserves.jihadist >= ops,
        s"expendBotReserves($ops): Only ${opsString(game.reserves.jihadist)} in reserve")
    game = game.copy(reserves = game.reserves.copy(jihadist = game.reserves.jihadist - ops))
-   log(s"$Jihadist expends ${opsString(ops)} from reserves.  Reserves now ${opsString(game.reserves.jihadist)}.")
+   log(s"$Jihadist expends ${opsString(ops)} from reserves.  Reserves now ${opsString(game.reserves.jihadist)}")
   }
   
   
@@ -729,13 +729,13 @@ object JihadistBot {
     
     val attempts = nextTravelFrom(0, Set.empty)
     val opsUsed = attempts.size
+    if (card.ops < opsUsed)
+      expendBotReserves(opsUsed - card.ops)
     
     for ((name, success) <- performTravels(attempts))
       usedCells(toName).addActives(1)
 
-    if (card.ops < opsUsed)
-      expendBotReserves(opsUsed - card.ops)
-    else if (card.ops > opsUsed)
+    if (card.ops > opsUsed)
       radicalization(card.ops - opsUsed)
   }
   
@@ -759,9 +759,7 @@ object JihadistBot {
     log()
     log(s"$Jihadist performs a Minor Jihad operation")
     log(separator())
-    
     val maxJihad = maxOpsPlusReserves(card)
-    
     def nextJihadTarget(completed: Int, alreadyTried: Set[String]): List[JihadTarget] = {
       val remaining = maxJihad - completed
       if (remaining == 0)
@@ -773,7 +771,7 @@ object JihadistBot {
                                              unusedCells(m) > 0 && !m.isPoor
         val candidates = countryNames(game.muslims filter canJihad)
         minorJihadTarget(candidates) match {
-          case None => Nil   // No more viable countries to travel from
+          case None => Nil   // No more candidates
           case Some(name) =>
             val m = game.getMuslim(name)
             val numAttempts = unusedCells(m) min remaining
@@ -787,13 +785,13 @@ object JihadistBot {
 
     val targets = nextJihadTarget(0, Set.empty)
     val opsUsed = (for (JihadTarget(_, a, s, _) <- targets) yield(a + s)).sum
+    if (card.ops < opsUsed)
+      expendBotReserves(opsUsed - card.ops)
     
     for ((name, successes) <- performJihads(targets))
       usedCells(name).addActives(successes)
     
-    if (card.ops < opsUsed)
-      expendBotReserves(opsUsed - card.ops)
-    else if (card.ops > opsUsed)
+    if (card.ops > opsUsed)
       radicalization(card.ops - opsUsed)
   }
   
@@ -801,9 +799,39 @@ object JihadistBot {
     log()
     log(s"$Jihadist performs a Major Jihad operation")
     log(separator())
-    log("Jihadist Bot Major Jihad not yet implemented.")
-    // val candidates = game.muslims filter (m => m.isPoor && m.majorJihadOK(ops))
+    val maxJihad = maxOpsPlusReserves(card)
+    def nextJihadTarget(completed: Int, alreadyTried: Set[String]): List[JihadTarget] = {
+      val remaining = maxJihad - completed
+      if (remaining == 0)
+        Nil  // We've used all available Ops
+      else {
+        // The Bot will only conduct major Jihad in a countries with Poor governance.
+        val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)   &&
+                                             jihadSuccessPossible(m) &&
+                                             m.isPoor                &&
+                                             unusedCells(m) - m.totalTroopsAndMilitia >= 5
+        val candidates = countryNames(game.muslims filter canJihad)
+        majorJihadTarget(candidates) match {
+          case None => Nil   // No more candidates
+          case Some(name) =>
+            val m = game.getMuslim(name)
+            val numAttempts = remaining
+            val target = JihadTarget(name, numAttempts, 0, major = true)
+            target :: nextJihadTarget(completed + numAttempts, alreadyTried + name)
+        }
+      }
+    }
+
+    val targets = nextJihadTarget(0, Set.empty)
+    val opsUsed = (for (JihadTarget(_, a, s, _) <- targets) yield(a + s)).sum
+    if (card.ops < opsUsed)
+      expendBotReserves(opsUsed - card.ops)
     
+    for ((name, successes) <- performJihads(targets))
+      usedCells(name).addActives(successes)
+    
+    if (card.ops > opsUsed)
+      radicalization(card.ops - opsUsed)
   }
   
   // Perform radicalization
