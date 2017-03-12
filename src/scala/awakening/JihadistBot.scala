@@ -779,11 +779,10 @@ object JihadistBot {
     
     val maxJihad = maxOpsPlusReserves(card)
     
-    // Returns the number of Jihad attempts made.
-    def nextJihadTarget(completed: Int, alreadyTried: Set[String]): Int = {
+    def nextJihadTarget(completed: Int, alreadyTried: Set[String]): List[JihadTarget] = {
       val remaining = maxJihad - completed
       if (remaining == 0)
-        completed  // We've used all available Ops
+        Nil  // We've used all available Ops
       else {
         // The Bot will never conduct minor Jihad in a country with Poor governance.
         val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)   &&
@@ -791,23 +790,26 @@ object JihadistBot {
                                              unusedCells(m) > 0 && !m.isPoor
         val candidates = countryNames(game.muslims filter canJihad)
         minorJihadTarget(candidates) match {
-          case None => completed   // No more viable countries to travel from
+          case None => Nil   // No more viable countries to travel from
           case Some(name) =>
-            val target = game.getMuslim(name)
-            val numAttempts = unusedCells(target) min remaining
-            val sleepers    = numAttempts - (activeCells(target) min numAttempts)
-            addOpsTarget(name)
-            val successes = performJihad(name, majorJihad = false, 
-                                         sleepersParticipating = sleepers,
-                                         dice = List.fill(numAttempts)(dieRoll))
-            usedCells(name).addActives(successes)
-            // Find the next Jihad target...
-            nextJihadTarget(completed + numAttempts, alreadyTried + name)
+            val m = game.getMuslim(name)
+            val numAttempts = unusedCells(m) min remaining
+            val actives = activeCells(m) min numAttempts
+            val sleepers    = numAttempts - (activeCells(m) min numAttempts)
+            val target = JihadTarget(name, actives, numAttempts - actives)
+            target :: nextJihadTarget(completed + numAttempts, alreadyTried + name)
         }
       }
     }
+
+    val targets = nextJihadTarget(0, Set.empty)
+    val opsUsed = (for (JihadTarget(_, a, s, _) <- targets) yield(a + s)).sum
     
-    val opsUsed = nextJihadTarget(0, Set.empty)
+    for ((name, successes) <- performJihads(targets)) {
+      addOpsTarget(name)
+      usedCells(name).addActives(successes)
+    }
+    
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
     else if (card.ops > opsUsed)

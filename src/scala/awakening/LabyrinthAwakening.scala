@@ -2199,7 +2199,7 @@ object LabyrinthAwakening {
               shiftAlignment(m.name, if (m.isNeutral) Ally else Neutral)
           case _ => // x < -2
             if (m.isAdversary) {
-              degradeGovernance(name)
+              degradeGovernance(name, levels = 1, canShiftToIR = true)
               if (game.getMuslim(name).isIslamistRule)
                 convergers = Converger(name, awakening = false) :: convergers
             }
@@ -2371,7 +2371,7 @@ object LabyrinthAwakening {
               shiftAlignment(m.name, newAlign)
             val steps = unfulfilledJihadHits - shifts
             if (steps > 0) {
-              degradeGovernance(m.name, steps)
+              degradeGovernance(m.name, levels = steps, canShiftToIR = true)
               if (game.getMuslim(m.name).isIslamistRule)
                 performConvergence(forCountry = m.name, awakening = false)
             }
@@ -2602,70 +2602,66 @@ object LabyrinthAwakening {
     success
   }
   
-  // Returns the number of successful rolls
-  def performJihad(name: String,
-                  majorJihad: Boolean,
-                  sleepersParticipating: Int, // not used if majorJihad == true
-                  dice: List[Int]): Int = {
-    val m = game.getMuslim(name)
-    val jihad = if (majorJihad) "Major Jihad" else "Jihad"
-    val numDice = dice.size
-    assert(!m.isIslamistRule, s"Cannot perform $jihad in Islamist Rule country.")
-    assert(!(majorJihad && m.isGood), s"Cannot perform $jihad in Good governance country.")
-    
-    log()
-    log(s"Conduct $jihad in $name, rolling ${diceString(numDice)}")
-    log(separator())
-    if (majorJihad && m.sleeperCells > 0)              flipAllSleepersCells(name)
-    else if (!majorJihad && sleepersParticipating > 0) flipSleeperCells(name, sleepersParticipating)
-    
-    val results: List[Boolean] = for ((die, i) <- dice.zipWithIndex) yield {
-      val ord = if (numDice == 1) "" else s"${ordinal(i+1)} "
-      log(s"${ord}Die roll: $die")
-      val modRoll = modifyJihadRoll(die, m)
-      modRoll <= m.governance
+  case class JihadTarget(name: String, actives: Int, sleepers: Int, major: Boolean = false)
+  
+  // Perform Jihads on the given targets.
+  // Return a List of (name, successes) to indicate the number of success achieved in
+  // each target.
+  def performJihads(targets: List[JihadTarget]): List[(String, Int)] = {
+    targets match {
+      case Nil => Nil
+      case JihadTarget(name, actives, sleepers, major)::remaining =>
+        val m = game.getMuslim(name)
+        val jihad = if (major) "Major Jihad" else "Jihad"
+        assert(!m.isIslamistRule, s"Cannot perform $jihad in Islamist Rule country")
+        assert(!(major && m.isGood), s"Cannot perform $jihad in country with Good governance")
+        val numAttempts = actives + sleepers
+        log()
+        log(s"Conduct $jihad in $name, rolling ${diceString(numAttempts)}")
+        log(separator())
+        if (major && m.sleeperCells > 0)
+          flipAllSleepersCells(name)
+        else if (!major && sleepers > 0)
+          flipSleeperCells(name, sleepers)
+        def nextAttempt(num: Int): Int = num match {
+          case n if n <= numAttempts =>
+            val ord = if (numAttempts == 1) "" else s"${ordinal(num)} "
+            val die = getDieRoll(Jihadist, prompt = s"Enter ${ord}die roll: ")
+            log(s"${ord}Die roll: $die")
+            val modRoll = modifyJihadRoll(die, m)
+            val result  = modRoll <= m.governance
+            log(if (result) "Success" else "Failure")
+            (if (result) 1 else 0) + nextAttempt(num + 1)
+          case _ => 0  // No more attempts
+        }
+        val successes = nextAttempt(1)
+        val failures  = numAttempts - successes
+        val majorSuccess = major && (
+          (m.isPoor && (successes  > 1 || m.besiegedRegime)) || 
+          (m.isFair && (successes == 3 || (successes == 2 && m.besiegedRegime)))
+        )
+        if (major)
+          log(s"Major Jihad ${if (majorSuccess) "succeeds" else "fails"}")
+        // Remove one active cell for each failure
+        removeActiveCellsFromCountry(name, failures, addCadre = false)
+        // Remove 1 aid marker for each sucessful die roll
+        removeAidMarker(name, successes min m.aidMarkers)
+        degradeGovernance(name, levels = successes, canShiftToIR = majorSuccess)
+        // If we just shifted to Islamic Rule, the perform convergence
+        if (game.getMuslim(name).isIslamistRule)
+          performConvergence(forCountry = name, awakening = false)
+        // A major jihad failure rolling 3 dice in a country that was 
+        // already at Poor governance before the operation begain will
+        // add a besieged regime marker and shift alignment toward ally
+        if (major && !majorSuccess && m.governance == Poor && numAttempts == 3) {
+          val newAlign = if (game.getMuslim(name).alignment == Adversary) Neutral else Ally
+          addBesiegedRegimeMarker(name)
+          shiftAlignment(name, newAlign)
+        }
+        (name, successes) :: performJihads(remaining)
     }
-    val successes = results count (_ == true)
-    val failures  = numDice - successes
-    val majorSuccess = majorJihad && (
-      (m.isPoor && (successes  > 1 || m.besiegedRegime)) || 
-      (m.isFair && (successes == 3 || (successes == 2 && m.besiegedRegime)))
-    )
-    
-    log()
-    (successes, failures) match {
-      case (0, f) => log(s"${amountOf(f, "failure")}") 
-      case (s, 0) => log(s"${amountOf(s, "success", Some("successes"))}") 
-      case (s, f) => log(s"${amountOf(s, "success", Some("successes"))} and ${amountOf(f, "failure")}") 
-    }
-    if (majorJihad)
-      log(s"Major Jihad ${if (majorSuccess) "succeeds" else "fails"}")
-        
-    // Remove one active cell for each failure
-    removeActiveCellsFromCountry(name, failures, addCadre = false)
-    degradeGovernance(name, successes, removeAid = true, canShiftToIR = majorSuccess)
-    if (game.getMuslim(name).isIslamistRule)
-      performConvergence(forCountry = name, awakening = false)
-    // A major jihad failure rolling 3 dice in a country that was 
-    // already at Poor governance before the operation begain will
-    // add a besieged regime marker and shift alignment toward ally
-    if (majorJihad && !majorSuccess && m.governance == Poor && numDice == 3) {
-      val updated = game.getMuslim(name)
-      log(s"Major Jihad failure with three dice in a Poor country:")
-      if (updated.besiegedRegime)
-        log(s"Besieged regime marker already present in $name")
-      else {
-        log(s"Add besieged regime marker to $name")
-        game = game.updateCountry(updated.copy(besiegedRegime = true))
-      }
-      val newAlignment = if (updated.alignment == Adversary) Neutral else Ally
-      if (m.alignment == newAlignment)
-        log(s"No shift in Aligment, $name is already at Ally.")
-      else
-        shiftAlignment(name, newAlignment)
-    }
-    successes
   }
+
   
   def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Unit = {
     if (triggered)
@@ -2766,10 +2762,7 @@ object LabyrinthAwakening {
 
   // Degrade the governance of the given country and log the results.
   // Note: The caller is responsible for handling convergence!
-  def degradeGovernance(name: String,
-                        levels: Int = 1,
-                        removeAid: Boolean = false,
-                        canShiftToIR: Boolean = true): Unit = {
+  def degradeGovernance(name: String, levels: Int, canShiftToIR: Boolean): Unit = {
     if (levels > 0) {
       val m = game.getMuslim(name)
       assert(!m.isIslamistRule, s"degradeGovernance() called on Islamist Rule country - $name")
@@ -2795,28 +2788,21 @@ object LabyrinthAwakening {
         game = game.updateCountry(degraded).copy(
           availablePlots = List.fill(m.wmdCache)(PlotWMD) ::: game.availablePlots)
         moveWMDCachedToAvailable(name)
+        removeEventMarkersFromCountry(name, "Advisors")
         endRegimeChange(name)
         endCivilWar(name)
         flipCaliphateSleepers()
       }
       else if (delta == 0) {
         // There was no change in governance.  ie: Poor and canShiftToIR == false 
-        // May still remove aid
         log(s"The governance of $name remains ${govToString(m.governance)}")
-        if (removeAid && m.aidMarkers > 0)
-          log(s"Remove ${amountOf(levels min m.aidMarkers, "aid marker")} from $name")
-        game = game.updateCountry(m.copy(aidMarkers = (m.aidMarkers - levels) max 0))
-        
       }
       else {
         log(s"Degrade the governance of $name to ${govToString(newGov)}")
-        if (removeAid && m.aidMarkers > 0)
-          log(s"Remove ${amountOf(levels min m.aidMarkers, "aid marker")} from $name")
         if (m.reaction > 0)
           log(s"Remove ${amountOf(delta min m.reaction, "reaction marker")} from $name")
-        val degraded = m.copy(governance = newGov, 
-               aidMarkers = (m.aidMarkers - levels) max 0, // One aid for each level (ie success die)
-               reaction   = (m.reaction   - delta)  max 0) // One reaction for each level actually degraded
+        // Remove One reaction for each level actually degraded
+        val degraded = m.copy(governance = newGov, reaction = (m.reaction - delta)  max 0)
         game = game.updateCountry(degraded)
       }
     }
@@ -2978,7 +2964,7 @@ object LabyrinthAwakening {
     if (!m.civilWar) {
       testCountry(name)
       if (m.isGood)
-        degradeGovernance(name, 1)
+        degradeGovernance(name, levels = 1, canShiftToIR = true)
       else if (m.isIslamistRule)
         improveGovernance(name, 1)
       game = game.updateCountry(m.copy(civilWar = true, regimeChange = NoRegimeChange))
@@ -3492,7 +3478,7 @@ object LabyrinthAwakening {
             // rule 11.2.6
             // If second WMD in the same civil war.  Shift immediately to Islamist Rule.
             if (mapPlot.plot == PlotWMD && m.civilWar && (wmdsInCivilWars contains m.name))
-              degradeGovernance(m.name, 3, canShiftToIR = true) // 3 levels guarantees shift to IR
+              degradeGovernance(m.name, levels = 3, canShiftToIR = true) // 3 levels guarantees shift to IR
             else {
               if (mapPlot.plot == PlotWMD && m.civilWar) {
                 // First WMD in civil war, remove a militia.
@@ -3508,7 +3494,9 @@ object LabyrinthAwakening {
               val successes = dice count (_ <= m.governance)
               val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
               log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
-              degradeGovernance(name, successes, removeAid = true, canShiftToIR = false)
+              // Remove 1 aid marker for each sucessful die roll
+              removeAidMarker(name, successes min m.aidMarkers)
+              degradeGovernance(name, levels = successes, canShiftToIR = false)
             }
             
           //------------------------------------------------------------------
@@ -4440,12 +4428,11 @@ object LabyrinthAwakening {
     log(separator())
     val jihadCountries = game.muslims filter (_.jihadOK)
     val maxDice = ops min (jihadCountries map (_.totalCells)).sum
-    case class Target(name: String, major: Boolean, actives: Int, sleepers: Int)
     var candidates = countryNames(jihadCountries)
     // All of the jihad cells must be declared before rolling any dice.
-    @tailrec def getJihadTargets(diceLeft: Int, candidates: List[String], targets: List[Target]): List[Target] = {
+   def getJihadTargets(diceLeft: Int, candidates: List[String]): List[JihadTarget] = {
       if (diceLeft == 0 || candidates.isEmpty)
-        targets.reverse
+        Nil
       else {
         if (diceLeft < maxDice)
           println(s"You have ${diceString(diceLeft)} remaining")
@@ -4466,43 +4453,12 @@ object LabyrinthAwakening {
         else if (m.totalCells == numRolls) (m.activeCells, m.sleeperCells)
         else if (m.activeCells == 0) (0, numRolls)
         else if (m.sleeperCells == 0) (numRolls,0)
-        else {
-          val ac = amountOf(m.activeCells, "active cell")
-          val sc = amountOf(m.sleeperCells, "sleeper cell")
-          val maxAc = m.activeCells min numRolls
-          val minAc = (numRolls - m.sleeperCells) max 0
-          // Display the number of active and sleeper cells in the country
-          // Then prompt for how many actives
-          println(s"$name contains $ac and $sc")
-          val actives = askInt("How many active cells will participate?", minAc, maxAc, Some(maxAc))
-          val sleepers = numRolls - actives
-          (actives, sleepers)
-        }
-        
-        getJihadTargets(
-          diceLeft - numRolls,
-          candidates filterNot (_ == name), // Don't allow same country to be selected twice
-          Target(name, majorJihad, actives, sleepers)::targets)
+        else askCells(name, numRolls, sleeperFocus = false)
+        val target = JihadTarget(name, actives, sleepers, majorJihad) 
+        target :: getJihadTargets(diceLeft - numRolls, candidates filterNot (_ == name))
       }
     }
-    val targets = getJihadTargets(maxDice, candidates, Nil)
-    // Now resolve all jihad targets.
-    // Now we can roll the die for each one see what happens and log the result.
-    for (Target(name, major, actives, sleepers) <- targets) {
-      addOpsTarget(name)
-      val jihad = if (major) "Major Jihad" else "Jihad"
-      val numDice = actives + sleepers
-      println()
-      def getDieRolls(dieNumber: Int): List[Int] = {
-        if (dieNumber > numDice) Nil
-        else {
-          val ord = ordinal(dieNumber)
-          val die = humanDieRoll(s"$ord Die roll for $jihad in $name: ")
-          die :: getDieRolls(dieNumber + 1)
-        }
-      }
-      performJihad(name, major, sleepers, getDieRolls(1))
-    }
+    performJihads(getJihadTargets(maxDice, candidates))
   }
   
   def humanPlot(ops: Int): Unit = {
