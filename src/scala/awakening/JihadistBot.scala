@@ -676,19 +676,22 @@ object JihadistBot {
     log(s"$Jihadist performs a Travel operation")
     log(separator())
     
+    val toName = travelToTarget(countryNames(game.countries)) getOrElse {
+      throw new IllegalStateException("travelOperation() should always find \"travel to\" ttarget")
+    }
+    
     def numAutoRecruit = game.muslims count (m => m.autoRecruit && m.totalCells > 0)
     val maxTravel = maxOpsPlusReserves(card)
     
-    // Returns the number of travel attempts made.
-    def nextTravelFrom(completed: Int, toName: String, alreadyTried: Set[String]): Int = {
+    def nextTravelFrom(completed: Int, alreadyTried: Set[String]): List[TravelAttempt] = {
       val remaining = maxTravel - completed
       if (remaining == 0)
-        completed  // We've used all available Ops
+        Nil  // We've used all available Ops
       else {
         val canTravelFrom = (c: Country) => !alreadyTried(c.name) && unusedCells(c) > 0
         val candidates = countryNames(game.countries filter canTravelFrom)
         travelFromTarget(toName, candidates) match {
-          case None => completed   // No more viable countries to travel from
+          case None => Nil   // No more viable countries to travel from
           case Some(fromName) =>
             val from = game.getCountry(fromName)
             // Limit numAttempts to only active cells within same country
@@ -702,54 +705,34 @@ object JihadistBot {
           
             if (numAttempts == 0) {
               botLog(s"No cells in $fromName are allowed to travel")
-              nextTravelFrom(completed, toName, alreadyTried + fromName) // Find the next from target
+              nextTravelFrom(completed, alreadyTried + fromName) // Find the next from target
             }
             else {
-              addOpsTarget(toName)
-              testCountry(toName)
               // Determine how many actives/sleepers will attempt travel
               val (actives, sleepers) = if (fromName == toName)
-                (0, numAttempts) // We've limited the number of attempts to sleepers above
+                (numAttempts, 0) // We've limited the number of attempts to sleepers above
               else {
                 // Actives first
                 val actives = from.activeCells min numAttempts
                 val sleepers = numAttempts - actives
                 (actives, sleepers)
               }
-              
-              if (travelIsAutomatic(fromName, toName)) {
-                log()
-                log(s"Travel from $fromName to $toName succeeds automatically")
-                if (fromName == toName)
-                  hideActiveCells(toName, actives)
-                else {
-                  moveCellsBetweenCountries(fromName, toName, actives, active = true)
-                  moveCellsBetweenCountries(fromName, toName, sleepers, active = false)
-                }
-                usedCells(toName).addSleepers(numAttempts)
-              }
-              else {
-                for (i <- 1 to numAttempts) {
-                  val ord    = ordinal(i)
-                  val die    = dieRoll
-                  val active = i <= actives
-                  log()
-                  if (performTravel(fromName, toName, active, die, s"$ord "))
-                    usedCells(toName).addSleepers(1)
-                }
-              }
+              val attempts = List.fill(actives)(TravelAttempt(fromName, toName, true)) ::: 
+                             List.fill(sleepers)(TravelAttempt(fromName, toName, false))
               
               // Find the next country to travel from...
-              nextTravelFrom(completed + numAttempts, toName, alreadyTried + fromName)
+              attempts ::: nextTravelFrom(completed + numAttempts, alreadyTried + fromName)
             }  
         }
       }
     }
+    
+    val attempts = nextTravelFrom(0, Set.empty)
+    val opsUsed = attempts.size
+    
+    for ((name, success) <- performTravels(attempts))
+      usedCells(toName).addActives(1)
 
-    val toCountry = travelToTarget(countryNames(game.countries)) getOrElse {
-      throw new IllegalStateException("travelOperation() should always find \"travel to\" ttarget")
-    }
-    val opsUsed = nextTravelFrom(0, toCountry, Set.empty)
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
     else if (card.ops > opsUsed)
@@ -805,10 +788,8 @@ object JihadistBot {
     val targets = nextJihadTarget(0, Set.empty)
     val opsUsed = (for (JihadTarget(_, a, s, _) <- targets) yield(a + s)).sum
     
-    for ((name, successes) <- performJihads(targets)) {
-      addOpsTarget(name)
+    for ((name, successes) <- performJihads(targets))
       usedCells(name).addActives(successes)
-    }
     
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)

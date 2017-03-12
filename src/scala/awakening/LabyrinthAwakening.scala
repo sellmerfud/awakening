@@ -2569,37 +2569,58 @@ object LabyrinthAwakening {
     game = game.copy(usPosture = newPosture)
   }
 
-  // Return true if the travel succeeds.
-  def performTravel(fromName: String, toName: String, activeCell: Boolean, die: Int, prefix: String = ""): Boolean = {
-    log(s"${prefix}Travel from $fromName to $toName")
-    log(s"Die roll: $die")
-    val modRoll = if (game.isTrainingCamp(fromName)) {
-      log(s"-1: Travelling from Training Camps")
-      log(s"Modified roll: ${die - 1}")
-      die - 1
-    }
-    else
-      die
-    val success = modRoll <= game.getCountry(toName).governance
-    log(if (success) "Succeeds" else "Fails")
-      
-    if (success) {
-      if (fromName == toName) {
+  case class TravelAttempt(from: String, to: String, active: Boolean)
+  
+  // Return a list of (Destination, success) 
+  def performTravels(attempts: List[TravelAttempt]): List[(String, Boolean)] = {
+    def handleResult(success: Boolean, from: String, to: String, active: Boolean): Boolean = {
+      if (success) {
         // We may have had to roll for adjacent travel or travel within a Schengen country
         // if Islamic Maghreb event is in play
-        if (activeCell)
-          hideActiveCells(toName, 1)
+        if (from == to) {
+          if (active)
+            hideActiveCells(to, 1)
+          else
+            log("Travelling a sleeper cell within the same country has no further effect")
+        }
         else
-          log("Travelling a sleeper cell within the same country has no further effect")
+          moveCellsBetweenCountries(from, to, 1, active)
       }
+      else if (active)
+        removeActiveCellsFromCountry(from, 1, addCadre = false)
       else
-        moveCellsBetweenCountries(fromName, toName, 1, activeCell)
+        removeSleeperCellsFromCountry(from, 1, addCadre = false)
+      success
     }
-    else if (activeCell)
-      removeActiveCellsFromCountry(fromName, 1, addCadre = false)
-    else
-      removeSleeperCellsFromCountry(fromName, 1, addCadre = false)
-    success
+    
+    attempts match {
+      case Nil => Nil
+      case TravelAttempt(from, to, active) :: remaining =>
+        log()
+        log(s"Attempt travel from $from to $to")
+        log(separator())
+        testCountry(to)
+        addOpsTarget(to)
+        val success = if (travelIsAutomatic(from, to)) {
+          log(s"Travel from $from to $to succeeds automatically")
+          handleResult(true, from, to, active)
+        }
+        else {
+          val die = getDieRoll(Jihadist, prompt = s"Enter die roll: ")
+          log(s"Die roll: $die")
+          val modRoll = if (game.isTrainingCamp(from)) {
+            log(s"-1: Travelling from Training Camps")
+            log(s"Modified roll: ${die - 1}")
+            die - 1
+          }
+          else
+            die
+          val success = modRoll <= game.getCountry(to).governance
+          log(if (success) "Success" else "Failure")
+          handleResult(success, from, to, active)
+        }
+        (to, success) :: performTravels(remaining)
+    }
   }
   
   case class JihadTarget(name: String, actives: Int, sleepers: Int, major: Boolean = false)
@@ -2619,6 +2640,7 @@ object LabyrinthAwakening {
         log()
         log(s"Conduct $jihad in $name, rolling ${diceString(numAttempts)}")
         log(separator())
+        addOpsTarget(name)
         if (major && m.sleeperCells > 0)
           flipAllSleepersCells(name)
         else if (!major && sleepers > 0)
@@ -4353,13 +4375,12 @@ object LabyrinthAwakening {
   }
   
   def humanTravel(ops: Int): Unit = {
-    val Active  = true
     log()
     log(s"$Jihadist performs a Travel operation with ${opsString(ops)}")
     log(separator())
     log(s"There are ${{amountOf(game.cellsOnMap, "cell")}} on the map")
-    val maxRolls = ops min game.cellsOnMap
-    val numRolls = askInt("How many dice do you wish to roll?", 1, maxRolls, Some(maxRolls))
+    val maxRolls    = ops min game.cellsOnMap
+    val numAttempts = askInt("How many dice do you wish to roll?", 1, maxRolls, Some(maxRolls))
     // Keep track of where cells have been selected. They can only be selected once!
     case class Source(name: String, sleepers: Int, actives: Int)
     var sourceCountries = 
@@ -4369,54 +4390,34 @@ object LabyrinthAwakening {
       ).toMap
     
     // All of the travelling cells must be declared before rolling any dice.
-    val attempts = for (i <- 1 to numRolls) yield {
+    val attempts = for (i <- 1 to numAttempts) yield {
       println()
       val ord        = ordinal(i)
       val candidates = sourceCountries.keys.toList.sorted
       val src        = sourceCountries(askCountry(s"$ord Travel from which country: ", candidates))
-      val cellType   = if (src.sleepers > 0 && src.actives > 0) {
-        val prompt = s"$ord Travel which cell (active or sleeper) Default = active: "
-        askOneOf(prompt, List("active", "sleeper"), allowNone = true) match {
-          case None    => Active
-          case Some(x) => x == "active"
-        } 
+      val active     = if (src.sleepers > 0 && src.actives > 0) {
+        askCells(src.name, 1, sleeperFocus = false) match {
+          case (1, _) => true
+          case _      => false
+        }
       }
       else {
-        println(s"$ord Travel cell will be ${if (src.actives > 0) "an active cell" else "a sleeper cell"}")
+        println(s"Travel cell will be ${if (src.actives > 0) "an active cell" else "a sleeper cell"}")
         src.actives > 0
       }
         
-      val dest = askCountry(s"$ord Travel to which country: ", countryNames(game.countries))
+      val dest = askCountry(s"$ord Travel to which destination country: ", countryNames(game.countries))
       // Remove the selected cell so that it cannot be selected twice.
       if (src.sleepers + src.actives == 1)
         sourceCountries -= src.name
-      else if (cellType == Active)
+      else if (active)
         sourceCountries += src.name -> src.copy(actives = src.actives - 1)
       else
         sourceCountries += src.name -> src.copy(sleepers = src.sleepers - 1)
-      (ord, src.name, dest, cellType)
+      
+      TravelAttempt(src.name, dest, active)
     }
-    
-    // Now we can roll the die for each one see what happens and log the result.
-    for ((ord, srcName, destName, active) <- attempts) {
-      addOpsTarget(destName)
-      testCountry(destName)
-      log()
-      if (travelIsAutomatic(srcName, destName)) {
-        log(s"$ord Travel from $srcName to $destName succeeds automatically")
-        if (srcName == destName)
-          if (active)
-            hideActiveCells(destName, 1)
-          else
-            log("Travelling a sleeper cell within the same country has no further effect")
-        else
-          moveCellsBetweenCountries(srcName, destName, 1, active)
-      }
-      else {
-        val die = humanDieRoll(s"Die roll for $ord Travel from $srcName to $destName: ")
-        performTravel(srcName, destName, active, die, s"$ord ")
-      }
-    }
+    performTravels(attempts.toList)
   }
   
   // When ever a country is targeted and is a candidate for Major Jihad
