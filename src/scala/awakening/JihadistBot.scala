@@ -371,14 +371,12 @@ object JihadistBot {
   val MarkerAlignGovPriorities = JihadPriorities drop 1
   
   // Bot will not try minor Jihad in Poor countries
-  // val candidates = game.muslims filter (m => !m.isPoor && jihadSuccessPossible(m))
   def minorJihadTarget(names: List[String]): Option[String] = {
     botLog("Find \"Minor Jihad\" target")
     topPriority(game getMuslims names, JihadPriorities) map (_.name)
   }
   
   // Bot will only try major Jihad in Poor countries
-  // val candidates = game.muslims filter (m => m.isPoor && m.majorJihadOK(ops))
   def majorJihadTarget(names: List[String]): Option[String] = {
     botLog("Find \"Major Jihad\" target")
     topPriority(game getMuslims names, JihadPriorities) map (_.name)
@@ -404,7 +402,6 @@ object JihadistBot {
     FairNonMuslimPriority, SamePostureAsUSPriority, LowestRECPriority,
     AdjacentIslamistRulePriority, OilExporterPriority)
   
-  // val candidates = followFlowchart(game.countries filter (_.totalCells > 0), flowchart)
   def plotTarget(names: List[String]): Option[String] = {
     val flowchart = if (game.fundingLevel == Tight)
       TightPlotFlowchart ::: OtherPlotFlowchart
@@ -581,9 +578,9 @@ object JihadistBot {
   def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.jihadist) min 3
   
   // Decrement the Bots reserves and log that they were used.
-  def useBotReserves(ops: Int): Unit = {
+  def expendBotReserves(ops: Int): Unit = {
     assert(game.reserves.jihadist >= ops,
-       s"useBotReserves($ops): Only ${opsString(game.reserves.jihadist)} in reserve")
+       s"expendBotReserves($ops): Only ${opsString(game.reserves.jihadist)} in reserve")
    game = game.copy(reserves = game.reserves.copy(jihadist = game.reserves.jihadist - ops))
    log(s"$Jihadist expends ${opsString(ops)} from reserves.  Reserves now ${opsString(game.reserves.jihadist)}.")
   }
@@ -634,10 +631,10 @@ object JihadistBot {
     val excessOps  = (card.ops - game.cellsToRecruit) max 0
     val recruitOps = game.cellsToRecruit min maxOpsPlusReserves(card)
     log()
-    log(s"$Jihadist performs a Recruit operation with ${opsString(recruitOps)}")
+    log(s"$Jihadist performs a Recruit operation")
     log(separator())
     if (recruitOps > card.ops)
-      useBotReserves(recruitOps - card.ops)
+      expendBotReserves(recruitOps - card.ops)
     if (recruitOps > 0) {
       // We should always find a target for recuit operations.
       val target = recruitTarget(countryNames(game.countries)) getOrElse {
@@ -676,24 +673,25 @@ object JihadistBot {
   // - Never travel sleeper cells within the same country
   def travelOperation(card: Card): Unit = {
     log()
-    log(s"$Jihadist performs a Travel operation with ${opsString(card.ops)}")
+    log(s"$Jihadist performs a Travel operation")
     log(separator())
     
     def numAutoRecruit = game.muslims count (m => m.autoRecruit && m.totalCells > 0)
     val maxTravel = maxOpsPlusReserves(card)
     
     // Returns the number of travel attempts made.
-    def attempt(completed: Int, toName: String, fromCountries: Set[String]): Int = {
+    def nextTravelFrom(completed: Int, toName: String, alreadyTried: Set[String]): Int = {
       val remaining = maxTravel - completed
       if (remaining == 0)
         completed  // We've used all available Ops
       else {
-        val candidates = countryNames(game.countries filter (c => unusedCells(c) > 0 && !fromCountries(c.name)))
+        val canTravelFrom = (c: Country) => !alreadyTried(c.name) && unusedCells(c) > 0
+        val candidates = countryNames(game.countries filter canTravelFrom)
         travelFromTarget(toName, candidates) match {
           case None => completed   // No more viable countries to travel from
           case Some(fromName) =>
             val from = game.getCountry(fromName)
-            // Limit maxAttempts to only active cells within same country
+            // Limit numAttempts to only active cells within same country
             // and to not allow last cell out of auto recruit (if only 1 other auto recruit with cells)
             val numAttempts = if (fromName == toName)
               from.activeCells min remaining
@@ -704,7 +702,7 @@ object JihadistBot {
           
             if (numAttempts == 0) {
               botLog(s"No cells in $fromName are allowed to travel")
-              attempt(completed, toName, fromCountries + fromName) // Find the next from target
+              nextTravelFrom(completed, toName, alreadyTried + fromName) // Find the next from target
             }
             else {
               addOpsTarget(toName)
@@ -742,7 +740,7 @@ object JihadistBot {
               }
               
               // Find the next country to travel from...
-              attempt(completed + numAttempts, toName, fromCountries + fromName)
+              nextTravelFrom(completed + numAttempts, toName, alreadyTried + fromName)
             }  
         }
       }
@@ -751,32 +749,78 @@ object JihadistBot {
     val toCountry = travelToTarget(countryNames(game.countries)) getOrElse {
       throw new IllegalStateException("travelOperation() should always find \"travel to\" ttarget")
     }
-    val opsUsed = attempt(0, toCountry, Set.empty)
+    val opsUsed = nextTravelFrom(0, toCountry, Set.empty)
     if (card.ops < opsUsed)
-      useBotReserves(opsUsed - card.ops)
+      expendBotReserves(opsUsed - card.ops)
     else if (card.ops > opsUsed)
       radicalization(card.ops - opsUsed)
   }
   
   def plotOperation(card: Card): Unit = {
     log()
-    log(s"$Jihadist performs a Plot operation with ${opsString(card.ops)}")
+    log(s"$Jihadist performs a Plot operation")
     log(separator())
     log("Jihadist Bot Plot not yet implemented.")
+    // val candidates = followFlowchart(game.countries filter (_.totalCells > 0), flowchart)
+    
   }
+  
+  // Get highest priority target country
+  // Make as many attempts as possible
+  // If ops left over, repeat
+  
+  // If ops left over and no more target countries
+  // perform radicalization.
   
   def minorJihadOperation(card: Card): Unit = {
     log()
-    log(s"$Jihadist performs a Minor Jihad operation with ${opsString(card.ops)}")
+    log(s"$Jihadist performs a Minor Jihad operation")
     log(separator())
-    log("Jihadist Bot Minor Jihad not yet implemented.")
+    
+    val maxJihad = maxOpsPlusReserves(card)
+    
+    // Returns the number of Jihad attempts made.
+    def nextJihadTarget(completed: Int, alreadyTried: Set[String]): Int = {
+      val remaining = maxJihad - completed
+      if (remaining == 0)
+        completed  // We've used all available Ops
+      else {
+        // The Bot will never conduct minor Jihad in a country with Poor governance.
+        val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)   &&
+                                             jihadSuccessPossible(m) &&
+                                             unusedCells(m) > 0 && !m.isPoor
+        val candidates = countryNames(game.muslims filter canJihad)
+        minorJihadTarget(candidates) match {
+          case None => completed   // No more viable countries to travel from
+          case Some(name) =>
+            val target = game.getMuslim(name)
+            val numAttempts = unusedCells(target) min remaining
+            val sleepers    = numAttempts - (activeCells(target) min numAttempts)
+            addOpsTarget(name)
+            val successes = performJihad(name, majorJihad = false, 
+                                         sleepersParticipating = sleepers,
+                                         dice = List.fill(numAttempts)(dieRoll))
+            usedCells(name).addActives(successes)
+            // Find the next Jihad target...
+            nextJihadTarget(completed + numAttempts, alreadyTried + name)
+        }
+      }
+    }
+    
+    val opsUsed = nextJihadTarget(0, Set.empty)
+    if (card.ops < opsUsed)
+      expendBotReserves(opsUsed - card.ops)
+    else if (card.ops > opsUsed)
+      radicalization(card.ops - opsUsed)
   }
   
   def majorJihadOperation(card: Card): Unit = {
     log()
-    log(s"$Jihadist performs a Major Jihad operation with ${opsString(card.ops)}")
+    log(s"$Jihadist performs a Major Jihad operation")
     log(separator())
     log("Jihadist Bot Major Jihad not yet implemented.")
+    // val candidates = game.muslims filter (m => m.isPoor && m.majorJihadOK(ops))
+    
   }
   
   // Perform radicalization

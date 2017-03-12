@@ -2602,10 +2602,11 @@ object LabyrinthAwakening {
     success
   }
   
+  // Returns the number of successful rolls
   def performJihad(name: String,
                   majorJihad: Boolean,
-                  sleepersParticipating: Int, // not used if majorJihad == false
-                  dice: List[Int]): Unit = {
+                  sleepersParticipating: Int, // not used if majorJihad == true
+                  dice: List[Int]): Int = {
     val m = game.getMuslim(name)
     val jihad = if (majorJihad) "Major Jihad" else "Jihad"
     val numDice = dice.size
@@ -2620,7 +2621,6 @@ object LabyrinthAwakening {
     
     val results: List[Boolean] = for ((die, i) <- dice.zipWithIndex) yield {
       val ord = if (numDice == 1) "" else s"${ordinal(i+1)} "
-      log()
       log(s"${ord}Die roll: $die")
       val modRoll = modifyJihadRoll(die, m)
       modRoll <= m.governance
@@ -2664,6 +2664,7 @@ object LabyrinthAwakening {
       else
         shiftAlignment(name, newAlignment)
     }
+    successes
   }
   
   def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Unit = {
