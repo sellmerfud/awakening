@@ -471,7 +471,8 @@ object LabyrinthAwakening {
     wmdCache: Int               = 0,  // Number of WMD plots cached
     iranSpecialCase: Boolean    = false
   ) extends Country {
-    override def isUntested = posture == PostureUntested
+    override def isUntested = posture == PostureUntested && 
+                              !(Set(UnitedStates,Israel, Iran) contains name)
     def isSchengen = Schengen contains name
     def isHard = posture == Hard
     def isSoft = posture == Soft
@@ -2568,6 +2569,10 @@ object LabyrinthAwakening {
   
   case class PlotAttempt(name: String, active: Boolean)
   
+  // NOTE: The ops parameter is used to determine which type of Plots
+  //       are available for selection.
+  // BUT : The Bot ignores this and simply selects at random
+  //       among all available plots.
   def performPlots(ops: Int, attempts: List[PlotAttempt]): Unit = {
     attempts match {
       case Nil =>
