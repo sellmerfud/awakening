@@ -2623,6 +2623,55 @@ object LabyrinthAwakening {
     }
   }
   
+  
+  case class PlotAttempt(name: String, active: Boolean)
+  
+  def performPlots(ops: Int, attempts: List[PlotAttempt]): Unit = {
+    attempts match {
+      case Nil =>
+      case _ if game.availablePlots.isEmpty =>
+        log(s"There are no more available plots")
+      case PlotAttempt(name, active) :: remaining =>
+        log()
+        log(s"Plot attempt in $name")
+        log(separator())
+        addOpsTarget(name)
+        if (!active)  
+          flipSleeperCells(name, 1)
+        val die = getDieRoll(Jihadist, prompt = s"Enter die roll: ")
+        log(s"Die roll: $die")
+        val success = die <= game.getCountry(name).governance
+        log(if (success) "Success" else "Failure")
+          
+        if (success) {
+          // Ask the user which plot to place.  The Bot take a random plot regardless of ops spent.
+          val plots = if (game.humanRole == Jihadist)
+            askAvailablePlots(1, ops)
+          else if (game.params.botDifficulties contains Attractive) {
+            log(s"$Jihadist Bot with Attractive Ideology places two plots")
+            shuffle(game.availablePlots) take 2
+          }
+          else 
+            shuffle(game.availablePlots) take 1
+  
+          for (plot <- plots)
+            addAvailablePlotToCountry(name, plot)
+        }
+      
+        performPlots(ops, remaining)
+    }
+  }
+  
+  def showPlots(plots: Vector[Plot]): Unit = {
+    @tailrec def showNext(list: List[Plot], index: Int): Unit = list match {
+      case Nil =>
+      case plot :: rest =>
+        println(s"$index) ${plot.name}")
+        showNext(rest, index + 1)
+    }
+    showNext(plots.toList, 1)
+  }
+  
   case class JihadTarget(name: String, actives: Int, sleepers: Int, major: Boolean = false)
   
   // Perform Jihads on the given targets.
@@ -4462,93 +4511,51 @@ object LabyrinthAwakening {
     performJihads(getJihadTargets(maxDice, candidates))
   }
   
+  // Can only Plots with number <= ops or WMD Plot
   def humanPlot(ops: Int): Unit = {
-    val Active  = true
-    val numPlots       = game.plotsAvailableWith(ops).size // Can only use WMD Plots or Plot with number <= ops
-    val maxCells       = (game.plotTargets map (name => game.getCountry(name).totalCells)).sum
+    val numPlots = game.plotsAvailableWith(ops).size 
+    val maxCells = (game.plotTargets map (name => game.getCountry(name).totalCells)).sum
+    val maxRolls = ops min maxCells
     log()
     log(s"$Jihadist performs a Plot operation with ${opsString(ops)}")
     log(separator())
-    if (maxCells == 1)
-      println("There is one cell on the map that can plot")
-    else
-      println(s"There are $maxCells cells on the map that can plot")
-    if (numPlots == 1)
-      println(s"There is 1 plot available for this operation")
-    else
-      println(s"There are $numPlots plots available for this operation")
-    
-    val maxRolls = ops min numPlots min maxCells
-    val numRolls = askInt("How many dice do you wish to roll?", 1, maxRolls, Some(maxRolls))
+    val cellDisp = if (maxCells == 1) "There is one cell on the map that can plot"
+                   else              s"There are $maxCells cells on the map that can plot"
+    val plotDisp = if (numPlots == 1) s"There is 1 plot available for this operation"
+    else                              s"There are $numPlots plots available for this operation"
+    println(cellDisp)
+    println(plotDisp)
+    val numAttempts = askInt("How many dice do you wish to roll?", 1, maxRolls, Some(maxRolls))
     // Keep track of where cells have been selected. They can only be selected once!
-    case class Target(name: String, sleepers: Int, actives: Int)
-    var targetCountries = 
-      (game.countries
-        filter (_.totalCells > 0) 
-        map (c => c.name -> Target(c.name, c.sleeperCells, c.activeCells))
-      ).toMap
-    
+    case class Target(name: String, actives: Int, sleepers: Int)
+    var targetCountries = (for (name <- game.plotTargets; c = game.getCountry(name))
+      yield name -> Target(name, c.activeCells, c.sleeperCells)).toMap
     // All of the plotting cells must be declared before rolling any dice.
-    val attempts = for (i <- (1 to numRolls).toList) yield {
+    val attempts = for (i <- (1 to numAttempts).toList) yield {
       println()
       val ord        = ordinal(i)
       val candidates = targetCountries.keys.toList.sorted
-      val target     = targetCountries(askCountry(s"$ord Plot in which country: ", candidates))
-      val cellType   = if (target.sleepers > 0 && target.actives > 0) {
-        val prompt = s"$ord Plot with (active or sleeper) cell. Default = active: "
-        askOneOf(prompt, List("active", "sleeper"), allowNone = true) match {
-          case None    => Active
-          case Some(x) => x == "active"
-        } 
+      val target     = targetCountries(askCountry(s"$ord Plot attempt in which country: ", candidates))
+      val active     = if (target.sleepers > 0 && target.actives > 0) {
+        askCells(target.name, 1, sleeperFocus = false) match {
+          case (1, _) => true
+          case _      => false
+        }
       }
       else {
         println(s"$ord Plot cell will be ${if (target.actives > 0) "an active cell" else "a sleeper cell"}")
         target.actives > 0
       }
-      addOpsTarget(target.name)
       // Remove the selected cell so that it cannot be selected twice.
       if (target.sleepers + target.actives == 1)
         targetCountries -= target.name
-      else if (cellType == Active)
+      else if (active)
         targetCountries += target.name -> target.copy(actives = target.actives - 1)
       else
         targetCountries += target.name -> target.copy(sleepers = target.sleepers - 1)
-      (ord, target.name, cellType)
+      PlotAttempt(target.name, active)
     }
-
-    def showPlots(plots: Vector[Plot]): Unit = {
-      @tailrec def showNext(list: List[Plot], index: Int): Unit = list match {
-        case Nil =>
-        case plot :: rest =>
-          println(s"$index) ${plot.name}")
-          showNext(rest, index + 1)
-      }
-      showNext(plots.toList, 1)
-    }
-    
-    var available = game.plotsAvailableWith(ops).sorted.toVector
-    // Now we can roll the die for each one see what happens and log the result.
-    for ((ord, name, active) <- attempts) {
-      val c       = game.getCountry(name)
-      println()
-      println(separator())
-      if (!active)  
-        flipSleeperCells(name, 1)
-      val die     = humanDieRoll(s"Die roll for $ord plot int $name: ")
-      val success = die <= c.governance
-      val result  = if (success) "succeeds" else "fails"
-      
-      log(s"$ord Plot in $name $result with a roll of $die")
-      if (success) {
-        val plotIndex = if (available.size == 1) 0
-        else {
-          showPlots(available)
-          askInt(s"Select plot to place in $name: ", 1, available.size) - 1
-        }
-        addAvailablePlotToCountry(name, available(plotIndex))
-        available = available.patch(plotIndex, Vector.empty, 1)
-      }
-    }
+    performPlots(ops, attempts)
   }
 
   def addAvailablePlotToCountry(name: String, plot: Plot): Unit = {
@@ -4707,7 +4714,6 @@ object LabyrinthAwakening {
   def adjustBotLogging(): Unit = {
     val newValue = !game.params.botLogging
     logAdjustment("Bot logging", game.params.botLogging, newValue)
-    pause()
     game = game.copy(params = game.params.copy(botLogging = newValue))
   }
   

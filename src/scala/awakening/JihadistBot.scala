@@ -740,12 +740,49 @@ object JihadistBot {
   }
   
   def plotOperation(card: Card): Unit = {
+    val maxCells = (game.plotTargets map game.getCountry map unusedCells).sum
+    val maxAttempts = card.ops min maxCells
     log()
     log(s"$Jihadist performs a Plot operation")
     log(separator())
-    log("Jihadist Bot Plot not yet implemented.")
-    // val candidates = followFlowchart(game.countries filter (_.totalCells > 0), flowchart)
     
+    // Return the number of attempts made.
+    def nextTarget(completed: Int, alreadyTried: Set[String]): Int = {
+      val remaining = maxAttempts - completed
+      if (remaining == 0 || game.availablePlots.isEmpty) {
+        if (game.availablePlots.isEmpty && completed == 0) 
+          log(s"There are no available plots")
+        completed
+      }
+      else {
+        val canPlot = (c: Country) => !alreadyTried(c.name) &&
+                                      unusedCells(c) > 0 && (
+                                        (game isNonMuslim c.name) ||
+                                        !(game getMuslim c.name).isIslamistRule
+                                      )
+        val candidates = countryNames(game.countries filter canPlot)
+        plotTarget(candidates) match {
+          case None => completed
+          case Some(name) =>
+            val c = game getCountry name
+            val numAttempts = unusedCells(c) min remaining
+            val actives     = activeCells(c) min numAttempts
+            val sleepers    = numAttempts - actives
+            val attempts = List.fill(actives)(PlotAttempt(name, true)) :::
+                           List.fill(sleepers)(PlotAttempt(name, false))
+            performPlots(card.ops, attempts)
+            usedCells(name).addActives(actives)
+            usedCells(name).addSleepers(sleepers)
+            nextTarget(completed + numAttempts, alreadyTried + name)
+        }
+      }
+    }
+    val opsUsed = nextTarget(0, Set.empty)
+    if (card.ops < opsUsed)
+      expendBotReserves(opsUsed - card.ops)
+    
+    if (card.ops > opsUsed)
+      radicalization(card.ops - opsUsed)
   }
   
   // Get highest priority target country
@@ -776,7 +813,6 @@ object JihadistBot {
             val m = game.getMuslim(name)
             val numAttempts = unusedCells(m) min remaining
             val actives = activeCells(m) min numAttempts
-            val sleepers    = numAttempts - (activeCells(m) min numAttempts)
             val target = JihadTarget(name, actives, numAttempts - actives)
             target :: nextJihadTarget(completed + numAttempts, alreadyTried + name)
         }
