@@ -3,4 +3,5 @@
 fsc -d classes \
 src/scala/awakening/LabyrinthAwakening.scala \
 src/scala/awakening/AwakeningCards.scala \
-src/scala/awakening/JihadistBot.scala
+src/scala/awakening/JihadistBot.scala \
+src/scala/awakening/scenarios/Awakening2010.scala

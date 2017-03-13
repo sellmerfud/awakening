@@ -1,10 +1,3 @@
-
-// Labyrinth Awakening
-//
-// An scala implementation of the solo AI for the game 
-// Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
-// published by GMT Games.
-// 
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -25,6 +18,14 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// Labyrinth Awakening
+//
+// An scala implementation of the solo AI for the game 
+// Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
+// published by GMT Games.
+// 
+
 package awakening
 
 import scala.util.Random.{shuffle, nextInt}
@@ -32,6 +33,7 @@ import scala.annotation.tailrec
 import scala.util.Properties.{lineSeparator, isWin}
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
+import scenarios._
 
 object LabyrinthAwakening {
   
@@ -429,7 +431,7 @@ object LabyrinthAwakening {
   
   def cardNumAndName(number: Int): String = deck(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
-  
+
   sealed trait Country {
     val name: String
     val governance: Int
@@ -439,23 +441,23 @@ object LabyrinthAwakening {
     val plots: List[PlotOnMap]
     val markers: List[String]
     val wmdCache: Int        // Number of WMD plots cached
-    
+  
     def isUntested: Boolean
     def isGood         = governance == Good
     def isFair         = governance == Fair
     def isPoor         = governance == Poor
     def isIslamistRule = governance == IslamistRule
-    
+  
     def totalCells = sleeperCells + activeCells
     def hasMarker(name: String) = markers contains name
-    
+  
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
     def recruitOK: Boolean = hasCadre || totalCells > 0
     def autoRecruit: Boolean
     def recruitSucceeds(die: Int): Boolean
   }
-  
+
   case class NonMuslimCountry(
     name: String,
     governance: Int             = Good,
@@ -483,7 +485,7 @@ object LabyrinthAwakening {
     def removeMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers filterNot names.contains)
     // US posture is stored in the GameState
     def canChangePosture = !(iranSpecialCase || name == UnitedStates || name == Israel)
-    
+  
   }
 
   case class MuslimCountry(
@@ -513,10 +515,10 @@ object LabyrinthAwakening {
     def isAlly      = alignment == Ally
     def isNeutral   = alignment == Neutral
     def isAdversary = alignment == Adversary
-    
+  
     def isShiaMix = !isSunni
     def inRegimeChange = regimeChange != NoRegimeChange
-    
+  
     def isUntestedWithData: Boolean = isUntested && (
       totalCells > 0            ||
       hasCadre                  ||
@@ -532,22 +534,22 @@ object LabyrinthAwakening {
       reaction > 0              ||
       wmdCache > 0
     )
-    
+  
     // If a muslim country is untest, then it is valid a WoI target.
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) =
       (isUntested      || ops >= governance)  &&
       !(isAdversary    || (isGood && isAlly)) &&
       (!inRegimeChange || ignoreRegimeChange || (totalTroopsAndMilitia - totalCells) >= 5)
-    
+  
     def autoRecruit = isIslamistRule || civilWar || inRegimeChange || hasMarker("Training Camps")
     def recruitSucceeds(die: Int) = autoRecruit || die <= governance
-    
+  
     // TODO: Add other markers!!
     def troopsMarkers: List[TroopsMarker] = markers collect {
       case "NATO"       => TroopsMarker("NATO", 2,       canDeploy = true,  prestigeLoss = true)
       case "UNSCR 1973" => TroopsMarker("UNSCR 1973", 1, canDeploy = false, prestigeLoss = false)
     }
-    
+  
     def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
     def markerTroopsThatAffectPrestige: Int =
       troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
@@ -555,7 +557,7 @@ object LabyrinthAwakening {
     def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
     def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
     def disruptAffectsPrestige = totalTroopsAndMilitia > 1 && totalTroopsThatAffectPrestige > 0
-    
+  
     def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar)
     def canTakeAidMarker = !(isGood || isIslamistRule)
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
@@ -566,7 +568,7 @@ object LabyrinthAwakening {
     else
       troops
     def canDeployFrom = maxDeployFrom > 0
-      
+    
     def jihadDRM = reaction - awakening
     def jihadOK = !isIslamistRule && totalCells > 0
     def majorJihadOK(ops: Int) = 
@@ -574,12 +576,11 @@ object LabyrinthAwakening {
         (isPoor && (ops  > 1 || besiegedRegime)) || 
         (isFair && (ops == 3 || (ops == 2 && besiegedRegime)))
       )
-    
+  
       def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
       def removeMarkers(names: String*): MuslimCountry = this.copy(markers = markers filterNot names.contains)
   }
-    
-  
+
   trait Scenario {
     val name: String
     val cardDeckName: String
@@ -590,66 +591,7 @@ object LabyrinthAwakening {
     val countries: List[Country]
     val markers: List[String]
   }
-  
-  class Awakening2010 extends Scenario {
-    val name           = "Awakening (2010 Scenario)"
-    val cardDeckName   = AwakeningDeck
-    val prestige       = 5
-    val usPosture      = Soft
-    val funding        = 5
-    val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-    val countries = List(
-      NonMuslimCountry(Canada),
-      NonMuslimCountry(UnitedStates, posture = Soft),
-      NonMuslimCountry(UnitedKingdom, recruitOverride = 2, posture = Hard),
-      NonMuslimCountry(Serbia),
-      NonMuslimCountry(Israel, posture = Hard),
-      NonMuslimCountry(India),
-      NonMuslimCountry(Scandinavia),
-      NonMuslimCountry(EasternEurope),
-      NonMuslimCountry(Benelux, posture = Soft),
-      NonMuslimCountry(Germany),
-      NonMuslimCountry(Italy),
-      NonMuslimCountry(France, recruitOverride = 2, posture = Hard),
-      NonMuslimCountry(Spain, recruitOverride = 2),
-      NonMuslimCountry(Russia, governance = Fair),
-      NonMuslimCountry(Caucasus, governance = Fair),
-      NonMuslimCountry(China, governance = Fair),
-      NonMuslimCountry(KenyaTanzania, governance = Fair),
-      NonMuslimCountry(Thailand, governance = Fair),
-      NonMuslimCountry(Philippines, governance = Fair, recruitOverride = 3),
-      NonMuslimCountry(Iran, governance = Fair, wmdCache = 1, iranSpecialCase = true),
-      NonMuslimCountry(Nigeria, governance = Poor),
-      
-      MuslimCountry(Morocco, resources = 2),
-      MuslimCountry(AlgeriaTunisia, resources = 2, oilProducer = true,
-                    governance = Poor, alignment = Neutral, awakening = 1),
-      MuslimCountry(Libya, resources = 1, oilProducer = true),
-      MuslimCountry(Egypt, resources = 3),
-      MuslimCountry(Sudan, resources = 1, oilProducer = true),
-      MuslimCountry(Somalia, resources = 1),
-      MuslimCountry(Jordan, resources = 1),
-      MuslimCountry(Syria, resources = 2, wmdCache = 2),
-      MuslimCountry(CentralAsia, resources = 2),
-      MuslimCountry(Turkey, isSunni = false, resources = 2),
-      MuslimCountry(Lebanon, isSunni = false, resources = 1),
-      MuslimCountry(Yemen, isSunni = false, resources = 1),
-      MuslimCountry(Iraq, isSunni = false, resources = 3, oilProducer = true,
-                    governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
-      MuslimCountry(SaudiArabia, isSunni = false, resources = 3, oilProducer = true),
-      MuslimCountry(GulfStates, isSunni = false, resources = 3, oilProducer = true,
-                    governance = Fair, alignment = Ally, troops = 2),
-      MuslimCountry(Pakistan, isSunni = false, resources = 2, wmdCache = 3,
-                    governance = Fair, alignment = Neutral, sleeperCells = 2),
-      MuslimCountry(Afghanistan, isSunni = false, resources = 1,
-                    governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
-                    regimeChange = TanRegimeChange),
-      MuslimCountry(IndonesiaMalaysia, resources = 3, oilProducer = true),
-      MuslimCountry(Mali, resources = 1)
-    )
-    val markers = List.empty[String]
-  }
-  
+
   // There is a limit of 22 construction arguments for case classes
   // To work around this in the GameState, we will combine a couple of parameters
   case class CampCells(inCamp: Int, onMap: Int)
