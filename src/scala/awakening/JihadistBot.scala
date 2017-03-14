@@ -408,6 +408,17 @@ object JihadistBot {
     topPriority(game getCountries names, priorities) map (_.name)
   }
   
+  def troopsMilitiaTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      PakistanPriority, BesiegedRegimePriority, SyriaPriority,
+      WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
+      IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+    
+    botLog("Find \"Troops/Militia\" target")
+    topPriority(game getCountries names, priorities) map (_.name)
+    
+  }
+  
 
   val TightPlotFlowchart = List(
     PoorNonMuslimFilter, FairNonMuslimFilter, GoodNonMuslimFilter)
@@ -437,7 +448,6 @@ object JihadistBot {
     PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
   
-    
   def recruitTarget(names: List[String]): Option[String] = {
     val priorities = List(
       NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
@@ -1248,4 +1258,39 @@ object JihadistBot {
     }
     nextTravel(0)
   }
+  
+  
+  // Selects troops that are on the map to take off of the map.
+  // This does not take troops from the track.  The caller should
+  // only call this if there were not enough troops on the track
+  // to satisfy the event.
+  def troopsToTakeOffMap(remaining: Int, candidates: List[String]): List[MapItem] = {
+    if (remaining == 0)
+      Nil
+    else {
+      troopsMilitiaTarget(candidates) match {
+        case None => Nil
+        case Some(t) if game.getMuslim(t).troops >= remaining =>
+          MapItem(t, remaining) :: Nil
+        case Some(t) =>
+          MapItem(t, 1) :: troopsToTakeOffMap(remaining - 1, candidates filterNot (_ == t))
+      }
+    }
+  }
+  
+  // This is a convenience method used when selecting targets for events.
+  def selectTargets(num: Int, candidates: List[String], pickBest: (List[String]) => Option[String]): List[String] = {
+    def nextTarget(n: Int, targets: List[String]): List[String] = {
+      if (n <= num && targets.nonEmpty) {
+        pickBest(candidates) match {
+          case None => Nil
+          case Some(name) => name :: nextTarget(n + 1, targets filterNot (_ == name))
+        }
+      }
+      else
+        Nil
+    }
+    nextTarget(1, candidates)
+  }
+  
 }

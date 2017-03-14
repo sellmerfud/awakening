@@ -1453,10 +1453,9 @@ object AwakeningCards extends CardDeck {
         val candidates = countryNames(game.muslims filter ghostSoldiersCandidate)
         val target = if (role == game.humanRole) 
           askCountry("Select country: ", candidates)
-        else {
-          log("!!! Bot event not yet implemented !!!")
-          candidates.head
-        }
+        else 
+          JihadistBot.troopsMilitiaTarget(candidates).get
+
         addEventTarget(target)
         val m = game.getMuslim(target)
         removeMilitiaFromCountry(target, (m.militia + 1) / 2) // Half rounded up
@@ -1468,6 +1467,7 @@ object AwakeningCards extends CardDeck {
       (role: Role) => (game.troopsAvailable + game.troopsOnMap) > 0
       ,
       (role: Role) => {
+        import JihadistBot.troopsToTakeOffMap
         // Take troops from available if possible, otherwise we must 
         // ask the user where to take them from.
         val numToRemove  = 2 min (game.troopsAvailable + game.troopsOnMap)
@@ -1481,10 +1481,8 @@ object AwakeningCards extends CardDeck {
           println(s"Select ${amountOf(numFromMap, "troop")} from the map to remove")
           askMapItems(targets.sortBy(_.country), numFromMap, "troop")
         }
-        else {
-          log("!!! Bot event not yet implemented !!!")
-          Nil
-        }
+        else
+          troopsToTakeOffMap(numFromMap, countryNames(game.muslims filter (_.troops > 0)))
         
         for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries) {
           if (name != "track")
@@ -1572,7 +1570,7 @@ object AwakeningCards extends CardDeck {
         val target = getTarget(countries drop (tanDie - 1)) map {
           case "Schengen" if role == game.humanRole =>
             askCountry("Choose a Hard Schengen country: ", validSchengen)
-          case "Schengen" => shuffle(validSchengen).head // Bot selects randomly
+          case "Schengen" => JihadistBot.plotTarget(validSchengen).get
           case name => name
         }
         
@@ -1600,12 +1598,12 @@ object AwakeningCards extends CardDeck {
       (role: Role) => game.usPosture == Soft
       ,
       (role: Role) => {
+        import JihadistBot.troopsToTakeOffMap
         // Take troops from available if possible, otherwise we must 
         // ask the user where to take them from.
         val numToRemove  = 3 min (game.troopsAvailable + game.troopsOnMap)
         val numFromTrack = numToRemove min game.troopsAvailable
         val numFromMap   = numToRemove - numFromTrack
-        
         val countries = if (numFromMap == 0)
           Nil
         else if (role == game.humanRole) {
@@ -1613,10 +1611,11 @@ object AwakeningCards extends CardDeck {
           println(s"Select ${amountOf(numFromMap, "troop")} from the map to remove")
           askMapItems(targets.sortBy(_.country), numFromMap, "troop")
         }
-        else {
-          log("!!! Bot event not yet implemented !!!")
-          Nil
-        }
+        else
+          troopsToTakeOffMap(numFromMap, countryNames(game.muslims filter (_.troops > 0)))
+        
+        log("US player draws one card from the discard pile")
+        log("Must draw \"Obama Doctrine\" if it is available")
         
         for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries) {
           if (name != "track")
@@ -1636,10 +1635,9 @@ object AwakeningCards extends CardDeck {
         val candidates = countryNames(game.muslims filter (_.totalTroops > 0))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
-        else {
-          log("!!! Bot event not yet implemented !!!")
-          candidates.head
-        }
+        else 
+          JihadistBot.troopsMilitiaTarget(candidates).get
+
         addEventTarget(target)
         val m = game.getMuslim(target)
         moveTroops(target, "track", m.troops)
@@ -1707,10 +1705,9 @@ object AwakeningCards extends CardDeck {
         val candidates = countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
-        else {
-          log("!!! Bot event not yet implemented !!!")
-          candidates.head
-        }
+        else
+          JihadistBot.recruitTarget(candidates).get
+
         addEventTarget(target)
         val m = game.getMuslim(target)
         val numCells = 5 min game.cellsAvailable
@@ -1745,43 +1742,53 @@ object AwakeningCards extends CardDeck {
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
       (role: Role) => {
         val candidates = countryNames(game.countries filter (_.totalCells == 0))
-        
-        if (role == game.humanRole) {
-          def nextCountry(targets: List[String], num: Int): Unit = num match {
-            case 4 =>
-            case n =>
-              val target = askCountry(s"Select ${ordinal(n)} country: ", targets)
-              addEventTarget(target)
-              testCountry(target)
-              val c = game.getCountry(target)
-              if (game.cellsAvailable > 0) {
-                if (c.autoRecruit) {
-                  log(s"Recruit in $target succeeds automatically")
-                  addSleeperCellsToCountry(target, 1, ignoreFunding = true)
-                }
-                else {
-                  val die = getDieRoll(role)
-                  log(s"Die roll: $die")
-                  if (die <= c.governance) {
-                    log(s"Recruit in $target succeeds with a die roll of $die")
-                    addSleeperCellsToCountry(target, 1, ignoreFunding = true)
-                  }
-                  else {
-                    log(s"Recruit in $target fails with a die roll of $die")
-                    addCadre(target)
-                  }
-                }
-              }
-              else
-                addCadre(target)
-              
-              nextCountry(targets filterNot (_ == target), num + 1)
+        var targets = if (role == game.humanRole) {
+          def nextCountry(targets: List[String], num: Int): List[String] = {
+            if (num <= 3 && targets.nonEmpty) {
+              val name = askCountry(s"Select ${ordinal(num)} country: ", targets)
+              name :: nextCountry(targets filterNot (_ == name), num + 1)
+            }
+            else
+              Nil
           }
           nextCountry(candidates, 1)
-          
         }
-        else {
-          log("!!! Bot event not yet implemented !!!")
+        else
+          JihadistBot.selectTargets(3, candidates, JihadistBot.recruitTarget)
+        
+        val numCells = if (role == game.botRole && game.jihadistIdeology(Potent)) {
+          log(s"$Jihadist Bot with Potent Ideology places two cells for each recruit success")
+          2
+        }
+        else
+          1
+        // Process all of the targets
+        for (target <- targets) {
+          addEventTarget(target)
+          testCountry(target)
+          
+          val c = game.getCountry(target)
+          if (game.cellsAvailable > 0) {
+            val cells = numCells min game.cellsAvailable
+            if (c.autoRecruit) {
+              log(s"Recruit in $target succeeds automatically")
+              addSleeperCellsToCountry(target, cells, ignoreFunding = true)
+            }
+            else {
+              val die = getDieRoll(role)
+              log(s"Die roll: $die")
+              if (die <= c.governance) {
+                log(s"Recruit in $target succeeds with a die roll of $die")
+                addSleeperCellsToCountry(target, cells, ignoreFunding = true)
+              }
+              else {
+                log(s"Recruit in $target fails with a die roll of $die")
+                addCadre(target)
+              }
+            }
+          }
+          else
+            addCadre(target)
         }
       }
     )),
@@ -1792,19 +1799,25 @@ object AwakeningCards extends CardDeck {
       ,
       (role: Role) => {
         val candidates = countryNames(game.countries filter martyrdomCandidate)
-        if (role == game.humanRole) {
+        val (target, active, plots) = if (role == game.humanRole) {
           val target = askCountry("Select country: ", candidates)
-          val (active, sleeper) = askCells(target, 1)
-          val plots = askAvailablePlots(2, ops = 3)
-          
-          addEventTarget(target)
-          removeCellsFromCountry(target, active, sleeper, addCadre = false)
-          for (plot <- plots)
-            addAvailablePlotToCountry(target, plot)
+          val (actives, _) = askCells(target, 1)
+          (target, actives > 0, askAvailablePlots(2, ops = 3))
         }
         else {
-          log("!!! Bot event not yet implemented !!!")
+          val target = JihadistBot.plotTarget(candidates).get
+          addEventTarget(target)
+          val active = (game getCountry target).activeCells > 0
+          (target, active, shuffle(game.availablePlots) take 2)
         }
+        
+        addEventTarget(target)
+        if (active)
+          removeActiveCellsFromCountry(target, 1, addCadre = false)
+        else
+          removeSleeperCellsFromCountry(target, 1, addCadre = false)
+        for (plot <- plots)
+          addAvailablePlotToCountry(target, plot)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1818,10 +1831,8 @@ object AwakeningCards extends CardDeck {
           val o2 = askCountry("Select 2nd country: ", candidates)
           o1::o2::Nil
         }
-        else {
-          log("!!! Bot event not yet implemented !!!")
-          candidates take 2
-        }
+        else 
+          JihadistBot.selectTargets(2, candidates, JihadistBot.markerAlignGovTarget)
         
         val targets = if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker)
           Egypt :: other2
@@ -1875,8 +1886,8 @@ object AwakeningCards extends CardDeck {
         val candidates = countryNames(game.muslims filter regionalAlQaedaCandidate)
         val maxPer = if (game hasMuslim (_.isIslamistRule)) 2 else 1
         case class Target(name: String, cells: Int)
-        if (role == game.humanRole) {
-          val targets = if (game.cellsAvailable == 1) {
+        val targets = if (role == game.humanRole) {
+          if (game.cellsAvailable == 1) {
             val name = askCountry("Select country: ", candidates)
             Target(name, 1)::Nil
           }
@@ -1897,15 +1908,22 @@ object AwakeningCards extends CardDeck {
             val name2 = askCountry("Select 2nd country: ", candidates filterNot (_ == name1))
             Target(name1, maxPer):: Target(name2, maxPer)::Nil
           }
-          
-          for (Target(name, num) <- targets) {
-            addEventTarget(name)
-            testCountry(name)
-            addSleeperCellsToCountry(name, num)
-          }
         }
         else {
-          log("!!! Bot event not yet implemented !!!")
+          def nextTarget(available: Int, targets: List[String]): List[Target] = targets match {
+            case Nil => Nil
+            case t::ts => 
+              val n = maxPer min available
+              Target(t, n) :: nextTarget(available - n, ts)
+          }
+          var names = JihadistBot.selectTargets(2, candidates, JihadistBot.recruitTarget)
+          nextTarget(game.cellsAvailable, names)  
+        }
+        
+        for (Target(name, num) <- targets) {
+          addEventTarget(name)
+          testCountry(name)
+          addSleeperCellsToCountry(name, num)
         }
       }
     )),
@@ -1939,8 +1957,8 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole)
           askCountry("Place Training Camps in which country: ", candidates)
         else {
-          log("!!! Bot event not yet implemented !!!")
-          candidates.head
+          // TODO: Make sure there are not special instructions for this event.
+          JihadistBot.recruitTarget(candidates).get
         }
         println()
         val priorCapacity = game.trainingCampCapacity

@@ -474,8 +474,8 @@ object LabyrinthAwakening {
     override def isUntested = posture == PostureUntested && 
                               !(Set(UnitedStates,Israel, Iran) contains name)
     def isSchengen = Schengen contains name
-    def isHard = posture == Hard
-    def isSoft = posture == Soft
+    def isHard = if (name == UnitedStates ) game.usPosture == Hard else posture == Hard
+    def isSoft = if (name == UnitedStates ) game.usPosture == Soft else posture == Soft
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) = 
       ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
 
@@ -2640,7 +2640,7 @@ object LabyrinthAwakening {
   // Perform Jihads on the given targets.
   // Return a List of (name, successes) to indicate the number of success achieved in
   // each target.
-  def performJihads(targets: List[JihadTarget]): List[(String, Int)] = {
+  def performJihads(targets: List[JihadTarget], ignoreFailures: Boolean = false): List[(String, Int)] = {
     targets match {
       case Nil => Nil
       case JihadTarget(name, actives, sleepers, major)::remaining =>
@@ -2677,7 +2677,8 @@ object LabyrinthAwakening {
         if (major)
           log(s"Major Jihad ${if (majorSuccess) "succeeds" else "fails"}")
         // Remove one active cell for each failure
-        removeActiveCellsFromCountry(name, failures, addCadre = false)
+        if (!ignoreFailures)
+          removeActiveCellsFromCountry(name, failures, addCadre = false)
         // Remove 1 aid marker for each sucessful die roll
         removeAidMarker(name, successes min m.aidMarkers)
         degradeGovernance(name, levels = successes, canShiftToIR = majorSuccess)
