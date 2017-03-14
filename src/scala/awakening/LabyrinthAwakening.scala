@@ -570,7 +570,7 @@ object LabyrinthAwakening {
       troops
     def canDeployFrom = maxDeployFrom > 0
     
-    def jihadDRM = reaction - awakening
+    def jihadDRM = awakening - reaction
     def jihadOK = !isIslamistRule && totalCells > 0
     def majorJihadOK(ops: Int) = 
       totalCells - totalTroopsAndMilitia >= 5 && (
@@ -1836,7 +1836,7 @@ object LabyrinthAwakening {
   }
   
   def pause() {
-      readLine("Continue ↩︎ ")
+    readLine("Continue ↩︎ ")
   }
   
   var indentation = 0
@@ -3105,9 +3105,11 @@ object LabyrinthAwakening {
   // otherwise the function will throw an exception!
   def addCellsToCountry(name: String, active: Boolean, num: Int, ignoreFunding: Boolean = false, logPrefix: String = ""): Unit = {
     if (num > 0) {
-      val isActive = active || game.isCaliphateMember(name)
-      val cellType = if (isActive) "active cell" else "sleeper cell"
-      val available = game.cellsAvailable
+      val isActive     = active || game.isCaliphateMember(name)
+      val cellType     = if (isActive) "active cell" else "sleeper cell"
+      val available    = game.cellsAvailable
+      val removedCadre = game.getCountry(name).hasCadre
+      
       assert(available >= num, s"not enough available cells have: $available, need $num")
       
       val CampCells(campCellsInCamp, campCellsOnMap) = game.trainingCampCells
@@ -3117,14 +3119,14 @@ object LabyrinthAwakening {
       // The number on the track is calculated, so it does not need to be set here.
       val newCampCells = CampCells(campCellsInCamp - fromCamp, campCellsOnMap + fromCamp)
       val updated = game.getCountry(name) match {
-        case m: MuslimCountry if isActive    => m.copy(activeCells  = m.activeCells  + num, hasCadre = false)
+        case m: MuslimCountry    if isActive => m.copy(activeCells  = m.activeCells  + num, hasCadre = false)
         case m: MuslimCountry                => m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false)
         case n: NonMuslimCountry if isActive => n.copy(activeCells  = n.activeCells  + num, hasCadre = false)
         case n: NonMuslimCountry             => n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false)
       }
       game = game.copy(trainingCampCells = newCampCells).updateCountry(updated)
       
-      if (game.getCountry(name).hasCadre)
+      if (removedCadre)
         log("%sRemove cadre marker from %s.".format(logPrefix, name))
       if (fromTrack > 0)
         log("%sMove %s to %s from the funding track".format(logPrefix, amountOf(fromTrack, cellType), name))
@@ -3171,7 +3173,7 @@ object LabyrinthAwakening {
         // The number on the track is calculated, so it does not need to be set here.
         val newCampCells = CampCells(campCellsInCamp + toCamp, campCellsOnMap - campCellsRemoved)
         val updated = game.getCountry(name) match {
-          case m: MuslimCountry if active    => m.copy(activeCells  = m.activeCells  - num, hasCadre = cadreAdded)
+          case m: MuslimCountry    if active => m.copy(activeCells  = m.activeCells  - num, hasCadre = cadreAdded)
           case m: MuslimCountry              => m.copy(sleeperCells = m.sleeperCells - num, hasCadre = cadreAdded)
           case n: NonMuslimCountry if active => n.copy(activeCells  = n.activeCells  - num, hasCadre = cadreAdded)
           case n: NonMuslimCountry           => n.copy(sleeperCells = n.sleeperCells - num, hasCadre = cadreAdded)
@@ -3218,13 +3220,13 @@ object LabyrinthAwakening {
       }
     
       from match {
-        case m: MuslimCountry if active    => game = game.updateCountry(m.copy(activeCells  = m.activeCells  - num))
+        case m: MuslimCountry    if active => game = game.updateCountry(m.copy(activeCells  = m.activeCells  - num))
         case m: MuslimCountry              => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells - num))
         case n: NonMuslimCountry if active => game = game.updateCountry(n.copy(activeCells  = n.activeCells  - num))
         case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells - num))
       }
       to match {
-        case m: MuslimCountry if makeActive    => game = game.updateCountry(m.copy(activeCells = m.activeCells + num, hasCadre = false))
+        case m: MuslimCountry    if makeActive => game = game.updateCountry(m.copy(activeCells = m.activeCells + num, hasCadre = false))
         case m: MuslimCountry                  => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false))
         case n: NonMuslimCountry if makeActive => game = game.updateCountry(n.copy(activeCells = n.activeCells + num, hasCadre = false))
         case n: NonMuslimCountry               => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))

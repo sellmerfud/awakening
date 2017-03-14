@@ -238,7 +238,8 @@ object JihadistBot {
   // Priorities Table
 
   // 1. Best Jihad DRM
-  val BestJihadDRMPriority = new HighestScorePriority("Best Jihad DRM", muslimScore(_.jihadDRM))
+  val BestJihadDRMPriority = new LowestScorePriority("Best Jihad DRM", 
+                  muslimScore(_.jihadDRM, nonMuslimScore = 100))
   // 2. US
   val USPriority = new CriteriaPriority("US", c => c.name == UnitedStates)
   // 3. With troops unless prestige 1
@@ -347,15 +348,15 @@ object JihadistBot {
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
   // then they would be selected over Islamist Rule countries.                            
-  val AutoRecruitBestJihadDRM = new HighestScoreFilter("Auto recruit w/ best Jihad DRM",
+  val AutoRecruitBestJihadDRM = new LowestScoreFilter("Auto recruit w/ best Jihad DRM",
                   muslimTest(_.autoRecruit),
-                  muslimScore(m => if (m.isIslamistRule) -50 else m.jihadDRM))
-  val FairMuslimBestJihadDRM = new HighestScoreFilter("Fair Muslim w/ best Jihad DRM",
+                  muslimScore(m => if (m.isIslamistRule) 50 else m.jihadDRM, nonMuslimScore = 100))
+  val FairMuslimBestJihadDRM = new LowestScoreFilter("Fair Muslim w/ best Jihad DRM",
                   muslimTest(_.isFair),
-                  muslimScore(_.jihadDRM))
-  val PoorMuslimBestJihadDRM = new HighestScoreFilter("Poor Muslim w/ best Jihad DRM",
+                  muslimScore(_.jihadDRM, nonMuslimScore = 100))
+  val PoorMuslimBestJihadDRM = new LowestScoreFilter("Poor Muslim w/ best Jihad DRM",
                   muslimTest(_.isPoor),
-                  muslimScore(_.jihadDRM))
+                  muslimScore(_.jihadDRM, nonMuslimScore = 100))
   val FewestCellsFilter = new LowestScoreFilter("Fewest cells", _ => true, muslimScore(unusedCells))
   
   
@@ -922,7 +923,7 @@ object JihadistBot {
     def nextAction(completed: Int): Int = {
       val remaining = maxOps - completed
       val unusedRemaining = (unusedOps - completed) max 0
-      if (remaining == 0) 0
+      if (remaining == 0) completed
       else {
           val ops = getRadicalizationAction match {
             case Some(PlotWMDInUS)               => radPlotWMDInUs(remaining)
@@ -937,7 +938,9 @@ object JihadistBot {
           nextAction(completed + ops)
       }
     }
-    nextAction(0)
+    val numActions = nextAction(0)
+    if (numActions > unusedOps)
+      expendBotReserves(numActions - unusedOps)
   }
     
   // Make as many plot attempts in the US as there are available cells there
@@ -1048,8 +1051,35 @@ object JihadistBot {
   // Returns the number of ops used
   def radRecruitAtMuslimCadre(maxOps: Int): Int = {
     log(s"Radicalization: Recruit in a Muslim country with a cadre")
-    log("Not yet imlemented !!!")
-    0
+    val candidates  = game.muslims filter (m => m.hasCadre) sortBy (_.jihadDRM)
+    val target      = minorJihadTarget(candidates map (_.name)).get
+    addOpsTarget(target)
+    val m = game getMuslim target
+    def nextAttempt(completed: Int): Int = {
+      if (completed == maxOps || game.cellsToRecruit == 0)
+        completed
+      else {
+        log()
+        log(s"$Jihadist attempts to recruit a cell into $target")
+        if (m.autoRecruit) {
+          log(s"Recruit is automatically successful in $target")
+          addSleeperCellsToCountry(target, 1)
+          usedCells(target).addSleepers(1)
+        }
+        else {
+          val die = dieRoll
+          val success = m.recruitSucceeds(die)
+          val result  = if (success) "succeeds" else "fails"
+          log(s"Recruit $result in $target with a roll of $die")
+          if (success) {
+            addSleeperCellsToCountry(target, 1)
+            usedCells(target).addSleepers(1)
+          }
+        }
+        nextAttempt(completed + 1)
+      }
+    }
+    nextAttempt(0)
   }
   
   // Returns the number of ops used
