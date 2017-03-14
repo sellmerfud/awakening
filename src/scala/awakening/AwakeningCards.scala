@@ -1800,10 +1800,10 @@ object AwakeningCards extends CardDeck {
           val eligible = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
           
           if (eligible contains UnitedStates)
-            UnitedStates :: JihadistBot.selectTargets(2, eligible filterNot (_ == UnitedStates), 
+            UnitedStates :: JihadistBot.multipleTargets(2, eligible filterNot (_ == UnitedStates), 
                                                 JihadistBot.recruitTarget)
           else 
-            JihadistBot.selectTargets(3, eligible, JihadistBot.recruitTarget)
+            JihadistBot.multipleTargets(3, eligible, JihadistBot.recruitTarget)
         }
         
         val numCells = if (role == game.botRole && game.jihadistIdeology(Potent)) {
@@ -1883,7 +1883,7 @@ object AwakeningCards extends CardDeck {
           o1::o2::Nil
         }
         else 
-          JihadistBot.selectTargets(2, candidates, JihadistBot.markerAlignGovTarget)
+          JihadistBot.multipleTargets(2, candidates, JihadistBot.markerAlignGovTarget)
         
         val targets = if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker)
           Egypt :: other2
@@ -1967,7 +1967,7 @@ object AwakeningCards extends CardDeck {
               val n = maxPer min available
               Target(t, n) :: nextTarget(available - n, ts)
           }
-          var names = JihadistBot.selectTargets(2, candidates, JihadistBot.recruitTarget)
+          var names = JihadistBot.multipleTargets(2, candidates, JihadistBot.recruitTarget)
           nextTarget(game.cellsAvailable, names)  
         }
         

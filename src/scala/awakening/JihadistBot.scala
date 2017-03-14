@@ -1285,7 +1285,7 @@ object JihadistBot {
   }
   
   // This is a convenience method used when selecting targets for events.
-  def selectTargets(num: Int, candidates: List[String], pickBest: (List[String]) => Option[String]): List[String] = {
+  def multipleTargets(num: Int, candidates: List[String], pickBest: (List[String]) => Option[String]): List[String] = {
     def nextTarget(n: Int, targets: List[String]): List[String] = {
       if (n <= num && targets.nonEmpty) {
         pickBest(candidates) match {
