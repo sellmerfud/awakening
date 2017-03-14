@@ -113,6 +113,7 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole)
           askCountry(s"Advisors in which country: ", candidates)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
@@ -222,6 +223,7 @@ object AwakeningCards extends CardDeck {
             log("Discard the top card in the Jihadist hand")
         }
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
         }
       }
@@ -305,6 +307,7 @@ object AwakeningCards extends CardDeck {
         val (active, sleeper) = if (role == game.humanRole)
           askCells(target, 1)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           val m = game.getMuslim(target)
           // TODO: This will probably become a botSelectCels() funcion as it is likely to be common.
@@ -418,6 +421,7 @@ object AwakeningCards extends CardDeck {
           }
         }
         else {
+          // See Event Instructions table
           // If there are any WMD plots in the available box, the bot
           // will remove one. Otherwise the US player must discard a random card.
           if (game.availablePlots contains PlotWMD) {
@@ -489,6 +493,7 @@ object AwakeningCards extends CardDeck {
       (role: Role) => role == game.humanRole  // The bot treats this as unplayable
       ,
       (role: Role) => {
+        // See Event Instructions table
         log("US player may inspect the Jihadist hand.")
         val cadres = countryNames(game.countries filter (_.hasCadre))
         if (cadres.isEmpty)
@@ -612,6 +617,7 @@ object AwakeningCards extends CardDeck {
           }
         }
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
         }
       }
@@ -646,6 +652,7 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole)
           askCountry("Place militia and aid in which country: ", candidates)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
@@ -752,6 +759,7 @@ object AwakeningCards extends CardDeck {
           (t, d)
         }
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           (candidates.head, dieRoll)
         }
@@ -774,6 +782,7 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole)
           askCountry("Place UNSCR 1973 in which country: ", candidates)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
@@ -837,6 +846,7 @@ object AwakeningCards extends CardDeck {
             (t, n)
           }
           else {
+            // See Event Instructions table
             log("!!! Bot event not yet implemented !!!")
             (candidates.head, 6)
           }
@@ -969,6 +979,7 @@ object AwakeningCards extends CardDeck {
           } 
         }
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           val target = shuffle(GulfUnionCountries).head
           addEventTarget(target)
@@ -1057,6 +1068,9 @@ object AwakeningCards extends CardDeck {
                          "Jihadi John", "Osama bin Ladin")
         log("US player takes one of the following cards from the discard pile:")
         log(orList(cards))
+        // See Event Instructions table
+        if (role == game.botRole)
+          log("The Bot selects the card nearest the bottom of the discard pile")
       }
     )),
     // ------------------------------------------------------------------------
@@ -1113,6 +1127,7 @@ object AwakeningCards extends CardDeck {
           decreasePrestige(1)
         }
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
         }
       }
@@ -1127,6 +1142,7 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
@@ -1149,6 +1165,7 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
@@ -1185,6 +1202,7 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
@@ -1197,7 +1215,9 @@ object AwakeningCards extends CardDeck {
     entry(new Card(166, "Ferguson", Jihadist, 1,
       NoRemove, NoMarker, Lapsing, NoAutoTrigger, AlwaysPlayable,
       (role: Role) => {
-        log("Jihadist play my block 1 US Associated event played later this turn.")
+        log("Jihadist player my block 1 US associated event played later this turn.")
+        if (role == game.botRole)
+          log("The Jihadist Bot will cancel the NEXT US associated event played by the US")
       }
     )),
     // ------------------------------------------------------------------------
@@ -1239,6 +1259,7 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
@@ -1342,6 +1363,7 @@ object AwakeningCards extends CardDeck {
           }
         }
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
         }
       }
@@ -1376,6 +1398,7 @@ object AwakeningCards extends CardDeck {
       (role: Role) => (role == game.humanRole || game.gwotPenalty == 0)
       ,
       (role: Role) => {
+        // See Event Instructions table
         rollUSPosture()
         increaseFunding(1)
         addEventTarget(Caucasus)
@@ -1422,6 +1445,7 @@ object AwakeningCards extends CardDeck {
         val target = if (role == game.humanRole) 
           askCountry("Select country: ", candidates)
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
           candidates.head
         }
@@ -1437,6 +1461,7 @@ object AwakeningCards extends CardDeck {
                       (role == game.humanRole || game.funding < 9) // Bot unplayable if funding == 9
       ,
       (role: Role) => {
+        // See Event Instructions table
         val num = 2 min (game.availablePlots count (_ == Plot1))
         addEventTarget(Israel)
         for (i <- 1 to num)
@@ -1616,6 +1641,11 @@ object AwakeningCards extends CardDeck {
         
         log("US player draws one card from the discard pile")
         log("Must draw \"Obama Doctrine\" if it is available")
+        // See Event Instructions table
+        if (game.botRole == US) {
+          log("US Bot will draw \"Obama Doctrine\", or \"Congress Acts\", or")
+          log("randomly among the US associated cards with the highest Ops")
+        }
         
         for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries) {
           if (name != "track")
@@ -1635,8 +1665,19 @@ object AwakeningCards extends CardDeck {
         val candidates = countryNames(game.muslims filter (_.totalTroops > 0))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
-        else 
+        else {
+          // See Event Instructions table
+          val candidates = {
+            val eligible = game.muslims filter (_.totalTroops > 0)
+            countryNames(if (eligible exists (_.isAlly))
+              eligible filter (_.isAlly)
+            else if (eligible exists (_.isNeutral))
+              eligible filter (_.isNeutral)
+            else
+              eligible)
+          }
           JihadistBot.troopsMilitiaTarget(candidates).get
+        }
 
         addEventTarget(target)
         val m = game.getMuslim(target)
@@ -1692,6 +1733,7 @@ object AwakeningCards extends CardDeck {
           log("discarding a non-US associated 3 Ops card")
         }
         else {
+          // See Event Instructions table
           log("!!! Bot event not yet implemented !!!")
         }
       }
@@ -1741,8 +1783,8 @@ object AwakeningCards extends CardDeck {
     entry(new Card(189, "Jihadist Videos", Jihadist, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
       (role: Role) => {
-        val candidates = countryNames(game.countries filter (_.totalCells == 0))
         var targets = if (role == game.humanRole) {
+          val candidates = countryNames(game.countries filter (_.totalCells == 0))
           def nextCountry(targets: List[String], num: Int): List[String] = {
             if (num <= 3 && targets.nonEmpty) {
               val name = askCountry(s"Select ${ordinal(num)} country: ", targets)
@@ -1753,8 +1795,16 @@ object AwakeningCards extends CardDeck {
           }
           nextCountry(candidates, 1)
         }
-        else
-          JihadistBot.selectTargets(3, candidates, JihadistBot.recruitTarget)
+        else {
+          // See Event Instructions table
+          val eligible = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
+          
+          if (eligible contains UnitedStates)
+            UnitedStates :: JihadistBot.selectTargets(2, eligible filterNot (_ == UnitedStates), 
+                                                JihadistBot.recruitTarget)
+          else 
+            JihadistBot.selectTargets(3, eligible, JihadistBot.recruitTarget)
+        }
         
         val numCells = if (role == game.botRole && game.jihadistIdeology(Potent)) {
           log(s"$Jihadist Bot with Potent Ideology places two cells for each recruit success")
@@ -1805,6 +1855,7 @@ object AwakeningCards extends CardDeck {
           (target, actives > 0, askAvailablePlots(2, ops = 3))
         }
         else {
+          // See Event Instructions table
           val target = JihadistBot.plotTarget(candidates).get
           addEventTarget(target)
           val active = (game getCountry target).activeCells > 0
@@ -1945,19 +1996,29 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(195, "Taliban Resurgent", Jihadist, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(196, "Training Camps", Jihadist, 3,
       NoRemove, CountryMarker, NoLapsing, NoAutoTrigger,
-      (role: Role) => game hasMuslim (m => !(m.isUntested || m.isGood))
+      (role: Role) => {
+        if (role == game.humanRole)
+          game hasMuslim (m => !(m.isUntested || m.isGood))
+        else // See Event Instructions table
+          game hasMuslim (m => !(m.isUntested || m.isGood) && !m.autoRecruit)
+      }
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter (m => !(m.isUntested || m.isGood)))
-        val target = if (role == game.humanRole)
+        val target = if (role == game.humanRole) {
+          val candidates = countryNames(game.muslims filter (m => !(m.isUntested || m.isGood)))
           askCountry("Place Training Camps in which country: ", candidates)
+        }
         else {
-          // TODO: Make sure there are not special instructions for this event.
+          // See Event Instructions table
+          val candidates = 
+            countryNames(game.muslims filter (m => !(m.isUntested || m.isGood && !m.autoRecruit)))
           JihadistBot.recruitTarget(candidates).get
         }
         println()
@@ -1975,7 +2036,9 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(197, "Unconfirmed", Jihadist, 3,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(198, "US Atrocities", Jihadist, 3,
@@ -1990,7 +2053,9 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(200, "Critical Middle", Unassociated, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(201, "Cross Border Support", Unassociated, 1,
@@ -1998,11 +2063,14 @@ object AwakeningCards extends CardDeck {
       (role: Role) => ()  
       // Can possibly declare Caliphate (only Mali or Muslim Nigeria)
       // Only if played by the Jihadist
+      // See Event Instructions table
     )),
     // ------------------------------------------------------------------------
     entry(new Card(202, "Cyber Warfare", Unassociated, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(203, "Day of Rage", Unassociated, 1,
@@ -2010,14 +2078,18 @@ object AwakeningCards extends CardDeck {
       (role: Role) => ()
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(205, "Erdoğan Effect", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
-    )),
-    // ------------------------------------------------------------------------
     entry(new Card(204, "Ebola Scare", Unassociated, 1,
       Remove, NoMarker, USLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
+    )),
+    // ------------------------------------------------------------------------
+    entry(new Card(205, "Erdoğan Effect", Unassociated, 1,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(206, "Friday of Anger", Unassociated, 1,
@@ -2027,17 +2099,23 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(207, "JV / Copycat", Unassociated, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(208, "Kinder – Gentler", Unassociated, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(209, "Quds Force", Unassociated, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(210, "Sectarian Violence", Unassociated, 1,
@@ -2075,6 +2153,7 @@ object AwakeningCards extends CardDeck {
       (role: Role) => () 
       // Can possibly declare Caliphate, only in Syria or Iraq
       // Only by Jihadist play
+      // See Event Instructions table
     )),
     // ------------------------------------------------------------------------
     entry(new Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2,
@@ -2084,12 +2163,16 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(217, "Agitators", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(218, "Al-Nusra Front", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(219, "Ayman al-Zawahiri", Unassociated, 2,
@@ -2104,22 +2187,31 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(221, "FlyPaper", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()  // Can possibly declare Caliphate, by either player
+      (role: Role) => {
+        // Can possibly declare Caliphate, by either player
+        // See Event Instructions table
+      }  
     )),
     // ------------------------------------------------------------------------
     entry(new Card(222, "Hagel", Unassociated, 2,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(223, "Iranian Elections", Unassociated, 2,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(224, "Je Suis Charlie", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(225, "Jihadi John", Unassociated, 2,
@@ -2129,7 +2221,9 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(226, "Operation Serval", Unassociated, 2,
       NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(227, "Popular Support", Unassociated, 2,
@@ -2144,12 +2238,16 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(229, "Prisoner Exchange", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(230, "Sellout", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(231, "Siege of Kobanigrad", Unassociated, 2,
@@ -2167,25 +2265,31 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(233, "UN Ceasefire", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(234, "Free Syrian Army", Unassociated, 3,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(235, "Qadhafi", Unassociated, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(236, "Oil Price Spike", Unassociated, 3,
       NoRemove, NoMarker, Lapsing, NoAutoTrigger, AlwaysPlayable,
       (role: Role) => {
         // Removes "Fracking" marker
+        // See Event Instructions table
       }
-      
     )),
     // ------------------------------------------------------------------------
     entry(new Card(237, "Osama bin Ladin", Unassociated, 3,
@@ -2195,19 +2299,25 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(238, "Revolution", Unassociated, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(239, "Truce", Unassociated, 3,
       NoRemove, NoMarker, Lapsing, NoAutoTrigger, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(240, "US Election", Unassociated, 3,
       NoRemove, NoMarker, NoLapsing, AutoTrigger,
       (role: Role) => false  // No directly playable, but will always auto trigger
       ,
-      (role: Role) => ()
+      (role: Role) => {
+        // See Event Instructions table
+      }
     ))
   )
 }

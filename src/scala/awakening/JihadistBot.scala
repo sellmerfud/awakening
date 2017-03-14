@@ -628,6 +628,7 @@ object JihadistBot {
   // Starting point for Jihadist bot card play.
   def cardPlay(card: Card): Unit = {
     usedCells.clear
+    
     // If the event is playable then the event is alwasy executed
     if (card.eventIsPlayable(Jihadist)) {
       performCardEvent(card, Jihadist)
@@ -636,6 +637,11 @@ object JihadistBot {
         addToReserves(Jihadist, card.ops)
     }
     else {
+      // US Elections is the only auto trigger event.
+      // The Bot will execute the event first.
+      if (card.autoTrigger)
+        performCardEvent(card, Jihadist)
+      
       // There is an unlikely, but possible chance that there are no cells or cadres on
       // the map. (The Bot does not lose when there are no cells on the map).
       // In this case the Bot cannot do anything except add Ops to reserves and wait
