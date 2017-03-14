@@ -615,7 +615,7 @@ object LabyrinthAwakening {
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
-    botLogging: Boolean = true  // TODO:  Set this to false after development
+    botLogging: Boolean = false
   )
   
   case class EventParameters(
@@ -1874,14 +1874,15 @@ object LabyrinthAwakening {
     val opponent = if (player == US) Jihadist else US
     val playable = card.eventIsPlayable(player)  
     val trigger  = card.eventWillTrigger(opponent)
-    val postfix = if (playable)
-      s"(The ${card.association} event is playable)"
+    val eventMsg = if (playable)
+      s"  (The ${card.association} event is playable)"
     else if (card.association == opponent && game.humanRole == player)
-      s"(The ${card.association} event will ${if (trigger) "" else "not "}be triggered)"
+      s"  (The ${card.association} event will ${if (trigger) "" else "not "}be triggered)"
     else 
-      s"(The ${card.association} event is not playable)"
+      s"  (The ${card.association} event is not playable)"
     
-    log(s"$player plays $card  $postfix")
+    log(s"$player plays $card")
+    log(eventMsg)
   }
 
   def separator(length: Int = 52, char: Char = '-'): String = char.toString * length
@@ -2580,7 +2581,9 @@ object LabyrinthAwakening {
         log(s"Plot attempt in $name")
         log(separator())
         addOpsTarget(name)
-        if (!active)  
+        if (active)
+          log("Using an already active cell")
+        else
           flipSleeperCells(name, 1)
         val die = getDieRoll(Jihadist, prompt = s"Enter die roll: ")
         log(s"Die roll: $die")
