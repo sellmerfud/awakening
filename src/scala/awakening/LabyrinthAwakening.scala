@@ -1735,9 +1735,6 @@ object LabyrinthAwakening {
     case class CaliphateCapitalCandidate(m: MuslimCountry) {
       val size = game.caliphateDaisyChain(m.name).size
     }
-    // We define this outside of the CaliphateCapitalCandidateOrdering so it can
-    // easily be called by the displaceCaliphateCapital() method.
-    //
     // Sort first by daisy chain size large to small
     // then by non Ally before Ally
     // then by worse governance before better governance
