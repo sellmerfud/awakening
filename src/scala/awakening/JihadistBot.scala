@@ -69,12 +69,23 @@ object JihadistBot {
   def unusedCells(c: Country)  = c.totalCells   - usedCells(c.name).total
   def unusedCellsOnMap = (game.countries map unusedCells).sum
   
-  def jihadSuccessPossible(m: MuslimCountry) = m.jihadOK && 1 + m.jihadDRM <= m.governance
+  def jihadDRM(m: MuslimCountry, major: Boolean): Int = 
+    if (game.jihadistIdeology(Virulent))
+      -m.reaction // Ignore awakening if Virulent for all jihads
+    else if (game.jihadistIdeology(Coherent) && !major)
+      -m.reaction // Ignore awakening if Coherent and minor jihads
+    else
+      m.awakening - m.reaction
+  
+  
+  // Return true if a die roll of 1 will succeed in the given country
+  def jihadSuccessPossible(m: MuslimCountry, major: Boolean) =
+    (1 + jihadDRM(m, major)) <= m.governance
   
   // Poor country with 1 to 4 more cells than Troops and Milita and Jihad success possible
   def poorMuslimNeedsCellsForMajorJihad(m: MuslimCountry): Boolean = 
     m.isPoor &&
-    jihadSuccessPossible(m) &&
+    jihadSuccessPossible(m, true) &&
     (unusedCells(m) - m.totalTroopsAndMilitia) > 0 &&
     (unusedCells(m) - m.totalTroopsAndMilitia) < 5
   
@@ -238,8 +249,13 @@ object JihadistBot {
   // Priorities Table
 
   // 1. Best Jihad DRM
-  val BestJihadDRMPriority = new LowestScorePriority("Best Jihad DRM", 
-                  muslimScore(_.jihadDRM, nonMuslimScore = 100))
+  case class BestJihadDRMPriority(major: Boolean) extends Priority {
+    val desc = s"Best ${if (major) "Major" else "Minor"} Jihad DRM"
+    val lowest = new LowestScorePriority(desc,
+                     muslimScore(m => jihadDRM(m, major), nonMuslimScore = 100)
+    )
+    def filter(countries: List[Country]) = lowest.filter(countries)
+  }
   // 2. US
   val USPriority = new CriteriaPriority("US", c => c.name == UnitedStates)
   // 3. With troops unless prestige 1
@@ -300,8 +316,8 @@ object JihadistBot {
   val NotRegimeChangePriority = new CriteriaPriority("Not Regime change", 
                   muslimTest(m => !m.inRegimeChange, nonMuslim = true))
   // 29. Worst Jihad DRM
-  val WorstJihadDRMPriority = new LowestScorePriority("Worst Jihad DRM",
-                  muslimScore(_.jihadDRM, nonMuslimScore = 100))
+  val WorstJihadDRMPriority = new HighestScorePriority("Worst Jihad DRM",
+                  muslimScore(m => jihadDRM(m, false), nonMuslimScore = -100))
   // 30. Disrupt prestige gain
   val DisruptPrestigePriority = new CriteriaPriority("Disrupt prestige gain", 
                   muslimTest(m => m.disruptAffectsPrestige && game.prestige < 12))
@@ -350,43 +366,46 @@ object JihadistBot {
   // then they would be selected over Islamist Rule countries.                            
   val AutoRecruitBestJihadDRM = new LowestScoreFilter("Auto recruit w/ best Jihad DRM",
                   muslimTest(_.autoRecruit),
-                  muslimScore(m => if (m.isIslamistRule) 50 else m.jihadDRM, nonMuslimScore = 100))
+                  muslimScore(m => if (m.isIslamistRule) 50 else jihadDRM(m, false), nonMuslimScore = 100))
   val FairMuslimBestJihadDRM = new LowestScoreFilter("Fair Muslim w/ best Jihad DRM",
                   muslimTest(_.isFair),
-                  muslimScore(_.jihadDRM, nonMuslimScore = 100))
+                  muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
   val PoorMuslimBestJihadDRM = new LowestScoreFilter("Poor Muslim w/ best Jihad DRM",
                   muslimTest(_.isPoor),
-                  muslimScore(_.jihadDRM, nonMuslimScore = 100))
-  val FewestCellsFilter = new LowestScoreFilter("Fewest cells", _ => true, muslimScore(unusedCells))
+                  muslimScore(m => jihadDRM(m, true), nonMuslimScore = 100))
+  val FewestCellsFilter = new LowestScoreFilter("Fewest cells", _ => true, _.totalCells)
   
-  
-  
-  // Jihad column of the Priorities table when checking for Jihad/Major Jihad
-  val JihadPriorities = List(
-    BestJihadDRMPriority, PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-    WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
-    IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
-  
-  // Jihad column when checking Markers, Alignment, Governance
-  // Jihad column of the Priorities table when checking Markers, Alignment, Governance
-  // Does not include the Best Jihad DRM priority
-  val MarkerAlignGovPriorities = JihadPriorities drop 1
-  
+    
   // Bot will not try minor Jihad in Poor countries
   def minorJihadTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      BestJihadDRMPriority(false), PakistanPriority, BesiegedRegimePriority, SyriaPriority,
+      WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
+      IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+    
     botLog("Find \"Minor Jihad\" target")
-    topPriority(game getMuslims names, JihadPriorities) map (_.name)
+    topPriority(game getMuslims names, priorities) map (_.name)
   }
   
   // Bot will only try major Jihad in Poor countries
   def majorJihadTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      BestJihadDRMPriority(true), PakistanPriority, BesiegedRegimePriority, SyriaPriority,
+      WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
+      IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+    
     botLog("Find \"Major Jihad\" target")
-    topPriority(game getMuslims names, JihadPriorities) map (_.name)
+    topPriority(game getMuslims names, priorities) map (_.name)
   }
   
   def markerAlignGovTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      PakistanPriority, BesiegedRegimePriority, SyriaPriority,
+      WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
+      IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+    
     botLog("Find \"Marker/Align/Gov\" target")
-    topPriority(game getCountries names, MarkerAlignGovPriorities) map (_.name)
+    topPriority(game getCountries names, priorities) map (_.name)
   }
   
 
@@ -418,30 +437,30 @@ object JihadistBot {
     PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
   
-  val RecruitPriorities = List(
-    NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
-    SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority,
-    GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
-    HighestRECPriority, BestJihadDRMPriority, SamePostureAsUSPriority,
-    MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     
   def recruitTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+      SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority,
+      GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
+      HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
+      MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     botLog("Find \"Recruit\" target")
     val candidates = followFlowchart(game getCountries names, RecruitTravelToFlowchart)
-    topPriority(candidates, RecruitPriorities) map (_.name)
+    topPriority(candidates, priorities) map (_.name)
   }
   
-  val TravelToPriorities = List(
-    NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
-    SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority, GoodPriority,
-    HighestResourcePriority, NoDisruptPretigePriority, BestJihadDRMPriority,
-    SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority,
-    OilExporterPriority)
 
   def travelToTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+      SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority, GoodPriority,
+      HighestResourcePriority, NoDisruptPretigePriority, BestJihadDRMPriority(false),
+      SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority,
+      OilExporterPriority)
     botLog("Find \"Travel To\" target")
     val candidates = followFlowchart(game getCountries names, RecruitTravelToFlowchart)
-    topPriority(candidates, TravelToPriorities) map (_.name)
+    topPriority(candidates, priorities) map (_.name)
   }
   
   def travelFromTarget(toCountry: String, names: List[String]): Option[String] = {
@@ -483,7 +502,7 @@ object JihadistBot {
     def yesPath = MajorJihadOp
     def noPath  = FundingTightDecision
     def condition(ops: Int) =
-      game.majorJihadTargets(ops) map game.getMuslim exists (m => m.isPoor && jihadSuccessPossible(m))
+      game.majorJihadTargets(ops) map game.getMuslim exists (m => m.isPoor && jihadSuccessPossible(m, true))
   }
   
   object FundingTightDecision extends OperationDecision {
@@ -512,7 +531,7 @@ object JihadistBot {
     def yesPath = MinorJihadOp
     def noPath  = PoorNeedCellsforMajorJihadDecision
     def condition(ops: Int) = 
-      game hasMuslim (m => jihadSuccessPossible(m) && (m.isGood || m.isFair))
+      game hasMuslim (m => jihadSuccessPossible(m, false) && (m.isGood || m.isFair))
   }
   
   // This object incorporates two boxes on the Flowchart
@@ -659,7 +678,14 @@ object JihadistBot {
           success
         }
       }
-      val numCells = results count (_ == true)
+      val successes = results count (_ == true)
+      val numCells = if (game.jihadistIdeology(Potent)) {
+        log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+        (successes * 2) min game.cellsToRecruit
+      }
+      else
+        successes
+      
       addSleeperCellsToCountry(target, numCells)
       usedCells(target).addSleepers(numCells)
     }
@@ -803,8 +829,8 @@ object JihadistBot {
         Nil  // We've used all available Ops
       else {
         // The Bot will never conduct minor Jihad in a country with Poor governance.
-        val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)   &&
-                                             jihadSuccessPossible(m) &&
+        val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)          &&
+                                             jihadSuccessPossible(m, false) &&
                                              unusedCells(m) > 0 && !m.isPoor
         val candidates = countryNames(game.muslims filter canJihad)
         minorJihadTarget(candidates) match {
@@ -839,8 +865,8 @@ object JihadistBot {
         Nil  // We've used all available Ops
       else {
         // The Bot will only conduct major Jihad in a countries with Poor governance.
-        val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)   &&
-                                             jihadSuccessPossible(m) &&
+        val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)         &&
+                                             jihadSuccessPossible(m, true) &&
                                              m.isPoor                &&
                                              unusedCells(m) - m.totalTroopsAndMilitia >= 5
         val candidates = countryNames(game.muslims filter canJihad)
@@ -1086,8 +1112,8 @@ object JihadistBot {
     log()
     log(s"Radicalization: Recruit in a Muslim country with a cadre")
     val maxOps     = cardOps + reserveOps
-    val candidates = game.muslims filter (m => m.hasCadre) sortBy (_.jihadDRM)
-    val target     = minorJihadTarget(candidates map (_.name)).get
+    val candidates = game.muslims filter (m => m.hasCadre) sortBy (m => jihadDRM(m, m.isPoor))
+    val target     = recruitTarget(candidates map (_.name)).get
     addOpsTarget(target)
     val m = game getMuslim target
     def nextAttempt(completed: Int): Int = {
@@ -1108,8 +1134,15 @@ object JihadistBot {
           val result  = if (success) "succeeds" else "fails"
           log(s"Recruit $result in $target with a roll of $die")
           if (success) {
-            addSleeperCellsToCountry(target, 1)
-            usedCells(target).addSleepers(1)
+            val numCells = if (game.jihadistIdeology(Potent)) {
+              log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+              2 min game.cellsToRecruit
+            }
+            else
+              1
+            
+            addSleeperCellsToCountry(target, numCells)
+            usedCells(target).addSleepers(numCells)
           }
         }
         nextAttempt(completed + 1)
@@ -1135,8 +1168,8 @@ object JihadistBot {
   def radRecruit(cardOps: Int): Int = {
     log()
     log(s"Radicalization: Recruit")
-    val candidates  = game.muslims filter (m => m.hasCadre) sortBy (_.jihadDRM)
-    val target      = minorJihadTarget(candidates map (_.name)).get
+    val candidates  = game.muslims filter (m => m.hasCadre || m.totalCells > 0)
+    val target      = recruitTarget(candidates map (_.name)).get
     addOpsTarget(target)
     val m = game getMuslim target
     def nextAttempt(completed: Int): Int = {
@@ -1155,8 +1188,14 @@ object JihadistBot {
           val result  = if (success) "succeeds" else "fails"
           log(s"Recruit $result in $target with a roll of $die")
           if (success) {
-            addSleeperCellsToCountry(target, 1)
-            usedCells(target).addSleepers(1)
+            val numCells = if (game.jihadistIdeology(Potent)) {
+              log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+              2 min game.cellsToRecruit
+            }
+            else
+              1
+            addSleeperCellsToCountry(target, numCells)
+            usedCells(target).addSleepers(numCells)
           }
         }
         nextAttempt(completed + 1)

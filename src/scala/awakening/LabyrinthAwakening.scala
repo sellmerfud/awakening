@@ -648,6 +648,9 @@ object LabyrinthAwakening {
     
     def humanRole = params.humanRole
     def botRole = if (humanRole == US) Jihadist else US
+    
+    def usResolve(name: BotDifficulty) = botRole == US && (params.botDifficulties contains name)
+    def jihadistIdeology(name: BotDifficulty) = botRole == Jihadist && (params.botDifficulties contains name)
       
     def markerInPlay(name: String) = markers contains name
     def lapsingInPlay(name: String) = cardsLapsing exists (num => deck(num).name == name)
@@ -1677,14 +1680,27 @@ object LabyrinthAwakening {
     modRoll
   }
   
-  def modifyJihadRoll(die: Int, m: MuslimCountry, silent: Boolean = false): Int = {
+  def modifyJihadRoll(die: Int, m: MuslimCountry, major: Boolean, silent: Boolean = false): Int = {
     def logNotZero(value: Int, msg: String): Unit =
       if (!silent && value != 0) log(f"$value%+2d: $msg")
     val awakeningMod   = m.awakening
     val reactionMod    = -m.reaction
     logNotZero(awakeningMod,   "Awakening")
     logNotZero(reactionMod,    "Reaction")
-    val modRoll = die + (awakeningMod + reactionMod)
+    
+    val drm = if (game.jihadistIdeology(Virulent)) {
+      if (!silent && (awakeningMod + reactionMod) > 0)
+        log(s"$Jihadist Bot with Virulent Ideology ignores DRM penalty Jihad")
+      reactionMod
+    }
+    else if (game.jihadistIdeology(Coherent) && !major) {
+      if (!silent && (awakeningMod + reactionMod) > 0)
+        log(s"$Jihadist Bot with Coherent Ideology ignores DRM penalty for Minor Jihad")
+      reactionMod
+    }
+    else
+      awakeningMod + reactionMod
+    val modRoll = die + drm
     if (!silent && (awakeningMod.abs + reactionMod.abs) > 0)
       log(s"Modified roll: $modRoll")
     modRoll
@@ -2594,7 +2610,7 @@ object LabyrinthAwakening {
           // Ask the user which plot to place.  The Bot take a random plot regardless of ops spent.
           val plots = if (game.humanRole == Jihadist)
             askAvailablePlots(1, ops)
-          else if (game.params.botDifficulties contains Attractive) {
+          else if (game.jihadistIdeology(Attractive)) {
             log(s"$Jihadist Bot with Attractive Ideology places two plots")
             shuffle(game.availablePlots) take 2
           }
@@ -2646,7 +2662,7 @@ object LabyrinthAwakening {
             val ord = if (numAttempts == 1) "" else s"${ordinal(num)} "
             val die = getDieRoll(Jihadist, prompt = s"Enter ${ord}die roll: ")
             log(s"${ord}Die roll: $die")
-            val modRoll = modifyJihadRoll(die, m)
+            val modRoll = modifyJihadRoll(die, m, major)
             val result  = modRoll <= m.governance
             log(if (result) "Success" else "Failure")
             (if (result) 1 else 0) + nextAttempt(num + 1)
