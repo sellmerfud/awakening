@@ -472,7 +472,7 @@ object LabyrinthAwakening {
     iranSpecialCase: Boolean    = false
   ) extends Country {
     override def isUntested = posture == PostureUntested && 
-                              !(Set(UnitedStates,Israel, Iran) contains name)
+                              !(Set(UnitedStates, Israel, Iran) contains name)
     def isSchengen = Schengen contains name
     def isHard = if (name == UnitedStates ) game.usPosture == Hard else posture == Hard
     def isSoft = if (name == UnitedStates ) game.usPosture == Soft else posture == Soft
@@ -564,11 +564,11 @@ object LabyrinthAwakening {
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
     def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
-    def maxDeployFrom = if (inRegimeChange)
-      if (troops - totalCells >= 5) troops - totalCells else 0
+    def maxDeployFrom(ops: Int) = if (inRegimeChange)
+      if (ops == 3 && troops - totalCells >= 5) troops - totalCells else 0
     else
       troops
-    def canDeployFrom = maxDeployFrom > 0
+    def canDeployFrom(ops: Int) = maxDeployFrom(ops) > 0
     
     def jihadDRM = awakening - reaction
     def jihadOK = !isIslamistRule && totalCells > 0
@@ -867,26 +867,27 @@ object LabyrinthAwakening {
     // But if that is the only valid destination, then do not include "track" in the
     // list of sources.
     def deployTargets(ops: Int): Option[(List[String], List[String])] = {
-      val fromCountries = countryNames(muslims filter (_.canDeployFrom))
+      val fromCountries = countryNames(muslims filter (_.canDeployFrom(ops)))
       val toCountries   = countryNames(muslims filter (_.canDeployTo(ops)))
       (fromCountries, toCountries) match {
         case (Nil, Nil )                        => None
         case (Nil, to  ) if troopsAvailable > 0 => Some("track"::Nil, to)
+        case (Nil, to  )                        => None
         case (from, Nil)                        => Some(from, "track"::Nil)
         case (from, to ) if troopsAvailable > 0 => Some("track"::from, "track"::to)
         case (from, to )                        => Some(from, "track"::to)
       }
     }
     
-    def regimeChangeSources: List[String] = {
-      val ms = countryNames(muslims filter (_.maxDeployFrom > 5))
+    def regimeChangeSources(ops: Int): List[String] = {
+      val ms = countryNames(muslims filter (_.maxDeployFrom(ops) > 5))
       if (troopsAvailable > 5) "track" :: ms else ms
     } 
       
     def regimeChangeTargets: List[String] = countryNames(muslims filter (_.isIslamistRule))
       
     def regimeChangePossible(ops: Int) = 
-      ops == 3 && usPosture == Hard && regimeChangeSources.nonEmpty && regimeChangeTargets.nonEmpty
+      ops == 3 && usPosture == Hard && regimeChangeSources(ops).nonEmpty && regimeChangeTargets.nonEmpty
   
     def withdrawFromTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
     
@@ -4148,7 +4149,7 @@ object LabyrinthAwakening {
   // Troops can alwasy deploy to the track.
   def humanDeploy(ops: Int): Unit = {
     log()
-    log(s"$US performs Deploy operation with ${opsString(ops)}")
+    log(s"$US performs a Deploy operation")
     log(separator())
     // If the only 
     val (from, to) = game.deployTargets(ops).get
@@ -4172,7 +4173,8 @@ object LabyrinthAwakening {
       }
     }
     val dest       = askCountry("Deploy troops to: ", to filterNot (_ == source))
-    val maxTroops  = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
+    val maxTroops  = if (source == "track") game.troopsAvailable 
+                     else game.getMuslim(source).maxDeployFrom(ops)
     val numTroops  = askInt("Deploy how many troops: ", 0, maxTroops)
     log()
     removeEventMarkersFromCountry(source, troopsMarkers:_*)
@@ -4181,18 +4183,19 @@ object LabyrinthAwakening {
   
   def humanRegimeChange(): Unit = {
     log()
-    log(s"$US performs Regime Change operation with ${opsString(3)}")
+    log(s"$US performs a Regime Change operation")
     log(separator())
     val dest      = askCountry("Regime change in which country: ", game.regimeChangeTargets)
-    val source    = askCountry("Deploy troops from: ", game.regimeChangeSources)
-    val maxTroops = if (source == "track") game.troopsAvailable else game.getMuslim(source).maxDeployFrom
+    val source    = askCountry("Deploy troops from: ", game.regimeChangeSources(3))
+    val maxTroops = if (source == "track") game.troopsAvailable
+                    else game.getMuslim(source).maxDeployFrom(3)
     val numTroops = askInt("How many troops: ", 6, maxTroops)
     performRegimeChange(source, dest, numTroops)
   }
   
   def humanWithdraw(): Unit = {
     log()
-    log(s"$US performs Withdraw operation with ${opsString(3)}")
+    log(s"$US performs a Withdraw operation")
     log(separator())
     val source = askCountry("Withdraw troops from which country: ", game.withdrawFromTargets)
     val dest   = askCountry("Deploy withdrawn troops to: ", (game.withdrawToTargets filter (_ != source)))
@@ -4202,7 +4205,7 @@ object LabyrinthAwakening {
 
   def humanDisrupt(ops: Int): Unit = {
     log()
-    log(s"$US performs Disrupt operation with ${opsString(ops)}")
+    log(s"$US performs a Disrupt operation")
     log(separator())
     performDisrupt(askCountry("Disrupt in which country: ", game.disruptTargets(ops)))
   }
@@ -4210,14 +4213,14 @@ object LabyrinthAwakening {
     
   def humanAlert(): Unit = {
     log()
-    log(s"$US performs Alert operation with ${opsString(3)}")
+    log(s"$US performs an Alert operation")
     log(separator())
     performAlert(askCountry("Alert plot in which country: ", game.alertTargets))
   }
     
   def humanReassess(): Unit = {
     log()
-    log(s"$US performs a Reassessment operation with ${opsString(6)}")
+    log(s"$US performs a Reassessment operation")
     log(separator())
     performReassessment()
   }

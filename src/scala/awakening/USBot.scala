@@ -36,9 +36,99 @@ object USBot extends BotHelpers {
 
 
   def woiMuslimTargets(ops: Int): List[MuslimCountry] = game.muslims filter (_.warOfIdeasOK(ops))
+  def woiNonMuslimTargets(ops: Int): List[NonMuslimCountry] = game.nonMuslims filter (_.warOfIdeasOK(ops))
+  
+  val onlyOneActiveCell = (c: Country) => c.activeCells == 1 && c.sleeperCells == 0
+  val numPlotDice = (m: MuslimCountry) => (m.plots map { case PlotOnMap(plot, _) => plot.number }).sum
 
-  // Priorities Table
+  // ------------------------------------------------------------------
+  // Jihadist Priorities Table
 
+  //  1. Lowest # of Plot dice
+  val FewestPlotDicePriority = new LowestScorePriority("Lowest # of Plot dice",
+                  muslimScore(numPlotDice, nonMuslimScore = 100))
+  
+  //  2. Regime Change
+  val RegimeChangePriority = new CriteriaPriority("Regime Change",
+                  muslimTest(_.inRegimeChange))
+  
+  //  3. Caliphate Captial
+  val CaliphateCaptialPriority = new CriteriaPriority("Caliphate Captial",
+                  muslimTest(_.caliphateCapital))
+
+  //  4. Pakistan Arsenal
+  val PakistanPriority = new CriteriaPriority("Pakistan arsenal",
+                  c => c.name == Pakistan && c.wmdCache > 0)
+  
+  //  5. Syria Arsenal
+  val SyriaPriority = new CriteriaPriority("Syria arsenal",
+                  c => c.name == Syria && c.wmdCache > 0)
+  
+  //  6. Iran Arsenal
+  val IranPriority = new CriteriaPriority("Iran arsenal",
+                  c => c.name == Iran && c.wmdCache > 0)
+  
+  //  7. Civil War
+  val CivilWArPriority = new CriteriaPriority("Civil War",
+                  muslimTest(_.civilWar))
+
+  //  8. Adjacent Good Ally
+  val AdjacentGoodAllyPriority = new CriteriaPriority("Adjacent Good Ally",
+                  muslimTest(m => game.adjacentToGoodAlly(m.name)))
+                  
+  //  9. Philippines (if Abu Sayyaf)  (Base game only)
+  val PhilippinesPriority = new CriteriaPriority("Philippines (if Abu Sayyaf)",
+                  c => c.name == Philippines && globalEventInPlay("Abu Sayyaf"))
+                  
+  // 10. Good
+  val GoodPriority = new CriteriaPriority("Good Muslim", _.isGood)
+  
+  // 11. Fair
+  val FairPriority = new CriteriaPriority("Fair Muslime", _.isFair)
+  
+  // Not in the table on the player aid sheet.  (Used by WoI non-Muslime)
+  val PoorPriority = new CriteriaPriority("Poor Muslime", _.isPoor)
+  
+  // 12. Highest Resource
+  val HighestResourcePriority = new HighestScorePriority("Highest resource",
+                  muslimScore(_.resources))
+  
+  // 13. Neutral
+  val NeutralPriority = new CriteriaPriority("Neutral Muslime", muslimTest(_.isNeutral))
+  
+  // 14. Besieged Regime
+  val BesiegedRegimePriority = new CriteriaPriority("Besieged Regime",
+                  muslimTest(_.besiegedRegime))
+  
+  // 15. Most Cells
+  val MostCellsPriority = new HighestScorePriority("Most cells", _.totalCells)
+  
+  // 16. Adjacent Islamist Rule
+  val AdjacentIslamistRulePriority = new CriteriaPriority("Adjacent Islamist Rule",
+                  muslimTest(m => game.adjacentToIslamistRule(m.name)))
+  
+  // 17. With Aid
+  val WithAidPriority = new CriteriaPriority("With Aid", muslimTest(_.aidMarkers > 0))
+  
+  // 18. Fewest Cells
+  val FewestCellsPriority = new LowestScorePriority("Fewest cells", _.totalCells)
+  
+  // 19. Lowest Resource
+  val LowestResourcePriority = new LowestScorePriority("Lowest resource",
+                  muslimScore(_.resources, nonMuslimScore = 100))
+  
+  // 20. Most Plots
+  val MostPlotsPriority = new HighestScorePriority("Most Plots", _.plots.size)
+
+  // 21. Most Troops
+  val MostTroopsPriority = new HighestScorePriority("Most Troops",
+                  muslimScore(_.totalTroops))
+  // 22. Oil Exporter
+  val OilExporterPriority = new CriteriaPriority("Oil exporter",
+                  muslimTest(_.oilProducer))
+
+  // ------------------------------------------------------------------
+  // US Operations Flowchart definitions.
   sealed trait Operation extends OpFlowchartItem
   case object WoiMuslimHighestDRM  extends Operation
   case object WoiMuslimMinusOneDRM extends Operation
@@ -51,7 +141,7 @@ object USBot extends BotHelpers {
   
   // This is the starting point of the PAR Flowchart
   object DisruptMuslim2MoreCellsDecision extends OperationDecision {
-    val desc = "Disrupt Muslim at least 2 more cells thatn TandM and JSP?"
+    val desc = "Disrupt Muslim at least 2 more cells than TandM and JSP?"
     def yesPath = Disrupt
     def noPath  = IR3AndRegimeChangeDecision
     def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
@@ -61,10 +151,10 @@ object USBot extends BotHelpers {
   }
   
   object IR3AndRegimeChangeDecision extends OperationDecision {
-    val desc = "Islamist Rule resources > 3 and Regime Change possible?"
+    val desc = "Islamist Rule resources >= 3 and Regime Change possible?"
     def yesPath = RegimeChange
     def noPath  = WoiMuslimNoPenaltyDecision
-    def condition(ops: Int) = game.islamistResources > 3 && game.regimeChangePossible(ops)
+    def condition(ops: Int) = game.islamistResources >= 3 && game.regimeChangePossible(ops)
   }
   
   object WoiMuslimNoPenaltyDecision extends OperationDecision {
@@ -95,11 +185,13 @@ object USBot extends BotHelpers {
     val desc = "Deploy Possible?"
     def yesPath = Deploy
     def noPath  = RegimeChangeDecision
-    def condition(ops: Int) = false
-      // TODO:
-      // Check OpP Flowchart to deploy from/to targets
-      // They cannot be equal (track == track)
-      // If a regime change country then Withdraw conditions must be met.
+    def condition(ops: Int) = game.deployTargets(ops) match {
+      case Some((fromCandidates, toCandidates)) =>
+        val from = deployFromTarget(fromCandidates)
+        val to   = deployToTarget(toCandidates)
+        (from.nonEmpty && to.nonEmpty && from != to)
+      case None => false
+    }
   }
   
   object USSoftDecision extends OperationDecision {
@@ -121,8 +213,7 @@ object USBot extends BotHelpers {
     def yesPath = Disrupt
     def noPath  = WoiMuslimMinus1DrmDecision
     def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
-      m.disruptAffectsPrestige ||
-      (m.sleeperCells == 0 && m.activeCells == 1)
+      m.disruptAffectsPrestige || onlyOneActiveCell(m)
     }
   }
   
@@ -133,11 +224,9 @@ object USBot extends BotHelpers {
     def condition(ops: Int) = 
       woiMuslimTargets(ops) exists (m => modifyWoiRoll(0, m, silent = true) == -1)
   }
-  
-  
-  
 
   
+  // ------------------------------------------------------------------
   // Follow the operations flowchart to pick which operation will be performed.
   def operationsFlowchart(ops: Int): Operation = {
     @tailrec def evaluateItem(item: OpFlowchartItem): Operation = item match {
@@ -151,7 +240,170 @@ object USBot extends BotHelpers {
     }
     evaluateItem(DisruptMuslim2MoreCellsDecision)
   }
+
+
+  // ------------------------------------------------------------------
+  val DisruptPriorities = List(
+    PakistanPriority, SyriaPriority, IranPriority, PhilippinesPriority,  // Base game only if Aby Sayyaf event is in play
+    GoodPriority, FairPriority, HighestResourcePriority, BesiegedRegimePriority,
+    MostCellsPriority, AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
+
+  val DisruptFlowchart = List(
+    new CriteriaFilter("Muslim at least 2 more cells than TandM and JSP", 
+      muslimTest(m => m.totalCells - m.totalTroopsAndMilitia >= 2 && jihadSuccessPossible(m, false))),
+    new CriteriaFilter("For Prestige gain", muslimTest(_.disruptAffectsPrestige)),
+    new CriteriaFilter("To place cadre", onlyOneActiveCell)    
+  )
   
+  def disruptTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Disrupt\" target")
+    val candidates = followFlowchart(game getCountries names, DisruptFlowchart)
+    topPriority(candidates, DisruptPriorities) map (_.name)
+  }
+  
+  // ------------------------------------------------------------------
+  // Not in the Priorities Table, but listed in OpP flowchard.
+  val WoiNonMuslimPriorities = List(
+    PoorPriority, FairPriority, GoodPriority, FewestCellsPriority)
+  
+  val WoiNonMuslimFlowchart = List(
+    new CriteriaFilter("Opposite posture US",
+      nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
+    new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)),
+    new CriteriaFilter("Same posture as US",
+      nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture == game.usPosture))
+  )
+  
+  def woiNonMuslimTarget(names: List[String]): Option[String] = {
+    botLog("Find \"non-Muslim WoI\" target")
+    val candidates = followFlowchart(game getCountries names, WoiNonMuslimFlowchart)
+    topPriority(candidates, WoiNonMuslimPriorities) map (_.name)
+  }
+
+  // ------------------------------------------------------------------
+  val DeployToPriorities = List(
+    PakistanPriority, SyriaPriority, IranPriority, FairPriority,
+    HighestResourcePriority, BesiegedRegimePriority, MostCellsPriority,
+    AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
+  
+  val DeployToFlowchart = List(
+    new CriteriaFilter("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
+        muslimTest(m => globalEventInPlay("Abu Sayyaf") && m.name == Philippines && 
+                         m.totalCells > 0 && m.totalTroops == 0)),
+    new CriteriaFilter("With cell, but no troops or militia",
+      muslimTest(m => m.totalCells > 0 && m.totalTroopsAndMilitia == 0)),
+    new CriteriaFilter("Regime Change needs troops + militia for WoI",
+      muslimTest(m => m.inRegimeChange && m.totalTroopsAndMilitia - m.totalCells < 5))
+  )
+
+  def deployToTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Deploy To\" target")
+    val track        = names find (_ == "track")
+    val countryNames = names filterNot (_ == "track")
+    followFlowchart(game getCountries countryNames, DeployToFlowchart) match {
+      case Nil        => track
+      case candidates => topPriority(candidates, DeployToPriorities) map (_.name)
+    }
+  }
+  
+  // ------------------------------------------------------------------
+  val DeployFromPriorities = List(
+    FewestCellsPriority, LowestResourcePriority, MostPlotsPriority, MostTroopsPriority)
+  
+  val DeployFromFlowchart = List(
+    new CriteriaFilter("Philippines if Moro Talks",  // Base game only
+        muslimTest(m => globalEventInPlay("Moro Talks") && m.name == Philippines)),
+    new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
+    new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
+        muslimTest(m => m.isGood && m.isAlly && 
+             (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
+    new CriteriaFilter("Fair Ally without cells OR with troop markers/militia",
+        muslimTest(m => m.isFair && m.isAlly && 
+             (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0)))
+  )
+  
+  def deployFromTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Deploy From\" target")
+    val track        = names find (_ == "track")
+    val countryNames = names filterNot (_ == "track")
+    followFlowchart(game getCountries countryNames, DeployFromFlowchart) match {
+      case Nil        => track
+      case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
+    }
+  }
+  
+  // ------------------------------------------------------------------
+  val RegimeChangePriorities = List(
+    HighestResourcePriority, AdjacentIslamistRulePriority, FewestCellsPriority)
+  
+  def regimeChangeTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Regime Change\" target")
+    topPriority(game getCountries names, RegimeChangePriorities) map (_.name)
+  }
+  
+  
+  // ------------------------------------------------------------------
+  val RegimeChangeFromFlowchart = List(
+    new CriteriaFilter("Philippines if Moro Talks",  // Base game only
+        muslimTest(m => globalEventInPlay("Moro Talks") && m.name == Philippines)),
+    new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
+    new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
+        muslimTest(m => m.isGood && m.isAlly && 
+             (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
+    new CriteriaFilter("Fair Ally without cells OR with troop markers/militia",
+        muslimTest(m => m.isFair && m.isAlly && 
+             (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
+    new CriteriaFilter("Good", _.isGood),         
+    new CriteriaFilter("Fair", _.isFair),         
+    new CriteriaFilter("Poor", _.isPoor)
+  )
+  
+  // Used to determine from where to get troops to use in a Regime Change Operation.
+  def regimeChangeFromTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Regime Change From\" target")
+    val track        = names find (_ == "track")
+    val countryNames = names filterNot (_ == "track")
+    followFlowchart(game getCountries countryNames, RegimeChangeFromFlowchart) match {
+      case Nil        => track
+      case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
+    }
+  }
+  
+  // ------------------------------------------------------------------
+  val WoiMuslimPriorities = List(
+    FewestPlotDicePriority, RegimeChangePriority, CaliphateCaptialPriority,
+    PakistanPriority, SyriaPriority, IranPriority, CivilWArPriority,
+    AdjacentGoodAllyPriority, HighestResourcePriority, NeutralPriority,
+    BesiegedRegimePriority, AdjacentIslamistRulePriority, FewestCellsPriority,
+    MostTroopsPriority, OilExporterPriority)
+  
+  def markerAlignGovTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Marker/Align/Gov\" target")
+    topPriority(game getCountries names, WoiMuslimPriorities) map (_.name)
+  }
+  
+  val BestWoiDRMFilter = new HighestScoreFilter("Highest WoI DRM",
+    muslimTest(_ => true),
+    muslimScore(m => modifyWoiRoll(0, m, silent = true)))
+  
+  def woiBestDRMTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Best DRM WoI\" target")
+    val flowchart  = BestWoiDRMFilter::Nil
+    val candidates = followFlowchart(game getCountries names, flowchart)
+    topPriority(candidates, WoiMuslimPriorities) map (_.name)
+  }
+  
+  val WoiDrmMinusOneFilter = new CriteriaFilter("WoI DRM -1",
+    muslimTest(m => modifyWoiRoll(0, m, silent = true) == -1))
+  
+  def woiDrmMinusOneTarget(names: List[String]): Option[String] = {
+    botLog("Find \"DRM -1 WoI\" target")
+    val flowchart = WoiDrmMinusOneFilter::Nil
+    val candidates = followFlowchart(game getCountries names, flowchart)
+    topPriority(candidates, WoiMuslimPriorities) map (_.name)
+  }
+  
+  // ------------------------------------------------------------------
   def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.us) min 3
   
   // Decrement the Bots reserves and log that they were used.
@@ -200,14 +452,16 @@ object USBot extends BotHelpers {
         if (card.autoTrigger)
           performCardEvent(card, US)
     
-        // val opsUsed = operationsFlowchart(maxOpsPlusReserves(card)) match {
-        //   case RecruitOp    => recruitOperation(card)
-        //   case TravelOp     => travelOperation(card)
-        //   case PlotOp       => plotOperation(card)
-        //   case MinorJihadOp => minorJihadOperation(card)
-        //   case MajorJihadOp => majorJihadOperation(card)
-        // }
-        // homelandSecurity(card, opsUsed)
+        val opsUsed = operationsFlowchart(maxOpsPlusReserves(card)) match {
+          case WoiMuslimHighestDRM  => woiMuslimHighestDRMOperation(card)
+          case WoiMuslimMinusOneDRM => woiMuslimDRMMinusOneOperation(card)
+          case WoiNonMuslim         => woiNonMuslimOperation(card)
+          case Deploy               => deployOperation(card)
+          case Disrupt              => disruptOperation(card)
+          case RegimeChange         => regimeChangeOperation(card)
+          case HomelandSecurity     => 0 // No operation performed
+        }
+        homelandSecurity(card, opsUsed)
         
       }
     }
@@ -267,6 +521,94 @@ object USBot extends BotHelpers {
     else
       false
   }
+
+
+  def woiMuslimHighestDRMOperation(card: Card): Int = {
+    val maxOps  = maxOpsPlusReserves(card)
+    val target  = woiBestDRMTarget(countryNames(woiMuslimTargets(maxOps))).get
+    val opsUsed = (game getMuslim target).governance
+    if (opsUsed > card.ops)
+      expendBotReserves(opsUsed - card.ops)
+    performWarOfIdeas(target, opsUsed)
+    opsUsed
+  }
+  
+  def woiMuslimDRMMinusOneOperation(card: Card): Int = {
+    val maxOps  = maxOpsPlusReserves(card)
+    val target  = woiDrmMinusOneTarget(countryNames(woiMuslimTargets(maxOps))).get
+    val opsUsed = (game getMuslim target).governance
+    if (opsUsed > card.ops)
+      expendBotReserves(opsUsed - card.ops)
+    performWarOfIdeas(target, opsUsed)
+    opsUsed
+  }
+  
+  def woiNonMuslimOperation(card: Card): Int = {
+    val maxOps  = maxOpsPlusReserves(card)
+    val target  = woiNonMuslimTarget(countryNames(woiNonMuslimTargets(maxOps))).get
+    val opsUsed = (game getMuslim target).governance
+    if (opsUsed > card.ops)
+      expendBotReserves(opsUsed - card.ops)
+    performWarOfIdeas(target, opsUsed)
+    opsUsed
+  }
+  
+  def deployOperation(card: Card): Int = {
+    val maxOps  = maxOpsPlusReserves(card)
+    val target  = woiNonMuslimTarget(countryNames(woiNonMuslimTargets(maxOps))).get
+    val (fromCandidates, toCandidates) = game.deployTargets(maxOps).get
+    val from = deployFromTarget(fromCandidates).get
+    val to   = deployToTarget(toCandidates).get
+    
+    val opsUsed = to match {
+      case "track" => 1
+      case name    => (game getMuslim name).governance
+    }
+    if (opsUsed > card.ops)
+      expendBotReserves(opsUsed - card.ops)
+
+    val (withdraw, numTroops) = from match {
+      case "track" => (false, 2)  // Always deploy exactly 2 troops from track
+      case name    =>
+        val m = game getMuslim name
+        (m.inRegimeChange, m.maxDeployFrom(opsUsed))
+    }
+    if (withdraw) {
+      log(s"$US performs a Withdraw operation")
+      performWithdraw(from, to, numTroops)
+    }
+    else {
+      log(s"$US performs a Deploy operation")
+      moveTroops(from, to, numTroops)
+    }
+    opsUsed
+  }
+  
+  def disruptOperation(card: Card): Int = {
+    val maxOps  = maxOpsPlusReserves(card)
+    val target  = disruptTarget(game disruptTargets maxOps).get
+    val opsUsed = (game getMuslim target).governance
+    if (opsUsed > card.ops)
+      expendBotReserves(opsUsed - card.ops)
+    log(s"$US performs a Disrupt operation in $target")
+    performDisrupt(target)
+    opsUsed
+  }
+  
+  def regimeChangeOperation(card: Card): Int = {
+    val maxOps  = maxOpsPlusReserves(card)
+    assert(maxOps == 3, "regimeChangeOperation() called with less than 3 Ops available")
+    val opsUsed = 3
+    val target  = regimeChangeTarget(game.regimeChangeTargets).get
+    val source  = regimeChangeFromTarget(game.regimeChangeSources(3)).get
+    
+    if (opsUsed > card.ops)
+      expendBotReserves(opsUsed - card.ops)
+    log(s"$US performs a Regime Change operation in $target")
+    performRegimeChange(source, target, 6) // Bot always uses exactly 6 troops
+    opsUsed
+  }
+  
 
   // Perform Homeland Security
   // The opsUsed parameter is the number of Ops used to perform the card operation.
