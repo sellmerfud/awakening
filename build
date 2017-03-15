@@ -5,4 +5,5 @@ src/scala/awakening/LabyrinthAwakening.scala \
 src/scala/awakening/AwakeningCards.scala \
 src/scala/awakening/BotHelpers.scala \
 src/scala/awakening/JihadistBot.scala \
+src/scala/awakening/USBot.scala \
 src/scala/awakening/scenarios/Awakening2010.scala

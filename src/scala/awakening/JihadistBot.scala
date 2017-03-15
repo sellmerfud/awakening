@@ -67,19 +67,6 @@ object JihadistBot extends BotHelpers {
   def unusedCells(c: Country)  = c.totalCells   - usedCells(c.name).total
   def unusedCellsOnMap = (game.countries map unusedCells).sum
   
-  def jihadDRM(m: MuslimCountry, major: Boolean): Int = 
-    if (game.jihadistIdeology(Virulent))
-      -m.reaction // Ignore awakening if Virulent for all jihads
-    else if (game.jihadistIdeology(Coherent) && !major)
-      -m.reaction // Ignore awakening if Coherent and minor jihads
-    else
-      m.awakening - m.reaction
-  
-  
-  // Return true if a die roll of 1 will succeed in the given country
-  def jihadSuccessPossible(m: MuslimCountry, major: Boolean) =
-    (1 + jihadDRM(m, major)) <= m.governance
-  
   // Poor country with 1 to 4 more cells than Troops and Milita and Jihad success possible
   def poorMuslimNeedsCellsForMajorJihad(m: MuslimCountry): Boolean = 
     m.isPoor &&
@@ -87,43 +74,6 @@ object JihadistBot extends BotHelpers {
     (unusedCells(m) - m.totalTroopsAndMilitia) > 0 &&
     (unusedCells(m) - m.totalTroopsAndMilitia) < 5
   
-  
-  
-  // Priorities are used to narrow down a list of countries to a single best country
-  // per the Priorities table.
-  sealed trait Priority {
-    val desc: String
-    def filter(countries: List[Country]): List[Country]
-    override def toString() = desc
-  }
-  
-  // If no candidates match the criteria, then return the list unchanged
-  // If at least on candidate matches the criteria then return all of the
-  // candidates that match the criteria.
-  class CriteriaPriority(val desc: String, criteria: (Country) => Boolean) extends Priority {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
-      case Nil      => botLog(s"Criteria ($desc): match = false"); countries
-      case matching => botLog(s"Criteria ($desc): match = true"); matching
-    }
-  }
-  
-  // Picks ALL of the candidates with the highest score and discards the rest.
-  class HighestScorePriority(val desc: String, score: (Country) => Int) extends Priority {
-    def filter(countries: List[Country]): List[Country] = {
-      val high = (countries map score).max
-      botLog(s"Highest ($desc): score = $high")
-      countries filter (c => score(c) == high)
-    }
-  }
-  
-  // Picks ALL of the candidates with the lowest score and discards the rest.
-  class LowestScorePriority(val desc: String, score: (Country) => Int) extends Priority {
-    def filter(countries: List[Country]): List[Country] = {
-      val low = (countries map score).min
-      botLog(s"Lowest ($desc): score = $low")
-      countries filter (c => score(c) == low)
-    }
-  }
 
   // Pick all candidates that are not the same as the target unless there
   // is only the target to choose from.
@@ -140,86 +90,7 @@ object JihadistBot extends BotHelpers {
     }
   }
 
-  // Flowchart filters implement the logic of the Operations Priorities (OpP) flowchart
-  sealed trait FlowchartFilter {
-    val desc: String
-    def filter(countries: List[Country]): List[Country]
-    override def toString() = desc
-  }
-  
-  // Filters the given countries and returns the results.
-  class CriteriaFilter(val desc: String, criteria: (Country) => Boolean) extends FlowchartFilter {
-    def filter(countries: List[Country]) = (countries filter criteria)
-  }
-  
-  // First picks only candidates that satisfy the criteria.
-  // Then among those takes only the ones with the highest score.
-  class HighestScoreFilter(val desc: String,
-                          criteria: (Country) => Boolean, 
-                          score:    (Country) => Int) extends FlowchartFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
-      case Nil        => Nil
-      case candidates =>
-        val high = (candidates map score).max
-        candidates filter (c => score(c) == high)
-    }
-  }
-  
-  // First picks only candidates that satisfy the criteria.
-  // Then among those takes only the ones with the lowest score.
-  class LowestScoreFilter(val desc: String,
-                          criteria: (Country) => Boolean, 
-                          score:    (Country) => Int) extends FlowchartFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
-      case Nil        => Nil
-      case candidates =>
-        val low = (candidates map score).min
-        candidates filter (c => score(c) == low)
-    }
-  }
-  
-  // Filters out all countries that are not adjacent to the target country.
-  class AdjacentFilter(target: String) extends FlowchartFilter {
-    val desc = s"Adjacent to $target"
-    def filter(countries: List[Country]) = 
-      (countries filter (c => areAdjacent(c.name, target)))
-  }
-  
-  
-  
-  // Narrow the given countries to the best target using the given list of priorities.
-  // If we run out of priorities and we have multiple candidates, the take one at random.
-  @tailrec def topPriority(countries: List[Country], priorities: List[Priority]): Option[Country] = {
-    botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")
-    (countries, priorities) match {
-      case (Nil, _)    => None
-      case (c::Nil, _) => Some(c)                             // We've narrowed it to one
-      case (cs, Nil)   => shuffle(cs).headOption              // Take one at random
-      case (cs, p::ps) => topPriority(p filter countries, ps) // Filter by next priority
-    }
-  }
-  
-  
-  // Test the list of countries by each flowchart filter until one of the filters returns
-  // a non-empty list of candidates.  If none of the filters finds a match then
-  // we return Nil to indicate that the operation being tried cannot be carried out.
-  @tailrec def followFlowchart(countries: List[Country], filters: List[FlowchartFilter]): List[Country] = {
-    (countries, filters) match {
-      case (Nil, _)    => Nil    // No countries to consider
-      case (_, Nil)    => Nil    // No filter found any candidates
-      case (_, f::fs) =>
-        f.filter(countries) match {
-          case Nil =>            // Filter did not match anything, try the next filter
-            botLog(s"OpP Flowchart ($f): failed")
-            followFlowchart(countries, fs)
-          case results =>        // We got some results…
-            botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
-            results
-        }
-    }
-  }
-  
-  // Priorities Table
+  // Jihadist Priorities Table
 
   // 1. Best Jihad DRM
   case class BestJihadDRMPriority(major: Boolean) extends Priority {
@@ -318,7 +189,7 @@ object JihadistBot extends BotHelpers {
   val OilExporterPriority = new CriteriaPriority("Oil exporter", muslimTest(_.oilProducer))
 
 
-  // Flowchart filters
+  // Jihadist Flowchart filters (OpP flowchart)
   
   val NonMuslimFilter     = new CriteriaFilter("non-Muslim", nonMuslimTest(_  => true))
   val PoorNonMuslimFilter = new CriteriaFilter("Poor non-Muslim", nonMuslimTest(_.isPoor))
@@ -461,23 +332,12 @@ object JihadistBot extends BotHelpers {
     topPriority(candidates, priorities) map (_.name)
   }
   
-  
-  sealed trait OpFlowchartItem
-  
   sealed trait Operation extends OpFlowchartItem
   case object RecruitOp    extends Operation
   case object TravelOp     extends Operation
   case object PlotOp       extends Operation
   case object MinorJihadOp extends Operation
   case object MajorJihadOp extends Operation
-  
-  sealed trait OperationDecision extends OpFlowchartItem {
-    val desc: String
-    def yesPath: OpFlowchartItem
-    def noPath: OpFlowchartItem
-    def condition(ops: Int): Boolean
-    override def toString() = desc
-  }
   
   // This is the starting point of the Operations Flowchart
   object MajorJihadDecision extends OperationDecision {
@@ -625,14 +485,16 @@ object JihadistBot extends BotHelpers {
         log(s"The $Jihadist Bot cannot execute an operation until an event places a cell.")
         addToReserves(Jihadist, card.ops)
       }
-      else
-        operationsFlowchart(maxOpsPlusReserves(card)) match {
+      else {
+        val opsUsed = operationsFlowchart(maxOpsPlusReserves(card)) match {
           case RecruitOp    => recruitOperation(card)
           case TravelOp     => travelOperation(card)
           case PlotOp       => plotOperation(card)
           case MinorJihadOp => minorJihadOperation(card)
           case MajorJihadOp => majorJihadOperation(card)
         }
+        radicalization(card, opsUsed)
+      }
     }
   }
   
@@ -640,7 +502,8 @@ object JihadistBot extends BotHelpers {
   // If we run out of card ops and there are still cells available, use reserves
   // If we run out of cells and still have card ops (not reserves), the use the
   // excess card ops for radicalization.
-  def recruitOperation(card: Card): Unit = {
+  // Returns the number of Ops used.
+  def recruitOperation(card: Card): Int = {
     val recruitOps = game.cellsToRecruit min maxOpsPlusReserves(card)
     log()
     log(s"$Jihadist performs a Recruit operation")
@@ -678,7 +541,7 @@ object JihadistBot extends BotHelpers {
       addSleeperCellsToCountry(target, numCells)
       usedCells(target).addSleepers(numCells)
     }
-    radicalization(card, recruitOps)
+    recruitOps
   }
   
   // First select the target to country.
@@ -689,7 +552,8 @@ object JihadistBot extends BotHelpers {
   //   there two or more other Auto Recruit countries with cells.
   // - Select active cells for travel before sleeper cells
   // - Never travel sleeper cells within the same country
-  def travelOperation(card: Card): Unit = {
+  // Returns the number of Ops used.
+  def travelOperation(card: Card): Int = {
     log()
     log(s"$Jihadist performs a Travel operation")
     log(separator())
@@ -753,10 +617,11 @@ object JihadistBot extends BotHelpers {
     for ((name, true) <- performTravels(attempts))
       usedCells(toName).addSleepers(1)
 
-    radicalization(card, opsUsed)
+    opsUsed
   }
   
-  def plotOperation(card: Card): Unit = {
+  // Returns the number of Ops used.
+  def plotOperation(card: Card): Int = {
     val maxCells = (game.plotTargets map game.getCountry map unusedCells).sum
     val maxAttempts = card.ops min maxCells
     log()
@@ -797,17 +662,14 @@ object JihadistBot extends BotHelpers {
     val opsUsed = nextTarget(0, Set.empty)
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
-    radicalization(card, opsUsed)
+    opsUsed
   }
   
   // Get highest priority target country
   // Make as many attempts as possible
   // If ops left over, repeat
-  
-  // If ops left over and no more target countries
-  // perform radicalization.
-  
-  def minorJihadOperation(card: Card): Unit = {
+  // Returns the number of Ops used.
+  def minorJihadOperation(card: Card): Int = {
     log()
     log(s"$Jihadist performs a Minor Jihad operation")
     log(separator())
@@ -840,10 +702,11 @@ object JihadistBot extends BotHelpers {
       expendBotReserves(opsUsed - card.ops)
     for ((name, successes) <- performJihads(targets))
       usedCells(name).addActives(successes)
-    radicalization(card, opsUsed)
+    opsUsed
   }
   
-  def majorJihadOperation(card: Card): Unit = {
+  // Returns the number of Ops used.
+  def majorJihadOperation(card: Card): Int = {
     log()
     log(s"$Jihadist performs a Major Jihad operation")
     log(separator())
@@ -876,7 +739,7 @@ object JihadistBot extends BotHelpers {
       expendBotReserves(opsUsed - card.ops)
     for ((name, successes) <- performJihads(targets))
       usedCells(name).addActives(successes)
-    radicalization(card, opsUsed)
+    opsUsed
   }
   
   

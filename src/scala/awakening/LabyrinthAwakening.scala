@@ -787,7 +787,7 @@ object LabyrinthAwakening {
     }
     
     def prestigeLevel = prestige match {
-      case x if x <  4 =>  Low
+      case x if x <  4 => Low
       case x if x <  7 => Medium
       case x if x < 10 => High
       case _           => VeryHigh
@@ -921,19 +921,20 @@ object LabyrinthAwakening {
         None
     } 
     
-    def disruptTargets(ops: Int): List[String] = {
-      val muslimTargets = muslims.filter { m =>
-        ops >= m.governance &&
-        (m.hasCadre || m.totalCells > 0) && 
-        (m.isAlly || (m.totalTroopsAndMilitia) > 1)
-      }
-      val nonMuslimTargets = nonMuslims.filter { n =>
-        !n.iranSpecialCase &&
-        ops >= n.governance &&
-        (n.hasCadre || n.totalCells > 0) 
-      }
-      countryNames(muslimTargets ::: nonMuslimTargets) 
-    }
+    def disruptMuslimTargets(ops: Int): List[String] = countryNames(muslims.filter { m =>
+      ops >= m.governance &&
+      (m.hasCadre || m.totalCells > 0) && 
+      (m.isAlly || (m.totalTroopsAndMilitia) > 1)
+    })
+    
+    def disruptNonMuslimTargets(ops: Int): List[String] = countryNames(nonMuslims.filter { n =>
+      !n.iranSpecialCase  &&
+      ops >= n.governance &&
+      (n.hasCadre || n.totalCells > 0) 
+    })
+      
+    def disruptTargets(ops: Int): List[String] = 
+      disruptMuslimTargets(ops) ::: disruptNonMuslimTargets(ops)
 
     def alertPossible(ops: Int) = ops == 3 && alertTargets.nonEmpty
     
@@ -4068,7 +4069,7 @@ object LabyrinthAwakening {
               // Add to the list of played cards for the turn
               game = game.copy(cardsPlayed = PlayedCard(US, card2) :: game.cardsPlayed)
               secondCard = Some(card2)
-              log(s"$US plays $card2")
+              logCardPlay(US, card2)
               Some(Reassess)
           }
         case action => action
