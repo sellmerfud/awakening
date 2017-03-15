@@ -1,3 +1,10 @@
+
+// Labyrinth Awakening
+//
+// An scala implementation of the solo AI for the game 
+// Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
+// published by GMT Games.
+// 
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -18,13 +25,6 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-// Labyrinth Awakening
-//
-// An scala implementation of the solo AI for the game 
-// Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
-// published by GMT Games.
-// 
 
 package awakening
 

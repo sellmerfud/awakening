@@ -1,5 +1,4 @@
 
-
 // Labyrinth Awakening
 //
 // An scala implementation of the solo AI for the game 
@@ -27,14 +26,13 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
 package awakening
 
 import scala.util.Random.shuffle
 import scala.annotation.tailrec
 import LabyrinthAwakening._
 
-object JihadistBot {
+object JihadistBot extends BotHelpers {
   
   // This object keeps track of which on map cells have been used during the
   // current Bot operation.  A given cell cannot be used more than once during
@@ -90,7 +88,6 @@ object JihadistBot {
     (unusedCells(m) - m.totalTroopsAndMilitia) < 5
   
   
-  def botLog(msg: => String) = if (game.params.botLogging) log(msg)
   
   // Priorities are used to narrow down a list of countries to a single best country
   // per the Priorities table.
@@ -188,30 +185,6 @@ object JihadistBot {
       (countries filter (c => areAdjacent(c.name, target)))
   }
   
-  // Helper functions used to make it easier to construct Priorities and FlowchartFilters
-  
-  // Helper function for scores that only apply Muslim countries
-  def muslimScore(score: (MuslimCountry) => Int, nonMuslimScore: Int = -100)(c: Country): Int = c match {
-    case m: MuslimCountry    => score(m)
-    case n: NonMuslimCountry => nonMuslimScore  
-  }
-  // Helper function for scores that only apply non-Muslim countries
-  def nonMuslimScore(score: (NonMuslimCountry) => Int, muslimScore: Int = -100)(c: Country): Int = c match {
-    case m: MuslimCountry    => muslimScore
-    case n: NonMuslimCountry => score(n)  
-  }
-  
-  // Helper function for criteria tests that only apply Muslim countries
-  def muslimTest(test: (MuslimCountry) => Boolean, nonMuslim: Boolean = false)(c: Country): Boolean = c match {
-    case m: MuslimCountry    => test(m)
-    case n: NonMuslimCountry => nonMuslim  
-  }
-  
-  // Helper function for criteria tests that only apply Muslim countries
-  def nonMuslimTest(test: (NonMuslimCountry) => Boolean, muslim: Boolean = false)(c: Country): Boolean = c match {
-    case m: MuslimCountry    => muslim
-    case n: NonMuslimCountry => test(n)  
-  }
   
   
   // Narrow the given countries to the best target using the given list of priorities.
@@ -1282,21 +1255,6 @@ object JihadistBot {
           MapItem(t, 1) :: troopsToTakeOffMap(remaining - 1, candidates filterNot (_ == t))
       }
     }
-  }
-  
-  // This is a convenience method used when selecting targets for events.
-  def multipleTargets(num: Int, candidates: List[String], pickBest: (List[String]) => Option[String]): List[String] = {
-    def nextTarget(n: Int, targets: List[String]): List[String] = {
-      if (n <= num && targets.nonEmpty) {
-        pickBest(candidates) match {
-          case None => Nil
-          case Some(name) => name :: nextTarget(n + 1, targets filterNot (_ == name))
-        }
-      }
-      else
-        Nil
-    }
-    nextTarget(1, candidates)
   }
   
 }
