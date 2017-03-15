@@ -1783,18 +1783,8 @@ object AwakeningCards extends CardDeck {
     entry(new Card(189, "Jihadist Videos", Jihadist, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, AlwaysPlayable,
       (role: Role) => {
-        var targets = if (role == game.humanRole) {
-          val candidates = countryNames(game.countries filter (_.totalCells == 0))
-          def nextCountry(targets: List[String], num: Int): List[String] = {
-            if (num <= 3 && targets.nonEmpty) {
-              val name = askCountry(s"Select ${ordinal(num)} country: ", targets)
-              name :: nextCountry(targets filterNot (_ == name), num + 1)
-            }
-            else
-              Nil
-          }
-          nextCountry(candidates, 1)
-        }
+        var targets = if (role == game.humanRole)
+          askCountries(3, countryNames(game.countries filter (_.totalCells == 0)))
         else {
           // See Event Instructions table
           val eligible = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
@@ -1877,11 +1867,8 @@ object AwakeningCards extends CardDeck {
       (role: Role) => {
         val candidates = countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))
         
-        val other2 = if (role == game.humanRole) {
-          val o1 = askCountry("Select 1st country: ", candidates)
-          val o2 = askCountry("Select 2nd country: ", candidates)
-          o1::o2::Nil
-        }
+        val other2 = if (role == game.humanRole)
+          askCountries(2, candidates)
         else 
           JihadistBot.multipleTargets(2, candidates, JihadistBot.markerAlignGovTarget)
         

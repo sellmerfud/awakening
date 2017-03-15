@@ -1331,6 +1331,20 @@ object LabyrinthAwakening {
     }
   }
   
+  // Ask the user to select multiple countries from the given candidates.
+  def askCountries(num: Int, candidates: List[String]): List[String] = {
+    def nextCountry(n: Int, targets: List[String]): List[String] = {
+      if (n <= num && targets.nonEmpty) {
+        val name = askCountry(s"Select ${ordinal(n)} country: ", targets)
+        name :: nextCountry(n + 1, targets filterNot (_ == name))
+      }
+      else
+        Nil
+    }
+    nextCountry(1, candidates)
+  }
+  
+  
   // Returns (actives, sleepers)
   def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean = true): (Int, Int) = {
     val c = game.getCountry(countryName)
