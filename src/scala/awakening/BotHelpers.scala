@@ -63,91 +63,54 @@ trait BotHelpers {
     def condition(ops: Int): Boolean
     override def toString() = desc
   }
-  
-  // Priorities are used to narrow down a list of countries to a single best country
-  // per the Priorities table.
-  trait Priority {
-    val desc: String
-    def filter(countries: List[Country]): List[Country]
-    override def toString() = desc
-  }
 
-  // If no candidates match the criteria, then return the list unchanged
-  // If at least on candidate matches the criteria then return all of the
-  // candidates that match the criteria.
-  class CriteriaPriority(val desc: String, criteria: (Country) => Boolean) extends Priority {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
-      case Nil      => botLog(s"Criteria ($desc): match = false"); countries
-      case matching => botLog(s"Criteria ($desc): match = true"); matching
-    }
-  }
-
-  // Picks ALL of the candidates with the highest score and discards the rest.
-  class HighestScorePriority(val desc: String, score: (Country) => Int) extends Priority {
-    def filter(countries: List[Country]): List[Country] = {
-      val high = (countries map score).max
-      botLog(s"Highest ($desc): score = $high")
-      countries filter (c => score(c) == high)
-    }
-  }
-
-  // Picks ALL of the candidates with the lowest score and discards the rest.
-  class LowestScorePriority(val desc: String, score: (Country) => Int) extends Priority {
-    def filter(countries: List[Country]): List[Country] = {
-      val low = (countries map score).min
-      botLog(s"Lowest ($desc): score = $low")
-      countries filter (c => score(c) == low)
-    }
-  }
-  
-  // Flowchart filters implement the logic of the Operations Priorities (OpP) flowchart
- trait FlowchartFilter {
+  // CountryFilters are used both when following an OpP flowchart and
+  // when following a Priorities Table.
+  // Each filter simply takes a list of Countries as input and produces
+  // a filtered list as output.
+  // The see the followOpPFlowchart() and topPriority() functions to see how
+  // filters are used (slightly differently) in each type of situation.
+  trait CountryFilter {
     val desc: String
     def filter(countries: List[Country]): List[Country]
     override def toString() = desc
   }
   
-  // Filters the given countries and returns the results.
-  class CriteriaFilter(val desc: String, criteria: (Country) => Boolean) extends FlowchartFilter {
-    def filter(countries: List[Country]) = (countries filter criteria)
-  }
-  
-  // First picks only candidates that satisfy the criteria.
-  // Then among those takes only the ones with the highest score.
-  class HighestScoreFilter(val desc: String,
-                          criteria: (Country) => Boolean, 
-                          score:    (Country) => Int) extends FlowchartFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
-      case Nil        => Nil
-      case candidates =>
-        val high = (candidates map score).max
-        candidates filter (c => score(c) == high)
+  // Process the list of countries by each CountryFilter supplied until one of the filters returns
+  // a non-empty list of candidates.
+  //
+  // Each filter is first used against the input and if the filter does not find any matching
+  // candidates, the next filter is given a chance.
+  // As soon as a filter finds at least one matching country, then the procees stops and the
+  // results from that filter are returned.
+  // If none of the filters finds at least one matching country we return Nil, 
+  // which indicates that no valid candidates were found for the OpP flowchart.
+  @tailrec final def followOpPFlowchart(countries: List[Country], filters: List[CountryFilter]): List[Country] = {
+    (countries, filters) match {
+      case (Nil, _)    => Nil    // No countries to consider
+      case (_, Nil)    => Nil    // No filter found any candidates
+      case (_, f::fs) =>
+        f.filter(countries) match {
+          case Nil =>            // Filter did not match anything, try the next filter
+            botLog(s"OpP Flowchart ($f): failed")
+            followOpPFlowchart(countries, fs)
+          case results =>        // We got some results…
+            botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
+            results
+        }
     }
   }
   
-  // First picks only candidates that satisfy the criteria.
-  // Then among those takes only the ones with the lowest score.
-  class LowestScoreFilter(val desc: String,
-                          criteria: (Country) => Boolean, 
-                          score:    (Country) => Int) extends FlowchartFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
-      case Nil        => Nil
-      case candidates =>
-        val low = (candidates map score).min
-        candidates filter (c => score(c) == low)
-    }
-  }
   
-  // Filters out all countries that are not adjacent to the target country.
-  class AdjacentFilter(target: String) extends FlowchartFilter {
-    val desc = s"Adjacent to $target"
-    def filter(countries: List[Country]) = 
-      (countries filter (c => areAdjacent(c.name, target)))
-  }
-  
-  // Narrow the given countries to the best target using the given list of priorities.
-  // If we run out of priorities and we have multiple candidates, the take one at random.
-  @tailrec final def topPriority(countries: List[Country], priorities: List[Priority]): Option[Country] = {
+  // Process the list of countries by each CountryFilter in the prorities list.
+  // The prorities list reprsents a single column in a Priorities Table.
+  // In this function each filter is processed in order until we have used all filters
+  // in the list to narrow the choices to a single country.  If we go through all of
+  // the filters and we stil have more than one viable country, then we pick one at
+  // random.
+  // Note: The only time this function will return Nil, is if the original list of
+  //       countries is empty.
+  @tailrec final def topPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
     botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")
     (countries, priorities) match {
       case (Nil, _)    => None
@@ -157,49 +120,124 @@ trait BotHelpers {
     }
   }
   
-  // Test the list of countries by each flowchart filter until one of the filters returns
-  // a non-empty list of candidates.  If none of the filters finds a match then
-  // we return Nil to indicate that the operation being tried cannot be carried out.
-  @tailrec final def followFlowchart(countries: List[Country], filters: List[FlowchartFilter]): List[Country] = {
-    (countries, filters) match {
-      case (Nil, _)    => Nil    // No countries to consider
-      case (_, Nil)    => Nil    // No filter found any candidates
-      case (_, f::fs) =>
-        f.filter(countries) match {
-          case Nil =>            // Filter did not match anything, try the next filter
-            botLog(s"OpP Flowchart ($f): failed")
-            followFlowchart(countries, fs)
-          case results =>        // We got some results…
-            botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
-            results
-        }
-    }
-  }
-
-  // Helper function for scores that only apply Muslim countries
-  def muslimScore(score: (MuslimCountry) => Int, nonMuslimScore: Int = -100)(c: Country): Int = c match {
-    case m: MuslimCountry    => score(m)
-    case n: NonMuslimCountry => nonMuslimScore  
-  }
-  // Helper function for scores that only apply non-Muslim countries
-  def nonMuslimScore(score: (NonMuslimCountry) => Int, muslimScore: Int = -100)(c: Country): Int = c match {
-    case m: MuslimCountry    => muslimScore
-    case n: NonMuslimCountry => score(n)  
-  }
-
-  // Helper function for criteria tests that only apply Muslim countries
+  // Helper function for CountryFilter boolean tests that only apply Muslim countries
+  // All non-Muslim countries will return a given value (false by default)
   def muslimTest(test: (MuslimCountry) => Boolean, nonMuslim: Boolean = false)(c: Country): Boolean = c match {
     case m: MuslimCountry    => test(m)
     case n: NonMuslimCountry => nonMuslim  
   }
 
-  // Helper function for criteria tests that only apply Muslim countries
+  // Helper function for CountryFilter boolean tests that only apply non-Muslim countries
+  // All Muslim countries will return a given value (false by default)
   def nonMuslimTest(test: (NonMuslimCountry) => Boolean, muslim: Boolean = false)(c: Country): Boolean = c match {
     case m: MuslimCountry    => muslim
     case n: NonMuslimCountry => test(n)  
   }
 
-  // This is a convenience method used when selecting targets for events.
+  // Helper function for CountryFilter integer test that only apply Muslim countries
+  // All Muslim countries will return a given value (false by default)
+  // All non-Muslim countries will return a given value (-100 by default)
+  def muslimScore(score: (MuslimCountry) => Int, nonMuslimScore: Int = -100)(c: Country): Int = c match {
+    case m: MuslimCountry    => score(m)
+    case n: NonMuslimCountry => nonMuslimScore  
+  }
+  // Helper function for CountryFilter integer test that only apply non-Muslim countries
+  // All Muslim countries will return a given value (-100 by default)
+  def nonMuslimScore(score: (NonMuslimCountry) => Int, muslimScore: Int = -100)(c: Country): Int = c match {
+    case m: MuslimCountry    => muslimScore
+    case n: NonMuslimCountry => score(n)  
+  }
+
+  // Boolean criteria filter used with Property Tables.
+  // The input is fitered and if the results are empty, the original input
+  // is returned. Otherwise the filtered input is returned.
+  class CriteriaPriority(val desc: String, criteria: (Country) => Boolean) extends CountryFilter {
+    def filter(countries: List[Country]) = (countries filter criteria) match {
+      case Nil      => botLog(s"Criteria ($desc): match = false"); countries
+      case matching => botLog(s"Criteria ($desc): match = true"); matching
+    }
+  }
+
+  // Highest integer score filter used with Property Tables.
+  // Applies the given score function to each country in the input list and
+  // takes the highest value.
+  // Then returns the list of countries whose score matches that highest value.
+  class HighestScorePriority(val desc: String, score: (Country) => Int) extends CountryFilter {
+    def filter(countries: List[Country]): List[Country] = {
+      val high = (countries map score).max
+      botLog(s"Highest ($desc): score = $high")
+      countries filter (c => score(c) == high)
+    }
+  }
+
+  // Lowest integer score filter used with Property Tables.
+  // Applies the given score function to each country in the input list and
+  // takes the lowest value.
+  // Then returns the list of countries whose score matches that lowest value.
+  class LowestScorePriority(val desc: String, score: (Country) => Int) extends CountryFilter {
+    def filter(countries: List[Country]): List[Country] = {
+      val low = (countries map score).min
+      botLog(s"Lowest ($desc): score = $low")
+      countries filter (c => score(c) == low)
+    }
+  }
+  
+  
+  // A boolean criteria filter that is used in OpP flowcharts
+  // Filters the given countries and returns the results.
+  class CriteriaNode(val desc: String, criteria: (Country) => Boolean) extends CountryFilter {
+    def filter(countries: List[Country]) = (countries filter criteria)
+  }
+  
+  // Highest integer score filter used with OpP flowcharts.
+  // Contains a boolean criteria to determine which countries may be considered,
+  // and an integer score function that is applied to each country that matches
+  // the necessary criteria.
+  // First picks only candidates that satisfy the criteria.
+  // Then among those takes only the ones with the highest score.
+  class HighestScoreNode(val desc: String,
+                         criteria: (Country) => Boolean, 
+                         score:    (Country) => Int) extends CountryFilter {
+    def filter(countries: List[Country]) = (countries filter criteria) match {
+      case Nil        => Nil
+      case candidates =>
+        val high = (candidates map score).max
+        candidates filter (c => score(c) == high)
+    }
+  }
+  
+  // Lowest integer score filter used with OpP flowcharts.
+  // Contains a boolean criteria to determine which countries may be considered,
+  // and an integer score function that is applied to each country that matches
+  // the necessary criteria.
+  // First picks only candidates that satisfy the criteria.
+  // Then among those takes only the ones with the lowest score.
+  class LowestScoreNode(val desc: String,
+                        criteria: (Country) => Boolean, 
+                        score:    (Country) => Int) extends CountryFilter {
+    def filter(countries: List[Country]) = (countries filter criteria) match {
+      case Nil        => Nil
+      case candidates =>
+        val low = (candidates map score).min
+        candidates filter (c => score(c) == low)
+    }
+  }
+  
+  // Adjacency filter used with OpP flowcharts.
+  // Returns the list of countries that are adjacent to the given target Country.
+  class AdjacentCountriesNode(target: String) extends CountryFilter {
+    val desc = s"Adjacent to $target"
+    def filter(countries: List[Country]) = 
+      (countries filter (c => areAdjacent(c.name, target)))
+  }
+
+
+  // This is a convenience method used when selecting multiple targets for events.
+  // It picks the best target from the given list of candidates repeatedly until
+  // the required number of targets have been picked or until we run out of candidates
+  // to choose from.
+  // As each target is selected, it is removed from the list of candidates so that
+  // a given target will not be picked more than once.
   def multipleTargets(num: Int, candidates: List[String], pickBest: (List[String]) => Option[String]): List[String] = {
     def nextTarget(n: Int, targets: List[String]): List[String] = {
       if (n <= num && targets.nonEmpty) {

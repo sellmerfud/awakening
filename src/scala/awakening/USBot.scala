@@ -249,15 +249,15 @@ object USBot extends BotHelpers {
     MostCellsPriority, AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
 
   val DisruptFlowchart = List(
-    new CriteriaFilter("Muslim at least 2 more cells than TandM and JSP", 
+    new CriteriaNode("Muslim at least 2 more cells than TandM and JSP", 
       muslimTest(m => m.totalCells - m.totalTroopsAndMilitia >= 2 && jihadSuccessPossible(m, false))),
-    new CriteriaFilter("For Prestige gain", muslimTest(_.disruptAffectsPrestige)),
-    new CriteriaFilter("To place cadre", onlyOneActiveCell)    
+    new CriteriaNode("For Prestige gain", muslimTest(_.disruptAffectsPrestige)),
+    new CriteriaNode("To place cadre", onlyOneActiveCell)    
   )
   
   def disruptTarget(names: List[String]): Option[String] = {
     botLog("Find \"Disrupt\" target")
-    val candidates = followFlowchart(game getCountries names, DisruptFlowchart)
+    val candidates = followOpPFlowchart(game getCountries names, DisruptFlowchart)
     topPriority(candidates, DisruptPriorities) map (_.name)
   }
   
@@ -267,16 +267,16 @@ object USBot extends BotHelpers {
     PoorPriority, FairPriority, GoodPriority, FewestCellsPriority)
   
   val WoiNonMuslimFlowchart = List(
-    new CriteriaFilter("Opposite posture US",
+    new CriteriaNode("Opposite posture US",
       nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
-    new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)),
-    new CriteriaFilter("Same posture as US",
+    new CriteriaNode("Untested non-Muslim", nonMuslimTest(_.isUntested)),
+    new CriteriaNode("Same posture as US",
       nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture == game.usPosture))
   )
   
   def woiNonMuslimTarget(names: List[String]): Option[String] = {
     botLog("Find \"non-Muslim WoI\" target")
-    val candidates = followFlowchart(game getCountries names, WoiNonMuslimFlowchart)
+    val candidates = followOpPFlowchart(game getCountries names, WoiNonMuslimFlowchart)
     topPriority(candidates, WoiNonMuslimPriorities) map (_.name)
   }
 
@@ -287,12 +287,12 @@ object USBot extends BotHelpers {
     AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
   
   val DeployToFlowchart = List(
-    new CriteriaFilter("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
+    new CriteriaNode("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
         muslimTest(m => globalEventInPlay("Abu Sayyaf") && m.name == Philippines && 
                          m.totalCells > 0 && m.totalTroops == 0)),
-    new CriteriaFilter("With cell, but no troops or militia",
+    new CriteriaNode("With cell, but no troops or militia",
       muslimTest(m => m.totalCells > 0 && m.totalTroopsAndMilitia == 0)),
-    new CriteriaFilter("Regime Change needs troops + militia for WoI",
+    new CriteriaNode("Regime Change needs troops + militia for WoI",
       muslimTest(m => m.inRegimeChange && m.totalTroopsAndMilitia - m.totalCells < 5))
   )
 
@@ -300,7 +300,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Deploy To\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
-    followFlowchart(game getCountries countryNames, DeployToFlowchart) match {
+    followOpPFlowchart(game getCountries countryNames, DeployToFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployToPriorities) map (_.name)
     }
@@ -311,13 +311,13 @@ object USBot extends BotHelpers {
     FewestCellsPriority, LowestResourcePriority, MostPlotsPriority, MostTroopsPriority)
   
   val DeployFromFlowchart = List(
-    new CriteriaFilter("Philippines if Moro Talks",  // Base game only
+    new CriteriaNode("Philippines if Moro Talks",  // Base game only
         muslimTest(m => globalEventInPlay("Moro Talks") && m.name == Philippines)),
-    new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
-    new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
+    new CriteriaNode("Islamist Rule", muslimTest(_.isIslamistRule)),
+    new CriteriaNode("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 
              (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
-    new CriteriaFilter("Fair Ally without cells OR with troop markers/militia",
+    new CriteriaNode("Fair Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isFair && m.isAlly && 
              (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0)))
   )
@@ -326,7 +326,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Deploy From\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
-    followFlowchart(game getCountries countryNames, DeployFromFlowchart) match {
+    followOpPFlowchart(game getCountries countryNames, DeployFromFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
     }
@@ -344,18 +344,18 @@ object USBot extends BotHelpers {
   
   // ------------------------------------------------------------------
   val RegimeChangeFromFlowchart = List(
-    new CriteriaFilter("Philippines if Moro Talks",  // Base game only
+    new CriteriaNode("Philippines if Moro Talks",  // Base game only
         muslimTest(m => globalEventInPlay("Moro Talks") && m.name == Philippines)),
-    new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
-    new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
+    new CriteriaNode("Islamist Rule", muslimTest(_.isIslamistRule)),
+    new CriteriaNode("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 
              (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
-    new CriteriaFilter("Fair Ally without cells OR with troop markers/militia",
+    new CriteriaNode("Fair Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isFair && m.isAlly && 
              (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
-    new CriteriaFilter("Good", _.isGood),         
-    new CriteriaFilter("Fair", _.isFair),         
-    new CriteriaFilter("Poor", _.isPoor)
+    new CriteriaNode("Good", _.isGood),         
+    new CriteriaNode("Fair", _.isFair),         
+    new CriteriaNode("Poor", _.isPoor)
   )
   
   // Used to determine from where to get troops to use in a Regime Change Operation.
@@ -363,7 +363,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Regime Change From\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
-    followFlowchart(game getCountries countryNames, RegimeChangeFromFlowchart) match {
+    followOpPFlowchart(game getCountries countryNames, RegimeChangeFromFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
     }
@@ -382,24 +382,24 @@ object USBot extends BotHelpers {
     topPriority(game getCountries names, WoiMuslimPriorities) map (_.name)
   }
   
-  val BestWoiDRMFilter = new HighestScoreFilter("Highest WoI DRM",
+  val BestWoiDRMFilter = new HighestScoreNode("Highest WoI DRM",
     muslimTest(_ => true),
     muslimScore(m => modifyWoiRoll(0, m, silent = true)))
   
   def woiBestDRMTarget(names: List[String]): Option[String] = {
     botLog("Find \"Best DRM WoI\" target")
     val flowchart  = BestWoiDRMFilter::Nil
-    val candidates = followFlowchart(game getCountries names, flowchart)
+    val candidates = followOpPFlowchart(game getCountries names, flowchart)
     topPriority(candidates, WoiMuslimPriorities) map (_.name)
   }
   
-  val WoiDrmMinusOneFilter = new CriteriaFilter("WoI DRM -1",
+  val WoiDrmMinusOneFilter = new CriteriaNode("WoI DRM -1",
     muslimTest(m => modifyWoiRoll(0, m, silent = true) == -1))
   
   def woiDrmMinusOneTarget(names: List[String]): Option[String] = {
     botLog("Find \"DRM -1 WoI\" target")
     val flowchart = WoiDrmMinusOneFilter::Nil
-    val candidates = followFlowchart(game getCountries names, flowchart)
+    val candidates = followOpPFlowchart(game getCountries names, flowchart)
     topPriority(candidates, WoiMuslimPriorities) map (_.name)
   }
   

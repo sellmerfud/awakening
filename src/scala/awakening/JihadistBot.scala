@@ -77,7 +77,7 @@ object JihadistBot extends BotHelpers {
 
   // Pick all candidates that are not the same as the target unless there
   // is only the target to choose from.
-  class NotDestinationPriority(target: String) extends Priority {
+  class NotDestinationPriority(target: String) extends CountryFilter {
     val desc = s"Not destination"
     def filter(countries: List[Country]) = (countries partition (_.name == target)) match {
       case (Nil, Nil)  => logResult(Nil);  Nil
@@ -93,7 +93,7 @@ object JihadistBot extends BotHelpers {
   // Jihadist Priorities Table
 
   // 1. Best Jihad DRM
-  case class BestJihadDRMPriority(major: Boolean) extends Priority {
+  case class BestJihadDRMPriority(major: Boolean) extends CountryFilter {
     val desc = s"Best ${if (major) "Major" else "Minor"} Jihad DRM"
     val lowest = new LowestScorePriority(desc,
                      muslimScore(m => jihadDRM(m, major), nonMuslimScore = 100)
@@ -230,33 +230,33 @@ object JihadistBot extends BotHelpers {
 
   // Jihadist OpP Flowchart filters
   
-  val NonMuslimFilter     = new CriteriaFilter("non-Muslim", nonMuslimTest(_  => true))
-  val PoorNonMuslimFilter = new CriteriaFilter("Poor non-Muslim", nonMuslimTest(_.isPoor))
-  val FairNonMuslimFilter = new CriteriaFilter("Fair non-Muslim", nonMuslimTest(_.isFair))
-  val GoodNonMuslimFilter = new CriteriaFilter("Good non-Muslim", nonMuslimTest(_.isGood))
+  val NonMuslimFilter     = new CriteriaNode("non-Muslim", nonMuslimTest(_  => true))
+  val PoorNonMuslimFilter = new CriteriaNode("Poor non-Muslim", nonMuslimTest(_.isPoor))
+  val FairNonMuslimFilter = new CriteriaNode("Fair non-Muslim", nonMuslimTest(_.isFair))
+  val GoodNonMuslimFilter = new CriteriaNode("Good non-Muslim", nonMuslimTest(_.isGood))
   
-  val PoorMuslimFilter  = new CriteriaFilter("Poor Muslim", muslimTest(_.isPoor))
-  val FairMuslimFilter  = new CriteriaFilter("Fair Muslim", muslimTest(_.isFair))
-  val GoodMuslimFilter  = new CriteriaFilter("Fair Muslim", muslimTest(_.isGood))
-  val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
+  val PoorMuslimFilter  = new CriteriaNode("Poor Muslim", muslimTest(_.isPoor))
+  val FairMuslimFilter  = new CriteriaNode("Fair Muslim", muslimTest(_.isFair))
+  val GoodMuslimFilter  = new CriteriaNode("Fair Muslim", muslimTest(_.isGood))
+  val AutoRecruitFilter = new CriteriaNode("Auto recruit", muslimTest(_.autoRecruit))
   
-  val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
+  val PoorTroopsActiveCellsFilter = new CriteriaNode("Poor with troops and active cells",
                   muslimTest(m => m.isPoor && activeCells(m) > 0))
-  val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells that troops/militia and JSP",
+  val PoorNeedCellsforMajorJihad = new CriteriaNode("Poor, 1-4 more cells that troops/militia and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
   // then they would be selected over Islamist Rule countries.                            
-  val AutoRecruitBestJihadDRM = new LowestScoreFilter("Auto recruit w/ best Jihad DRM",
+  val AutoRecruitBestJihadDRM = new LowestScoreNode("Auto recruit w/ best Jihad DRM",
                   muslimTest(_.autoRecruit),
                   muslimScore(m => if (m.isIslamistRule) 50 else jihadDRM(m, false), nonMuslimScore = 100))
-  val FairMuslimBestJihadDRM = new LowestScoreFilter("Fair Muslim w/ best Jihad DRM",
+  val FairMuslimBestJihadDRM = new LowestScoreNode("Fair Muslim w/ best Jihad DRM",
                   muslimTest(_.isFair),
                   muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
-  val PoorMuslimBestJihadDRM = new LowestScoreFilter("Poor Muslim w/ best Jihad DRM",
+  val PoorMuslimBestJihadDRM = new LowestScoreNode("Poor Muslim w/ best Jihad DRM",
                   muslimTest(_.isPoor),
                   muslimScore(m => jihadDRM(m, true), nonMuslimScore = 100))
-  val FewestCellsFilter = new LowestScoreFilter("Fewest cells", _ => true, _.totalCells)
+  val FewestCellsFilter = new LowestScoreNode("Fewest cells", _ => true, _.totalCells)
   
     
   // Bot will not try minor Jihad in Poor countries
@@ -323,7 +323,7 @@ object JihadistBot extends BotHelpers {
     else
       OtherPlotFlowchart
     botLog("Find \"Plot\" target")
-    val candidates = followFlowchart(game getCountries names, flowchart)
+    val candidates = followOpPFlowchart(game getCountries names, flowchart)
     topPriority(candidates, PlotPriorities) map (_.name)
   }
   
@@ -339,7 +339,7 @@ object JihadistBot extends BotHelpers {
       HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
       MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     botLog("Find \"Recruit\" target")
-    val candidates = followFlowchart(game getCountries names, RecruitTravelToFlowchart)
+    val candidates = followOpPFlowchart(game getCountries names, RecruitTravelToFlowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
@@ -352,14 +352,14 @@ object JihadistBot extends BotHelpers {
       SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority,
       OilExporterPriority)
     botLog("Find \"Travel To\" target")
-    val candidates = followFlowchart(game getCountries names, RecruitTravelToFlowchart)
+    val candidates = followOpPFlowchart(game getCountries names, RecruitTravelToFlowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
   def travelFromTarget(toCountry: String, names: List[String]): Option[String] = {
     botLog("Find \"Travel From\" target")
     val flowchart = List(
-      new AdjacentFilter(toCountry), AutoRecruitFilter, FewestCellsFilter)
+      new AdjacentCountriesNode(toCountry), AutoRecruitFilter, FewestCellsFilter)
 
     val priorities = List(
       new NotDestinationPriority(toCountry), IslamistRulePriority,
@@ -367,7 +367,7 @@ object JihadistBot extends BotHelpers {
       MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
       DisruptPrestigePriority, LowestRECPriority)
       
-    val candidates = followFlowchart(game getCountries names, flowchart)
+    val candidates = followOpPFlowchart(game getCountries names, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
