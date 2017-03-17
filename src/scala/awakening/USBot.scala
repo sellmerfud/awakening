@@ -35,14 +35,405 @@ import LabyrinthAwakening._
 object USBot extends BotHelpers {
 
 
-  def woiMuslimTargets(ops: Int): List[MuslimCountry] = game.muslims filter (_.warOfIdeasOK(ops))
+  // The Bot will not consider WoI in an untested muslim country unless
+  // it has 3 Ops to work with.
+  def woiMuslimTargets(ops: Int): List[MuslimCountry] = if (ops == 3)
+    game.muslims filter (_.warOfIdeasOK(ops))
+  else
+    game.muslims filter (m => !m.isUntested && m.warOfIdeasOK(ops))
   def woiNonMuslimTargets(ops: Int): List[NonMuslimCountry] = game.nonMuslims filter (_.warOfIdeasOK(ops))
   
   val onlyOneActiveCell = (c: Country) => c.activeCells == 1 && c.sleeperCells == 0
   val numPlotDice = (m: MuslimCountry) => (m.plots map { case PlotOnMap(plot, _) => plot.number }).sum
 
+  // This class is used when determining the priority plot to alert.
+  // It contains an PlotOnMap and a Country containing that plot.
+  case class PlotInCountry(onMap: PlotOnMap, country: Country) {
+    val id = PlotInCountry.nextId
+    def isWMD = onMap.plot == PlotWMD
+    override def toString() = s"$onMap in ${country.name}"
+  }
+  object PlotInCountry {
+    // In order to distinguish between on map plots during the US Bot alert process
+    // each PlotInCountry instance has a unique identifier.
+    private var _nextId = 0
+    private def nextId: Int = {
+      _nextId += 1
+      _nextId
+    }
+  }
+  
+  // PlotFilters are used both when following the Alert Priorities table.
+  // Each filter simply takes a list of PlotInCountry instances as input
+  // and produces a filtered list as output.
+  trait PlotFilter {
+    val desc: String
+    def filter(plots: List[PlotInCountry]): List[PlotInCountry]
+    override def toString() = desc
+  }
+  
+  // Boolean criteria filter used with Alert Prioities Table
+  // The input is fitered and if the results are empty, the original input
+  // is returned. Otherwise the filtered input is returned.
+  class PlotCriteria(val desc: String, criteria: (PlotInCountry) => Boolean) extends PlotFilter {
+    def filter(plots: List[PlotInCountry]) = (plots filter criteria) match {
+      case Nil      => botLog(s"Criteria ($desc): match = false"); plots
+      case matching => botLog(s"Criteria ($desc): match = true"); matching
+    }
+  }
+  
+  // Highest integer score filter used with Alert Prioities Table.
+  // Applies the given score function to each plot in the input list and
+  // takes the highest value.
+  // Then returns the list of plots whose score matches that highest value.
+  class PlotHighestScore(val desc: String, score: (PlotInCountry) => Int) extends PlotFilter {
+    def filter(plots: List[PlotInCountry]): List[PlotInCountry] = {
+      val high = (plots map score).max
+      botLog(s"Highest ($desc): score = $high")
+      plots filter (plot => score(plot) == high)
+    }
+  }
+  
+  // Calculate the resutling funding if the plot were to be resolved.
+  def fundingResult(plot: PlotInCountry): Int = {
+    val funding = game.funding
+    plot.country match {
+      case m: MuslimCountry                              => game.funding + (if (m.isGood) 2 else 1)
+      case n: NonMuslimCountry if n.name == Iran         => game.funding + 1
+      case n: NonMuslimCountry if n.name == UnitedStates => 9
+      case n: NonMuslimCountry if plot.isWMD             => 9
+      case n: NonMuslimCountry if n.isGood               => funding + plot.onMap.plot.number * 2
+      case n: NonMuslimCountry                           => funding + plot.onMap.plot.number
+    }
+  }
+
+  def inMuslimCountry(plot: PlotInCountry) = game isMuslim plot.country.name
+  def inNonMuslimCountry(plot: PlotInCountry) = game isNonMuslim plot.country.name
+  def getMuslim(plot: PlotInCountry) = game getMuslim plot.country.name
+  def getNonMuslim(plot: PlotInCountry) = game getNonMuslim plot.country.name
+  
   // ------------------------------------------------------------------
-  // Jihadist Priorities Table
+  // Alert Priorities Table
+  
+  val AlertPriorities = List(
+    new PlotCriteria("WMD in US", 
+      plot => plot.isWMD && plot.country.name == UnitedStates),
+    new PlotCriteria("WMD with troops",
+      plot => plot.isWMD && 
+              inMuslimCountry(plot) && 
+              getMuslim(plot).totalTroopsThatAffectPrestige > 0),
+    new PlotCriteria("In US",
+      plot => plot.country.name == UnitedStates),
+    new PlotCriteria("Good Muslim",
+      plot => inMuslimCountry(plot) &&
+              getMuslim(plot).isGood),
+    new PlotCriteria("non-Muslim if increase funding >= 8 from <= 7",
+      plot => inNonMuslimCountry(plot) &&
+              !plot.onMap.backlashed &&
+              game.funding <= 7 &&
+              fundingResult(plot) >= 8),
+    new PlotCriteria("Fair Muslim",
+      plot => inMuslimCountry(plot) &&
+              getMuslim(plot).isFair),
+    new PlotCriteria("With troops",
+      plot => inMuslimCountry(plot) && 
+              getMuslim(plot).totalTroopsThatAffectPrestige > 0),
+    new PlotHighestScore("Plot #", 
+      plot => plot.onMap.plot.number),
+    new PlotCriteria("Poor with Aid",
+      plot => inMuslimCountry(plot) && 
+              getMuslim(plot).isPoor &&
+              getMuslim(plot).aidMarkers > 0),
+    new PlotHighestScore("Resource", 
+      plot => if (inMuslimCountry(plot)) getMuslim(plot).resources else 0)
+  )
+  
+  // Process the list of PlotInCountry instances by each PlotFilter in the priorities list.
+  // In this function each filter is processed in order until we have used all filters
+  // in the list to narrow the choices to a single country.  If we go through all of
+  // the filters and we stil have more than one viable country, then we pick one at
+  // random.
+  // Note: The only time this function will return Nil, is if the original list of
+  //       PlotInCountry instances is empty.
+  def priorityPlot(plots: List[PlotInCountry]): PlotInCountry = {
+    @tailrec def topPriority(plots: List[PlotInCountry], priorities: List[PlotFilter]): PlotInCountry = {
+      botLog(s"priorityPlot: [${(plots map (_.toString)) mkString ", "}]")
+      (plots, priorities) match {
+        case (Nil, _)    => throw new IllegalStateException("priorityPlot() found nothing")
+        case (p::Nil, _) => p                               // We've narrowed it to one
+        case (ps, Nil)   => shuffle(ps).head                // Take one at random
+        case (ps, f::fs) => topPriority(f filter plots, fs) // Filter by next priority
+      }
+    }
+    assert(plots.nonEmpty, "priorityPlot() called with empty list of plots")
+    topPriority(plots, AlertPriorities)
+  }
+  
+  def roll(plot: Plot, m: MuslimCountry)    = dieRoll - m.aidMarkers <= plot.number  
+  def roll(plot: Plot, n: NonMuslimCountry) = dieRoll <= plot.number  
+  
+  // ------------------------------------------------------------------
+  // US Alert Table
+  trait AlertResult {
+    def apply(plot: PlotInCountry): Boolean
+  }
+  
+  class MuslimAlertResult(test: (Plot, MuslimCountry) => Boolean) extends AlertResult {
+    def apply(plot: PlotInCountry): Boolean = 
+      test(plot.onMap.plot, game getMuslim plot.country.name)
+  }
+  
+  class NonMuslimAlertResult(test: (Plot, NonMuslimCountry) => Boolean) extends AlertResult {
+    def apply(plot: PlotInCountry): Boolean = 
+      test(plot.onMap.plot, game getNonMuslim plot.country.name)
+  }
+  
+  // Muslim Alert Table
+  val muslimTable = {
+    val R = new MuslimAlertResult((p, m) => roll(p, m))
+    val N = new MuslimAlertResult((_, _) => false)
+    val Y = new MuslimAlertResult((_, _) => true)
+    val G = new MuslimAlertResult((_, m) => m.isGood)
+    val L = new MuslimAlertResult((_, m) => m.isGood || m.totalTroopsThatAffectPrestige > 0)
+    val T = new MuslimAlertResult((p, m) => m.totalTroopsThatAffectPrestige > 0 || roll(p, m))
+    
+    Vector(//1   2   3   4   5   6   7   8   9  10  11  12
+      Vector(R,  R,  R,  T,  R,  R,  T,  R,  R,  T,  R,  R),  // 1
+      Vector(R,  R,  R,  T,  R,  R,  T,  R,  R,  T,  R,  R),  // 2
+      Vector(G,  G,  G,  L,  G,  G,  L,  G,  G,  L,  G,  G),  // 3
+      Vector(Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y),  // 4
+      Vector(R,  R,  R,  T,  R,  R,  T,  R,  R,  T,  R,  R),  // 5
+      Vector(G,  G,  G,  L,  G,  G,  L,  G,  G,  L,  G,  G),  // 6
+      Vector(Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y,  Y),  // 7
+      Vector(R,  R,  R,  T,  R,  R,  T,  R,  R,  T,  R,  R),  // 8
+      Vector(N,  N,  N,  T,  N,  N,  T,  N,  N,  T,  N,  N)   // 9
+    )
+  }
+  
+  // non-Muslim Alert Table
+  val nonMuslimTable = {
+    val R = new NonMuslimAlertResult((p, n) =>  roll(p,n))
+    val N = new NonMuslimAlertResult((_, _) => false)
+    val Y = new NonMuslimAlertResult((_, _) => true)
+    val Z = new NonMuslimAlertResult((_, n) => n.name == UnitedStates)
+    val U = new NonMuslimAlertResult((p, n) => n.name == UnitedStates || roll(p, n))
+    val S = new NonMuslimAlertResult((p, n) => n.name == UnitedStates && roll(p, n))
+    
+    case class _2(letter: NonMuslimAlertResult) extends NonMuslimAlertResult((_, _) => true) {
+      override def apply(plot: PlotInCountry): Boolean = {
+        val p = plot.onMap.plot
+        val n = game getNonMuslim plot.country.name
+        (p == Plot1 && n.isGood) || p == Plot2 || p == Plot3 || letter(plot)
+      }
+    }
+    case class _3(letter: NonMuslimAlertResult) extends NonMuslimAlertResult((_, _) => true) {
+      override def apply(plot: PlotInCountry): Boolean = {
+        val p = plot.onMap.plot
+        val n = game getNonMuslim plot.country.name
+        (p == Plot2 && n.isGood) || p == Plot3 || letter(plot)
+      }
+    }
+    case class _4(letter: NonMuslimAlertResult) extends NonMuslimAlertResult((_, _) => true) {
+      override def apply(plot: PlotInCountry): Boolean = {
+        val p = plot.onMap.plot
+        val n = game getNonMuslim plot.country.name
+        ((p == Plot2 || p == Plot3) && n.isGood) || letter(plot)
+      }
+    }
+    
+    Vector(//   1      2      3      4      5      6      7      8      9     10     11      12
+      Vector(_4(Z), _4(U), _4(U), _4(U), _4(U), _4(U), _4(U), _4(U), _4(U), _4(U), _4(Z), _4(Z)),  // 1
+      Vector(_3(Z), _3(U), _3(U), _3(U), _3(U), _3(U), _3(U), _3(U), _3(U), _3(U), _3(Z), _3(Z)),  // 2
+      Vector(_2(Z), _2(U), _2(U), _2(U), _2(U), _2(U), _2(U), _2(U), _2(U), _2(U), _2(Z), _2(Z)),  // 3
+      Vector(    Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y),  // 4
+      Vector(_3(R), _3(U), _3(U), _3(U), _3(U), _3(U), _3(U), _3(U), _3(U), _3(U), _3(Z), _3(Z)),  // 5
+      Vector(_2(R), _2(U), _2(U), _2(U), _2(U), _2(U), _2(U), _2(U), _2(U), _2(U), _2(Z), _2(Z)),  // 6
+      Vector(    Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y,     Y),  // 7
+      Vector(    R,     Z,     Z,     U,     Z,     Z,     U,     Z,     Z,     U,     Z,     S),  // 8
+      Vector(    R,     Z,     Z,     U,     Z,     Z,     U,     Z,     Z,     U,     Z,     S)   // 9
+    )
+  }
+  
+  
+  // Returns true if the plot is Alerted.
+  def alertTable(card: Card, priorityPlot: PlotInCountry, plots: List[PlotInCountry]): Boolean = {
+    val (fundingMod, prestigeMod) = alertTableMods(plots filterNot (_.id == priorityPlot.id))
+    val funding     = (game.funding  + fundingMod)  max 1 min 9
+    val prestige    = (game.prestige + prestigeMod) max 1 min 12
+    val alertResult = if (game isMuslim priorityPlot.country.name)
+      muslimTable(funding - 1)(prestige - 1)
+    else
+      nonMuslimTable(funding - 1)(prestige - 1)
+    if (alertResult(priorityPlot)) {
+      alertPlot(card, priorityPlot);
+      true
+    }
+    else
+      false
+  }
+  
+  // Returns the drms for (funding, prestige)
+  def alertTableMods(otherPlots: List[PlotInCountry]): (Int, Int) = {
+    var (funding, prestige) = (0, 0)
+    for (plot <- otherPlots) {
+      plot.country match {
+        case m: MuslimCountry =>
+          if (m.isGood) funding += 2
+          if (m.isGood && m.totalTroopsThatAffectPrestige > 0) prestige -= 1
+          if (m.isFair || m.isPoor) funding += 1
+          if ((m.isFair || m.isPoor) && m.totalTroopsThatAffectPrestige > 0) prestige -= 1
+        case n: NonMuslimCountry =>
+          if (n.isGood) funding += (plot.onMap.plot.number * 2)
+          if (n.isFair || n.isPoor) funding += plot.onMap.plot.number
+      }
+    }
+    
+    // Don't really want to ask everytime if this is the last turn, so
+    // we will just assume that it is not.
+    val lastTurn = false 
+    if (lastTurn) funding += 1
+    else {
+      game.gwot match {
+        case (posture, 3) if posture == game.usPosture => prestige += 1
+        case _ =>
+      }
+      if (game hasMuslim (_.isIslamistRule)) prestige -= 1
+      if (globalEventInPlay("Pirates"))      funding += 1
+      if (globalEventInPlay("Fracking"))     funding -= 1
+    }
+    (funding, prestige)
+  }
+  
+
+  // ------------------------------------------------------------------
+  // US Alert Resoulution Flowchart definitions.
+  
+  trait AlertFlowchartNode
+  
+  trait AlertDecision extends AlertFlowchartNode {
+    val desc: String
+    def yesPath: AlertFlowchartNode
+    def noPath: AlertFlowchartNode
+    // ops is the total number of ops available including reserves
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]): Boolean
+    override def toString() = desc
+  }
+  
+  sealed trait AlertAction    extends AlertFlowchartNode
+  case object AlertPlot       extends AlertAction
+  case object AlertTable      extends AlertAction
+  case object PARFlowchart    extends AlertAction
+  case object AddToUSReserves extends AlertAction
+
+  // This is the starting point of the ARF Flowchart
+  object WMDPlacedInCountry extends AlertDecision {
+    val desc = "WMD place in country?"
+    def yesPath = ThreeOpsForWMD
+    def noPath  = ThreeOpsAvailable
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = plots exists (_.isWMD)
+  }
+  
+  object ThreeOpsForWMD extends AlertDecision {
+    val desc = "3 Ops available for WMD alert?"
+    def yesPath = WMDInUS
+    def noPath  = LastCardOrEventAlertsPriorityPlot
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops == 3
+  }
+  
+  object WMDInUS extends AlertDecision {
+    val desc = "WMD in the United States?"
+    def yesPath = AlertPlot
+    def noPath  = WMDWithTroopsAndPrestigeAbove3
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = 
+      plots exists (p => p.isWMD && p.country.name == UnitedStates)
+  }
+  
+  object LastCardOrEventAlertsPriorityPlot extends AlertDecision {
+    val desc = "Last card of phase or Event would alert priority plot?"
+    def yesPath = PARFlowchart
+    def noPath  = AddToUSReserves
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = {
+      val targetPlot = priorityPlot(plots)
+      card.eventAlertsPlot(targetPlot.country.name, targetPlot.onMap.plot) ||
+      askYorN("Does the Jihadist Bot have another card in hand (y/n)? ") == false
+    }
+  }
+  
+  object WMDWithTroopsAndPrestigeAbove3 extends AlertDecision {
+    val desc = "WMD with troops and Prestige > 3?"
+    def yesPath = AlertPlot
+    def noPath  = WMDAtNonMuslimAndFundingBelow8
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) =
+      game.prestige > 3 &&
+      (plots.exists (plot => plot.isWMD && 
+                     inMuslimCountry(plot) && 
+                     getMuslim(plot).totalTroopsThatAffectPrestige > 0))
+  }
+  
+  object WMDAtNonMuslimAndFundingBelow8 extends AlertDecision {
+    val desc = "WMD at non-Muslim and Funding <8?"
+    def yesPath = AlertPlot
+    def noPath  = AlertTable
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) =
+      game.funding < 8 &&
+      (plots exists (plot => plot.isWMD && inNonMuslimCountry(plot)))
+  }
+  
+  
+  object ThreeOpsAvailable extends AlertDecision {
+    val desc = "3 Ops available?"
+    def yesPath = LastCardOrOrReservesBelow2
+    def noPath  = PlayableNonJihadistEvent
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops == 3
+  }
+  
+  object LastCardOrOrReservesBelow2 extends AlertDecision {
+    val desc = "Last card of phase or US reserves < 2?"
+    def yesPath = AlertTable
+    def noPath  = MultiplePlots
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = {
+      game.reserves.us < 2 ||
+      askYorN("Does the Jihadist Bot have another card in hand (y/n)? ") == false
+    }
+  }
+  
+  object PlayableNonJihadistEvent extends AlertDecision {
+    val desc = "Playable non-Jihadist event?"
+    def yesPath = PARFlowchart
+    def noPath  = LastCardOrEventAlertsPriorityPlot
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops == 3
+  }
+  
+  object MultiplePlots extends AlertDecision {
+    val desc = "Multiple plots?"
+    def yesPath = AlertTable
+    def noPath  = PARFlowchart
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = {
+      game.reserves.us < 2 ||
+      askYorN("Does the Jihadist Bot have another card in hand (y/n)? ") == false
+    }
+  }
+  
+  // ------------------------------------------------------------------
+  // Follow the operations flowchart to pick which operation will be performed.
+  def alertResolutionFlowchart(card: Card, ops: Int, plots: List[PlotInCountry]): AlertAction = {
+    assert(plots.nonEmpty, "alertResolutionFlowchart() called with empty plots list")
+    @tailrec def evaluateNode(node: AlertFlowchartNode): AlertAction = node match {
+      case action:   AlertAction   => action
+      case decision: AlertDecision =>
+        botLog(s"ARF Flowchart: $node")
+        if (decision.condition(card, ops, plots))
+          evaluateNode(decision.yesPath)
+        else
+          evaluateNode(decision.noPath)
+    }
+    evaluateNode(WMDPlacedInCountry)
+  }
+  
+
+
+  // ------------------------------------------------------------------
+  // US Priorities Table entries
 
   //  1. Lowest # of Plot dice
   val FewestPlotDicePriority = new LowestScorePriority("Lowest # of Plot dice",
@@ -129,7 +520,7 @@ object USBot extends BotHelpers {
 
   // ------------------------------------------------------------------
   // US Operations Flowchart definitions.
-  sealed trait Operation extends OpFlowchartItem
+  sealed trait Operation extends OpFlowchartNode
   case object WoiMuslimHighestDRM  extends Operation
   case object WoiMuslimMinusOneDRM extends Operation
   case object WoiNonMuslim         extends Operation
@@ -229,16 +620,16 @@ object USBot extends BotHelpers {
   // ------------------------------------------------------------------
   // Follow the operations flowchart to pick which operation will be performed.
   def operationsFlowchart(ops: Int): Operation = {
-    @tailrec def evaluateItem(item: OpFlowchartItem): Operation = item match {
+    @tailrec def evaluateNode(node: OpFlowchartNode): Operation = node match {
       case operation: Operation        => operation
       case decision: OperationDecision =>
-        botLog(s"PAR Flowchart: $item")
+        botLog(s"PAR Flowchart: $node")
         if (decision.condition(ops))
-          evaluateItem(decision.yesPath)
+          evaluateNode(decision.yesPath)
         else
-          evaluateItem(decision.noPath)
+          evaluateNode(decision.noPath)
     }
-    evaluateItem(DisruptMuslim2MoreCellsDecision)
+    evaluateNode(DisruptMuslim2MoreCellsDecision)
   }
 
 
@@ -290,7 +681,7 @@ object USBot extends BotHelpers {
     new CriteriaNode("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
         muslimTest(m => globalEventInPlay("Abu Sayyaf") && m.name == Philippines && 
                          m.totalCells > 0 && m.totalTroops == 0)),
-    new CriteriaNode("With cell, but no troops or militia",
+    new CriteriaNode("With cells, but no troops or militia",
       muslimTest(m => m.totalCells > 0 && m.totalTroopsAndMilitia == 0)),
     new CriteriaNode("Regime Change needs troops + militia for WoI",
       muslimTest(m => m.inRegimeChange && m.totalTroopsAndMilitia - m.totalCells < 5))
@@ -300,10 +691,12 @@ object USBot extends BotHelpers {
     botLog("Find \"Deploy To\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
-    followOpPFlowchart(game getCountries countryNames, DeployToFlowchart) match {
+    val target = followOpPFlowchart(game getCountries countryNames, DeployToFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployToPriorities) map (_.name)
     }
+    botLog(s"Deploy To result: ${target getOrElse "<none>"}")
+    target
   }
   
   // ------------------------------------------------------------------
@@ -326,10 +719,12 @@ object USBot extends BotHelpers {
     botLog("Find \"Deploy From\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
-    followOpPFlowchart(game getCountries countryNames, DeployFromFlowchart) match {
+    val target = followOpPFlowchart(game getCountries countryNames, DeployFromFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
     }
+    botLog(s"Deploy From result: ${target getOrElse "<none>"}")
+    target
   }
   
   // ------------------------------------------------------------------
@@ -423,21 +818,26 @@ object USBot extends BotHelpers {
     performCardEvent(card, US, triggered = true)
   }
   
-  
   // Starting point for Jihadist bot card play.
   def cardPlay(card: Card): Unit = {
-    
+    val maxOps = maxOpsPlusReserves(card)
+    val plots = for (country <- game.countries; plot <- country.plots)
+      yield PlotInCountry(plot, country)
+      
     // If there is at least one plot on the map then
     // we consult the Alert Resolution Flowchart (ARF)
-    val consultPAR = if (game.countries exists (_.plots.nonEmpty)) {
-      // May have to add a new check to the cards to see if the event would
-      // remove the Priority Plot!
-      // The ARF may defer to the PAR
-      true
+    val consultPAR = plots.isEmpty || {
+      alertResolutionFlowchart(card, maxOps, plots) match {
+        case AlertPlot       => alertPlot(card, priorityPlot(plots)); false
+        case AlertTable      => !alertTable(card, priorityPlot(plots), plots)
+        case PARFlowchart    => true
+        case AddToUSReserves => addToReserves(US, card.ops); false
+      }
     }
-    else 
-      true
     
+    // If the Alert Resolution Flowchart has indicated that we continue,
+    // the first see if Reassessment is possible.  If Reassessment is
+    // not performed, then finally we consult the PAR flowchart.
     if (consultPAR && !reassessment(card)) {
       // If the event is playable then the event is alwasy executed
       if (card.eventIsPlayable(US)) {
@@ -452,7 +852,7 @@ object USBot extends BotHelpers {
         if (card.autoTrigger)
           performCardEvent(card, US)
     
-        val opsUsed = operationsFlowchart(maxOpsPlusReserves(card)) match {
+        val opsUsed = operationsFlowchart(maxOps) match {
           case WoiMuslimHighestDRM  => woiMuslimHighestDRMOperation(card)
           case WoiMuslimMinusOneDRM => woiMuslimDRMMinusOneOperation(card)
           case WoiNonMuslim         => woiNonMuslimOperation(card)
@@ -462,9 +862,19 @@ object USBot extends BotHelpers {
           case HomelandSecurity     => 0 // No operation performed
         }
         homelandSecurity(card, opsUsed)
-        
       }
     }
+  }
+  
+  // Alert the given plot
+  def alertPlot(card: Card, plot: PlotInCountry): Unit = {
+    log()
+    log(s"$US performs an Alert operation")
+    log(separator())
+    assert(maxOpsPlusReserves(card) == 3, "Not enough Ops for Alert")
+    if (3 > card.ops)
+      expendBotReserves(3 - card.ops)
+    performAlert(plot.country.name, plot.onMap)
   }
   
   // Checks to see if the Bot wants to do a Reassessment and
@@ -480,7 +890,7 @@ object USBot extends BotHelpers {
        ((game.usPosture == Soft && game.islamistResources >= 2) ||
         (game.usPosture == Hard && game.gwotPenalty == 3 && game.numIslamistRule == 0))
     
-    if (tryReassess) {
+    tryReassess && {
       // Reassessment is desired. Ask if the next US card has enough Ops
       val opsNeeded = 6 - card.ops - game.reserves.us
       println("The US is planning a Reassessment.")
@@ -489,7 +899,7 @@ object USBot extends BotHelpers {
       else
         askYorN(s"Does the US have another card in hand with at least $opsNeeded Ops (y/n)? ")
 
-      if (reassess) {
+      reassess && {
         val cardNum = askCardNumber("Card # ", initial = None, allowNone = false).get
         val card2 = deck(cardNum)
         if (card2.ops >= opsNeeded) {
@@ -515,17 +925,14 @@ object USBot extends BotHelpers {
           false
         }
       }
-      else
-        false
     }
-    else
-      false
   }
 
 
   def woiMuslimHighestDRMOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     val target  = woiBestDRMTarget(countryNames(woiMuslimTargets(maxOps))).get
+    testCountry(target)
     val opsUsed = (game getMuslim target).governance
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
@@ -536,6 +943,7 @@ object USBot extends BotHelpers {
   def woiMuslimDRMMinusOneOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     val target  = woiDrmMinusOneTarget(countryNames(woiMuslimTargets(maxOps))).get
+    testCountry(target)
     val opsUsed = (game getMuslim target).governance
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
@@ -555,7 +963,6 @@ object USBot extends BotHelpers {
   
   def deployOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
-    val target  = woiNonMuslimTarget(countryNames(woiNonMuslimTargets(maxOps))).get
     val (fromCandidates, toCandidates) = game.deployTargets(maxOps).get
     val from = deployFromTarget(fromCandidates).get
     val to   = deployToTarget(toCandidates).get
@@ -619,6 +1026,11 @@ object USBot extends BotHelpers {
   // then we do nothing.
   def homelandSecurity(card: Card, opsUsed: Int): Unit = {
     if (opsUsed < card.ops) {
+      val unusedOps = card.ops - opsUsed
+      log()
+      log(s"$US performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(game.reserves.us,"reserve")})")
+      log(separator())
+      
       // TODO: flesh out
     }
   }

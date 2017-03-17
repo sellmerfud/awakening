@@ -51,15 +51,15 @@ trait BotHelpers {
   def jihadSuccessPossible(m: MuslimCountry, major: Boolean) =
     (1 + jihadDRM(m, major)) <= m.governance
   
-  // trait representing items in the 
+  // trait representing nodes in the 
   // - Jihadist EvO Flowchart
   // - US PAR Flowchart
-  trait OpFlowchartItem
+  trait OpFlowchartNode
   
- trait OperationDecision extends OpFlowchartItem {
+  trait OperationDecision extends OpFlowchartNode {
     val desc: String
-    def yesPath: OpFlowchartItem
-    def noPath: OpFlowchartItem
+    def yesPath: OpFlowchartNode
+    def noPath: OpFlowchartNode
     def condition(ops: Int): Boolean
     override def toString() = desc
   }
@@ -116,7 +116,7 @@ trait BotHelpers {
       case (Nil, _)    => None
       case (c::Nil, _) => Some(c)                             // We've narrowed it to one
       case (cs, Nil)   => shuffle(cs).headOption              // Take one at random
-      case (cs, p::ps) => topPriority(p filter countries, ps) // Filter by next priority
+      case (cs, f::fs) => topPriority(f filter countries, fs) // Filter by next priority
     }
   }
   
@@ -148,7 +148,7 @@ trait BotHelpers {
     case n: NonMuslimCountry => score(n)  
   }
 
-  // Boolean criteria filter used with Property Tables.
+  // Boolean criteria filter used with Priority Tables.
   // The input is fitered and if the results are empty, the original input
   // is returned. Otherwise the filtered input is returned.
   class CriteriaPriority(val desc: String, criteria: (Country) => Boolean) extends CountryFilter {
@@ -158,7 +158,7 @@ trait BotHelpers {
     }
   }
 
-  // Highest integer score filter used with Property Tables.
+  // Highest integer score filter used with Priority Tables.
   // Applies the given score function to each country in the input list and
   // takes the highest value.
   // Then returns the list of countries whose score matches that highest value.
@@ -170,7 +170,7 @@ trait BotHelpers {
     }
   }
 
-  // Lowest integer score filter used with Property Tables.
+  // Lowest integer score filter used with Priority Tables.
   // Applies the given score function to each country in the input list and
   // takes the lowest value.
   // Then returns the list of countries whose score matches that lowest value.

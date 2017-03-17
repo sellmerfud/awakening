@@ -353,7 +353,10 @@ object LabyrinthAwakening {
   
   type CardEvent       = Role => Unit
   type EventConditions = Role => Boolean
+  type EventAlertsPlot = (String, Plot) => Boolean
   val AlwaysPlayable: EventConditions =  _ => true
+  val DoesNotAlertPlot: EventAlertsPlot = (_, _) => false
+  
   
   sealed trait CardMarker
   case object NoMarker      extends CardMarker
@@ -384,6 +387,7 @@ object LabyrinthAwakening {
     val marker: CardMarker,   // Only used by the adjust routines
     val lapsing: CardLapsing,
     val autoTrigger: Boolean,
+    val eventAlertsPlot: EventAlertsPlot,
     val eventConditions: EventConditions,
     val executeEvent: CardEvent) {
       
@@ -1668,7 +1672,7 @@ object LabyrinthAwakening {
   
   def modifyWoiRoll(die: Int, m: MuslimCountry, ignoreGwotPenalty: Boolean = false, silent: Boolean = false): Int = {
     def logNotZero(value: Int, msg: String): Unit =
-      if (!silent && value != 0) log(f"$value%+2d: $msg")
+      if (!silent && value != 0) log(f"$value%+2d $msg")
     val prestigeMod = game.prestige match {
       case x if x < 4  => -1
       case x if x < 7  =>  0
@@ -1698,7 +1702,7 @@ object LabyrinthAwakening {
   
   def modifyJihadRoll(die: Int, m: MuslimCountry, major: Boolean, silent: Boolean = false): Int = {
     def logNotZero(value: Int, msg: String): Unit =
-      if (!silent && value != 0) log(f"$value%+2d: $msg")
+      if (!silent && value != 0) log(f"$value%+2d $msg")
     val awakeningMod   = m.awakening
     val reactionMod    = -m.reaction
     logNotZero(awakeningMod,   "Awakening")
@@ -1908,8 +1912,10 @@ object LabyrinthAwakening {
     val trigger  = card.eventWillTrigger(opponent)
     val eventMsg = if (playable)
       s"  (The ${card.association} event is playable)"
-    else if (card.association == opponent && game.humanRole == player)
+    else if (card.association == opponent && opponent == game.botRole)
       s"  (The ${card.association} event will ${if (trigger) "" else "not "}be triggered)"
+    else if (card.association == opponent && opponent == game.humanRole)
+      s"  (The ${card.association} event will not be triggered)"
     else 
       s"  (The ${card.association} event is not playable)"
     
@@ -2401,7 +2407,7 @@ object LabyrinthAwakening {
         else {
           log(s"$US performs War of Ideas in $name")
           log(separator())
-          val die = humanDieRoll()
+          val die = getDieRoll(US)
           log(s"Die roll: $die")
           val modRoll = modifyWoiRoll(die, tested, ignoreGwotPenalty)
           if (modRoll <= 4) {
@@ -2434,7 +2440,7 @@ object LabyrinthAwakening {
         log()
         log(s"$US performs War of Ideas in $name")
         log(separator())
-        val die = humanDieRoll()
+        val die = getDieRoll(US)
         val newPosture = if (die > 4) Hard else Soft
         game = game.updateCountry(n.copy(posture = newPosture))
         log(s"Die roll: $die")
@@ -2512,28 +2518,28 @@ object LabyrinthAwakening {
       increasePrestige(1)
   }
   
-  def performAlert(target: String): Unit = {
-    val c = game.getCountry(target)
-    assert(c.hasPlots, s"performAlert(): $target has no plots")
-    addOpsTarget(target)
-    // Any any are backlashed, then don't add them to the list unless that is all there is.
-    val (alerted :: remaining) = if (c.plots exists (_.backlashed))
-      shuffle(c.plots filterNot (_.backlashed))
-    else
-      shuffle(c.plots)
-    val prestigeDelta = if (alerted.plot == PlotWMD) 1 else 0
+  def performAlert(countryName: String, plotOnMap: PlotOnMap): Unit = {
+    val c = game.getCountry(countryName)
+    assert(c.plots contains plotOnMap, s"performAlert(): $countryName does not contain $plotOnMap")
+    addOpsTarget(countryName)
+
+    val plot = plotOnMap.plot
+    val prestigeDelta = if (plot == PlotWMD) 1 else 0
+    val i = c.plots.indexOf(plotOnMap)
+    val remaining = (c.plots take i) ::: (c.plots drop (i + 1))
     val updated = c match {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = remaining)).adjustPrestige(prestigeDelta)
       case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = remaining)).adjustPrestige(prestigeDelta)
     }
-    if (alerted.plot == PlotWMD) {
-      log(s"$alerted alerted in $target, remove it from the game.")
+    if  (plot != PlotWMD)
+      game = game.copy(resolvedPlots = plot :: game.resolvedPlots)
+    
+    if (plot == PlotWMD) {
+      log(s"$plot alerted in $countryName, remove it from the game.")
       log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot")
     }
-    else {
-      log(s"$alerted alerted in $target, move it to the resolved plots box.")
-      game = game.copy(resolvedPlots = alerted.plot :: game.resolvedPlots)
-    }
+    else 
+      log(s"$plot alerted in $countryName, move it to the resolved plots box.")
   }
   
   def performReassessment(): Unit = {
@@ -2582,7 +2588,7 @@ object LabyrinthAwakening {
           val die = getDieRoll(Jihadist, prompt = s"Enter die roll: ")
           log(s"Die roll: $die")
           val modRoll = if (game.isTrainingCamp(from)) {
-            log(s"-1: Travelling from Training Camps")
+            log(s"-1 Travelling from Training Camps")
             log(s"Modified roll: ${die - 1}")
             die - 1
           }
@@ -4006,8 +4012,7 @@ object LabyrinthAwakening {
       logCardPlay(US, card)
       try game.humanRole match {
         case US => humanUsCardPlay(card)
-        case _  => // USBot.cardPlay(card)
-          log("US Bot has not been implemented!!!")
+        case _  => USBot.cardPlay(card)
       }
       catch {
         case AbortCardPlay =>
@@ -4210,12 +4215,23 @@ object LabyrinthAwakening {
     performDisrupt(askCountry("Disrupt in which country: ", game.disruptTargets(ops)))
   }
   
+  // Pick a random plot in the country.
+  // If any are backlashed, then don't add them to the list unless that is all there is.
+  def humanPickPlotToAlert(countryName: String): PlotOnMap = {
+    val c = game.getCountry(countryName)
+    assert(c.hasPlots, s"humanPickPlotToAlert(): $countryName has no plots")
+    if ((c.plots exists (_.backlashed)) && (c.plots exists (p => !p.backlashed)))
+      shuffle(c.plots filterNot (_.backlashed)).head
+    else
+      shuffle(c.plots).head
+  }
     
   def humanAlert(): Unit = {
     log()
     log(s"$US performs an Alert operation")
     log(separator())
-    performAlert(askCountry("Alert plot in which country: ", game.alertTargets))
+    val name = askCountry("Alert plot in which country: ", game.alertTargets)
+    performAlert(name, humanPickPlotToAlert(name))
   }
     
   def humanReassess(): Unit = {

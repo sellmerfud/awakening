@@ -90,7 +90,7 @@ object JihadistBot extends BotHelpers {
     }
   }
 
-  // Jihadist Priorities Table
+  // Jihadist Priorities Table entries
 
   // 1. Best Jihad DRM
   case class BestJihadDRMPriority(major: Boolean) extends CountryFilter {
@@ -372,7 +372,7 @@ object JihadistBot extends BotHelpers {
   }
   
   // Jihadisht Operations Flowchart definitions.
-  sealed trait Operation extends OpFlowchartItem
+  sealed trait Operation extends OpFlowchartNode
   case object RecruitOp    extends Operation
   case object TravelOp     extends Operation
   case object PlotOp       extends Operation
@@ -467,16 +467,16 @@ object JihadistBot extends BotHelpers {
   
   // Follow the operations flowchart to pick which operation will be performed.
   def operationsFlowchart(ops: Int): Operation = {
-    @tailrec def evaluateItem(item: OpFlowchartItem): Operation = item match {
+    @tailrec def evaluateNode(node: OpFlowchartNode): Operation = node match {
       case operation: Operation        => operation
       case decision: OperationDecision =>
-        botLog(s"EvO Flowchart: $item")
+        botLog(s"EvO Flowchart: $node")
         if (decision.condition(ops))
-          evaluateItem(decision.yesPath)
+          evaluateNode(decision.yesPath)
         else
-          evaluateItem(decision.noPath)
+          evaluateNode(decision.noPath)
     }
-    evaluateItem(MajorJihadDecision)
+    evaluateNode(MajorJihadDecision)
   }
   
   def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.jihadist) min 3
