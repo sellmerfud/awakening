@@ -33,6 +33,7 @@ import scala.annotation.tailrec
 import scala.util.Properties.{lineSeparator, isWin}
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
+import scala.io.StdIn.readLine
 import scenarios._
 
 object LabyrinthAwakening {
@@ -924,7 +925,7 @@ object LabyrinthAwakening {
         Some(Left((sleepers, actives)))
       }
       else if (c.hasCadre)
-        Some(Right())
+        Some(Right(()))
       else
         None
     } 
@@ -2262,7 +2263,7 @@ object LabyrinthAwakening {
                   val m = (markers find (_.name == name)).get
                   markersLost = name :: markersLost
                   hitsRemaining -= m.num; 
-                  nextHit(markers filterNot (_ == name), troops, militia)
+                  nextHit(markers filterNot (_.name == name), troops, militia)
               }
             }
           }
