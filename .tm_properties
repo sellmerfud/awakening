@@ -1,0 +1,27 @@
+# To clear the file globs from the "Go To File" dialog.
+#  defaults delete com.macromates.TextMate.preview "Find in Folder Globs"
+#    Should exit TextMate first.
+#    This will clear the for ALL projects!!!
+
+
+scmDisplay  = '${TM_SCM_BRANCH:+ ☛ $TM_SCM_NAME: ${TM_SCM_BRANCH/^.*svn\/maestro\///}}'
+relativeDir = '${TM_DIRECTORY/^.*\/playground\/?(.+)?/${1:?$1:.}/}'
+windowTitle = '$TM_DISPLAYNAME – $relativeDir $scmDisplay'
+
+excludeFilesInBrowser       = "{$excludeFilesInBrowser,*.class,*.jar}"
+excludeDirectoriesInBrowser = "{$excludeDirectoriesInBrowser,classes,lib}"
+excludeInFileChooser        = "{$excludeInFileChooser,classes,lib,help,robo-help,scaladoc,*.jar}"
+excludeInFolderSearch       = "{$excludeInFolderSearch,classes,lib,log,scaladoc,help,robo-help,*.jar}" 
+
+showWrapColumn = true
+wrapColumn     = 100
+softWrap       = false
+
+TM_TODO_IGNORE       = '(?:^|/)jquery'
+
+# [ src/main/scala/** ]
+fileType  = 'source.scala'
+
+[ source.scala,source.java,text.html.basic ]
+tabSize         = 2
+softTabs        = true
