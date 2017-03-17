@@ -37,7 +37,7 @@ object USBot extends BotHelpers {
 
   // The Bot will not consider WoI in an untested muslim country unless
   // it has 3 Ops to work with.
-  def woiMuslimTargets(ops: Int): List[MuslimCountry] = if (ops == 3)
+  def woiMuslimTargets(ops: Int): List[MuslimCountry] = if (ops >= 3)
     game.muslims filter (_.warOfIdeasOK(ops))
   else
     game.muslims filter (m => !m.isUntested && m.warOfIdeasOK(ops))
@@ -337,7 +337,7 @@ object USBot extends BotHelpers {
     val desc = "3 Ops available for WMD alert?"
     def yesPath = WMDInUS
     def noPath  = LastCardOrEventAlertsPriorityPlot
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops == 3
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops >= 3
   }
   
   object WMDInUS extends AlertDecision {
@@ -355,7 +355,7 @@ object USBot extends BotHelpers {
     def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = {
       val targetPlot = priorityPlot(plots)
       card.eventAlertsPlot(targetPlot.country.name, targetPlot.onMap.plot) ||
-      askYorN("Does the Jihadist Bot have another card in hand (y/n)? ") == false
+      askYorN(s"Does the $US Bot have another card in hand (y/n)? ") == false
     }
   }
   
@@ -384,7 +384,7 @@ object USBot extends BotHelpers {
     val desc = "3 Ops available?"
     def yesPath = LastCardOrOrReservesBelow2
     def noPath  = PlayableNonJihadistEvent
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops == 3
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops >= 3
   }
   
   object LastCardOrOrReservesBelow2 extends AlertDecision {
@@ -393,7 +393,7 @@ object USBot extends BotHelpers {
     def noPath  = MultiplePlots
     def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = {
       game.reserves.us < 2 ||
-      askYorN("Does the Jihadist Bot have another card in hand (y/n)? ") == false
+      askYorN(s"Does the $US Bot have another card in hand (y/n)? ") == false
     }
   }
   
@@ -401,17 +401,14 @@ object USBot extends BotHelpers {
     val desc = "Playable non-Jihadist event?"
     def yesPath = PARFlowchart
     def noPath  = LastCardOrEventAlertsPriorityPlot
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops == 3
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = card.eventIsPlayable(US)
   }
   
   object MultiplePlots extends AlertDecision {
     val desc = "Multiple plots?"
     def yesPath = AlertTable
     def noPath  = PARFlowchart
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = {
-      game.reserves.us < 2 ||
-      askYorN("Does the Jihadist Bot have another card in hand (y/n)? ") == false
-    }
+    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = plots.size > 1
   }
   
   // ------------------------------------------------------------------
@@ -469,7 +466,7 @@ object USBot extends BotHelpers {
                   
   //  9. Philippines (if Abu Sayyaf)  (Base game only)
   val PhilippinesPriority = new CriteriaPriority("Philippines (if Abu Sayyaf)",
-                  c => c.name == Philippines && globalEventInPlay("Abu Sayyaf"))
+                  c => c.name == Philippines && globalEventInPlay("Abu Sayyaf (ISIL)"))
                   
   // 10. Good
   val GoodPriority = new CriteriaPriority("Good Muslim", _.isGood)
@@ -517,6 +514,12 @@ object USBot extends BotHelpers {
   // 22. Oil Exporter
   val OilExporterPriority = new CriteriaPriority("Oil exporter",
                   muslimTest(_.oilProducer))
+
+  // Other priorities that are not in the priority table.
+  val NoCellsPriority = new CriteriaPriority("No cells", _.totalCells == 0)
+  val HasCadrePriority = new CriteriaPriority("Has Cadre", _.hasCadre)
+  val ClosestToUSPriority = new LowestScorePriority("Closest to US",
+    c => distance(c.name, UnitedStates))
 
   // ------------------------------------------------------------------
   // US Operations Flowchart definitions.
@@ -871,7 +874,7 @@ object USBot extends BotHelpers {
     log()
     log(s"$US performs an Alert operation")
     log(separator())
-    assert(maxOpsPlusReserves(card) == 3, "Not enough Ops for Alert")
+    assert(maxOpsPlusReserves(card) >= 3, "Not enough Ops for Alert")
     if (3 > card.ops)
       expendBotReserves(3 - card.ops)
     performAlert(plot.country.name, plot.onMap)
@@ -895,9 +898,9 @@ object USBot extends BotHelpers {
       val opsNeeded = 6 - card.ops - game.reserves.us
       println("The US is planning a Reassessment.")
       val reassess = if (opsNeeded == 1)
-        askYorN("Does the US have another card in hand (y/n)? ")
+        askYorN(s"Does the $US Bot have another card in hand (y/n)? ")
       else
-        askYorN(s"Does the US have another card in hand with at least $opsNeeded Ops (y/n)? ")
+        askYorN(s"Does the $US Bot have another card in hand with at least $opsNeeded Ops (y/n)? ")
 
       reassess && {
         val cardNum = askCardNumber("Card # ", initial = None, allowNone = false).get
@@ -1004,7 +1007,7 @@ object USBot extends BotHelpers {
   
   def regimeChangeOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
-    assert(maxOps == 3, "regimeChangeOperation() called with less than 3 Ops available")
+    assert(maxOps >= 3, "regimeChangeOperation() called with less than 3 Ops available")
     val opsUsed = 3
     val target  = regimeChangeTarget(game.regimeChangeTargets).get
     val source  = regimeChangeFromTarget(game.regimeChangeSources(3)).get
@@ -1016,7 +1019,41 @@ object USBot extends BotHelpers {
     opsUsed
   }
   
+  sealed trait HomelandSecurityAction
+  case object DisruptUS            extends HomelandSecurityAction
+  case object WoiSoftNonMuslim     extends HomelandSecurityAction
+  case object DisruptNonMuslim     extends HomelandSecurityAction
+  case object AddToReserves        extends HomelandSecurityAction
+  case object DisruptMuslimToCadre extends HomelandSecurityAction
+  case object WoiNonMuslimOpposite extends HomelandSecurityAction
+  case object WoiNonMuslimUntested extends HomelandSecurityAction
 
+  // cardOps is the numbe of Ops remaining from the played card. (no reserves)
+  // maxOps  is the tota number of Ops available including reserves.
+  // The DisruptMuslimToRemoveCadre, WoiNonMuslimOpposite, WoiNonMuslimUntested actions cannot use reserves.
+  def getHomelandSecurityAction(cardOps: Int, maxOps: Int): Option[HomelandSecurityAction] = {
+    val canDisruptUS = (game getNonMuslim UnitedStates).totalCells > 0 ||
+                       (game getNonMuslim UnitedStates).hasCadre
+    val canWoiSoftNonMuslim = game.usPosture == Hard && game.worldPosture == Soft
+    val canDisruptNonMuslim = game.disruptNonMuslimTargets(maxOps).nonEmpty
+    // The following can only use cardOps (no reserves)
+    val canAddToReserves = cardOps > 0 && game.reserves.us < 2
+    val canDisruptMuslimCadre = game.disruptMuslimTargets(cardOps) map game.getMuslim exists (_.hasCadre)
+    val canWoINonMuslimOpposite = 
+      game.warOfIdeasNonMuslimTargets(cardOps) map game.getNonMuslim exists (_.isOppositeUsPosture)
+    val canWoINonMuslimUntested = 
+      game.warOfIdeasNonMuslimTargets(cardOps) map game.getNonMuslim exists (_.isUntested)
+    
+    if      (canDisruptUS)            Some(DisruptUS)
+    else if (canWoiSoftNonMuslim)     Some(WoiSoftNonMuslim)
+    else if (canDisruptNonMuslim)     Some(DisruptNonMuslim)
+    else if (canAddToReserves)        Some(AddToReserves)
+    else if (canDisruptMuslimCadre)   Some(DisruptMuslimToCadre)
+    else if (canWoINonMuslimOpposite) Some(WoiNonMuslimOpposite)
+    else if (canWoINonMuslimUntested) Some(WoiNonMuslimUntested)
+    else                              None
+  }
+  
   // Perform Homeland Security
   // The opsUsed parameter is the number of Ops used to perform the card operation.
   // If this value is less than the number of Ops on the card, then we will 
@@ -1027,13 +1064,136 @@ object USBot extends BotHelpers {
   def homelandSecurity(card: Card, opsUsed: Int): Unit = {
     if (opsUsed < card.ops) {
       val unusedOps = card.ops - opsUsed
+      val maxRadOps = unusedOps + game.reserves.us
+      
       log()
       log(s"$US performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(game.reserves.us,"reserve")})")
       log(separator())
       
-      // TODO: flesh out
+      // Returns the number of actions executed
+      def nextAction(completed: Int): Unit = {
+        if (completed < maxRadOps) {
+          val cardOps    = (unusedOps - completed) max 0  // Ops remaining from the card
+          val reserveOps = maxRadOps - cardOps                   // Ops remaining from reserves
+          val ops = getHomelandSecurityAction(cardOps, maxRadOps - completed) match {
+            case Some(DisruptUS)            => hsDisruptUS(cardOps, reserveOps)
+            case Some(WoiSoftNonMuslim)     => hsWoiSoftNonMuslim(cardOps, reserveOps)
+            case Some(DisruptNonMuslim)     => hsDisruptNonMuslim(cardOps, reserveOps)
+            case Some(AddToReserves)        => hsAddtoReserves(cardOps)
+            case Some(DisruptMuslimToCadre) => hsDisruptMuslimCadre(cardOps)
+            case Some(WoiNonMuslimOpposite) => hsWoiNonMuslimOpposite(cardOps)
+            case Some(WoiNonMuslimUntested) => hsWoiNonMuslimUntested(cardOps)
+            case None => -1  // Finished with radicalization
+          }
+          if (ops > 0)  
+            nextAction(completed + ops)
+        }
+      }
+      nextAction(0)
     }
   }
   
   
+  // Disrupt in the UnitedStates
+  // cardsOps   - The number of unused Ops remaining from the card
+  // reserveOps - The number of unused Ops remaining from reserves
+  // Returns the number of ops used
+  def hsDisruptUS(cardOps: Int, reserveOps: Int): Int = {
+    val opsUsed = 1
+    if (cardOps < opsUsed)
+      expendBotReserves(opsUsed)
+    log()
+    log(s"Homeland Security: Disrupt in the United States")
+    performDisrupt(UnitedStates)
+    opsUsed
+  }
+    
+  // War of Ideas in a Soft Muslim country.
+  // Priorities: Good then Fair then Poor. 
+  // Among these, no Cells then Cadre, priority to closest to the US.
+  // cardsOps   - The number of unused Ops remaining from the card
+  // reserveOps - The number of unused Ops remaining from reserves
+  // Returns the number of ops used
+  def hsWoiSoftNonMuslim(cardOps: Int, reserveOps: Int): Int = {
+    val priorities = List(
+      GoodPriority, FairPriority, PoorPriority,
+      NoCellsPriority, HasCadrePriority, ClosestToUSPriority)              
+    val maxOps = cardOps + reserveOps
+    val candidates = game.warOfIdeasNonMuslimTargets(maxOps) map game.getNonMuslim filter (_.isSoft)
+    val target  = topPriority(candidates, priorities).get
+    val opsUsed = target.governance
+    if (opsUsed > cardOps)
+      expendBotReserves(opsUsed - cardOps)
+    log()
+    log(s"Homeland Security: War of Ideas in ${target.name}")
+    performWarOfIdeas(target.name, opsUsed)
+    opsUsed
+  }
+    
+  // Disrupt a non-Muslim country
+  // Priorities: Closest to the US, then most cells.
+  // cardsOps   - The number of unused Ops remaining from the card
+  // reserveOps - The number of unused Ops remaining from reserves
+  // Returns the number of ops used
+  def hsDisruptNonMuslim(cardOps: Int, reserveOps: Int): Int = {
+    val priorities = List(ClosestToUSPriority, MostCellsPriority)              
+    val maxOps = cardOps + reserveOps
+    val candidates = game.disruptNonMuslimTargets(maxOps) map game.getNonMuslim
+    val target  = topPriority(candidates, priorities).get
+    val opsUsed = target.governance
+    if (opsUsed > cardOps)
+      expendBotReserves(opsUsed - cardOps)
+    log()
+    log(s"Homeland Security: Disrupt in ${target.name}")
+    performDisrupt(target.name)
+    opsUsed
+  }
+    
+  // cardsOps - The number of unused Ops remaining from the card
+  // Add any remaining card ops to reserves until reserves are full.
+  // Returns the number of ops added
+  def hsAddtoReserves(cardOps: Int): Int = {
+    log()
+    log(s"Homeland Security: Add to reserves")
+    val opsAdded = cardOps min (2 - game.reserves.us)
+    addToReserves(US, opsAdded)
+    opsAdded
+  }
+  
+  // Disrupt a Muslim country to remvoe a Cadre.
+  // Priorities: Closest to the US.
+  // cardsOps   - The number of unused Ops remaining from the card
+  // Returns the number of ops used
+  def hsDisruptMuslimCadre(cardOps: Int): Int = {
+    val priorities = List(ClosestToUSPriority)              
+    val candidates = game.disruptMuslimTargets(cardOps) map game.getMuslim
+    val target  = topPriority(candidates, priorities).get
+    val opsUsed = target.governance
+    log()
+    log(s"Homeland Security: Disrupt to remove Cadre in ${target.name}")
+    performDisrupt(target.name)
+    opsUsed
+  }
+    
+  def hsWoiNonMuslimOpposite(cardOps: Int): Int = {
+    val priorities = List(PoorPriority, FairPriority, GoodPriority)
+    val candidates = game.warOfIdeasNonMuslimTargets(cardOps) map game.getNonMuslim filter (_.isOppositeUsPosture)
+    val target  = topPriority(candidates, priorities).get
+    val opsUsed = target.governance
+    log()
+    log(s"Homeland Security: War of Ideas in ${target.name}")
+    performWarOfIdeas(target.name, opsUsed)
+    opsUsed
+  }
+    
+  def hsWoiNonMuslimUntested(cardOps: Int): Int = {
+    val priorities = List(PoorPriority, FairPriority, GoodPriority)
+    val candidates = game.warOfIdeasNonMuslimTargets(cardOps) map game.getNonMuslim filter (_.isUntested)
+    val target  = topPriority(candidates, priorities).get
+    val opsUsed = target.governance
+    log()
+    log(s"Homeland Security: War of Ideas in ${target.name}")
+    performWarOfIdeas(target.name, opsUsed)
+    opsUsed
+  }  
 }

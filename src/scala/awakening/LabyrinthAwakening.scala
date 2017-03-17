@@ -480,6 +480,7 @@ object LabyrinthAwakening {
     def isSchengen = Schengen contains name
     def isHard = if (name == UnitedStates ) game.usPosture == Hard else posture == Hard
     def isSoft = if (name == UnitedStates ) game.usPosture == Soft else posture == Soft
+    def isOppositeUsPosture = !isUntested && posture != game.usPosture
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) = 
       ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
 
@@ -569,7 +570,7 @@ object LabyrinthAwakening {
 
     def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
     def maxDeployFrom(ops: Int) = if (inRegimeChange)
-      if (ops == 3 && troops - totalCells >= 5) troops - totalCells else 0
+      if (ops >= 3 && troops - totalCells >= 5) troops - totalCells else 0
     else
       troops
     def canDeployFrom(ops: Int) = maxDeployFrom(ops) > 0
@@ -579,7 +580,7 @@ object LabyrinthAwakening {
     def majorJihadOK(ops: Int) = 
       totalCells - totalTroopsAndMilitia >= 5 && (
         (isPoor && (ops  > 1 || besiegedRegime)) || 
-        (isFair && (ops == 3 || (ops == 2 && besiegedRegime)))
+        (isFair && (ops >= 3 || (ops == 2 && besiegedRegime)))
       )
   
       def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
@@ -776,6 +777,8 @@ object LabyrinthAwakening {
       (posture, value.abs min 3)
     }
     
+    def worldPosture = gwot._1
+    
     // 0, 1, 2, 3
     def gwotPenalty: Int = {
       gwot match {
@@ -891,14 +894,14 @@ object LabyrinthAwakening {
     def regimeChangeTargets: List[String] = countryNames(muslims filter (_.isIslamistRule))
       
     def regimeChangePossible(ops: Int) = 
-      ops == 3 && usPosture == Hard && regimeChangeSources(ops).nonEmpty && regimeChangeTargets.nonEmpty
+      ops >= 3 && usPosture == Hard && regimeChangeSources(ops).nonEmpty && regimeChangeTargets.nonEmpty
   
     def withdrawFromTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
     
     def withdrawToTargets: List[String] = "track" :: countryNames(muslims filter (_.canDeployTo(3)))
       
     def withdrawPossible(ops: Int) = 
-        ops == 3 && usPosture == Soft && withdrawFromTargets.nonEmpty
+        ops >= 3 && usPosture == Soft && withdrawFromTargets.nonEmpty
 
     def disruptAffectsPrestige(name: String): Boolean = getCountry(name) match {
       case m: MuslimCountry    => m.disruptAffectsPrestige
@@ -941,11 +944,19 @@ object LabyrinthAwakening {
     def disruptTargets(ops: Int): List[String] = 
       disruptMuslimTargets(ops) ::: disruptNonMuslimTargets(ops)
 
-    def alertPossible(ops: Int) = ops == 3 && alertTargets.nonEmpty
+    def alertPossible(ops: Int) = ops >= 3 && alertTargets.nonEmpty
     
     def alertTargets: List[String] = countryNames(countries filter (_.hasPlots))
     
-    def warOfIdeasTargets(ops: Int): List[String] = countryNames(countries filter (_.warOfIdeasOK(ops)))
+    def warOfIdeasMuslimTargets(ops: Int): List[String] =
+      countryNames(muslims filter (_.warOfIdeasOK(ops)))
+    
+    def warOfIdeasNonMuslimTargets(ops: Int): List[String] =
+      countryNames(nonMuslims filter (_.warOfIdeasOK(ops)))
+    
+    def warOfIdeasTargets(ops: Int): List[String] = 
+      warOfIdeasMuslimTargets(ops) ::: warOfIdeasNonMuslimTargets(ops)
+    
     
     def recruitTargets: List[String] = countryNames(countries filter (_.recruitOK))
     
@@ -3750,8 +3761,8 @@ object LabyrinthAwakening {
     // ask which side the user wishes to play -- to be done
     val (humanRole, botDifficulties) =
       askOneOf("Which side do you wish play? (US or Jihadist) ", "US"::"Jihadist"::Nil, allowAbort = false) match {
-        case Some("US") => (US, Muddled :: Coherent :: Attractive :: Nil)
-        case _          => (Jihadist, OffGuard :: Competent :: Adept :: Nil)
+        case Some("US") => (US, Muddled:: Nil)
+        case _          => (Jihadist, OffGuard :: Nil)
       }
     
     val humanAutoRoll = false
