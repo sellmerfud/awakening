@@ -5,7 +5,7 @@
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
 // 
-// Copyright (c) 2010-2017 Curt Sellmer
+// Copyright (c) 2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -28,13 +28,16 @@
 
 package awakening
 
+import java.io.{ File, FileWriter, FileReader, IOException }
 import scala.util.Random.{shuffle, nextInt}
 import scala.annotation.tailrec
 import scala.util.Properties.{lineSeparator, isWin}
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 import scala.io.StdIn.readLine
+import scala.pickling.Defaults._, scala.pickling.json, scala.pickling.json._
 import scenarios._
+import FUtil.Pathname
 
 object LabyrinthAwakening {
   
@@ -407,9 +410,17 @@ object LabyrinthAwakening {
     def compare(x: Card, y: Card) = x.number compare y.number
   }
   
-  // Used to keep track of cards played during the current turn.
-  case class PlayedCard(role:Role, card: Card) {
-    override def toString() = s"$role played ${cardNumAndName(card.number)}"
+  sealed trait Play
+  // Used to keep track of cards played during the current turn
+  // for display purposes only.  This is stored in the game state.
+  case class PlayedCard(role: Role, cardNum: Int) extends Play {
+    override def toString() = s"$role played ${cardNumAndName(cardNum)}"
+  }
+  case class Played2Cards(role: Role, card1Num: Int, card2Num: Int) extends Play {
+    override def toString() = s"$role played ${cardNumAndName(card1Num)} and ${cardNumAndName(card2Num)}"
+  }
+  case class PlotsResolved(num: Int) extends Play {
+    override def toString() = s"$num Plots were resolved"
   }
   
   val LabyrinthDeck = "Labyrinth Deck"  // For future support…
@@ -644,10 +655,10 @@ object LabyrinthAwakening {
     trainingCampCells: CampCells = CampCells(0, 0),
     eventParams: EventParameters = EventParameters(),
     resolvedPlots: List[Plot] = Nil,
-    cardsPlayed: List[PlayedCard] = Nil,   // Cards played during current turn (most recent first).
-    firstPlotCard: Option[Int] = None,  // Card number
-    cardsLapsing: List[Int] = Nil,       // Card numbers
-    cardsRemoved: List[Int] = Nil,   // Cards removed from the game.
+    plays: List[Play] = Nil,               // Cards plays/plot resolutions during current turn (most recent first).
+    firstPlotCard: Option[Int] = None,     // Card number
+    cardsLapsing: List[Int] = Nil,         // Card numbers
+    cardsRemoved: List[Int] = Nil,         // Cards removed from the game.
     targetsThisCard: CardTargets = CardTargets(),
     targetsLastCard: CardTargets = CardTargets()
   ) {
@@ -978,14 +989,14 @@ object LabyrinthAwakening {
     def plotPossible(ops: Int) = plotsAvailableWith(ops).nonEmpty && plotTargets.nonEmpty
     
     // --- Summaries --------------------------------------
-    def cardPlaySummary: Seq[String] = {
+    def playSummary: Seq[String] = {
       val b = new ListBuffer[String]
-      b += s"Cards played this turn"
+      b += s"Plays so far this turn"
       b += separator()
-      if (cardsPlayed.isEmpty)
+      if (plays.isEmpty)
         b += "none"
       else
-        b ++= cardsPlayed.reverse map (_.toString)
+        b ++= plays.reverse map (_.toString)
       b.toList
     }
     
@@ -1182,18 +1193,6 @@ object LabyrinthAwakening {
   // Global variables
   var game = initialGameState(new Awakening2010, US, true, Muddled :: Nil)
   
-  // A history of the card plays for the current game turn, most recent first.
-  // The current game state is NOT in the list. 
-  // Allows user to roll back to a previous card play in the current turn.
-  var previousCardPlays = List.empty[GameState]
-  
-  // The history of game turns, most recent first
-  // The current game state is NOT in the list.  It is added at the
-  // end of the turn.
-  // Allows user to roll back to a previous turn.
-  var previousTurns = List.empty[GameState]
-  
-  
   // If num is 1 use the name as is
   // otherwise either use the plural if given or add an 's' to the name.
   def amountOf(num: Int, name: String, plural: Option[String] = None) = 
@@ -1275,8 +1274,11 @@ object LabyrinthAwakening {
     }
   }
     
-  def askOneOf(prompt: String, options: Seq[Any], initial: Option[String] = None, 
-               allowNone: Boolean = false, allowAbort: Boolean = true, 
+  def askOneOf(prompt: String,
+               options: Seq[Any],
+               initial: Option[String] = None, 
+               allowNone: Boolean = false,
+               allowAbort: Boolean = true, 
                abbr: Map[String, String] = Map.empty): Option[String] = {
     val choices = if (allowAbort) options ++ List(AbortCard) else options
     def testResponse(response: Option[String]): Option[String] = {
@@ -1463,7 +1465,10 @@ object LabyrinthAwakening {
   // Allow the user to choose 1 or more choices and return
   // a list of keys to the chosen items.
   // Caller should println() a brief description of what is being chosen.
-  def askMenu(items: ListMap[String, String], numChoices: Int = 1, repeatsOK: Boolean = false): List[String] = {
+  def askMenu(items: ListMap[String, String], 
+             numChoices: Int = 1,
+             repeatsOK: Boolean = false,
+             allowAbort: Boolean = true): List[String] = {
     def nextChoice(num: Int, itemsRemaining: ListMap[String, String]): List[String] = {
       if (itemsRemaining.isEmpty || num > numChoices)
         Nil
@@ -1476,7 +1481,7 @@ object LabyrinthAwakening {
           println(s"${i+1}) ${itemsRemaining(key)}")
         val prompt = if (numChoices > 1) s"${ordinal(num)} Selection: "
         else "Selection: "
-        val choice = askOneOf(prompt, 1 to itemsRemaining.size).get.toInt
+        val choice = askOneOf(prompt, 1 to itemsRemaining.size, allowAbort = allowAbort).get.toInt
         println()
         val index  = choice - 1
         val key    = indexMap(index)
@@ -1999,10 +2004,126 @@ object LabyrinthAwakening {
     log()
     summary foreach log
   }
+  
+  
+  // We assume that the current working directory
+  // set as the installed directory and thus the game directory
+  // is in ./games.  The script used to invoke the program will
+  // ensure that is the case.
+  val gamesDir = Pathname("./games")
+  
+  // Save the current play
+  // 
+  def savePlay(): Unit = {
+    val num = game.plays.size
+    saveGameState(gameFilePath(s"play-$num"))
+  }
+  
+  def saveTurn(): Unit = {
+    import Pathname.glob
+    saveGameState(gameFilePath(s"turn-${game.turn}"))
+    // Remove all of the play files
+    val playFiles = glob(gamesDir/gameName.get/"play*")
+    inspect("playFiles", playFiles)
+    playFiles foreach (_.delete())
+  }
+  
+  def gameFilePath(filename: String): Pathname = {
+    assert(gameName.nonEmpty, "gameFilePath(): called with gameName not set!")
+    gamesDir/gameName.get/filename
+  }
+  
+  
+  // Return the list of saved games
+  def savedGames: Seq[String] = {
+    val subdirs = gamesDir.children() filter { path => mostRecentSaveFile(path).nonEmpty }
+    subdirs map (_.basename.toString)
+  }
+  
+  // Given a directory for a saved game finds the most recent save file.
+  // Files can be named play-n or turn-n
+  // If any play-n files exist take the one with the hightest number, otherwise
+  // take the turn-n file with the highest number.
+  def mostRecentSaveFile(gameDirectory: Pathname): Option[Pathname] = {
+    val PLAY = """play-(\d+)""".r
+    val TURN = """turn-(\d+)""".r
+    case class Entry(score: Int, path: Pathname)
+    if (gameDirectory.isDirectory) {
+      val entries = gameDirectory.children() map { path =>
+        path.basename.toString match {
+          case PLAY(n) => Entry(n.toInt + 5000, path)
+          case TURN(n) => Entry(n.toInt, path)
+          case _       => Entry(-1, path)
+        }
+      }
+      (entries filter (_.score >= 0)).sortBy(-_.score).headOption map (_.path)
+    }
+    else
+      None
     
+  }
+  val VALID_NAME = """([-A-Za-z0-9_ ]+)""".r
+  var gameName: Option[String] = None // The name of sub-directory containing the game files
+  
+  // Ask the user for a name for their game.
+  def askGameName(prompt: String, forCreate: Boolean): String = {
+    def getName: String = {
+      readLine(prompt) match {
+        case null => getName
+        case VALID_NAME(name) if forCreate =>
+          if (!(gamesDir/name).exists)
+            name
+          else {
+            println(s"A game with the name '$name' already exists")
+            getName
+          }
+
+        case VALID_NAME(name) =>
+          val dir = gamesDir/name
+          if (dir.isDirectory && dir.isReadable)
+            name
+          else {
+            println(s"'$name' is not a valid game name")
+            getName
+          }
+        case name => 
+          println("Game names must consist of one or more letters, numbers, spaces, dashes or undercores")
+          getName
+      }
+    }
+    getName
+  }
+  
   // Save the current game state.
-  def saveGameState(filename: String): Unit = {
-    // To be done.
+  def saveGameState(filepath: Pathname): Unit = {
+    try {
+      filepath.dirname.mkpath() // Make sure that the game directory exists
+      filepath.writeFile(game.pickle.value)
+    }
+    catch {
+      case e: IOException =>
+        val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
+        println(s"IO Error writing game file ($filepath)$suffix")
+      case e: Throwable =>
+        val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
+        println(s"Error writing save game ($filepath)$suffix")
+    }
+  }
+  
+  // The path should be the full path to the file to load.
+  // Will set the game global variable
+  def loadGameState(filepath: Pathname): Unit = {
+    try {
+      game = json.JSONPickle(filepath.readFile()).unpickle[GameState]
+    }
+    catch {
+      case e: IOException =>
+        val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
+        println(s"IO Error reading game file ($filepath)$suffix")
+      case e: Throwable =>
+        val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
+        println(s"Error writing save game ($filepath)$suffix")
+    }
   }
   
   // Display a list of what needs to be done to get the game board into
@@ -3631,13 +3752,15 @@ object LabyrinthAwakening {
         log() // blank line before next one
       } // for 
       // Move all of the plots to the resolved plots box.
-      println("Put the plots in the resolved plots box")
+      println("Put the resolved plots in the resolved plots box")
       (game.countries filter (_.hasPlots)) foreach {
         case m: MuslimCountry    =>
            game = game.updateCountry(m.copy(plots = Nil)).copy(resolvedPlots = (m.plots map (_.plot)) ::: game.resolvedPlots)
         case n: NonMuslimCountry => 
           game = game.updateCountry(n.copy(plots = Nil)).copy(resolvedPlots = (n.plots map (_.plot)) ::: game.resolvedPlots)
       }
+      game = game.copy(plays = PlotsResolved(unblocked.size) :: game.plays)
+      savePlay()  // Save the play so we can roll back
     }
   }
   
@@ -3653,6 +3776,12 @@ object LabyrinthAwakening {
       game = game.copy(offMapTroops = game.offMapTroops - 3,
                        eventParams = game.eventParams.copy(sequestrationTroops = false))
     }
+  }
+  
+  def logStartOfTurn(): Unit = {
+    log()
+    log(s"Start of turn ${game.turn}")
+    log(separator(char = '='))
   }
   
   def endTurn(): Unit = {
@@ -3739,15 +3868,17 @@ object LabyrinthAwakening {
         log(s"Flip green regime change marker in ${rc.name} to its tan side")
       }
     
-      // Reset history of cards for current turn
-      // Move the current turn Ops targets to the previous 
-      game = game.copy(turn = game.turn + 1, cardsPlayed = Nil)
-    
-      previousCardPlays = Nil
-      previousTurns = game :: previousTurns
-      saveGameState("some file name")      
+      saveTurn()      
+      // Reset history of cards for current turn and advance the turn number.
+      game = game.copy(turn = game.turn + 1, plays = Nil)
+      logStartOfTurn()
     }
   }
+  
+  val scenarios = ListMap[String, Scenario](
+    "Awakening2010" -> new Awakening2010
+  )
+  val scenarioChoices = scenarios map { case (key, scenario) => key -> scenario.name }
   
   val AbortCard = "abort card"
   case object ExitGame extends Exception
@@ -3755,35 +3886,100 @@ object LabyrinthAwakening {
   
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
+    gamesDir.mkpath()
     // parse cmd line args -- to be done
-    // prompt for scenario -- to be done
-    // prompt for bot's (jihadish ideology / us resolve) difficulty level. -- to be done
-    val scenario = new Awakening2010
-    // ask which side the user wishes to play -- to be done
-    val (humanRole, botDifficulties) =
-      askOneOf("Which side do you wish play? (US or Jihadist) ", "US"::"Jihadist"::Nil, allowAbort = false) match {
-        case Some("US") => (US, Muddled:: Nil)
-        case _          => (Jihadist, OffGuard :: Nil)
-      }
     
-    val humanAutoRoll = false
-    game = initialGameState(scenario, humanRole, humanAutoRoll, botDifficulties)
+    askWhichGame() match {
+      case Some(name) =>
+        gameName = Some(name)
+        val gamepath = mostRecentSaveFile(gamesDir/name) getOrElse {
+          throw new IllegalStateException(s"No saved file found for game '$name'")
+        }
+        loadGameState(gamepath)
+        printSummary(game.scenarioSummary)
+        printSummary(game.scoringSummary)
+        // printSummary(game.statusSummary)
+        printSummary(game.playSummary)
+        
+      case None => // Start a new game
+        gameName = Some(askGameName("Enter a name for your new game: ", forCreate = true))
+        // prompt for scenario
+        val scenario = scenarios(askMenu(scenarioChoices, allowAbort = false).head)
+        // ask which side the user wishes to play
+        val sidePrompt = "Which side do you wish play? (US or Jihadist) "
+        val humanRole = Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
+        val difficulties = askDifficulties(if (humanRole == US) Jihadist else US)
+        val humanAutoRoll = !askYorN("Do you wish to roll your own dice (y/n)? ")
+
+        game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
+        logSummary(game.scenarioSummary)
+        printSummary(game.scoringSummary)
+        // printSummary(game.statusSummary)
+        saveTurn()  // Save the initial game state as turn-0
+        game = game.copy(turn = game.turn + 1)
+        logStartOfTurn()
+    }
     
-    logSummary(game.scenarioSummary)
-    printSummary(game.scoringSummary)
-    printSummary(game.statusSummary)
-    saveGameState("initial state before first turn.")
-    game = game.copy(turn = game.turn + 1)
-    log()
-    log()
-    log(s"Start of turn ${game.turn}")
-    log(separator(char = '='))
     try commandLoop()
     catch {
       case ExitGame => 
     }
   }
 
+  // Ask which saved game the user wants to load.
+  // Return None if they with to start a new game.
+  // previously saved game.
+  def askWhichGame(): Option[String] = {
+    val games = savedGames
+    if (games.isEmpty)
+      None
+    else {
+      val choices = ("--new-game--" -> "Start a new game") +: 
+                    (games map (g => g -> s"Resume game '$g'"))
+      println("Which game would you like to play:")
+      askMenu(ListMap(choices:_*), allowAbort = false).head match {
+        case "--new-game--" => None
+        case name => Some(name)
+      }
+    }
+  }
+    
+  val USLevels = Map(
+    OffGuard.name  -> List(OffGuard),
+    Competent.name -> List(OffGuard,Competent),
+    Adept.name     -> List(OffGuard,Competent,Adept),
+    Vigilant.name  -> List(OffGuard,Competent,Adept,Vigilant),
+    Ruthless.name  -> List(OffGuard,Competent,Adept,Vigilant,Ruthless),
+    NoMercy.name   -> List(OffGuard,Competent,Adept,Vigilant,Ruthless,NoMercy))
+    
+  val JihadistLevels = Map(
+    Muddled.name    -> List(Muddled),
+    Coherent.name   -> List(Muddled,Coherent),
+    Attractive.name -> List(Muddled,Coherent,Attractive),
+    Potent.name     -> List(Muddled,Coherent,Attractive,Potent),
+    Infectious.name -> List(Muddled,Coherent,Attractive,Potent,Infectious),
+    Virulent.name   -> List(Muddled,Coherent,Attractive,Potent,Infectious,Virulent))
+  
+  def askDifficulties(botRole: Role): List[BotDifficulty] = {
+    val USLevels = List(OffGuard,Competent,Adept,Vigilant,Ruthless,NoMercy)
+    val JLevels  = List(Muddled,Coherent,Attractive,Potent,Infectious,Virulent)
+    val levels = if (botRole == US) USLevels else JLevels
+    val fmt = "%%-%ds".format((levels map (_.name.length)).max)
+    
+    def nextChoice(num: Int, prev: Option[BotDifficulty], levels: List[BotDifficulty]): List[(String, String)] =
+      (prev, levels) match {
+        case (_, Nil) => Nil
+        case (None, (d@BotDifficulty(name, desc)) :: rest) => 
+          (num.toString -> s"${fmt.format(name)}: $desc") :: nextChoice(num+1, Some(d), rest)
+        case (Some(BotDifficulty(pname, _)), (d@BotDifficulty(name, desc)) :: rest) =>
+          (num.toString -> s"${fmt.format(name)}: $pname plus $desc") :: nextChoice(num+1, Some(d), rest)
+      }
+    
+    val choices = ListMap(nextChoice(1, None, levels):_*)
+    println("\nChoose a difficulty level:")
+    levels take askMenu(choices, allowAbort = false).head.toInt
+  }
+  
   // Check to see if any automatic victory condition has been met.
   // Note: The WMD resolved in United States condition is checked by resolvePlots()
   def checkAutomaticVictory(): Unit = {
@@ -3813,14 +4009,27 @@ object LabyrinthAwakening {
     }
   }
   
+  def unresolvedPlots: Int = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
+  
   // ---------------------------------------------
   // Process all top level user commands.
   @tailrec def commandLoop(): Unit = {
     checkAutomaticVictory()
+    val cards = (game.plays collect {
+      case PlayedCard(_, _)      => 1
+      case Played2Cards(_, _, _) => 2
+    }).sum
+    
+    if (cards > 3 && unresolvedPlots > 0) {
+      println(separator())
+      println(s"$cards cards have been played and there are unresolved plots on the map")
+      if (askYorN("Do you want to resolve the plots now (y/n) ?"))
+        resolvePlots()
+    }
+    
+    val plots = unresolvedPlots
+    val plotDisp = if (plots == 0) "" else s", ${amountOf(plots, "unresolved plot")}"
     val prompt = {
-      val cards = game.cardsPlayed.size
-      val plots = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
-      val plotDisp = if (plots == 0) "" else s", ${amountOf(plots, "unresolved plot")}"
       s"""
          |>>> Turn ${game.turn}  (${amountOf(cards, "card")} played$plotDisp) <<<
          |${separator()}
@@ -3849,7 +4058,7 @@ object LabyrinthAwakening {
                                 |actions will be conducted."""),
       Command("show",         """Display the current game state
                                 |  show all        - entire game state
-                                |  show played     - cards played during the current turn
+                                |  show plays      - cards played during the current turn
                                 |  show summary    - game summary including score
                                 |  show scenario   - scenario and difficulty level
                                 |  show caliphate  - countries making up the Caliphate
@@ -3873,9 +4082,10 @@ object LabyrinthAwakening {
       Command("rollback",     """Roll back card plays in the current turn or
                                 |roll back to the start of any previous turn""".stripMargin),
       Command("help",         """List available commands"""),
-      Command("quit",         """Save the current turn and quit the game""")
+      Command("quit",         """Quit the game.  All plays for the current turn will be saved.""")
     ) filter { 
-      case Command("remove cadre", _) => game.humanRole == Jihadist && (game.hasCountry(_.hasCadre))
+      case Command("remove cadre", _)  => game.humanRole == Jihadist && (game.hasCountry(_.hasCadre))
+      case Command("resolve plots", _) => unresolvedPlots > 0
       case _                          => true
     } 
 
@@ -3896,8 +4106,7 @@ object LabyrinthAwakening {
         case "adjust"        => adjustSettings(param)
         case "history"       => game.history foreach println  // TODO: Allow > file.txt
         case "rollback"      => println("Not implemented.")
-        case "quit" =>
-          throw ExitGame
+        case "quit"          => if (askYorN("Really quit (y/n)? ")) throw ExitGame
         case "help" if param.isEmpty =>
           println("Available commands: (type help <command> for more detail)")
           println(orList(CmdNames))
@@ -3923,10 +4132,10 @@ object LabyrinthAwakening {
   
   
   def showCommand(param: Option[String]): Unit = {
-    val options = "all" :: "cards" :: "summary" :: "scenario" :: "caliphate" ::
+    val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" ::
                   "civil wars" :: countryNames(game.countries)
     askOneOf("Show: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
-      case "cards"      => printSummary(game.cardPlaySummary)
+      case "plays"      => printSummary(game.playSummary)
       case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
       case "scenario"   => printSummary(game.scenarioSummary)
       case "caliphate"  => printSummary(game.caliphateSummary)
@@ -4011,28 +4220,26 @@ object LabyrinthAwakening {
   
   def usCardPlay(param: Option[String]): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
-      val card    = deck(cardNumber)
-      // Save the game state so we can roll back later 
-      previousCardPlays = game :: previousCardPlays
-      // Add the card to the list of played cards for the turn
-      // and clear the op targets for the current card.
+      val card = deck(cardNumber)
+      val savedState = game
       game = game.copy(
-        cardsPlayed        = PlayedCard(US, card) :: game.cardsPlayed,
+        plays           = PlayedCard(US, card.number) :: game.plays,
         targetsLastCard = game.targetsThisCard,
         targetsThisCard = CardTargets()
       )
       logCardPlay(US, card)
-      try game.humanRole match {
-        case US => humanUsCardPlay(card)
-        case _  => USBot.cardPlay(card)
+      try {
+        game.humanRole match {
+          case US => humanUsCardPlay(card)
+          case _  => USBot.cardPlay(card)
+        }
+        savePlay()  // Save the play so we can roll back
       }
       catch {
         case AbortCardPlay =>
           println("\n>>>> Aborting the current card play <<<<")
           println(separator())
-          val mostRecent :: rest = previousCardPlays
-          previousCardPlays = rest
-          performRollback(mostRecent)
+          performRollback(savedState)
       }
     }
   }
@@ -4084,8 +4291,8 @@ object LabyrinthAwakening {
             case None => None // Cancel the operation
             case Some(cardNum) =>
               val card2 = deck(cardNum)
-              // Add to the list of played cards for the turn
-              game = game.copy(cardsPlayed = PlayedCard(US, card2) :: game.cardsPlayed)
+              val newPlays = Played2Cards(US, card.number, card2.number) :: game.plays.tail
+              game = game.copy(plays = newPlays)
               secondCard = Some(card2)
               logCardPlay(US, card2)
               Some(Reassess)
@@ -4255,28 +4462,28 @@ object LabyrinthAwakening {
         
   def jihadistCardPlay(param: Option[String]): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
-      val card    = deck(cardNumber)
-      // Save the game state so we can roll back later 
-      previousCardPlays = game :: previousCardPlays
+      val card = deck(cardNumber)
+      val savedState = game
       // Add the card to the list of played cards for the turn
       // and clear the op targets for the current card.
       game = game.copy(
-        cardsPlayed     = PlayedCard(Jihadist, card) :: game.cardsPlayed,
+        plays           = PlayedCard(Jihadist, card.number) :: game.plays,
         targetsLastCard = game.targetsThisCard,
         targetsThisCard = CardTargets()
       )
       logCardPlay(Jihadist, card)
-      try game.humanRole match {
-        case Jihadist => humanJihadistCardPlay(card)
-        case _        => JihadistBot.cardPlay(card)
+      try {
+        game.humanRole match {
+          case Jihadist => humanJihadistCardPlay(card)
+          case _        => JihadistBot.cardPlay(card)
+        }
+        savePlay()  // Save the play so we can roll back
       }
       catch {
         case AbortCardPlay =>
           println("\n>>>> Aborting the current card play <<<<")
           println(separator())
-          val mostRecent :: rest = previousCardPlays
-          previousCardPlays = rest
-          performRollback(mostRecent)
+          performRollback(savedState)
       }
     }
   }

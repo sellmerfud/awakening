@@ -5,7 +5,7 @@
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
 // 
-// Copyright (c) 2010-2017 Curt Sellmer
+// Copyright (c) 2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -884,29 +884,33 @@ object USBot extends BotHelpers {
   // has enough Ops to do so.
   // Returns true if Reassessment performed
   def reassessment(card: Card): Boolean = {
-    // Is this the first US card of the action phase?
-    // We assume that if the cardsPlayed is empty and a US card is being played,
-    // then the Jihadist has already played all her cards.
-    val tryReassess = 
-       (game.cardsPlayed.isEmpty || game.cardsPlayed.head.role != US) &&
+    val tryReassess = {
+      // Must be first US card play of the action phase
+      // Check that the most recent plays include an even number (including zero)
+      // of US card plays.
+      val usPlays = (game.plays takeWhile { case PlayedCard(US, _) => true; case _ => false }).size
+      val firstUSCardOfPhase = usPlays % 2 == 0
+
+       firstUSCardOfPhase &&
        (card.ops + game.reserves.us >= 3) &&  // Possible if we have at least 3 on hand
        ((game.usPosture == Soft && game.islamistResources >= 2) ||
         (game.usPosture == Hard && game.gwotPenalty == 3 && game.numIslamistRule == 0))
-    
+    }
     tryReassess && {
       // Reassessment is desired. Ask if the next US card has enough Ops
       val opsNeeded = 6 - card.ops - game.reserves.us
-      println("The US is planning a Reassessment.")
-      val reassess = if (opsNeeded == 1)
-        askYorN(s"Does the $US Bot have another card in hand (y/n)? ")
-      else
+      println("The US is considering Reassessment.")
+      val reassess = if (opsNeeded > 1)
         askYorN(s"Does the $US Bot have another card in hand with at least $opsNeeded Ops (y/n)? ")
+      else
+        askYorN(s"Does the $US Bot have another card in hand (y/n)? ")
 
       reassess && {
         val cardNum = askCardNumber("Card # ", initial = None, allowNone = false).get
         val card2 = deck(cardNum)
         if (card2.ops >= opsNeeded) {
-          game = game.copy(cardsPlayed = PlayedCard(US, card2) :: game.cardsPlayed)
+          val newPlays = Played2Cards(US, card.number, card2.number) :: game.plays.tail
+          game = game.copy(plays = newPlays)
           logCardPlay(US, card2)
           // Check to see if either of the cards played has the autoTrigger
           // US Elections event.  If so the event happens first.
@@ -923,7 +927,7 @@ object USBot extends BotHelpers {
           true
         }
         else {
-          println(s"$card2 does not have enought Ops")
+          println(s"$card2 does not have enough Ops")
           println("Place the card back on top of the US hand of cards")
           false
         }
