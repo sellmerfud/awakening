@@ -28,7 +28,7 @@
 
 package awakening
 
-import java.io.{ File, FileWriter, FileReader, IOException }
+import java.io.IOException
 import scala.util.Random.{shuffle, nextInt}
 import scala.annotation.tailrec
 import scala.util.Properties.{lineSeparator, isWin}
@@ -1996,7 +1996,88 @@ object LabyrinthAwakening {
     summary foreach log
   }
   
-  
+  // Display some or all of the game log.
+  // usage:
+  //   history        ##  Shows the log from the beginning of the current turn
+  //   history -1     ##  Shows the log from the beginning of the previous turn
+  //   history -n     ##  Shows the log from the beginning of the turn n turns ago
+  //   history 1      ##  Shows the log for the first turn
+  //   history n      ##  Shows the log for the nth turn
+  //   history 1..3   ##  Shows the log for the first through third turns
+  //   history 5..    ##  Shows the log from the fifth turn through the end
+  //   history ..5    ##  Shows the log from the beginning through the fifth turn
+  //   history all    ##  Shows the entire log
+  def history(input: Option[String]): Unit = {
+    val POS = """(\d+)""".r
+    val NEG = """-(\d+)""".r
+    val PRE = """\.\.(\d+)""".r
+    val SUF = """(\d+)\.\.""".r
+    val RNG = """(\d+)\.\.(\d+)""".r
+    val ALL = "all"
+    case class Error(msg: String) extends Exception
+    try {
+      def redirect(tokens: List[String]): Option[String] = {
+        tokens match {
+          case Nil => None
+          case x::xs  if !(x startsWith ">") => None
+          case ">":: Nil => throw Error("No filename specified after '>'")
+          case ">"::file::xs => Some(file)
+          case file::xs => Some(file drop 1)
+        }
+      }
+      
+      val tokens = (input getOrElse "" split "\\s+").toList map (_.toLowerCase) dropWhile (_ == "")
+      val (param, file) = if (tokens.isEmpty)
+        (None, None)
+      else if (!(tokens.head startsWith ">"))
+          (tokens.headOption, redirect(tokens.tail))
+      else
+        (None, redirect(tokens))
+    
+      def normalize(n: Int) = 0 max n min (game.turn + 1)
+      val START = 0
+      val END   = game.turn + 1
+      val (start, end) = param match {
+        case None => (game.turn, game.turn + 1)
+        case Some(POS(n))                           => (normalize(n.toInt), normalize(n.toInt + 1))
+        case Some(NEG(n))                           => (normalize(game.turn - n.toInt), END)
+        case Some(PRE(e))                           => (START, normalize(e.toInt + 1))
+        case Some(SUF(s))                           => (normalize(s.toInt), END)
+        case Some(RNG(s, e)) if (e.toInt < s.toInt) => (normalize(e.toInt), normalize(s.toInt + 1))
+        case Some(RNG(s, e))                        => (normalize(s.toInt), normalize(e.toInt + 1))
+        case Some("all" | "al" | "a")               => (START, END)
+        case Some(p)                                => throw Error(s"Invalid parameter: $p")
+      }
+      
+      val SOT = """%s\s+(\d+)\s*""".format(START_OF_TURN).r
+      def turnIndex(num: Int): Int = {
+        val turnMatch = (x: String) => x match {
+          case SOT(n) if n.toInt == num => true
+          case _ => false
+        }
+        if (num == 0) 0
+        else if (num == game.turn + 1) game.history.size
+        else game.history indexWhere turnMatch
+      } 
+      val ignore = turnIndex(start)
+      val length = turnIndex(end) - ignore
+      val logs = game.history drop ignore take length
+      file match {
+        case None => logs foreach println
+        case Some(fname) =>
+          Pathname(fname).writer { w =>
+            logs foreach { log =>
+              w.write(log)
+              w.write("\n")
+            }
+          }
+      }
+    }
+    catch {
+      case e: IOException => println(s"IOException: ${e.getMessage}")
+      case Error(msg) => println(msg)
+    }
+  }
   // We assume that the current working directory
   // set as the installed directory and thus the game directory
   // is in ./games.  The script used to invoke the program will
@@ -2061,34 +2142,57 @@ object LabyrinthAwakening {
   
   def loadTurn(num: Int): Unit = {    
     loadGameState(turnFilePath(num))
+    // Loading a turn represents the end of that turn
+    // so we must advance the turn number.
+    game = game.copy(turn = game.turn + 1)
+    logStartOfTurn()
+  }
+  
+  // Load the most recent game file for the given game.
+  // 
+  def loadMostRecent(name: String): Unit = {
+    val file = mostRecentSaveFile(name) getOrElse {
+      throw new IllegalStateException(s"No saved file found for game '$name'")
+    }
+    gameName = Some(name)
+    file match {
+      case PlayFile(n) => loadPlay(n)
+      case TurnFile(n) => loadTurn(n)
+    }
   }
   
   // Return the list of saved games
-  def savedGames: Seq[String] = {
-    val subdirs = gamesDir.children() filter { path => mostRecentSaveFile(path).nonEmpty }
-    subdirs map (_.basename.toString)
-  }
+  def savedGames: Seq[String] =
+    gamesDir.children(withDirectory = false) map (_.toString) filter { name =>
+      mostRecentSaveFile(name).nonEmpty 
+    }
+  
+  sealed trait GameFile
+  case class TurnFile(num: Int) extends GameFile
+  case class PlayFile(num: Int) extends GameFile
   
   // Given a directory for a saved game finds the most recent save file.
   // Files can be named play-n or turn-n
   // If any play-n files exist take the one with the hightest number, otherwise
   // take the turn-n file with the highest number.
-  def mostRecentSaveFile(gameDirectory: Pathname): Option[Pathname] = {
-    case class Entry(score: Int, path: Pathname)
-    if (gameDirectory.isDirectory) {
-      val entries = gameDirectory.children() map { path =>
-        path.basename.toString match {
-          case PLAY(n) => Entry(n.toInt + 5000, path)
-          case TURN(n) => Entry(n.toInt, path)
-          case _       => Entry(-1, path)
+  def mostRecentSaveFile(name: String): Option[GameFile] = {
+    case class Entry(score: Int, file: GameFile)
+    val dir = gamesDir/name
+    if (dir.isDirectory) {
+      val entries = dir.children(withDirectory = false) map { child =>
+        child.toString match {
+          case PLAY(n) => Entry(n.toInt + 5000, PlayFile(n.toInt))
+          case TURN(n) => Entry(n.toInt, TurnFile(n.toInt))
+          case _       => Entry(-1, TurnFile(-1))
         }
       }
-      (entries filter (_.score >= 0)).sortBy(-_.score).headOption map (_.path)
+      (entries filter (_.score >= 0)).sortBy(-_.score).headOption map (_.file)
     }
     else
       None
-    
   }
+
+  
   val VALID_NAME = """([-A-Za-z0-9_ ]+)""".r
   var gameName: Option[String] = None // The name of sub-directory containing the game files
   
@@ -3850,9 +3954,10 @@ object LabyrinthAwakening {
     }
   }
   
+  val START_OF_TURN = "Start of turn"
   def logStartOfTurn(): Unit = {
     log()
-    log(s"Start of turn ${game.turn}")
+    log(s"$START_OF_TURN ${game.turn}")
     log(separator(char = '='))
   }
   
@@ -3940,9 +4045,11 @@ object LabyrinthAwakening {
         log(s"Flip green regime change marker in ${rc.name} to its tan side")
       }
     
-      saveTurn()      
-      // Reset history of cards for current turn and advance the turn number.
-      game = game.copy(turn = game.turn + 1, plays = Nil)
+      // Reset history list of plays. They are not store in turn files.
+      game = game.copy(plays = Nil)
+      saveTurn()     
+      // Increase the turn number and log it. 
+      game = game.copy(turn = game.turn + 1)
       logStartOfTurn()
     }
   }
@@ -3963,11 +4070,7 @@ object LabyrinthAwakening {
     
     askWhichGame() match {
       case Some(name) =>
-        gameName = Some(name)
-        val gamepath = mostRecentSaveFile(gamesDir/name) getOrElse {
-          throw new IllegalStateException(s"No saved file found for game '$name'")
-        }
-        loadGameState(gamepath)
+        loadMostRecent(name)
         printSummary(game.scenarioSummary)
         printSummary(game.scoringSummary)
         // printSummary(game.statusSummary)
@@ -4156,7 +4259,16 @@ object LabyrinthAwakening {
                                 |  adjust offmap troops - Number of troops in off map box
                                 |  adjust auto roll     - Auto roll for human operations
                                 |  adjust <country>     - Country specific settings""".stripMargin),
-      Command("history",      """Display game history"""),
+      Command("history",      """Display game history
+                                |  history       - Shows the log from the beginning of the current turn
+                                |  history -1    - Shows the log from the beginning of the previous turn
+                                |  history -n    - Shows the log from the beginning of the turn n turns ago
+                                |  history 1     - Shows the log for the first turn
+                                |  history n     - Shows the log for the nth turn
+                                |  history 1..3  - Shows the log for the first through third turns
+                                |  history 5..   - Shows the log from the fifth turn through the end
+                                |  history ..5   - Shows the log from the beginning through the fifth turn
+                                |  history all   - Shows the entire log""".stripMargin),
       Command("rollback",     """Roll back card plays in the current turn or
                                 |roll back to the start of any previous turn""".stripMargin),
       Command("help",         """List available commands"""),
@@ -4181,7 +4293,7 @@ object LabyrinthAwakening {
         case "end turn"      => endTurn()
         case "show"          => showCommand(param)
         case "adjust"        => adjustSettings(param)
-        case "history"       => game.history foreach println  // TODO: Allow > file.txt
+        case "history"       => history(param)
         case "rollback"      => rollback()
         case "quit"          => if (askYorN("Really quit (y/n)? ")) throw ExitGame
         case "help" if param.isEmpty =>
