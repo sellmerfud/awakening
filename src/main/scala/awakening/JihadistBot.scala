@@ -842,7 +842,6 @@ object JihadistBot extends BotHelpers {
       log()
       log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(game.reserves.jihadist,"reserve")})")
       log(separator())
-      log(s"A maximum of ${amountOf(maxRadOps, "action")} will be taken")
     
       // Returns the number of actions executed
       def nextAction(completed: Int): Unit = {

@@ -3972,6 +3972,9 @@ object LabyrinthAwakening {
       log("End of turn")
       log(separator())
     
+      if (unresolvedPlots > 0)
+        resolvePlots()
+      
       if (game.markerInPlay("Pirates") && piratesConditionsInEffect) {
         log("No funding drop because Pirates is in effect")
       }
@@ -4076,9 +4079,6 @@ object LabyrinthAwakening {
     askWhichGame() match {
       case Some(name) =>
         loadMostRecent(name)
-        printSummary(game.scenarioSummary)
-        printSummary(game.scoringSummary)
-        // printSummary(game.statusSummary)
         printSummary(game.playSummary)
         
       case None => // Start a new game
@@ -4095,7 +4095,6 @@ object LabyrinthAwakening {
         game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
         logSummary(game.scenarioSummary)
         printSummary(game.scoringSummary)
-        // printSummary(game.statusSummary)
         saveTurn()  // Save the initial game state as turn-0
         game = game.copy(turn = game.turn + 1)
         logStartOfTurn()
@@ -4201,14 +4200,15 @@ object LabyrinthAwakening {
   // Process all top level user commands.
   @tailrec def commandLoop(): Unit = {
     checkAutomaticVictory()
-    val cards = (game.plays collect {
+    
+    val cards = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved]) collect {
       case PlayedCard(_, _)      => 1
       case Played2Cards(_, _, _) => 2
     }).sum
     
-    if (cards > 3 && unresolvedPlots > 0) {
+    if (cards > 0 && cards % 4 == 0 && unresolvedPlots > 0) {
       println(separator())
-      println(s"$cards cards have been played and there are unresolved plots on the map")
+      println(s"4 cards have been played and there are unresolved plots on the map")
       if (askYorN("Do you want to resolve the plots now (y/n) ?"))
         resolvePlots()
     }
