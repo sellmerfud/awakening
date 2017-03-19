@@ -86,5 +86,5 @@ class Awakening2010 extends Scenario {
     MuslimCountry(IndonesiaMalaysia, resources = 3, oilProducer = true),
     MuslimCountry(Mali, resources = 1)
   )
-  val markers = List.empty[String]
+  val markersInPlay = List.empty[String]
 }

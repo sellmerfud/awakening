@@ -426,25 +426,16 @@ object LabyrinthAwakening {
   val LabyrinthDeck = "Labyrinth Deck"  // For future support…
   val AwakeningDeck = "Awakening Deck"
   
-  trait CardDeck {
-    val cardMap: Map[Int, Card]
-    
+  class CardDeck(val cardMap: Map[Int, Card]) {
     def isValidCardNumber(num: Int): Boolean = cardMap contains num
     def apply(num: Int): Card      = cardMap(num)  // Allows deck(4) to get a specific card
     def cards: List[Card]          = cardMap.valuesIterator.toList.sorted
     def lapsing: List[Card]        = cards filter (_.lapsing != NoLapsing)
     def removable: List[Card]      = cards filter (_.remove != NoRemove)
 
-    // Convenience method for add a card to the card map.
-    protected def entry(card: Card) = (card.number -> card)
   }
   
-  val CardDecks = Map(AwakeningDeck -> AwakeningCards)
-  def deck                 = CardDecks(game.params.cardDeckName)
-  def cards                = deck.cards
-  def lapsingCardNumbers   = deck.lapsing map (_.number)
-  def removableCardNumbers = deck.removable map (_.number)
-  
+  val deck = new CardDeck(AwakeningCards.deck)
   def cardNumAndName(number: Int): String = deck(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
 
@@ -607,7 +598,7 @@ object LabyrinthAwakening {
     val funding: Int
     val availablePlots: List[Plot]     // 1, 2, 3, 4 == WMD
     val countries: List[Country]
-    val markers: List[String]
+    val markersInPlay: List[String]
   }
 
   // There is a limit of 22 construction arguments for case classes
@@ -1186,7 +1177,7 @@ object LabyrinthAwakening {
       scenario.usPosture,
       scenario.funding,
       scenario.countries,
-      scenario.markers.sorted,
+      scenario.markersInPlay.sorted,
       scenario.availablePlots.sorted)
   
   

@@ -34,7 +34,7 @@ import scala.util.Random.shuffle
 import scala.collection.immutable.ListMap
 import LabyrinthAwakening._
 
-object AwakeningCards extends CardDeck {
+object AwakeningCards {
   val GulfUnionCountries = List(GulfStates, SaudiArabia, Yemen, Jordan, Morocco).sorted
   
   // Various tests used by the card events
@@ -101,8 +101,10 @@ object AwakeningCards extends CardDeck {
     m.awakening > 0 || (game.adjacentMuslims(m.name) exists (_.awakening > 0))
   })
   
+  // Convenience method for adding a card to the deck.
+  private def entry(card: Card) = (card.number -> card)
   
-  val cardMap: Map[Int, Card] = Map(
+  val deck: Map[Int, Card] = Map(
     // ------------------------------------------------------------------------
     entry(new Card(121, "Advisors", US, 1,
       NoRemove, CountryMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
@@ -231,14 +233,14 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(127, "Reaper", US, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => cardMap(126).eventConditions(role),
-      (role: Role) => cardMap(126).executeEvent(role)
+      (role: Role) => deck(126).eventConditions(role),
+      (role: Role) => deck(126).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(128, "Reaper", US, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => cardMap(126).eventConditions(role),
-      (role: Role) => cardMap(126).executeEvent(role)
+      (role: Role) => deck(126).eventConditions(role),
+      (role: Role) => deck(126).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(129, "Special Forces", US, 1,
@@ -261,8 +263,8 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(130, "Special Forces", US, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => cardMap(129).eventConditions(role),
-      (role: Role) => cardMap(129).executeEvent(role)
+      (role: Role) => deck(129).eventConditions(role),
+      (role: Role) => deck(129).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(131, "Arab Spring Fallout", US, 2,
@@ -887,8 +889,8 @@ object AwakeningCards extends CardDeck {
     // ------------------------------------------------------------------------
     entry(new Card(154, "Facebook", US, 3,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => cardMap(153).eventConditions(role),
-      (role: Role) => cardMap(153).executeEvent(role)
+      (role: Role) => deck(153).eventConditions(role),
+      (role: Role) => deck(153).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(155, "Fracking", US, 3,
