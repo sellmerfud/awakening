@@ -2012,27 +2012,65 @@ object LabyrinthAwakening {
   // ensure that is the case.
   val gamesDir = Pathname("./games")
   
-  // Save the current play
-  // 
-  def savePlay(): Unit = {
-    val num = game.plays.size
-    saveGameState(gameFilePath(s"play-$num"))
-  }
-  
-  def saveTurn(): Unit = {
-    import Pathname.glob
-    saveGameState(gameFilePath(s"turn-${game.turn}"))
-    // Remove all of the play files
-    val playFiles = glob(gamesDir/gameName.get/"play*")
-    inspect("playFiles", playFiles)
-    playFiles foreach (_.delete())
-  }
+  val PLAY = """play-(\d+)""".r
+  val TURN = """turn-(\d+)""".r
   
   def gameFilePath(filename: String): Pathname = {
     assert(gameName.nonEmpty, "gameFilePath(): called with gameName not set!")
     gamesDir/gameName.get/filename
   }
   
+  def gameDescPath(nameOfGame: String): Pathname = gamesDir/nameOfGame/"description"
+  
+  
+  def playFilePath(num: Int): String = gameFilePath(s"play-$num")
+  def turnFilePath(num: Int): String = gameFilePath(s"turn-$num")
+  
+  def playFileNumber(path: Pathname): Int = path.basename.toString match {
+    case PLAY(n) => n.toInt
+    case _ => throw new IllegalArgumentException(s"playFileNumber(): Invalid play file: $path")
+  }
+  
+  def turnFileNumber(path: Pathname): Int = path.basename.toString match {
+    case TURN(n) => n.toInt
+    case _ => throw new IllegalArgumentException(s"turnFileNumber(): Invalid turn file: $path")
+  }
+  
+  // Save the current play
+  // 
+  def savePlay(): Unit = {
+    saveGameState(playFilePath(game.plays.size))
+  }
+  
+  def saveTurn(): Unit = {
+    saveGameState(turnFilePath(game.turn))
+    saveGameDescription()
+    removePlayFiles() // Remove all of the play files
+  }
+
+  // Save a brief description of the game.
+  // The descriptions are used by the askWhichGame() function.
+  def saveGameDescription(): Unit = {
+    val desc = s"${game.params.scenarioName}, playing ${game.humanRole}, ${amountOf(game.turn, "turn")} completed"
+    gameDescPath(gameName.get).writeFile(desc)
+  }
+  
+  def loadGameDescription(nameOfGame: String): String = {
+    val path = gameDescPath(nameOfGame)
+    if (path.exists)
+      path.readFile()
+    else
+      ""
+  }
+  
+
+  def loadPlay(num: Int): Unit = {    
+    loadGameState(playFilePath(num))
+  }
+  
+  def loadTurn(num: Int): Unit = {    
+    loadGameState(turnFilePath(num))
+  }
   
   // Return the list of saved games
   def savedGames: Seq[String] = {
@@ -2045,8 +2083,6 @@ object LabyrinthAwakening {
   // If any play-n files exist take the one with the hightest number, otherwise
   // take the turn-n file with the highest number.
   def mostRecentSaveFile(gameDirectory: Pathname): Option[Pathname] = {
-    val PLAY = """play-(\d+)""".r
-    val TURN = """turn-(\d+)""".r
     case class Entry(score: Int, path: Pathname)
     if (gameDirectory.isDirectory) {
       val entries = gameDirectory.children() map { path =>
@@ -2065,27 +2101,23 @@ object LabyrinthAwakening {
   val VALID_NAME = """([-A-Za-z0-9_ ]+)""".r
   var gameName: Option[String] = None // The name of sub-directory containing the game files
   
-  // Ask the user for a name for their game.
-  def askGameName(prompt: String, forCreate: Boolean): String = {
+  // Ask the user for a name for their new game.
+  def askGameName(prompt: String): String = {
     def getName: String = {
       readLine(prompt) match {
         case null => getName
-        case VALID_NAME(name) if forCreate =>
-          if (!(gamesDir/name).exists)
-            name
-          else {
-            println(s"A game with the name '$name' already exists")
-            getName
-          }
-
         case VALID_NAME(name) =>
-          val dir = gamesDir/name
-          if (dir.isDirectory && dir.isReadable)
-            name
-          else {
-            println(s"'$name' is not a valid game name")
-            getName
+          if ((gamesDir/name).exists) {
+            println(s"A game called '$name' already exists.")
+            if (askYorN(s"Do you want to overwrite the existing game (y/n)? ")) {
+              (gamesDir/name).rmtree()
+              name
+            }
+            else
+              getName
           }
+          else
+            name
         case name => 
           println("Game names must consist of one or more letters, numbers, spaces, dashes or undercores")
           getName
@@ -2125,6 +2157,55 @@ object LabyrinthAwakening {
         println(s"Error writing save game ($filepath)$suffix")
     }
   }
+  
+  // Allows the user to roll back to an earlier play in the current turn,
+  // or to the beginning of any previous turn.
+  def rollback(): Unit = {
+    val defaultChoices = List(
+      "previous" -> "Beginning of a previous turn",
+      "cancel"   -> "Cancel rollback")
+    val choices = if (game.plays.isEmpty) {
+      println("Rollback to the beginning of a previous turn:") 
+      defaultChoices
+    }
+    else {
+      println("Rollback to the beginning of a previous play or a previous turn:") 
+      (game.plays.reverse.zipWithIndex map { case (p, i) => s"play-$i" -> p.toString }) ::: defaultChoices
+    }
+       
+    askMenu(ListMap(choices:_*), allowAbort = false).head match {
+      case PLAY("0") =>
+        loadTurn(game.turn - 1)
+        removePlayFiles()
+      case PLAY(n) => 
+        loadPlay(n.toInt)
+        removePlayFiles(n.toInt + 1)
+      case "previous" =>
+        val turn = askInt("Enter turn #", 1, game.turn, allowAbort = false)
+        loadTurn(turn - 1)
+        removePlayFiles()
+        removeTurnFiles(turn)      
+      case _ => // cancel
+    }
+  }
+  
+  // Remove play files starting with the given number an all 
+  // those that follow the number.
+  def removePlayFiles(num: Int = 0): Unit = {
+    import Pathname.glob    
+    val playFiles = glob(gamesDir/gameName.get/"play*")
+    playFiles filter (playFileNumber(_) >= num) foreach (_.delete())
+  }
+
+  // Remove turn files starting with the given number an all 
+  // those that follow the number.
+  def removeTurnFiles(num: Int = 0): Unit = {
+    import Pathname.glob    
+    val turnFiles = glob(gamesDir/gameName.get/"turn*")
+    turnFiles filter (turnFileNumber(_) >= num) foreach (_.delete())
+  }
+
+  
   
   // Display a list of what needs to be done to get the game board into
   // the proper state when going from one state to another.
@@ -3902,7 +3983,7 @@ object LabyrinthAwakening {
         printSummary(game.playSummary)
         
       case None => // Start a new game
-        gameName = Some(askGameName("Enter a name for your new game: ", forCreate = true))
+        println()
         // prompt for scenario
         val scenario = scenarios(askMenu(scenarioChoices, allowAbort = false).head)
         // ask which side the user wishes to play
@@ -3910,6 +3991,7 @@ object LabyrinthAwakening {
         val humanRole = Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
         val difficulties = askDifficulties(if (humanRole == US) Jihadist else US)
         val humanAutoRoll = !askYorN("Do you wish to roll your own dice (y/n)? ")
+        gameName = Some(askGameName("Enter a name for your new game: "))
 
         game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
         logSummary(game.scenarioSummary)
@@ -3934,8 +4016,13 @@ object LabyrinthAwakening {
     if (games.isEmpty)
       None
     else {
-      val choices = ("--new-game--" -> "Start a new game") +: 
-                    (games map (g => g -> s"Resume game '$g'"))
+      val gameChoices = games map { name =>
+        val desc = loadGameDescription(name)
+        val suffix = if (desc == "") "" else s": $desc"
+        name -> s"Resume game '$name'$suffix"
+      }
+      val choices = ("--new-game--" -> "Start a new game") +: gameChoices
+      println()
       println("Which game would you like to play:")
       askMenu(ListMap(choices:_*), allowAbort = false).head match {
         case "--new-game--" => None
@@ -4064,7 +4151,7 @@ object LabyrinthAwakening {
                                 |  show caliphate  - countries making up the Caliphate
                                 |  show civil wars - countries in civil war
                                 |  show <country>  - state of a single country""".stripMargin),
-      Command("adjust",       """Adjust game settings <Minimal rule checking is applied>
+      Command("adjust",       """Adjust game settings  (Minimal rule checking is applied)
                                 |  adjust prestige      - US prestige level
                                 |  adjust posture       - US posture
                                 |  adjust funding       - Jihadist funding level
@@ -4084,8 +4171,7 @@ object LabyrinthAwakening {
       Command("help",         """List available commands"""),
       Command("quit",         """Quit the game.  All plays for the current turn will be saved.""")
     ) filter { 
-      case Command("remove cadre", _)  => game.humanRole == Jihadist && (game.hasCountry(_.hasCadre))
-      case Command("resolve plots", _) => unresolvedPlots > 0
+      case Command("remove cadre", _) => game.humanRole == Jihadist
       case _                          => true
     } 
 
@@ -4105,7 +4191,7 @@ object LabyrinthAwakening {
         case "show"          => showCommand(param)
         case "adjust"        => adjustSettings(param)
         case "history"       => game.history foreach println  // TODO: Allow > file.txt
-        case "rollback"      => println("Not implemented.")
+        case "rollback"      => rollback()
         case "quit"          => if (askYorN("Really quit (y/n)? ")) throw ExitGame
         case "help" if param.isEmpty =>
           println("Available commands: (type help <command> for more detail)")
@@ -4120,14 +4206,18 @@ object LabyrinthAwakening {
   // (To avoid giving the US an easy prestige bump)
   def humanRemoveCadre(): Unit = {
     val candidates = countryNames(game.countries filter (_.hasCadre))
-    val target = askCountry(s"Remove cadre in which country: ", candidates)
-    game.getCountry(target) match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+    if (candidates.isEmpty)
+      println("There are no cadres on the map")
+    else {
+      val target = askCountry(s"Remove cadre in which country: ", candidates)
+      game.getCountry(target) match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+      }
+      log()
+      log(separator())
+      log(s"$Jihadist voluntarily removes a cadre from $target")
     }
-    log()
-    log(separator())
-    log(s"$Jihadist voluntarily removes a cadre from $target")
   }
   
   
@@ -4531,7 +4621,7 @@ object LabyrinthAwakening {
         // Don't prompt for event/ops order when playing to reserves.
         addToReserves(Jihadist, card.ops)
         if (card.eventWillTrigger(US))
-          performCardEvent(card, US, triggered = true) // TODO: use USBot.performTriggeredEvent(card)
+          USBot.performTriggeredEvent(card)
       }
       else if (action == ExecuteEvent)
         performCardEvent(card, Jihadist)
@@ -4550,7 +4640,7 @@ object LabyrinthAwakening {
           case actions =>
             actions foreach {
               case TriggeredEvent(c) =>
-                performCardEvent(card, US, triggered = true) // TODO: use USBot.performTriggeredEvent(card)
+                USBot.performTriggeredEvent(card)
               case Ops =>
                 action match {
                   case Recruit      => humanRecruit(opsAvailable)
