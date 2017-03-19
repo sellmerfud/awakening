@@ -226,7 +226,11 @@ object FUtil {
     def read1Line: Unit = {
       reader.readLine match {
         case null =>
-        case line => sb.append(line).append(lineSeparator); read1Line
+        case line => 
+          if (sb.nonEmpty)
+            sb.append(lineSeparator)
+          sb.append(line)
+          read1Line
       }
     }
     read1Line

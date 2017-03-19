@@ -35,7 +35,10 @@ import scala.util.Properties.{lineSeparator, isWin}
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 import scala.io.StdIn.readLine
-import scala.pickling.Defaults._, scala.pickling.json, scala.pickling.json._
+import scala.pickling.Defaults._
+import scala.pickling.binary
+import scala.pickling.binary._
+import scala.pickling.shareNothing._
 import scenarios._
 import FUtil.Pathname
 
@@ -2068,7 +2071,7 @@ object LabyrinthAwakening {
           Pathname(fname).writer { w =>
             logs foreach { log =>
               w.write(log)
-              w.write("\n")
+              w.write(lineSeparator)
             }
           }
       }
@@ -2225,7 +2228,7 @@ object LabyrinthAwakening {
   def saveGameState(filepath: Pathname): Unit = {
     try {
       filepath.dirname.mkpath() // Make sure that the game directory exists
-      filepath.writeFile(game.pickle.value)
+      filepath.write(game.pickle.value)
     }
     catch {
       case e: IOException =>
@@ -2241,7 +2244,9 @@ object LabyrinthAwakening {
   // Will set the game global variable
   def loadGameState(filepath: Pathname): Unit = {
     try {
-      game = json.JSONPickle(filepath.readFile()).unpickle[GameState]
+      filepath.inputStream { istream =>
+        game = BinaryPickle(istream).unpickle[GameState]
+      }
     }
     catch {
       case e: IOException =>
@@ -2249,7 +2254,7 @@ object LabyrinthAwakening {
         println(s"IO Error reading game file ($filepath)$suffix")
       case e: Throwable =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"Error writing save game ($filepath)$suffix")
+        println(s"Error reading save game ($filepath)$suffix")
     }
   }
   
@@ -4113,7 +4118,7 @@ object LabyrinthAwakening {
       val gameChoices = games map { name =>
         val desc = loadGameDescription(name)
         val suffix = if (desc == "") "" else s": $desc"
-        name -> s"Resume game '$name'$suffix"
+        name -> s"Resume '$name'$suffix"
       }
       val choices = ("--new-game--" -> "Start a new game") +: gameChoices
       println()
