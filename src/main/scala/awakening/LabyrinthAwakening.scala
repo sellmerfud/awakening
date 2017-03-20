@@ -249,6 +249,8 @@ object LabyrinthAwakening {
   val Neutral   = "Neutral"
   val Adversary = "Adversary"
   
+  val African       = Morocco::AlgeriaTunisia::Libya::Egypt::Sudan::Somalia::KenyaTanzania::
+                      Mali::Nigeria::Nil
   val Schengen      = Scandinavia :: Benelux :: Germany :: EasternEurope :: 
                       France :: Italy :: Spain :: Nil
   val SchengenLinks = Canada :: UnitedStates :: UnitedKingdom :: Morocco ::
@@ -466,6 +468,7 @@ object LabyrinthAwakening {
     def recruitOK: Boolean = hasCadre || totalCells > 0
     def autoRecruit: Boolean
     def recruitSucceeds(die: Int): Boolean
+    def canTakeMilitia: Boolean
   }
 
   case class NonMuslimCountry(
@@ -497,6 +500,7 @@ object LabyrinthAwakening {
     def removeMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers filterNot names.contains)
     // US posture is stored in the GameState
     def canChangePosture = !(iranSpecialCase || name == UnitedStates || name == Israel)
+    def canTakeMilitia = false
   
   }
 
@@ -561,7 +565,8 @@ object LabyrinthAwakening {
       case "NATO"       => TroopsMarker("NATO", 2,       canDeploy = true,  prestigeLoss = true)
       case "UNSCR 1973" => TroopsMarker("UNSCR 1973", 1, canDeploy = false, prestigeLoss = false)
     }
-  
+    
+    def canTakeMilitia = !(isGood || isIslamistRule)
     def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
     def markerTroopsThatAffectPrestige: Int =
       troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
@@ -569,6 +574,7 @@ object LabyrinthAwakening {
     def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
     def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
     def disruptAffectsPrestige = totalTroopsAndMilitia > 1 && totalTroopsThatAffectPrestige > 0
+  
   
     def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar)
     def canTakeAidMarker = !(isGood || isIslamistRule)

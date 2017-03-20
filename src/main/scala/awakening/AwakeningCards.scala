@@ -118,13 +118,21 @@ object AwakeningCards {
     GulfUnionCountries.foldLeft(Set.empty[String]) { (candidates, name) =>
       val gulf = game getMuslim name
       val adj = (getAdjacent(name) filter (x => game.isMuslim(x) && x != Iran)) map game.getMuslim
-      candidates ++ ((gulf :: adj) filter (m => !(m.isGood || m.isIslamistRule)) map (_.name))
+      candidates ++ ((gulf :: adj) filter (_.canTakeMilitia) map (_.name))
     }
   }
   
   val criticalMiddleUSCandidate = (m: MuslimCountry) => m.isFair && m.resources > 1 &&
                                      (!m.isAlly || m.canTakeAwakeningOrReactionMarker)
   val criticalMiddleJihadistCandidate = (m: MuslimCountry) => m.isPoor && m.resources < 3
+  
+  def crossBorderSupportPlayable(role: Role) = {
+    val cellsOK   = game.cellsAvailable > 0
+    val militiaOK = game.militiaAvailable > 0 && (game.getCountries(African) exists (_.canTakeMilitia))
+    (role == game.humanRole && (cellsOK || militiaOK)) ||
+    (role == Jihadist && cellsOK) ||
+    (role == US       && militiaOK)
+  }
   
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
@@ -2380,11 +2388,54 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(201, "Cross Border Support", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()  
-      // Can possibly declare Caliphate (only Mali or Muslim Nigeria)
-      // Only if played by the Jihadist
-      // See Event Instructions table
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => crossBorderSupportPlayable(role)
+      ,
+      (role: Role) => {
+        // See Event Instructions table
+        val cellsOK   = game.cellsAvailable > 0
+        val militiaOK = game.militiaAvailable > 0 && (game.getCountries(African) exists (_.canTakeMilitia))
+        val (target, action) = if (role == game.humanRole) {
+          val choices = List(
+            if (militiaOK) Some("militia" -> "Place militia") else None,
+            if (cellsOK)   Some("cells" -> "Place cells")     else None
+          ).flatten
+          println("What would you like to do:")
+          val action = askMenu(ListMap(choices:_*)).head
+          val candidates = if (action == "militia")
+            countryNames(game.getCountries(African) filter (_.canTakeMilitia))
+          else
+            countryNames(game.getCountries(African))
+          val name = askCountry("Select African country: ", candidates)
+          (name, action)
+        }
+        else if (role == US) {
+          val candidates = USBot.highestCellsMinusTandM(countryNames(game.getCountries(African) filter (_.canTakeMilitia)))
+          val target = shuffle(candidates).head
+          (target, "militia")
+        }
+        else {
+          val target = JihadistBot.recruitTravelToPriority(African).get
+          (target, "cells")
+        }
+        
+        addEventTarget(target)
+        val bump = (target == Mali || target == Nigeria)
+        if (action == "militia") {
+          val num = (if (bump) 2 else 1) min game.militiaAvailable
+          addMilitiaToCountry(target, num)
+        }
+        else {
+          // Can possibly declare Caliphate (only Mali or Muslim Nigeria)
+          val num = (if (bump) 3 else 2) min game.cellsAvailable
+          addSleeperCellsToCountry(target, num)
+          if (num == 3 &&
+              canDeclareCaliphate(target) &&
+              ((role == game.humanRole && askDeclareCaliphate(target)) ||
+               (role == game.botRole && JihadistBot.willDeclareCaliphate(target))))
+            declareCaliphate(target)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(202, "Cyber Warfare", Unassociated, 1,

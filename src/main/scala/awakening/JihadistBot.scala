@@ -330,6 +330,17 @@ object JihadistBot extends BotHelpers {
     PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
   
+  def recruitTravelToPriority(names: List[String]): Option[String] = {
+    val priorities = List(
+      NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+      SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority,
+      GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
+      HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
+      MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+    topPriority(game getCountries names, priorities) map (_.name)
+  }
+  
+  
   def recruitTarget(names: List[String]): Option[String] = {
     val priorities = List(
       NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
