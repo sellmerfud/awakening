@@ -454,66 +454,66 @@ object USBot extends BotHelpers {
                   muslimScore(numPlotDice, nonMuslimScore = 100))
   
   //  2. Regime Change
-  val RegimeChangePriority = new CriteriaPriority("Regime Change",
+  val RegimeChangePriority = new CriteriaFilter("Regime Change",
                   muslimTest(_.inRegimeChange))
   
   //  3. Caliphate Captial
-  val CaliphateCaptialPriority = new CriteriaPriority("Caliphate Captial",
+  val CaliphateCaptialPriority = new CriteriaFilter("Caliphate Captial",
                   muslimTest(_.caliphateCapital))
 
   //  4. Pakistan Arsenal
-  val PakistanPriority = new CriteriaPriority("Pakistan arsenal",
+  val PakistanPriority = new CriteriaFilter("Pakistan arsenal",
                   c => c.name == Pakistan && c.wmdCache > 0)
   
   //  5. Syria Arsenal
-  val SyriaPriority = new CriteriaPriority("Syria arsenal",
+  val SyriaPriority = new CriteriaFilter("Syria arsenal",
                   c => c.name == Syria && c.wmdCache > 0)
   
   //  6. Iran Arsenal
-  val IranPriority = new CriteriaPriority("Iran arsenal",
+  val IranPriority = new CriteriaFilter("Iran arsenal",
                   c => c.name == Iran && c.wmdCache > 0)
   
   //  7. Civil War
-  val CivilWArPriority = new CriteriaPriority("Civil War",
+  val CivilWArPriority = new CriteriaFilter("Civil War",
                   muslimTest(_.civilWar))
 
   //  8. Adjacent Good Ally
-  val AdjacentGoodAllyPriority = new CriteriaPriority("Adjacent Good Ally",
+  val AdjacentGoodAllyPriority = new CriteriaFilter("Adjacent Good Ally",
                   muslimTest(m => game.adjacentToGoodAlly(m.name)))
                   
   //  9. Philippines (if Abu Sayyaf)  (Base game only)
-  val PhilippinesPriority = new CriteriaPriority("Philippines (if Abu Sayyaf)",
+  val PhilippinesPriority = new CriteriaFilter("Philippines (if Abu Sayyaf)",
                   c => c.name == Philippines && globalEventInPlay("Abu Sayyaf (ISIL)"))
                   
   // 10. Good
-  val GoodPriority = new CriteriaPriority("Good Muslim", _.isGood)
+  val GoodPriority = new CriteriaFilter("Good Muslim", _.isGood)
   
   // 11. Fair
-  val FairPriority = new CriteriaPriority("Fair Muslim", _.isFair)
+  val FairPriority = new CriteriaFilter("Fair Muslim", _.isFair)
   
   // Not in the table on the player aid sheet.  (Used by WoI non-Muslim)
-  val PoorPriority = new CriteriaPriority("Poor Muslim", _.isPoor)
+  val PoorPriority = new CriteriaFilter("Poor Muslim", _.isPoor)
   
   // 12. Highest Resource
   val HighestResourcePriority = new HighestScorePriority("Highest resource",
                   muslimScore(_.resources))
   
   // 13. Neutral
-  val NeutralPriority = new CriteriaPriority("Neutral Muslim", muslimTest(_.isNeutral))
+  val NeutralPriority = new CriteriaFilter("Neutral Muslim", muslimTest(_.isNeutral))
   
   // 14. Besieged Regime
-  val BesiegedRegimePriority = new CriteriaPriority("Besieged Regime",
+  val BesiegedRegimePriority = new CriteriaFilter("Besieged Regime",
                   muslimTest(_.besiegedRegime))
   
   // 15. Most Cells
   val MostCellsPriority = new HighestScorePriority("Most cells", _.totalCells)
   
   // 16. Adjacent Islamist Rule
-  val AdjacentIslamistRulePriority = new CriteriaPriority("Adjacent Islamist Rule",
+  val AdjacentIslamistRulePriority = new CriteriaFilter("Adjacent Islamist Rule",
                   muslimTest(m => game.adjacentToIslamistRule(m.name)))
   
   // 17. With Aid
-  val WithAidPriority = new CriteriaPriority("With Aid", muslimTest(_.aidMarkers > 0))
+  val WithAidPriority = new CriteriaFilter("With Aid", muslimTest(_.aidMarkers > 0))
   
   // 18. Fewest Cells
   val FewestCellsPriority = new LowestScorePriority("Fewest cells", _.totalCells)
@@ -529,12 +529,12 @@ object USBot extends BotHelpers {
   val MostTroopsPriority = new HighestScorePriority("Most Troops",
                   muslimScore(_.totalTroops))
   // 22. Oil Exporter
-  val OilExporterPriority = new CriteriaPriority("Oil exporter",
+  val OilExporterPriority = new CriteriaFilter("Oil exporter",
                   muslimTest(_.oilProducer))
 
   // Other priorities that are not in the priority table.
-  val NoCellsPriority = new CriteriaPriority("No cells", _.totalCells == 0)
-  val HasCadrePriority = new CriteriaPriority("Has Cadre", _.hasCadre)
+  val NoCellsPriority = new CriteriaFilter("No cells", _.totalCells == 0)
+  val HasCadrePriority = new CriteriaFilter("Has Cadre", _.hasCadre)
   val ClosestToUSPriority = new LowestScorePriority("Closest to US",
     c => distance(c.name, UnitedStates))
 
@@ -660,10 +660,10 @@ object USBot extends BotHelpers {
     MostCellsPriority, AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
 
   val DisruptFlowchart = List(
-    new CriteriaNode("Muslim at least 2 more cells than TandM and JSP", 
+    new CriteriaFilter("Muslim at least 2 more cells than TandM and JSP", 
       muslimTest(m => m.totalCells - m.totalTroopsAndMilitia >= 2 && jihadSuccessPossible(m, false))),
-    new CriteriaNode("For Prestige gain", muslimTest(_.disruptAffectsPrestige)),
-    new CriteriaNode("To place cadre", onlyOneActiveCell)    
+    new CriteriaFilter("For Prestige gain", muslimTest(_.disruptAffectsPrestige)),
+    new CriteriaFilter("To place cadre", onlyOneActiveCell)    
   )
   
   def disruptTarget(names: List[String]): Option[String] = {
@@ -691,10 +691,10 @@ object USBot extends BotHelpers {
     PoorPriority, FairPriority, GoodPriority, FewestCellsPriority)
   
   val WoiNonMuslimFlowchart = List(
-    new CriteriaNode("Opposite posture US",
+    new CriteriaFilter("Opposite posture US",
       nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
-    new CriteriaNode("Untested non-Muslim", nonMuslimTest(_.isUntested)),
-    new CriteriaNode("Same posture as US",
+    new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)),
+    new CriteriaFilter("Same posture as US",
       nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture == game.usPosture))
   )
   
@@ -711,12 +711,12 @@ object USBot extends BotHelpers {
     AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
   
   val DeployToFlowchart = List(
-    new CriteriaNode("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
+    new CriteriaFilter("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
         muslimTest(m => globalEventInPlay("Abu Sayyaf") && m.name == Philippines && 
                          m.totalCells > 0 && m.totalTroops == 0)),
-    new CriteriaNode("With cells, but no troops or militia",
+    new CriteriaFilter("With cells, but no troops or militia",
       muslimTest(m => m.totalCells > 0 && m.totalTroopsAndMilitia == 0)),
-    new CriteriaNode("Regime Change needs troops + militia for WoI",
+    new CriteriaFilter("Regime Change needs troops + militia for WoI",
       muslimTest(m => m.inRegimeChange && m.totalTroopsAndMilitia - m.totalCells < 5))
   )
 
@@ -741,13 +741,13 @@ object USBot extends BotHelpers {
     FewestCellsPriority, LowestResourcePriority, MostPlotsPriority, MostTroopsPriority)
   
   val DeployFromFlowchart = List(
-    new CriteriaNode("Philippines if Moro Talks",  // Base game only
+    new CriteriaFilter("Philippines if Moro Talks",  // Base game only
         muslimTest(m => globalEventInPlay("Moro Talks") && m.name == Philippines)),
-    new CriteriaNode("Islamist Rule", muslimTest(_.isIslamistRule)),
-    new CriteriaNode("Good Ally without cells OR with troop markers/militia",
+    new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
+    new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 
              (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
-    new CriteriaNode("Fair Ally without cells OR with troop markers/militia",
+    new CriteriaFilter("Fair Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isFair && m.isAlly && 
              (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0)))
   )
@@ -776,18 +776,18 @@ object USBot extends BotHelpers {
   
   // ------------------------------------------------------------------
   val RegimeChangeFromFlowchart = List(
-    new CriteriaNode("Philippines if Moro Talks",  // Base game only
+    new CriteriaFilter("Philippines if Moro Talks",  // Base game only
         muslimTest(m => globalEventInPlay("Moro Talks") && m.name == Philippines)),
-    new CriteriaNode("Islamist Rule", muslimTest(_.isIslamistRule)),
-    new CriteriaNode("Good Ally without cells OR with troop markers/militia",
+    new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
+    new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 
              (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
-    new CriteriaNode("Fair Ally without cells OR with troop markers/militia",
+    new CriteriaFilter("Fair Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isFair && m.isAlly && 
              (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
-    new CriteriaNode("Good", _.isGood),         
-    new CriteriaNode("Fair", _.isFair),         
-    new CriteriaNode("Poor", _.isPoor)
+    new CriteriaFilter("Good", _.isGood),         
+    new CriteriaFilter("Fair", _.isFair),         
+    new CriteriaFilter("Poor", _.isPoor)
   )
   
   // Used to determine from where to get troops to use in a Regime Change Operation.
@@ -825,7 +825,7 @@ object USBot extends BotHelpers {
     topPriority(candidates, WoiMuslimPriorities) map (_.name)
   }
   
-  val WoiDrmMinusOneFilter = new CriteriaNode("WoI DRM -1",
+  val WoiDrmMinusOneFilter = new CriteriaFilter("WoI DRM -1",
     muslimTest(m => modifyWoiRoll(0, m, silent = true) == -1))
   
   def woiDrmMinusOneTarget(names: List[String]): Option[String] = {
@@ -840,8 +840,8 @@ object USBot extends BotHelpers {
   // Get target for the SCAF event
   def scafTarget(names: List[String]): Option[String] = {
     val flowchart = List(
-      new CriteriaPriority("Adversary Muslim", muslimTest(_.isAdversary)),
-      new CriteriaPriority("Neutral Muslim", muslimTest(_.isNeutral)))
+      new CriteriaFilter("Adversary Muslim", muslimTest(_.isAdversary)),
+      new CriteriaFilter("Neutral Muslim", muslimTest(_.isNeutral)))
     val priorities = FewestCellsPriority::PoorPriority::WoiMuslimPriorities
       
     botLog("Find \"SCAF\" target")
@@ -853,14 +853,24 @@ object USBot extends BotHelpers {
   // Get target for the Status Quo event
   def statusQuoTarget(names: List[String]): Option[String] = {
     val flowchart = List(
-      new CriteriaPriority("Adversary Muslim", muslimTest(_.isAdversary)),
-      new CriteriaPriority("Neutral Muslim", muslimTest(_.isNeutral)))
+      new CriteriaFilter("Adversary Muslim", muslimTest(_.isAdversary)),
+      new CriteriaFilter("Neutral Muslim", muslimTest(_.isNeutral)))
     val priorities = HighestResourcePriority::Nil
       
     botLog("Find \"Status Quo\" target")
     val candidates = followOpPFlowchart(game getCountries names, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
+  
+  
+  def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
+    val flowchart = List(
+      new CriteriaFilter("Adversary", muslimTest(m => m.isAdversary)),
+      new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
+    botLog("Find \"Critical Middle\" target")
+    countryNames(followOpPFlowchart(game getCountries names, flowchart)) 
+  }
+  
   
   // ------------------------------------------------------------------
   def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.us) min 3

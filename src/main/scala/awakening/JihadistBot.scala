@@ -102,50 +102,50 @@ object JihadistBot extends BotHelpers {
   }
   
   // 2. US
-  val USPriority = new CriteriaPriority("US", c => c.name == UnitedStates)
+  val USPriority = new CriteriaFilter("US", c => c.name == UnitedStates)
   
   // 3. With troops unless prestige 1
-  val WithPrestigeTroopsPriority = new CriteriaPriority("With troops & Prestige > 1",
+  val WithPrestigeTroopsPriority = new CriteriaFilter("With troops & Prestige > 1",
                   muslimTest(_.totalTroops > 0 && game.prestige > 1))
                   
   // 4. Not Islamist Rule
-  val NotIslamistRulePriority = new CriteriaPriority("Not Islamist Rule",
+  val NotIslamistRulePriority = new CriteriaFilter("Not Islamist Rule",
                   muslimTest(_.isIslamistRule == false, nonMuslim = true))
                   
   // 5. Pakistan with Arsenal
-  val PakistanPriority = new CriteriaPriority("Pakistan arsenal",
+  val PakistanPriority = new CriteriaFilter("Pakistan arsenal",
                   c => c.name == Pakistan && c.wmdCache > 0)
                   
   // 6. Philippines if would prestige - 1
-  val PhilippinesPriority = new CriteriaPriority("Phillipines", 
+  val PhilippinesPriority = new CriteriaFilter("Phillipines", 
                   muslimTest(m => m.name == Philippines &&
                                   m.totalTroops > 0 &&
                                   game.prestige > 1))
                                   
   // 7. Besieged Regime
-  val BesiegedRegimePriority = new CriteriaPriority("Besieged regime", muslimTest(_.besiegedRegime))
+  val BesiegedRegimePriority = new CriteriaFilter("Besieged regime", muslimTest(_.besiegedRegime))
   
   // 8. Most active cells  
   val MostActveCellsPriority = new HighestScorePriority("Most active cells", activeCells)
   
   // 9. Syrai with Arsenal
-  val SyriaPriority = new CriteriaPriority("Syria Arsenal", c => c.name == Syria && c.wmdCache > 0)
+  val SyriaPriority = new CriteriaFilter("Syria Arsenal", c => c.name == Syria && c.wmdCache > 0)
   
   // 10. With Aid
-  val WithAidPriority = new CriteriaPriority("With aid", muslimTest(_.aidMarkers > 0))
+  val WithAidPriority = new CriteriaFilter("With aid", muslimTest(_.aidMarkers > 0))
   
   // 11. Regime Change with troops
-  val RegimeChangeTroopsPriority = new CriteriaPriority("Regime change with troops", 
+  val RegimeChangeTroopsPriority = new CriteriaFilter("Regime change with troops", 
                   muslimTest(m => m.inRegimeChange && m.totalTroops > 0))
                   
   // 12. Highest Resource
   val HighestResourcePriority = new HighestScorePriority("Highest resource", muslimScore(_.resources))
   
   // 13. With Troops
-  val WithTroopsPriority = new CriteriaPriority("With troops", muslimTest(_.totalTroops > 0))
+  val WithTroopsPriority = new CriteriaFilter("With troops", muslimTest(_.totalTroops > 0))
   
   // 14. Iran with Arsenal
-  val IranPriority = new CriteriaPriority("Iran arsenal", c => c.name == Iran && c.wmdCache > 0)
+  val IranPriority = new CriteriaFilter("Iran arsenal", c => c.name == Iran && c.wmdCache > 0)
   
   // 15. US  (Already define at #2)
   
@@ -153,24 +153,24 @@ object JihadistBot extends BotHelpers {
   //  create an instance of the NotDestinationPriority() class.
   
   // 17. Islamist Rule
-  val IslamistRulePriority = new CriteriaPriority("Islamist Rule", muslimTest(_.isIslamistRule))
+  val IslamistRulePriority = new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule))
   
   // 18. Poor
-  val PoorPriority = new CriteriaPriority("Poor", muslimTest(_.isPoor))
+  val PoorPriority = new CriteriaFilter("Poor", muslimTest(_.isPoor))
   
   // 19. Fair
-  val FairPriority = new CriteriaPriority("Fair", muslimTest(_.isFair))
+  val FairPriority = new CriteriaFilter("Fair", muslimTest(_.isFair))
   
   // 20. Good
-  val GoodPriority = new CriteriaPriority("Good", muslimTest(_.isGood))
+  val GoodPriority = new CriteriaFilter("Good", muslimTest(_.isGood))
   
   // 21. Highest Resource (Already defined at #12)
   
   // 22. Russia
-  val RussiaPriority = new CriteriaPriority("Russia", _.name == Russia)
+  val RussiaPriority = new CriteriaFilter("Russia", _.name == Russia)
   
   // 23. No Disrupt pretige gain
-  val NoDisruptPretigePriority = new CriteriaPriority("No Disrupt prestige gain",
+  val NoDisruptPretigePriority = new CriteriaFilter("No Disrupt prestige gain",
                   muslimTest(_.totalTroopsThatAffectPrestige == 0, nonMuslim = true))
                   
   // 24. Highest REC#
@@ -179,12 +179,12 @@ object JihadistBot extends BotHelpers {
   // 25. Best Jihad DRM (Already defined at #1)
   
   // 26. Not US
-  val NotUSPriority = new CriteriaPriority("Not US", c => c.name != UnitedStates)
+  val NotUSPriority = new CriteriaFilter("Not US", c => c.name != UnitedStates)
   
   // 27. Most active cells  (Already defined at #8)
   
   // 28. Not Regime change
-  val NotRegimeChangePriority = new CriteriaPriority("Not Regime change", 
+  val NotRegimeChangePriority = new CriteriaFilter("Not Regime change", 
                   muslimTest(m => !m.inRegimeChange, nonMuslim = true))
                   
   // 29. Worst Jihad DRM
@@ -192,26 +192,26 @@ object JihadistBot extends BotHelpers {
                   muslimScore(m => jihadDRM(m, false)))
                   
   // 30. Disrupt prestige gain
-  val DisruptPrestigePriority = new CriteriaPriority("Disrupt prestige gain", 
+  val DisruptPrestigePriority = new CriteriaFilter("Disrupt prestige gain", 
                   muslimTest(m => m.disruptAffectsPrestige && game.prestige < 12))
                   
   // 31. Cival War
-  val CivilWarPriority = new CriteriaPriority("Civil War", muslimTest(_.civilWar))
+  val CivilWarPriority = new CriteriaFilter("Civil War", muslimTest(_.civilWar))
   
   // 32. Neutral
-  val NeutralPriority = new CriteriaPriority("Neutral", muslimTest(_.isNeutral))
+  val NeutralPriority = new CriteriaFilter("Neutral", muslimTest(_.isNeutral))
   
   // 33. Besieged Regmime (Already defined at #7)
   
   // 34. Adjacent Good Ally
-  val AdjacentGoodAllyPriority = new CriteriaPriority("Adjacent Good Ally", 
+  val AdjacentGoodAllyPriority = new CriteriaFilter("Adjacent Good Ally", 
                   muslimTest(m => game.adjacentToGoodAlly(m.name)))
                   
   // 35. Fair non-Muslim
-  val FairNonMuslimPriority = new CriteriaPriority("Fair non-Muslim", nonMuslimTest(_.isFair))
+  val FairNonMuslimPriority = new CriteriaFilter("Fair non-Muslim", nonMuslimTest(_.isFair))
   
   // 36. Same posture as US
-  val SamePostureAsUSPriority = new CriteriaPriority("Same posture as US",
+  val SamePostureAsUSPriority = new CriteriaFilter("Same posture as US",
                   nonMuslimTest(_.posture == game.usPosture))
                   
   // 37. Lowest REC#
@@ -221,28 +221,28 @@ object JihadistBot extends BotHelpers {
   val MostCellsPriority = new HighestScorePriority("Most cells", unusedCells)
   
   // 39. Adjacent to Islamist Rule
-  val AdjacentIslamistRulePriority = new CriteriaPriority("Adjacent to Islamist Rule", 
+  val AdjacentIslamistRulePriority = new CriteriaFilter("Adjacent to Islamist Rule", 
                   c => game.adjacentToIslamistRule(c.name))
                   
   // 40. Oil Exporter
-  val OilExporterPriority = new CriteriaPriority("Oil exporter", muslimTest(_.oilProducer))
+  val OilExporterPriority = new CriteriaFilter("Oil exporter", muslimTest(_.oilProducer))
 
 
   // Jihadist OpP Flowchart filters
   
-  val NonMuslimFilter     = new CriteriaNode("non-Muslim", nonMuslimTest(_  => true))
-  val PoorNonMuslimFilter = new CriteriaNode("Poor non-Muslim", nonMuslimTest(_.isPoor))
-  val FairNonMuslimFilter = new CriteriaNode("Fair non-Muslim", nonMuslimTest(_.isFair))
-  val GoodNonMuslimFilter = new CriteriaNode("Good non-Muslim", nonMuslimTest(_.isGood))
+  val NonMuslimFilter     = new CriteriaFilter("non-Muslim", nonMuslimTest(_  => true))
+  val PoorNonMuslimFilter = new CriteriaFilter("Poor non-Muslim", nonMuslimTest(_.isPoor))
+  val FairNonMuslimFilter = new CriteriaFilter("Fair non-Muslim", nonMuslimTest(_.isFair))
+  val GoodNonMuslimFilter = new CriteriaFilter("Good non-Muslim", nonMuslimTest(_.isGood))
   
-  val PoorMuslimFilter  = new CriteriaNode("Poor Muslim", muslimTest(_.isPoor))
-  val FairMuslimFilter  = new CriteriaNode("Fair Muslim", muslimTest(_.isFair))
-  val GoodMuslimFilter  = new CriteriaNode("Fair Muslim", muslimTest(_.isGood))
-  val AutoRecruitFilter = new CriteriaNode("Auto recruit", muslimTest(_.autoRecruit))
+  val PoorMuslimFilter  = new CriteriaFilter("Poor Muslim", muslimTest(_.isPoor))
+  val FairMuslimFilter  = new CriteriaFilter("Fair Muslim", muslimTest(_.isFair))
+  val GoodMuslimFilter  = new CriteriaFilter("Fair Muslim", muslimTest(_.isGood))
+  val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
   
-  val PoorTroopsActiveCellsFilter = new CriteriaNode("Poor with troops and active cells",
+  val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
                   muslimTest(m => m.isPoor && activeCells(m) > 0))
-  val PoorNeedCellsforMajorJihad = new CriteriaNode("Poor, 1-4 more cells that troops/militia and JSP",
+  val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells that troops/militia and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
@@ -489,17 +489,54 @@ object JihadistBot extends BotHelpers {
   // Get target for the Status Quo event
   def changeOfStateTarget(names: List[String]): Option[String] = {
     val flowchart = List(
-      new CriteriaPriority("Fair Ally", muslimTest(m => m.isFair && m.isAlly)))
+      new CriteriaFilter("Fair Ally", muslimTest(m => m.isFair && m.isAlly)))
     val priorities = List(
       HighestResourcePriority,
-      new CriteriaPriority("No Troops", muslimTest(m => m.totalTroops == 0)))
+      new CriteriaFilter("No Troops", muslimTest(m => m.totalTroops == 0)))
       
     botLog("Find \"Change of State\" target")
     val candidates = followOpPFlowchart(game getCountries names, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
+  // ------------------------------------------------------------------
+  // Get target for the Status Quo event
+  def talibanResurgentTarget(names: List[String]): Option[String] = {
+    val flowchart = List(
+      GoodPriority,
+      FairPriority,
+      new CriteriaFilter("Poor with Troops and US Prestige > 1", 
+           muslimTest(m => m.isPoor && game.prestige > 1)))
+      
+    botLog("Find \"Taliban Resurgent\" target")
+    val candidates = countryNames(followOpPFlowchart(game getCountries names, flowchart))
+    minorJihadTarget(candidates)
+  }
   
+  def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
+    val flowchart = List(
+      new CriteriaFilter("Ally",    muslimTest(m => m.isAlly)),
+      new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
+    botLog("Find \"Critical Middle\" target")
+    countryNames(followOpPFlowchart(game getCountries names, flowchart)) 
+  }
+  
+  // Pick actives before sleepers
+  // Return (actives, sleepers)
+  def chooseCellsToRemove(name: String, num: Int): (Int, Int) = {
+    val c = game getCountry name
+    val actives = num min c.activeCells
+    val sleepers  = (num - actives) min c.sleeperCells
+    (actives, sleepers)
+  }
+  
+  // The Bot will declare the Calipahate if it results in  an auto win, 
+  // or if there is at least one other adjacent country that qualifies to be part
+  // of the Calipahte.
+  def willDeclareCaliphate(capital: String): Boolean = {
+    canDeclareCaliphate(capital) &&
+    (game.islamistResources == 5 || game.caliphateDaisyChain(capital).size > 1)
+  }
   
   def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.jihadist) min 3
   

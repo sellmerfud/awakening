@@ -87,6 +87,8 @@ object AwakeningCards {
   val martyrdomCandidate = (c: Country) => c.totalCells > 0 && 
     !(game.isMuslim(c.name) && game.getMuslim(c.name).isIslamistRule)
   val regionalAlQaedaCandidate = (m: MuslimCountry) => m.name != Iran && m.isUntested
+  val talibanResurgentCandidate = (m: MuslimCountry) => (m.civilWar || m.inRegimeChange) && m.totalCells >= 3
+  val usAtrocitiesCandidate = (m: MuslimCountry) => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)
 
   def parisAttacksPossible: Boolean = {
     val list = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
@@ -112,13 +114,17 @@ object AwakeningCards {
   
   val GulfUnionCountries = List(GulfStates, SaudiArabia, Yemen, Jordan, Morocco).sorted
   
-  val gulfUnionCandidates: Set[String] = {
+  def gulfUnionCandidates: Set[String] = {
     GulfUnionCountries.foldLeft(Set.empty[String]) { (candidates, name) =>
       val gulf = game getMuslim name
       val adj = (getAdjacent(name) filter (x => game.isMuslim(x) && x != Iran)) map game.getMuslim
       candidates ++ ((gulf :: adj) filter (m => !(m.isGood || m.isIslamistRule)) map (_.name))
     }
   }
+  
+  val criticalMiddleUSCandidate = (m: MuslimCountry) => m.isFair && m.resources > 1 &&
+                                     (!m.isAlly || m.canTakeAwakeningOrReactionMarker)
+  val criticalMiddleJihadistCandidate = (m: MuslimCountry) => m.isPoor && m.resources < 3
   
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
@@ -780,7 +786,7 @@ object AwakeningCards {
         addEventTarget(target)
         removeCachedWMD(target, 1)
         if (game.cellsAvailable > 0)
-          addSleeperCellsToCountry(Israel, 1, ignoreFunding = true)
+          addSleeperCellsToCountry(Israel, 1)
         increaseFunding(1)
       }
     )),
@@ -1871,8 +1877,8 @@ object AwakeningCards {
               val maxCells = 3 min game.cellsAvailable
               val num = askInt("Place how many cells", 1, maxCells, Some(maxCells))
               addSleeperCellsToCountry(Nigeria, num)
-              if (num == 3 && !game.caliphateDeclared && game.isMuslim(Nigeria))
-                askDeclareCaliphate(Nigeria)
+              if (num == 3 && canDeclareCaliphate(Nigeria) && askDeclareCaliphate(Nigeria))
+                declareCaliphate(Nigeria)
           }
           log()
           log("Jihadist player may return Boko Haram to hand by")
@@ -1880,7 +1886,21 @@ object AwakeningCards {
         }
         else {
           // See Event Instructions table
-          log("!!! Bot event not yet implemented !!!")
+          // We know that either cells are available or a Plot2/3 is available from
+          // the eventConditions().
+          val plot = (game.availablePlots.sorted filter (p => p == Plot2 || p == Plot3)).headOption
+          val placeCells = if (plot.isEmpty) true
+          else if (game.cellsAvailable == 0) false
+          else if (game isMuslim Nigeria) true  // Muslim priority to cells
+          else false                            // non-Muslim priority to plot
+          if (placeCells)  {
+            val numCells = 3 min game.cellsAvailable
+            addSleeperCellsToCountry(Nigeria, numCells)
+            if (numCells == 3 && JihadistBot.willDeclareCaliphate(Nigeria))
+              declareCaliphate(Nigeria)
+          }
+          else
+            addAvailablePlotToCountry(Nigeria, plot.get)
         }
       }
     )),
@@ -1904,8 +1924,12 @@ object AwakeningCards {
           removeAidMarker(target, 1)
         else if (!m.besiegedRegime)
           addBesiegedRegimeMarker(target)
-        if (numCells >= 3 && !game.caliphateDeclared)
-          askDeclareCaliphate(target)
+        
+        if (numCells >= 3 &&
+            canDeclareCaliphate(target) &&
+            ((role == game.humanRole && askDeclareCaliphate(target)) ||
+             (role == game.botRole && JihadistBot.willDeclareCaliphate(target))))
+          declareCaliphate(target)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1958,14 +1982,14 @@ object AwakeningCards {
             val cells = numCells min game.cellsAvailable
             if (c.autoRecruit) {
               log(s"Recruit in $target succeeds automatically")
-              addSleeperCellsToCountry(target, cells, ignoreFunding = true)
+              addSleeperCellsToCountry(target, cells)
             }
             else {
               val die = getDieRoll(role)
               log(s"Die roll: $die")
               if (die <= c.governance) {
                 log(s"Recruit in $target succeeds with a die roll of $die")
-                addSleeperCellsToCountry(target, cells, ignoreFunding = true)
+                addSleeperCellsToCountry(target, cells)
               }
               else {
                 log(s"Recruit in $target fails with a die roll of $die")
@@ -2130,9 +2154,32 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(195, "Taliban Resurgent", Jihadist, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => if (role == game.humanRole)
+          game hasMuslim talibanResurgentCandidate
+      else {
+        val candidates = countryNames(game.muslims filter talibanResurgentCandidate)
+        JihadistBot.talibanResurgentTarget(candidates).nonEmpty
+      }
+      ,
       (role: Role) => {
         // See Event Instructions table
+        val candidates = countryNames(game.muslims filter talibanResurgentCandidate)
+        val (target, plots, (actives, sleepers)) = if (role == game.humanRole) {
+          val name = askCountry("Select country: ", candidates)
+          val plots = askPlots(game.availablePlots filterNot (_ == PlotWMD), 2)
+          println("Choose cells to remove:")
+          (name, plots, askCells(name, 3, sleeperFocus = false))
+        }
+        else {
+          val name = JihadistBot.talibanResurgentTarget(candidates).get
+          val plots = (game.availablePlots.sorted filterNot (_ == PlotWMD)) take 2
+          (name, plots, JihadistBot.chooseCellsToRemove(name, 3))
+        }
+        addEventTarget(target)
+        removeCellsFromCountry(target, actives, sleepers, addCadre = false)
+        plots foreach { p => addAvailablePlotToCountry(target, p) }
+        performJihads(JihadTarget(target, 2, 0)::Nil, ignoreFailures = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2165,7 +2212,7 @@ object AwakeningCards {
         addEventMarkersToCountry(target, "Training Camps")
         updateTrainingCampCapacity(priorCapacity)
         val cellsToAdd = game.cellsAvailable min 2
-        addSleeperCellsToCountry(target, cellsToAdd, ignoreFunding = true)
+        addSleeperCellsToCountry(target, cellsToAdd)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2173,23 +2220,162 @@ object AwakeningCards {
       Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
         // See Event Instructions table
+        if (role == game.humanRole)
+          log("Draw one of the indicated cards from the discard pile.")
+        else
+          log(s"The $Jihadist Bot draws the candidate card nearest the top of the dicard pile")
+        decreasePrestige(1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(198, "US Atrocities", Jihadist, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim usAtrocitiesCandidate
+      ,
+      (role: Role) => {
+        val alignCandidates = countryNames(game.muslims filter usAtrocitiesCandidate)
+        val postureCandidates = countryNames(game.nonMuslims filter (n => n.isUntested && !n.isSchengen))
+        var (alignTarget, postureTarget) = if (role == game.humanRole) {
+          val at = askCountry(s"Select country for alignment shift: ", alignCandidates)
+          val pt = if (postureCandidates.isEmpty)
+            None
+          else {
+            val name = askCountry(s"Select posture of which country: ", postureCandidates)
+            val pos = askOneOf(s"Select posture for $name: ", Hard::Soft::Nil).get
+            Some(name, pos)
+          }
+          (at, pt)
+        }
+        else {
+          val at = JihadistBot.markerAlignGovTarget(alignCandidates).get
+          val pt = if (postureCandidates.isEmpty)
+            None
+          else
+            Some(shuffle(postureCandidates).head, oppositePosture(game.usPosture))
+          (at, pt)
+        }
+        
+        val newAlign = if ((game getMuslim alignTarget).alignment == Ally)
+          Neutral
+        else
+          Adversary
+        addEventTarget(alignTarget)
+        shiftAlignment(alignTarget, newAlign)
+        postureTarget foreach {
+          case (name, posture) => 
+            addEventTarget(name)
+            setCountryPosture(name, posture)
+        }
+        decreasePrestige(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(199, "US Consulate Attacked", Jihadist, 3,
       NoRemove, NoMarker, Lapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        decreasePrestige(2)
+        if (role == game.humanRole)
+          log(s"Discard the top card of the $US hand")
+        else
+          log(s"You ($US) must discard one random card")
+        log("If US Elections is played later this turn, US Posture switches automatically")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(200, "Critical Middle", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role match {
+        case US       => game hasMuslim criticalMiddleUSCandidate
+        case Jihadist => game hasMuslim criticalMiddleJihadistCandidate
+      }
+      ,
       (role: Role) => {
         // See Event Instructions table
+        val usCandidates = countryNames(game.muslims filter criticalMiddleUSCandidate)
+        val jiCandidates = countryNames(game.muslims filter criticalMiddleJihadistCandidate)
+        val (target, action, from) = (role, role == game.humanRole) match {
+          case (US, true) =>
+            val target = askCountry("Select country: ", usCandidates)
+            val m = game getMuslim target
+            val choices = List(
+              if (m.canTakeAwakeningOrReactionMarker) Some("awakening" -> "Place an awakening marker") else None,
+              if (!m.isAlly) Some("shiftAlly" -> "Shift alignment towards Ally") else None
+            ).flatten
+            val action = if (choices.isEmpty) None
+            else askMenu(ListMap(choices:_*)).headOption
+            (target, action, Nil)
+              
+          case (Jihadist, true) =>
+            val target = askCountry("Select country: ", jiCandidates)
+            val m = game getMuslim target
+            val choices = List(
+              if (game.cellsAvailable > 0) Some("cells" -> "Place cells") else None,
+              if (!m.isAdversary) Some("shiftAdversary" -> "Shift alignment towards Adversary") else None
+            ).flatten
+            val action = if (choices.isEmpty) None
+            else askMenu(ListMap(choices:_*)).headOption
+            val from = if (action == Some("cells")) {
+              val xs = (game.countries filter (c => c.name != target && c.totalCells > 0) 
+                                      map (c => MapItem(c.name, c.totalCells)))
+              val items = MapItem("track", game.cellsAvailable) :: xs
+              println(s"Select 2 cells to place in $target:")
+              askMapItems(items, 2, "cell")
+            }
+            else
+              Nil
+              (target, action, from)
+            
+          case (US, false) =>
+            USBot.criticalMiddleShiftPossibilities(usCandidates) match {
+              case Nil => (USBot.markerAlignGovTarget(usCandidates).get, Some("awakening"), Nil)
+              case xs  => (USBot.markerAlignGovTarget(xs).get, Some("shiftAlly"), Nil)
+            }
+          case (Jihadist, false) =>
+            JihadistBot.criticalMiddleShiftPossibilities(jiCandidates) match {
+              case Nil =>
+                val target = JihadistBot.travelToTarget(jiCandidates).get
+                def nextFrom(countries: List[String], remaining: Int): List[MapItem] =
+                  if (remaining == 0)
+                    Nil
+                  else if (game.cellsAvailable > 0) {
+                    val n = remaining min game.cellsAvailable
+                    MapItem("track", n)::nextFrom(countries, remaining - n)
+                  }
+                  else if (countries.isEmpty)
+                    Nil
+                  else {
+                    val name = JihadistBot.travelFromTarget(target, countries).get
+                    val n = remaining min (game getCountry name).totalCells
+                    MapItem(name, n)::nextFrom(countries filterNot (_ == name), remaining - n)
+                  }
+
+                val fromCandidates = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
+                (target, Some("cells"), nextFrom(fromCandidates, 2))
+                
+              case xs  => (JihadistBot.markerAlignGovTarget(xs).get, Some("shiftAdversary"), Nil)
+            }
+        }
+        
+        addEventTarget(target)
+        val m = game getMuslim target
+        action match {
+          case None                   => log(s"$target is already and Ally and cannot take an awakening marker")
+          case Some("awakening")      => addAwakeningMarker(target)
+          case Some("shiftAlly")      => shiftAlignment(target, if (m.isAdversary) Neutral else Ally)
+          case Some("shiftAdversary") => shiftAlignment(target, if (m.isAlly) Neutral else Adversary)
+          case _ => // place cells
+            from foreach {
+              case MapItem("track", n) => addSleeperCellsToCountry(target, n)
+              case MapItem(name, n)    =>
+                val actives  = n min (game getCountry name).activeCells
+                val sleepers = n - actives
+                moveCellsBetweenCountries(name, target, actives, true)
+                moveCellsBetweenCountries(name, target, sleepers, false)
+            }
+        }
+        log()
+        log("IMPORTANT!")
+        log("Place the \"Critical Middle\" card in the approximate middle of the draw pile")
       }
     )),
     // ------------------------------------------------------------------------
@@ -2455,6 +2641,7 @@ object AwakeningCards {
       ,
       (role: Role) => {
         // See Event Instructions table
+        // if lapsingEventInPlay("US Consulate Attacked") the posture switches, without a roll.
       }
     ))
   )

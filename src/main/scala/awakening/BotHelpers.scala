@@ -86,14 +86,19 @@ trait BotHelpers {
   // If none of the filters finds at least one matching country we return Nil, 
   // which indicates that no valid candidates were found for the OpP flowchart.
   @tailrec final def followOpPFlowchart(countries: List[Country], filters: List[CountryFilter]): List[Country] = {
+    botLog(s"OpP Flowchart: [${(countries map (_.name)) mkString ", "}]")
     (countries, filters) match {
-      case (Nil, _)    => Nil    // No countries to consider
-      case (_, Nil)    => Nil    // No filter found any candidates
-      case (_, f::fs) =>
-        f.filter(countries) match {
+      case (Nil, _) =>
+        botLog("OpP Flowchart: no countries to consider")
+        Nil    // No countries to consider
+      case (_, Nil) => 
+        botLog("OpP Flowchart: no candidates found")
+        Nil    // No filter found any candidates
+      case (cs, f::fs) =>
+        (f filter cs) match {
           case Nil =>            // Filter did not match anything, try the next filter
             botLog(s"OpP Flowchart ($f): failed")
-            followOpPFlowchart(countries, fs)
+            followOpPFlowchart(cs, fs)
           case results =>        // We got some results…
             botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
             results
@@ -114,9 +119,22 @@ trait BotHelpers {
     botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")
     (countries, priorities) match {
       case (Nil, _)    => None
-      case (c::Nil, _) => Some(c)                             // We've narrowed it to one
-      case (cs, Nil)   => shuffle(cs).headOption              // Take one at random
-      case (cs, f::fs) => topPriority(f filter countries, fs) // Filter by next priority
+      case (c::Nil, _) => 
+        botLog(s"topPriority: Picked a winner [${c.name}]")
+        Some(c)                             // We've narrowed it to one
+      case (cs, Nil)   =>
+        val c = shuffle(cs).head              // Take one at random
+        botLog(s"topPriority: Picked random country [${c.name}]")
+        Some(c)
+      case (cs, f::fs) =>
+        (f filter cs) match {
+          case Nil =>
+            botLog(s"topPriority ($f) falied")
+            topPriority(cs, fs) // Filter entire list by next priority
+          case rs  =>
+            botLog(s"topPriority ($f) [${(rs map (_.name) mkString ", ")}]")
+            topPriority(rs, fs) // Filter matched list by next priority
+        }
     }
   }
   
@@ -148,16 +166,13 @@ trait BotHelpers {
     case n: NonMuslimCountry => score(n)  
   }
 
-  // Boolean criteria filter used with Priority Tables.
-  // The input is fitered and if the results are empty, the original input
-  // is returned. Otherwise the filtered input is returned.
-  class CriteriaPriority(val desc: String, criteria: (Country) => Boolean) extends CountryFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
-      case Nil      => botLog(s"Criteria ($desc): match = false"); countries
-      case matching => botLog(s"Criteria ($desc): match = true"); matching
-    }
+  
+  // A boolean criteria filter that is used in OpP flowcharts
+  // Filters the given countries and returns the results.
+  class CriteriaFilter(val desc: String, criteria: (Country) => Boolean) extends CountryFilter {
+    def filter(countries: List[Country]) = (countries filter criteria)
   }
-
+  
   // Highest integer score filter used with Priority Tables.
   // Applies the given score function to each country in the input list and
   // takes the highest value.
@@ -180,13 +195,6 @@ trait BotHelpers {
       botLog(s"Lowest ($desc): score = $low")
       countries filter (c => score(c) == low)
     }
-  }
-  
-  
-  // A boolean criteria filter that is used in OpP flowcharts
-  // Filters the given countries and returns the results.
-  class CriteriaNode(val desc: String, criteria: (Country) => Boolean) extends CountryFilter {
-    def filter(countries: List[Country]) = (countries filter criteria)
   }
   
   // Highest integer score filter used with OpP flowcharts.

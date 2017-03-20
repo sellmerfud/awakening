@@ -1358,6 +1358,16 @@ object LabyrinthAwakening {
     nextCountry(1, candidates)
   }
   
+  // Used when the user must select 1 or more avaailable plots to place in a country.
+  def askPlots(plots: List[Plot], num: Int): List[Plot] = {
+    val maxPlots  = num min plots.size
+    val entries   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p }
+    val choices   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p.toString }
+    val plotMap   = ListMap(entries:_*)
+    val choiceMap = ListMap(choices:_*)
+    println(s"Choose ${amountOf(maxPlots, "plot")}:")
+    askMenu(choiceMap, maxPlots) map plotMap
+  }
   
   // Returns (actives, sleepers)
   def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean = true): (Int, Int) = {
@@ -1737,11 +1747,15 @@ object LabyrinthAwakening {
     modRoll
   }
 
-  def askDeclareCaliphate(capital: String): Unit = {
-    if (!game.caliphateDeclared && 
-        askYorN(s"Do you wish to declare a Caliphate with $capital as the the Captial (y/n)? "))
-      declareCaliphate(capital)
-  }
+  // Return true if no caliphate exists and the the given country is a caliphate candidate.
+  def canDeclareCaliphate(capital: String): Boolean  =
+    !game.caliphateDeclared && 
+    (game isMuslim capital) &&
+    (game getMuslim capital).caliphateCandidate
+
+  def askDeclareCaliphate(capital: String): Boolean =
+    askYorN(s"Do you wish to declare a Caliphate with $capital as the the Captial (y/n)? ")
+
 
   // Throws an exception if a Caliphate already exists
   def declareCaliphate(capital: String): Unit = {
@@ -3351,7 +3365,7 @@ object LabyrinthAwakening {
       addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
       removeReactionMarker(name, m.reaction)
       val newSleepers = m.reaction min game.cellsAvailable
-      addSleeperCellsToCountry(name, newSleepers, ignoreFunding = true)
+      addSleeperCellsToCountry(name, newSleepers)
       flipCaliphateSleepers()
     }
   }
@@ -3455,16 +3469,16 @@ object LabyrinthAwakening {
     }
   }
   
-  def addActiveCellsToCountry(name: String, num: Int, ignoreFunding: Boolean = false, logPrefix: String = "") =
-    addCellsToCountry(name, true, num, ignoreFunding, logPrefix)
+  def addActiveCellsToCountry(name: String, num: Int, logPrefix: String = "") =
+    addCellsToCountry(name, true, num, logPrefix)
   
-  def addSleeperCellsToCountry(name: String, num: Int, ignoreFunding: Boolean = false, logPrefix: String = "") =
-    addCellsToCountry(name, false, num, ignoreFunding, logPrefix)
+  def addSleeperCellsToCountry(name: String, num: Int, logPrefix: String = "") =
+    addCellsToCountry(name, false, num, logPrefix)
   
   // Move cells from the track (or training camp) to a country on the map.
   // Caller should ensure there are enough available cells to satisfy the move.
   // otherwise the function will throw an exception!
-  def addCellsToCountry(name: String, active: Boolean, num: Int, ignoreFunding: Boolean = false, logPrefix: String = ""): Unit = {
+  def addCellsToCountry(name: String, active: Boolean, num: Int, logPrefix: String = ""): Unit = {
     if (num > 0) {
       val isActive     = active || game.isCaliphateMember(name)
       val cellType     = if (isActive) "active cell" else "sleeper cell"
@@ -5516,7 +5530,7 @@ object LabyrinthAwakening {
         if (value < c.activeCells)
           removeActiveCellsFromCountry(name, c.activeCells - value, addCadre = false, s"$name adjusted: ")
         else if (value > c.activeCells)
-          addActiveCellsToCountry(name, value - c.activeCells, ignoreFunding = true, s"$name adjusted: ")
+          addActiveCellsToCountry(name, value - c.activeCells, s"$name adjusted: ")
       }
   }
   
@@ -5537,7 +5551,7 @@ object LabyrinthAwakening {
         if (value < c.sleeperCells)
           removeSleeperCellsFromCountry(name, c.sleeperCells - value, addCadre = false, s"$name adjusted: ")
         else if (value > c.sleeperCells)
-          addSleeperCellsToCountry(name, value - c.sleeperCells, ignoreFunding = true, s"$name adjusted: ")
+          addSleeperCellsToCountry(name, value - c.sleeperCells, s"$name adjusted: ")
       }
   }
   
