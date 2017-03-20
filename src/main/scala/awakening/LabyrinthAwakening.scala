@@ -1866,14 +1866,18 @@ object LabyrinthAwakening {
       getTarget
     }
     
-    val rmc = randomConvergenceTarget
-    if (awakening) {
-      game = game.updateCountry(rmc.copy(awakening = rmc.awakening + 1))
-      log(s"Convergence for ${forCountry}: Add 1 awakening marker to ${rmc.name}")
-    }
+    if (lapsingEventInPlay("Arab Winter"))
+      log("No convergence peformed because \"Arab Winter\" is in effect")
     else {
-      game = game.updateCountry(rmc.copy(reaction = rmc.reaction + 1))
-      log(s"Convergence for ${forCountry}: Add 1 reaction marker to ${rmc.name}")
+      val rmc = randomConvergenceTarget
+      if (awakening) {
+        game = game.updateCountry(rmc.copy(awakening = rmc.awakening + 1))
+        log(s"Convergence for ${forCountry}: Add 1 awakening marker to ${rmc.name}")
+      }
+      else {
+        game = game.updateCountry(rmc.copy(reaction = rmc.reaction + 1))
+        log(s"Convergence for ${forCountry}: Add 1 reaction marker to ${rmc.name}")
+      }
     }
   }
   
@@ -3238,9 +3242,10 @@ object LabyrinthAwakening {
     }
   }
   
-  def globalEventInPlay(name: String)    = (game markerInPlay name)
-  def globalEventNotInPlay(name: String) = !globalEventInPlay(name)
-  def lapsingEventInPlay(name: String)   = (game lapsingInPlay name)
+  def globalEventInPlay(name: String)     = (game markerInPlay name)
+  def globalEventNotInPlay(name: String)  = !globalEventInPlay(name)
+  def lapsingEventInPlay(name: String)    = (game lapsingInPlay name)
+  def lapsingEventNotInPlay(name: String) = !lapsingEventInPlay(name)
   
   def addGlobalEventMarker(marker: String): Unit = {
     if (!(game markerInPlay marker)) {
