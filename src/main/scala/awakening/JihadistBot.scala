@@ -301,7 +301,6 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, priorities) map (_.name)
     
   }
-  
 
   val TightPlotFlowchart = List(
     PoorNonMuslimFilter, FairNonMuslimFilter, GoodNonMuslimFilter)
@@ -478,6 +477,29 @@ object JihadistBot extends BotHelpers {
     }
     evaluateNode(MajorJihadDecision)
   }
+  
+  
+  def goodPriority(names: List[String]): Option[String] = {
+    val priorities = GoodPriority::Nil
+    botLog("Find \"Good Priority\" target")
+    topPriority(game getCountries names, priorities) map (_.name)
+  }
+  
+  // ------------------------------------------------------------------
+  // Get target for the Status Quo event
+  def changeOfStateTarget(names: List[String]): Option[String] = {
+    val flowchart = List(
+      new CriteriaPriority("Fair Ally", muslimTest(m => m.isFair && m.isAlly)))
+    val priorities = List(
+      HighestResourcePriority,
+      new CriteriaPriority("No Troops", muslimTest(m => m.totalTroops == 0)))
+      
+    botLog("Find \"Change of State\" target")
+    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    topPriority(candidates, priorities) map (_.name)
+  }
+  
+  
   
   def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.jihadist) min 3
   

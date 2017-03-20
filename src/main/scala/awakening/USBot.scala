@@ -43,6 +43,24 @@ object USBot extends BotHelpers {
     game.muslims filter (m => !m.isUntested && m.warOfIdeasOK(ops))
   def woiNonMuslimTargets(ops: Int): List[NonMuslimCountry] = game.nonMuslims filter (_.warOfIdeasOK(ops))
   
+  // Pick sleepers before actives
+  // Return (actives, sleepers)
+  def chooseCellsToRemove(name: String, num: Int): (Int, Int) = {
+    val c = game getCountry name
+    val sleepers = num min c.sleeperCells
+    val actives  = (num - sleepers) min c.activeCells
+    (actives, sleepers)
+  }
+  
+  // Pick actives before sleepers
+  // Return (actives, sleepers)
+  def chooseCellsToDisrupt(name: String, num: Int): (Int, Int) = {
+    val c = game getCountry name
+    val actives = num min c.activeCells
+    val sleepers  = (num - actives) min c.sleeperCells
+    (actives, sleepers)
+  }
+  
   val onlyOneActiveCell = (c: Country) => c.activeCells == 1 && c.sleeperCells == 0
   val numPlotDice = (m: MuslimCountry) => (m.plots map { case PlotOnMap(plot, _) => plot.number }).sum
 
@@ -153,9 +171,8 @@ object USBot extends BotHelpers {
   // in the list to narrow the choices to a single country.  If we go through all of
   // the filters and we stil have more than one viable country, then we pick one at
   // random.
-  // Note: The only time this function will return Nil, is if the original list of
-  //       PlotInCountry instances is empty.
   def priorityPlot(plots: List[PlotInCountry]): PlotInCountry = {
+    assert(plots.nonEmpty, "priorityPlot() called with empty list")
     @tailrec def topPriority(plots: List[PlotInCountry], priorities: List[PlotFilter]): PlotInCountry = {
       botLog(s"priorityPlot: [${(plots map (_.toString)) mkString ", "}]")
       (plots, priorities) match {
@@ -472,17 +489,17 @@ object USBot extends BotHelpers {
   val GoodPriority = new CriteriaPriority("Good Muslim", _.isGood)
   
   // 11. Fair
-  val FairPriority = new CriteriaPriority("Fair Muslime", _.isFair)
+  val FairPriority = new CriteriaPriority("Fair Muslim", _.isFair)
   
-  // Not in the table on the player aid sheet.  (Used by WoI non-Muslime)
-  val PoorPriority = new CriteriaPriority("Poor Muslime", _.isPoor)
+  // Not in the table on the player aid sheet.  (Used by WoI non-Muslim)
+  val PoorPriority = new CriteriaPriority("Poor Muslim", _.isPoor)
   
   // 12. Highest Resource
   val HighestResourcePriority = new HighestScorePriority("Highest resource",
                   muslimScore(_.resources))
   
   // 13. Neutral
-  val NeutralPriority = new CriteriaPriority("Neutral Muslime", muslimTest(_.isNeutral))
+  val NeutralPriority = new CriteriaPriority("Neutral Muslim", muslimTest(_.isNeutral))
   
   // 14. Besieged Regime
   val BesiegedRegimePriority = new CriteriaPriority("Besieged Regime",
@@ -655,6 +672,19 @@ object USBot extends BotHelpers {
     topPriority(candidates, DisruptPriorities) map (_.name)
   }
   
+  def disruptPriority(names: List[String]): Option[String] = {
+   topPriority(names map game.getCountry, DisruptPriorities) map (_.name) 
+  }
+  
+  // Narrow a list of Muslim countries to those were the
+  // number of cells - (troops + militia) is highest.
+  def highestCellsMinusTandM(names: List[String]): List[String] = {
+    val muslims = names map game.getMuslim
+    val score = (m: MuslimCountry) => m.totalCells - m.totalTroopsAndMilitia
+    val high = (muslims map score).max
+    muslims filter (m => score(m) == high) map (_.name)
+  }
+  
   // ------------------------------------------------------------------
   // Not in the Priorities Table, but listed in OpP flowchard.
   val WoiNonMuslimPriorities = List(
@@ -700,6 +730,10 @@ object USBot extends BotHelpers {
     }
     botLog(s"Deploy To result: ${target getOrElse "<none>"}")
     target
+  }
+  
+  def deployToPriority(names: List[String]): Option[String] = {
+   topPriority(names map game.getCountry, DeployToPriorities) map (_.name) 
   }
   
   // ------------------------------------------------------------------
@@ -799,6 +833,33 @@ object USBot extends BotHelpers {
     val flowchart = WoiDrmMinusOneFilter::Nil
     val candidates = followOpPFlowchart(game getCountries names, flowchart)
     topPriority(candidates, WoiMuslimPriorities) map (_.name)
+  }
+  
+  
+  // ------------------------------------------------------------------
+  // Get target for the SCAF event
+  def scafTarget(names: List[String]): Option[String] = {
+    val flowchart = List(
+      new CriteriaPriority("Adversary Muslim", muslimTest(_.isAdversary)),
+      new CriteriaPriority("Neutral Muslim", muslimTest(_.isNeutral)))
+    val priorities = FewestCellsPriority::PoorPriority::WoiMuslimPriorities
+      
+    botLog("Find \"SCAF\" target")
+    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    topPriority(candidates, priorities) map (_.name)
+  }
+  
+  // ------------------------------------------------------------------
+  // Get target for the Status Quo event
+  def statusQuoTarget(names: List[String]): Option[String] = {
+    val flowchart = List(
+      new CriteriaPriority("Adversary Muslim", muslimTest(_.isAdversary)),
+      new CriteriaPriority("Neutral Muslim", muslimTest(_.isNeutral)))
+    val priorities = HighestResourcePriority::Nil
+      
+    botLog("Find \"Status Quo\" target")
+    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    topPriority(candidates, priorities) map (_.name)
   }
   
   // ------------------------------------------------------------------

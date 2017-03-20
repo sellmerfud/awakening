@@ -2794,10 +2794,10 @@ object LabyrinthAwakening {
     if (m.sleeperCells > 0)
       log(s"Flip the ${amountOf(m.sleeperCells, "sleeper cell")} in ${m.name} to active")
     rollPrestige()
+    endCivilWar(dest)  // Can't have civil war in regime change performed due to event, etc.
     flipCaliphateSleepers()
-    
   }
-  
+    
   // • Deploy any number troops out of the Regime Change country (regardless of cells present).
   // • Remove any Aid markers there.
   // • Place a Besieged Regime marker there (if there is not one already).
