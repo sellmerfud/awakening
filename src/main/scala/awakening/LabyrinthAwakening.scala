@@ -1364,15 +1364,19 @@ object LabyrinthAwakening {
     nextCountry(1, candidates)
   }
   
-  // Used when the user must select 1 or more avaailable plots to place in a country.
+  // Used when the user must select 1 or more available plots to place in a country.
   def askPlots(plots: List[Plot], num: Int): List[Plot] = {
     val maxPlots  = num min plots.size
     val entries   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p }
     val choices   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p.toString }
-    val plotMap   = ListMap(entries:_*)
-    val choiceMap = ListMap(choices:_*)
+    val plotMap   = Map(entries:_*)
     println(s"Choose ${amountOf(maxPlots, "plot")}:")
-    askMenu(choiceMap, maxPlots) map plotMap
+    askMenu(choices, maxPlots) map plotMap
+  }
+  
+  // Ask the user to select a number of available plots
+  def askAvailablePlots(num: Int, ops: Int): List[Plot] = {
+    askPlots(game.availablePlots filter (p => ops >= p.opsToPlace), num)
   }
   
   // Returns (actives, sleepers)
@@ -1412,15 +1416,6 @@ object LabyrinthAwakening {
     }
   }
   
-  // Ask the user to select a number of available plots
-  def askAvailablePlots(num: Int, ops: Int): List[Plot] = {
-    val plotList = for ((p, i) <- game.availablePlots.sorted.zipWithIndex if ops >= p.opsToPlace) yield
-      (i.toString -> p)
-    val plotMap = ListMap(plotList:_*)
-    val choices = plotMap map { case (key, plot) => (key -> plot.name)}
-    println(s"Select ${amountOf(num, "available plot")}:")
-    askMenu(choices, num) map plotMap
-  }
   
   def askCardNumber(prompt: String, 
                     initial: Option[String] = None,
@@ -1475,7 +1470,8 @@ object LabyrinthAwakening {
   // Allow the user to choose 1 or more choices and return
   // a list of keys to the chosen items.
   // Caller should println() a brief description of what is being chosen.
-  def askMenu(items: ListMap[String, String], 
+  // items is a list of (key -> display) for each item in the menu.
+  def askMenu(items: List[(String, String)], 
              numChoices: Int = 1,
              repeatsOK: Boolean = false,
              allowAbort: Boolean = true): List[String] = {
@@ -1499,7 +1495,7 @@ object LabyrinthAwakening {
         indexMap(index) :: nextChoice(num + 1, remain)
       }
     }
-    nextChoice(1, items)
+    nextChoice(1, ListMap(items:_*))
   }
   
   // Name of country and number of items in that country.
@@ -1520,8 +1516,7 @@ object LabyrinthAwakening {
         val maxLen = (targets map (_.country.length)).max
         val fmt = "%%-%ds  (%%s)".format(maxLen)
         def disp(t: MapItem) = {fmt.format(t.country, amountOf(t.num, name))}
-        val opts = targets.map(t => t.country -> disp(t))
-        val choices = ListMap(opts:_*)
+        val choices = targets.map(t => t.country -> disp(t))
         println()
         println(s"${amountOf(numItems, name)} remaining, choose country")
         // println("Choose next country to activate sleeper cells")
@@ -2297,7 +2292,7 @@ object LabyrinthAwakening {
       (game.plays.reverse.zipWithIndex map { case (p, i) => s"play-$i" -> p.toString }) ::: defaultChoices
     }
        
-    askMenu(ListMap(choices:_*), allowAbort = false).head match {
+    askMenu(choices, allowAbort = false).head match {
       case PLAY("0") =>
         loadTurn(game.turn - 1)
         removePlayFiles()
@@ -2582,7 +2577,7 @@ object LabyrinthAwakening {
                 if (troops  > 0) Some("troop"   -> "Troop cube") else None,
                 if (militia > 0) Some("militia" -> "Militia cube") else None
               ).flatten ++ (markers map (m => m.name -> s"${m.name}  (absorbs ${amountOf(m.num, "hit")})"))
-              askMenu(ListMap(choices:_*)).head match {
+              askMenu(choices).head match {
                 case "troop"   => troopsLost += 1;  hitsRemaining -=1; nextHit(markers, troops - 1, militia)
                 case "militia" => militiaLost += 1; hitsRemaining -=1; nextHit(markers, troops, militia - 1)
                 case name      => 
@@ -4090,7 +4085,7 @@ object LabyrinthAwakening {
   val scenarios = ListMap[String, Scenario](
     "Awakening2010" -> new Awakening2010
   )
-  val scenarioChoices = scenarios map { case (key, scenario) => key -> scenario.name }
+  val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
   
   val AbortCard = "abort card"
   case object ExitGame extends Exception
@@ -4139,15 +4134,15 @@ object LabyrinthAwakening {
     if (games.isEmpty)
       None
     else {
-      val gameChoices = games map { name =>
+      val gameChoices = games.toList map { name =>
         val desc = loadGameDescription(name)
         val suffix = if (desc == "") "" else s": $desc"
         name -> s"Resume '$name'$suffix"
       }
-      val choices = ("--new-game--" -> "Start a new game") +: gameChoices
+      val choices = ("--new-game--" -> "Start a new game") :: gameChoices
       println()
       println("Which game would you like to play:")
-      askMenu(ListMap(choices:_*), allowAbort = false).head match {
+      askMenu(choices, allowAbort = false).head match {
         case "--new-game--" => None
         case name => Some(name)
       }
@@ -4185,9 +4180,8 @@ object LabyrinthAwakening {
           (num.toString -> s"${fmt.format(name)}: $pname plus $desc") :: nextChoice(num+1, Some(d), rest)
       }
     
-    val choices = ListMap(nextChoice(1, None, levels):_*)
     println("\nChoose a difficulty level:")
-    levels take askMenu(choices, allowAbort = false).head.toInt
+    levels take askMenu(nextChoice(1, None, levels), allowAbort = false).head.toInt
   }
   
   // Check to see if any automatic victory condition has been met.
@@ -4611,7 +4605,7 @@ object LabyrinthAwakening {
       else {
         val combos = for (i <- 1 to candidates.size; combo <- candidates.combinations(i).toList)
           yield (combo.mkString(",") -> andList(combo))
-        val choices = ListMap("none" -> "none") ++ combos
+        val choices = ("none" -> "none") :: combos.toList
         println(s"Which troops markers will deploy out of $source")
         askMenu(choices).head match {
           case "none" => Nil

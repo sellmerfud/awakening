@@ -31,7 +31,6 @@ package awakening
 // Awakening expansion.
 
 import scala.util.Random.shuffle
-import scala.collection.immutable.ListMap
 import LabyrinthAwakening._
 import USBot.PlotInCountry
 
@@ -251,7 +250,7 @@ object AwakeningCards {
       (role: Role) => {
         if (role == game.humanRole) {
           if (game.muslims exists (_.totalCells > 0)) {
-            val choices = ListMap(
+            val choices = List(
               "remove"  -> "Remove up to 2 cells in one Muslim country",
               "discard" -> "Randomly discard 1 card from the Jihadist hand")
             println("Choose one:")
@@ -438,7 +437,7 @@ object AwakeningCards {
       ,
       (role: Role) => {
         if (role == game.humanRole) {
-          val choices = ListMap(
+          val choices = List(
             "reveal"  -> "Reveal all WMD plots and remove one",
             "discard" -> "Randomly discard 1 card from the Jihadist hand")
           println("Choose one:")
@@ -644,7 +643,7 @@ object AwakeningCards {
             item(true,               "draw"      -> "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
           ).flatten 
           println("Do any 2 of the following:")
-          askMenu(ListMap(items:_*), 2, repeatsOK = false) foreach { action =>
+          askMenu(items, 2, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "awakening" =>
@@ -992,7 +991,7 @@ object AwakeningCards {
             if (game.militiaAvailable > 0) Some("place")      else None,
             if (existingMilitia)           Some("reposition") else None
           ).flatten
-          val choices = ListMap(
+          val choices = List(
             "place"      -> "Place up to 4 militia in one Gulf Union (or adjacent) country",
             "reposition" -> "Repositon militia in Gulf Union countries")
           val placeCandidates = gulfUnionCandidates.toList.sorted
@@ -1162,7 +1161,7 @@ object AwakeningCards {
           if (game.sleeperCellsOnMap > 0) Some("activate") else None,
           if (game.alertTargets.nonEmpty) Some("alert") else None
         ).flatten
-        val choices = ListMap(
+        val choices = List(
           "activate" -> "Activate half (rounded up) of all sleeper cells on the map",
           "alert"    -> "Alert all plots on the map"
         )
@@ -1362,7 +1361,7 @@ object AwakeningCards {
           val candidates = countryNames(game.muslims filter islamicMaghrebCandidate)
           val t = askCountry("Select country: ", candidates)
           val two = (game.getMuslim(t).civilWar || game.isCaliphateMember(t))
-          val choices = ListMap(
+          val choices = List(
             "cells" -> (if (two) "Place cells" else "Place a cell"),
             "funding" -> "Increase funding")
           (t, askMenu(choices).head)
@@ -1444,7 +1443,7 @@ object AwakeningCards {
             item(true,       "draw"     -> "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
           ).flatten 
           println("Do any 2 of the following:")
-          askMenu(ListMap(items:_*), 2, repeatsOK = false) foreach { action =>
+          askMenu(items, 2, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "reaction" =>
@@ -1864,7 +1863,7 @@ object AwakeningCards {
           ).flatten
           if (choices.size > 1)
             println("Choose one of:")
-          askMenu(ListMap(choices:_*)).head match {
+          askMenu(choices).head match {
             case "plot" =>
               val options = Seq(Plot2, Plot3) filter game.availablePlots.contains map {
                 case Plot2 => "2"
@@ -2308,7 +2307,7 @@ object AwakeningCards {
               if (!m.isAlly) Some("shiftAlly" -> "Shift alignment towards Ally") else None
             ).flatten
             val action = if (choices.isEmpty) None
-            else askMenu(ListMap(choices:_*)).headOption
+            else askMenu(choices).headOption
             (target, action, Nil)
               
           case (Jihadist, true) =>
@@ -2319,7 +2318,7 @@ object AwakeningCards {
               if (!m.isAdversary) Some("shiftAdversary" -> "Shift alignment towards Adversary") else None
             ).flatten
             val action = if (choices.isEmpty) None
-            else askMenu(ListMap(choices:_*)).headOption
+            else askMenu(choices).headOption
             val from = if (action == Some("cells")) {
               val xs = (game.countries filter (c => c.name != target && c.totalCells > 0) 
                                       map (c => MapItem(c.name, c.totalCells)))
@@ -2399,7 +2398,7 @@ object AwakeningCards {
             if (cellsOK)   Some("cells" -> "Place cells")     else None
           ).flatten
           println("What would you like to do:")
-          val action = askMenu(ListMap(choices:_*)).head
+          val action = askMenu(choices).head
           val candidates = if (action == "militia")
             countryNames(game.getCountries(African) filter (_.canTakeMilitia))
           else
