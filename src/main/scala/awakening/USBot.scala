@@ -871,6 +871,20 @@ object USBot extends BotHelpers {
     topPriority(candidates, priorities) map (_.name)
   }
   
+  // ------------------------------------------------------------------
+  // Ebola Scare target
+  def ebolaScareTarget(names: List[String]): Option[String] = {
+    val flowchart = List(
+      new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
+      new CriteriaFilter("Ally without cells", muslimTest(m => m.isAlly && m.totalCells == 0)))
+      
+    botLog("Find \"Ebola Scare\" target")
+    selectCandidates(game getCountries names, flowchart) match {
+      case xs  => shuffle(xs).headOption map (_.name)
+      case Nil => shuffle(names).headOption
+    }
+  }
+  
   
   def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
     val flowchart = List(

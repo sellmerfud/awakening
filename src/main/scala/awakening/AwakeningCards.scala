@@ -2511,14 +2511,45 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(203, "Day of Rage", Unassociated, 1,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game getMuslim Yemen).canTakeAwakeningOrReactionMarker
+      ,
+      (role: Role) => {
+        addEventTarget(Yemen)
+        testCountry(Yemen)
+        if (role == US)
+          addAwakeningMarker(Yemen)
+        else
+          addReactionMarker(Yemen)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(204, "Ebola Scare", Unassociated, 1,
-      Remove, NoMarker, USLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoMarker, USLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole ||
+                      role == US ||
+                      askYorN(s"Does the $US player have any cards in hand (y/n) ?")
+      ,  
       (role: Role) => {
         // See Event Instructions table
+        if (role == Jihadist) {
+          if (role == game.humanRole)
+            log(s"Discard the top card of the $US hand")
+          else
+            log(s"You ($US) must discard one random card")
+        }
+        else {
+          val withTroops = countryNames(game.muslims filter (_.troops > 0))
+          val source = if (game.troopsAvailable > 0)
+            "track"
+          else if (role == game.humanRole)
+            askCountry("Remove troop from which country? ", withTroops)
+          else {
+            USBot.ebolaScareTarget(withTroops).get
+          }
+          takeTroopsOffMap(source, 1)
+          increasePrestige(2)
+        }
       }
     )),
     // ------------------------------------------------------------------------
