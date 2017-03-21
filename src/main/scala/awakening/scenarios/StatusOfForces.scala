@@ -30,12 +30,12 @@ package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
 
-class Awakening2010 extends Scenario {
-  val name           = "Awakening"
+class StatusOfForces extends Scenario {
+  val name           = "Status of Force Agreement"
   val cardDeckName   = AwakeningDeck
-  val prestige       = 5
+  val prestige       = 6
   val usPosture      = Soft
-  val funding        = 5
+  val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
   val countries = List(
     NonMuslimCountry(Canada),
@@ -63,23 +63,26 @@ class Awakening2010 extends Scenario {
     MuslimCountry(Morocco, resources = 2),
     MuslimCountry(AlgeriaTunisia, resources = 2, oilProducer = true,
                   governance = Poor, alignment = Neutral, awakening = 1),
-    MuslimCountry(Libya, resources = 1, oilProducer = true),
-    MuslimCountry(Egypt, resources = 3),
+    MuslimCountry(Libya, resources = 1, oilProducer = true, governance = Fair, alignment = Ally),
+    MuslimCountry(Egypt, resources = 3, governance = Fair, alignment = Neutral, 
+                  awakening = 1, reaction = 1),
     MuslimCountry(Sudan, resources = 1, oilProducer = true),
     MuslimCountry(Somalia, resources = 1),
     MuslimCountry(Jordan, resources = 1),
-    MuslimCountry(Syria, resources = 2, wmdCache = 2),
+    MuslimCountry(Syria, resources = 2, wmdCache = 2, governance = Poor, alignment = Neutral,
+                  awakening = 1, reaction = 1, sleeperCells = 2),
     MuslimCountry(CentralAsia, resources = 2),
     MuslimCountry(Turkey, isSunni = false, resources = 2),
     MuslimCountry(Lebanon, isSunni = false, resources = 1),
     MuslimCountry(Yemen, isSunni = false, resources = 1),
     MuslimCountry(Iraq, isSunni = false, resources = 3, oilProducer = true,
-                  governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
+                  governance = Poor, alignment = Neutral, militia = 1, sleeperCells = 2,
+                  awakening = 1, reaction = 1),
     MuslimCountry(SaudiArabia, isSunni = false, resources = 3, oilProducer = true),
     MuslimCountry(GulfStates, isSunni = false, resources = 3, oilProducer = true,
-                  governance = Fair, alignment = Ally, troops = 2),
+                  governance = Fair, alignment = Ally, troops = 2, awakening = 1),
     MuslimCountry(Pakistan, isSunni = false, resources = 2, wmdCache = 3,
-                  governance = Fair, alignment = Neutral, sleeperCells = 2),
+                  governance = Poor, alignment = Neutral, sleeperCells = 1, reaction = 1),
     MuslimCountry(Afghanistan, isSunni = false, resources = 1,
                   governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
                   regimeChange = TanRegimeChange),
@@ -87,6 +90,6 @@ class Awakening2010 extends Scenario {
     MuslimCountry(Mali, resources = 1)
   )
   val markersInPlay = List.empty[String]
-  val cardsRemoved = List.empty[Int]
+  val cardsRemoved = 133::185::237::Nil
   val offMapTroops = 0
 }

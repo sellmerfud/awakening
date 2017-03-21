@@ -30,12 +30,12 @@ package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
 
-class Awakening2010 extends Scenario {
-  val name           = "Awakening"
+class MittsTurn extends Scenario {
+  val name           = "Mitt's Turn"
   val cardDeckName   = AwakeningDeck
-  val prestige       = 5
-  val usPosture      = Soft
-  val funding        = 5
+  val prestige       = 7
+  val usPosture      = Hard
+  val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
   val countries = List(
     NonMuslimCountry(Canada),
@@ -51,7 +51,7 @@ class Awakening2010 extends Scenario {
     NonMuslimCountry(Italy),
     NonMuslimCountry(France, recruitOverride = 2, posture = Hard),
     NonMuslimCountry(Spain, recruitOverride = 2),
-    NonMuslimCountry(Russia, governance = Fair),
+    NonMuslimCountry(Russia, governance = Fair, posture = Soft),
     NonMuslimCountry(Caucasus, governance = Fair),
     NonMuslimCountry(China, governance = Fair),
     NonMuslimCountry(KenyaTanzania, governance = Fair),

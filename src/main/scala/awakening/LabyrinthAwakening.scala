@@ -608,6 +608,8 @@ object LabyrinthAwakening {
     val availablePlots: List[Plot]     // 1, 2, 3, 4 == WMD
     val countries: List[Country]
     val markersInPlay: List[String]
+    val cardsRemoved: List[Int]
+    val offMapTroops: Int
   }
 
   // There is a limit of 22 construction arguments for case classes
@@ -1187,7 +1189,9 @@ object LabyrinthAwakening {
       scenario.funding,
       scenario.countries,
       scenario.markersInPlay.sorted,
-      scenario.availablePlots.sorted)
+      scenario.availablePlots.sorted,
+      cardsRemoved = scenario.cardsRemoved,
+      offMapTroops = scenario.offMapTroops)
   
   
   // Global variables
@@ -4087,7 +4091,9 @@ object LabyrinthAwakening {
   }
   
   val scenarios = ListMap[String, Scenario](
-    "Awakening2010" -> new Awakening2010
+    "Awakening2010"  -> new Awakening2010,
+    "MittsTurn"      -> new MittsTurn,
+    "StatusOfForces" -> new StatusOfForces
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
   
@@ -4108,6 +4114,7 @@ object LabyrinthAwakening {
       case None => // Start a new game
         println()
         // prompt for scenario
+        println("Choose a scenario:")
         val scenario = scenarios(askMenu(scenarioChoices, allowAbort = false).head)
         // ask which side the user wishes to play
         val sidePrompt = "Which side do you wish play? (US or Jihadist) "
@@ -4119,6 +4126,12 @@ object LabyrinthAwakening {
         game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
         logSummary(game.scenarioSummary)
         printSummary(game.scoringSummary)
+        if (scenario.cardsRemoved.nonEmpty) {
+          log()
+          log("The following cards are removed for this scenario")
+          log(separator())
+          scenario.cardsRemoved map (deck(_).toString) foreach log  
+        }
         saveTurn()  // Save the initial game state as turn-0
         game = game.copy(turn = game.turn + 1)
         logStartOfTurn()
