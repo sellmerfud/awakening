@@ -133,6 +133,12 @@ object AwakeningCards {
     (role == US       && militiaOK)
   }
   
+  def cyberWarfarePlayable(role: Role): Boolean = role == game.humanRole || {
+    val postureUS = game.getNonMuslims(China::Russia::India::Nil) exists (_.posture !=  game.usPosture)
+    val postureJ  = game.getNonMuslims(China::Russia::India::Nil) exists (_.posture ==  game.usPosture)
+    (role == US      ) && (postureUS || game.reserves.jihadist > 0) ||
+    (role == Jihadist) && (postureJ  || game.reserves.us       > 0)
+  }
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2246,7 +2252,8 @@ object AwakeningCards {
             None
           else {
             val name = askCountry(s"Select posture of which country: ", postureCandidates)
-            val pos = askOneOf(s"Select posture for $name: ", Hard::Soft::Nil).get
+            val pos = askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get
+            
             Some(name, pos)
           }
           (at, pt)
@@ -2436,9 +2443,70 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(202, "Cyber Warfare", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => cyberWarfarePlayable(role)
+      ,
       (role: Role) => {
+        val COUNTRIES = List(China, Russia, India)
+        val opRes = if (role == US) game.reserves.jihadist else game.reserves.us
+        val cadres = game hasCountry (_.hasCadre)
         // See Event Instructions table
+        if (role == game.humanRole) {
+          val choices = List(
+            if (opRes > 0) 
+              Some("reserves" -> s"Steal opponent's ${amountOf(opRes,"reserve Op")}") else None,
+            Some("posture" -> "Set the posture of China, Russia, or India"),
+            Some("place" -> "Place a cadre"),
+            if (cadres) Some("remove" -> "Remove a cadre") else None
+          ).flatten
+          println("Choose 1 option:")
+          askMenu(choices).head match {
+            case "reserves" =>
+              clearReserves(if (role == US) Jihadist else US)
+              addToReserves(role, opRes)
+            case "posture"  =>
+              val name    = askCountry("Set the posture of which country? ", COUNTRIES)
+              val posture = askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get
+              addEventTarget(name)
+              testCountry(name)
+              setCountryPosture(name, posture)
+            case "place"    =>
+              val candidates = countryNames(game.countries filter (c => !c.hasCadre && c.totalCells == 0))
+              val name = askCountry("Place a cadre in which country? ", candidates)
+              addEventTarget(name)
+              testCountry(name)
+              addCadre(name)
+            case _          => 
+              val candidates = countryNames(game.countries filter (c => c.hasCadre ))
+              val name = askCountry("Remove cadre from which country? ", candidates)
+              addEventTarget(name)
+              removeCadre(name)
+          }
+        }
+        else if (role == US) {
+          countryNames(game.getNonMuslims(COUNTRIES) filter (_.posture != game.usPosture)) match {
+            case Nil =>
+              clearReserves(Jihadist)
+              addToReserves(role, opRes)
+            case xs =>
+              val name = USBot.markerAlignGovTarget(xs).get
+              addEventTarget(name)
+              testCountry(name)
+              setCountryPosture(name, game.usPosture)
+          }
+        }
+        else {
+          countryNames(game.getNonMuslims(COUNTRIES) filter (_.posture == game.usPosture)) match {
+            case Nil =>
+              clearReserves(US)
+              addToReserves(role, opRes)
+            case xs =>
+              val name = JihadistBot.markerAlignGovTarget(xs).get
+              addEventTarget(name)
+              testCountry(name)
+              setCountryPosture(name, oppositePosture(game.usPosture))
+          }
+        }
       }
     )),
     // ------------------------------------------------------------------------

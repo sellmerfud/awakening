@@ -19,7 +19,7 @@ softWrap       = false
 
 TM_TODO_IGNORE       = '(?:^|/)jquery'
 
-# [ src/main/scala/** ]
+[ src/main/scala/** ]
 fileType  = 'source.scala'
 
 [ source.scala,source.java,text.html.basic ]

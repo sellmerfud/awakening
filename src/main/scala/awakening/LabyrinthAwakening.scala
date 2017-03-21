@@ -778,7 +778,7 @@ object LabyrinthAwakening {
     
     // Returns the current gwot 
     // posture (Soft, Even, Hard)
-    // value 0, 1, 2, 3
+    // value 0, 1, 2, 3, 4, ...
     def gwot: (String, Int) = {
       val value = (nonMuslims.filterNot(_.name == UnitedStates).foldLeft(0) { 
         case (v, c) if c.isHard => v + 1
@@ -786,7 +786,7 @@ object LabyrinthAwakening {
         case (v, _) => v // Untested
       })
       val posture = if (value == 0) Even else if (value < 0) Soft else Hard
-      (posture, value.abs min 3)
+      (posture, value.abs)
     }
     
     def worldPosture = gwot._1
@@ -794,7 +794,7 @@ object LabyrinthAwakening {
     // 0, 1, 2, 3
     def gwotPenalty: Int = {
       gwot match {
-        case (posture, value)  if posture != usPosture => value
+        case (posture, value)  if posture != usPosture => value min 3
         case _ => 0
       }
     }
@@ -2459,6 +2459,17 @@ object LabyrinthAwakening {
     }
   }
   
+  def clearReserves(role: Role): Unit = {
+    if (role == US && game.reserves.us > 0) {
+      game = game.copy(reserves = game.reserves.copy(us = 0))
+      log(s"$role reserves set to zero")
+    }
+    else if (role == Jihadist && game.reserves.jihadist > 0) {
+      game = game.copy(reserves = game.reserves.copy(jihadist = 0))
+      log(s"$role reserves set to zero")
+    }
+  }
+  
   // Change the current game state and print to the console all
   // ajdustments that need to be made to the game 
   def performRollback(previousGameState: GameState): Unit = {
@@ -4028,14 +4039,7 @@ object LabyrinthAwakening {
         game = game.copy(firstPlotCard = None)
       }
       // The Bot's reserves are not cleared
-      if (game.humanRole == US && game.reserves.us > 0) {
-        game = game.copy(reserves = game.reserves.copy(us = 0))
-        log(s"$US reserves set to zero")
-      }
-      else if (game.humanRole == Jihadist && game.reserves.jihadist > 0) {
-        game = game.copy(reserves = game.reserves.copy(jihadist = 0))
-        log(s"Jihadist reserves set to zero")
-      }
+      clearReserves(game.humanRole)
     
       if (game.resolvedPlots.nonEmpty) {
         game = game.copy(resolvedPlots = Nil, availablePlots = game.availablePlots ::: game.resolvedPlots)
