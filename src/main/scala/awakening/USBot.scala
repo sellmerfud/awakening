@@ -668,7 +668,7 @@ object USBot extends BotHelpers {
   
   def disruptTarget(names: List[String]): Option[String] = {
     botLog("Find \"Disrupt\" target")
-    val candidates = followOpPFlowchart(game getCountries names, DisruptFlowchart)
+    val candidates = selectCandidates(game getCountries names, DisruptFlowchart)
     topPriority(candidates, DisruptPriorities) map (_.name)
   }
   
@@ -700,7 +700,7 @@ object USBot extends BotHelpers {
   
   def woiNonMuslimTarget(names: List[String]): Option[String] = {
     botLog("Find \"non-Muslim WoI\" target")
-    val candidates = followOpPFlowchart(game getCountries names, WoiNonMuslimFlowchart)
+    val candidates = selectCandidates(game getCountries names, WoiNonMuslimFlowchart)
     topPriority(candidates, WoiNonMuslimPriorities) map (_.name)
   }
 
@@ -724,7 +724,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Deploy To\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
-    val target = followOpPFlowchart(game getCountries countryNames, DeployToFlowchart) match {
+    val target = selectCandidates(game getCountries countryNames, DeployToFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployToPriorities) map (_.name)
     }
@@ -756,7 +756,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Deploy From\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
-    val target = followOpPFlowchart(game getCountries countryNames, DeployFromFlowchart) match {
+    val target = selectCandidates(game getCountries countryNames, DeployFromFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
     }
@@ -795,7 +795,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Regime Change From\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
-    followOpPFlowchart(game getCountries countryNames, RegimeChangeFromFlowchart) match {
+    selectCandidates(game getCountries countryNames, RegimeChangeFromFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
     }
@@ -821,7 +821,7 @@ object USBot extends BotHelpers {
   def woiBestDRMTarget(names: List[String]): Option[String] = {
     botLog("Find \"Best DRM WoI\" target")
     val flowchart  = BestWoiDRMFilter::Nil
-    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, WoiMuslimPriorities) map (_.name)
   }
   
@@ -831,10 +831,19 @@ object USBot extends BotHelpers {
   def woiDrmMinusOneTarget(names: List[String]): Option[String] = {
     botLog("Find \"DRM -1 WoI\" target")
     val flowchart = WoiDrmMinusOneFilter::Nil
-    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, WoiMuslimPriorities) map (_.name)
   }
   
+  // ------------------------------------------------------------------
+  // Get target for the UNSCR 1973 event
+  def unscr1973Target(names: List[String]): Option[String] = {
+    val flowchart = List(USBot.HighestResourcePriority)
+      
+    botLog("Find \"UNSCR 1973\" target")
+    val candidates = selectCandidates(game getCountries names, flowchart)
+    topPriority(candidates, DisruptPriorities) map (_.name) 
+  }
   
   // ------------------------------------------------------------------
   // Get target for the SCAF event
@@ -845,7 +854,7 @@ object USBot extends BotHelpers {
     val priorities = FewestCellsPriority::PoorPriority::WoiMuslimPriorities
       
     botLog("Find \"SCAF\" target")
-    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
@@ -858,7 +867,7 @@ object USBot extends BotHelpers {
     val priorities = HighestResourcePriority::Nil
       
     botLog("Find \"Status Quo\" target")
-    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
@@ -868,7 +877,7 @@ object USBot extends BotHelpers {
       new CriteriaFilter("Adversary", muslimTest(m => m.isAdversary)),
       new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
     botLog("Find \"Critical Middle\" target")
-    countryNames(followOpPFlowchart(game getCountries names, flowchart)) 
+    countryNames(selectCandidates(game getCountries names, flowchart)) 
   }
   
   

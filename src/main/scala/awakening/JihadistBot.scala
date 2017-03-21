@@ -310,11 +310,11 @@ object JihadistBot extends BotHelpers {
     PoorMuslimFilter)
   
   val PlotPriorities = List(
-    USPriority, WithPrestigeTroopsPriority, PakistanPriority, MostActveCellsPriority,
-    SyriaPriority, WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority,
-    IranPriority, CivilWarPriority, NeutralPriority, AdjacentGoodAllyPriority,
-    FairNonMuslimPriority, SamePostureAsUSPriority, LowestRECPriority,
-    AdjacentIslamistRulePriority, OilExporterPriority)
+    USPriority, WithPrestigeTroopsPriority, PakistanPriority, PhilippinesPriority,
+    MostActveCellsPriority, SyriaPriority, WithAidPriority, RegimeChangeTroopsPriority,
+    HighestResourcePriority, IranPriority, CivilWarPriority, NeutralPriority,
+    AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority, 
+    LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
   
   def plotTarget(names: List[String]): Option[String] = {
     val flowchart = if (game.fundingLevel == Tight)
@@ -322,7 +322,7 @@ object JihadistBot extends BotHelpers {
     else
       OtherPlotFlowchart
     botLog("Find \"Plot\" target")
-    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, PlotPriorities) map (_.name)
   }
   
@@ -349,7 +349,7 @@ object JihadistBot extends BotHelpers {
       HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
       MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     botLog("Find \"Recruit\" target")
-    val candidates = followOpPFlowchart(game getCountries names, RecruitTravelToFlowchart)
+    val candidates = selectCandidates(game getCountries names, RecruitTravelToFlowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
@@ -362,7 +362,7 @@ object JihadistBot extends BotHelpers {
       SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority,
       OilExporterPriority)
     botLog("Find \"Travel To\" target")
-    val candidates = followOpPFlowchart(game getCountries names, RecruitTravelToFlowchart)
+    val candidates = selectCandidates(game getCountries names, RecruitTravelToFlowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
@@ -377,7 +377,7 @@ object JihadistBot extends BotHelpers {
       MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
       DisruptPrestigePriority, LowestRECPriority)
       
-    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
@@ -506,7 +506,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("No Troops", muslimTest(m => m.totalTroops == 0)))
       
     botLog("Find \"Change of State\" target")
-    val candidates = followOpPFlowchart(game getCountries names, flowchart)
+    val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
@@ -520,7 +520,7 @@ object JihadistBot extends BotHelpers {
            muslimTest(m => m.isPoor && game.prestige > 1)))
       
     botLog("Find \"Taliban Resurgent\" target")
-    val candidates = countryNames(followOpPFlowchart(game getCountries names, flowchart))
+    val candidates = countryNames(selectCandidates(game getCountries names, flowchart))
     minorJihadTarget(candidates)
   }
   
@@ -529,7 +529,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Ally",    muslimTest(m => m.isAlly)),
       new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
     botLog("Find \"Critical Middle\" target")
-    countryNames(followOpPFlowchart(game getCountries names, flowchart)) 
+    countryNames(selectCandidates(game getCountries names, flowchart)) 
   }
   
   // Pick actives before sleepers

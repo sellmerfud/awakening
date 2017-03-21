@@ -852,10 +852,8 @@ object AwakeningCards {
         val candidates = countryNames(game.muslims filter unscr1973Candidate)
         val target = if (role == game.humanRole)
           askCountry("Place UNSCR 1973 in which country: ", candidates)
-        else {
-           val best = USBot.followOpPFlowchart(game.muslims filter unscr1973Candidate, USBot.HighestResourcePriority::Nil)
-           USBot.disruptPriority(countryNames(best)).get
-        }
+        else 
+          USBot.unscr1973Target(countryNames(game.muslims filter unscr1973Candidate)).get
         
         addEventTarget(target)
         val m = game.getMuslim(target)

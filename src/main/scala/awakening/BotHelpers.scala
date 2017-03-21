@@ -64,11 +64,11 @@ trait BotHelpers {
     override def toString() = desc
   }
 
-  // CountryFilters are used both when following an OpP flowchart and
-  // when following a Priorities Table.
+  // CountryFilters are used both when selecting a list of candidates and
+  // when picking the top priority when following a Priorities Table.
   // Each filter simply takes a list of Countries as input and produces
   // a filtered list as output.
-  // The see the followOpPFlowchart() and topPriority() functions to see how
+  // The see the selectCandidates() and topPriority() functions to see how
   // filters are used (slightly differently) in each type of situation.
   trait CountryFilter {
     val desc: String
@@ -76,6 +76,8 @@ trait BotHelpers {
     override def toString() = desc
   }
   
+  // This corresponds to following amn OpP Flowchart, but is also used for
+  // finding specific event candidates.
   // Process the list of countries by each CountryFilter supplied until one of the filters returns
   // a non-empty list of candidates.
   //
@@ -85,7 +87,7 @@ trait BotHelpers {
   // results from that filter are returned.
   // If none of the filters finds at least one matching country we return Nil, 
   // which indicates that no valid candidates were found for the OpP flowchart.
-  @tailrec final def followOpPFlowchart(countries: List[Country], filters: List[CountryFilter]): List[Country] = {
+  @tailrec final def selectCandidates(countries: List[Country], filters: List[CountryFilter]): List[Country] = {
     botLog(s"OpP Flowchart: [${(countries map (_.name)) mkString ", "}]")
     (countries, filters) match {
       case (Nil, _) =>
@@ -98,7 +100,7 @@ trait BotHelpers {
         (f filter cs) match {
           case Nil =>            // Filter did not match anything, try the next filter
             botLog(s"OpP Flowchart ($f): failed")
-            followOpPFlowchart(cs, fs)
+            selectCandidates(cs, fs)
           case results =>        // We got some results…
             botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
             results
