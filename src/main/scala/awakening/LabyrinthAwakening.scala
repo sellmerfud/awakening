@@ -2271,6 +2271,15 @@ object LabyrinthAwakening {
     logStartOfTurn()
   }
   
+  def loadFromFile(name: String, path: Pathname): Unit = {
+    gameName = Some(name)
+    loadGameState(path)
+    if (game.plays.isEmpty) {
+      game = game.copy(turn = game.turn + 1)
+      logStartOfTurn()
+    }
+  }
+  
   // Load the most recent game file for the given game.
   // 
   def loadMostRecent(name: String): Unit = {
@@ -2372,9 +2381,11 @@ object LabyrinthAwakening {
       case e: IOException =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
         println(s"IO Error reading game file ($filepath)$suffix")
+        sys.exit(1)
       case e: Throwable =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
         println(s"Error reading save game ($filepath)$suffix")
+        sys.exit(1)
     }
   }
   
@@ -4204,50 +4215,66 @@ object LabyrinthAwakening {
   
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
-    var userParams = loadParamsFile(UserParams())
     gamesDir.mkpath()
-    
-    // parse cmd line args -- to be done
-    
-    askWhichGame() match {
-      case Some(name) =>
-        loadMostRecent(name)
-        printSummary(game.playSummary)
+    var configParams = loadParamsFile(UserParams())
+    var cmdLineParams = parseCommandLine(args, UserParams())
+    if (cmdLineParams.gameFile.nonEmpty) {
+      val name = askGameName("Enter a name for the game: ")
+      loadFromFile(name, Pathname(cmdLineParams.gameFile.get))
+      printSummary(game.playSummary)
+    }
+    else if (cmdLineParams.gameName.nonEmpty) {
+      loadMostRecent(cmdLineParams.gameName.get)
+      printSummary(game.playSummary)
+    }
+    else {
+      val existingGame = if (cmdLineParams.anyNewGameParams) None
+                         else askWhichGame()
+      existingGame match {
+        case Some(name) =>
+          loadMostRecent(name)
+          printSummary(game.playSummary)
         
-      case None => // Start a new game
-        println()
+        case None => // Start a new game
+          println()
+          val scenarioName = cmdLineParams.scenarioName orElse 
+                             configParams.scenarioName getOrElse {
+            // prompt for scenario
+            println("Choose a scenario:")
+            askMenu(scenarioChoices, allowAbort = false).head
+          }
+          val scenario = scenarios(scenarioName)
+          val humanRole = cmdLineParams.side orElse
+                          configParams.side getOrElse {
+            // ask which side the user wishes to play
+            val sidePrompt = "Which side do you wish play? (US or Jihadist) "
+            Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
+          }
+          val difficulties = if (humanRole == US)
+            cmdLineParams.jihadistBotDifficulties orElse
+            configParams.jihadistBotDifficulties getOrElse askDifficulties(Jihadist)
+          else
+            cmdLineParams.usBotDifficulties orElse
+            configParams.usBotDifficulties getOrElse askDifficulties(US)
+          val humanAutoRoll = cmdLineParams.autoDice orElse
+                              configParams.autoDice getOrElse
+                              !askYorN("Do you wish to roll your own dice (y/n)? ")
         
-        val scenarioName = userParams.scenarioName getOrElse {
-          // prompt for scenario
-          println("Choose a scenario:")
-          askMenu(scenarioChoices, allowAbort = false).head
-        }
-        val scenario = scenarios(scenarioName)
-        val humanRole = userParams.side getOrElse {
-          // ask which side the user wishes to play
-          val sidePrompt = "Which side do you wish play? (US or Jihadist) "
-          Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
-        }
-        val difficulties = if (humanRole == US)
-          userParams.jihadistBotDifficulties getOrElse askDifficulties(Jihadist)
-        else
-          userParams.usBotDifficulties getOrElse askDifficulties(US)
-        val humanAutoRoll = userParams.autoDice getOrElse !askYorN("Do you wish to roll your own dice (y/n)? ")
-        
-        gameName = Some(askGameName("Enter a name for your new game: "))
+          gameName = Some(askGameName("Enter a name for your new game: "))
 
-        game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
-        logSummary(game.scenarioSummary)
-        printSummary(game.scoringSummary)
-        if (scenario.cardsRemoved.nonEmpty) {
-          log()
-          log("The following cards are removed for this scenario")
-          log(separator())
-          scenario.cardsRemoved map (deck(_).toString) foreach log  
-        }
-        saveTurn()  // Save the initial game state as turn-0
-        game = game.copy(turn = game.turn + 1)
-        logStartOfTurn()
+          game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
+          logSummary(game.scenarioSummary)
+          printSummary(game.scoringSummary)
+          if (scenario.cardsRemoved.nonEmpty) {
+            log()
+            log("The following cards are removed for this scenario")
+            log(separator())
+            scenario.cardsRemoved map (deck(_).toString) foreach log  
+          }
+          saveTurn()  // Save the initial game state as turn-0
+          game = game.copy(turn = game.turn + 1)
+          logStartOfTurn()
+      }
     }
     
     try commandLoop()
@@ -4256,6 +4283,73 @@ object LabyrinthAwakening {
     }
   }
 
+  def parseCommandLine(args: Seq[String], userParams: UserParams): UserParams = {
+    import org.sellmerfud.optparse._
+    def diffHelp(diffs: Seq[BotDifficulty]): Seq[String] = {
+      val maxLen = (diffs map (_.name.length)).max
+      val fmt = "%%-%ds - %%s".format(maxLen)
+      diffs map (d => fmt.format(d.name, d.description))
+    }
+    case class JihadDiff(diff: BotDifficulty)
+    case class USDiff(diff: BotDifficulty)
+    try {
+      new OptionParser[UserParams] {
+        addArgumentParser[JihadDiff] { arg =>
+          if (isValidIdeology(arg))
+            JihadDiff(BotDifficulty(arg))
+          else
+            throw new InvalidArgumentException(s"Invalid Jihadist ideology value '$arg'")
+        }
+        addArgumentParser[USDiff] { arg =>
+          if (isValidUsResolve(arg))
+            USDiff(BotDifficulty(arg))
+          else
+            throw new InvalidArgumentException(s"Invalid US resolve value '$arg'")
+        }
+        banner = "awakening [options]"
+        separator("")
+        separator("Options:")
+        val saved = savedGames
+        if (saved.isEmpty)
+        reqd[String]("", "--game=name", "Resume a game in progress")
+          { (v, c) => throw new InvalidArgumentException("You do not have any saved games") }
+        else
+        reqd[String]("", "--game=name", saved, "Resume a game in progress")
+          { (v, c) => c.copy(gameName = Some(v)) }
+        
+        reqd[String]("", "--scenario=name", scenarios.keys.toSeq, "Select a scenario")
+          { (v, c) => c.copy(scenarioName = Some(v)) }
+      
+        reqd[String]("", "--side=us|jihadist", Seq("us","jihadist"), "Select a side to play")
+          { (v, c) => c.copy(side = Some(if (v == "us") US else Jihadist)) }
+      
+        reqd[Int]("", "--level=n", Seq.range(1, 7), "Select difficulty level (1 - 6)")
+          { (v, c) => c.copy(level = Some(v)) }
+
+        reqd[String]("", "--dice=<auto|human>", scenarios.keys.toSeq, "How to roll the human player's dice",
+                                                             "auto  - the program rolls them automatically",
+                                                             "human - you enter your dice rolls manually")
+          { (v, c) => c.copy(autoDice = Some(v == "auto")) }
+      
+        list[JihadDiff]("", "--ideology=x,y,z", 
+                       ("Comma separated list of Jihadist ideology values" +: diffHelp(AllJihadistLevels)): _*) { 
+          (v, c) =>
+          val values = (v map { case JihadDiff(diff) => diff }).sorted.distinct
+          c.copy(ideology = values)
+        }
+        list[USDiff]("", "--us-resolve=x,y,z", 
+                     ("Comma separated list of US resolve values" +: diffHelp(AllUSLevels)): _*) { 
+          (v, c) => 
+          val values = (v map { case USDiff(diff) => diff }).sorted.distinct
+          c.copy(usResolve = values)
+        }
+        reqd[String]("", "--file=path", "Path to a saved game file")
+          { (v, c) => c.copy(gameFile = Some(v)) }
+      }.parse(args, userParams)
+    }
+    catch { case e: OptionParserException => println(e.getMessage); sys.exit(1) }
+  }  
+  
   // Ask which saved game the user wants to load.
   // Return None if they with to start a new game.
   // previously saved game.
@@ -4280,12 +4374,14 @@ object LabyrinthAwakening {
   }
     
   case class UserParams(
+    val gameName: Option[String] = None,
     val scenarioName: Option[String] = None,
     val side: Option[Role] = None,
     val level: Option[Int] = None,
     val autoDice: Option[Boolean] = None,
     val ideology: List[BotDifficulty] = Nil,
-    val usResolve: List[BotDifficulty] = Nil) {
+    val usResolve: List[BotDifficulty] = Nil,
+    val gameFile: Option[String] = None) {
       
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
       case Nil => level map (AllUSLevels take _)
@@ -4296,6 +4392,10 @@ object LabyrinthAwakening {
       case Nil => level map (AllJihadistLevels take _)
       case xs  => Some(xs)
     }
+    
+    def anyNewGameParams =
+      (scenarioName orElse side orElse level orElse autoDice).nonEmpty ||
+      ideology.nonEmpty || usResolve.nonEmpty
   }
   
   def loadParamsFile(initialParams: UserParams): UserParams = {
@@ -5326,10 +5426,8 @@ object LabyrinthAwakening {
   
   
   def adjustDifficulty(): Unit = {
-    val AllLevels = if (game.botRole == US)
-      OffGuard::Competent::Adept::Vigilant::Ruthless::NoMercy::Nil
-    else
-      Muddled::Coherent::Attractive::Potent::Infectious::Virulent::Nil
+    val AllLevels = if (game.botRole == US) AllUSLevels
+    else AllJihadistLevels
     val AllNames = AllLevels map (_.name)
     var inEffect = game.params.botDifficulties map (_.name)
     
