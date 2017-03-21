@@ -32,63 +32,24 @@ import awakening.LabyrinthAwakening._
 
 class StatusOfForces extends Scenario {
   val name           = "Status of Force Agreement"
-  val cardDeckName   = AwakeningDeck
+  val expansion      = true
   val prestige       = 6
   val usPosture      = Soft
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
   val countries = List(
-    NonMuslimCountry(Canada),
-    NonMuslimCountry(UnitedStates, posture = Soft),
-    NonMuslimCountry(UnitedKingdom, recruitOverride = 2, posture = Hard),
-    NonMuslimCountry(Serbia),
-    NonMuslimCountry(Israel, posture = Hard),
-    NonMuslimCountry(India),
-    NonMuslimCountry(Scandinavia),
-    NonMuslimCountry(EasternEurope),
-    NonMuslimCountry(Benelux, posture = Soft),
-    NonMuslimCountry(Germany),
-    NonMuslimCountry(Italy),
-    NonMuslimCountry(France, recruitOverride = 2, posture = Hard),
-    NonMuslimCountry(Spain, recruitOverride = 2),
-    NonMuslimCountry(Russia, governance = Fair),
-    NonMuslimCountry(Caucasus, governance = Fair),
-    NonMuslimCountry(China, governance = Fair),
-    NonMuslimCountry(KenyaTanzania, governance = Fair),
-    NonMuslimCountry(Thailand, governance = Fair),
-    NonMuslimCountry(Philippines, governance = Fair, recruitOverride = 3),
-    NonMuslimCountry(Iran, governance = Fair, wmdCache = 1, iranSpecialCase = true),
-    NonMuslimCountry(Nigeria, governance = Poor),
-    
-    MuslimCountry(Morocco, resources = 2),
-    MuslimCountry(AlgeriaTunisia, resources = 2, oilProducer = true,
-                  governance = Poor, alignment = Neutral, awakening = 1),
-    MuslimCountry(Libya, resources = 1, oilProducer = true, governance = Fair, alignment = Ally),
-    MuslimCountry(Egypt, resources = 3, governance = Fair, alignment = Neutral, 
-                  awakening = 1, reaction = 1),
-    MuslimCountry(Sudan, resources = 1, oilProducer = true),
-    MuslimCountry(Somalia, resources = 1),
-    MuslimCountry(Jordan, resources = 1),
-    MuslimCountry(Syria, resources = 2, wmdCache = 2, governance = Poor, alignment = Neutral,
-                  awakening = 1, reaction = 1, sleeperCells = 2),
-    MuslimCountry(CentralAsia, resources = 2),
-    MuslimCountry(Turkey, isSunni = false, resources = 2),
-    MuslimCountry(Lebanon, isSunni = false, resources = 1),
-    MuslimCountry(Yemen, isSunni = false, resources = 1),
-    MuslimCountry(Iraq, isSunni = false, resources = 3, oilProducer = true,
-                  governance = Poor, alignment = Neutral, militia = 1, sleeperCells = 2,
-                  awakening = 1, reaction = 1),
-    MuslimCountry(SaudiArabia, isSunni = false, resources = 3, oilProducer = true),
-    MuslimCountry(GulfStates, isSunni = false, resources = 3, oilProducer = true,
-                  governance = Fair, alignment = Ally, troops = 2, awakening = 1),
-    MuslimCountry(Pakistan, isSunni = false, resources = 2, wmdCache = 3,
-                  governance = Poor, alignment = Neutral, sleeperCells = 1, reaction = 1),
-    MuslimCountry(Afghanistan, isSunni = false, resources = 1,
-                  governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
-                  regimeChange = TanRegimeChange),
-    MuslimCountry(IndonesiaMalaysia, resources = 3, oilProducer = true),
-    MuslimCountry(Mali, resources = 1)
-  )
+    DefaultIraq.copy(governance = Poor, alignment = Neutral, militia = 1, activeCells = 2,
+                     awakening = 1, reaction = 1),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2, awakening = 1),
+    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
+                            regimeChange = TanRegimeChange),
+    DefaultPakistan.copy(governance = Poor, alignment = Neutral, sleeperCells = 1, reaction = 1),
+    DefaultSyria.copy(governance = Poor, alignment = Neutral, sleeperCells = 4,
+                      awakening = 1, reaction = 1),
+    DefaultEgypt.copy(governance = Fair, alignment = Neutral, awakening = 1, reaction = 1),
+    DefaultUnitedKingdom.copy(posture = Hard),
+    DefaultFrance.copy(posture = Hard),
+    DefaultBenelux.copy(posture = Soft))
   val markersInPlay = List.empty[String]
   val cardsRemoved = 133::185::237::Nil
   val offMapTroops = 0

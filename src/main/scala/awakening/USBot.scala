@@ -880,8 +880,8 @@ object USBot extends BotHelpers {
       
     botLog("Find \"Ebola Scare\" target")
     selectCandidates(game getCountries names, flowchart) match {
-      case xs  => shuffle(xs).headOption map (_.name)
       case Nil => shuffle(names).headOption
+      case xs  => shuffle(xs).headOption map (_.name)
     }
   }
   

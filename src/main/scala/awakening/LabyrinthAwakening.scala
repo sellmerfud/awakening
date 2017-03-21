@@ -75,40 +75,43 @@ object LabyrinthAwakening {
     }
   }
   
-  case class BotDifficulty(name: String, description: String) {
+  case class BotDifficulty(val order: Int, name: String, description: String) {
     override def toString() = f"$name%-10s - $description"
+    val key = name.toLowerCase
   }
   
+  implicit val BotDifficultyOrdering = Ordering.by { x: BotDifficulty => x.order }
+  
   // US
-  val OffGuard  = BotDifficulty("Off Guard", "Standard rules")
-  val Competent = BotDifficulty("Competent", "Alert affects two plots in the same country")
-  val Adept     = BotDifficulty("Adept"    , "Disrupt at two or more troops awards +2 prestige")
-  val Vigilant  = BotDifficulty("Vigilant" , "No auto recruit in Regime Change or Civil War countries")
-  val Ruthless  = BotDifficulty("Ruthless" , "US associated events trigger on first plot")
-  val NoMercy   = BotDifficulty("NoMercy"  , "Ignore DRM penalty on War of Ideas")
+  val OffGuard  = BotDifficulty(1, "Off Guard", "Standard rules")
+  val Competent = BotDifficulty(2, "Competent", "Alert affects two plots in the same country")
+  val Adept     = BotDifficulty(3, "Adept"    , "Disrupt at two or more troops awards +2 prestige")
+  val Vigilant  = BotDifficulty(4, "Vigilant" , "No auto recruit in Regime Change or Civil War countries")
+  val Ruthless  = BotDifficulty(5, "Ruthless" , "US associated events trigger on first plot")
+  val NoMercy   = BotDifficulty(6, "NoMercy"  , "Ignore DRM penalty on War of Ideas")
 
   // Jihadist
-  val Muddled    = BotDifficulty("Muddled"   , "Standard rules")
-  val Coherent   = BotDifficulty("Coherent"  , "Ignore DRM penalty during Minor Jihad")
-  val Attractive = BotDifficulty("Attractive", "Each successful plot places two available plot markers")
-  val Potent     = BotDifficulty("Potent"    , "Each successful recruit places two available cells")
-  val Infectious = BotDifficulty("Infectious", "US must play all cards")
-  val Virulent   = BotDifficulty("Virulent"  , "Ignore all DRM penalties")
+  val Muddled    = BotDifficulty(1, "Muddled"   , "Standard rules")
+  val Coherent   = BotDifficulty(2, "Coherent"  , "Ignore DRM penalty during Minor Jihad")
+  val Attractive = BotDifficulty(3, "Attractive", "Each successful plot places two available plot markers")
+  val Potent     = BotDifficulty(4, "Potent"    , "Each successful recruit places two available cells")
+  val Infectious = BotDifficulty(5, "Infectious", "US must play all cards")
+  val Virulent   = BotDifficulty(6, "Virulent"  , "Ignore all DRM penalties")
   
   object BotDifficulty {
-    def apply(name: String): BotDifficulty = name match {
-      case OffGuard.name   => OffGuard
-      case Competent.name  => Competent
-      case Adept.name      => Adept
-      case Vigilant.name   => Vigilant
-      case Ruthless.name   => Ruthless
-      case NoMercy.name    => NoMercy
-      case Muddled.name    => Muddled
-      case Coherent.name   => Coherent
-      case Attractive.name => Attractive
-      case Potent.name     => Potent
-      case Infectious.name => Infectious
-      case Virulent.name   => Virulent
+    def apply(name: String): BotDifficulty = name.toLowerCase match {
+      case OffGuard.key   => OffGuard
+      case Competent.key  => Competent
+      case Adept.key      => Adept
+      case Vigilant.key   => Vigilant
+      case Ruthless.key   => Ruthless
+      case NoMercy.key    => NoMercy
+      case Muddled.key    => Muddled
+      case Coherent.key   => Coherent
+      case Attractive.key => Attractive
+      case Potent.key     => Potent
+      case Infectious.key => Infectious
+      case Virulent.key   => Virulent
       case _ => throw new IllegalArgumentException(s"Invalid BotDifficulty name: $name")
     }
   }
@@ -151,48 +154,6 @@ object LabyrinthAwakening {
   val GreenRegimeChange = "Green"
   val TanRegimeChange   = "Tan"
 
-  val Canada            = "Canada"
-  val UnitedStates      = "United States"
-  val UnitedKingdom     = "United Kingdom"
-  val Serbia            = "Serbia"
-  val Israel            = "Israel"
-  val India             = "India"
-  val Scandinavia       = "Scandinavia"
-  val EasternEurope     = "Eastern Europe"
-  val Benelux           = "Benelux"
-  val Germany           = "Germany"
-  val France            = "France"
-  val Italy             = "Italy"
-  val Spain             = "Spain"
-  val Russia            = "Russia"
-  val Caucasus          = "Caucasus"
-  val China             = "China"
-  val KenyaTanzania     = "Kenya/Tanzania"
-  val Thailand          = "Thailand"
-  val Philippines       = "Philippines"
-  val Morocco           = "Morocco"
-  val AlgeriaTunisia    = "Algeria/Tunisia"
-  val Libya             = "Libya"
-  val Egypt             = "Egypt"
-  val Sudan             = "Sudan"
-  val Somalia           = "Somalia"
-  val Jordan            = "Jordan"
-  val Syria             = "Syria"
-  val CentralAsia       = "Central Asia"
-  val IndonesiaMalaysia = "Indonesia/Malaysia"
-  val Turkey            = "Turkey"
-  val Lebanon           = "Lebanon"
-  val Yemen             = "Yemen"
-  val Iraq              = "Iraq"
-  val SaudiArabia       = "Saudi Arabia"
-  val GulfStates        = "Gulf States"
-  val Pakistan          = "Pakistan"
-  val Afghanistan       = "Afghanistan"
-  val Iran              = "Iran"
-  val Mali              = "Mali"
-  val Nigeria           = "Nigeria"
-  
-  val CountryAbbreviations = Map("US" -> UnitedStates, "UK" -> UnitedKingdom)
   // Troop commitment
   val LowIntensity = "Low Intensity"
   val War          = "War"
@@ -248,6 +209,138 @@ object LabyrinthAwakening {
   val Ally      = "Ally"
   val Neutral   = "Neutral"
   val Adversary = "Adversary"
+
+  val Canada            = "Canada"
+  val UnitedStates      = "United States"
+  val UnitedKingdom     = "United Kingdom"
+  val Serbia            = "Serbia"
+  val Israel            = "Israel"
+  val India             = "India"
+  val Scandinavia       = "Scandinavia"
+  val EasternEurope     = "Eastern Europe"
+  val Benelux           = "Benelux"
+  val Germany           = "Germany"
+  val France            = "France"
+  val Italy             = "Italy"
+  val Spain             = "Spain"
+  val Russia            = "Russia"
+  val Caucasus          = "Caucasus"
+  val China             = "China"
+  val KenyaTanzania     = "Kenya/Tanzania"
+  val Thailand          = "Thailand"
+  val Philippines       = "Philippines"
+  val Morocco           = "Morocco"
+  val AlgeriaTunisia    = "Algeria/Tunisia"
+  val Libya             = "Libya"
+  val Egypt             = "Egypt"
+  val Sudan             = "Sudan"
+  val Somalia           = "Somalia"
+  val Jordan            = "Jordan"
+  val Syria             = "Syria"
+  val CentralAsia       = "Central Asia"
+  val IndonesiaMalaysia = "Indonesia/Malaysia"
+  val Turkey            = "Turkey"
+  val Lebanon           = "Lebanon"
+  val Yemen             = "Yemen"
+  val Iraq              = "Iraq"
+  val SaudiArabia       = "Saudi Arabia"
+  val GulfStates        = "Gulf States"
+  val Pakistan          = "Pakistan"
+  val Afghanistan       = "Afghanistan"
+  val Iran              = "Iran"
+  val Mali              = "Mali"
+  val Nigeria           = "Nigeria"
+  
+  val DefaultCanada            = NonMuslimCountry(Canada)
+  val DefaultUnitedStates      = NonMuslimCountry(UnitedStates)
+  val DefaultUnitedKingdom     = NonMuslimCountry(UnitedKingdom, recruitOverride = 2)
+  val DefaultSerbia            = NonMuslimCountry(Serbia)
+  val DefaultIsrael            = NonMuslimCountry(Israel, posture = Hard)
+  val DefaultIndia             = NonMuslimCountry(India)
+  val DefaultScandinavia       = NonMuslimCountry(Scandinavia)
+  val DefaultEasternEurope     = NonMuslimCountry(EasternEurope)
+  val DefaultBenelux           = NonMuslimCountry(Benelux)
+  val DefaultGermany           = NonMuslimCountry(Germany)
+  val DefaultItaly             = NonMuslimCountry(Italy)
+  val DefaultFrance            = NonMuslimCountry(France, recruitOverride = 2)
+  val DefaultSpain             = NonMuslimCountry(Spain, recruitOverride = 2)
+  val DefaultRussia            = NonMuslimCountry(Russia, governance = Fair)
+  val DefaultCaucasus          = NonMuslimCountry(Caucasus, governance = Fair)
+  val DefaultChina             = NonMuslimCountry(China, governance = Fair)
+  val DefaultKenyaTanzania     = NonMuslimCountry(KenyaTanzania, governance = Fair)
+  val DefaultThailand          = NonMuslimCountry(Thailand, governance = Fair)
+  val DefaultPhilippines       = NonMuslimCountry(Philippines, governance = Fair, recruitOverride = 3)
+  val DefaultIran              = NonMuslimCountry(Iran, governance = Fair, wmdCache = 1, iranSpecialCase = true)
+  val DefaultNigeria           = NonMuslimCountry(Nigeria, governance = Poor, recruitOverride = 3)
+  
+  val DefaultMuslimNigeria     = MuslimCountry(Nigeria, resources = 2, oilProducer = true)
+  val DefaultMorocco           = MuslimCountry(Morocco, resources = 2)
+  val DefaultAlgeriaTunisia    = MuslimCountry(AlgeriaTunisia, resources = 2, oilProducer = true)
+  val DefaultLibya             = MuslimCountry(Libya, resources = 1, oilProducer = true)
+  val DefaultEgypt             = MuslimCountry(Egypt, resources = 3)
+  val DefaultSudan             = MuslimCountry(Sudan, resources = 1, oilProducer = true)
+  val DefaultSomalia           = MuslimCountry(Somalia, resources = 1)
+  val DefaultJordan            = MuslimCountry(Jordan, resources = 1)
+  val DefaultSyria             = MuslimCountry(Syria, resources = 2, wmdCache = 2)
+  val DefaultCentralAsia       = MuslimCountry(CentralAsia, resources = 2)
+  val DefaultTurkey            = MuslimCountry(Turkey, isSunni = false, resources = 2)
+  val DefaultLebanon           = MuslimCountry(Lebanon, isSunni = false, resources = 1)
+  val DefaultYemen             = MuslimCountry(Yemen, isSunni = false, resources = 1)
+  val DefaultIraq              = MuslimCountry(Iraq, isSunni = false, resources = 3, oilProducer = true)
+  val DefaultSaudiArabia       = MuslimCountry(SaudiArabia, isSunni = false, resources = 3, oilProducer = true)
+  val DefaultGulfStates        = MuslimCountry(GulfStates, isSunni = false, resources = 3, oilProducer = true)
+  val DefaultPakistan          = MuslimCountry(Pakistan, isSunni = false, resources = 2, wmdCache = 3)
+  val DefaultAfghanistan       = MuslimCountry(Afghanistan, isSunni = false, resources = 1)
+  val DefaultIndonesiaMalaysia = MuslimCountry(IndonesiaMalaysia, resources = 3, oilProducer = true)
+  val DefaultMali              = MuslimCountry(Mali, resources = 1)
+  
+  val LabyrinthDefaultCountries = List(
+    DefaultCanada,
+    DefaultUnitedStates,
+    DefaultUnitedKingdom,
+    DefaultSerbia,
+    DefaultIsrael,
+    DefaultIndia,
+    DefaultScandinavia,
+    DefaultEasternEurope,
+    DefaultBenelux,
+    DefaultGermany,
+    DefaultItaly,
+    DefaultFrance,
+    DefaultSpain,
+    DefaultRussia,
+    DefaultCaucasus,
+    DefaultChina,
+    DefaultKenyaTanzania,
+    DefaultThailand,
+    DefaultPhilippines,
+    DefaultIran,
+    DefaultMorocco,
+    DefaultAlgeriaTunisia,
+    DefaultLibya,
+    DefaultEgypt,
+    DefaultSudan,
+    DefaultSomalia,
+    DefaultJordan,
+    DefaultSyria,
+    DefaultCentralAsia,
+    DefaultTurkey,
+    DefaultLebanon,
+    DefaultYemen,
+    DefaultIraq,
+    DefaultSaudiArabia,
+    DefaultGulfStates,
+    DefaultPakistan,
+    DefaultAfghanistan,
+    DefaultIndonesiaMalaysia
+  )
+  
+  val AwakeningDefaultCountries = DefaultNigeria :: DefaultMali :: LabyrinthDefaultCountries
+  
+    
+  
+  
+  val CountryAbbreviations = Map("US" -> UnitedStates, "UK" -> UnitedKingdom)
   
   val African       = Morocco::AlgeriaTunisia::Libya::Egypt::Sudan::Somalia::KenyaTanzania::
                       Mali::Nigeria::Nil
@@ -257,54 +350,54 @@ object LabyrinthAwakening {
                       AlgeriaTunisia :: Libya :: Serbia :: Turkey :: Lebanon ::
                       Russia :: Nil
     
-  // List of names to adjacent countries
-  case class CountryData(adjacent: List[String])
-                    
   // A country key and a list of adjacent country keys.
-  val countryData: Map[String, CountryData] = Map(
-   Canada            -> CountryData(UnitedStates :: UnitedKingdom :: Schengen),
-   UnitedStates      -> CountryData(Canada :: UnitedKingdom :: Philippines :: Schengen),
-   UnitedKingdom     -> CountryData(Canada :: UnitedStates :: Schengen),
-   Serbia            -> CountryData(Russia :: Turkey :: Schengen),
-   Israel            -> CountryData(Egypt :: Jordan :: Lebanon :: Nil),
-   India             -> CountryData(Pakistan :: IndonesiaMalaysia :: Nil),
-   Scandinavia       -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Scandinavia)),
-   EasternEurope     -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == EasternEurope)),
-   Benelux           -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Benelux)),
-   Germany           -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Germany)),
-   France            -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == France)),
-   Italy             -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Italy)),
-   Spain             -> CountryData((Schengen ::: SchengenLinks) filterNot (_ == Spain)),
-   Russia            -> CountryData(Serbia :: Turkey :: Caucasus :: CentralAsia :: Schengen),
-   Caucasus          -> CountryData(Turkey :: Russia :: CentralAsia :: Iran :: Nil),
-   China             -> CountryData(CentralAsia:: Thailand :: Nil),
-   KenyaTanzania     -> CountryData(Sudan :: Somalia :: Nigeria :: Nil),
-   Thailand          -> CountryData(China :: IndonesiaMalaysia :: Philippines :: Nil),
-   Philippines       -> CountryData(UnitedStates :: IndonesiaMalaysia :: Thailand :: Nil),
-   Morocco           -> CountryData(AlgeriaTunisia :: Mali :: Schengen),
-   AlgeriaTunisia    -> CountryData(Morocco :: Libya :: Mali :: Schengen),
-   Libya             -> CountryData(AlgeriaTunisia :: Egypt :: Sudan :: Schengen),
-   Egypt             -> CountryData(Israel :: Libya :: Sudan :: Nil),
-   Sudan             -> CountryData(Libya :: Egypt :: Somalia :: KenyaTanzania :: Nigeria :: Nil),
-   Somalia           -> CountryData(Yemen :: Sudan :: KenyaTanzania :: Nil),
-   Jordan            -> CountryData(Israel :: Syria :: Iraq :: SaudiArabia :: Nil),
-   Syria             -> CountryData(Iraq :: Lebanon :: Jordan :: Turkey :: Nil),
-   CentralAsia       -> CountryData(Russia :: Caucasus :: Iran :: Afghanistan :: China :: Nil),
-   IndonesiaMalaysia -> CountryData(Pakistan :: IndonesiaMalaysia :: Thailand :: Philippines :: Nil),
-   Turkey            -> CountryData(Serbia :: Russia :: Caucasus :: Syria :: Iran :: Schengen),
-   Lebanon           -> CountryData(Syria :: Israel :: Schengen),
-   Yemen             -> CountryData(SaudiArabia :: Somalia :: Nil),
-   Iraq              -> CountryData(GulfStates :: SaudiArabia :: Iran :: Turkey :: Syria :: Jordan :: Nil),
-   SaudiArabia       -> CountryData(Jordan :: Iraq :: GulfStates :: Yemen :: Nil),
-   GulfStates        -> CountryData(SaudiArabia :: Iraq :: Iran :: Pakistan :: Nil),
-   Pakistan          -> CountryData(GulfStates :: Iran :: Afghanistan :: IndonesiaMalaysia :: India :: Nil),
-   Afghanistan       -> CountryData(Pakistan :: Iran :: CentralAsia :: Nil),
-   Iran              -> CountryData(Afghanistan :: Pakistan :: GulfStates :: Iraq :: Turkey :: Caucasus :: CentralAsia :: Nil),
-   Mali              -> CountryData(Morocco :: AlgeriaTunisia :: Nigeria :: Nil),
-   Nigeria           -> CountryData(Mali :: Sudan :: KenyaTanzania :: Nil)
+  val adjacencyMap: Map[String, List[String]] = Map(
+   Canada            -> (UnitedStates :: UnitedKingdom :: Schengen),
+   UnitedStates      -> (Canada :: UnitedKingdom :: Philippines :: Schengen),
+   UnitedKingdom     -> (Canada :: UnitedStates :: Schengen),
+   Serbia            -> (Russia :: Turkey :: Schengen),
+   Israel            -> (Egypt :: Jordan :: Lebanon :: Nil),
+   India             -> (Pakistan :: IndonesiaMalaysia :: Nil),
+   Scandinavia       -> ((Schengen ::: SchengenLinks) filterNot (_ == Scandinavia)),
+   EasternEurope     -> ((Schengen ::: SchengenLinks) filterNot (_ == EasternEurope)),
+   Benelux           -> ((Schengen ::: SchengenLinks) filterNot (_ == Benelux)),
+   Germany           -> ((Schengen ::: SchengenLinks) filterNot (_ == Germany)),
+   France            -> ((Schengen ::: SchengenLinks) filterNot (_ == France)),
+   Italy             -> ((Schengen ::: SchengenLinks) filterNot (_ == Italy)),
+   Spain             -> ((Schengen ::: SchengenLinks) filterNot (_ == Spain)),
+   Russia            -> (Serbia :: Turkey :: Caucasus :: CentralAsia :: Schengen),
+   Caucasus          -> (Turkey :: Russia :: CentralAsia :: Iran :: Nil),
+   China             -> (CentralAsia:: Thailand :: Nil),
+   KenyaTanzania     -> (Sudan :: Somalia :: Nigeria :: Nil),
+   Thailand          -> (China :: IndonesiaMalaysia :: Philippines :: Nil),
+   Philippines       -> (UnitedStates :: IndonesiaMalaysia :: Thailand :: Nil),
+   Morocco           -> (AlgeriaTunisia :: Mali :: Schengen),
+   AlgeriaTunisia    -> (Morocco :: Libya :: Mali :: Schengen),
+   Libya             -> (AlgeriaTunisia :: Egypt :: Sudan :: Schengen),
+   Egypt             -> (Israel :: Libya :: Sudan :: Nil),
+   Sudan             -> (Libya :: Egypt :: Somalia :: KenyaTanzania :: Nigeria :: Nil),
+   Somalia           -> (Yemen :: Sudan :: KenyaTanzania :: Nil),
+   Jordan            -> (Israel :: Syria :: Iraq :: SaudiArabia :: Nil),
+   Syria             -> (Iraq :: Lebanon :: Jordan :: Turkey :: Nil),
+   CentralAsia       -> (Russia :: Caucasus :: Iran :: Afghanistan :: China :: Nil),
+   IndonesiaMalaysia -> (Pakistan :: IndonesiaMalaysia :: Thailand :: Philippines :: Nil),
+   Turkey            -> (Serbia :: Russia :: Caucasus :: Syria :: Iran :: Schengen),
+   Lebanon           -> (Syria :: Israel :: Schengen),
+   Yemen             -> (SaudiArabia :: Somalia :: Nil),
+   Iraq              -> (GulfStates :: SaudiArabia :: Iran :: Turkey :: Syria :: Jordan :: Nil),
+   SaudiArabia       -> (Jordan :: Iraq :: GulfStates :: Yemen :: Nil),
+   GulfStates        -> (SaudiArabia :: Iraq :: Iran :: Pakistan :: Nil),
+   Pakistan          -> (GulfStates :: Iran :: Afghanistan :: IndonesiaMalaysia :: India :: Nil),
+   Afghanistan       -> (Pakistan :: Iran :: CentralAsia :: Nil),
+   Iran              -> (Afghanistan :: Pakistan :: GulfStates :: Iraq :: Turkey :: Caucasus :: CentralAsia :: Nil),
+   Mali              -> (Morocco :: AlgeriaTunisia :: Nigeria :: Nil),
+   Nigeria           -> (Mali :: Sudan :: KenyaTanzania :: Nil)
   )
   
-  def getAdjacent(name: String): List[String] = countryData(name).adjacent
+  // We must filter against countries in the game, so we don't try
+  // to access Mali, Nigeria during a Labyrinth scenario!
+  def getAdjacent(name: String): List[String] = 
+    adjacencyMap(name) filter (adjName => game hasCountry (_.name == adjName))
   def getAdjacentMuslims(name: String) = getAdjacent(name) filter game.isMuslim
   def getAdjacentNonMuslims(name: String) = getAdjacent(name) filter game.isNonMuslim
   def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
@@ -427,9 +520,6 @@ object LabyrinthAwakening {
   case class PlotsResolved(num: Int) extends Play {
     override def toString() = s"$num Plots were resolved"
   }
-  
-  val LabyrinthDeck = "Labyrinth Deck"  // For future support…
-  val AwakeningDeck = "Awakening Deck"
   
   class CardDeck(val cardMap: Map[Int, Card]) {
     def isValidCardNumber(num: Int): Boolean = cardMap contains num
@@ -601,7 +691,7 @@ object LabyrinthAwakening {
 
   trait Scenario {
     val name: String
-    val cardDeckName: String
+    val expansion: Boolean     // false for Labyrinth scenario, true for Awakening scenario
     val prestige: Int
     val usPosture: String
     val funding: Int
@@ -630,7 +720,6 @@ object LabyrinthAwakening {
   
   case class GameParameters(
     scenarioName: String,
-    cardDeckName: String,
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
@@ -1181,21 +1270,29 @@ object LabyrinthAwakening {
     scenario: Scenario,
     humanRole: Role,
     humanAutoRoll: Boolean,
-    botDifficulties: List[BotDifficulty]) = GameState(
-      GameParameters(scenario.name, scenario.cardDeckName, humanRole,humanAutoRoll, botDifficulties),
-      0, // Turn number, zero indicates start of game.
-      scenario.prestige,
-      scenario.usPosture,
-      scenario.funding,
-      scenario.countries,
-      scenario.markersInPlay.sorted,
-      scenario.availablePlots.sorted,
-      cardsRemoved = scenario.cardsRemoved,
-      offMapTroops = scenario.offMapTroops)
+    botDifficulties: List[BotDifficulty]) = {
+      var countries:List[Country] = if (scenario.expansion) AwakeningDefaultCountries 
+                                    else LabyrinthDefaultCountries
+      // Apply scenario overrides to countries.
+      for (c <- scenario.countries)
+        countries = c :: (countries filterNot (_.name == c.name))
+      
+      GameState(
+        GameParameters(scenario.name, humanRole,humanAutoRoll, botDifficulties),
+        0, // Turn number, zero indicates start of game.
+        scenario.prestige,
+        scenario.usPosture,
+        scenario.funding,
+        countries,
+        scenario.markersInPlay.sorted,
+        scenario.availablePlots.sorted,
+        cardsRemoved = scenario.cardsRemoved,
+        offMapTroops = scenario.offMapTroops)
+    }
   
   
   // Global variables
-  var game = initialGameState(new Awakening2010, US, true, Muddled :: Nil)
+  var game = initialGameState(new Awakening, US, true, Muddled :: Nil)
   
   // If num is 1 use the name as is
   // otherwise either use the plural if given or add an 's' to the name.
@@ -4091,11 +4188,15 @@ object LabyrinthAwakening {
   }
   
   val scenarios = ListMap[String, Scenario](
-    "Awakening2010"  -> new Awakening2010,
-    "MittsTurn"      -> new MittsTurn,
-    "StatusOfForces" -> new StatusOfForces
+    "Awakening"          -> new Awakening,
+    "MittsTurn"          -> new MittsTurn,
+    "StatusOfForces"     -> new StatusOfForces,
+    "IslamicStateOfIraq" -> new IslamicStateOfIraq
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
+  
+  // Case sensitive
+  def isValidScenario(name: String) = scenarios contains name
   
   val AbortCard = "abort card"
   case object ExitGame extends Exception
@@ -4103,7 +4204,9 @@ object LabyrinthAwakening {
   
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
+    var userParams = loadParamsFile(UserParams())
     gamesDir.mkpath()
+    
     // parse cmd line args -- to be done
     
     askWhichGame() match {
@@ -4113,14 +4216,24 @@ object LabyrinthAwakening {
         
       case None => // Start a new game
         println()
-        // prompt for scenario
-        println("Choose a scenario:")
-        val scenario = scenarios(askMenu(scenarioChoices, allowAbort = false).head)
-        // ask which side the user wishes to play
-        val sidePrompt = "Which side do you wish play? (US or Jihadist) "
-        val humanRole = Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
-        val difficulties = askDifficulties(if (humanRole == US) Jihadist else US)
-        val humanAutoRoll = !askYorN("Do you wish to roll your own dice (y/n)? ")
+        
+        val scenarioName = userParams.scenarioName getOrElse {
+          // prompt for scenario
+          println("Choose a scenario:")
+          askMenu(scenarioChoices, allowAbort = false).head
+        }
+        val scenario = scenarios(scenarioName)
+        val humanRole = userParams.side getOrElse {
+          // ask which side the user wishes to play
+          val sidePrompt = "Which side do you wish play? (US or Jihadist) "
+          Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
+        }
+        val difficulties = if (humanRole == US)
+          userParams.jihadistBotDifficulties getOrElse askDifficulties(Jihadist)
+        else
+          userParams.usBotDifficulties getOrElse askDifficulties(US)
+        val humanAutoRoll = userParams.autoDice getOrElse !askYorN("Do you wish to roll your own dice (y/n)? ")
+        
         gameName = Some(askGameName("Enter a name for your new game: "))
 
         game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
@@ -4166,6 +4279,95 @@ object LabyrinthAwakening {
     }
   }
     
+  case class UserParams(
+    val scenarioName: Option[String] = None,
+    val side: Option[Role] = None,
+    val level: Option[Int] = None,
+    val autoDice: Option[Boolean] = None,
+    val ideology: List[BotDifficulty] = Nil,
+    val usResolve: List[BotDifficulty] = Nil) {
+      
+    def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
+      case Nil => level map (AllUSLevels take _)
+      case xs  => Some(xs)
+    }
+    
+    def usBotDifficulties: Option[List[BotDifficulty]] = usResolve match {
+      case Nil => level map (AllJihadistLevels take _)
+      case xs  => Some(xs)
+    }
+  }
+  
+  def loadParamsFile(initialParams: UserParams): UserParams = {
+    import java.util.Properties
+    val testpath = Some(Pathname("./test_params")) filter (_.exists)
+    val path = testpath getOrElse Pathname("./awakening_params")
+    if (path.exists && path.isReadable) {
+      try {
+        var params = initialParams
+        val props = new Properties()
+        def propValue(name: String): Option[String] =
+          (Option(props.getProperty(name)) map (_.trim)) match {
+            case Some("") => None  // Treat empty values a non-existent
+            case x        => x
+          }
+        path.reader { r => props.load(r) }
+        
+        propValue("scenario") foreach { value =>
+          if (isValidScenario(value))
+            params = params.copy(scenarioName = Some(value))
+          else
+            println(s"Ignoring invalid scenario name ($value) in awakening_params file")
+        }
+        propValue("side") foreach { value =>
+          value.toLowerCase match {
+            case "jihadist" => params = params.copy(side = Some(Jihadist))
+            case "us"       => params = params.copy(side = Some(US))
+            case _ => println(s"Ignoring invalid side name ($value) in awakening_params file")
+          }
+        }
+        propValue("level") foreach { value =>
+          if (List("1","2","3","4","5","6") contains value)
+            params = params.copy(level = Some(value.toInt))
+          else
+            println(s"Ignoring invalid level ($value) in awakening_params file")
+        }
+        propValue("dice") foreach { value =>
+          value.toLowerCase match {
+            case "auto"  => params = params.copy(autoDice = Some(true))
+            case "human" => params = params.copy(autoDice = Some(false))
+            case _ => println(s"Ignoring invalid dice value ($value) in awakening_params file")
+          }
+        }
+        propValue("ideology") foreach { value =>
+          val tokens = value.split(",").toList map (_.trim) filterNot (_ == "")
+          if (tokens forall isValidIdeology) 
+            params = params.copy(ideology = (tokens.distinct map BotDifficulty.apply).sorted)
+          else
+            println(s"Ignoring invalid ideology value ($value) in awakening_params file")
+        }
+        propValue("us-resolve") foreach { value =>
+          val tokens = value.split(",").toList map (_.trim) filterNot (_ == "")
+          if (tokens forall isValidUsResolve) 
+            params = params.copy(usResolve = (tokens.distinct map BotDifficulty.apply).sorted)
+          else
+            println(s"Ignoring invalid us-resolve value ($value) in awakening_params file")
+        }
+        params
+      }
+      catch {
+        case e: Throwable =>
+          println(s"Error reading $path: ${e.getMessage}")
+          initialParams
+      }
+    }
+    else
+      initialParams
+  }
+  
+  val AllUSLevels = List(OffGuard,Competent,Adept,Vigilant,Ruthless,NoMercy)
+  val AllJihadistLevels  = List(Muddled,Coherent,Attractive,Potent,Infectious,Virulent)
+  
   val USLevels = Map(
     OffGuard.name  -> List(OffGuard),
     Competent.name -> List(OffGuard,Competent),
@@ -4183,17 +4385,15 @@ object LabyrinthAwakening {
     Virulent.name   -> List(Muddled,Coherent,Attractive,Potent,Infectious,Virulent))
   
   def askDifficulties(botRole: Role): List[BotDifficulty] = {
-    val USLevels = List(OffGuard,Competent,Adept,Vigilant,Ruthless,NoMercy)
-    val JLevels  = List(Muddled,Coherent,Attractive,Potent,Infectious,Virulent)
-    val levels = if (botRole == US) USLevels else JLevels
+    val levels = if (botRole == US) AllUSLevels else AllJihadistLevels
     val fmt = "%%-%ds".format((levels map (_.name.length)).max)
     
     def nextChoice(num: Int, prev: Option[BotDifficulty], levels: List[BotDifficulty]): List[(String, String)] =
       (prev, levels) match {
         case (_, Nil) => Nil
-        case (None, (d@BotDifficulty(name, desc)) :: rest) => 
+        case (None, (d@BotDifficulty(_, name, desc)) :: rest) => 
           (num.toString -> s"${fmt.format(name)}: $desc") :: nextChoice(num+1, Some(d), rest)
-        case (Some(BotDifficulty(pname, _)), (d@BotDifficulty(name, desc)) :: rest) =>
+        case (Some(BotDifficulty(_, pname, _)), (d@BotDifficulty(_, name, desc)) :: rest) =>
           (num.toString -> s"${fmt.format(name)}: $pname plus $desc") :: nextChoice(num+1, Some(d), rest)
       }
     
@@ -4201,6 +4401,13 @@ object LabyrinthAwakening {
     levels take askMenu(nextChoice(1, None, levels), allowAbort = false).head.toInt
   }
   
+  def isValidIdeology(name: String) = 
+    JihadistLevels.keys exists (_.toLowerCase == name.toLowerCase)
+    
+  def isValidUsResolve(name: String) = 
+    JihadistLevels.keys exists (_.toLowerCase == name.toLowerCase)
+    
+    
   // Check to see if any automatic victory condition has been met.
   // Note: The WMD resolved in United States condition is checked by resolvePlots()
   def checkAutomaticVictory(): Unit = {

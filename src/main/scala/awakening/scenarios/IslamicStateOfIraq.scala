@@ -30,25 +30,26 @@ package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
 
-class MittsTurn extends Scenario {
-  val name           = "Mitt's Turn"
+class IslamicStateOfIraq extends Scenario {
+  val name           = "Islamic State of Iraq & the Levant (ISIL)"
   val expansion      = true
-  val prestige       = 7
+  val prestige       = 5
   val usPosture      = Hard
-  val funding        = 6
+  val funding        = 7
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
   val countries = List(
-    DefaultAlgeriaTunisia.copy(governance = Poor, alignment = Neutral, awakening = 1),
-    DefaultIraq.copy(governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
+    DefaultSyria.copy(governance = Fair, alignment = Neutral, civilWar = true, militia = 3, 
+                      caliphateCapital = true, activeCells = 4, wmdCache = 0),
+    DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 2,
+                      activeCells = 3),
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
-                            regimeChange = TanRegimeChange),
-    DefaultPakistan.copy(governance = Fair, alignment = Neutral, sleeperCells = 2),
+    DefaultAfghanistan.copy(governance = Fair, alignment = Ally, troops = 2, sleeperCells = 1),
+    DefaultPakistan.copy(governance = Poor, alignment = Ally, hasCadre = true),
+    DefaultMuslimNigeria.copy(governance = Poor, alignment = Neutral, sleeperCells = 2),
     DefaultUnitedKingdom.copy(posture = Hard),
     DefaultFrance.copy(posture = Hard),
-    DefaultBenelux.copy(posture = Soft),
-    DefaultRussia.copy(posture = Soft))
-  val markersInPlay = List.empty[String]
-  val cardsRemoved = List.empty[Int]
-  val offMapTroops = 0
+    DefaultBenelux.copy(posture = Hard))
+  val markersInPlay = List("Sequestration")
+  val cardsRemoved = 133::185::237::Nil
+  val offMapTroops = 3
 }
