@@ -894,6 +894,15 @@ object USBot extends BotHelpers {
     countryNames(selectCandidates(game getCountries names, flowchart)) 
   }
   
+  // ------------------------------------------------------------------
+  // Pick the top priority plot in the given country.
+  def selectPriorityPlot(name: String): PlotOnMap = {
+    val c = game getCountry name
+    assert(c.plots.nonEmpty, s"selectPriorityPlot(): $name has no plots")
+    val plots = c.plots map (p => PlotInCountry(p, c))
+    val best = priorityPlot(plots)
+    best.onMap
+  }
   
   // ------------------------------------------------------------------
   def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.us) min 3

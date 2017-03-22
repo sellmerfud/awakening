@@ -2689,16 +2689,105 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(207, "JV / Copycat", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => 
+        (role == Jihadist && game.cellsAvailable > 0 || (game.availablePlots contains Plot1)) ||
+        (role == US && (game hasNonMuslim (n => n.hasCadre || n.totalCells > 0 || n.plots.nonEmpty)))
+      ,
       (role: Role) => {
         // See Event Instructions table
+        if (role == Jihadist) {
+          if (role == game.humanRole) {
+            val candidates = countryNames(game.nonMuslims)
+            val name = askCountry("Select country: ", countryNames(game.nonMuslims))
+            addEventTarget(name)
+            testCountry(name)
+            val choices = List(
+              if (game.cellsAvailable > 0) Some("cell" -> "Place a cell") else None,
+              if (game.availablePlots contains Plot1) Some("plot" -> "Place a Plot 1") else None
+            ).flatten
+            println("Select 1:")
+            askMenu(choices).head match {
+              case "cell" => addSleeperCellsToCountry(name, 1)
+              case "plot" => addAvailablePlotToCountry(name, Plot1)
+            }
+          }
+          else {  // Jihadist Bot
+            addEventTarget(UnitedStates)
+            if (game.cellsAvailable > 0 && 
+                  ((game.availablePlots contains PlotWMD) || 
+                    game.funding == 9 ||
+                    !(game.availablePlots contains Plot1))) {
+              addSleeperCellsToCountry(UnitedStates, 1)          
+            }
+            else
+              addAvailablePlotToCountry(UnitedStates, Plot1)
+          }
+        }
+        else {  // US 
+          if (role == game.humanRole) {
+            val candidates = 
+              countryNames(game.nonMuslims filter (n => n.hasCadre || n.totalCells > 0 || n.plots.nonEmpty))
+            val name = askCountry("Select country: ", countryNames(game.nonMuslims))
+            val n = game getNonMuslim name
+            addEventTarget(name)
+            testCountry(name)
+            val choices = List(
+              if (n.totalCells > 0) Some("cell"  -> "Remve a cell") else None,
+              if (n.hasCadre)       Some("cadre" -> "Remove cadre") else None,
+              if (n.plots.nonEmpty) Some("plot"  -> "Alert a plot") else None
+            ).flatten
+            println("Select 1:")
+            askMenu(choices).head match {
+              case "cell"  => 
+                // Use the Bot routine to pick a sleeper first
+                val (actives, sleepers) = USBot.chooseCellsToRemove(name, 1)
+                removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+              case "cadre" => removeCadre(name)
+              case "plot"  => performAlert(name, humanPickPlotToAlert(name))
+            }
+          }
+          else {  // US Bot
+            val criteria = (n: NonMuslimCountry) => n.hasCadre || n.totalCells > 0 || n.plots.nonEmpty
+            val name = if (criteria(game getNonMuslim UnitedStates))
+              UnitedStates
+            else {
+              val candidates = countryNames(game.nonMuslims filter criteria)
+              USBot.disruptTarget(candidates).get
+            }
+            addEventTarget(name)
+            val n = game getNonMuslim name
+            if (n.plots.nonEmpty)
+              performAlert(name, USBot.selectPriorityPlot(name))
+            else if (n.totalCells > 0) {
+              val (actives, sleepers) = USBot.chooseCellsToRemove(name, 1)
+              removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+            }
+            else
+              removeCadre(name)
+          }
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(208, "Kinder – Gentler", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole ||
+        (role == Jihadist && game.troopCommitment == Overstretch) ||
+        (role == US       && game.troopCommitment == LowIntensity)
+      ,
       (role: Role) => {
         // See Event Instructions table
+        if (game.troopCommitment == Overstretch) {
+          increaseFunding(1)
+          decreasePrestige(1)
+        }
+        else if (game.troopCommitment == LowIntensity) {
+          decreaseFunding(1)
+          increasePrestige(1)
+        }
+        else
+          log("The event has no effect because the troop comittment is War")
       }
     )),
     // ------------------------------------------------------------------------
