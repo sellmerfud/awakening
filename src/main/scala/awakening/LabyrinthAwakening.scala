@@ -2257,29 +2257,7 @@ object LabyrinthAwakening {
     else
       ""
   }
-  
 
-  def loadPlay(num: Int): Unit = {    
-    loadGameState(playFilePath(num))
-  }
-  
-  def loadTurn(num: Int): Unit = {    
-    loadGameState(turnFilePath(num))
-    // Loading a turn represents the end of that turn
-    // so we must advance the turn number.
-    game = game.copy(turn = game.turn + 1)
-    logStartOfTurn()
-  }
-  
-  def loadFromFile(name: String, path: Pathname): Unit = {
-    gameName = Some(name)
-    loadGameState(path)
-    if (game.plays.isEmpty) {
-      game = game.copy(turn = game.turn + 1)
-      logStartOfTurn()
-    }
-  }
-  
   // Load the most recent game file for the given game.
   // 
   def loadMostRecent(name: String): Unit = {
@@ -2288,8 +2266,8 @@ object LabyrinthAwakening {
     }
     gameName = Some(name)
     file match {
-      case PlayFile(n) => loadPlay(n)
-      case TurnFile(n) => loadTurn(n)
+      case PlayFile(n) => loadGameState(playFilePath(n))
+      case TurnFile(n) => loadGameState(turnFilePath(n))
     }
   }
   
@@ -2376,6 +2354,12 @@ object LabyrinthAwakening {
       filepath.inputStream { istream =>
         game = BinaryPickle(istream).unpickle[GameState]
       }
+      // If we load a game with no plays then it represents
+      // the end of a turn so we must advance the turn number.
+      if (game.plays.isEmpty) {
+        game = game.copy(turn = game.turn + 1)
+        logStartOfTurn()
+      }
     }
     catch {
       case e: IOException =>
@@ -2406,14 +2390,14 @@ object LabyrinthAwakening {
        
     askMenu(choices, allowAbort = false).head match {
       case PLAY("0") =>
-        loadTurn(game.turn - 1)
+        loadGameState(turnFilePath(game.turn - 1))
         removePlayFiles()
       case PLAY(n) => 
-        loadPlay(n.toInt)
+        loadGameState(playFilePath(n.toInt))
         removePlayFiles(n.toInt + 1)
       case "previous" =>
         val turn = askInt("Enter turn #", 1, game.turn, allowAbort = false)
-        loadTurn(turn - 1)
+        loadGameState(turnFilePath(turn - 1))
         removePlayFiles()
         removeTurnFiles(turn)      
       case _ => // cancel
@@ -4219,8 +4203,8 @@ object LabyrinthAwakening {
     var configParams = loadParamsFile(UserParams())
     var cmdLineParams = parseCommandLine(args, UserParams())
     if (cmdLineParams.gameFile.nonEmpty) {
-      val name = askGameName("Enter a name for the game: ")
-      loadFromFile(name, Pathname(cmdLineParams.gameFile.get))
+      gameName = Some(askGameName("Enter a name for the game: "))
+      loadGameState(Pathname(cmdLineParams.gameFile.get))
       printSummary(game.playSummary)
     }
     else if (cmdLineParams.gameName.nonEmpty) {
