@@ -1635,6 +1635,64 @@ object LabyrinthAwakening {
         MapItem(country, num) :: askMapItems(newTargets, numItems - num, name)
     }
   }
+  
+  // This is used then the user is asked to select a number of cells from multiple
+  // locations: country names or "track".
+  case class CellsItem(name: String, actives: Int, sleepers: Int) {
+    val total = actives + sleepers
+  }
+  
+  def askCellsFromAnywhere(num: Int, trackOK: Boolean, names: List[String], sleeperFocus: Boolean = true): List[CellsItem] = {
+    if (num == 0)
+      Nil
+    else {
+      def nextChoice(numRemaining: Int, sources: List[CellsItem]): List[CellsItem] = {
+        if (numRemaining == 0 || sources.isEmpty)
+          Nil
+        else {
+          val len = (sources map (_.name.length)).max
+          val fmttrk = "%%-%ds  (contains %%d cells)".format(len)
+          val fmt    = "%%-%ds  (contains %%d active and %%d sleeper)".format(len)
+          def disp(i: CellsItem) = if (i.name == "track")
+            fmttrk.format(i.name, i.sleepers)
+          else
+            fmt.format(i.name, i.actives, i.sleepers)
+          val choices = sources map { i => i.name -> disp(i) }
+          println()
+          println(s"${amountOf(numRemaining, "cell")} remaining, choose from:")
+          val name = askMenu(choices).head
+          val src = sources.find (_.name == name).get
+          val mx = numRemaining min src.total
+          val n = askInt(s"Choose how many cells from $name", 1, mx, Some(mx))
+          val (a, s) = if (name == "track") (0, n) else askCells(name, n, sleeperFocus)
+          val newSources = if (src.total == n)
+            sources filterNot (_.name == name)
+          else
+            sources map { x =>
+              if (x.name == name) x.copy(actives = x.actives - a, sleepers = x.sleepers - s)
+              else x
+            }
+          CellsItem(name, a, s) :: nextChoice(numRemaining - n, newSources)
+        }
+      }
+      
+      // First create a CellsItem for all potential sources that have cells.
+      val trackSrc = if (trackOK && game.cellsAvailable > 0) 
+        List(CellsItem("track", 0, game.cellsAvailable))
+      else
+        Nil
+      val countrySrcs = (game getCountries names filter (_.totalCells > 0)
+                           map (c => CellsItem(c.name, c.activeCells, c.sleeperCells)))
+      val srcItems = nextChoice(num, trackSrc ::: countrySrcs)
+      // Combine items in the same
+      val result = for ((name, items) <- srcItems.groupBy(_.name))
+        yield (name -> items.foldLeft(CellsItem(name, 0, 0)) { (sum, item) =>
+          sum.copy(actives = sum.actives + item.actives, sleepers = sum.sleepers + item.sleepers)
+        })
+      result.values.toList
+    }
+  }
+  
     
   // Use the random Muslim table.
   val randomMuslimTable = Vector(
