@@ -4400,8 +4400,8 @@ object LabyrinthAwakening {
   
   def loadParamsFile(initialParams: UserParams): UserParams = {
     import java.util.Properties
-    val testpath = Some(Pathname("./test_params")) filter (_.exists)
-    val path = testpath getOrElse Pathname("./awakening_params")
+    val testpath = Some(Pathname("./test_config")) filter (_.exists)
+    val path = testpath getOrElse Pathname("./awakening_config")
     if (path.exists && path.isReadable) {
       try {
         var params = initialParams
@@ -4417,26 +4417,26 @@ object LabyrinthAwakening {
           if (isValidScenario(value))
             params = params.copy(scenarioName = Some(value))
           else
-            println(s"Ignoring invalid scenario name ($value) in awakening_params file")
+            println(s"Ignoring invalid scenario name ($value) in awakening_config file")
         }
         propValue("side") foreach { value =>
           value.toLowerCase match {
             case "jihadist" => params = params.copy(side = Some(Jihadist))
             case "us"       => params = params.copy(side = Some(US))
-            case _ => println(s"Ignoring invalid side name ($value) in awakening_params file")
+            case _ => println(s"Ignoring invalid side name ($value) in awakening_config file")
           }
         }
         propValue("level") foreach { value =>
           if (List("1","2","3","4","5","6") contains value)
             params = params.copy(level = Some(value.toInt))
           else
-            println(s"Ignoring invalid level ($value) in awakening_params file")
+            println(s"Ignoring invalid level ($value) in awakening_config file")
         }
         propValue("dice") foreach { value =>
           value.toLowerCase match {
             case "auto"  => params = params.copy(autoDice = Some(true))
             case "human" => params = params.copy(autoDice = Some(false))
-            case _ => println(s"Ignoring invalid dice value ($value) in awakening_params file")
+            case _ => println(s"Ignoring invalid dice value ($value) in awakening_config file")
           }
         }
         propValue("ideology") foreach { value =>
@@ -4444,14 +4444,14 @@ object LabyrinthAwakening {
           if (tokens forall isValidIdeology) 
             params = params.copy(ideology = (tokens.distinct map BotDifficulty.apply).sorted)
           else
-            println(s"Ignoring invalid ideology value ($value) in awakening_params file")
+            println(s"Ignoring invalid ideology value ($value) in awakening_config file")
         }
         propValue("us-resolve") foreach { value =>
           val tokens = value.split(",").toList map (_.trim) filterNot (_ == "")
           if (tokens forall isValidUsResolve) 
             params = params.copy(usResolve = (tokens.distinct map BotDifficulty.apply).sorted)
           else
-            println(s"Ignoring invalid us-resolve value ($value) in awakening_params file")
+            println(s"Ignoring invalid us-resolve value ($value) in awakening_config file")
         }
         params
       }
