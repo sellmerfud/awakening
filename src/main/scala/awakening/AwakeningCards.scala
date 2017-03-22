@@ -2903,8 +2903,28 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(214, "3 Cups of Tea", Unassociated, 2,
-      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game hasMuslim (m => m.isUntested)) ||
+              (role == Jihadist && globalEventNotInPlay("3 Cups of Tea"))
+      ,
       (role: Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.isUntested))
+        if (candidates.nonEmpty) {
+          val name = if (role == game.humanRole)
+            askCountry("Select unmarked Muslim country: ", candidates)
+          else if (role == Jihadist)
+            JihadistBot.markerAlignGovTarget(candidates).get
+          else
+            USBot.markerAlignGovTarget(candidates).get
+          
+          addEventTarget(name)
+          testCountry(name)
+          if (role == Jihadist)
+            addReactionMarker(name)
+          else
+            addAwakeningMarker(name, 2)
+          
+        }
         removeGlobalEventMarker("Malala Yousafzai")
         addGlobalEventMarker("3 Cups of Tea")
       }
