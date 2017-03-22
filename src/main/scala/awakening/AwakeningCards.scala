@@ -88,6 +88,9 @@ object AwakeningCards {
   val regionalAlQaedaCandidate = (m: MuslimCountry) => m.name != Iran && m.isUntested
   val talibanResurgentCandidate = (m: MuslimCountry) => (m.civilWar || m.inRegimeChange) && m.totalCells >= 3
   val usAtrocitiesCandidate = (m: MuslimCountry) => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)
+  val smartPhonesCandidate = (m: MuslimCountry) => m.canTakeAwakeningOrReactionMarker &&
+                                          (game.targetsThisCard.wasOpsOrEventTarget(m.name) ||
+                                           game.targetsLastCard.wasOpsOrEventTarget(m.name))
 
   def parisAttacksPossible: Boolean = {
     val list = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
@@ -139,6 +142,15 @@ object AwakeningCards {
     (role == US      ) && (postureUS || game.reserves.jihadist > 0) ||
     (role == Jihadist) && (postureJ  || game.reserves.us       > 0)
   }
+  
+  def qudsForcePlayable(role: Role): Boolean = 
+    (role == Jihadist &&
+     ((game isNonMuslim Iran) || !(game getMuslim Iran).isAlly) &&
+     (game hasMuslim (_.militia > 0))) ||
+    (role == US &&
+     ((game isNonMuslim Iran) || !(game getMuslim Iran).isIslamistRule) &&
+     (game hasMuslim (_.totalCells > 0)))
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2689,10 +2701,15 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(207, "JV / Copycat", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger,
+      (_, _) => {
+        val us = game getNonMuslim UnitedStates
+        us.hasPlots || (us.totalCells == 0 && !us.hasCadre && (game hasNonMuslim (_.hasPlots)))
+      }
+      ,
       (role: Role) => 
         (role == Jihadist && game.cellsAvailable > 0 || (game.availablePlots contains Plot1)) ||
-        (role == US && (game hasNonMuslim (n => n.hasCadre || n.totalCells > 0 || n.plots.nonEmpty)))
+        (role == US && (game hasNonMuslim (n => n.hasCadre || n.totalCells > 0 || n.hasPlots)))
       ,
       (role: Role) => {
         // See Event Instructions table
@@ -2727,7 +2744,7 @@ object AwakeningCards {
         else {  // US 
           if (role == game.humanRole) {
             val candidates = 
-              countryNames(game.nonMuslims filter (n => n.hasCadre || n.totalCells > 0 || n.plots.nonEmpty))
+              countryNames(game.nonMuslims filter (n => n.hasCadre || n.totalCells > 0 || n.hasPlots))
             val name = askCountry("Select country: ", countryNames(game.nonMuslims))
             val n = game getNonMuslim name
             addEventTarget(name)
@@ -2735,7 +2752,7 @@ object AwakeningCards {
             val choices = List(
               if (n.totalCells > 0) Some("cell"  -> "Remve a cell") else None,
               if (n.hasCadre)       Some("cadre" -> "Remove cadre") else None,
-              if (n.plots.nonEmpty) Some("plot"  -> "Alert a plot") else None
+              if (n.hasPlots)       Some("plot"  -> "Alert a plot") else None
             ).flatten
             println("Select 1:")
             askMenu(choices).head match {
@@ -2748,7 +2765,7 @@ object AwakeningCards {
             }
           }
           else {  // US Bot
-            val criteria = (n: NonMuslimCountry) => n.hasCadre || n.totalCells > 0 || n.plots.nonEmpty
+            val criteria = (n: NonMuslimCountry) => n.hasCadre || n.totalCells > 0 || n.hasPlots
             val name = if (criteria(game getNonMuslim UnitedStates))
               UnitedStates
             else {
@@ -2757,7 +2774,7 @@ object AwakeningCards {
             }
             addEventTarget(name)
             val n = game getNonMuslim name
-            if (n.plots.nonEmpty)
+            if (n.hasPlots)
               performAlert(name, USBot.selectPriorityPlot(name))
             else if (n.totalCells > 0) {
               val (actives, sleepers) = USBot.chooseCellsToRemove(name, 1)
@@ -2792,40 +2809,105 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(209, "Quds Force", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => {
-        // See Event Instructions table
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => qudsForcePlayable(role)
+      ,
+      (role: Role) => if (role == Jihadist) { // See Event Instructions table
+        val candidates = countryNames(game.muslims filter (_.militia > 0))
+        val name = if (role == game.humanRole)
+          askCountry("Select country with militia: ", candidates)
+        else
+          JihadistBot.minorJihadTarget(candidates).get
+        
+        addEventTarget(name)
+        val m = game getMuslim name
+        val numMilitia = (if (m.isSunni) 1 else 2) min m.militia
+        removeMilitiaFromCountry(name, numMilitia)
+      }
+      else {  // US
+        val candidates = countryNames(game.muslims filter (_.totalCells > 0))
+        val name = if (role == game.humanRole)
+          askCountry("Select country with cells: ", candidates)
+        else
+          USBot.disruptTarget(candidates).get
+        
+        addEventTarget(name)
+        val m = game getMuslim name
+        val numCells = if (m.isSunni) 1 else 2
+        val (actives, sleepers) = if (role == game.humanRole)
+          askCells(name, numCells, sleeperFocus = true)
+        else
+          USBot.chooseCellsToRemove(name, numCells)
+        removeCellsFromCountry(name, actives, sleepers, addCadre = true)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(210, "Sectarian Violence", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == Jihadist && (game hasMuslim (_.awakening > 0))) ||
+                      (role == US       && (game hasMuslim (_.reaction > 0)))
+      ,
+      (role: Role) => if (role == Jihadist) {
+        val candidates = countryNames(game.muslims filter (_.awakening > 0))
+        val name = if (role == game.humanRole)
+          askCountry("Remove awakening marker from which country: ", candidates)
+        else
+          JihadistBot.markerAlignGovTarget(candidates).get
+        addEventTarget(name)
+        removeAwakeningMarker(name)
+      }
+      else {  // US
+        val candidates = countryNames(game.muslims filter (_.reaction > 0))
+        val name = if (role == game.humanRole)
+          askCountry("Remove reaction marker from which country: ", candidates)
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        addEventTarget(name)
+        removeReactionMarker(name)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(211, "Smartphones", Unassociated, 1,
-      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim smartPhonesCandidate
+      ,
       (role: Role) => {
-        // TODO: Need to flesh this out.
+        val candidates = countryNames(game.muslims filter smartPhonesCandidate)
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else if (role == Jihadist)
+          JihadistBot.markerAlignGovTarget(candidates).get
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        
+        addEventTarget(name)
+        if (role == Jihadist)
+          addReactionMarker(name)
+        else
+          addAwakeningMarker(name)
         removeGlobalEventMarker("Censorship")
         addGlobalEventMarker("Smartphones")
       }
-      
     )),
     // ------------------------------------------------------------------------
     entry(new Card(212, "Smartphones", Unassociated, 1,
-      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(211).eventConditions(role),
+      (role: Role) => deck(211).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(213, "Smartphones", Unassociated, 1,
-      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(211).eventConditions(role),
+      (role: Role) => deck(211).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(214, "3 Cups of Tea", Unassociated, 2,
       NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        removeGlobalEventMarker("Malala Yousafzai")
+        addGlobalEventMarker("3 Cups of Tea")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2,
@@ -2903,6 +2985,7 @@ object AwakeningCards {
       NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
         // See Event Instructions table
+        addGlobalEventMarker("Operation Serval")
       }
     )),
     // ------------------------------------------------------------------------
@@ -2941,6 +3024,7 @@ object AwakeningCards {
       (role: Role) => {
         // Mark as either "Trade Embargo (US)" or "Trade Embargo (Jihadist)"
         // If Iran becomes Neutral or Ally, remove any Trade Embargo marker. [11.3.3.1]
+        addGlobalEventMarker("Trade Embargo")
       }
     )),
     // ------------------------------------------------------------------------

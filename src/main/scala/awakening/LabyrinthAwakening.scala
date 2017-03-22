@@ -716,7 +716,12 @@ object LabyrinthAwakening {
     ops:              Set[String] = Set.empty,
     testedOrImproved: Set[String] = Set.empty,
     event:            Set[String] = Set.empty
-  )
+  ) {
+    def wasOpsTarget(name: String)        = ops contains name
+    def wasEventTarget(name: String)      = event contains name
+    def wasOpsOrEventTarget(name: String) = wasOpsTarget(name) || wasEventTarget(name)
+    def wasTestedOrImproved(name: String) = testedOrImproved contains name
+  }
   
   case class GameParameters(
     scenarioName: String,
