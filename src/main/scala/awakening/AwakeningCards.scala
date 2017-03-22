@@ -2554,15 +2554,138 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(205, "Erdoğan Effect", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole || {
+        val mm = game getMuslims (Turkey::Iraq::Syria::Nil) 
+        (role == Jihadist && game.cellsAvailable > 0 || (mm exists (_.canTakeAwakeningOrReactionMarker))) ||
+        (role == US && (mm exists (m => m.reaction > 0 || m.totalCells > 0)))
+      }
+      ,
       (role: Role) => {
         // See Event Instructions table
+        val candidates = List(Turkey, Serbia, Iraq, Caucasus, Syria, Iran)
+        if (role == game.humanRole) {
+          val name = askCountry("Select country: ", candidates)
+          val choices = if (game isMuslim name) {
+            val m = game getMuslim name
+            val canAwake = m.canTakeAwakeningOrReactionMarker
+            val canBesiege = !(m.besiegedRegime || m.isGood || m.isIslamistRule)
+            val canMilitia = game.militiaAvailable > 0 && !(m.besiegedRegime || m.isGood || m.isIslamistRule)
+            List(
+              if (m.canTakeAidMarker)      Some("+aid" -> "Place aid marker") else None,
+              if (m.aidMarkers > 0)        Some("-aid" -> "Remove aid marker") else None,
+              if (canBesiege)              Some("+bsg" -> "Place besiged regime marker") else None,
+              if (m.besiegedRegime)        Some("-bsh" -> "Remove besieged regime marker") else None,
+              if (canAwake)                Some("+awa" -> "Place awakening marker") else None,
+              if (m.awakening > 0)         Some("-awa" -> "Remove awakening marker") else None,
+              if (canAwake)                Some("+rea" -> "Place reaction marker") else None,
+              if (m.reaction > 0)          Some("-rea" -> "Remove reaction marker") else None,
+              if (canMilitia)              Some("+mil" -> "Place 2 milita") else None,
+              if (m.militia > 0)           Some("-mil" -> "Remove 2 militia") else None,
+              if (game.cellsAvailable > 0) Some("+cel" -> "Place 2 cells") else None,
+              if (m.totalCells > 0)        Some("-cel" -> "Remove 2 cells") else None
+            ).flatten
+          }
+          else {
+            val n = game getNonMuslim name
+            List(
+              if (n.isUntested && n.canChangePosture)  Some("+pos" -> "Place posture marker") else None,
+              if (!n.isUntested && n.canChangePosture) Some("-pos" -> "Remove posture marker") else None,
+              if (game.cellsAvailable > 0)             Some("+cel" -> "Place 2 cells") else None,
+              if (n.totalCells > 0)                    Some("-cel" -> "Remove 2 cells") else None
+            ).flatten
+          }
+          if (choices.isEmpty)
+            log(s"There are no valid action that can be taken in $name")
+          else {
+            addEventTarget(name)
+            testCountry(name)
+            println("Choose 1: ")
+            askMenu(choices).head match {
+              case "+aid" => addAidMarker(name)
+              case "-aid" => removeAidMarker(name)
+              case "+bsg" => addBesiegedRegimeMarker(name)
+              case "-bsh" => removeBesiegedRegimeMarker(name)
+              case "+awa" => addAwakeningMarker(name)
+              case "-awa" => removeAwakeningMarker(name)
+              case "+rea" => addReactionMarker(name)
+              case "-rea" => removeReactionMarker(name)
+              case "+mil" => addMilitiaToCountry(name, 2 min game.militiaAvailable)
+              case "-mil" => removeMilitiaFromCountry(name, 2 min (game getMuslim name).militia)
+              case "+cel" => addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
+              case "-cel" =>
+                val c = game getCountry name
+                val sleepers = 2 min c.sleeperCells
+                val actives  = (2 - sleepers) min c.activeCells
+                removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+              case "+pos" =>
+                val posture = askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get
+                setCountryPosture(name, posture) 
+              case "-pos" => setCountryPosture(name, PostureUntested) 
+            }
+          }
+        }
+        else if (role == Jihadist ) {
+          // Bot only affects cells or reaction markers.
+          if (game.cellsAvailable > 0) {
+            val name = JihadistBot.recruitTarget(Turkey::Iraq::Syria::Nil).get
+            addEventTarget(name)
+            testCountry(name)
+            addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
+          }
+          else {
+            val mm = game getMuslims (Turkey::Iraq::Syria::Nil) 
+            val candidates = countryNames(mm filter (_.canTakeAwakeningOrReactionMarker))
+            val name = JihadistBot.markerAlignGovTarget(candidates).get
+            addEventTarget(name)
+            testCountry(name)
+            addReactionMarker(name)
+          }
+        }
+        else {  // US Bot
+          val mm = game getMuslims (Turkey::Iraq::Syria::Nil) 
+          if (mm exists (_.totalCells > 0)) {
+            val candidates = countryNames(mm filter (_.totalCells > 0))
+            val name = USBot.disruptTarget(candidates).get
+            addEventTarget(name)
+            val (actives, sleepers) = USBot.chooseCellsToRemove(name, 2)
+            removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+          }
+          else {
+            val candidates = countryNames(mm filter (_.reaction > 0))
+            val name = USBot.markerAlignGovTarget(candidates).get
+            addEventTarget(name)
+            removeReactionMarker(name)
+          }
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(206, "Friday of Anger", Unassociated, 1,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == Jihadist && (game hasMuslim (_.awakening > 0))) ||
+                      (role == US       && (game hasMuslim (_.reaction > 0)))
+      ,
+      (role: Role) => {
+        if (role == Jihadist) {
+           val candidates = countryNames(game.muslims filter (_.awakening > 0))
+           val name = if (role == game.humanRole)
+             askCountry("Place reaction marker in which country? ", candidates)
+           else
+             JihadistBot.markerAlignGovTarget(candidates).get
+           addEventTarget(name)
+           addReactionMarker(name)
+        }
+        else {
+          val candidates = countryNames(game.muslims filter (_.reaction > 0))
+          val name = if (role == game.humanRole)
+            askCountry("Place awakening marker in which country? ", candidates)
+          else
+            USBot.markerAlignGovTarget(candidates).get
+          addEventTarget(name)
+          addAwakeningMarker(name)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(207, "JV / Copycat", Unassociated, 1,
