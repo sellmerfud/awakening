@@ -569,11 +569,11 @@ object JihadistBot extends BotHelpers {
   }
   
   // Starting point for Jihadist bot card play.
-  def cardPlay(card: Card): Unit = {
+  def cardPlay(card: Card, playable: Boolean): Unit = {
     usedCells.clear
     
     // If the event is playable then the event is alwasy executed
-    if (card.eventIsPlayable(Jihadist)) {
+    if (playable) {
       performCardEvent(card, Jihadist)
       // If the card event is Unassociated add ops to the Bot's reserves.
       if (card.association == Unassociated) 

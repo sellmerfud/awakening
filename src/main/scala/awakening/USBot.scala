@@ -332,7 +332,7 @@ object USBot extends BotHelpers {
     def yesPath: AlertFlowchartNode
     def noPath: AlertFlowchartNode
     // ops is the total number of ops available including reserves
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]): Boolean
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]): Boolean
     override def toString() = desc
   }
   
@@ -347,21 +347,21 @@ object USBot extends BotHelpers {
     val desc = "WMD place in country?"
     def yesPath = ThreeOpsForWMD
     def noPath  = ThreeOpsAvailable
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = plots exists (_.isWMD)
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = plots exists (_.isWMD)
   }
   
   object ThreeOpsForWMD extends AlertDecision {
     val desc = "3 Ops available for WMD alert?"
     def yesPath = WMDInUS
     def noPath  = LastCardOrEventAlertsPriorityPlot
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops >= 3
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = ops >= 3
   }
   
   object WMDInUS extends AlertDecision {
     val desc = "WMD in the United States?"
     def yesPath = AlertPlot
     def noPath  = WMDWithTroopsAndPrestigeAbove3
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = 
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = 
       plots exists (p => p.isWMD && p.country.name == UnitedStates)
   }
   
@@ -369,7 +369,7 @@ object USBot extends BotHelpers {
     val desc = "Last card of phase or Event would alert priority plot?"
     def yesPath = PARFlowchart
     def noPath  = AddToUSReserves
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = {
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
       val targetPlot = priorityPlot(plots)
       card.eventAlertsPlot(targetPlot.country.name, targetPlot.onMap.plot) ||
       askYorN(s"Does the $US Bot have another card in hand (y/n)? ") == false
@@ -380,7 +380,7 @@ object USBot extends BotHelpers {
     val desc = "WMD with troops and Prestige > 3?"
     def yesPath = AlertPlot
     def noPath  = WMDAtNonMuslimAndFundingBelow8
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) =
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) =
       game.prestige > 3 &&
       (plots.exists (plot => plot.isWMD && 
                      inMuslimCountry(plot) && 
@@ -391,7 +391,7 @@ object USBot extends BotHelpers {
     val desc = "WMD at non-Muslim and Funding <8?"
     def yesPath = AlertPlot
     def noPath  = AlertTable
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) =
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) =
       game.funding < 8 &&
       (plots exists (plot => plot.isWMD && inNonMuslimCountry(plot)))
   }
@@ -401,14 +401,14 @@ object USBot extends BotHelpers {
     val desc = "3 Ops available?"
     def yesPath = LastCardOrOrReservesBelow2
     def noPath  = PlayableNonJihadistEvent
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = ops >= 3
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = ops >= 3
   }
   
   object LastCardOrOrReservesBelow2 extends AlertDecision {
     val desc = "Last card of phase or US reserves < 2?"
     def yesPath = AlertTable
     def noPath  = MultiplePlots
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = {
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
       game.reserves.us < 2 ||
       askYorN(s"Does the $US Bot have another card in hand (y/n)? ") == false
     }
@@ -418,25 +418,25 @@ object USBot extends BotHelpers {
     val desc = "Playable non-Jihadist event?"
     def yesPath = PARFlowchart
     def noPath  = LastCardOrEventAlertsPriorityPlot
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = card.eventIsPlayable(US)
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = playableEvent
   }
   
   object MultiplePlots extends AlertDecision {
     val desc = "Multiple plots?"
     def yesPath = AlertTable
     def noPath  = PARFlowchart
-    def condition(card: Card, ops: Int, plots: List[PlotInCountry]) = plots.size > 1
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = plots.size > 1
   }
   
   // ------------------------------------------------------------------
   // Follow the operations flowchart to pick which operation will be performed.
-  def alertResolutionFlowchart(card: Card, ops: Int, plots: List[PlotInCountry]): AlertAction = {
+  def alertResolutionFlowchart(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]): AlertAction = {
     assert(plots.nonEmpty, "alertResolutionFlowchart() called with empty plots list")
     @tailrec def evaluateNode(node: AlertFlowchartNode): AlertAction = node match {
       case action:   AlertAction   => action
       case decision: AlertDecision =>
         botLog(s"ARF Flowchart: $node")
-        if (decision.condition(card, ops, plots))
+        if (decision.condition(card, ops, playableEvent, plots))
           evaluateNode(decision.yesPath)
         else
           evaluateNode(decision.noPath)
@@ -925,7 +925,7 @@ object USBot extends BotHelpers {
   }
   
   // Starting point for Jihadist bot card play.
-  def cardPlay(card: Card): Unit = {
+  def cardPlay(card: Card, playable: Boolean): Unit = {
     val maxOps = maxOpsPlusReserves(card)
     val plots = for (country <- game.countries; plot <- country.plots)
       yield PlotInCountry(plot, country)
@@ -933,7 +933,7 @@ object USBot extends BotHelpers {
     // If there is at least one plot on the map then
     // we consult the Alert Resolution Flowchart (ARF)
     val consultPAR = plots.isEmpty || {
-      alertResolutionFlowchart(card, maxOps, plots) match {
+      alertResolutionFlowchart(card, maxOps, playable, plots) match {
         case AlertPlot       => alertPlot(card, priorityPlot(plots)); false
         case AlertTable      => !alertTable(card, priorityPlot(plots), plots)
         case PARFlowchart    => true
@@ -946,7 +946,7 @@ object USBot extends BotHelpers {
     // not performed, then finally we consult the PAR flowchart.
     if (consultPAR && !reassessment(card)) {
       // If the event is playable then the event is alwasy executed
-      if (card.eventIsPlayable(US)) {
+      if (playable) {
         performCardEvent(card, US)
         // If the card event is Unassociated add ops to the Bot's reserves.
         if (card.association == Unassociated) 
@@ -1014,7 +1014,7 @@ object USBot extends BotHelpers {
         if (card2.ops >= opsNeeded) {
           val newPlays = Played2Cards(US, card.number, card2.number) :: game.plays.tail
           game = game.copy(plays = newPlays)
-          logCardPlay(US, card2)
+          logCardPlay(US, card2, false, false)
           // Check to see if either of the cards played has the autoTrigger
           // US Elections event.  If so the event happens first.
           // Calculate the new Posture before any change caused by the Elections.
