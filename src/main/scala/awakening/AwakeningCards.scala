@@ -92,6 +92,9 @@ object AwakeningCards {
                                           (game.targetsThisCard.wasOpsOrEventTarget(m.name) ||
                                            game.targetsLastCard.wasOpsOrEventTarget(m.name))
 
+  val alNusraFrontCandidate = (m: MuslimCountry) => (m.civilWar || m.inRegimeChange) &&
+                                                     m.totalCells > 0 &&
+                                                     m.militia > 0
   def parisAttacksPossible: Boolean = {
     val list = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
     (game.cellsAvailable > 0 || game.availablePlots.nonEmpty) &&
@@ -2656,7 +2659,7 @@ object AwakeningCards {
           val mm = game getMuslims (Turkey::Iraq::Syria::Nil) 
           if (mm exists (_.totalCells > 0)) {
             val candidates = countryNames(mm filter (_.totalCells > 0))
-            val name = USBot.disruptTarget(candidates).get
+            val name = USBot.disruptPriority(candidates).get
             addEventTarget(name)
             val (actives, sleepers) = USBot.chooseCellsToRemove(name, 2)
             removeCellsFromCountry(name, actives, sleepers, addCadre = true)
@@ -2768,7 +2771,7 @@ object AwakeningCards {
               UnitedStates
             else {
               val candidates = countryNames(game.nonMuslims filter criteria)
-              USBot.disruptTarget(candidates).get
+              USBot.disruptPriority(candidates).get
             }
             addEventTarget(name)
             val n = game getNonMuslim name
@@ -2827,7 +2830,7 @@ object AwakeningCards {
         val name = if (role == game.humanRole)
           askCountry("Select country with cells: ", candidates)
         else
-          USBot.disruptTarget(candidates).get
+          USBot.disruptPriority(candidates).get
         
         addEventTarget(name)
         val m = game getMuslim name
@@ -2992,21 +2995,66 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2,
-      USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim (m => m.oilExporter && 
+                                (m.isIslamistRule || m.inRegimeChange || m.civilWar))
+      ,
+      (role: Role) => if (role == US) {
+        increasePrestige(2)
+        decreaseFunding(1)
+      }
+      else { // Jihadist
+        increaseFunding(if (game.caliphateDeclared) 3 else 2)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(217, "Agitators", Unassociated, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == game.humanRole) || {
+        val cards = List("Coup", "ISIL", "Free Syrian Army", "Benghazi Falls", "Operation Serval",
+                     "Revolution", "Houthi Rebels", "Congress Acts")
+        println("The following cards cause Civil War or Regime Change")
+        cards foreach println
+        askYorN("Is at least one of these cards in the discard pile (y/n)? ")
+      }
+      ,
       (role: Role) => {
         // See Event Instructions table
+        if (role == game.botRole)
+          log(s"$role takes the candidate card nearest the bottom of the discard pile")
+        else
+          log(s"$role takes one of the candidate cards from the discard pile")
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(218, "Al-Nusra Front", Unassociated, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == game.humanRole && (game hasMuslim alNusraFrontCandidate)) ||
+        (role == Jihadist && (game hasMuslim (m => alNusraFrontCandidate(m) && m.militia > m.totalCells))) ||
+        (role == US       && (game hasMuslim (m => alNusraFrontCandidate(m) && m.totalCells > m.militia))) 
+      ,
       (role: Role) => {
         // See Event Instructions table
+        val candidates = countryNames(game.muslims filter alNusraFrontCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else if (role == Jihadist) {
+          val candidates = countryNames(game.muslims filter (m => alNusraFrontCandidate(m) && m.militia > m.totalCells))
+          JihadistBot.minorJihadTarget(candidates).get
+        }
+        else {
+          val candidates = countryNames(game.muslims filter (m => alNusraFrontCandidate(m) && m.totalCells > m.militia))
+          USBot.disruptPriority(USBot.highestCellsMinusTandM(candidates)).get
+        }
+        
+        addEventTarget(target)
+        val m = game getMuslim target
+        if (m.totalCells > m.militia) {
+          val (actives, sleepers) = USBot.chooseCellsToRemove(target, m.totalCells - m.militia)
+          removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+        }
+        else if (m.militia > m.totalCells)
+          removeMilitiaFromCountry(target, m.militia - m.totalCells)
       }
     )),
     // ------------------------------------------------------------------------

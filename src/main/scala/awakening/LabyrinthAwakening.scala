@@ -273,12 +273,12 @@ object LabyrinthAwakening {
   val DefaultIran              = NonMuslimCountry(Iran, governance = Fair, wmdCache = 1, iranSpecialCase = true)
   val DefaultNigeria           = NonMuslimCountry(Nigeria, governance = Poor, recruitOverride = 3)
   
-  val DefaultMuslimNigeria     = MuslimCountry(Nigeria, resources = 2, oilProducer = true)
+  val DefaultMuslimNigeria     = MuslimCountry(Nigeria, resources = 2, oilExporter = true)
   val DefaultMorocco           = MuslimCountry(Morocco, resources = 2)
-  val DefaultAlgeriaTunisia    = MuslimCountry(AlgeriaTunisia, resources = 2, oilProducer = true)
-  val DefaultLibya             = MuslimCountry(Libya, resources = 1, oilProducer = true)
+  val DefaultAlgeriaTunisia    = MuslimCountry(AlgeriaTunisia, resources = 2, oilExporter = true)
+  val DefaultLibya             = MuslimCountry(Libya, resources = 1, oilExporter = true)
   val DefaultEgypt             = MuslimCountry(Egypt, resources = 3)
-  val DefaultSudan             = MuslimCountry(Sudan, resources = 1, oilProducer = true)
+  val DefaultSudan             = MuslimCountry(Sudan, resources = 1, oilExporter = true)
   val DefaultSomalia           = MuslimCountry(Somalia, resources = 1)
   val DefaultJordan            = MuslimCountry(Jordan, resources = 1)
   val DefaultSyria             = MuslimCountry(Syria, resources = 2, wmdCache = 2)
@@ -286,12 +286,12 @@ object LabyrinthAwakening {
   val DefaultTurkey            = MuslimCountry(Turkey, isSunni = false, resources = 2)
   val DefaultLebanon           = MuslimCountry(Lebanon, isSunni = false, resources = 1)
   val DefaultYemen             = MuslimCountry(Yemen, isSunni = false, resources = 1)
-  val DefaultIraq              = MuslimCountry(Iraq, isSunni = false, resources = 3, oilProducer = true)
-  val DefaultSaudiArabia       = MuslimCountry(SaudiArabia, isSunni = false, resources = 3, oilProducer = true)
-  val DefaultGulfStates        = MuslimCountry(GulfStates, isSunni = false, resources = 3, oilProducer = true)
+  val DefaultIraq              = MuslimCountry(Iraq, isSunni = false, resources = 3, oilExporter = true)
+  val DefaultSaudiArabia       = MuslimCountry(SaudiArabia, isSunni = false, resources = 3, oilExporter = true)
+  val DefaultGulfStates        = MuslimCountry(GulfStates, isSunni = false, resources = 3, oilExporter = true)
   val DefaultPakistan          = MuslimCountry(Pakistan, isSunni = false, resources = 2, wmdCache = 3)
   val DefaultAfghanistan       = MuslimCountry(Afghanistan, isSunni = false, resources = 1)
-  val DefaultIndonesiaMalaysia = MuslimCountry(IndonesiaMalaysia, resources = 3, oilProducer = true)
+  val DefaultIndonesiaMalaysia = MuslimCountry(IndonesiaMalaysia, resources = 3, oilExporter = true)
   val DefaultMali              = MuslimCountry(Mali, resources = 1)
   
   val LabyrinthDefaultCountries = List(
@@ -607,7 +607,7 @@ object LabyrinthAwakening {
     alignment: String           = Neutral,
     troops: Int                 = 0,
     militia: Int                = 0,
-    oilProducer: Boolean        = false,
+    oilExporter: Boolean        = false,
     aidMarkers: Int             = 0,
     regimeChange: String        = NoRegimeChange,
     besiegedRegime: Boolean     = false,
@@ -964,7 +964,7 @@ object LabyrinthAwakening {
     def numGoodOrFair    = muslims count (c => c.isGood || c.isFair)
     def numPoorOrIslamic = muslims count (c => c.isPoor || c.isIslamistRule)
     def numIslamistRule  = muslims count (c => c.isIslamistRule)
-    def oilBump(c: MuslimCountry) = if (c.oilProducer) eventParams.oilPriceSpikes else 0
+    def oilBump(c: MuslimCountry) = if (c.oilExporter) eventParams.oilPriceSpikes else 0
     def goodResources =
       muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
     def islamistResources = 
@@ -1195,7 +1195,7 @@ object LabyrinthAwakening {
         case m: MuslimCountry =>
           val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
           val res = amountOf(m.resources, "resource")
-          val oil = if (m.oilProducer) ", Oil producer" else ""
+          val oil = if (m.oilExporter) ", Oil producer" else ""
           b += s"$name -- $gov, $res$oil"
           item(m.activeCells, "Active cell")
           item(m.sleeperCells, "Sleeper cell")

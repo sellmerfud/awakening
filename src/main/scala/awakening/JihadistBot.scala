@@ -225,7 +225,7 @@ object JihadistBot extends BotHelpers {
                   c => game.adjacentToIslamistRule(c.name))
                   
   // 40. Oil Exporter
-  val OilExporterPriority = new CriteriaFilter("Oil exporter", muslimTest(_.oilProducer))
+  val OilExporterPriority = new CriteriaFilter("Oil exporter", muslimTest(_.oilExporter))
 
 
   // Jihadist OpP Flowchart filters

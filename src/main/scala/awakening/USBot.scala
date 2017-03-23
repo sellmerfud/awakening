@@ -530,7 +530,7 @@ object USBot extends BotHelpers {
                   muslimScore(_.totalTroops))
   // 22. Oil Exporter
   val OilExporterPriority = new CriteriaFilter("Oil exporter",
-                  muslimTest(_.oilProducer))
+                  muslimTest(_.oilExporter))
 
   // Other priorities that are not in the priority table.
   val NoCellsPriority = new CriteriaFilter("No cells", _.totalCells == 0)
