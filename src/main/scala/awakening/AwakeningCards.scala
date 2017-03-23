@@ -3060,7 +3060,9 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(219, "Ayman al-Zawahiri", Unassociated, 2,
       USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(220, "Daraa", Unassociated, 2,

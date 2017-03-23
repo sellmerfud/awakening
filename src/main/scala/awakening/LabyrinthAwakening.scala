@@ -35,15 +35,11 @@ import scala.util.Properties.{lineSeparator, isWin}
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 import scala.io.StdIn.readLine
-import scala.pickling.Defaults._
-import scala.pickling.binary
-import scala.pickling.binary._
-import scala.pickling.shareNothing._
 import scenarios._
 import FUtil.Pathname
+import Pickling.{ loadGameState, saveGameState }
 
 object LabyrinthAwakening {
-  
   def dieRoll = nextInt(6) + 1
   def humanDieRoll(prompt: String = "Enter die roll: ", allowAbort: Boolean = true) =
     if (game.params.humanAutoRoll)
@@ -2390,48 +2386,6 @@ object LabyrinthAwakening {
       }
     }
     getName
-  }
-  
-  // Save the current game state.
-  def saveGameState(filepath: Pathname): Unit = {
-    try {
-      filepath.dirname.mkpath() // Make sure that the game directory exists
-      filepath.write(game.pickle.value)
-    }
-    catch {
-      case e: IOException =>
-        val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"IO Error writing game file ($filepath)$suffix")
-      case e: Throwable =>
-        val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"Error writing save game ($filepath)$suffix")
-    }
-  }
-  
-  // The path should be the full path to the file to load.
-  // Will set the game global variable
-  def loadGameState(filepath: Pathname): Unit = {
-    try {
-      filepath.inputStream { istream =>
-        game = BinaryPickle(istream).unpickle[GameState]
-      }
-      // If we load a game with no plays then it represents
-      // the end of a turn so we must advance the turn number.
-      if (game.plays.isEmpty) {
-        game = game.copy(turn = game.turn + 1)
-        logStartOfTurn()
-      }
-    }
-    catch {
-      case e: IOException =>
-        val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"IO Error reading game file ($filepath)$suffix")
-        sys.exit(1)
-      case e: Throwable =>
-        val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"Error reading save game ($filepath)$suffix")
-        sys.exit(1)
-    }
   }
   
   // Allows the user to roll back to an earlier play in the current turn,
