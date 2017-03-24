@@ -3247,16 +3247,31 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(222, "Hagel", Unassociated, 2,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => {
-        // See Event Instructions table
-      }
+      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole ||
+                      (role == Jihadist && game.usPosture == Hard) ||
+                      (role == US && game.usPosture == Soft && 
+                        (game.islamistResources > 1 || !(game.gwot == (Soft, 2) || game.gwot == (Soft, 3))))
+      , // See Event Instructions table
+      (role: Role) => setUSPosture(if (role == US) Hard else Soft)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(223, "Iranian Elections", Unassociated, 2,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
         // See Event Instructions table
+        log("Flip Iran country mat to its Shia-Mix Muslim side")
+        log("Set Iran to Fair Adversary")
+        game.updateCountry(DefaultMuslimIran.copy(governance = Fair, alignment = Adversary))
+        addEventTarget(Iran)
+        if (role == US) {
+          addAwakeningMarker(Iran, 2)
+          addReactionMarker(Iran)
+        }
+        else {
+          addReactionMarker(Iran, 2)
+          addAwakeningMarker(Iran)
+        }
       }
     )),
     // ------------------------------------------------------------------------

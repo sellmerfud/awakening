@@ -269,7 +269,9 @@ object LabyrinthAwakening {
   val DefaultIran              = NonMuslimCountry(Iran, governance = Fair, wmdCache = 1, iranSpecialCase = true)
   val DefaultNigeria           = NonMuslimCountry(Nigeria, governance = Poor, recruitOverride = 3)
   
+  val DefaultMuslimIran        = MuslimCountry(Iran, resources = 2, oilExporter = true)
   val DefaultMuslimNigeria     = MuslimCountry(Nigeria, resources = 2, oilExporter = true)
+  
   val DefaultMorocco           = MuslimCountry(Morocco, resources = 2)
   val DefaultAlgeriaTunisia    = MuslimCountry(AlgeriaTunisia, resources = 2, oilExporter = true)
   val DefaultLibya             = MuslimCountry(Libya, resources = 1, oilExporter = true)
@@ -870,7 +872,7 @@ object LabyrinthAwakening {
     
     // Returns the current gwot 
     // posture (Soft, Even, Hard)
-    // value 0, 1, 2, 3, 4, ...
+    // value 0, 1, 2, 3
     def gwot: (String, Int) = {
       val value = (nonMuslims.filterNot(_.name == UnitedStates).foldLeft(0) { 
         case (v, c) if c.isHard => v + 1
@@ -878,7 +880,7 @@ object LabyrinthAwakening {
         case (v, _) => v // Untested
       })
       val posture = if (value == 0) Even else if (value < 0) Soft else Hard
-      (posture, value.abs)
+      (posture, value.abs min 3)
     }
     
     def worldPosture = gwot._1
