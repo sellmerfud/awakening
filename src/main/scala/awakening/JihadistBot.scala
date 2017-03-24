@@ -502,6 +502,17 @@ object JihadistBot extends BotHelpers {
   }
   
   
+  
+  // ------------------------------------------------------------------
+  def posturePriority(names: List[String]): Option[String] = {
+    val priorities = List(
+      new CriteriaFilter("Same posture as US",
+        nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture == game.usPosture)),
+      new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)))
+    topPriority(game getNonMuslims names, priorities) map (_.name)
+  }
+  
+  // ------------------------------------------------------------------
   def goodPriority(names: List[String]): Option[String] = {
     val priorities = GoodPriority::Nil
     botLog("Find \"Good Priority\" target")

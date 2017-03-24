@@ -3353,8 +3353,27 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(225, "Jihadi John", Unassociated, 2,
-      USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole ||
+                      (role == US && game.prestige < 12) ||
+                      (role == Jihadist && 
+                       (game.funding < 9 || 
+                        (game.getNonMuslims(Schengen) exists (n => n.isUntested || n.posture == game.usPosture)))) 
+      ,
+      (role: Role) => if (role == US) {
+        increasePrestige(if (game.caliphateDeclared) 2 else 1)
+      }
+      else {
+        val (name, posture) = if (role == game.humanRole)
+          (askCountry("Select Schengen country: ", Schengen),
+          askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get)
+        else
+          (JihadistBot.posturePriority(Schengen).get, oppositePosture(game.usPosture))
+        
+        addEventTarget(name)
+        setCountryPosture(name, posture)
+        increaseFunding(if (game.caliphateDeclared) 2 else 1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(226, "Operation Serval", Unassociated, 2,

@@ -688,18 +688,19 @@ object USBot extends BotHelpers {
   // ------------------------------------------------------------------
   def posturePriority(names: List[String]): Option[String] = {
     val priorities = List(
-      new CriteriaFilter("Opposite posture US",
+      new CriteriaFilter("Opposite posture of US",
         nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
       new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)))
     topPriority(game getNonMuslims names, priorities) map (_.name)
   }
+  
   // ------------------------------------------------------------------
   // Not in the Priorities Table, but listed in OpP flowchard.
   val WoiNonMuslimPriorities = List(
     PoorPriority, FairPriority, GoodPriority, FewestCellsPriority)
   
   val WoiNonMuslimFlowchart = List(
-    new CriteriaFilter("Opposite posture US",
+    new CriteriaFilter("Opposite posture of US",
       nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
     new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)),
     new CriteriaFilter("Same posture as US",
