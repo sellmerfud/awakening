@@ -381,6 +381,18 @@ object JihadistBot extends BotHelpers {
     topPriority(candidates, priorities) map (_.name)
   }
   
+  
+  // This is used for some events where we want to check the priorites only,
+  // and skip the flowchart.
+  def travelFromPriorities(toCountry: String, names: List[String]): Option[String] = {
+    val priorities = List(
+      new NotDestinationPriority(toCountry), IslamistRulePriority,
+      PoorPriority, FairPriority, GoodPriority, NotUSPriority,
+      MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
+      DisruptPrestigePriority, LowestRECPriority)
+    topPriority(game getCountries names, priorities) map (_.name)
+  }
+  
   // Jihadisht Operations Flowchart definitions.
   sealed trait Operation extends OpFlowchartNode
   case object RecruitOp    extends Operation

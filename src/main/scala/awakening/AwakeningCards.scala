@@ -100,6 +100,10 @@ object AwakeningCards {
     (game.cellsAvailable > 0 || game.availablePlots.nonEmpty) &&
     (list exists (name => game.getNonMuslim(name).isHard))
   }
+  def flyPaperCandidates: List[String] = {
+    val caliphate = game.caliphateCapital map (c => game.caliphateDaisyChain(c).toSet) getOrElse Set.empty
+    countryNames(game.muslims filter (m => caliphate(m.name) || m.civilWar || m.inRegimeChange))
+  }
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -1125,7 +1129,7 @@ object AwakeningCards {
           USBot.markerAlignGovTarget(candidates).get
         
         addEventTarget(target)
-        improveGovernance(target)
+        improveGovernance(target, 1, canShiftToGood = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1269,7 +1273,7 @@ object AwakeningCards {
         val m = game.getMuslim(target)
         shiftAlignment(target, Ally)
         if (m.isPoor)
-          improveGovernance(target, 1)
+          improveGovernance(target, 1, canShiftToGood = false)
         removeCellsFromCountry(target, m.activeCells, m.sleeperCells, addCadre = true)
         if (lapsingEventNotInPlay("Arab Winter"))
           addReactionMarker(target, m.totalCells)
@@ -3059,22 +3063,186 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(219, "Ayman al-Zawahiri", Unassociated, 2,
-      USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == US && (game.funding > 1 || game.prestige < 12)) ||
+                      (role == Jihadist && game.prestige > 1 && (game hasMuslim (_.reaction > 0)))
+      ,
       (role: Role) => {
-        
+        if (role == US) {
+          // Values adjusted by if the #237 Osama Bin Laden card has been rmoved 
+          val num = if (game.cardRemoved(237)) 2 else 1
+          decreaseFunding(num)
+          increasePrestige(num)
+        }
+        else {
+          val totalReactionMarkers = (game.muslims map (_.reaction)).sum
+          // Prestige is decrease 1 for every 4 reaction markers on the map (rounded up)
+          val num = (totalReactionMarkers + 3) / 4
+          decreasePrestige(num)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(220, "Daraa", Unassociated, 2,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => !game.getMuslim(Syria).isIslamistRule
+      ,
+      (role: Role) => {
+        val syria = game getMuslim Syria
+        addEventTarget(Syria)
+        if (role == US) {
+          improveGovernance(Syria, 1, canShiftToGood = false)
+          if (syria.canTakeAwakeningOrReactionMarker)
+            addAwakeningMarker(Syria)
+        }
+        else {  // Jihadist
+          degradeGovernance(Syria, 1, canShiftToIR = false)
+          if (syria.canTakeAwakeningOrReactionMarker)
+            addReactionMarker(Syria)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(221, "FlyPaper", Unassociated, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => {
+        val candidates = flyPaperCandidates
+        if (role == game.humanRole)
+          candidates.nonEmpty
+        else if (role == Jihadist && candidates.nonEmpty) {
+          // Bot will only remove cells.  Make sure there are cell in a country
+          // other than the target country.
+          val target = JihadistBot.recruitTarget(candidates).get
+          game hasCountry (c => c.name != target && c.totalCells > 0)
+        }
+        else if (role == US && candidates.nonEmpty) {
+          val lowResource = (game getMuslims candidates map (_.resources)).min
+          val target = shuffle(countryNames(game getMuslims candidates filter (_.resources == lowResource))).head
+          (game hasMuslim (m => m.name != target && m.reaction > 0)) ||
+          (game hasCountry (c => c.name != target && c.totalCells > 0))
+        }
+        else
+          false
+      }
+      ,
+      (role: Role) => {
+        val candidates = flyPaperCandidates
         // Can possibly declare Caliphate, by either player
         // See Event Instructions table
+        if (role == game.humanRole) {
+          val totalReaction = (game.muslims filter (_.reaction > 0)).size
+          val totalCells = (game.countries filter (_.totalCells > 0)).size
+          val numReaction = if (totalReaction == 0) 0
+                            else askInt("Remove how many reaction markers? ", 0, 3 min totalReaction)
+          
+          val reactionCountries = if (numReaction == 0)
+            Nil
+          else {
+            val withReaction = countryNames(game.muslims filter (_.reaction > 0))
+            val names = if (numReaction == 1)
+              askCountry("Remove reaction marker from which country? ", withReaction)::Nil
+            else {
+              println("Remove reaction markers from which countries?")
+              askCountries(numReaction, withReaction)
+            }
+            for (name <- names)
+              removeReactionMarker(name)
+            names
+          }
+          
+          val numCells = if (totalCells == 0 || numReaction == 3) 0
+                         else askInt("Remove how many cells? ", 0, (3 - numReaction) min totalCells)
+          if (numCells > 0) {
+            val withCells = countryNames(game.countries filter 
+                          (c => !(reactionCountries contains c.name) && c.totalCells > 0))
+            val names = if (numCells == 1)
+              askCountry("Remove a cell from which country? ", withCells)::Nil
+            else {
+              println("Remove cells from which countries?")
+              askCountries(numCells, withCells)
+            }
+            val cells = for (name <- names; (a, s) = askCells(name, 1, sleeperFocus = role == US))
+              yield CellsItem(name, a, s)
+            
+            for (CellsItem(name, a, s) <- cells)
+              removeCellsFromCountry(name, a, s, addCadre = true)
+          }
+          
+          val cellsToPlace = (numReaction + numCells) min game.cellsAvailable
+          if (cellsToPlace > 0) {
+            val name = askCountry(s"Select country to place ${amountOf(cellsToPlace, "cell")}: ", candidates)
+            addEventTarget(name)
+            addSleeperCellsToCountry(name, cellsToPlace)
+            if (cellsToPlace == 3 && canDeclareCaliphate(name) && askDeclareCaliphate(name))
+              declareCaliphate(name)
+          }                                  
+        }
+        else if (role == Jihadist) {
+          // Bot removes only cells
+          val target = JihadistBot.recruitTarget(candidates).get
+          val withCells = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
+          val countries = if (withCells.size <= 3)
+            withCells
+          else {
+            def nextCountry(num: Int, candidates: List[String]): List[String] =
+              if (num > 3 || candidates.isEmpty)
+                Nil
+              else {
+                val country = JihadistBot.travelFromPriorities(target, candidates).get
+                country :: nextCountry(num + 1, candidates filterNot (_ == country))
+              }
+            nextCountry(1, withCells)
+          }
+          
+          for (name <- countries) {
+            val (a, s) = JihadistBot.chooseCellsToRemove(name, 1)
+            removeCellsFromCountry(name, a, s, addCadre = true)
+          }
+          
+          addEventTarget(target)
+          addSleeperCellsToCountry(target, countries.size)
+          if (countries.size == 3 && canDeclareCaliphate(target) && JihadistBot.willDeclareCaliphate(target))
+            declareCaliphate(target)
+        }
+        else {  // US Bot
+          // Will remove reaction markers before cells, 2 max
+          val lowResource = (game getMuslims candidates map (_.resources)).min
+          val target = shuffle(countryNames(game getMuslims candidates filter (_.resources == lowResource))).head
+          val withReaction = countryNames(game.muslims filter (_.reaction > 0))
+          def nextReaction(remaining: Int, countries: List[String]): List[String] = {
+            if (remaining == 0 || countries.isEmpty)
+              Nil
+            else {
+              val name = USBot.disruptPriority(countries).get
+              name :: nextReaction(remaining - 1, countries filterNot (_ == name))
+            }
+          }
+          val reactions = nextReaction(2, withReaction)
+          for (name <- reactions)
+            removeReactionMarker(name)
+            
+          val numCells = if (reactions.size == 2)
+            0
+          else {
+            val withCells = countryNames(game.countries filter 
+              (c => c.name != target && !(reactions contains c.name) && c.totalCells > 0))
+            def nextCell(remaining: Int, countries: List[String]): Int = {
+              if (remaining == 0 || countries.isEmpty)
+                0
+              else {
+                val name = USBot.disruptPriority(countries).get
+                val (a, c) = USBot.chooseCellsToRemove(name, 1)
+                removeCellsFromCountry(name, a, c, addCadre = true)
+                1 + nextCell(remaining - 1, countries filterNot (_ == name))
+              }
+            }
+            nextCell(2 - reactions.size, withCells)
+          }
+          
+          val toPlace = reactions.size + numCells
+          addEventTarget(target)
+          addSleeperCellsToCountry(target, toPlace)
+        }
       }  
     )),
     // ------------------------------------------------------------------------
