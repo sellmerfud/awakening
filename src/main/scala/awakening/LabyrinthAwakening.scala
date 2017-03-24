@@ -652,8 +652,9 @@ object LabyrinthAwakening {
   
     // TODO: Add other markers!!
     def troopsMarkers: List[TroopsMarker] = markers collect {
-      case "NATO"       => TroopsMarker("NATO", 2,       canDeploy = true,  prestigeLoss = true)
-      case "UNSCR 1973" => TroopsMarker("UNSCR 1973", 1, canDeploy = false, prestigeLoss = false)
+      case "NATO"             => TroopsMarker("NATO", 2,       canDeploy = true,  prestigeLoss = true)
+      case "UNSCR 1973"       => TroopsMarker("UNSCR 1973", 1, canDeploy = false, prestigeLoss = false)
+      case "Operation Serval" => TroopsMarker("Operation Serval", 1, canDeploy = true, prestigeLoss = true)
     }
     
     def canTakeMilitia = !(isGood || isIslamistRule)
@@ -4571,10 +4572,12 @@ object LabyrinthAwakening {
       s"""
          |>>> Turn ${game.turn}  (${amountOf(cards, "card")} played$plotDisp) <<<
          |${separator()}
-         |Command : """.stripMargin
+         |Command: """.stripMargin
     }
     readLine(prompt) match {
-      case null => println() // User pressed Ctrl-d (end of file)
+      case null =>
+        println()
+        commandLoop()
       case cmd =>
         doCommand(cmd.trim)
         commandLoop()

@@ -158,6 +158,27 @@ object AwakeningCards {
      ((game isNonMuslim Iran) || !(game getMuslim Iran).isIslamistRule) &&
      (game hasMuslim (_.totalCells > 0)))
   
+  def servalCandidates = {
+    val names = List(Morocco, AlgeriaTunisia, Libya, Sudan, Somalia, Mali)
+    countryNames(game getMuslims names filter (_.isPoor))
+  }
+  
+  def servalPlayable(role: Role): Boolean = {
+    if (role == game.humanRole)
+      servalCandidates.nonEmpty
+    else if (role == US) {  // USBot
+      val canPlaceMarker = (USBot.servalTarget(servalCandidates) map 
+                 (name => !game.getMuslim(name).hasMarker("Operation Serval")) 
+                 getOrElse false)
+      game.militiaAvailable > 0 || canPlaceMarker
+    }
+    else { // JihadistBot
+      val canStartCivilWar = (JihadistBot.minorJihadTarget(servalCandidates) map
+                      (name => !game.getMuslim(name).civilWar) 
+                      getOrElse false)
+      game.cellsAvailable > 0 || canStartCivilWar
+    }
+  }
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -883,12 +904,13 @@ object AwakeningCards {
         val m = game.getMuslim(target)
         // If the target already contains the marker, then
         // we only remove a cell.
-        val sameCountry = m.hasMarker("UNSCR 1973")
+        val MARKER = "UNSCR 1973"
+        val sameCountry = m.hasMarker(MARKER)
 
         if (!sameCountry) {
           // If marker is already on the map, remove it first.
-          game.muslims find (_.hasMarker("UNSCR 1973")) foreach { c =>
-            removeEventMarkersFromCountry(c.name, "UNSCR 1973")
+          game.muslims find (_.hasMarker(MARKER)) foreach { c =>
+            removeEventMarkersFromCountry(c.name, MARKER)
           }
         }
 
@@ -901,7 +923,7 @@ object AwakeningCards {
         }
 
         if (!sameCountry)
-          addEventMarkersToCountry(target, "UNSCR 1973")
+          addEventMarkersToCountry(target, MARKER)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1144,16 +1166,17 @@ object AwakeningCards {
         else
           USBot.deployToPriority(candidates).get
         
+        val MARKER = "NATO"
         addEventTarget(target)
         addAidMarker(target)
-        (game.muslims find (_.hasMarker("NATO")) map (_.name)) match {
+        (game.muslims find (_.hasMarker(MARKER)) map (_.name)) match {
           case Some(`target`) =>
             log(s"NATO marker remains in $target")
           case Some(current) =>
-            removeEventMarkersFromCountry(current, "NATO")
-            addEventMarkersToCountry(target, "NATO")
+            removeEventMarkersFromCountry(current, MARKER)
+            addEventMarkersToCountry(target, MARKER)
           case None =>
-            addEventMarkersToCountry(target, "NATO")
+            addEventMarkersToCountry(target, MARKER)
         }
       }
     )),
@@ -3377,10 +3400,38 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(226, "Operation Serval", Unassociated, 2,
-      NoRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => {
-        // See Event Instructions table
-        addGlobalEventMarker("Operation Serval")
+      NoRemove, CountryMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => servalPlayable(role)
+      ,
+      (role: Role) => if (role == US) {  // See Event Instructions table
+        val name = if (role == game.humanRole)
+          askCountry("Select country for Serval marker: ", servalCandidates)
+        else 
+          USBot.servalTarget(servalCandidates).get
+        val MARKER = "Operation Serval"
+        val sameCountry = (game getMuslim name).hasMarker(MARKER)
+
+        if (!sameCountry) {
+          // If marker is already on the map, remove it first.
+          game.muslims find (_.hasMarker(MARKER)) foreach { c =>
+            removeEventMarkersFromCountry(c.name, MARKER)
+          }
+        }
+        addEventTarget(name)
+        if (!sameCountry)
+          addEventMarkersToCountry(name, MARKER)
+        addMilitiaToCountry(name, 1 min game.militiaAvailable)
+      }
+      else {  // Jihadist
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", servalCandidates)
+        else
+          JihadistBot.minorJihadTarget(servalCandidates).get
+        
+        addEventTarget(name)
+        startCivilWar(name)
+        val numCells = if (name == Mali) 2 else 1
+        addSleeperCellsToCountry(name, numCells min game.cellsAvailable)
       }
     )),
     // ------------------------------------------------------------------------
