@@ -47,9 +47,9 @@ class StatusOfForces extends Scenario {
     DefaultSyria.copy(governance = Poor, alignment = Neutral, sleeperCells = 4,
                       awakening = 1, reaction = 1),
     DefaultEgypt.copy(governance = Fair, alignment = Neutral, awakening = 1, reaction = 1),
-    DefaultUnitedKingdom.copy(posture = Hard),
-    DefaultFrance.copy(posture = Hard),
-    DefaultBenelux.copy(posture = Soft))
+    DefaultUnitedKingdom.copy(postureValue = Hard),
+    DefaultFrance.copy(postureValue = Hard),
+    DefaultBenelux.copy(postureValue = Soft))
   val markersInPlay = List.empty[String]
   val cardsRemoved = 133::185::237::Nil
   val offMapTroops = 0

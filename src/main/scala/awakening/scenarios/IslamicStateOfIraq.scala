@@ -46,9 +46,9 @@ class IslamicStateOfIraq extends Scenario {
     DefaultAfghanistan.copy(governance = Fair, alignment = Ally, troops = 2, sleeperCells = 1),
     DefaultPakistan.copy(governance = Poor, alignment = Ally, hasCadre = true),
     DefaultMuslimNigeria.copy(governance = Poor, alignment = Neutral, sleeperCells = 2),
-    DefaultUnitedKingdom.copy(posture = Hard),
-    DefaultFrance.copy(posture = Hard),
-    DefaultBenelux.copy(posture = Hard))
+    DefaultUnitedKingdom.copy(postureValue = Hard),
+    DefaultFrance.copy(postureValue = Hard),
+    DefaultBenelux.copy(postureValue = Hard))
   val markersInPlay = List("Sequestration")
   val cardsRemoved = 133::185::237::Nil
   val offMapTroops = 3

@@ -251,7 +251,7 @@ object LabyrinthAwakening {
   val DefaultUnitedStates      = NonMuslimCountry(UnitedStates)
   val DefaultUnitedKingdom     = NonMuslimCountry(UnitedKingdom, recruitOverride = 2)
   val DefaultSerbia            = NonMuslimCountry(Serbia)
-  val DefaultIsrael            = NonMuslimCountry(Israel, posture = Hard)
+  val DefaultIsrael            = NonMuslimCountry(Israel, postureValue = Hard)
   val DefaultIndia             = NonMuslimCountry(India)
   val DefaultScandinavia       = NonMuslimCountry(Scandinavia)
   val DefaultEasternEurope     = NonMuslimCountry(EasternEurope)
@@ -269,7 +269,8 @@ object LabyrinthAwakening {
   val DefaultIran              = NonMuslimCountry(Iran, governance = Fair, wmdCache = 1, iranSpecialCase = true)
   val DefaultNigeria           = NonMuslimCountry(Nigeria, governance = Poor, recruitOverride = 3)
   
-  val DefaultMuslimIran        = MuslimCountry(Iran, resources = 2, oilExporter = true)
+  val DefaultMuslimIran        = MuslimCountry(Iran, resources = 2, oilExporter = true,
+                                                governance = Fair, alignment = Adversary)
   val DefaultMuslimNigeria     = MuslimCountry(Nigeria, resources = 2, oilExporter = true)
   
   val DefaultMorocco           = MuslimCountry(Morocco, resources = 2)
@@ -567,13 +568,14 @@ object LabyrinthAwakening {
     hasCadre: Boolean           = false,
     plots: List[PlotOnMap]      = Nil,
     markers: List[String]       = Nil,
-    posture: String             = PostureUntested,
+    postureValue: String        = PostureUntested,
     recruitOverride: Int        = 0,
     wmdCache: Int               = 0,  // Number of WMD plots cached
     iranSpecialCase: Boolean    = false
   ) extends Country {
     override def isUntested = posture == PostureUntested && 
                               !(Set(UnitedStates, Israel, Iran) contains name)
+    def posture = if (name == UnitedStates) game.usPosture else postureValue
     def isSchengen = Schengen contains name
     def isHard = if (name == UnitedStates ) game.usPosture == Hard else posture == Hard
     def isSoft = if (name == UnitedStates ) game.usPosture == Soft else posture == Soft
@@ -754,7 +756,8 @@ object LabyrinthAwakening {
     cardsLapsing: List[Int] = Nil,         // Card numbers
     cardsRemoved: List[Int] = Nil,         // Cards removed from the game.
     targetsThisCard: CardTargets = CardTargets(),
-    targetsLastCard: CardTargets = CardTargets()
+    targetsLastCard: CardTargets = CardTargets(),
+    lastResolvePlotsTargets: Set[String] = Set.empty  // Countries where plots were resolved
   ) {
     
     def humanRole = params.humanRole
@@ -1807,7 +1810,7 @@ object LabyrinthAwakening {
           
         case n: NonMuslimCountry =>
           val newPosture = if (dieRoll < 5) Soft else Hard
-          game = game.updateCountry(n.copy(posture = newPosture))
+          game = game.updateCountry(n.copy(postureValue = newPosture))
           log(s"${n.name} tested: Set posture to $newPosture")
           logWorldPosture()
       }
@@ -1847,7 +1850,7 @@ object LabyrinthAwakening {
     if (n.posture == newPosture)
       log(s"The posture of $name remains $newPosture")
     else {
-      game = game.updateCountry(n.copy(posture = newPosture))
+      game = game.updateCountry(n.copy(postureValue = newPosture))
       log(s"Set the posture of $name to $newPosture")
       logWorldPosture()
     }
@@ -2899,7 +2902,7 @@ object LabyrinthAwakening {
         log(separator())
         val die = getDieRoll(US)
         val newPosture = if (die > 4) Hard else Soft
-        game = game.updateCountry(n.copy(posture = newPosture))
+        game = game.updateCountry(n.copy(postureValue = newPosture))
         log(s"Die roll: $die")
         if (newPosture == n.posture)
           log(s"Posture of $name remains $newPosture")
@@ -3001,8 +3004,7 @@ object LabyrinthAwakening {
   
   def performReassessment(): Unit = {
     val newPosture = oppositePosture(game.usPosture)
-    log(s"Change US posture from ${game.usPosture} to $newPosture")
-    game = game.copy(usPosture = newPosture)
+    setUSPosture(newPosture)
   }
 
   case class TravelAttempt(from: String, to: String, active: Boolean)
@@ -3359,7 +3361,7 @@ object LabyrinthAwakening {
       for (p <- n.plots)
         removePlotFromCountry(name, p, toAvailable = true)
       removeEventMarkersFromCountry(name, n.markers:_*)
-      game = game.updateCountry(game.getNonMuslim(name).copy(posture = PostureUntested))
+      game = game.updateCountry(game.getNonMuslim(name).copy(postureValue = PostureUntested))
       log(s"Remove the ${n.posture} posture marker from $name")
     }
   }
@@ -3380,7 +3382,7 @@ object LabyrinthAwakening {
     if (n.posture == newPosture) 
       log(s"The posture of $name reamins $newPosture")
     else {
-      game = game.updateCountry(n.copy(posture = newPosture))
+      game = game.updateCountry(n.copy(postureValue = newPosture))
       log(s"Set posture of $name to $newPosture")
       logWorldPosture()
     }
@@ -4089,7 +4091,8 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry => 
           game = game.updateCountry(n.copy(plots = Nil)).copy(resolvedPlots = (n.plots map (_.plot)) ::: game.resolvedPlots)
       }
-      game = game.copy(plays = PlotsResolved(unblocked.size) :: game.plays)
+      game = game.copy(plays = PlotsResolved(unblocked.size) :: game.plays,
+                       lastResolvePlotsTargets = (unblocked map (_.country.name)).toSet)
       savePlay()  // Save the play so we can roll back
     }
   }
@@ -4711,8 +4714,8 @@ object LabyrinthAwakening {
     printCountries("Muslim Countries with Poor Governance",  countryNames(game.muslims filter (_.isPoor)))
     printCountries("Muslim Countries under Islamic Rule",    countryNames(game.muslims filter (_.isIslamistRule)))
     printCountries("Untested Muslim Countries with Data",    countryNames(game.muslims filter (_.isUntestedWithData)))
-    printCountries("Non-Muslim Countries with Hard Posture", countryNames(game.nonMuslims filter (_.isHard)))
-    printCountries("Non-Muslim Countries with Soft Posture", countryNames(game.nonMuslims filter (_.isSoft)))
+    printCountries("Non-Muslim Countries with Hard Posture", countryNames(game.nonMuslims filter (n => n.name != UnitedStates && n.isHard)))
+    printCountries("Non-Muslim Countries with Soft Posture", countryNames(game.nonMuslims filter (n => n.name != UnitedStates && n.isSoft)))
     val iranSpecial = game.nonMuslims find (_.iranSpecialCase) map (_.name)
     if (iranSpecial.nonEmpty)
       printCountries("Iran Special Case", iranSpecial.toList)
@@ -5765,7 +5768,7 @@ object LabyrinthAwakening {
         val prompt = s"New posture (${orList(choices)}): "
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newPosture =>
           logAdjustment(name, "Prestige", n.posture, newPosture)
-          game = game.updateCountry(n.copy(posture = newPosture))
+          game = game.updateCountry(n.copy(postureValue = newPosture))
         }
     }
   }

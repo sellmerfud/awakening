@@ -44,10 +44,10 @@ class MittsTurn extends Scenario {
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
                             regimeChange = TanRegimeChange),
     DefaultPakistan.copy(governance = Fair, alignment = Neutral, sleeperCells = 2),
-    DefaultUnitedKingdom.copy(posture = Hard),
-    DefaultFrance.copy(posture = Hard),
-    DefaultBenelux.copy(posture = Soft),
-    DefaultRussia.copy(posture = Soft))
+    DefaultUnitedKingdom.copy(postureValue = Hard),
+    DefaultFrance.copy(postureValue = Hard),
+    DefaultBenelux.copy(postureValue = Soft),
+    DefaultRussia.copy(postureValue = Soft))
   val markersInPlay = List.empty[String]
   val cardsRemoved = List.empty[Int]
   val offMapTroops = 0

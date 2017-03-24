@@ -3262,7 +3262,7 @@ object AwakeningCards {
         // See Event Instructions table
         log("Flip Iran country mat to its Shia-Mix Muslim side")
         log("Set Iran to Fair Adversary")
-        game.updateCountry(DefaultMuslimIran.copy(governance = Fair, alignment = Adversary))
+        game = game.updateCountry(DefaultMuslimIran)
         addEventTarget(Iran)
         if (role == US) {
           addAwakeningMarker(Iran, 2)
@@ -3276,9 +3276,79 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(224, "Je Suis Charlie", Unassociated, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => {
+        val plotOK = game.lastResolvePlotsTargets exists game.isNonMuslim
+        val nonMuslimPostureChange = game hasNonMuslim (n => n.canChangePosture && n.posture != game.usPosture)
+        if (role == game.humanRole)
+          plotOK &&
+          (role == US ||
+           (role == Jihadist && (game.usPosture != game.worldPosture && game.worldPosture != Even) || game.prestige > 1))
+        else
+          plotOK &&
+          ((role == US && nonMuslimPostureChange) ||
+           (role == Jihadist && (game.usPosture == Hard && game.worldPosture == Hard) || game.prestige > 1))
+      }
+      ,
       (role: Role) => {
         // See Event Instructions table
+        if (role == US) {
+          val nonSchengen = countryNames(game.nonMuslims filter (n => n.canChangePosture && !(Schengen contains n.name)))
+          if (role == game.humanRole) {
+            val schengen  = askCountry("Select posture of which Schengen country: ", Schengen)
+            val posture = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+            addEventTarget(schengen)
+            setCountryPosture(schengen, posture)
+            
+            val other  = askCountry("Select posture of which non-Schengen country: ", nonSchengen)
+            val posture2 = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+            addEventTarget(other)
+            setCountryPosture(other, posture2)
+          }
+          else {
+            val shengens = game.nonMuslims filter (n => (Schengen contains n.name) && n.canChangePosture && n.posture != game.usPosture)
+            val others = game.nonMuslims filter (n => !(Schengen contains n.name) && n.canChangePosture && n.posture != game.usPosture)
+            // Either list could be empty...
+            USBot.posturePriority(countryNames(shengens)) foreach { name =>
+              addEventTarget(name)
+              setCountryPosture(name, game.usPosture)
+            } 
+            USBot.posturePriority(countryNames(others)) foreach { name =>
+              addEventTarget(name)
+              setCountryPosture(name, game.usPosture)
+            } 
+          }
+        }
+        else { // Jihadist
+          if (role == game.humanRole) {
+            val canPosture = game.usPosture == game.worldPosture && game.worldPosture != Even
+            val choices = List(
+              if (canPosture)        Some("posture"  -> "Set US posture to opposite of World") else None,
+              if (game.prestige > 1) Some("prestige" -> "Reduce US prestige by 1/2 die roll (rounded up)") else None
+            ).flatten
+            if (choices.isEmpty)
+              log("The event has no effect")
+            else {
+              println("Choose 1:")
+              askMenu(choices).head match {
+                case "posture"  => setUSPosture(oppositePosture(game.worldPosture))
+                case "prestige" =>
+                  val die = getDieRoll(role)
+                  log(s"Die roll: $die")
+                  decreasePrestige((die + 1)/ 2)
+              }
+            }
+          }
+          else { // Jihadist Bot
+            if (game.usPosture == Hard && game.worldPosture == Hard)
+              setUSPosture(Soft)
+            else {
+              val die = getDieRoll(role)
+              log(s"Die roll: $die")
+              decreasePrestige((die + 1)/ 2)
+            }
+          }
+        }
       }
     )),
     // ------------------------------------------------------------------------
