@@ -1736,9 +1736,8 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(181, "NPT Safeguards Ignored", Jihadist, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,  
-      (role: Role) => globalEventNotInPlay("Trade Embargo (US)") &&
-                      game.getCountry(Iran).totalCells > 0 &&
-                      game.getCountry(Iran).wmdCache > 0
+      (role: Role) => game.getCountry(Iran).wmdCache   > 0 &&
+                      game.getCountry(Iran).totalCells > 0
       ,
       (role: Role) => {
         addEventTarget(Iran)
@@ -1748,6 +1747,7 @@ object AwakeningCards {
         if (success) {
           log("Success")
           moveWMDCachedToAvailable(Iran)
+          // Card only removed if die roll was successful
           removeCardFromGame(181)
         }
         else {
@@ -3284,7 +3284,15 @@ object AwakeningCards {
         // See Event Instructions table
         log("Flip Iran country mat to its Shia-Mix Muslim side")
         log("Set Iran to Fair Adversary")
-        game = game.updateCountry(DefaultMuslimIran)
+        val iran = game.getNonMuslim(Iran)
+        game = game.updateCountry(DefaultMuslimIran.copy(
+          sleeperCells = iran.sleeperCells,
+          activeCells  = iran.activeCells,
+          hasCadre     = iran.hasCadre,
+          plots        = iran.plots,
+          markers      = iran.markers,
+          wmdCache     = iran.wmdCache
+        ))
         addEventTarget(Iran)
         if (role == US) {
           addAwakeningMarker(Iran, 2)
@@ -3592,10 +3600,38 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(232, "Trade Embargo", Unassociated, 2,
       USRemove, GlobalMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => {
-        // Mark as either "Trade Embargo (US)" or "Trade Embargo (Jihadist)"
-        // If Iran becomes Neutral or Ally, remove any Trade Embargo marker. [11.3.3.1]
-        addGlobalEventMarker("Trade Embargo")
+      (role: Role) => if (role == US) {
+        val iran = game getCountry Iran
+        if (iran.wmdCache > 0) {
+          log("Remove the Iraninan WMD from the game")
+          increasePrestige(1)
+          iran match {
+            case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = 0))
+            case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = 0))
+          }
+        }
+        
+        if (iran.hasMarker("Trade Embargo")) {
+          removeEventMarkersFromCountry(Iran, "Trade Embargo")
+          log("Iran may resume oil exports")
+        }
+      }
+      else { // Jihadist
+        val candidates = countryNames(game.muslims filter (m => m.isShiaMix && m.canTakeAwakeningOrReactionMarker))
+        val name = if (candidates.isEmpty)
+          None
+        else if (role == game.humanRole)
+          Some(askCountry("Select Shia-Mix country to place reaction marker: ", candidates))
+        else
+          JihadistBot.markerAlignGovTarget(candidates)
+        
+        decreasePrestige(1)
+        name foreach (addReactionMarker(_))
+        if (!game.getCountry(Iran).hasMarker("Trade Embargo")) {
+          // If Iran becomes Neutral or Ally, remove any Trade Embargo marker. [11.3.3.1]
+          addEventMarkersToCountry(Iran, "Trade Embargo")
+          log("Iran is no longer an oil exporter")
+        }
       }
     )),
     // ------------------------------------------------------------------------

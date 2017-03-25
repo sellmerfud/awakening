@@ -622,6 +622,8 @@ object LabyrinthAwakening {
     def isNeutral   = alignment == Neutral
     def isAdversary = alignment == Adversary
   
+    def canExportOil = oilExporter && !hasMarker("Trade Embargo")
+    
     def isShiaMix = !isSunni
     def inRegimeChange = regimeChange != NoRegimeChange
   
@@ -966,7 +968,7 @@ object LabyrinthAwakening {
     def numGoodOrFair    = muslims count (c => c.isGood || c.isFair)
     def numPoorOrIslamic = muslims count (c => c.isPoor || c.isIslamistRule)
     def numIslamistRule  = muslims count (c => c.isIslamistRule)
-    def oilBump(c: MuslimCountry) = if (c.oilExporter) eventParams.oilPriceSpikes else 0
+    def oilBump(c: MuslimCountry) = if (c.canExportOil) eventParams.oilPriceSpikes else 0
     def goodResources =
       muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
     def islamistResources = 
@@ -1197,7 +1199,7 @@ object LabyrinthAwakening {
         case m: MuslimCountry =>
           val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
           val res = amountOf(m.resources, "resource")
-          val oil = if (m.oilExporter) ", Oil producer" else ""
+          val oil = if (m.oilExporter && !m.hasMarker("Trade Embargo")) ", Oil exporter" else ""
           b += s"$name -- $gov, $res$oil"
           item(m.activeCells, "Active cell")
           item(m.sleeperCells, "Sleeper cell")
@@ -3389,6 +3391,10 @@ object LabyrinthAwakening {
     if (m.alignment != newAlign) {
       log(s"Set the alignment of $name to $newAlign")
       game = game.updateCountry(m.copy(alignment = newAlign))
+      if (name == Iran && newAlign != Adversary && (game.getCountry(Iran).hasMarker("Trade Embargo"))) {
+        removeEventMarkersFromCountry(Iran, "Trade Embargo")
+        log("Iran may resume oil exports")
+      }
       if (newAlign == Adversary)
         removeEventMarkersFromCountry(name, "Advisors")
     }
