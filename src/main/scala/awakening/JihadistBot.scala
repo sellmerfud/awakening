@@ -555,6 +555,16 @@ object JihadistBot extends BotHelpers {
     countryNames(selectCandidates(game getCountries names, flowchart)) 
   }
   
+  def unCeasefireTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new HighestScorePriority("Most cells - militia", muslimScore(m => m.totalCells - m.militia)),
+      new CriteriaFilter("Ally",    muslimTest(m => m.isAlly)),
+      new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
+      
+    botLog("Find \"UN Ceasefire\" target")
+    topPriority(game getMuslims names, priorities) map (_.name)
+  }
+
   // Pick actives before sleepers
   // Return (actives, sleepers)
   def chooseCellsToRemove(name: String, num: Int): (Int, Int) = {

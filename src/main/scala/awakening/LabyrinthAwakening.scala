@@ -1823,6 +1823,16 @@ object LabyrinthAwakening {
       false
   }
   
+  // This is used by some events.
+  def rollGovernance(name: String): Unit = {
+    val m = game getMuslim name
+    val die = dieRoll
+    log(s"Governance die roll: $die")
+    val newGov = if (die < 5) Poor else Fair
+    game = game.updateCountry(m.copy(governance = newGov))
+    log(s"Set the governance of $name to ${govToString(newGov)}")
+  }
+  
   def rollUSPosture(): Unit = {
     val die = dieRoll
     val newPosture = if (die + 1 > 4) Hard else Soft

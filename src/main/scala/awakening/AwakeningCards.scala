@@ -98,6 +98,7 @@ object AwakeningCards {
   val selloutCandidate = (m: MuslimCountry) => (m.civilWar || m.inRegimeChange) && 
                                                m.totalCells > 0 &&
                                                !game.isCaliphateMember(m.name)
+  val unCeasfireCandidate = (m: MuslimCountry) => m.civilWar && !game.isCaliphateMember(m.name)
   def parisAttacksPossible: Boolean = {
     val list = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
     (game.cellsAvailable > 0 || game.availablePlots.nonEmpty) &&
@@ -3636,10 +3637,28 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(233, "UN Ceasefire", Unassociated, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim unCeasfireCandidate
+      ,
       (role: Role) => {
-        // Not playable in a caliphate member
         // See Event Instructions table
+        // Not playable in a caliphate member
+        val candidates = countryNames(game.muslims filter unCeasfireCandidate)
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else if (role == Jihadist) 
+          JihadistBot.unCeasefireTarget(candidates).get
+        else 
+          USBot.unCeasefireTarget(candidates).get
+        
+        val m = game getMuslim name
+        endCivilWar(name)  // This will remove the militia
+        addAwakeningMarker(name, m.militia)
+        moveTroops(name, "track", m.troops)
+        removeCellsFromCountry(name, m.activeCells, m.sleeperCells, addCadre = false)
+        addReactionMarker(name, m.totalCells)
+        setAlignment(name, Neutral)
+        rollGovernance(name)
       }
     )),
     // ------------------------------------------------------------------------

@@ -900,6 +900,15 @@ object USBot extends BotHelpers {
     }
   }
   
+  def unCeasefireTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new HighestScorePriority("Most militia - cells", muslimScore(m => m.militia - m.totalCells)),
+      new CriteriaFilter("Adversary", muslimTest(m => m.isAdversary)),
+      new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
+      
+    botLog("Find \"UN Ceasefire\" target")
+    topPriority(game getMuslims names, priorities) map (_.name)
+  }
   
   def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
     val flowchart = List(
