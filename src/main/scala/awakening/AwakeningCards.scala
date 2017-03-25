@@ -3559,8 +3559,35 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(231, "Siege of Kobanigrad", Unassociated, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == US && (game hasMuslim (m => m.civilWar && m.totalCells > 0))) ||
+                      (role == Jihadist && (game hasMuslim (m => m.civilWar && m.militia > 0)))
+      ,
+      (role: Role) => if (role == US) {
+        val candidates = countryNames(game.muslims filter (m => m.civilWar && m.totalCells > 0))
+        val (name, (actives, sleepers)) = if (role == game.humanRole) {
+          val name = askCountry("Select country: ", candidates)
+          val cells = askCells(name, 3 min (game getMuslim name).totalCells)
+          (name, cells)
+        }
+        else {
+          val name = USBot.disruptPriority(candidates).get
+          val cells = USBot.chooseCellsToRemove(name, 3 min (game getMuslim name).totalCells)
+          (name, cells)
+        }
+        addEventTarget(name)
+        removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+      }
+      else {
+        val candidates = countryNames(game.muslims filter (m => m.civilWar && m.militia > 0))
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else
+          JihadistBot.minorJihadTarget(candidates).get
+        
+        addEventTarget(name)
+        removeMilitiaFromCountry(name, 2 min (game getMuslim name).militia)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(232, "Trade Embargo", Unassociated, 2,
