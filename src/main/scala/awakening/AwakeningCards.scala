@@ -3436,13 +3436,72 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(227, "Popular Support", Unassociated, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == US && (game hasMuslim (_.awakening > 0))) ||
+                      (role == Jihadist && (game hasMuslim (_.reaction > 0)))
+      ,
+      (role: Role) => if (role == US) {
+        val candidates = countryNames(game.muslims filter (_.awakening > 0))
+        val (name, adjacent) = if (role == game.humanRole) {
+          val name = askCountry("Select country with awakening marker: ", candidates)
+          val adjCandidates = getAdjacentMuslims(name) filter (x => game.getMuslim(x).canTakeAwakeningOrReactionMarker)
+          val adjacent = if (adjCandidates.nonEmpty)
+            Some(askCountry("Select an adjacent Muslim country: ", adjCandidates))
+          else {
+            println("No adjacent countries can take an awakening marker")
+            None
+          }
+          (name, adjacent)
+        }
+        else {
+          val name = USBot.markerAlignGovTarget(candidates).get
+          val adjCandidates = getAdjacentMuslims(name) filter (x => game.getMuslim(x).canTakeAwakeningOrReactionMarker)
+          val adjacent = USBot.markerAlignGovTarget(adjCandidates)
+          (name, adjacent)
+        }
+        
+        addEventTarget(name)
+        addAwakeningMarker(name)
+        adjacent foreach { adj =>
+          addEventTarget(adj)
+          testCountry(adj)
+          addAwakeningMarker(adj)
+        }
+      }
+      else {
+        val candidates = countryNames(game.muslims filter (_.reaction > 0))
+        val (name, adjacent) = if (role == game.humanRole) {
+          val name = askCountry("Select country with reaction marker: ", candidates)
+          val adjCandidates = getAdjacentMuslims(name) filter (x => game.getMuslim(x).canTakeAwakeningOrReactionMarker)
+          val adjacent = if (adjCandidates.nonEmpty)
+            Some(askCountry("Select an adjacent Muslim country: ", adjCandidates))
+          else {
+            println("No adjacent countries can take a reaction marker")
+            None
+          }
+          (name, adjacent)
+        }
+        else {
+          val name = JihadistBot.markerAlignGovTarget(candidates).get
+          val adjCandidates = getAdjacentMuslims(name) filter (x => game.getMuslim(x).canTakeAwakeningOrReactionMarker)
+          val adjacent = JihadistBot.markerAlignGovTarget(adjCandidates)
+          (name, adjacent)
+        }
+        
+        addEventTarget(name)
+        addReactionMarker(name)
+        adjacent foreach { adj =>
+          addEventTarget(adj)
+          testCountry(adj)
+          addReactionMarker(adj)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(228, "Popular Support", Unassociated, 2,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(227).eventConditions(role),
+      (role: Role) => deck(227).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(229, "Prisoner Exchange", Unassociated, 2,
