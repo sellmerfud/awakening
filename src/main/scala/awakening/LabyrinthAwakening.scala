@@ -2636,7 +2636,7 @@ object LabyrinthAwakening {
                 convergers = Converger(name, awakening = true) :: convergers
             }
             else 
-              shiftAlignment(m.name, if (m.isNeutral) Ally else Neutral)
+              shiftAlignmentLeft(m.name)
           case _ => // x < -2
             if (m.isAdversary) {
               degradeGovernance(name, levels = 1, canShiftToIR = true)
@@ -2644,7 +2644,7 @@ object LabyrinthAwakening {
                 convergers = Converger(name, awakening = false) :: convergers
             }
             else 
-              shiftAlignment(m.name, if (m.isNeutral) Adversary else Neutral)
+              shiftAlignmentRight(m.name)
         }
       }
       
@@ -2808,7 +2808,7 @@ object LabyrinthAwakening {
             }
             
             if (shifts > 0)
-              shiftAlignment(m.name, newAlign)
+              setAlignment(m.name, newAlign)
             val steps = unfulfilledJihadHits - shifts
             if (steps > 0) {
               degradeGovernance(m.name, levels = steps, canShiftToIR = true)
@@ -2829,7 +2829,7 @@ object LabyrinthAwakening {
               case _              => (2, Ally)
             }
             if (shifts > 0)
-              shiftAlignment(m.name, newAlign)
+              setAlignment(m.name, newAlign)
             val steps = unfulfilledUSHits - shifts
             if (steps > 0) {
               improveGovernance(m.name, steps, canShiftToGood = true)
@@ -2879,7 +2879,7 @@ object LabyrinthAwakening {
           }
           else if (tested.isNeutral) {
             log("Success")
-            shiftAlignment(name, Ally)
+            setAlignment(name, Ally)
           }
           else {
             val caliphateCapital = tested.caliphateCapital
@@ -3171,9 +3171,8 @@ object LabyrinthAwakening {
         // already at Poor governance before the operation begain will
         // add a besieged regime marker and shift alignment toward ally
         if (major && !majorSuccess && m.governance == Poor && numAttempts == 3) {
-          val newAlign = if (game.getMuslim(name).alignment == Adversary) Neutral else Ally
           addBesiegedRegimeMarker(name)
-          shiftAlignment(name, newAlign)
+          shiftAlignmentLeft(name)
         }
         (name, successes) :: performJihads(remaining)
     }
@@ -3367,10 +3366,28 @@ object LabyrinthAwakening {
     }
   }
   
-  def shiftAlignment(name: String, newAlign: String): Unit = {
+  def shiftAlignmentLeft(name: String): Unit = {
+    var m = game.getMuslim(name)
+    m.alignment match {
+      case Adversary => setAlignment(name, Neutral)
+      case Neutral   => setAlignment(name, Ally)
+      case _         =>
+    }
+  }
+  
+  def shiftAlignmentRight(name: String): Unit = {
+    var m = game.getMuslim(name)
+    m.alignment match {
+      case Ally    => setAlignment(name, Neutral)
+      case Neutral => setAlignment(name, Adversary)
+      case _       =>
+    }
+  }
+  
+  def setAlignment(name: String, newAlign: String): Unit = {
     var m = game.getMuslim(name)
     if (m.alignment != newAlign) {
-      log(s"Shift the alignment of $name to $newAlign")
+      log(s"Set the alignment of $name to $newAlign")
       game = game.updateCountry(m.copy(alignment = newAlign))
       if (newAlign == Adversary)
         removeEventMarkersFromCountry(name, "Advisors")
