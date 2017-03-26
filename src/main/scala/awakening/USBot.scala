@@ -919,6 +919,16 @@ object USBot extends BotHelpers {
     topPriority(game getMuslims names, priorities) map (_.name)
   }
   
+  def revolutionTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new HighestScorePriority("Highest reaction - awakening", muslimScore(m => m.reaction - m.awakening)),
+      HighestResourcePriority)
+      
+    botLog("Find \"Revolution\" target")
+    topPriority(game getMuslims names, priorities) map (_.name)
+  }
+
+  
   def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
     val flowchart = List(
       new CriteriaFilter("Adversary", muslimTest(m => m.isAdversary)),

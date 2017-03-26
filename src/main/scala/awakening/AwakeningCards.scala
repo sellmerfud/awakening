@@ -3781,9 +3781,21 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(238, "Revolution", Unassociated, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim (m => m.isPoor && m.awakening > 0 && m.reaction > 0)
+      ,
       (role: Role) => {
         // See Event Instructions table
+        val candidates = countryNames(game.muslims filter (m => m.isPoor && m.awakening > 0 && m.reaction > 0))
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else if (role == Jihadist)
+          JihadistBot.revolutionTarget(candidates).get
+        else
+          USBot.revolutionTarget(candidates).get
+        
+        addEventTarget(name)
+        startCivilWar(name)
       }
     )),
     // ------------------------------------------------------------------------

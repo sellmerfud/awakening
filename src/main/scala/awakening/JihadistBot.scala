@@ -574,6 +574,15 @@ object JihadistBot extends BotHelpers {
     topPriority(game getMuslims names, priorities) map (_.name)
   }
 
+  def revolutionTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new HighestScorePriority("Highest awakening - reaction", muslimScore(m => m.awakening - m.reaction)),
+      HighestResourcePriority)
+      
+    botLog("Find \"Revolution\" target")
+    topPriority(game getMuslims names, priorities) map (_.name)
+  }
+
   // Pick actives before sleepers
   // Return (actives, sleepers)
   def chooseCellsToRemove(name: String, num: Int): (Int, Int) = {
