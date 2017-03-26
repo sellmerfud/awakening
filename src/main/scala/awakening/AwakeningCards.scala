@@ -3702,9 +3702,33 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(235, "Qadhafi", Unassociated, 3,
-      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim (_.civilWar)
+      ,
       (role: Role) => {
-        // See Event Instructions table
+        val candidates = countryNames(game.muslims filter (_.civilWar))
+        val name = if (role == game.humanRole)
+          askCountry("Select country in Civil War: ", candidates)
+        else if (role == Jihadist)
+          JihadistBot.qadhafiTarget(candidates).get
+        else
+          USBot.qadhafiTarget(candidates).get
+        
+        val m = game getMuslim name
+        addEventTarget(name)
+        endCivilWar(name)
+        if (m.totalCells > m.totalTroopsAndMilitia) {
+          setAlignment(name, Adversary)
+          if (m.isFair)
+            degradeGovernance(name, 1, canShiftToIR = false)
+        }
+        if (m.totalTroopsAndMilitia > m.totalCells) {
+          setAlignment(name, Ally)
+          if (m.isPoor)
+            improveGovernance(name, 1, canShiftToGood = false)
+        }
+        else
+          log(s"The governance and alignment of $name does not change")
       }
     )),
     // ------------------------------------------------------------------------

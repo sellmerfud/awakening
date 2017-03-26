@@ -910,6 +910,15 @@ object USBot extends BotHelpers {
     topPriority(game getMuslims names, priorities) map (_.name)
   }
   
+  def qadhafiTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new CriteriaFilter("TandM > Cells", muslimTest(m => m.totalTroopsAndMilitia > m.totalCells)),
+      HighestResourcePriority)
+      
+    botLog("Find \"Qadhafi\" target")
+    topPriority(game getMuslims names, priorities) map (_.name)
+  }
+  
   def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
     val flowchart = List(
       new CriteriaFilter("Adversary", muslimTest(m => m.isAdversary)),

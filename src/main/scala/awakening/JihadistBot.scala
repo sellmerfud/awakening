@@ -564,6 +564,15 @@ object JihadistBot extends BotHelpers {
     botLog("Find \"UN Ceasefire\" target")
     topPriority(game getMuslims names, priorities) map (_.name)
   }
+  
+  def qadhafiTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new CriteriaFilter("Cells > TandM", muslimTest(m => m.totalCells > m.totalTroopsAndMilitia)),
+      HighestResourcePriority)
+      
+    botLog("Find \"Qadhafi\" target")
+    topPriority(game getMuslims names, priorities) map (_.name)
+  }
 
   // Pick actives before sleepers
   // Return (actives, sleepers)
