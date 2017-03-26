@@ -45,7 +45,7 @@ class IslamicStateOfIraq extends Scenario {
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
     DefaultAfghanistan.copy(governance = Fair, alignment = Ally, troops = 2, sleeperCells = 1),
     DefaultPakistan.copy(governance = Poor, alignment = Ally, hasCadre = true),
-    DefaultMuslimNigeria.copy(governance = Poor, alignment = Neutral, sleeperCells = 2),
+    DefaultMuslimNigeria.copy(sleeperCells = 2),
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultFrance.copy(postureValue = Hard),
     DefaultBenelux.copy(postureValue = Hard))

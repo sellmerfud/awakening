@@ -271,7 +271,8 @@ object LabyrinthAwakening {
   
   val DefaultMuslimIran        = MuslimCountry(Iran, resources = 2, oilExporter = true,
                                                 governance = Fair, alignment = Adversary)
-  val DefaultMuslimNigeria     = MuslimCountry(Nigeria, resources = 2, oilExporter = true)
+  val DefaultMuslimNigeria     = MuslimCountry(Nigeria, isSunni = true, resources = 2, oilExporter = true,
+                                               governance = Poor, alignment = Neutral)
   
   val DefaultMorocco           = MuslimCountry(Morocco, resources = 2)
   val DefaultAlgeriaTunisia    = MuslimCountry(AlgeriaTunisia, resources = 2, oilExporter = true)
@@ -1280,24 +1281,24 @@ object LabyrinthAwakening {
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty]) = {
-      var countries:List[Country] = if (scenario.expansion) AwakeningDefaultCountries 
-                                    else LabyrinthDefaultCountries
-      // Apply scenario overrides to countries.
-      for (c <- scenario.countries)
-        countries = c :: (countries filterNot (_.name == c.name))
-      
-      GameState(
-        GameParameters(scenario.name, humanRole,humanAutoRoll, botDifficulties),
-        0, // Turn number, zero indicates start of game.
-        scenario.prestige,
-        scenario.usPosture,
-        scenario.funding,
-        countries,
-        scenario.markersInPlay.sorted,
-        scenario.availablePlots.sorted,
-        cardsRemoved = scenario.cardsRemoved,
-        offMapTroops = scenario.offMapTroops)
-    }
+    var countries:List[Country] = if (scenario.expansion) AwakeningDefaultCountries 
+                                  else LabyrinthDefaultCountries
+    // Apply scenario overrides to countries.
+    for (c <- scenario.countries)
+      countries = c :: (countries filterNot (_.name == c.name))
+    
+    GameState(
+      GameParameters(scenario.name, humanRole,humanAutoRoll, botDifficulties),
+      0, // Turn number, zero indicates start of game.
+      scenario.prestige,
+      scenario.usPosture,
+      scenario.funding,
+      countries,
+      scenario.markersInPlay.sorted,
+      scenario.availablePlots.sorted,
+      cardsRemoved = scenario.cardsRemoved,
+      offMapTroops = scenario.offMapTroops)
+  }
   
   
   // Global variables
@@ -3407,6 +3408,8 @@ object LabyrinthAwakening {
       }
       if (newAlign == Adversary)
         removeEventMarkersFromCountry(name, "Advisors")
+      else if (name == Nigeria && newAlign == Ally && m.totalCells == 0)
+        makeNigeriaNonMuslim() // rule 11.3.3.3
     }
   }
   
@@ -3731,6 +3734,11 @@ object LabyrinthAwakening {
           log("%sAdd cadre marker to %s.".format(logPrefix, name))
       }
       removeTrainingCamp_?(name)
+      if (name == Nigeria && (game isMuslim Nigeria)) {
+        val m = game getMuslim Nigeria
+        if (m.isAlly && m.totalCells == 0)
+          makeNigeriaNonMuslim() // rule 11.3.3.3
+      }
     }
   }
   
@@ -3977,11 +3985,38 @@ object LabyrinthAwakening {
     }
   }
   
+  def makeNigeriaNonMuslim(): Unit = {
+    log("Nigeria is an Ally with no cells, so it becomes a non-Muslim country")
+    endCivilWar(Nigeria)
+    endRegimeChange(Nigeria)
+    val m = game getMuslim Nigeria
+    removeCadre(Nigeria)
+    if (m.militia > 0)
+      removeMilitiaFromCountry(Nigeria, m.militia)
+    if (m.troops > 0)
+      moveTroops(Nigeria, "track", m.troops)
+    if (m.aidMarkers > 0)
+      removeAidMarker(Nigeria, m.aidMarkers)
+    if (m.awakening > 0)
+      removeAwakeningMarker(Nigeria, m.awakening)
+    if (m.reaction > 0)
+      removeReactionMarker(Nigeria, m.reaction)
+    for (plotOnMap <- m.plots)
+      removePlotFromCountry(Nigeria, plotOnMap)
+    for (marker <- m.markers)
+      removeEventMarkersFromCountry(Nigeria, m.markers: _*)
+    log("Flip Nigeria over to its non-Muslim side")
+    if (m.governance != Poor)
+      log(s"Place a ${govToString(m.governance)} governance marker in Nigeria")
+    
+    game = game.updateCountry(DefaultNigeria.copy(governance = m.governance))
+  }
+  
   def resolvePlots(): Unit = {
-    case class Unblocked(country: Country, mapPlot: PlotOnMap)
+    case class Unblocked(name: String, mapPlot: PlotOnMap)
     def chng(amt: Int) = if (amt > 0) "Increase" else "Decrease"
     val unblocked = for (c <- game.countries filter (_.hasPlots); p <- c.plots)
-      yield Unblocked(c, p)
+      yield Unblocked(c.name, p)
     var wmdsInCivilWars = Set.empty[String]
     log()
     log("Reslove plots")
@@ -3989,15 +4024,15 @@ object LabyrinthAwakening {
       log(separator())
       log("There are no unblocked plots on the map")
     }
-    else if (unblocked exists (ub => ub.country.name == UnitedStates && ub.mapPlot.plot == PlotWMD)) {
+    else if (unblocked exists (ub => ub.name == UnitedStates && ub.mapPlot.plot == PlotWMD)) {
       // If there is a WMD in the United States reslove it first as it will end the game.
       log(separator())
       log("An unblocked WMD plot was resolved in the United States")
       log("Game Over - Jihadist automatic victory!")
     }
     else {
-      for (Unblocked(country, mapPlot) <- unblocked) {
-        val name = country.name
+      for (Unblocked(name, mapPlot) <- unblocked) {
+        val country = game getCountry name
         log(separator())
         log(s"Unblocked $mapPlot in $name")
         country match {
@@ -4033,10 +4068,11 @@ object LabyrinthAwakening {
               returnSequestrationTroopsToAvailable()
             }
             
-            // rule 11.2.6
-            // If second WMD in the same civil war.  Shift immediately to Islamist Rule.
-            if (mapPlot.plot == PlotWMD && m.civilWar && (wmdsInCivilWars contains m.name))
+            // rule 11.2.6    (WMD in Civil War)
+            if (mapPlot.plot == PlotWMD && m.civilWar && (wmdsInCivilWars contains m.name)) {
+              // If second WMD in the same civil war.  Shift immediately to Islamist Rule.
               degradeGovernance(m.name, levels = 3, canShiftToIR = true) // 3 levels guarantees shift to IR
+            }
             else {
               if (mapPlot.plot == PlotWMD && m.civilWar) {
                 // First WMD in civil war, remove a militia.
@@ -4058,7 +4094,7 @@ object LabyrinthAwakening {
             }
             
           //------------------------------------------------------------------
-          case n: NonMuslimCountry =>
+          case n: NonMuslimCountry =>          
             // Funding
             if (n.iranSpecialCase) {
               game = game.adjustFunding(1)
@@ -4086,6 +4122,18 @@ object LabyrinthAwakening {
             // Posture
             if (name == UnitedStates)
               rollUSPosture()
+            else if (n.name == Nigeria && mapPlot.plot != Plot1) {
+              // rule 11.3.3.3  (Nigeria)
+              game = game.updateCountry(DefaultMuslimNigeria.copy(
+                sleeperCells = n.sleeperCells,
+                activeCells  = n.activeCells,
+                hasCadre     = n.hasCadre,
+                plots        = n.plots,
+                markers      = n.markers,
+                wmdCache     = n.wmdCache
+              ))
+              log("Flip Nigeria over to its Muslim side")
+            }
             else if (n.canChangePosture) {
               rollCountryPosture(n.name)
               if (n.isSchengen)
@@ -4106,6 +4154,7 @@ object LabyrinthAwakening {
                   rollCountryPosture(s2)
                 }
             }
+            
             // Sequestration
             if (mapPlot.plot == PlotWMD && game.eventParams.sequestrationTroops) {
               log("Resolved WMD plot releases the troops off map for Sequestration")
@@ -4126,7 +4175,7 @@ object LabyrinthAwakening {
           game = game.updateCountry(n.copy(plots = Nil)).copy(resolvedPlots = (n.plots map (_.plot)) ::: game.resolvedPlots)
       }
       game = game.copy(plays = PlotsResolved(unblocked.size) :: game.plays,
-                       lastResolvePlotsTargets = (unblocked map (_.country.name)).toSet)
+                       lastResolvePlotsTargets = (unblocked map (_.name)).toSet)
       savePlay()  // Save the play so we can roll back
     }
   }

@@ -1207,7 +1207,7 @@ object USBot extends BotHelpers {
       val maxRadOps = unusedOps + game.reserves.us
       
       log()
-      log(s"$US performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(game.reserves.us,"reserve")})")
+      log(s"$US performs Homeland Security with ${amountOf(unusedOps, "unused Op")} (${amountOf(game.reserves.us,"reserve")})")
       log(separator())
       
       // Returns the number of actions executed
