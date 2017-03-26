@@ -183,6 +183,21 @@ object AwakeningCards {
       game.cellsAvailable > 0 || canStartCivilWar
     }
   }
+  
+  def oilPriceSpikePlayable(role: Role): Boolean = {
+    if (role == game.humanRole)
+      true
+    else if (role == Jihadist) {
+      // Unplayable if it would cause Jihadist instant victory
+      val usOilExporters = game.muslims count (m => m.isGood && m.oilExporter)
+      game.goodResources + usOilExporters < 12
+    }
+    else {
+      // Unplayable if it would cause US instant victory
+      val jihadOilExporters = game.muslims count (m => m.isIslamistRule && m.oilExporter)
+      game.islamistResources + jihadOilExporters < 6 || !game.islamistAdjacency
+    }
+  }
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -3092,7 +3107,7 @@ object AwakeningCards {
       ,
       (role: Role) => {
         if (role == US) {
-          // Values adjusted by if the #237 Osama Bin Laden card has been rmoved 
+          // Values adjusted if the #237 Osama Bin Laden card has been rmoved 
           val num = if (game.cardRemoved(237)) 2 else 1
           decreaseFunding(num)
           increasePrestige(num)
@@ -3153,8 +3168,8 @@ object AwakeningCards {
         // Can possibly declare Caliphate, by either player
         // See Event Instructions table
         if (role == game.humanRole) {
-          val totalReaction = (game.muslims filter (_.reaction > 0)).size
-          val totalCells = (game.countries filter (_.totalCells > 0)).size
+          val totalReaction = game.muslims count (_.reaction > 0)
+          val totalCells    = game.countries count (_.totalCells > 0)
           val numReaction = if (totalReaction == 0) 0
                             else askInt("Remove how many reaction markers? ", 0, 3 min totalReaction)
           
@@ -3733,16 +3748,36 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(236, "Oil Price Spike", Unassociated, 3,
-      NoRemove, NoMarker, Lapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoMarker, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => oilPriceSpikePlayable(role)
+      ,
       (role: Role) => {
-        // Removes "Fracking" marker
         // See Event Instructions table
+        removeGlobalEventMarker("Fracking") // Cancels effects of "Fracking" marker
+        if (role == game.humanRole)
+          log(s"$role player draws a card other than Oil Price Spike from the discad pile")
+        else if (role == US)
+          log(s"$US Bot draws highest Ops US associated card (at random) from the discard pile ")
+        else
+          log(s"$Jihadist Bot draws highest Ops Jihadist associated card (at random) from the discard pile ")
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(237, "Osama bin Ladin", Unassociated, 3,
-      USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      USRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == Jihadist  && 
+                       game.prestige > 1 && 
+                       (game hasMuslim (m => m.isIslamistRule || m.civilWar))) ||
+                      (role == US && 
+                       (game.funding > 1 || game.prestige < 12) &&
+                       !(game.getMuslim(Pakistan).isIslamistRule && game.getMuslim(Afghanistan).isIslamistRule))
+      ,
+      (role: Role) => if (role == US) {
+        decreaseFunding(2)
+        increasePrestige(3)
+      }
+      else
+        decreasePrestige(game.muslims count (m => m.isIslamistRule || m.civilWar))
     )),
     // ------------------------------------------------------------------------
     entry(new Card(238, "Revolution", Unassociated, 3,
