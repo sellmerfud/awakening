@@ -4647,7 +4647,7 @@ object LabyrinthAwakening {
     if (cards > 0 && cards % 4 == 0 && unresolvedPlots > 0) {
       println(separator())
       println(s"4 cards have been played and there are unresolved plots on the map")
-      if (askYorN("Do you want to resolve the plots now (y/n) ?"))
+      if (askYorN("Do you want to resolve the plots now (y/n)? "))
         resolvePlots()
     }
     

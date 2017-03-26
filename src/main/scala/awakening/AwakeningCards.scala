@@ -2479,6 +2479,7 @@ object AwakeningCards {
         }
         
         addEventTarget(target)
+        testCountry(target)
         val bump = (target == Mali || target == Nigeria)
         if (action == "militia") {
           val num = (if (bump) 2 else 1) min game.militiaAvailable
@@ -3013,6 +3014,7 @@ object AwakeningCards {
               case "cell" => 
                 val schengen = randomSchengenCountry
                 addEventTarget(schengen.name)
+                testCountry(schengen.name)
                 addSleeperCellsToCountry(schengen.name, 1)
             }
           }
@@ -3020,6 +3022,7 @@ object AwakeningCards {
         else {
           val target = JihadistBot.recruitTarget(Syria::Iraq::Nil).get
           addEventTarget(target)
+          testCountry(target)
           val num = 3 min game.cellsAvailable
           addSleeperCellsToCountry(target, num)
           if (num == 3 && canDeclareCaliphate(target) && JihadistBot.willDeclareCaliphate(target))
