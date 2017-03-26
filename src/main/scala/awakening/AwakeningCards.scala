@@ -3811,8 +3811,18 @@ object AwakeningCards {
       (role: Role) => false  // No directly playable, but will always auto trigger
       ,
       (role: Role) => {
-        // See Event Instructions table
-        // if lapsingEventInPlay("US Consulate Attacked") the posture switches, without a roll.
+        if (lapsingEventInPlay("US Consulate Attacked")) {
+          log("US Consulate Attacked event is lapsing")
+          setUSPosture(oppositePosture(game.usPosture))
+        }
+        else
+          rollUSPosture()
+        
+        logWorldPosture()
+        if (game.gwotPenalty == 0)
+          increasePrestige(1)
+        else
+          decreasePrestige(1)
       }
     ))
   )

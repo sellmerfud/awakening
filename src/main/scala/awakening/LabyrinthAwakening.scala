@@ -1845,12 +1845,13 @@ object LabyrinthAwakening {
   }
   
   def setUSPosture(newPosture: String): Unit = {
-    if (game.usPosture == newPosture)
+    if (game.usPosture == newPosture) {
       log(s"US posture remains $newPosture")
+      logWorldPosture()
+    }
     else {
       game = game.copy(usPosture = newPosture)
       log(s"Set US posture to $newPosture")
-      logWorldPosture()
     }
   }
   
@@ -2117,7 +2118,9 @@ object LabyrinthAwakening {
   
   def logCardPlay(player: Role, card: Card, playable: Boolean, triggered: Boolean): Unit = {
     val opponent = if (player == US) Jihadist else US
-    val eventMsg = if (playable)
+    val eventMsg = if (card.autoTrigger)
+      s"  (The ${card.association} event will automatically trigger)"
+    else if (playable)
       s"  (The ${card.association} event is playable)"
     else if (card.association == opponent && opponent == game.botRole)
       s"  (The ${card.association} event will ${if (triggered) "" else "not "}be triggered)"
