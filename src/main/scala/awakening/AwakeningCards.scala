@@ -3611,7 +3611,7 @@ object AwakeningCards {
             case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = 0))
           }
         }
-        
+        addEventTarget(Iran)
         if (iran.hasMarker("Trade Embargo")) {
           removeEventMarkersFromCountry(Iran, "Trade Embargo")
           log("Iran may resume oil exports")
@@ -3619,15 +3619,19 @@ object AwakeningCards {
       }
       else { // Jihadist
         val candidates = countryNames(game.muslims filter (m => m.isShiaMix && m.canTakeAwakeningOrReactionMarker))
-        val name = if (candidates.isEmpty)
+        val shiaMix = if (candidates.isEmpty)
           None
         else if (role == game.humanRole)
           Some(askCountry("Select Shia-Mix country to place reaction marker: ", candidates))
         else
           JihadistBot.markerAlignGovTarget(candidates)
         
+        addEventTarget(Iran)
         decreasePrestige(1)
-        name foreach (addReactionMarker(_))
+        shiaMix foreach { name =>
+          addEventTarget(name)
+          addReactionMarker(name)
+        }
         if (!game.getCountry(Iran).hasMarker("Trade Embargo")) {
           // If Iran becomes Neutral or Ally, remove any Trade Embargo marker. [11.3.3.1]
           addEventMarkersToCountry(Iran, "Trade Embargo")
@@ -3651,6 +3655,7 @@ object AwakeningCards {
         else 
           USBot.unCeasefireTarget(candidates).get
         
+        addEventTarget(name)
         val m = game getMuslim name
         endCivilWar(name)  // This will remove the militia
         addAwakeningMarker(name, m.militia)
@@ -3663,9 +3668,36 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(234, "Free Syrian Army", Unassociated, 3,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => {
-        // See Event Instructions table
+        val syria = game getMuslim Syria
+        !syria.isUntested && (
+          role == game.humanRole ||
+          (role == Jihadist && !syria.isIslamistRule && syria.reaction <= syria.awakening) ||
+          (role == US && !syria.isGood && syria.awakening <= syria.reaction)
+        )
+      }
+      ,
+      (role: Role) => {
+        val (cells, militia) = if (role == game.humanRole) {
+          val choices = List(
+            "cells"   -> "Place 2 cells and 1 milita in Syria",
+            "militia" -> "Place 2 militia and 1 cell in Syria"
+          )
+          println("Choose one: ")
+          if (askMenu(choices).head == "cells") (2, 1) else (1, 2)
+        }
+        else if (role == Jihadist) (2, 1)
+        else (1, 2)
+          
+        addEventTarget(Syria)
+        addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
+        addMilitiaToCountry(Syria, militia min game.militiaAvailable)
+        if ((game getMuslim Turkey).canTakeAidMarker) {
+          addEventTarget(Turkey)
+          testCountry(Turkey)
+          addAidMarker(Turkey)
+        }
       }
     )),
     // ------------------------------------------------------------------------

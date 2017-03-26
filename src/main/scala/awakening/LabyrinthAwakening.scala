@@ -3670,9 +3670,9 @@ object LabyrinthAwakening {
       if (removedCadre)
         log("%sRemove cadre marker from %s.".format(logPrefix, name))
       if (fromTrack > 0)
-        log("%sMove %s to %s from the funding track".format(logPrefix, amountOf(fromTrack, cellType), name))
+        log("%sAdd %s to %s from the funding track".format(logPrefix, amountOf(fromTrack, cellType), name))
       if (fromCamp > 0)
-        log("%sMove %s to %s from the training camp available area".format(logPrefix, amountOf(fromCamp, cellType), name))
+        log("%sAdd %s to %s from the training camp available area".format(logPrefix, amountOf(fromCamp, cellType), name))
     }
   }
 
