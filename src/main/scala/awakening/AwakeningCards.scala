@@ -503,11 +503,11 @@ object AwakeningCards {
       (role: Role) => {
         if (role == game.humanRole) {
           val choices = List(
-            "reveal"  -> "Reveal all WMD plots and remove one",
-            "discard" -> "Randomly discard 1 card from the Jihadist hand")
+            "reveal" -> "Reveal all WMD plots and remove one",
+            "draw"  -> "Randomly draw 1 card from the Jihadist hand")
           println("Choose one:")
           askMenu(choices).head match {
-            case "discard" => log("Discard the top card in the Jihadist Bot's hand")
+            case "draw" => log("Draw the top card in the Jihadist Bot's hand")
             case _ =>
               val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
                 yield c.name
@@ -545,7 +545,7 @@ object AwakeningCards {
         else {
           // See Event Instructions table
           // If there are any WMD plots in the available box, the bot
-          // will remove one. Otherwise the US player must discard a random card.
+          // will remove one. Otherwise take a US players random card.
           if (game.availablePlots contains PlotWMD) {
             // The sort order for plots put WMD's first.
             game = game.copy(availablePlots = game.availablePlots.sorted.tail).adjustPrestige(1)
@@ -553,7 +553,7 @@ object AwakeningCards {
             log(s"Increase prestige by +1 to ${game.prestige} for removing an WMD plot")
           }
           else
-            log(s"You ($Jihadist) must discard one random card")
+            log(s"You ($Jihadist) must place on random card on top of the $US hand")
         }
       }
     )),
@@ -668,7 +668,7 @@ object AwakeningCards {
         decreaseFunding(1)
         addEventTarget(Pakistan)
         testCountry(Pakistan)
-        if (lapsingEventNotInPlay("Arab Winter") && (game getMuslim Pakistan).canTakeAwakeningOrReactionMarker)
+        if ((game getMuslim Pakistan).canTakeAwakeningOrReactionMarker)
           addAwakeningMarker(Pakistan)
       }
     )),
@@ -834,7 +834,7 @@ object AwakeningCards {
         addEventTarget(target)
         testCountry(target)
         removeBesiegedRegimeMarker(target)
-        if (lapsingEventNotInPlay("Arab Winter") && game.getMuslim(target).canTakeAwakeningOrReactionMarker)
+        if (game.getMuslim(target).canTakeAwakeningOrReactionMarker)
           addAwakeningMarker(target)
         else if (game.getMuslim(target).isGood)
           log(s"Cannot add an awakening marker to $target because it has Good governance")
@@ -1153,7 +1153,9 @@ object AwakeningCards {
         addEventTarget(target)
         moveTroops("track", target, 2 min game.troopsAvailable)
         addAidMarker(target)
-        if (lapsingEventNotInPlay("Arab Winter"))
+        if (lapsingEventInPlay("Arab Winter"))
+          log("Awakening markers cannot be placed because \"Arab Winter\" is in effect")
+        else
           adjacent foreach { m => addAwakeningMarker(m) }
       }
     )),
@@ -1317,7 +1319,7 @@ object AwakeningCards {
         if (m.isPoor)
           improveGovernance(target, 1, canShiftToGood = false)
         removeCellsFromCountry(target, m.activeCells, m.sleeperCells, addCadre = true)
-        if (lapsingEventNotInPlay("Arab Winter"))
+        if (m.canTakeAwakeningOrReactionMarker)
           addReactionMarker(target, m.totalCells)
       }
     )),
@@ -1387,6 +1389,7 @@ object AwakeningCards {
         log("Jihadist player my block 1 US associated event played later this turn.")
         if (role == game.botRole)
           log("The Jihadist Bot will cancel the NEXT US associated event played by the US")
+      Lapsing
       }
     )),
     // ------------------------------------------------------------------------
@@ -1466,8 +1469,7 @@ object AwakeningCards {
 
         addEventTarget(target)
         removeAwakeningMarker(target)
-        if (lapsingEventNotInPlay("Arab Winter"))
-          addReactionMarker(target)
+        addReactionMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1477,7 +1479,7 @@ object AwakeningCards {
         addEventTarget(Iraq)
         testCountry(Iraq)
         addActiveCellsToCountry(Iraq, 1 min game.cellsAvailable)
-        if (lapsingEventNotInPlay("Arab Winter"))
+        if ((game getMuslim Iraq).canTakeAwakeningOrReactionMarker)
           addReactionMarker(Iraq)
         decreasePrestige(1)
       }
@@ -2138,23 +2140,25 @@ object AwakeningCards {
       (role: Role) => {
         val opponent = if (role == Jihadist) US else Jihadist
         log("US randomly discards 2 cards")
-        log("Playable Jihadist events on the discards are triggered")
-        
-        def nextDiscard(num: Int): List[Int] = {
-          if (num > 2)
-            Nil
-          else {
-            val prompt = s"Number of the ${ordinal(num)} discard (or blank if none) "
-            askCardNumber(prompt) match {
-              case None         => Nil
-              case Some(cardNo) =>  cardNo :: nextDiscard(num + 1)
+        if (role == game.botRole) {
+          log("Playable Jihadist events on the discards are triggered")
+          
+          def nextDiscard(num: Int): List[Int] = {
+            if (num > 2)
+              Nil
+            else {
+              val prompt = s"Card # of the ${ordinal(num)} discard (or blank if none) "
+              askCardNumber(prompt) match {
+                case None         => Nil
+                case Some(cardNo) =>  cardNo :: nextDiscard(num + 1)
+              }
             }
           }
-        }
         
-        for (n <- nextDiscard(1); card = deck(n))
-          if (card.eventWillTrigger(Jihadist))
-            performCardEvent(card, Jihadist, triggered = true)
+          for (n <- nextDiscard(1); card = deck(n))
+            if (card.eventWillTrigger(Jihadist))
+              performCardEvent(card, Jihadist, triggered = true)
+        }
         
         setUSPosture(Soft)
       }
@@ -2524,7 +2528,6 @@ object AwakeningCards {
               val name    = askCountry("Set the posture of which country? ", COUNTRIES)
               val posture = askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get
               addEventTarget(name)
-              testCountry(name)
               setCountryPosture(name, posture)
             case "place"    =>
               val candidates = countryNames(game.countries filter (c => !c.hasCadre && c.totalCells == 0))
@@ -2752,7 +2755,7 @@ object AwakeningCards {
       }
       ,
       (role: Role) => 
-        (role == Jihadist && game.cellsAvailable > 0 || (game.availablePlots contains Plot1)) ||
+        (role == Jihadist && (game.cellsAvailable > 0 || (game.availablePlots contains Plot1))) ||
         (role == US && (game hasNonMuslim (n => n.hasCadre || n.totalCells > 0 || n.hasPlots)))
       ,
       (role: Role) => {
@@ -3334,7 +3337,7 @@ object AwakeningCards {
     entry(new Card(224, "Je Suis Charlie", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => {
-        val plotOK = game.lastResolvePlotsTargets exists game.isNonMuslim
+        val plotOK = askYorN("Was a plot resolved in a non-Muslim country during the last Resolve Plots phase? (y/n) ")
         val nonMuslimPostureChange = game hasNonMuslim (n => n.canChangePosture && n.posture != game.usPosture)
         if (role == game.humanRole)
           plotOK &&

@@ -508,16 +508,21 @@ object LabyrinthAwakening {
     def compare(x: Card, y: Card) = x.number compare y.number
   }
   
-  sealed trait Play
+  sealed trait Play {
+    def numCards: Int
+  }
   // Used to keep track of cards played during the current turn
   // for display purposes only.  This is stored in the game state.
   case class PlayedCard(role: Role, cardNum: Int) extends Play {
+    override def numCards = 1
     override def toString() = s"$role played ${cardNumAndName(cardNum)}"
   }
   case class Played2Cards(role: Role, card1Num: Int, card2Num: Int) extends Play {
+    override def numCards = 2
     override def toString() = s"$role played ${cardNumAndName(card1Num)} and ${cardNumAndName(card2Num)}"
   }
   case class PlotsResolved(num: Int) extends Play {
+    override def numCards = 0
     override def toString() = s"$num Plots were resolved"
   }
   
@@ -676,7 +681,7 @@ object LabyrinthAwakening {
 
     def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
     def maxDeployFrom(ops: Int) = if (inRegimeChange)
-      if (ops >= 3 && troops - totalCells >= 5) troops - totalCells else 0
+      if (ops >= 3 && troops - totalCells > 5) (troops - totalCells - 5) else 0
     else
       troops
     def canDeployFrom(ops: Int) = maxDeployFrom(ops) > 0
@@ -760,8 +765,7 @@ object LabyrinthAwakening {
     cardsLapsing: List[Int] = Nil,         // Card numbers
     cardsRemoved: List[Int] = Nil,         // Cards removed from the game.
     targetsThisCard: CardTargets = CardTargets(),
-    targetsLastCard: CardTargets = CardTargets(),
-    lastResolvePlotsTargets: Set[String] = Set.empty  // Countries where plots were resolved
+    targetsLastCard: CardTargets = CardTargets()
   ) {
     
     def humanRole = params.humanRole
@@ -1491,15 +1495,21 @@ object LabyrinthAwakening {
   }
   
   // Returns (actives, sleepers)
-  def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean = true): (Int, Int) = {
+  // If validCells is present it represents the number of (active, sleeper) cells in
+  // the country that can be selected.
+  // If validCells is None, then the total number of cells in the country is considered.
+  def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean = true, 
+               validCells: Option[(Int, Int)] = None): (Int, Int) = {
     val c = game.getCountry(countryName)
-    val maxCells = numCells min c.totalCells
+    val (activeCells, sleeperCells) = validCells getOrElse (c.activeCells, c.sleeperCells)
+    val totalCells = activeCells + sleeperCells
+    val maxCells = numCells min + totalCells
     
-    if (maxCells == c.totalCells) (c.activeCells, c.sleeperCells)
-    else if (c.activeCells  == 0) (0, maxCells)
-    else if (c.sleeperCells == 0) (maxCells, 0)
+    if (maxCells == totalCells) (activeCells, sleeperCells)
+    else if (activeCells  == 0) (0, maxCells)
+    else if (sleeperCells == 0) (maxCells, 0)
     else {
-      val (a, s) = (amountOf(c.activeCells, "active cell"), amountOf(c.sleeperCells, "sleeper cell"))
+      val (a, s) = (amountOf(activeCells, "active cell"), amountOf(sleeperCells, "sleeper cell"))
       println(s"$countryName has $a and $s")
       
       if (maxCells == 1) {
@@ -1512,13 +1522,13 @@ object LabyrinthAwakening {
       }
       else {
         if (sleeperFocus) {
-          val smax     = maxCells min c.sleeperCells
+          val smax     = maxCells min sleeperCells
           val prompt   = s"How many sleeper cells (Default = $smax): "
           val sleepers = askInt(prompt, 1, smax, Some(smax))
           (maxCells - sleepers , sleepers)
         }
         else {
-          val amax    = maxCells min c.activeCells
+          val amax    = maxCells min activeCells
           val prompt  = s"How many active cells (Default = $amax): "
           val actives = askInt(prompt, 1, amax, Some(amax))
           (actives, maxCells - actives)
@@ -2058,14 +2068,16 @@ object LabyrinthAwakening {
     if (lapsingEventInPlay("Arab Winter"))
       log("No convergence peformed because \"Arab Winter\" is in effect")
     else {
-      val rmc = randomConvergenceTarget
+      val target = randomConvergenceTarget.name
+      testCountry(target)
+      val m = game getMuslim target
       if (awakening) {
-        game = game.updateCountry(rmc.copy(awakening = rmc.awakening + 1))
-        log(s"Convergence for ${forCountry}: Add 1 awakening marker to ${rmc.name}")
+        game = game.updateCountry(m.copy(awakening = m.awakening + 1))
+        log(s"Convergence for ${forCountry}: Add 1 awakening marker to ${target}")
       }
       else {
-        game = game.updateCountry(rmc.copy(reaction = rmc.reaction + 1))
-        log(s"Convergence for ${forCountry}: Add 1 reaction marker to ${rmc.name}")
+        game = game.updateCountry(m.copy(reaction = m.reaction + 1))
+        log(s"Convergence for ${forCountry}: Add 1 reaction marker to ${target}")
       }
     }
   }
@@ -2415,8 +2427,9 @@ object LabyrinthAwakening {
       defaultChoices
     }
     else {
-      println("Rollback to the beginning of a previous play or a previous turn:") 
-      (game.plays.reverse.zipWithIndex map { case (p, i) => s"play-$i" -> p.toString }) ::: defaultChoices
+      println("Rollback to the beginning of a previous play or a previous turn:")
+      val plays = (game.plays.reverse.zipWithIndex map { case (p, i) => s"play-$i" -> p.toString }).reverse
+      plays ::: defaultChoices
     }
        
     askMenu(choices, allowAbort = false).head match {
@@ -2795,7 +2808,7 @@ object LabyrinthAwakening {
       // First if an "Advisors" marker is present in any of the countries, then 
       // add one militia to that country.
       for (m <- civilWars filter (_.hasMarker("Advisors")) if game.militiaAvailable > 0) {
-        log("Add one militia to ${m.name} due to presence of Advisors")
+        log(s"Add one militia to ${m.name} due to presence of Advisors")
         game = game.updateCountry(m.copy(militia = m.militia + 1))
       } 
       
@@ -3226,6 +3239,13 @@ object LabyrinthAwakening {
     game = game.copy(cardsLapsing = cardNumber :: game.cardsLapsing)
   }
   
+  def removeCardFromLapsing(cardNumber: Int): Unit = {
+    if (game.cardLapsing(cardNumber)) {
+      log("The \"%s\" card is not longer lapsing".format(deck(cardNumber).name))
+      game = game.copy(cardsLapsing = game.cardsLapsing filterNot (_ == cardNumber))
+    }
+  }
+  
   // Prestige roll used
   //   After regime change, withdraw, unblocked plot in the US, or by event.
   def rollPrestige(): Unit = {
@@ -3268,7 +3288,6 @@ object LabyrinthAwakening {
           if (m.besiegedRegime  ) log(s"Remove besieged regime marker from $name")
           if (m.aidMarkers > 0  ) log(s"Remove ${amountOf(m.aidMarkers, "aid marker")} from $name")
           if (m.awakening > 0   ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name")
-          if (m.reaction > 0    ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
           if (m.reaction > 0    ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name")
           if (m.militia > 0     ) log(s"Remove ${m.militia} miltia from $name")
 
@@ -3890,11 +3909,11 @@ object LabyrinthAwakening {
   
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
-      if (lapsingEventInPlay("Arab Winter")) 
-        log(s"${amountOf(num, "awakening marker")} NOT added to $target because Arab Winter is in effect")
+      val m = game.getMuslim(target)
+      assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
+      if (lapsingEventInPlay("Arab Winter"))
+        log("Awakening markers cannot be placed because \"Arab Winter\" is in effect")
       else {
-        val m = game.getMuslim(target)
-        assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
         game = game.updateCountry(m.copy(awakening = m.awakening + num))
         log(s"Add ${amountOf(num, "awakening marker")} to $target")
       }
@@ -3914,8 +3933,12 @@ object LabyrinthAwakening {
     if (num > 0) {
       val m = game.getMuslim(target)
       assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
-      game = game.updateCountry(m.copy(reaction = m.reaction + num))
-      log(s"Add ${amountOf(num, "reaction marker")} to $target")
+      if (lapsingEventInPlay("Arab Winter"))
+        log("Reaction markers cannot be placed because \"Arab Winter\" is in effect")
+      else {
+        game = game.updateCountry(m.copy(reaction = m.reaction + num))
+        log(s"Add ${amountOf(num, "reaction marker")} to $target")
+      }
     }
   }
   
@@ -4130,6 +4153,7 @@ object LabyrinthAwakening {
                 wmdCache     = n.wmdCache
               ))
               log("Flip Nigeria over to its Muslim side")
+              log("Nigeria is now a Poor Neutral Muslim country")
             }
             else if (n.canChangePosture) {
               rollCountryPosture(n.name)
@@ -4171,10 +4195,9 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry => 
           game = game.updateCountry(n.copy(plots = Nil)).copy(resolvedPlots = (n.plots map (_.plot)) ::: game.resolvedPlots)
       }
-      game = game.copy(plays = PlotsResolved(unblocked.size) :: game.plays,
-                       lastResolvePlotsTargets = (unblocked map (_.name)).toSet)
-      savePlay()  // Save the play so we can roll back
     }
+    game = game.copy(plays = PlotsResolved(unblocked.size) :: game.plays)
+    savePlay()  // Save the play so we can roll back
   }
   
   def piratesConditionsInEffect: Boolean = List(Somalia, Yemen) map game.getMuslim exists { m =>
@@ -4200,13 +4223,13 @@ object LabyrinthAwakening {
   
   def endTurn(): Unit = {
     if (askYorN("Really end the turn (y/n)? ")) {
+      if (unresolvedPlots > 0)
+        resolvePlots()
+      
       log()
       log("End of turn")
       log(separator())
     
-      if (unresolvedPlots > 0)
-        resolvePlots()
-      
       if (game.markerInPlay("Pirates") && piratesConditionsInEffect) {
         log("No funding drop because Pirates is in effect")
       }
@@ -4236,7 +4259,7 @@ object LabyrinthAwakening {
         game = game.copy(cardsLapsing = Nil, eventParams = game.eventParams.copy(oilPriceSpikes = 0))
       }
       game.firstPlotCard foreach { num => 
-        log(s"Discard the firstplot card: ${cardNumAndName(num)}")
+        log(s"Discard the first   plot card: ${cardNumAndName(num)}")
         game = game.copy(firstPlotCard = None)
       }
       // The Bot's reserves are not cleared
@@ -4633,12 +4656,10 @@ object LabyrinthAwakening {
   @tailrec def commandLoop(): Unit = {
     checkAutomaticVictory()
     
-    val cards = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved]) collect {
-      case PlayedCard(_, _)      => 1
-      case Played2Cards(_, _, _) => 2
-    }).sum
+    val cardsPlayed     = (game.plays map (_.numCards)).sum
+    val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved]) map (_.numCards)).sum
     
-    if (cards > 0 && cards % 4 == 0 && unresolvedPlots > 0) {
+    if (cardsSincePlots > 0 && cardsSincePlots % 4 == 0 && unresolvedPlots > 0) {
       println(separator())
       println(s"4 cards have been played and there are unresolved plots on the map")
       if (askYorN("Do you want to resolve the plots now (y/n)? "))
@@ -4649,7 +4670,7 @@ object LabyrinthAwakening {
     val plotDisp = if (plots == 0) "" else s", ${amountOf(plots, "unresolved plot")}"
     val prompt = {
       s"""
-         |>>> Turn ${game.turn}  (${amountOf(cards, "card")} played$plotDisp) <<<
+         |>>> Turn ${game.turn}  (${amountOf(cardsPlayed, "card")} played$plotDisp) <<<
          |${separator()}
          |Command: """.stripMargin
     }
@@ -4868,10 +4889,22 @@ object LabyrinthAwakening {
       val triggered  = card.eventWillTrigger(Jihadist)
       logCardPlay(US, card, playable, triggered)
       try {
-        game.humanRole match {
-          case US => humanUsCardPlay(card, playable, triggered)
-          case _  => USBot.cardPlay(card, playable)
+        // When the Ferguson event is in effect, the Jihadist player
+        // may cancel the play of any US associated card.
+        // If the JihadistBot is playing it will cancel the next one played by the US.
+        if (game.lapsingInPlay("Ferguson") &&
+            card.association == US &&
+            (game.botRole == Jihadist ||
+             askYorN("Do you wish to cancel the play of this US associated card? (y/n) "))) {
+        
+          log(s"${card.numAndName} is discarded without effect")
+          removeCardFromLapsing(166)
         }
+        else 
+          game.humanRole match {
+            case US => humanUsCardPlay(card, playable, triggered)
+            case _  => USBot.cardPlay(card, playable)
+          }
         savePlay()  // Save the play so we can roll back
       }
       catch {
@@ -5117,10 +5150,20 @@ object LabyrinthAwakening {
       val triggered  = card.eventWillTrigger(US)
       logCardPlay(Jihadist, card, playable, triggered)
       try {
-        game.humanRole match {
-          case Jihadist => humanJihadistCardPlay(card, playable, triggered)
-          case _        => JihadistBot.cardPlay(card, playable)
+        // When the Ferguson event is in effect, the Jihadist player
+        // may cancel the play of any US associated card.
+        // If the JihadistBot is playing it will only cancel those played by the US.
+        if (game.lapsingInPlay("Ferguson") && card.association == US && game.humanRole == Jihadist &&
+           askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
+        
+          log(s"${card.numAndName} is discarded without effect")
+          removeCardFromLapsing(166)
         }
+        else
+          game.humanRole match {
+            case Jihadist => humanJihadistCardPlay(card, playable, triggered)
+            case _        => JihadistBot.cardPlay(card, playable)
+          }
         savePlay()  // Save the play so we can roll back
       }
       catch {

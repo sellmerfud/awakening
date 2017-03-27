@@ -1032,10 +1032,12 @@ object USBot extends BotHelpers {
   def reassessment(card: Card): Boolean = {
     val tryReassess = {
       // Must be first US card play of the action phase
-      // Check that the most recent plays include an even number (including zero)
-      // of US card plays.
+      // The card being currently played has already been added to the list of plays.
+      // Check that the number of US played cards at the front of the plays list
+      // is an odd number.  We cannot just check for 1, because the US may be playing
+      // two action phases without a Jihadist play in between (if the Jihadist hand is empty)
       val usPlays = (game.plays takeWhile { case PlayedCard(US, _) => true; case _ => false }).size
-      val firstUSCardOfPhase = usPlays % 2 == 0
+      val firstUSCardOfPhase = usPlays % 2 == 1
 
        firstUSCardOfPhase &&
        (card.ops + game.reserves.us >= 3) &&  // Possible if we have at least 3 on hand
@@ -1052,7 +1054,7 @@ object USBot extends BotHelpers {
         askYorN(s"Does the $US Bot have another card in hand (y/n)? ")
 
       reassess && {
-        val cardNum = askCardNumber("Card # ", initial = None, allowNone = false).get
+        val cardNum = askCardNumber("Enter the next card in the US hand. Card # ", initial = None, allowNone = false).get
         val card2 = deck(cardNum)
         if (card2.ops >= opsNeeded) {
           val newPlays = Played2Cards(US, card.number, card2.number) :: game.plays.tail
