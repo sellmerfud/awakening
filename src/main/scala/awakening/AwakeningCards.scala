@@ -2986,21 +2986,28 @@ object AwakeningCards {
         // See Event Instructions table
         // Can possibly declare Caliphate, only in Syria or Iraq
         if (role == game.humanRole) {
-          val target = askCountry("Place cells in Syria or Iraq? ", Syria::Iraq::Nil)
-          addEventTarget(target)
-          val withCells = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
-          val sources = askCellsFromAnywhere(3, true, withCells, sleeperFocus = false) 
-          println()
-          sources foreach {
-            case CellsItem("track", _ , n) => addSleeperCellsToCountry(target, n)
-            case CellsItem(name, a, s)     =>
-              moveCellsBetweenCountries(name, target, a, true)
-              moveCellsBetweenCountries(name, target, s, false)
+          println("Place 3 cells in Syria and/or Iraq")
+          val inSyria = askInt("How many do you wish to place in Syria? ", 0, 3)
+          val inIraq = 3 - inSyria
+          val targets = List((Syria, inSyria),(Iraq, inIraq)) filterNot (_._2 == 0)
+          for ((target, num) <- targets) {
+            addEventTarget(target)
+            val withCells = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
+            println()
+            println(s"Choose ${amountOf(num, "cell")} to place in $target")
+            val sources = askCellsFromAnywhere(num, true, withCells, sleeperFocus = false) 
+            println()
+            sources foreach {
+              case CellsItem("track", _ , n) => addSleeperCellsToCountry(target, n)
+              case CellsItem(name, a, s)     =>
+                moveCellsBetweenCountries(name, target, a, true)
+                moveCellsBetweenCountries(name, target, s, false)
+            }
+            // Count how many were actually placed (based on availability)
+            val totalPlaced = (sources map (_.total)).sum
+            if (totalPlaced == 3 && canDeclareCaliphate(target) && askDeclareCaliphate(target))
+              declareCaliphate(target)
           }
-          
-          val totalPlaced = (sources map (_.total)).sum
-          if (totalPlaced == 3 && canDeclareCaliphate(target) && askDeclareCaliphate(target))
-            declareCaliphate(target)
           
           val action = if (game.cellsAvailable == 0) "draw"
           else {

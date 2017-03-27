@@ -1599,7 +1599,6 @@ object LabyrinthAwakening {
         val prompt = if (numChoices > 1) s"${ordinal(num)} Selection: "
         else "Selection: "
         val choice = askOneOf(prompt, 1 to itemsRemaining.size, allowAbort = allowAbort).get.toInt
-        println()
         val index  = choice - 1
         val key    = indexMap(index)
         val remain = if (repeatsOK) itemsRemaining else itemsRemaining - key
@@ -1663,7 +1662,8 @@ object LabyrinthAwakening {
           else
             fmt.format(i.name, i.actives, i.sleepers)
           val choices = sources map { i => i.name -> disp(i) }
-          println()
+          if (numRemaining != num)
+            println()
           println(s"${amountOf(numRemaining, "cell")} remaining, choose from:")
           val name = askMenu(choices).head
           val src = sources.find (_.name == name).get
@@ -1688,13 +1688,7 @@ object LabyrinthAwakening {
         Nil
       val countrySrcs = (game getCountries names filter (_.totalCells > 0)
                            map (c => CellsItem(c.name, c.activeCells, c.sleeperCells)))
-      val srcItems = nextChoice(num, trackSrc ::: countrySrcs)
-      // Combine items in the same
-      val result = for ((name, items) <- srcItems.groupBy(_.name))
-        yield (name -> items.foldLeft(CellsItem(name, 0, 0)) { (sum, item) =>
-          sum.copy(actives = sum.actives + item.actives, sleepers = sum.sleepers + item.sleepers)
-        })
-      result.values.toList
+      nextChoice(num, trackSrc ::: countrySrcs)
     }
   }
   
