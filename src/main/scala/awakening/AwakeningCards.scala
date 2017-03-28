@@ -668,8 +668,7 @@ object AwakeningCards {
         decreaseFunding(1)
         addEventTarget(Pakistan)
         testCountry(Pakistan)
-        if ((game getMuslim Pakistan).canTakeAwakeningOrReactionMarker)
-          addAwakeningMarker(Pakistan)
+        addAwakeningMarker(Pakistan)
       }
     )),
     // ------------------------------------------------------------------------
@@ -834,12 +833,7 @@ object AwakeningCards {
         addEventTarget(target)
         testCountry(target)
         removeBesiegedRegimeMarker(target)
-        if (game.getMuslim(target).canTakeAwakeningOrReactionMarker)
-          addAwakeningMarker(target)
-        else if (game.getMuslim(target).isGood)
-          log(s"Cannot add an awakening marker to $target because it has Good governance")
-        else
-          log(s"Cannot add an awakening marker to $target because it is in Civil War")
+        addAwakeningMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
@@ -871,12 +865,10 @@ object AwakeningCards {
       (role: Role) => {
         val candidates = countryNames(game.muslims filter tahrirCandidate)
         
-        if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker) {
-          addEventTarget(Egypt)
-          testCountry(Egypt)
-          addAwakeningMarker(Egypt, 2)
-          addReactionMarker(Egypt)
-        }
+        addEventTarget(Egypt)
+        testCountry(Egypt)
+        addAwakeningMarker(Egypt, 2)
+        addReactionMarker(Egypt)
         
         if (candidates.nonEmpty) {
           val target = if (role == game.humanRole)
@@ -1319,8 +1311,7 @@ object AwakeningCards {
         if (m.isPoor)
           improveGovernance(target, 1, canShiftToGood = false)
         removeCellsFromCountry(target, m.activeCells, m.sleeperCells, addCadre = true)
-        if (m.canTakeAwakeningOrReactionMarker)
-          addReactionMarker(target, m.totalCells)
+        addReactionMarker(target, m.totalCells)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1479,8 +1470,7 @@ object AwakeningCards {
         addEventTarget(Iraq)
         testCountry(Iraq)
         addActiveCellsToCountry(Iraq, 1 min game.cellsAvailable)
-        if ((game getMuslim Iraq).canTakeAwakeningOrReactionMarker)
-          addReactionMarker(Iraq)
+        addReactionMarker(Iraq)
         decreasePrestige(1)
       }
     )),
@@ -3143,13 +3133,11 @@ object AwakeningCards {
         addEventTarget(Syria)
         if (role == US) {
           improveGovernance(Syria, 1, canShiftToGood = false)
-          if (syria.canTakeAwakeningOrReactionMarker)
-            addAwakeningMarker(Syria)
+          addAwakeningMarker(Syria)
         }
         else {  // Jihadist
           degradeGovernance(Syria, 1, canShiftToIR = false)
-          if (syria.canTakeAwakeningOrReactionMarker)
-            addReactionMarker(Syria)
+          addReactionMarker(Syria)
         }
       }
     )),
@@ -3721,11 +3709,9 @@ object AwakeningCards {
         addEventTarget(Syria)
         addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
         addMilitiaToCountry(Syria, militia min game.militiaAvailable)
-        if ((game getMuslim Turkey).canTakeAidMarker) {
-          addEventTarget(Turkey)
-          testCountry(Turkey)
-          addAidMarker(Turkey)
-        }
+        addEventTarget(Turkey)
+        testCountry(Turkey)
+        addAidMarker(Turkey)
       }
     )),
     // ------------------------------------------------------------------------

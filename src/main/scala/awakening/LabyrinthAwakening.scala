@@ -3892,9 +3892,12 @@ object LabyrinthAwakening {
   def addAidMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
       val m = game.getMuslim(target)
-      assert(!m.isGood && !m.isIslamistRule, s"$target cannot take an aid marker")
-      game = game.updateCountry(m.copy(aidMarkers = m.aidMarkers + num))
-      log(s"Add ${amountOf(num, "aid marker")} to $target")
+      if (m.canTakeAidMarker) {
+        game = game.updateCountry(m.copy(aidMarkers = m.aidMarkers + num))
+        log(s"Add ${amountOf(num, "aid marker")} to $target")
+      }
+      else
+        log(s"$target cannot take an aid marker")
     }
   }
   
@@ -3910,13 +3913,14 @@ object LabyrinthAwakening {
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
       val m = game.getMuslim(target)
-      assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
       if (lapsingEventInPlay("Arab Winter"))
         log("Awakening markers cannot be placed because \"Arab Winter\" is in effect")
-      else {
+      else if (m.canTakeAwakeningOrReactionMarker) {
         game = game.updateCountry(m.copy(awakening = m.awakening + num))
         log(s"Add ${amountOf(num, "awakening marker")} to $target")
       }
+      else
+        log(s"$target cannot take an awakening marker")
     }
   }
   
@@ -3932,13 +3936,14 @@ object LabyrinthAwakening {
   def addReactionMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
       val m = game.getMuslim(target)
-      assert(m.canTakeAwakeningOrReactionMarker, s"$target cannot take an awakening marker")
       if (lapsingEventInPlay("Arab Winter"))
         log("Reaction markers cannot be placed because \"Arab Winter\" is in effect")
-      else {
+      else if (m.canTakeAwakeningOrReactionMarker) {
         game = game.updateCountry(m.copy(reaction = m.reaction + num))
         log(s"Add ${amountOf(num, "reaction marker")} to $target")
       }
+      else
+        log(s"$target cannot take a reaction marker")
     }
   }
   
