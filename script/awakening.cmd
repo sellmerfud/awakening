@@ -1,0 +1,17 @@
+@ECHO off
+
+SetLocal EnableDelayedExpansion
+
+rem This script is used to run the scala implementation of the
+rem solo AI for Labyrinth: The Awakening
+
+## Set the current working directory to the directory where this script is running.
+## This is important so that all of our relative path references work correctly.
+pushd %~dp0
+
+CLASSPATH=lib\awakening_2.11-1.0.jar;lib\optparse_2.11.jar;lib\scala-library-2.11.0.jar;^
+lib\scala-reflect-2.11.0.jar;lib\scala-pickling_2.11-0.10.1.jar
+java -server -cp %CLASSPATH%  awakening.LabyrinthAwakening %*
+
+popd
+EndLocal
