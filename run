@@ -1,7 +1,0 @@
-#! /bin/bash
-
-CP=./target/scala-2.11/classes:\
-/Users/curt/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.11.8.jar:\
-/Users/curt/.ivy2/cache/org.scala-lang.modules/scala-pickling_2.11/jars/scala-pickling_2.11-0.10.1.jar   
-
-java -cp "$CP" awakening.LabyrinthAwakening
