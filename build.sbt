@@ -27,7 +27,8 @@ lazy val awakening = (project in file("."))
       val log = streams.value.log
       val p = (packageBin in Compile).value  // Depends on the package being built
       val jar    = (artifactPath in packageBin in Compile).value
-      val cp     = (managedClasspath in Compile).value.files
+      // Filter out the scala-compiler jar file.
+      val cp     = (managedClasspath in Compile).value.files filterNot (_.getName contains "compiler")
       val base   = s"./target/awakening-${version.value}"
       val lib    = s"./target/awakening-${version.value}/lib"
       val others = Seq("src/other/awakening_config",
