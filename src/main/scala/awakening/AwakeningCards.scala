@@ -2962,8 +2962,10 @@ object AwakeningCards {
             addAwakeningMarker(name, 2)
           
         }
-        removeGlobalEventMarker("Malala Yousafzai")
-        addGlobalEventMarker("3 Cups of Tea")
+        if (role == Jihadist) {
+          removeGlobalEventMarker("Malala Yousafzai")
+          addGlobalEventMarker("3 Cups of Tea")
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -2985,6 +2987,7 @@ object AwakeningCards {
           val targets = List((Syria, inSyria),(Iraq, inIraq)) filterNot (_._2 == 0)
           for ((target, num) <- targets) {
             addEventTarget(target)
+            testCountry(target)
             val withCells = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
             println()
             println(s"Choose ${amountOf(num, "cell")} to place in $target")
@@ -3033,6 +3036,7 @@ object AwakeningCards {
           else if (game.cellsAvailable > 0) {
             val schengen = randomSchengenCountry
             addEventTarget(schengen.name)
+            testCountry(schengen.name)
             addSleeperCellsToCountry(schengen.name, 1)
           }
         }
@@ -3112,7 +3116,7 @@ object AwakeningCards {
         if (role == US) {
           // Values adjusted if the #237 Osama Bin Laden card has been rmoved 
           val num = if (game.cardRemoved(237)) 2 else 1
-          decreaseFunding(num)
+          decreaseFunding(1)
           increasePrestige(num)
         }
         else {

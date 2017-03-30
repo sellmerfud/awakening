@@ -2089,18 +2089,11 @@ object LabyrinthAwakening {
     readLine("Continue ↩︎ ")
   }
   
-  var indentation = 0
-  
-  // Add a two spaces to the current indent.
-  def indentLog(): Unit = indentation += 2
-  def outdentLog(): Unit = indentation = (indentation - 2) max 0
-  def clearIndent(): Unit = indentation = 0
-  
   // Print the line to the console and save it in the game's history.
-  def log(line: String = ""): Unit = {
-    val indentedLine = (" " * indentation) + line
-    println(indentedLine)
-    game = game.copy(history = game.history :+ indentedLine)
+  def log(line: String = "", echo: Boolean = true): Unit = {
+    if (echo)
+      println(line)
+    game = game.copy(history = game.history :+ line)
   }
   
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
@@ -2133,6 +2126,7 @@ object LabyrinthAwakening {
     else 
       s"  (The ${card.association} event is not playable)"
     log()
+    log(separator(char = '='), echo = false)
     log(s"$player plays $card")
     log(eventMsg)
   }
@@ -2199,7 +2193,7 @@ object LabyrinthAwakening {
   
   def logSummary(summary: Seq[String]): Unit = {
     log()
-    summary foreach log
+    summary foreach (log(_))
   }
   
   // Display some or all of the game log.
@@ -3180,7 +3174,7 @@ object LabyrinthAwakening {
         val successes = nextAttempt(1)
         val failures  = numAttempts - successes
         val majorSuccess = major && (
-          (m.isPoor && (successes  > 1 || m.besiegedRegime)) || 
+          (m.isPoor && (successes  > 1 || (successes == 1 && m.besiegedRegime))) || 
           (m.isFair && (successes == 3 || (successes == 2 && m.besiegedRegime)))
         )
         if (major)
@@ -3342,8 +3336,7 @@ object LabyrinthAwakening {
           val degraded = m.copy(
             governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
             aidMarkers = 0, militia = 0, besiegedRegime = false)
-          game = game.updateCountry(degraded).copy(
-            availablePlots = List.fill(m.wmdCache)(PlotWMD) ::: game.availablePlots)
+          game = game.updateCountry(degraded)
           moveWMDCachedToAvailable(name)
           removeEventMarkersFromCountry(name, "Advisors")
           endRegimeChange(name)
@@ -4226,6 +4219,7 @@ object LabyrinthAwakening {
   val START_OF_TURN = "Start of turn"
   def logStartOfTurn(): Unit = {
     log()
+    log(separator(char = '='))
     log(s"$START_OF_TURN ${game.turn}")
     log(separator(char = '='))
   }
@@ -4395,7 +4389,7 @@ object LabyrinthAwakening {
             log()
             log("The following cards are removed for this scenario")
             log(separator())
-            scenario.cardsRemoved map (deck(_).toString) foreach log  
+            scenario.cardsRemoved map (deck(_).toString) foreach (log(_))
           }
           saveTurn()  // Save the initial game state as turn-0
           game = game.copy(turn = game.turn + 1)
@@ -5005,7 +4999,7 @@ object LabyrinthAwakening {
           case actions =>
             actions foreach {
               case TriggeredEvent(c) =>
-                JihadistBot.performTriggeredEvent(card)
+                JihadistBot.performTriggeredEvent(c)
               case Ops =>
                 action match {
                   case WarOfIdeas => humanWarOfIdeas(opsAvailable)
@@ -5251,7 +5245,7 @@ object LabyrinthAwakening {
           case actions =>
             actions foreach {
               case TriggeredEvent(c) =>
-                USBot.performTriggeredEvent(card)
+                USBot.performTriggeredEvent(c)
               case Ops =>
                 action match {
                   case Recruit      => humanRecruit(opsAvailable)
@@ -5836,7 +5830,7 @@ object LabyrinthAwakening {
     @tailrec def getNextResponse(): Unit = {
       println()
       println(separator())
-      game.countrySummary(name, showAll = true) foreach println
+      game.countrySummary(name) foreach println
       println()
         
       if (game.isMuslim(name)) {
