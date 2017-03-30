@@ -16,7 +16,7 @@ lazy val awakening = (project in file("."))
     scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %% "scala-pickling" % "0.10.1",
-      "org.sellmerfud"         %% "optparse"       % "2.2-SNAPSHOT"
+      "org.sellmerfud"         %% "optparse"       % "2.2"
     ),
     // Task to create the distribution zip file
     // To create a zip file that is readable on windoze
@@ -25,7 +25,7 @@ lazy val awakening = (project in file("."))
     //  3. In the Mac Finder, right click target/awakening-1.0 and compress
     stage in Compile := {
       val log = streams.value.log
-      val p = (packageBin in Compile).value  // Depends on the package being built
+      (packageBin in Compile).value  // Depends on the package being built
       val jar    = (artifactPath in packageBin in Compile).value
       // Filter out the scala-compiler jar file.
       val cp     = (managedClasspath in Compile).value.files filterNot (_.getName contains "compiler")
@@ -36,8 +36,10 @@ lazy val awakening = (project in file("."))
                        "src/other/awakening.cmd") map (new File(_))
       val files  = (others pair (f => flatRebase(base)(f).map (new File(_)))) ++ 
                    ((jar +: cp) pair (f => flatRebase(lib)(f).map (new File(_))))
+      log.info(s"Staging to $base ...")
       IO.createDirectory(new File(lib))
       IO.copy(files, overwrite = true)
+      log.info("Done staging.")
     }
   )
   

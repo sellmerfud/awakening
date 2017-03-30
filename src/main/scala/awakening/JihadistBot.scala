@@ -406,8 +406,11 @@ object JihadistBot extends BotHelpers {
     val desc = "Major Jihad Success possible at Poor?"
     def yesPath = MajorJihadOp
     def noPath  = FundingTightDecision
-    def condition(ops: Int) =
-      game.majorJihadTargets(ops) map game.getMuslim exists (m => m.isPoor && jihadSuccessPossible(m, true))
+    def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
+      m.isPoor &&
+      unusedCells(m) - m.totalTroopsAndMilitia >= 5 &&
+      jihadSuccessPossible(m, true)
+    }
   }
   
   object FundingTightDecision extends OperationDecision {
@@ -435,8 +438,13 @@ object JihadistBot extends BotHelpers {
     val desc = "Cells in Good or Fair Muslim where Jihad Success Possible?"
     def yesPath = MinorJihadOp
     def noPath  = PoorNeedCellsforMajorJihadDecision
-    def condition(ops: Int) = 
-      game hasMuslim (m => jihadSuccessPossible(m, false) && (m.isGood || m.isFair))
+    def condition(ops: Int) = {
+      game hasMuslim { m =>
+        (m.isGood || m.isFair) &&
+        jihadSuccessPossible(m, false) && 
+        unusedCells(m) > 0
+      }
+    }
   }
   
   // This object incorporates two boxes on the Flowchart

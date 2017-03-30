@@ -417,7 +417,7 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(132, "Battle of Sirte", US, 2,
-      Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => game hasMuslim (_.civilWar)
       ,
       (role: Role) => {
@@ -620,7 +620,7 @@ object AwakeningCards {
         else {
           val target =askCountry("Select country with cadre: ", cadres)
           addEventTarget(target)
-          removeCadre(target)
+          removeCadreFromCountry(target)
         }
         
         // US player conducts a 1 Op operations.
@@ -2057,12 +2057,12 @@ object AwakeningCards {
               }
               else {
                 log(s"Recruit in $target fails with a die roll of $die")
-                addCadre(target)
+                addCadreToCountry(target)
               }
             }
           }
           else
-            addCadre(target)
+            addCadreToCountry(target)
         }
       }
     )),
@@ -2524,12 +2524,12 @@ object AwakeningCards {
               val name = askCountry("Place a cadre in which country? ", candidates)
               addEventTarget(name)
               testCountry(name)
-              addCadre(name)
+              addCadreToCountry(name)
             case _          => 
               val candidates = countryNames(game.countries filter (c => c.hasCadre ))
               val name = askCountry("Remove cadre from which country? ", candidates)
               addEventTarget(name)
-              removeCadre(name)
+              removeCadreFromCountry(name)
           }
         }
         else if (role == US) {
@@ -2797,7 +2797,7 @@ object AwakeningCards {
                 // Use the Bot routine to pick a sleeper first
                 val (actives, sleepers) = USBot.chooseCellsToRemove(name, 1)
                 removeCellsFromCountry(name, actives, sleepers, addCadre = true)
-              case "cadre" => removeCadre(name)
+              case "cadre" => removeCadreFromCountry(name)
               case "plot"  => performAlert(name, humanPickPlotToAlert(name))
             }
           }
@@ -2818,7 +2818,7 @@ object AwakeningCards {
               removeCellsFromCountry(name, actives, sleepers, addCadre = true)
             }
             else
-              removeCadre(name)
+              removeCadreFromCountry(name)
           }
         }
       }
@@ -3126,7 +3126,10 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(220, "Daraa", Unassociated, 2,
       Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => !game.getMuslim(Syria).isIslamistRule
+      (role: Role) => {
+        val syria = game getMuslim Syria
+        (syria.isGood || syria.isFair || syria.canTakeAwakeningOrReactionMarker)
+      }
       ,
       (role: Role) => {
         val syria = game getMuslim Syria
