@@ -1849,10 +1849,8 @@ object LabyrinthAwakening {
   }
   
   def setUSPosture(newPosture: String): Unit = {
-    if (game.usPosture == newPosture) {
+    if (game.usPosture == newPosture)
       log(s"US posture remains $newPosture")
-      logWorldPosture()
-    }
     else {
       game = game.copy(usPosture = newPosture)
       log(s"Set US posture to $newPosture")
@@ -2134,7 +2132,7 @@ object LabyrinthAwakening {
       s"  (The ${card.association} event will not be triggered)"
     else 
       s"  (The ${card.association} event is not playable)"
-    
+    log()
     log(s"$player plays $card")
     log(eventMsg)
   }
@@ -2694,9 +2692,8 @@ object LabyrinthAwakening {
   // If the US is human then prompt for pieces to remove.
   // Return the number of unresolved hits
   def usCivilWarLosses(m: MuslimCountry, hits: Int): Int = {
-    if (hits == 0 || m.totalTroopsAndMilitia == 0) {
+    if (hits == 0 || m.totalTroopsAndMilitia == 0)
       hits
-    }
     else {
       val (markersLost, troopsLost, militiaLost, hitsRemaining) = if (game.humanRole == US) {
         // If there are any markers representing troops or
@@ -2709,37 +2706,31 @@ object LabyrinthAwakening {
         else if (!mixedCubes && m.troopsMarkers.isEmpty) {
           if (m.troops > 0)
             (Nil, m.troops min hits, 0, (hits - m.troops) max 0)
-          else if (m.militia > 0)
-            (Nil, 0, m.militia min hits, (hits - m.militia) max 0)
           else
-            (m.troopsMarkers map (_.name), 0, 0, (hits - m.markerTroops) max 0)
+            (Nil, 0, m.militia min hits, (hits - m.militia) max 0)
         }
         else {
           var markersLost = List.empty[String]
           var (troopsLost, militiaLost, hitsRemaining) = (0, 0, hits)
-          def nextHit(markers: List[TroopsMarker], 
-                      troops: Int,
-                      militia: Int): Unit = {
+          def nextHit(markers: List[TroopsMarker], troops: Int, militia: Int): Unit = {
             if (hitsRemaining > 0 && (markers.nonEmpty || troops > 0 || militia > 0)) {
-              println(s"${amountOf(hitsRemaining, "hit")} remaining")
-              println("Choose which unit will aborb the next hit")
-              
               val choices = List(
                 if (troops  > 0) Some("troop"   -> "Troop cube") else None,
                 if (militia > 0) Some("militia" -> "Militia cube") else None
               ).flatten ++ (markers map (m => m.name -> s"${m.name}  (absorbs ${amountOf(m.num, "hit")})"))
+              println(s"$US must absorb ${amountOf(hitsRemaining, "more hit")}")
+              println("Which unit will take the next hit:")
               askMenu(choices).head match {
-                case "troop"   => troopsLost += 1;  hitsRemaining -=1; nextHit(markers, troops - 1, militia)
+                case "troop"   => troopsLost  += 1; hitsRemaining -=1; nextHit(markers, troops - 1, militia)
                 case "militia" => militiaLost += 1; hitsRemaining -=1; nextHit(markers, troops, militia - 1)
                 case name      => 
-                  val m = (markers find (_.name == name)).get
+                  val marker = (markers find (_.name == name)).get
                   markersLost = name :: markersLost
-                  hitsRemaining -= m.num; 
+                  hitsRemaining = (hitsRemaining - marker.num) max 0
                   nextHit(markers filterNot (_.name == name), troops, militia)
               }
             }
           }
-          println(s"The US must absorb ${amountOf(hits, "hit")} due to attrition")
           nextHit(m.troopsMarkers, m.troops, m.militia)
           (markersLost, troopsLost, militiaLost, hitsRemaining)
         }
@@ -2776,18 +2767,24 @@ object LabyrinthAwakening {
       hits
     else {
       // Remove two cells per hit if any troops present or if "Advisors" marker present.
-      val multiplier = if (m.totalTroops > 0 || m.hasMarker("Advisors")) 2 else 1
-      val losses     = hits * multiplier
+      val multiplier    = if (m.totalTroops > 0 || m.hasMarker("Advisors")) 2 else 1
+      val losses        = hits * multiplier
+      val unfulfilled   = (losses - m.totalCells) max 0
+      val hitsRemaining =  (unfulfilled + multiplier - 1) / multiplier
       
       val (activesLost, sleepersLost) = if (m.totalCells <= losses)
         (m.activeCells, m.sleeperCells)
+      else if (game.humanRole == Jihadist) {
+        println(s"$Jihadist must absorb ${amountOf(losses, "hit")}")
+        askCells(m.name, losses, sleeperFocus = false)
+      }
       else {
+        // Bot removes actives first.
         val active  = m.activeCells min losses
         val sleeper = m.sleeperCells min (losses - active)
         (active, sleeper)
       }
-      val unfulfilled   = (losses - activesLost - sleepersLost) max 0
-      val hitsRemaining =  (unfulfilled + multiplier - 1) / multiplier
+
       removeCellsFromCountry(m.name, activesLost, sleepersLost, addCadre = true)
       hitsRemaining    
     }
@@ -2811,7 +2808,7 @@ object LabyrinthAwakening {
       } 
       
       for (m <- civilWars) {
-        val jihadHits = m.totalCells / 6 + (if (dieRoll <= m.totalCells % 6) 1 else 0)
+        val jihadHits = m.totalCells            / 6 + (if (dieRoll <= m.totalCells % 6) 1 else 0)
         val usHits    = m.totalTroopsAndMilitia / 6 + (if (dieRoll <= m.totalTroopsAndMilitia % 6) 1 else 0)
         if (jihadHits + usHits == 0)
           log(s"${m.name}: no attrition suffered by either side")
