@@ -969,14 +969,14 @@ object JihadistBot extends BotHelpers {
       val maxReserves = (3 - card.ops) min game.reserves.jihadist
       val maxRadOps   = unusedOps + maxReserves
       log()
-      log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(game.reserves.jihadist,"reserve")})")
+      log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(maxReserves,"reserve")})")
       log(separator())
     
       // Returns the number of actions executed
       def nextAction(completed: Int): Unit = {
         if (completed < maxRadOps) {
-          val cardOps    = (unusedOps - completed) max 0  // Ops remaining from the card
-          val reserveOps = maxRadOps - cardOps                   // Ops remaining from reserves
+          val cardOps    = (unusedOps - completed) max 0   // Ops remaining from the card
+          val reserveOps = maxRadOps - cardOps - completed // Ops remaining from reserves
           val ops = getRadicalizationAction(cardOps == 0) match {
             case Some(PlotWMDInUS)               => radPlotWMDInUs(cardOps, reserveOps)
             case Some(TravelToUntestedNonMuslim) => radTravelToUntestedNonMuslim(cardOps, reserveOps)
