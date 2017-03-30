@@ -1978,7 +1978,7 @@ object AwakeningCards {
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else
-          JihadistBot.recruitTarget(candidates).get
+          JihadistBot.recruitTravelToPriority(candidates).get
 
         addEventTarget(target)
         val m = game.getMuslim(target)
@@ -2025,9 +2025,9 @@ object AwakeningCards {
           
           if (eligible contains UnitedStates)
             UnitedStates :: JihadistBot.multipleTargets(2, eligible filterNot (_ == UnitedStates), 
-                                                JihadistBot.recruitTarget)
+                                                JihadistBot.recruitTravelToPriority)
           else 
-            JihadistBot.multipleTargets(3, eligible, JihadistBot.recruitTarget)
+            JihadistBot.multipleTargets(3, eligible, JihadistBot.recruitTravelToPriority)
         }
         
         val numCells = if (role == game.botRole && game.jihadistIdeology(Potent)) {
@@ -2192,7 +2192,7 @@ object AwakeningCards {
               val n = maxPer min available
               Target(t, n) :: nextTarget(available - n, ts)
           }
-          var names = JihadistBot.multipleTargets(2, candidates, JihadistBot.recruitTarget)
+          var names = JihadistBot.multipleTargets(2, candidates, JihadistBot.recruitTravelToPriority)
           nextTarget(game.cellsAvailable, names)  
         }
         
@@ -2267,7 +2267,7 @@ object AwakeningCards {
           // See Event Instructions table
           val candidates = 
             countryNames(game.muslims filter (m => !(m.isUntested || m.isGood && !m.autoRecruit)))
-          JihadistBot.recruitTarget(candidates).get
+          JihadistBot.recruitTravelToPriority(candidates).get
         }
         println()
         val priorCapacity = game.trainingCampCapacity
@@ -2677,7 +2677,7 @@ object AwakeningCards {
         else if (role == Jihadist ) {
           // Bot only affects cells or reaction markers.
           if (game.cellsAvailable > 0) {
-            val name = JihadistBot.recruitTarget(Turkey::Iraq::Syria::Nil).get
+            val name = JihadistBot.recruitTravelToPriority(Turkey::Iraq::Syria::Nil).get
             addEventTarget(name)
             testCountry(name)
             addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
@@ -3020,7 +3020,7 @@ object AwakeningCards {
           }
         }
         else {
-          val target = JihadistBot.recruitTarget(Syria::Iraq::Nil).get
+          val target = JihadistBot.recruitTravelToPriority(Syria::Iraq::Nil).get
           addEventTarget(target)
           testCountry(target)
           val num = 3 min game.cellsAvailable
@@ -3154,7 +3154,7 @@ object AwakeningCards {
         else if (role == Jihadist && candidates.nonEmpty) {
           // Bot will only remove cells.  Make sure there are cell in a country
           // other than the target country.
-          val target = JihadistBot.recruitTarget(candidates).get
+          val target = JihadistBot.recruitTravelToPriority(candidates).get
           game hasCountry (c => c.name != target && c.totalCells > 0)
         }
         else if (role == US && candidates.nonEmpty) {
@@ -3221,7 +3221,7 @@ object AwakeningCards {
         }
         else if (role == Jihadist) {
           // Bot removes only cells
-          val target = JihadistBot.recruitTarget(candidates).get
+          val target = JihadistBot.recruitTravelToPriority(candidates).get
           val withCells = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
           val countries = if (withCells.size <= 3)
             withCells
