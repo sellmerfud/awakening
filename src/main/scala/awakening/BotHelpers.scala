@@ -251,7 +251,7 @@ trait BotHelpers {
   def multipleTargets(num: Int, candidates: List[String], pickBest: (List[String]) => Option[String]): List[String] = {
     def nextTarget(n: Int, targets: List[String]): List[String] = {
       if (n <= num && targets.nonEmpty) {
-        pickBest(candidates) match {
+        pickBest(targets) match {
           case None => Nil
           case Some(name) => name :: nextTarget(n + 1, targets filterNot (_ == name))
         }
