@@ -511,13 +511,17 @@ object LabyrinthAwakening {
   sealed trait Play {
     def numCards: Int
   }
+  sealed trait CardPlay extends Play {
+    val role: Role
+  }
+  
   // Used to keep track of cards played during the current turn
   // for display purposes only.  This is stored in the game state.
-  case class PlayedCard(role: Role, cardNum: Int) extends Play {
+  case class PlayedCard(role: Role, cardNum: Int) extends CardPlay {
     override def numCards = 1
     override def toString() = s"$role played ${cardNumAndName(cardNum)}"
   }
-  case class Played2Cards(role: Role, card1Num: Int, card2Num: Int) extends Play {
+  case class Played2Cards(role: Role, card1Num: Int, card2Num: Int) extends CardPlay {
     override def numCards = 2
     override def toString() = s"$role played ${cardNumAndName(card1Num)} and ${cardNumAndName(card2Num)}"
   }
@@ -716,13 +720,14 @@ object LabyrinthAwakening {
   case class CampCells(inCamp: Int, onMap: Int)
   case class Reserves(us: Int, jihadist: Int)
   // Keeps track of the which countries were the target of
-  // operations
-  // events
-  // improved or tested
+  // -operations
+  // -events
+  // -improved or tested
   // 
   // Some events depend on this.
-  case class CardTargets(
+  case class PhaseTargets(
     ops:              Set[String] = Set.empty,
+    disrupted:        Set[String] = Set.empty,
     testedOrImproved: Set[String] = Set.empty,
     event:            Set[String] = Set.empty
   ) {
@@ -764,8 +769,8 @@ object LabyrinthAwakening {
     firstPlotCard: Option[Int] = None,     // Card number
     cardsLapsing: List[Int] = Nil,         // Card numbers
     cardsRemoved: List[Int] = Nil,         // Cards removed from the game.
-    targetsThisCard: CardTargets = CardTargets(),
-    targetsLastCard: CardTargets = CardTargets()
+    targetsThisPhase: PhaseTargets = PhaseTargets(),
+    targetsLastPhase: PhaseTargets = PhaseTargets()
   ) {
     
     def humanRole = params.humanRole
@@ -1790,18 +1795,23 @@ object LabyrinthAwakening {
   }
   
   def addOpsTarget(name: String): Unit = {
-    val targets = game.targetsThisCard
-    game = game.copy(targetsThisCard = targets.copy(ops = targets.ops + name))
+    val targets = game.targetsThisPhase
+    game = game.copy(targetsThisPhase = targets.copy(ops = targets.ops + name))
+  }
+  
+  def addDisruptedTarget(name: String): Unit = {
+    val targets = game.targetsThisPhase
+    game = game.copy(targetsThisPhase = targets.copy(disrupted = targets.disrupted + name))
   }
   
   def addTestedOrImproved(name: String): Unit = {
-    val targets = game.targetsThisCard
-    game = game.copy(targetsThisCard = targets.copy(testedOrImproved = targets.testedOrImproved + name))
+    val targets = game.targetsThisPhase
+    game = game.copy(targetsThisPhase = targets.copy(testedOrImproved = targets.testedOrImproved + name))
   }
   
   def addEventTarget(names: String*): Unit = {
-    val targets = game.targetsThisCard
-    game = game.copy(targetsThisCard = targets.copy(event = targets.event ++ names))
+    val targets = game.targetsThisPhase
+    game = game.copy(targetsThisPhase = targets.copy(event = targets.event ++ names))
   }
   
   // If the country is untested, test it and return true
@@ -2986,6 +2996,7 @@ object LabyrinthAwakening {
   def performDisrupt(target: String): Unit = {
     val bumpPrestige = game.disruptAffectsPrestige(target)
     addOpsTarget(target)
+    addDisruptedTarget(target)
     game.disruptLosses(target) match {
       case Some(Left((sleepers, actives))) =>
         flipSleeperCells(target, sleepers)
@@ -4889,11 +4900,16 @@ object LabyrinthAwakening {
     askCardNumber("Card # ", param) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
-      game = game.copy(
-        plays           = PlayedCard(US, card.number) :: game.plays,
-        targetsLastCard = game.targetsThisCard,
-        targetsThisCard = CardTargets()
-      )
+      
+      // If we are entering a new action phase, reset the phase targets
+      if (newActionPhase(US))
+        game = game.copy(
+          targetsLastPhase = game.targetsThisPhase,
+          targetsThisPhase = PhaseTargets()
+        )
+      
+      // Add the card to the list of plays for the turn.
+      game = game.copy(plays = PlayedCard(US, card.number) :: game.plays)
       
       val playable = card.eventIsPlayable(US)  
       val triggered  = card.eventWillTrigger(Jihadist)
@@ -5144,18 +5160,47 @@ object LabyrinthAwakening {
     log(separator())
     performReassessment()
   }
+  
+  // Attempt to detect a change of action phase.
+  // Normally an action phase consists to two card plays by the same side.
+  // There are exceptions to this because the hand sizes may have an odd number
+  // of cards and each hand size may be different.
+  // This function is called as a new card is being played by the indicated Role.
+  // We use the follow heuristic:
+  // - Looking at the most recent plays, count the number of cards that have been
+  //   played by the current role since either the other role has played a card, or
+  //   plots have been resolved or the beginning of the turn.
+  //   If that number is even (including zero) then we are starting a new phase.
+  //
+  // Card #138, "Intel Community" allows a player to play an additional card
+  // in the same action phase.  This will throw us off, and currently this is 
+  // not taken into account.  The Bot treats this card as unplayable.  We could
+  // ask the user if they are playing the additional card, and then add a new
+  // special type of entry in the `plays` list, but since this is a rare use case,
+  // I am ignoring it for now.
+  def newActionPhase(role: Role): Boolean = {
+    val cardPlays = game.plays.takeWhile {
+      case p: CardPlay if p.role == role => true
+      case _ => false
+    }
+    (cardPlays map (_.numCards)).sum % 2 == 0
+  }
         
   def jihadistCardPlay(param: Option[String]): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
-      // Add the card to the list of played cards for the turn
-      // and clear the op targets for the current card.
-      game = game.copy(
-        plays           = PlayedCard(Jihadist, card.number) :: game.plays,
-        targetsLastCard = game.targetsThisCard,
-        targetsThisCard = CardTargets()
-      )
+      
+      // If we are entering a new action phase, reset the phase targets
+      if (newActionPhase(Jihadist))
+        game = game.copy(
+          targetsLastPhase = game.targetsThisPhase,
+          targetsThisPhase = PhaseTargets()
+        )
+      
+      // Add the card to the list of plays for the turn.
+      game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
+      
       val playable = card.eventIsPlayable(Jihadist)  
       val triggered  = card.eventWillTrigger(US)
       logCardPlay(Jihadist, card, playable, triggered)

@@ -89,8 +89,8 @@ object AwakeningCards {
   val talibanResurgentCandidate = (m: MuslimCountry) => (m.civilWar || m.inRegimeChange) && m.totalCells >= 3
   val usAtrocitiesCandidate = (m: MuslimCountry) => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)
   val smartPhonesCandidate = (m: MuslimCountry) => m.canTakeAwakeningOrReactionMarker &&
-                                          (game.targetsThisCard.wasOpsOrEventTarget(m.name) ||
-                                           game.targetsLastCard.wasOpsOrEventTarget(m.name))
+                                          (game.targetsThisPhase.wasOpsOrEventTarget(m.name) ||
+                                           game.targetsLastPhase.wasOpsOrEventTarget(m.name))
 
   val alNusraFrontCandidate = (m: MuslimCountry) => (m.civilWar || m.inRegimeChange) &&
                                                      m.totalCells > 0 &&
