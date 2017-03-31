@@ -4105,14 +4105,16 @@ object LabyrinthAwakening {
                 }
               }
               
-              // roll plot dice
-              val dice = List.fill(mapPlot.plot.number)(dieRoll)
-              val successes = dice count (_ <= m.governance)
-              val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
-              log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
-              // Remove 1 aid marker for each sucessful die roll
-              removeAidMarker(name, successes min m.aidMarkers)
-              degradeGovernance(name, levels = successes, canShiftToIR = false)
+              if (!m.isPoor || m.aidMarkers > 0) {
+                // roll plot dice
+                val dice = List.fill(mapPlot.plot.number)(dieRoll)
+                val successes = dice count (_ <= m.governance)
+                val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
+                log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
+                // Remove 1 aid marker for each sucessful die roll
+                removeAidMarker(name, successes min m.aidMarkers)
+                degradeGovernance(name, levels = successes, canShiftToIR = false)
+              }
             }
             
           //------------------------------------------------------------------
@@ -4634,11 +4636,11 @@ object LabyrinthAwakening {
     def gameOver(victor: Role, reason: String) = {
       log()
       log(separator())
-      log(reason)
       log(s"Game Over - $victor automatic victory!")
+      log(reason)
     }
     if (game.goodResources >= 12)
-      gameOver(US, s"${game.numGoodOrFair} resources controlled by countries with Good governance")
+      gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance")
     else if (game.numGoodOrFair >= 15)
       gameOver(US, s"${game.numGoodOrFair} Muslim countries have Fair or Good governance")
     else if (game.cellsOnMap == 0 && game.humanRole == Jihadist)

@@ -2606,7 +2606,9 @@ object AwakeningCards {
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => role == game.humanRole || {
         val mm = game getMuslims (Turkey::Iraq::Syria::Nil) 
-        (role == Jihadist && game.cellsAvailable > 0 || (mm exists (_.canTakeAwakeningOrReactionMarker))) ||
+        (role == Jihadist && 
+          (game.cellsAvailable > 0 || 
+          ((mm exists (_.canTakeAwakeningOrReactionMarker)) && lapsingEventNotInPlay("Arab Winter")))) ||
         (role == US && (mm exists (m => m.reaction > 0 || m.totalCells > 0)))
       }
       ,
@@ -2617,7 +2619,7 @@ object AwakeningCards {
           val name = askCountry("Select country: ", candidates)
           val choices = if (game isMuslim name) {
             val m = game getMuslim name
-            val canAwake = m.canTakeAwakeningOrReactionMarker
+            val canAwake = m.canTakeAwakeningOrReactionMarker && lapsingEventNotInPlay("Arab Winter")
             val canBesiege = !(m.besiegedRegime || m.isGood || m.isIslamistRule)
             val canMilitia = game.militiaAvailable > 0 && !(m.besiegedRegime || m.isGood || m.isIslamistRule)
             List(
@@ -3132,7 +3134,11 @@ object AwakeningCards {
       Remove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => {
         val syria = game getMuslim Syria
-        (syria.isGood || syria.isFair || syria.canTakeAwakeningOrReactionMarker)
+        val canAwakeReact = syria.canTakeAwakeningOrReactionMarker && lapsingEventNotInPlay("Arab Winter")
+        !syria.isIslamistRule && (
+          (role == US && canAwakeReact) ||
+          (role == Jihadist && (!syria.isPoor || canAwakeReact))
+        )
       }
       ,
       (role: Role) => {
@@ -3468,8 +3474,10 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(227, "Popular Support", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => (role == US && (game hasMuslim (_.awakening > 0))) ||
-                      (role == Jihadist && (game hasMuslim (_.reaction > 0)))
+      (role: Role) => lapsingEventNotInPlay("Arab Winter") && (
+        (role == US && (game hasMuslim (_.awakening > 0))) ||
+        (role == Jihadist && (game hasMuslim (_.reaction > 0)))
+      )
       ,
       (role: Role) => if (role == US) {
         val candidates = countryNames(game.muslims filter (_.awakening > 0))
@@ -3642,7 +3650,7 @@ object AwakeningCards {
       }
       else { // Jihadist
         val candidates = countryNames(game.muslims filter (m => m.isShiaMix && m.canTakeAwakeningOrReactionMarker))
-        val shiaMix = if (candidates.isEmpty)
+        val shiaMix = if (candidates.isEmpty || lapsingEventNotInPlay("Arab Winter"))
           None
         else if (role == game.humanRole)
           Some(askCountry("Select Shia-Mix country to place reaction marker: ", candidates))
