@@ -1922,7 +1922,7 @@ object LabyrinthAwakening {
       bonus + penalty
 
     val modRoll = die + drm
-    if (!silent && drm != 0)
+    if (!silent && (bonus > 0 || penalty < 0))
       log(s"Modified roll: $modRoll")
     modRoll
   }
@@ -1948,7 +1948,7 @@ object LabyrinthAwakening {
     else
       awakeningMod + reactionMod
     val modRoll = die + drm
-    if (!silent && (awakeningMod.abs + reactionMod.abs) > 0)
+    if (!silent && (awakeningMod > 0 || reactionMod < 0))
       log(s"Modified roll: $modRoll")
     modRoll
   }
@@ -2577,7 +2577,7 @@ object LabyrinthAwakening {
       def showC(oldValue: Any, newValue: Any, msg: String) = if (oldValue != newValue) b += msg
           
       showC(fromC.posture, toC.posture, s"  Set posture to ${toC.posture}")
-      showC(fromC.sleeperCells, toC.sleeperCells, s"  Set active cells to ${toC.sleeperCells}")
+      showC(fromC.sleeperCells, toC.sleeperCells, s"  Set sleeper cells to ${toC.sleeperCells}")
       showC(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
       (fromC.hasCadre, toC.hasCadre) match {
         case (true, false) => b += "  Remove cadre marker"
@@ -3299,7 +3299,6 @@ object LabyrinthAwakening {
   def improveGovernance(name: String, levels: Int, canShiftToGood: Boolean): Unit = {
     if (levels > 0) {
       val m = game.getMuslim(name)
-      assert(m.isAlly, s"improveGovernance() called on non-ally - $name")
       assert(!m.isGood, s"improveGovernance() called on Good country - $name")
       val minGov = if (canShiftToGood) Good else Fair
       val newGov = (m.governance - levels) max minGov
@@ -4881,7 +4880,7 @@ object LabyrinthAwakening {
         println("\nThe %s event \"%s\" will trigger, which should happen first?".format(opponent, c.name))
         println(separator())
         val choices = List("event", "operations")
-        askOneOf(s"${orList(choices)}? ", choices) match {
+        askOneOf(s"${orList(choices)}? ", choices, abbr = Map("ops" -> "operations")) match {
           case None               => Nil
           case Some("operations") => List(Ops, TriggeredEvent(c))
           case _                  => List(TriggeredEvent(c), Ops)
@@ -5315,7 +5314,8 @@ object LabyrinthAwakening {
             humanPlot(opsAvailable)
           }
         }
-        humanPlot(opsAvailable)
+        else
+          humanPlot(opsAvailable)
       }
       else
         getActionOrder(CardForActions(card, playable, triggered), opponent = US) match {
@@ -5428,7 +5428,7 @@ object LabyrinthAwakening {
     log(separator())
     log(s"There are ${{amountOf(game.cellsOnMap, "cell")}} on the map")
     val maxRolls    = ops min game.cellsOnMap
-    val numAttempts = askInt("How many dice do you wish to roll?", 1, maxRolls, Some(maxRolls))
+    val numAttempts = askInt("How many attempts do you wish to make?", 1, maxRolls, Some(maxRolls))
     // Keep track of where cells have been selected. They can only be selected once!
     case class Source(name: String, sleepers: Int, actives: Int)
     var sourceCountries = 
@@ -5524,7 +5524,7 @@ object LabyrinthAwakening {
     else                              s"There are $numPlots plots available for this operation"
     println(cellDisp)
     println(plotDisp)
-    val numAttempts = askInt("How many dice do you wish to roll?", 1, maxRolls, Some(maxRolls))
+    val numAttempts = askInt("How many attempts do you wish to make?", 1, maxRolls, Some(maxRolls))
     // Keep track of where cells have been selected. They can only be selected once!
     case class Target(name: String, actives: Int, sleepers: Int)
     var targetCountries = (for (name <- game.plotTargets; c = game.getCountry(name))

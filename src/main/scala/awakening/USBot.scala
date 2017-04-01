@@ -1158,6 +1158,7 @@ object USBot extends BotHelpers {
     }
     else {
       log(s"$US performs a Deploy operation")
+      addOpsTarget(to)
       moveTroops(from, to, numTroops)
     }
     opsUsed
