@@ -273,16 +273,23 @@ object USBot extends BotHelpers {
   
   
   // Returns true if the plot is Alerted.
-  def alertTable(card: Card, priorityPlot: PlotInCountry, plots: List[PlotInCountry]): Boolean = {
-    val (fundingMod, prestigeMod) = alertTableMods(plots filterNot (_.id == priorityPlot.id))
+  def alertTable(card: Card, plots: List[PlotInCountry]): Boolean = {
+    val plot = priorityPlot(plots)
+    val (fundingMod, prestigeMod) = alertTableMods(plots filterNot (_.id == plot.id))
     val funding     = (game.funding  + fundingMod)  max 1 min 9
     val prestige    = (game.prestige + prestigeMod) max 1 min 12
-    val alertResult = if (game isMuslim priorityPlot.country.name)
+    val alertResult = if (game isMuslim plot.country.name)
       muslimTable(funding - 1)(prestige - 1)
     else
       nonMuslimTable(funding - 1)(prestige - 1)
-    if (alertResult(priorityPlot)) {
-      alertPlot(card, priorityPlot);
+    if (alertResult(plot)) {
+      alertPlot(card, plot)
+      val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
+      if (game.usResolve(Competent) && otherPlotsInCountry.nonEmpty) {
+        log(s"$US Bot with Competent resolve alerts two plots in the same country")
+        val plot2 = priorityPlot(otherPlotsInCountry)
+        performAlert(plot2.country.name, plot2.onMap)
+      }
       true
     }
     else
@@ -977,8 +984,18 @@ object USBot extends BotHelpers {
     // we consult the Alert Resolution Flowchart (ARF)
     val consultPAR = plots.isEmpty || {
       alertResolutionFlowchart(card, maxOps, playable, plots) match {
-        case AlertPlot       => alertPlot(card, priorityPlot(plots)); false
-        case AlertTable      => !alertTable(card, priorityPlot(plots), plots)
+        case AlertPlot       => 
+          val plot = priorityPlot(plots)
+          val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
+          alertPlot(card, plot)
+          if (game.usResolve(Competent) && otherPlotsInCountry.nonEmpty) {
+            log(s"$US Bot with Competent resolve alerts two plots in the same country")
+            val plot2 = priorityPlot(otherPlotsInCountry)
+            performAlert(plot2.country.name, plot2.onMap)
+          }
+          false
+          
+        case AlertTable      => !alertTable(card, plots)
         case PARFlowchart    => true
         case AddToUSReserves => addToReserves(US, card.ops); false
       }

@@ -294,7 +294,7 @@ object LabyrinthAwakening {
   val DefaultIndonesiaMalaysia = MuslimCountry(IndonesiaMalaysia, resources = 3, oilExporter = true)
   val DefaultMali              = MuslimCountry(Mali, resources = 1)
   
-  val LabyrinthDefaultCountries = List(
+  val LabyrinthDefaultCountries: List[Country] = List(
     DefaultCanada,
     DefaultUnitedStates,
     DefaultUnitedKingdom,
@@ -587,8 +587,8 @@ object LabyrinthAwakening {
                               !(Set(UnitedStates, Israel, Iran) contains name)
     def posture = if (name == UnitedStates) game.usPosture else postureValue
     def isSchengen = Schengen contains name
-    def isHard = if (name == UnitedStates ) game.usPosture == Hard else posture == Hard
-    def isSoft = if (name == UnitedStates ) game.usPosture == Soft else posture == Soft
+    def isHard = posture == Hard
+    def isSoft = posture == Soft
     def isOppositeUsPosture = !isUntested && posture != game.usPosture
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) = 
       ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
@@ -659,7 +659,10 @@ object LabyrinthAwakening {
       !(isAdversary    || (isGood && isAlly)) &&
       (!inRegimeChange || ignoreRegimeChange || (totalTroopsAndMilitia - totalCells) >= 5)
   
-    def autoRecruit = isIslamistRule || civilWar || inRegimeChange || hasMarker("Training Camps")
+    def autoRecruit = {
+      val vigilant = game.usResolve(Vigilant)
+      isIslamistRule || hasMarker("Training Camps") || (!vigilant && (civilWar || inRegimeChange))
+    }
     def recruitSucceeds(die: Int) = autoRecruit || die <= governance
   
     // TODO: Add other markers!!
@@ -1906,10 +1909,20 @@ object LabyrinthAwakening {
     logNotZero(adjToGoodAllyMod, "Adjacent to Good Ally")
     logNotZero(awakeningMod,     "Awakening")
     logNotZero(reactionMod,      "Reaction")
-    val modRoll = die + (prestigeMod + shiftToGoodMod + gwotMod + aidMod + adjToGoodAllyMod + awakeningMod + reactionMod)
-    val anyMods = (prestigeMod.abs + shiftToGoodMod.abs + gwotMod.abs + aidMod.abs + 
-                   adjToGoodAllyMod.abs + awakeningMod.abs + reactionMod.abs) > 0
-    if (!silent && anyMods)
+    
+    val bonus   = aidMod + adjToGoodAllyMod + awakeningMod + (if (prestigeMod > 0) prestigeMod else 0)
+    val penalty = shiftToGoodMod + gwotMod + reactionMod + (if (prestigeMod < 0) prestigeMod else 0)
+    
+    val drm = if (game.usResolve(NoMercy)) {
+      if (!silent && penalty < 0)
+        log(s"$US Bot with NoMercy resolve ignores DRM penalty")
+      bonus
+    }
+    else
+      bonus + penalty
+
+    val modRoll = die + drm
+    if (!silent && drm != 0)
       log(s"Modified roll: $modRoll")
     modRoll
   }
@@ -1923,12 +1936,12 @@ object LabyrinthAwakening {
     logNotZero(reactionMod,    "Reaction")
     
     val drm = if (game.jihadistIdeology(Virulent)) {
-      if (!silent && (awakeningMod + reactionMod) > 0)
-        log(s"$Jihadist Bot with Virulent Ideology ignores DRM penalty Jihad")
+      if (!silent && awakeningMod > 0)
+        log(s"$Jihadist Bot with Virulent Ideology ignores DRM penalty for Jihad")
       reactionMod
     }
     else if (game.jihadistIdeology(Coherent) && !major) {
-      if (!silent && (awakeningMod + reactionMod) > 0)
+      if (!silent && awakeningMod > 0)
         log(s"$Jihadist Bot with Coherent Ideology ignores DRM penalty for Minor Jihad")
       reactionMod
     }
@@ -3007,7 +3020,11 @@ object LabyrinthAwakening {
         throw new IllegalStateException(s"performDisrupt(): $target has no cells or cadre")
     }
     
-    if (bumpPrestige)
+    if (bumpPrestige && game.usResolve(Adept)) {
+      log(s"$US Bot with Adept resolve alerts increases prestige by +2")
+      increasePrestige(2)
+    }
+    else if (bumpPrestige)
       increasePrestige(1)
   }
   
@@ -5281,9 +5298,23 @@ object LabyrinthAwakening {
         println()
         println(separator())
         log(s"Place the $card card in the first plot box")
-        if (triggered)
-          log("%s event \"%s\" does not trigger".format(US, card.name))
         game = game.copy(firstPlotCard = Some(card.number))
+        if (triggered) {
+          if (game.usResolve(Ruthless)) {
+            log(s"$US Bot with Ruthless executes US associated events on first plot")
+            getActionOrder(CardForActions(card, playable, triggered), opponent = US) match {
+              case Nil => // Cancel the operation
+              case actions => actions foreach {
+                case TriggeredEvent(c) => USBot.performTriggeredEvent(c)
+                case Ops               => humanPlot(opsAvailable)
+              }
+            }
+          }
+          else {
+            log("%s event \"%s\" does not trigger".format(US, card.name))
+            humanPlot(opsAvailable)
+          }
+        }
         humanPlot(opsAvailable)
       }
       else
@@ -5330,6 +5361,13 @@ object LabyrinthAwakening {
         (dest, true)
       }
       else {
+        if (game.usResolve(Vigilant) && (game isMuslim dest)) {
+          val m = game getMuslim dest
+          if (m.civilWar)
+            log(s"$US Bot with Vigilant prevents auto recruit in Civil War country")
+          else if (m.inRegimeChange)
+            log(s"$US Bot with Vigilant prevents auto recruit in Regime Change country")
+        }
         val die     = humanDieRoll(s"Die roll for $ord Recruit in $dest: ")
         val success = c.recruitSucceeds(die)
         val result  = if (success) "succeeds" else "fails"

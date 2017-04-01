@@ -1289,6 +1289,7 @@ object AwakeningCards {
             
             flipNext((game.sleeperCellsOnMap + 1) / 2, candidates)
           }
+          decreasePrestige(1)
         }
       }
     )),
@@ -3144,6 +3145,7 @@ object AwakeningCards {
       (role: Role) => {
         val syria = game getMuslim Syria
         addEventTarget(Syria)
+        testCountry(Syria)
         if (role == US) {
           improveGovernance(Syria, 1, canShiftToGood = false)
           addAwakeningMarker(Syria)
