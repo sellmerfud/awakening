@@ -3335,7 +3335,7 @@ object AwakeningCards {
     entry(new Card(224, "Je Suis Charlie", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => {
-        val plotOK = askYorN("Was a plot resolved in a non-Muslim country during the last Resolve Plots phase? (y/n) ")
+        val plotOK = game.resolvedPlotTargets exists (name => game isNonMuslim name)
         val nonMuslimPostureChange = game hasNonMuslim (n => n.canChangePosture && n.posture != game.usPosture)
         if (role == game.humanRole)
           plotOK &&

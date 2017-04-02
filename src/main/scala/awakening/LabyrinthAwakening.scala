@@ -744,10 +744,10 @@ object LabyrinthAwakening {
   // And also records which countries has plot resolve in the most recent
   // resolve plots phase.
   case class PlotData(
-    availablePlots: List[Plot]  = Nil,
-    resolvedPlots: List[Plot]   = Nil,
-    removedPlots: List[Plot]    = Nil,
-    resolveTargets: Set[String] = Set.empty
+    availablePlots: List[Plot]   = Nil,
+    resolvedPlots: List[Plot]    = Nil,
+    removedPlots: List[Plot]     = Nil,
+    resolvedTargets: Set[String] = Set.empty
   )
   
   case class GameParameters(
@@ -801,9 +801,10 @@ object LabyrinthAwakening {
     def muslims    = countries filter (_.isInstanceOf[MuslimCountry]) map (_.asInstanceOf[MuslimCountry])
     def nonMuslims = countries filter (_.isInstanceOf[NonMuslimCountry]) map (_.asInstanceOf[NonMuslimCountry])
     
-    def availablePlots = plotData.availablePlots
-    def resolvedPlots  = plotData.resolvedPlots
-    def removedPlots   = plotData.removedPlots
+    def availablePlots      = plotData.availablePlots
+    def resolvedPlots       = plotData.resolvedPlots
+    def removedPlots        = plotData.removedPlots
+    def resolvedPlotTargets = plotData.resolvedTargets
     
     // The methods assume a valid name and will throw an exception if an invalid name is used!
     def getCountry(name: String)   = (countries find (_.name == name)).get
@@ -4128,7 +4129,7 @@ object LabyrinthAwakening {
       log("There are no unblocked plots on the map")
     }
     else if (unblocked exists (ub => ub.name == UnitedStates && ub.mapPlot.plot == PlotWMD)) {
-      // If there is a WMD in the United States reslove it first as it will end the game.
+      // If there is a WMD in the United States resolve it first as it will end the game.
       log(separator())
       log("An unblocked WMD plot was resolved in the United States")
       log("Game Over - Jihadist automatic victory!")
@@ -4296,7 +4297,10 @@ object LabyrinthAwakening {
           game = game.updateCountry(n.copy(plots = Nil)).copy(plotData = updatedPlots)
       }
     }
-    game = game.copy(plays = PlotsResolved(unblocked.size) :: game.plays)
+    game = game.copy(
+      plotData = game.plotData.copy(resolvedTargets = (unblocked map (_.name)).toSet),
+      plays    = PlotsResolved(unblocked.size) :: game.plays
+    )
     savePlay()  // Save the play so we can roll back
   }
   
@@ -4855,7 +4859,7 @@ object LabyrinthAwakening {
       Command("help",         """List available commands"""),
       Command("quit",         """Quit the game.  All plays for the current turn will be saved.""")
     ) filter { 
-      case Command("remove cadre", _) => game.humanRole == Jihadist
+      case Command("remove cadre", _) => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
       case _                          => true
     } 
 
@@ -5004,11 +5008,16 @@ object LabyrinthAwakening {
       val savedState = game
       
       // If we are entering a new action phase, reset the phase targets
-      if (!additional && newActionPhase(US))
+      val (newPhase, skippedPlotResolution) = if (additional) (false, false)
+                                              else newActionPhase(Jihadist)
+      if (newPhase) {
+        if (skippedPlotResolution)
+          game = game.copy(plotData = game.plotData.copy(resolvedTargets = Set.empty))
         game = game.copy(
           targetsLastPhase = game.targetsThisPhase,
           targetsThisPhase = PhaseTargets()
         )
+      }
       
       // Add the card to the list of plays for the turn.
       val thisPlay = if (additional)
@@ -5282,13 +5291,21 @@ object LabyrinthAwakening {
   //
   // Card #138, "Intel Community" allows a player to play an additional card
   // in the same action phase.  We do not include the additional card in the count.
-  def newActionPhase(role: Role): Boolean = {
-    val cardPlays = game.plays.takeWhile {
-      case p: CardPlay if p.role == role => true
-      case _ => false
-    }
-    // Skip any additional card plays
-    (cardPlays filterNot (_.isInstanceOf[AdditionalCard]) map (_.numCards)).sum % 2 == 0
+  //
+  // It is possible that we skipped the plot resolution phase (because there were no
+  // plots on the map).  We detect that when going straight form a player phase
+  // to another player phase, unless it is from Jihadist to US.
+  // The second return value indicates whether the plot resolution was skipped.
+  def newActionPhase(role: Role): (Boolean, Boolean) = {
+    val cardPlays = game.plays takeWhile (_.isInstanceOf[CardPlay]) map (_.asInstanceOf[CardPlay])
+    val currentRolePlays = cardPlays takeWhile (_.role == role)
+    
+    // Skip any additional card plays in the count
+    val newPhase = (currentRolePlays filterNot (_.isInstanceOf[AdditionalCard]) map (_.numCards)).sum % 2 == 0
+    val skippedPlots = newPhase && cardPlays.nonEmpty && 
+                       (cardPlays.head.role == role ||  // Always if same player is taking two actions in a row
+                        role == Jihadist)               // If Jihadist is playing directly after US
+    (newPhase, skippedPlots)
   }
   
   // Return true if this is the first card played by the give role in the
@@ -5310,11 +5327,15 @@ object LabyrinthAwakening {
       val savedState = game
       
       // If we are entering a new action phase, reset the phase targets
-      if (newActionPhase(Jihadist))
+      val (newPhase, skippedPlotResolution) = newActionPhase(Jihadist)
+      if (newPhase) {
+        if (skippedPlotResolution)
+          game = game.copy(plotData = game.plotData.copy(resolvedTargets = Set.empty))
         game = game.copy(
           targetsLastPhase = game.targetsThisPhase,
           targetsThisPhase = PhaseTargets()
         )
+      }
       
       // Add the card to the list of plays for the turn.
       game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
