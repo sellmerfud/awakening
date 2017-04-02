@@ -615,7 +615,7 @@ object AwakeningCards {
       ,
       (role: Role) => {
         // See Event Instructions table
-        log("US player may inspect the Jihadist hand.")
+        log("US player does not inspect the Jihadist hand in the solo game.")
         val cadres = countryNames(game.countries filter (_.hasCadre))
         if (cadres.isEmpty)
           log("No cadres on the map to remove")
@@ -630,7 +630,8 @@ object AwakeningCards {
         log("US player conducts an operation with 1 Op")
         humanExecuteOperation(1)
         println()
-        log("US player may now play an extra card in this action phase")
+        if (askYorN("Do you wish to play an extra card now during this action phase? (y/n) "))
+          usCardPlay(None, additional = true)
       }
     )),
     // ------------------------------------------------------------------------

@@ -521,9 +521,9 @@ object LabyrinthAwakening {
     override def numCards = 1
     override def toString() = s"$role played ${cardNumAndName(cardNum)}"
   }
-  case class Played2Cards(role: Role, card1Num: Int, card2Num: Int) extends CardPlay {
-    override def numCards = 2
-    override def toString() = s"$role played ${cardNumAndName(card1Num)} and ${cardNumAndName(card2Num)}"
+  case class AdditionalCard(role: Role, cardNum: Int) extends CardPlay {
+    override def numCards = 1
+    override def toString() = s"$role played additional card ${cardNumAndName(cardNum)}"
   }
   case class PlotsResolved(num: Int) extends Play {
     override def numCards = 0
@@ -4704,7 +4704,9 @@ object LabyrinthAwakening {
     checkAutomaticVictory()
     
     val cardsPlayed     = (game.plays map (_.numCards)).sum
-    val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved]) map (_.numCards)).sum
+    val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved])
+                                      filterNot (_.isInstanceOf[AdditionalCard])
+                                      map (_.numCards)).sum
     
     if (cardsSincePlots > 0 && cardsSincePlots % 4 == 0 && unresolvedPlots > 0) {
       println(separator())
@@ -4922,20 +4924,26 @@ object LabyrinthAwakening {
     }
   }
   
-  def usCardPlay(param: Option[String]): Unit = {
+  // The Intel Community event allows the US to play an additional card during
+  // the action phase.  Hence the `additional` parameter.
+  def usCardPlay(param: Option[String], additional: Boolean = false): Unit = {
     askCardNumber("Card # ", param) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
       
       // If we are entering a new action phase, reset the phase targets
-      if (newActionPhase(US))
+      if (!additional && newActionPhase(US))
         game = game.copy(
           targetsLastPhase = game.targetsThisPhase,
           targetsThisPhase = PhaseTargets()
         )
       
       // Add the card to the list of plays for the turn.
-      game = game.copy(plays = PlayedCard(US, card.number) :: game.plays)
+      val thisPlay = if (additional)
+        AdditionalCard(US, card.number)
+      else
+        PlayedCard(US, card.number)
+      game = game.copy(plays = thisPlay :: game.plays)
       
       val playable = card.eventIsPlayable(US)  
       val triggered  = card.eventWillTrigger(Jihadist)
@@ -4961,6 +4969,7 @@ object LabyrinthAwakening {
         savePlay()  // Save the play so we can roll back
       }
       catch {
+        case AbortCardPlay if additional => throw AbortCardPlay // Abort back to the original card.
         case AbortCardPlay =>
           println("\n>>>> Aborting the current card play <<<<")
           println(separator())
@@ -4988,8 +4997,8 @@ object LabyrinthAwakening {
     def inReserve    = game.reserves.us
     var secondCard: Option[CardForActions] = None   // For reassessment only
     def opsAvailable = (card.ops + reservesUsed) min 3
-    
     @tailrec def getNextResponse(): Option[String] = {
+      val canReassess = firstCardOfPhase(US) && card.ops == 3 && reservesUsed == 0
       val actions = List(
         if (playable && reservesUsed == 0)                      Some(ExecuteEvent) else None,
                                                                 Some(WarOfIdeas),
@@ -4998,9 +5007,10 @@ object LabyrinthAwakening {
         if (game.withdrawPossible(opsAvailable))                Some(Withdraw)     else None,
         if (game.disruptTargets(opsAvailable).nonEmpty)         Some(Disrupt)      else None,
         if (game.alertPossible(opsAvailable))                   Some(Alert)        else None,
-        if (card.ops == 3 && reservesUsed == 0)                 Some(Reassess)     else None,
+        if (canReassess)                                        Some(Reassess)     else None,
         if (card.ops < 3 && reservesUsed == 0 && inReserve < 2) Some(AddReserves)  else None,
-        if (card.ops < 3 && inReserve > 0)                      Some(UseReserves)  else None
+        if (card.ops < 3 && inReserve > 0)                      Some(UseReserves)  else None,
+        Some(AbortCard)
       ).flatten
     
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
@@ -5014,11 +5024,10 @@ object LabyrinthAwakening {
         case Some(Reassess) =>
           println("You must play a second 3 Ops card")
           askCardNumber("Card # ", None, true, only3Ops = true) match {
-            case None => None // Cancel the operation
+            case None => throw AbortCardPlay
             case Some(cardNum) =>
               val card2 = deck(cardNum)
-              val newPlays = Played2Cards(US, card.number, card2.number) :: game.plays.tail
-              game = game.copy(plays = newPlays)
+              game = game.copy(plays = PlayedCard(US, card2.number) :: game.plays)
               val playable = card2.eventIsPlayable(US)  
               val triggered  = card2.eventWillTrigger(Jihadist)
               secondCard = Some(CardForActions(card2, playable, triggered))
@@ -5040,7 +5049,7 @@ object LabyrinthAwakening {
         performCardEvent(card, US)
       else
         getActionOrder(CardForActions(card, playable, triggered), opponent = Jihadist, secondCard) match {
-          case Nil => // Cancel the operation
+          case Nil => throw AbortCardPlay
           case actions =>
             actions foreach {
               case TriggeredEvent(c) =>
@@ -5200,17 +5209,27 @@ object LabyrinthAwakening {
   //   If that number is even (including zero) then we are starting a new phase.
   //
   // Card #138, "Intel Community" allows a player to play an additional card
-  // in the same action phase.  This will throw us off, and currently this is 
-  // not taken into account.  The Bot treats this card as unplayable.  We could
-  // ask the user if they are playing the additional card, and then add a new
-  // special type of entry in the `plays` list, but since this is a rare use case,
-  // I am ignoring it for now.
+  // in the same action phase.  We do not include the additional card in the count.
   def newActionPhase(role: Role): Boolean = {
     val cardPlays = game.plays.takeWhile {
       case p: CardPlay if p.role == role => true
       case _ => false
     }
-    (cardPlays map (_.numCards)).sum % 2 == 0
+    // Skip any additional card plays
+    (cardPlays filterNot (_.isInstanceOf[AdditionalCard]) map (_.numCards)).sum % 2 == 0
+  }
+  
+  // Return true if this is the first card played by the give role in the
+  // current action phase.  
+  // IMPORTANT: This function assumes that the current card has already been added to 
+  //            the list of plays for the turn.
+  def firstCardOfPhase(role: Role): Boolean = {
+    val cardPlays = game.plays.takeWhile {
+      case p: CardPlay if p.role == role => true
+      case _ => false
+    }
+    // Skip any additional card plays
+    (cardPlays filterNot (_.isInstanceOf[AdditionalCard]) map (_.numCards)).sum == 1
   }
         
   def jihadistCardPlay(param: Option[String]): Unit = {
@@ -5316,7 +5335,7 @@ object LabyrinthAwakening {
           if (game.usResolve(Ruthless)) {
             log(s"$US Bot with Ruthless executes US associated events on first plot")
             getActionOrder(CardForActions(card, playable, triggered), opponent = US) match {
-              case Nil => // Cancel the operation
+              case Nil => throw AbortCardPlay
               case actions => actions foreach {
                 case TriggeredEvent(c) => USBot.performTriggeredEvent(c)
                 case Ops               => humanPlot(opsAvailable)
@@ -5333,7 +5352,7 @@ object LabyrinthAwakening {
       }
       else
         getActionOrder(CardForActions(card, playable, triggered), opponent = US) match {
-          case Nil => // Cancel the operation
+          case Nil => throw AbortCardPlay
           case actions =>
             actions foreach {
               case TriggeredEvent(c) =>
