@@ -1009,8 +1009,11 @@ object AwakeningCards {
         else
           USBot.multipleTargets(3, candidates, USBot.markerAlignGovTarget)
 
-        addEventTarget(targets:_*)
-        targets foreach (target => addAwakeningMarker(target))
+        targets foreach { target => 
+          addEventTarget(target)
+          testCountry(target)
+          addAwakeningMarker(target)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -1726,7 +1729,7 @@ object AwakeningCards {
         else
           troopsToTakeOffMap(numFromMap, countryNames(game.muslims filter (_.troops > 0)))
         
-        for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries) {
+        for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries; if num > 0) {
           if (name != "track")
             addEventTarget(name)
           takeTroopsOffMap(name, num)
@@ -2009,6 +2012,7 @@ object AwakeningCards {
           
         for (name <- Seq(Syria, Iraq); if canCivilWar(game.getMuslim(name))) {
           addEventTarget(name)
+          testCountry(name)
           startCivilWar(name)
         }
         decreasePrestige(1)

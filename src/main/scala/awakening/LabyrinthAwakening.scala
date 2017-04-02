@@ -4936,10 +4936,11 @@ object LabyrinthAwakening {
         // If the JihadistBot is playing it will cancel the next one played by the US.
         if (game.lapsingInPlay("Ferguson") &&
             card.association == US &&
+            playable && 
             (game.botRole == Jihadist ||
              askYorN("Do you wish to cancel the play of this US associated card? (y/n) "))) {
         
-          log(s"${card.numAndName} is discarded without effect")
+          log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect")
           removeCardFromLapsing(166)
         }
         else 
