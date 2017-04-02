@@ -379,7 +379,7 @@ object USBot extends BotHelpers {
     def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
       val targetPlot = priorityPlot(plots)
       card.eventAlertsPlot(targetPlot.country.name, targetPlot.onMap.plot) ||
-      askYorN(s"Is this the last card of the $US phase (y/n)? ")
+      askYorN(s"Is this the last card of the $US action phase (y/n)? ")
     }
   }
   
@@ -417,7 +417,7 @@ object USBot extends BotHelpers {
     def noPath  = MultiplePlots
     def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
       game.reserves.us < 2 ||
-      askYorN(s"Is this the last card of the $US phase (y/n)? ")
+      askYorN(s"Is this the last card of the $US action phase (y/n)? ")
     }
   }
   

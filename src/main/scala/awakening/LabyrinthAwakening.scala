@@ -1035,19 +1035,16 @@ object LabyrinthAwakening {
     
     // Returns the losses that would occur iif this country is the 
     // target of a disrupt operation.
-    // Some(Either((sleepers, actives), ())) or None
-    def disruptLosses(name: String): Option[Either[(Int, Int), Unit]] = {
+    // Some(Either(cells, ())) or None
+    def disruptLosses(name: String): Option[Either[Int, Unit]] = {
       val c = getCountry(name) 
-      val maxLosses = c match {
+      val numLosses = c match {
         case m: MuslimCountry =>
           if ((m.totalTroopsAndMilitia) > 1 && (m.totalTroops > 0 || m.hasMarker("Advisors"))) 2 else 1
         case n: NonMuslimCountry => if (n.isHard) 2 else 1
       }
-      if (c.totalCells > 0) {
-        val sleepers = maxLosses min c.sleeperCells
-        val actives = (maxLosses - sleepers) min c.activeCells
-        Some(Left((sleepers, actives)))
-      }
+      if (c.totalCells > 0)
+        Some(Left(numLosses min c.totalCells))
       else if (c.hasCadre)
         Some(Right(()))
       else
@@ -3011,7 +3008,11 @@ object LabyrinthAwakening {
     addOpsTarget(target)
     addDisruptedTarget(target)
     game.disruptLosses(target) match {
-      case Some(Left((sleepers, actives))) =>
+      case Some(Left(numCells)) =>
+        val (actives, sleepers) = if (game.humanRole == US)
+          askCells(target, numCells, sleeperFocus = false)
+        else
+          USBot.chooseCellsToDisrupt(target, numCells)
         flipSleeperCells(target, sleepers)
         removeActiveCellsFromCountry(target, actives, addCadre = true)
       case Some(Right(_)) =>
@@ -3019,7 +3020,6 @@ object LabyrinthAwakening {
       case None =>
         throw new IllegalStateException(s"performDisrupt(): $target has no cells or cadre")
     }
-    
     if (bumpPrestige && game.usResolve(Adept)) {
       log(s"$US Bot with Adept resolve alerts increases prestige by +2")
       increasePrestige(2)
@@ -3249,10 +3249,10 @@ object LabyrinthAwakening {
       case _                           => false
     }
     
-    if (remove)
-      removeCardFromGame(card.number)
-    else if (lapsing)
+    if (lapsing)
       markCardAsLapsing(card.number)
+    else if (remove)
+      removeCardFromGame(card.number)
   }
   
   def removeCardFromGame(cardNumber: Int): Unit = {
@@ -4290,8 +4290,18 @@ object LabyrinthAwakening {
       val koreanCrisis = game.lapsingInPlay("Korean Crisis")
       
       if (game.cardsLapsing.nonEmpty) {
-        log(s"Discard the lapsing events: ${cardNumsAndNames(game.cardsLapsing)}")
-        game = game.copy(cardsLapsing = Nil, eventParams = game.eventParams.copy(oilPriceSpikes = 0))
+        // some lapsing cards are removed at the end of the turn.
+        val (remove, discard) = game.cardsLapsing.partition (deck(_).remove == Remove)
+        if (remove.nonEmpty)
+          log(s"Remove the following lapsing cards from the game: ${cardNumsAndNames(remove)}")
+        if (discard.nonEmpty)
+          log(s"Discard the lapsing cards: ${cardNumsAndNames(discard)}")
+        
+        game = game.copy(
+          cardsLapsing = Nil,
+          cardsRemoved = remove ::: game.cardsRemoved,
+          eventParams = game.eventParams.copy(oilPriceSpikes = 0)
+        )
       }
       game.firstPlotCard foreach { num => 
         log(s"Discard the first   plot card: ${cardNumAndName(num)}")
@@ -4320,7 +4330,7 @@ object LabyrinthAwakening {
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
       if (game.eventParams.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
-        log("There is a 3 Resource Mulim country at Islamist Rule")
+        log("There is a 3 Resource Muslim country at Islamist Rule")
         returnSequestrationTroopsToAvailable()
       }
       
@@ -4880,7 +4890,7 @@ object LabyrinthAwakening {
         println("\nThe %s event \"%s\" will trigger, which should happen first?".format(opponent, c.name))
         println(separator())
         val choices = List("event", "operations")
-        askOneOf(s"${orList(choices)}? ", choices, abbr = Map("ops" -> "operations")) match {
+        askOneOf(s"${orList(choices)}? ", choices) match {
           case None               => Nil
           case Some("operations") => List(Ops, TriggeredEvent(c))
           case _                  => List(TriggeredEvent(c), Ops)
