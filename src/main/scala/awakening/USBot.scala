@@ -1066,7 +1066,7 @@ object USBot extends BotHelpers {
       val opsNeeded = 6 - card.ops - game.reserves.us
       println("The US is considering Reassessment.")
       val reassess = if (opsNeeded > 1)
-        askYorN(s"Does the $US Bot have another card in hand with at least $opsNeeded Ops (y/n)? ")
+        askYorN(s"Does the next card in the $US Bot hand have at least $opsNeeded Ops (y/n)? ")
       else
         askYorN(s"Does the $US Bot have another card in hand (y/n)? ")
 

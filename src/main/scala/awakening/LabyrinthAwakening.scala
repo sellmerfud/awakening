@@ -5225,10 +5225,13 @@ object LabyrinthAwakening {
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
         // If the JihadistBot is playing it will only cancel those played by the US.
-        if (game.lapsingInPlay("Ferguson") && card.association == US && game.humanRole == Jihadist &&
-           askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
+        if (game.lapsingInPlay("Ferguson") &&
+            card.association == US &&
+            triggered &&
+            game.humanRole == Jihadist &&
+            askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
         
-          log(s"${card.numAndName} is discarded without effect")
+          log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect")
           removeCardFromLapsing(166)
         }
         else

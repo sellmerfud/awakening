@@ -39,7 +39,8 @@ object AwakeningCards {
   // Various tests used by the card events
   val advisorsCandidate = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.totalTroops == 0 && !m.hasMarker("Advisors")
   val humanitarianAidCandidate = (m: MuslimCountry) => m.canTakeAidMarker && m.totalCells > 0
-  val peshmergaCandidate = (m: MuslimCountry) => (m.name == Iraq || m.name == Syria) && m.totalCells > 0
+  val peshmergaCandidate = (m: MuslimCountry) => (m.name == Iraq || m.name == Syria) && 
+                                     m.totalCells > 0 && !m.isGood && !m.isIslamistRule
   val arabSpringFalloutCandidate = (m: MuslimCountry) => {
     m.awakening == 0 &&
     m.canTakeAwakeningOrReactionMarker && 
@@ -99,6 +100,7 @@ object AwakeningCards {
                                                m.totalCells > 0 &&
                                                !game.isCaliphateMember(m.name)
   val unCeasfireCandidate = (m: MuslimCountry) => m.civilWar && !game.isCaliphateMember(m.name)
+  val opNewDawnCandidate = (m: MuslimCountry) => m.troops > 0 && m.canTakeMilitia
   def parisAttacksPossible: Boolean = {
     val list = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
     (game.cellsAvailable > 0 || game.availablePlots.nonEmpty) &&
@@ -766,10 +768,10 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(144, "Operation New Dawn", US, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => game.troopsOnMap > 0 && game.militiaAvailable > 0
+      (role: Role) => game.militiaAvailable > 0 && (game hasMuslim opNewDawnCandidate)
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter (_.troops > 0))
+        val candidates = countryNames(game.muslims filter opNewDawnCandidate)
         val target = if (role == game.humanRole)
           askCountry("Replace troops in which country: ", candidates)
         else {
@@ -3716,11 +3718,18 @@ object AwakeningCards {
       }
       ,
       (role: Role) => {
+        val syria = game getMuslim Syria
         val (cells, militia) = if (role == game.humanRole) {
-          val choices = List(
-            "cells"   -> "Place 2 cells and 1 milita in Syria",
-            "militia" -> "Place 2 militia and 1 cell in Syria"
-          )
+          val choices = if (syria.canTakeMilitia)
+            List("cells"   -> "Place 2 cells and 1 milita in Syria",
+                 "militia" -> "Place 2 militia and 1 cell in Syria")
+          else
+            List("cells"   -> "Place 2 cells in Syria",
+                 "militia" -> "Place 1 cell in Syria")
+          if (syria.isGood)
+            println("Syria cannot take militia because it is at Good governance")
+          else if (syria.isIslamistRule)
+            println("Syria cannot take militia because it is at Islamist Rule")
           println("Choose one: ")
           if (askMenu(choices).head == "cells") (2, 1) else (1, 2)
         }
@@ -3729,7 +3738,8 @@ object AwakeningCards {
           
         addEventTarget(Syria)
         addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
-        addMilitiaToCountry(Syria, militia min game.militiaAvailable)
+        if (syria.canTakeMilitia)
+          addMilitiaToCountry(Syria, militia min game.militiaAvailable)
         addEventTarget(Turkey)
         testCountry(Turkey)
         addAidMarker(Turkey)
