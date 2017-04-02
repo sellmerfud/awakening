@@ -526,21 +526,12 @@ object AwakeningCards {
                 else
                   askCountry("Select 'available' or country with WMD: ", "available" :: wmdOnMap)
               
-                if (target == "available") {
-                  log(s"Permanently remove one $PlotWMD from the available plots box")
-                  game = game.copy(availablePlots = game.availablePlots.sorted.tail).adjustPrestige(1)
-                }
+                if (target == "available")
+                  removeAvailableWMD(1)
                 else {
-                  log(s"Permanently remove one $PlotWMD from the $target")
                   addEventTarget(target)
-                  game.getCountry(target) match {
-                    case m: MuslimCountry =>
-                      game = game.updateCountry(m.copy(plots = m.plots.sorted.tail)).adjustPrestige(1)
-                    case n: NonMuslimCountry =>
-                      game = game.updateCountry(n.copy(plots = n.plots.sorted.tail)).adjustPrestige(1)
-                  }
+                  removePlacedWMD(target, 1)
                 }
-                log(s"Increase prestige by +1 to ${game.prestige} for removing a WMD plot")
               }
           }
         }
@@ -549,13 +540,10 @@ object AwakeningCards {
           // If there are any WMD plots in the available box, the bot
           // will remove one. Otherwise take a US players random card.
           if (game.availablePlots contains PlotWMD) {
-            // The sort order for plots put WMD's first.
-            game = game.copy(availablePlots = game.availablePlots.sorted.tail).adjustPrestige(1)
-            log(s"Permanently remove one $PlotWMD from the available plots box")
-            log(s"Increase prestige by +1 to ${game.prestige} for removing an WMD plot")
+            removeAvailableWMD(1)
           }
           else
-            log(s"You ($Jihadist) must place on random card on top of the $US hand")
+            log(s"You ($Jihadist) must place one random card on top of the $US hand")
         }
       }
     )),
