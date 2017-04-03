@@ -34,7 +34,8 @@ lazy val awakening = (project in file("."))
       val cp     = (managedClasspath in Compile).value.files filterNot (_.getName contains "compiler")
       val base   = s"./target/awakening-${version.value}"
       val lib    = s"./target/awakening-${version.value}/lib"
-      val others = Seq("src/other/awakening_config",
+      val others = Seq("src/other/README.txt",
+                       "src/other/awakening_config",
                        "src/other/awakening",
                        "src/other/awakening.cmd") map (new File(_))
       val files  = (others pair (f => flatRebase(base)(f).map (new File(_)))) ++ 
