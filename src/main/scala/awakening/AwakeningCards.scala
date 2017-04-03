@@ -2603,7 +2603,7 @@ object AwakeningCards {
       }
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(205, "Erdoğan Effect", Unassociated, 1,
+    entry(new Card(205, "Erdogan Effect", Unassociated, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => role == game.humanRole || {
         val mm = game getMuslims (Turkey::Iraq::Syria::Nil) 
@@ -2827,7 +2827,7 @@ object AwakeningCards {
       }
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(208, "Kinder – Gentler", Unassociated, 1,
+    entry(new Card(208, "Kinder - Gentler", Unassociated, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => role == game.humanRole ||
         (role == Jihadist && game.troopCommitment == Overstretch) ||

@@ -2137,7 +2137,11 @@ object LabyrinthAwakening {
   }
   
   def pause() {
-    readLine("Continue ↩︎ ")
+    import scala.util.Properties.isWin
+    if (isWin)
+      readLine("Press Enter to continue... ")
+    else
+      readLine("Continue ↩︎ ")
   }
   
   // Print the line to the console and save it in the game's history.
@@ -4569,7 +4573,8 @@ object LabyrinthAwakening {
         reqd[String]("", "--game=name", saved, "Resume a game in progress")
           { (v, c) => c.copy(gameName = Some(v)) }
         
-        reqd[String]("", "--scenario=name", scenarios.keys.toSeq, "Select a scenario")
+        val scenarioHelp = "Select a scenario" +: scenarios.keys.toSeq
+        reqd[String]("", "--scenario=name", scenarios.keys.toSeq, scenarioHelp: _*)
           { (v, c) => c.copy(scenarioName = Some(v)) }
       
         reqd[String]("", "--side=us|jihadist", Seq("us","jihadist"), "Select a side to play")
@@ -4875,7 +4880,9 @@ object LabyrinthAwakening {
                                 |  history 1..3  - Shows the log for the first through third turns
                                 |  history 5..   - Shows the log from the fifth turn through the end
                                 |  history ..5   - Shows the log from the beginning through the fifth turn
-                                |  history all   - Shows the entire log""".stripMargin),
+                                |  history all   - Shows the entire log
+                                |  Any of the above commands may be followed by >filename
+                                |  to save the history in a file instead of echoing it to the console""".stripMargin),
       Command("rollback",     """Roll back card plays in the current turn or
                                 |roll back to the start of any previous turn""".stripMargin),
       Command("help",         """List available commands"""),
