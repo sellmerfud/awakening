@@ -1,4 +1,8 @@
 import Path.flatRebase
+import java.nio.file.{ Files, Paths }
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.attribute.PosixFilePermission._
+import java.util.HashSet
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
@@ -21,8 +25,7 @@ lazy val awakening = (project in file("."))
     // Task to create the distribution zip file
     // To create a zip file that is readable on windoze
     //  1. Remove target/awakening-1.0/.DS_Store, target/awakening-1.0/lib/.DS_Store
-    //  2. chmod +x target/awakening-1.0/awakening
-    //  3. In the Mac Finder, right click target/awakening-1.0 and compress
+    //  2. In the Mac Finder, right click target/awakening-1.0 and compress
     stage in Compile := {
       val log = streams.value.log
       (packageBin in Compile).value  // Depends on the package being built
@@ -37,8 +40,17 @@ lazy val awakening = (project in file("."))
       val files  = (others pair (f => flatRebase(base)(f).map (new File(_)))) ++ 
                    ((jar +: cp) pair (f => flatRebase(lib)(f).map (new File(_))))
       log.info(s"Staging to $base ...")
+      IO.delete(new File(s"$base.zip"))
+      IO.delete(new File(base))
       IO.createDirectory(new File(lib))
       IO.copy(files, overwrite = true)
+      val perms = new HashSet[PosixFilePermission]()
+      val permsList = List(OWNER_READ,  OWNER_WRITE,   OWNER_EXECUTE, 
+                           GROUP_READ,  GROUP_EXECUTE,
+                           OTHERS_READ, OTHERS_EXECUTE)
+      for (p <- permsList) 
+        perms.add(p)
+      Files.setPosixFilePermissions(Paths.get(s"$base/awakening"), perms)
       log.info("Done staging.")
     }
   )
