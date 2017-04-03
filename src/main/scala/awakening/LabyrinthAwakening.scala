@@ -5753,10 +5753,13 @@ object LabyrinthAwakening {
 
   
   def adjustSettings(param: Option[String]): Unit = {
-    val options = "prestige"::"funding"::"difficulty"::"lapsing cards"::"removed cards"::
-                  "first plot"::"markers" ::"reserves"::"plots"::"offmap troops"::"posture"::
-                  "auto roll"::"bot logging"::countryNames(game.countries)
-    askOneOf("[Adjust] (? for list): ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
+    val options = List("prestige", "funding", "difficulty", "lapsing cards",
+                       "removed cards", "first plot", "markers" , "reserves",
+                       "plots", "offmap troops", "posture", "auto roll",
+                       "bot logging").sorted :::countryNames(game.countries).sorted
+    val choice = askOneOf("[Adjust] (? for list): ", options, param, allowNone = true,
+                           abbr = CountryAbbreviations, allowAbort = false)
+    choice foreach {
       case "prestige" =>
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
           logAdjustment("Prestige", game.prestige, value)
@@ -5821,8 +5824,7 @@ object LabyrinthAwakening {
       }
     }
   }
-  
-  
+    
   def adjustDifficulty(): Unit = {
     val AllLevels = if (game.botRole == US) AllUSLevels
     else AllJihadistLevels
