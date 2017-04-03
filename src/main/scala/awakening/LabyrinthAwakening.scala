@@ -422,13 +422,13 @@ object LabyrinthAwakening {
     measure(source, Set.empty).get
   }
   
-  def plotsDisplay(plots: List[Plot], humanRole: Role): String = (plots.size, humanRole) match {
+  def plotsDisplay(plots: List[Plot], humanRole: Role = Jihadist): String = (plots.size, humanRole) match {
     case (0, _)        => "none"
     case (n, US)       => amountOf(n, "hidden plot")
     case (_, Jihadist) => plots.sorted map (_.name) mkString ", "
   }
   
-  def mapPlotsDisplay(plots: List[PlotOnMap], humanRole: Role): String = {
+  def mapPlotsDisplay(plots: List[PlotOnMap], humanRole: Role = Jihadist): String = {
     val lashed = plots count (_.backlashed)
     (plots.size, humanRole) match {
       case (0, _)                => "none"
@@ -1501,14 +1501,24 @@ object LabyrinthAwakening {
     nextCountry(1, candidates)
   }
   
-  // Used when the user must select 1 or more available plots to place in a country.
-  def askPlots(plots: List[Plot], num: Int): List[Plot] = {
+  // Used when the user must select 1 or more plots in a country
+  def askMapPlots(plots: List[PlotOnMap], num: Int, allowAbort: Boolean = true): List[PlotOnMap] = {
     val maxPlots  = num min plots.size
     val entries   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p }
     val choices   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p.toString }
     val plotMap   = Map(entries:_*)
     println(s"Choose ${amountOf(maxPlots, "plot")}:")
-    askMenu(choices, maxPlots) map plotMap
+    askMenu(choices, maxPlots, allowAbort = allowAbort) map plotMap
+  }
+  
+  // Used when the user must select 1 or more available plots to place in a country.
+  def askPlots(plots: List[Plot], num: Int, allowAbort: Boolean = true): List[Plot] = {
+    val maxPlots  = num min plots.size
+    val entries   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p }
+    val choices   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p.toString }
+    val plotMap   = Map(entries:_*)
+    println(s"Choose ${amountOf(maxPlots, "plot")}:")
+    askMenu(choices, maxPlots, allowAbort = allowAbort) map plotMap
   }
   
   // Ask the user to select a number of available plots
@@ -5758,7 +5768,7 @@ object LabyrinthAwakening {
     val options = List("prestige", "funding", "difficulty", "lapsing cards",
                        "removed cards", "first plot", "markers" , "reserves",
                        "plots", "offmap troops", "posture", "auto roll",
-                       "bot logging").sorted :::countryNames(game.countries).sorted
+                       "bot logging", "resolved plot countries").sorted :::countryNames(game.countries).sorted
     val choice = askOneOf("[Adjust] (? for list): ", options, param, allowNone = true,
                            abbr = CountryAbbreviations, allowAbort = false)
     choice foreach {
@@ -5786,6 +5796,7 @@ object LabyrinthAwakening {
         logAdjustment("Human auto roll", game.params.humanAutoRoll, !game.params.humanAutoRoll)
         game = game.copy(params = game.params.copy(humanAutoRoll = !game.params.humanAutoRoll))
       
+      case "resolved plot countries" => adjustPlotTargets()
       case "difficulty"    => adjustDifficulty()
       case "bot logging"   => adjustBotLogging()
       case "lapsing cards" => adjustLapsingCards()
@@ -5981,102 +5992,111 @@ object LabyrinthAwakening {
     }  
   }
 
-  // If the human is the Jihadist, the all plots are visible.
-  // If the human is the US, then only resolved plots are visible.
-  def adjustPlots(): Unit = {
-    def showPlots(plots: Vector[Plot], startIndex: Int): Unit = {
-      @tailrec def showNext(list: List[Plot], index: Int): Unit = list match {
-        case Nil =>
-        case plot :: rest =>
-          println(s"$index) ${plot.name}")
-          showNext(rest, index + 1)
-      }
-      
-      if (plots.isEmpty)
+  def adjustPlotTargets(): Unit = {
+    var targets = game.plotData.resolvedTargets
+    
+    def nextAction(): Unit = {
+      val nonTargets = countryNames(game.countries) filterNot targets.apply
+      val choices = List(
+        if (nonTargets.nonEmpty) Some("add" -> "Add a country to the resolved plot targets") else None,
+        if (targets.nonEmpty)    Some("del" -> "Remove a country to the resolved plot targets") else None,
+        Some("done" -> "Finished")
+      ).flatten
+      println("\nCountries where plots were resolved in the last plot resolution phase:")
+      if (targets.isEmpty)
         println("none")
       else
-        showNext(plots.toList, startIndex)
+        println(targets.toList.sorted.mkString(", "))
+      println("\nChoose one: ")
+      askMenu(choices, allowAbort = false).head  match {
+        case "done" =>
+        case "add"  =>
+          val name = askCountry("Select country to add: ", nonTargets.sorted, allowAbort = false)
+          targets = targets + name
+          nextAction()
+        case _ =>
+          val name = askCountry("Select country to remove: ", targets.toList.sorted, allowAbort = false)
+          targets = targets - name
+          nextAction()
+      }
     }
     
-    var available = game.availablePlots.toVector
-    var resolved  = game.resolvedPlots.toVector
-
-    if (game.humanRole == US) {
-      @tailrec def getNextResponse(): Unit = {
-        println()
-        println("Available plots:")
-        println(s"${available.size} hidden plots")
-        println()
-        println("Resolved plots:")
-        showPlots(resolved, 1)
-        println()
-        if (resolved.isEmpty)
-          println("Plots cannot be adjusted at this time.")
-        else {
-          println("Select a resolved plot to make available")
-          askOneOf("Plot: ", 1 to (resolved.size ), allowNone = true, allowAbort = false) map (_.toInt) match {
-            case None =>
-            case Some(num) =>
-              val index    = num - 1
-              val selected = resolved(index)
-              resolved  = resolved.patch(index, Vector.empty, 1)
-              available = available :+ selected
-              if (resolved.nonEmpty)
-                getNextResponse()
-          }
-        }
-      }
-      getNextResponse()
-    }
-    else { // humanRole == Jihadist
-      @tailrec def getNextResponse(): Unit = {
-        println()
-        println("Available plots:")
-        showPlots(available, 1)
-        println()
-        println("Resolved plots:")
-        showPlots(resolved, available.size + 1)
-        println()
-        if (available.isEmpty && resolved.isEmpty)
-          println("Plots cannot be adjusted at this time.")
-        else {
-          println("Select a plot to move between available and resolved")
-          askOneOf("Plot: ", 1 to (available.size + resolved.size ), allowNone = true, allowAbort = false) map (_.toInt) match {
-            case None =>
-            case Some(num) if num <= available.size =>
-              val index    = num - 1
-              val selected = available(index)
-              available = available.patch(index, Vector.empty, 1)
-              resolved  = resolved :+ selected
-              getNextResponse()
-            
-            case Some(num) =>
-              val index    = num - available.size - 1
-              val selected = resolved(index)
-              resolved  = resolved.patch(index, Vector.empty, 1)
-              available = available :+ selected
-              getNextResponse()
-          }
-        }
-      }
-      getNextResponse()
-    }
-    val alist = available.toList.sorted
-    val rlist = resolved.toList.sorted
-    if (alist != game.availablePlots.sorted || rlist != game.resolvedPlots.sorted) {
-      logAdjustment("Available plots", 
-                    plotsDisplay(game.availablePlots, game.humanRole),
-                    plotsDisplay(alist, game.humanRole))
-      logAdjustment("Resolved plots", 
-                    plotsDisplay(game.resolvedPlots, Jihadist),
-                    plotsDisplay(rlist, Jihadist))
-      val updatePlots = game.plotData.copy(
-        availablePlots = alist,
-        resolvedPlots = rlist
-      )
-      game = game.copy(plotData = updatePlots)
+    nextAction()
+    if (targets != game.plotData.resolvedTargets) {
+      logAdjustment("Resolved plot targets", game.plotData.resolvedTargets.toList.sorted, targets.toList.sorted)
+      val updatedPlots = game.plotData.copy(resolvedTargets = targets)
+      game = game.copy(plotData = updatedPlots)
     }
   }
+  
+  def adjustPlots(): Unit = {
+    var available = game.availablePlots.toVector
+    var resolved  = game.resolvedPlots.toVector
+    var outOfPlay = game.removedPlots.toVector
+    
+    def showAll(): Unit = {
+      println()
+      println("Available  : " + plotsDisplay(available.toList))
+      println("Resolved   : " + plotsDisplay(resolved.toList))
+      println("Out of play: " + plotsDisplay(outOfPlay.toList))
+    }
+    
+    def doMove(spec: String): Unit = {
+      val src = spec take 1
+      val dest = spec drop 2
+      val list = (if (src == "a") available else if (src == "r") resolved else outOfPlay).toList
+      val plot = askPlots(list, 1, allowAbort = false).head
+      val index = list.indexOf(plot)
+      src match {
+        case "a" => available = available.patch(index, Vector.empty, 1)
+        case "r" => resolved  = resolved.patch(index, Vector.empty, 1)
+        case _   => outOfPlay = outOfPlay.patch(index, Vector.empty, 1)
+      }
+      dest match {
+        case "a" => available = available :+ plot
+        case "r" => resolved  = resolved :+ plot
+        case _   => outOfPlay = outOfPlay :+ plot
+      }
+    }
+    
+    def nextAction(): Unit = {
+      val choices = List(
+        if (available.nonEmpty) Some("a-r" -> "Move available plot to the resolved box") else None,
+        if (available.nonEmpty) Some("a-o" -> "Move available plot to out of play") else None,
+        if (resolved.nonEmpty)  Some("r-a" -> "Move resolved plot to the available box") else None,
+        if (resolved.nonEmpty)  Some("r-o" -> "Move resolved plot to out of play") else None,
+        if (outOfPlay.nonEmpty) Some("o-a" -> "Move out of play plot to the available box") else None,
+        if (outOfPlay.nonEmpty) Some("o-a" -> "Move out of play plot to the resolved box") else None,
+        Some("done" -> "Finished")
+      ).flatten
+      
+      showAll()
+      println("\nChoose one: ")
+      askMenu(choices, allowAbort = false).head  match {
+        case "done" =>
+        case spec   => doMove(spec); nextAction()
+      }
+    }
+    
+    if (available.isEmpty && resolved.isEmpty && outOfPlay.isEmpty)
+      println("Nothing to adjust, all plots are on the map")
+    else {
+      nextAction()
+      if (available.toList.sorted != game.plotData.availablePlots.sorted)
+        logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(available.toList))
+      if (resolved.toList.sorted != game.plotData.resolvedPlots.sorted)
+        logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(resolved.toList))
+      if (outOfPlay.toList.sorted != game.plotData.removedPlots.sorted)
+        logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(outOfPlay.toList))
+    
+      val updatedPlots = game.plotData.copy(
+       availablePlots = available.toList,
+       resolvedPlots  = resolved.toList,
+       removedPlots   = outOfPlay.toList)
+      game = game.copy(plotData = updatedPlots)
+    }
+  }
+
   
   def adjustCountry(name: String): Unit = {
     @tailrec def getNextResponse(): Unit = {
@@ -6475,142 +6495,92 @@ object LabyrinthAwakening {
   
   // Move plots between country and available/resolved
   def adJustCountryPlots(name: String): Unit = {
-    val country = game.getCountry(name)
-    def numIndexesUsed(numPlots: Int, hidden: Boolean) = numPlots match {
-      case 0           => 0
-      case _ if hidden => 1
-      case x           => x
-    }
-    def showPlots(plots: Vector[Plot], startIndex: Int, hidden: Boolean): Unit = {
-      @tailrec def showNext(list: List[Plot], index: Int): Unit = list match {
-        case Nil =>
-        case plot :: rest =>
-          println(s"$index) ${plot.name}")
-          showNext(rest, index + 1)
-      }
+    val c = game getCountry name
+    var country   = c.plots.toVector
+    var available = game.availablePlots.toVector
+    var resolved  = game.resolvedPlots.toVector
+    var outOfPlay = game.removedPlots.toVector
     
-      numIndexesUsed(plots.size, hidden) match {
-        case 0           => println("none")
-        case _ if hidden => println(s"$startIndex) ${plots.size} hidden plots")
-        case _           => showNext(plots.toList, startIndex)
-      }
+    def showAll(): Unit = {
+      val fmt = "%%-%ds: ".format(11 max name.length)
+      def label(s: String) = fmt.format(s)
+      println()
+      println(label(name)          + mapPlotsDisplay(country.toList))
+      println(label("Available")   + plotsDisplay(available.toList))
+      println(label("Resolved")    + plotsDisplay(resolved.toList))
+      println(label("Out of play") + plotsDisplay(outOfPlay.toList))
     }
-    def showMapPlots(plots: Vector[PlotOnMap], startIndex: Int, hidden: Boolean): Unit = {
-      @tailrec def showNext(list: List[PlotOnMap], index: Int): Unit = list match {
-        case Nil =>
-        case plot :: rest =>
-          println(s"$index) $plot")
-          showNext(rest, index + 1)
-      }
     
-      numIndexesUsed(plots.size, hidden) match {
-        case 0           => println("none")
-        case _ if hidden => println(s"$startIndex) ${plots.size} hidden plots")
-        case _           => showNext(plots.toList, startIndex)
-      }
-    }
-
-    // For hidden plot we select a random index.
-    def selectedIndex(index: Int, numPlots: Int, hidden: Boolean): Int =
-      if (hidden) nextInt(numPlots) else index
-
-    var countryPlots = country.plots.toVector
-    var resolved     = game.resolvedPlots.toVector
-    var available    = game.availablePlots.toVector
-    
-    @tailrec def getNextResponse(): Unit = {
-      val countryStart   = 1
-      val resolvedStart  = countryStart  + countryPlots.size
-      val availableStart = resolvedStart + resolved.size
-      println()
-      println()
-      println(s"$name plots (can be removed)")
-      println(separator(length = 25))
-      showMapPlots(countryPlots, countryStart, game.humanRole == US)
-      println()
-      println(s"Resolved Plots (can be added to $name)")  
-      println(separator(length = 25))
-      showPlots(resolved, resolvedStart, false)
-      println()
-      println(s"Available Plots (can be added to $name)")  
-      println(separator(length = 25))
-      showPlots(available, availableStart, game.humanRole == US)
-      println()
-      if (countryPlots.isEmpty && resolved.isEmpty && available.isEmpty)
-        println("Plots cannot be adjusted at this time.")
-      else {
-        val countryIndexes   = numIndexesUsed(countryPlots.size, game.humanRole == US)
-        val resolvedIndexes  = numIndexesUsed(resolved.size, false)
-        val availableIndexes = numIndexesUsed(available.size, game.humanRole == US)
-        val totalIndexes     = countryIndexes + resolvedIndexes + availableIndexes
-        println("Select the number corresponding to the plot to add/remove")
-        askOneOf("Plot: ", 1 to totalIndexes, allowNone = true, allowAbort = false) map (_.toInt) match {
-          case None => // Cancel the adjustment
-          case Some(num) =>
-            val index = num - 1  // Actual indexes are zero based
-            if (index < countryIndexes) {
-              // Remove from country, prompt for destination (available or resolved)
-              val choices = "resolved"::"available"::Nil
-              askOneOf(s"Remove to (${orList(choices)}): ", choices, allowNone = true, allowAbort = false) match {
-                case None => // Cancel the adjustment
-                case Some(target) =>
-                  val i = selectedIndex(index, countryPlots.size, game.humanRole == US)
-                  if (target == "resolved")
-                    resolved = resolved :+ countryPlots(i).plot
-                  else
-                    available = available :+ countryPlots(i).plot
-                  countryPlots = countryPlots.patch(i, Vector.empty, 1)
-                  getNextResponse()
-              }
-            }
-            else if (index < countryIndexes + resolvedIndexes) {
-              // Add from resolved to country
-              val i = selectedIndex(index - countryIndexes, resolved.size, false)
-              countryPlots = countryPlots :+ PlotOnMap(resolved(i))
-              resolved = resolved.patch(i, Vector.empty, 1)
-              getNextResponse()
-            }
-            else {
-              // Add from available to country
-              val i = selectedIndex(index - countryIndexes - resolvedIndexes, available.size, game.humanRole == US)
-              countryPlots   = countryPlots :+ PlotOnMap(available(i))
-              available = available.patch(i, Vector.empty, 1)
-              getNextResponse()
-            }
+    def doMove(spec: String): Unit = {
+      val src = spec take 1
+      val dest = spec drop 2
+      if (src == "c") {
+        val onMap = askMapPlots(country.toList, 1, allowAbort = false).head
+        val index = country.indexOf(onMap)
+        country = country.patch(index, Vector.empty, 1)
+        dest match {
+          case "a" => available = available :+ onMap.plot
+          case "r" => resolved  = resolved :+ onMap.plot
+          case _   => outOfPlay = outOfPlay :+ onMap.plot
         }
       }
+      else {
+        val list = (if (src == "a") available else if (src == "r") resolved else outOfPlay).toList
+        val plot = askPlots(list, 1, allowAbort = false).head
+        val index = list.indexOf(plot)
+        src match {
+          case "a" => available = available.patch(index, Vector.empty, 1)
+          case "r" => resolved  = resolved.patch(index, Vector.empty, 1)
+          case _   => outOfPlay = outOfPlay.patch(index, Vector.empty, 1)
+        }
+        country = country :+ PlotOnMap(plot)
+      }
     }
-    getNextResponse()
+        
+    def nextAction(): Unit = {
+      val choices = List(
+        if (country.nonEmpty)   Some("c-a" -> s"Move plot from $name to the available box") else None,
+        if (country.nonEmpty)   Some("c-r" -> s"Move plot from $name to the resolved box") else None,
+        if (country.nonEmpty)   Some("c-o" -> s"Move plot from $name to out of play") else None,
+        if (available.nonEmpty) Some("a-c" -> s"Move available plot to $name") else None,
+        if (resolved.nonEmpty)  Some("r-c" -> s"Move resolved plot to $name") else None,
+        if (outOfPlay.nonEmpty) Some("o-c" -> s"Move out of play plot to $name") else None,
+        Some("done" -> "Finished")
+      ).flatten
+      
+      showAll()
+      println("\nChoose one: ")
+      askMenu(choices, allowAbort = false).head  match {
+        case "done" =>
+        case spec   => doMove(spec); nextAction()
+      }
+    }
     
-    val clist = countryPlots.toList.sorted
-    val rlist = resolved.toList.sorted
-    val alist = available.toList.sorted
-    if (clist != country.plots.sorted)
-      logAdjustment(name, "plots", 
-                    mapPlotsDisplay(country.plots, game.humanRole),
-                    mapPlotsDisplay(clist, game.humanRole))
-      
-    if (rlist != game.resolvedPlots.sorted)
-      logAdjustment("Resolved plots", 
-                    plotsDisplay(game.resolvedPlots, Jihadist),
-                    plotsDisplay(rlist, Jihadist))
-      
-    if (alist != game.availablePlots.sorted)
-      logAdjustment("Available plots", 
-                    plotsDisplay(game.availablePlots, game.humanRole),
-                    plotsDisplay(alist, game.humanRole))
-
-    val updatedPlots = game.plotData.copy(
-      availablePlots = alist,
-      resolvedPlots = rlist
-    )
-    game = game.copy(plotData = updatedPlots)
-    country match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = clist))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = clist))
+    if (country.isEmpty && available.isEmpty && resolved.isEmpty && outOfPlay.isEmpty)
+      println("Nothing to adjust, there are no plots") // Should never happen!
+    else {
+      nextAction()
+      if (country.toList.sorted != c.plots.sorted)
+        logAdjustment(name, "plots", mapPlotsDisplay(c.plots), mapPlotsDisplay(country.toList))
+      if (available.toList.sorted != game.plotData.availablePlots.sorted)
+        logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(available.toList))
+      if (resolved.toList.sorted != game.plotData.resolvedPlots.sorted)
+        logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(resolved.toList))
+      if (outOfPlay.toList.sorted != game.plotData.removedPlots.sorted)
+        logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(outOfPlay.toList))
+    
+      val updatedPlots = game.plotData.copy(
+       availablePlots = available.toList,
+       resolvedPlots  = resolved.toList,
+       removedPlots   = outOfPlay.toList)
+      game = game.copy(plotData = updatedPlots)
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = country.toList))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = country.toList))
+      }
     }
-  }
-  
+  }  
+    
   def adjustCountryMarkers(name: String): Unit = {
     val countryMarkers = (deck.cards filter (_.marker == CountryMarker) map (_.name)).sorted.distinct
     val country = game.getCountry(name)
