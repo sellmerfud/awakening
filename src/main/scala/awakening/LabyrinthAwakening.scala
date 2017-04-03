@@ -531,6 +531,10 @@ object LabyrinthAwakening {
     override def numCards = 0
     override def toString() = s"$num Plots were resolved"
   }
+  case class AdjustmentMade(desc: String) extends Play {
+    override def numCards = 0
+    override def toString() = s"Adjustment made: $desc"
+  }
   
   class CardDeck(val cardMap: Map[Int, Card]) {
     def isValidCardNumber(num: Int): Boolean = cardMap contains num
@@ -5328,7 +5332,9 @@ object LabyrinthAwakening {
   // to another player phase, unless it is from Jihadist to US.
   // The second return value indicates whether the plot resolution was skipped.
   def newActionPhase(role: Role): (Boolean, Boolean) = {
-    val cardPlays = game.plays takeWhile (_.isInstanceOf[CardPlay]) map (_.asInstanceOf[CardPlay])
+    val cardPlays = (game.plays filterNot(_.isInstanceOf[AdjustmentMade])
+                                takeWhile (_.isInstanceOf[CardPlay])
+                                map (_.asInstanceOf[CardPlay]))
     val currentRolePlays = cardPlays takeWhile (_.role == role)
     
     // Skip any additional card plays in the count
@@ -5344,7 +5350,7 @@ object LabyrinthAwakening {
   // IMPORTANT: This function assumes that the current card has already been added to 
   //            the list of plays for the turn.
   def firstCardOfPhase(role: Role): Boolean = {
-    val cardPlays = game.plays.takeWhile {
+    val cardPlays = game.plays.filterNot(_.isInstanceOf[AdjustmentMade]).takeWhile {
       case p: CardPlay if p.role == role => true
       case _ => false
     }
@@ -5763,6 +5769,14 @@ object LabyrinthAwakening {
     }
   }
 
+  def saveAdjustment(desc: String): Unit = {
+    game = game.copy(plays = AdjustmentMade(desc) :: game.plays)
+    savePlay()
+  }
+  def saveAdjustment(country: String, desc: String): Unit = {
+    game = game.copy(plays = AdjustmentMade(s"$country -> $desc") :: game.plays)
+    savePlay()
+  }
   
   def adjustSettings(param: Option[String]): Unit = {
     val options = List("prestige", "funding", "difficulty", "lapsing cards",
@@ -5776,25 +5790,30 @@ object LabyrinthAwakening {
         adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
           logAdjustment("Prestige", game.prestige, value)
           game = game.copy(prestige = value)
+          saveAdjustment("Prestige")
         }
       case "posture" =>
         val newValue = oppositePosture(game.usPosture)
         logAdjustment("US posture", game.usPosture, newValue)
         game = game.copy(usPosture = newValue)
+        saveAdjustment("US posture")
         
       case "funding" =>
         adjustInt("Funding", game.funding, 1 to 9) foreach { value =>
-          logAdjustment("Prestige", game.funding, value)
+          logAdjustment("Funding", game.funding, value)
           game = game.copy(funding = value)
+          saveAdjustment("Funding")
         }
       case "offmap troops" =>
         adjustInt("Offmap troops", game.offMapTroops, 0 to (game.offMapTroops + game.troopsAvailable)) foreach { value =>
           logAdjustment("Offmap troops", game.offMapTroops, value)
           game = game.copy(offMapTroops = value)
+          saveAdjustment("Offmap troops")
         }
       case "auto roll" => 
         logAdjustment("Human auto roll", game.params.humanAutoRoll, !game.params.humanAutoRoll)
         game = game.copy(params = game.params.copy(humanAutoRoll = !game.params.humanAutoRoll))
+        saveAdjustment("Human auto roll")
       
       case "resolved plot countries" => adjustPlotTargets()
       case "difficulty"    => adjustDifficulty()
@@ -5835,6 +5854,7 @@ object LabyrinthAwakening {
         case US       => game = game.copy(reserves = game.reserves.copy(us = value))
         case Jihadist => game = game.copy(reserves = game.reserves.copy(jihadist = value))
       }
+      saveAdjustment(s"$role reserves")
     }
   }
     
@@ -5879,6 +5899,7 @@ object LabyrinthAwakening {
     if (updated != game.params.botDifficulties) {
       logAdjustment(s"$label", game.params.botDifficulties.map(_.name), updated.map(_.name))
       game = game.copy(params = game.params.copy(botDifficulties = updated))
+      saveAdjustment("Bot difficulty")
     }  
   }
   
@@ -5886,6 +5907,7 @@ object LabyrinthAwakening {
     val newValue = !game.params.botLogging
     logAdjustment("Bot logging", game.params.botLogging, newValue)
     game = game.copy(params = game.params.copy(botLogging = newValue))
+    saveAdjustment("Bot logging")
   }
   
   def adjustLapsingCards(): Unit = {
@@ -5910,6 +5932,7 @@ object LabyrinthAwakening {
     if (lapsing.toSet != game.cardsLapsing.toSet) {
       logAdjustment("Lapsing Events", cardNumsAndNames(game.cardsLapsing), cardNumsAndNames(lapsing))
       game = game.copy(cardsLapsing = lapsing)
+      saveAdjustment("Lapsing Events")
     }  
   }
 
@@ -5935,6 +5958,7 @@ object LabyrinthAwakening {
     if (outOfPlay.toSet != game.cardsRemoved.toSet) {
       logAdjustment("Removed Cards", cardNumsAndNames(game.cardsRemoved), cardNumsAndNames(outOfPlay))
       game = game.copy(cardsRemoved = outOfPlay)
+      saveAdjustment("Removed Cards")
     }  
   }
   
@@ -5952,6 +5976,7 @@ object LabyrinthAwakening {
     if (inPlay != game.firstPlotCard) {
       logAdjustment("First plot", game.firstPlotCard map cardNumAndName, inPlay map cardNumAndName)
       game = game.copy(firstPlotCard = inPlay)
+      saveAdjustment("First plot")
     }  
   }
   
@@ -5989,6 +6014,7 @@ object LabyrinthAwakening {
     if (inPlay != game.markers) {
       logAdjustment("Global Markers", game.markers, inPlay)
       game = game.copy(markers = inPlay)
+      saveAdjustment("Global Markers")
     }  
   }
 
@@ -6026,6 +6052,7 @@ object LabyrinthAwakening {
       logAdjustment("Resolved plot targets", game.plotData.resolvedTargets.toList.sorted, targets.toList.sorted)
       val updatedPlots = game.plotData.copy(resolvedTargets = targets)
       game = game.copy(plotData = updatedPlots)
+      saveAdjustment("Resolved plot targets")
     }
   }
   
@@ -6082,18 +6109,24 @@ object LabyrinthAwakening {
       println("Nothing to adjust, all plots are on the map")
     else {
       nextAction()
-      if (available.toList.sorted != game.plotData.availablePlots.sorted)
-        logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(available.toList))
-      if (resolved.toList.sorted != game.plotData.resolvedPlots.sorted)
-        logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(resolved.toList))
-      if (outOfPlay.toList.sorted != game.plotData.removedPlots.sorted)
-        logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(outOfPlay.toList))
+      val availableChanged = available.toList.sorted != game.plotData.availablePlots.sorted
+      val resolvedChanged = resolved.toList.sorted != game.plotData.resolvedPlots.sorted
+      val outOfPlayChanged = outOfPlay.toList.sorted != game.plotData.removedPlots.sorted
+      if (availableChanged || resolvedChanged || outOfPlayChanged) {
+        if (availableChanged)
+          logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(available.toList))
+        if (resolvedChanged)
+          logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(resolved.toList))
+        if (outOfPlayChanged)
+          logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(outOfPlay.toList))
     
-      val updatedPlots = game.plotData.copy(
-       availablePlots = available.toList,
-       resolvedPlots  = resolved.toList,
-       removedPlots   = outOfPlay.toList)
-      game = game.copy(plotData = updatedPlots)
+        val updatedPlots = game.plotData.copy(
+         availablePlots = available.toList,
+         resolvedPlots  = resolved.toList,
+         removedPlots   = outOfPlay.toList)
+        game = game.copy(plotData = updatedPlots)
+        saveAdjustment("Available, resolved, out of play plots")
+      }
     }
   }
 
@@ -6174,6 +6207,7 @@ object LabyrinthAwakening {
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newPosture =>
           logAdjustment(name, "Prestige", n.posture, newPosture)
           game = game.updateCountry(n.copy(postureValue = newPosture))
+          saveAdjustment(name, "Prestige")
         }
     }
   }
@@ -6190,6 +6224,7 @@ object LabyrinthAwakening {
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newAlignment =>
           logAdjustment(name, "Alignment", m.alignment, newAlignment)
           game = game.updateCountry(m.copy(alignment = newAlignment))
+          saveAdjustment(name, "Alignment")
         }
     }
   }
@@ -6261,6 +6296,7 @@ object LabyrinthAwakening {
             }
             game = game.updateCountry(updated)
             removeTrainingCamp_?(name)
+            saveAdjustment(name, "Governance")
           }
         }
     }
@@ -6279,6 +6315,7 @@ object LabyrinthAwakening {
           removeActiveCellsFromCountry(name, c.activeCells - value, addCadre = false, s"$name adjusted: ")
         else if (value > c.activeCells)
           addActiveCellsToCountry(name, value - c.activeCells, s"$name adjusted: ")
+        saveAdjustment(name, "Active cells")
       }
   }
   
@@ -6300,6 +6337,7 @@ object LabyrinthAwakening {
           removeSleeperCellsFromCountry(name, c.sleeperCells - value, addCadre = false, s"$name adjusted: ")
         else if (value > c.sleeperCells)
           addSleeperCellsToCountry(name, value - c.sleeperCells, s"$name adjusted: ")
+        saveAdjustment(name, "Sleeper cells")
       }
   }
   
@@ -6312,6 +6350,7 @@ object LabyrinthAwakening {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = newValue))
       case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = newValue))
     }
+    saveAdjustment(name, "Cadre")
   }
     
   def adjustTroops(name: String): Unit = {
@@ -6323,11 +6362,13 @@ object LabyrinthAwakening {
           println("There a no troops available to add to this country.")
           pause()
         }
-        else
+        else {
           adjustInt("Troops", m.troops, 0 to maxTroops) foreach { value =>
             logAdjustment(name, "Troops", m.troops, value)
             game = game.updateCountry(m.copy(troops = value))
           }
+          saveAdjustment(name, "Troops")
+        }
     }
   }
   
@@ -6340,11 +6381,13 @@ object LabyrinthAwakening {
           println("There a no troops available to add to this country.")
           pause()
         }
-        else
+        else {
           adjustInt("Militia", m.militia, 0 to maxMilitia) foreach { value =>
             logAdjustment(name, "Militia", m.militia, value)
             game = game.updateCountry(m.copy(militia = value))
           }
+          saveAdjustment(name, "Militia")
+        }
     }
   }
   
@@ -6361,6 +6404,7 @@ object LabyrinthAwakening {
         adjustInt("Aid", m.aidMarkers, 0 to 10) foreach { value =>
           logAdjustment(name, "Aid", m.aidMarkers, value)
           game = game.updateCountry(m.copy(aidMarkers = value))
+          saveAdjustment(name, "Aid")
         }
     }
   }
@@ -6381,6 +6425,7 @@ object LabyrinthAwakening {
         adjustInt("Awakening markers", m.awakening, 0 to 10) foreach { value =>
           logAdjustment(name, "Awakening markers", m.awakening, value)
           game = game.updateCountry(m.copy(awakening = value))
+          saveAdjustment(name, "Awakening markers")
         }
     }
   }
@@ -6401,6 +6446,7 @@ object LabyrinthAwakening {
         adjustInt("Reaction markers", m.reaction, 0 to 10) foreach { value =>
           logAdjustment(name, "Reaction markers", m.reaction, value)
           game = game.updateCountry(m.copy(reaction = value))
+          saveAdjustment(name, "Reaction markers")
         }
     }
   }
@@ -6418,6 +6464,7 @@ object LabyrinthAwakening {
         val newValue = !m.besiegedRegime
         logAdjustment(name, "Besieged regime", m.besiegedRegime, newValue)
         game = game.updateCountry(m.copy(besiegedRegime = newValue))
+        saveAdjustment(name, "Besieged regime")
     }
   }
   
@@ -6446,6 +6493,7 @@ object LabyrinthAwakening {
               updated = updated.copy(caliphateCapital = false)
             }
             game = game.updateCountry(updated)
+            saveAdjustment(name, "Regime Change")
           }
         }
     }
@@ -6467,6 +6515,7 @@ object LabyrinthAwakening {
           startCivilWar(name)
         else
           endCivilWar(name)
+        saveAdjustment(name, "Civil War")
     }
   }
   
@@ -6489,6 +6538,7 @@ object LabyrinthAwakening {
             logAdjustment(previousCapitalName, "Caliphate Capital", true, false)
             logAdjustment(name, "Caliphate Capital", false, true)
             game = game.updateCountries(previousCapital.copy(caliphateCapital = false)::m.copy(caliphateCapital = true)::Nil)
+            saveAdjustment(name, "Caliphate Capital")
         }
     }
   }
@@ -6560,23 +6610,30 @@ object LabyrinthAwakening {
       println("Nothing to adjust, there are no plots") // Should never happen!
     else {
       nextAction()
-      if (country.toList.sorted != c.plots.sorted)
-        logAdjustment(name, "plots", mapPlotsDisplay(c.plots), mapPlotsDisplay(country.toList))
-      if (available.toList.sorted != game.plotData.availablePlots.sorted)
-        logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(available.toList))
-      if (resolved.toList.sorted != game.plotData.resolvedPlots.sorted)
-        logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(resolved.toList))
-      if (outOfPlay.toList.sorted != game.plotData.removedPlots.sorted)
-        logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(outOfPlay.toList))
+      val countryChanged = country.toList.sorted != c.plots.sorted
+      val availableChanged = available.toList.sorted != game.plotData.availablePlots.sorted
+      val resolvedChanged = resolved.toList.sorted != game.plotData.resolvedPlots.sorted
+      val outOfPlayChanged = outOfPlay.toList.sorted != game.plotData.removedPlots.sorted
+      if (countryChanged || availableChanged || resolvedChanged || outOfPlayChanged) {
+        if (countryChanged)
+          logAdjustment(name, "plots", mapPlotsDisplay(c.plots), mapPlotsDisplay(country.toList))
+        if (availableChanged)
+          logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(available.toList))
+        if (resolvedChanged)
+          logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(resolved.toList))
+        if (outOfPlayChanged)
+          logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(outOfPlay.toList))
     
-      val updatedPlots = game.plotData.copy(
-       availablePlots = available.toList,
-       resolvedPlots  = resolved.toList,
-       removedPlots   = outOfPlay.toList)
-      game = game.copy(plotData = updatedPlots)
-      c match {
-        case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = country.toList))
-        case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = country.toList))
+        val updatedPlots = game.plotData.copy(
+         availablePlots = available.toList,
+         resolvedPlots  = resolved.toList,
+         removedPlots   = outOfPlay.toList)
+        game = game.copy(plotData = updatedPlots)
+        c match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = country.toList))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = country.toList))
+        }
+        saveAdjustment(name, "Plots")
       }
     }
   }  
@@ -6619,20 +6676,23 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry => game = game.updateCountry(n.copy(markers = inPlay))
       }
       updateTrainingCampCapacity(priorCampCapacity)
+      saveAdjustment(name, "Markers")
     }  
   }
   
   def adjustCountryWMDCache(name: String): Unit = {
     game.getCountry(name) match {
       case n: NonMuslimCountry => 
-      adjustInt("WMD cache", n.wmdCache, 0 to 3) foreach { value =>
-        logAdjustment(name, "WMD cache", n.wmdCache, value)
-        game = game.updateCountry(n.copy(wmdCache = value))
-      }
+        adjustInt("WMD cache", n.wmdCache, 0 to 3) foreach { value =>
+          logAdjustment(name, "WMD cache", n.wmdCache, value)
+          game = game.updateCountry(n.copy(wmdCache = value))
+          saveAdjustment(name, "WMD cache")
+        }
       case m: MuslimCountry =>
         adjustInt("WMD cache", m.wmdCache, 0 to 3) foreach { value =>
           logAdjustment(name, "WMD cache", m.wmdCache, value)
           game = game.updateCountry(m.copy(wmdCache = value))
+          saveAdjustment(name, "WMD cache")
         }
     }    
   }
