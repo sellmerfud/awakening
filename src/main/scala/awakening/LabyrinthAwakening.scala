@@ -484,7 +484,7 @@ object LabyrinthAwakening {
     val number: Int,
     val name: String,
     val association: CardAssociation,
-    val ops: Int,
+    val printedOps: Int,
     val remove: CardRemoval,
     val marker: CardMarker,   // Only used by the adjust routines
     val lapsing: CardLapsing,
@@ -492,7 +492,9 @@ object LabyrinthAwakening {
     val eventAlertsPlot: EventAlertsPlot,
     val eventConditions: EventConditions,
     val executeEvent: CardEvent) {
-      
+    
+    def ops: Int = printedOps
+    
     def numAndName = s"#$number $name"
     override def toString() = s"${numAndName} (${opsString(ops)})"
     

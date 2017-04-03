@@ -682,9 +682,11 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(143, "Obama Doctrine", US, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => game.usPosture == Soft
+      (role: Role) => if (game.params.scenarioName == "Mitt's Turn") game.usPosture == Hard
+                      else game.usPosture == Soft
       ,
       (role: Role) => {
+        val numActions = if (game.params.scenarioName == "Mitt's Turn") 3 else 2
         if (role == game.humanRole) {
           def item(test: Boolean, x: (String, String)) = if (test) Some(x) else None
           val canAwakening = (game hasMuslim (_.canTakeAwakeningOrReactionMarker)) && lapsingEventNotInPlay("Arab Winter")
@@ -697,8 +699,8 @@ object AwakeningCards {
             item(true,               "posture"   -> "Select posture of 1 Schengen country"),
             item(true,               "draw"      -> "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
           ).flatten 
-          println("Do any 2 of the following:")
-          askMenu(items, 2, repeatsOK = false) foreach { action =>
+          println(s"Do any $numActions of the following:")
+          askMenu(items, numActions, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "awakening" =>
@@ -734,7 +736,7 @@ object AwakeningCards {
             if (game.funding  >  1) Some("funding") else None,
             if (canAwakening      ) Some("awakening") else None,
             if (game hasMuslim (_.canTakeAidMarker)) Some("aid") else None
-          ).flatten take 2
+          ).flatten take numActions
           actions foreach {
             case "prestige" => increasePrestige(1)
             case "funding"  => decreaseFunding(1)
@@ -753,7 +755,10 @@ object AwakeningCards {
           }  
         }
       }
-    )),
+    ) {
+      // For "Mitt's Turn" scenario this card has 3 ops.
+      override def ops: Int = if (game.params.scenarioName == "Mitt's Turn") 3 else 2
+    }),
     // ------------------------------------------------------------------------
     entry(new Card(144, "Operation New Dawn", US, 2,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
