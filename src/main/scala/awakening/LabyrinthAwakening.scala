@@ -4123,6 +4123,7 @@ object LabyrinthAwakening {
       yield Unblocked(c.name, p)
     var wmdsInCivilWars = Set.empty[String]
     log()
+    log(separator(char='='))
     log("Reslove plots")
     if (unblocked.isEmpty) {
       log(separator())
@@ -4328,12 +4329,12 @@ object LabyrinthAwakening {
   
   def endTurn(): Unit = {
     if (askYorN("Really end the turn (y/n)? ")) {
-      if (unresolvedPlots > 0)
+      if (numUnresolvedPlots > 0)
         resolvePlots()
       
       log()
       log("End of turn")
-      log(separator())
+      log(separator(char='='))
     
       if (game.markerInPlay("Pirates") && piratesConditionsInEffect) {
         log("No funding drop because Pirates is in effect")
@@ -4772,7 +4773,7 @@ object LabyrinthAwakening {
     }
   }
   
-  def unresolvedPlots: Int = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
+  def numUnresolvedPlots: Int = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
   
   // ---------------------------------------------
   // Process all top level user commands.
@@ -4784,14 +4785,19 @@ object LabyrinthAwakening {
                                       filterNot (_.isInstanceOf[AdditionalCard])
                                       map (_.numCards)).sum
     
-    if (cardsSincePlots > 0 && cardsSincePlots % 4 == 0 && unresolvedPlots > 0) {
-      println(separator())
-      println(s"4 cards have been played and there are unresolved plots on the map")
-      if (askYorN("Do you want to resolve the plots now (y/n)? "))
-        resolvePlots()
+    if (cardsSincePlots > 0 && cardsSincePlots % 4 == 0) {
+      // If there are plots on the map call it to the users attention,
+      // otherwise just do the resolvePlots() so that it is added to the log.
+      if (numUnresolvedPlots > 0) {
+        println()
+        println(separator())
+        println("4 cards have been played and there are unresolved plots on the map")
+        pause()
+      }
+      resolvePlots()
     }
     
-    val plots = unresolvedPlots
+    val plots = numUnresolvedPlots
     val plotDisp = if (plots == 0) "" else s", ${amountOf(plots, "unresolved plot")}"
     val prompt = {
       s"""
@@ -5003,21 +5009,34 @@ object LabyrinthAwakening {
   // The Intel Community event allows the US to play an additional card during
   // the action phase.  Hence the `additional` parameter.
   def usCardPlay(param: Option[String], additional: Boolean = false): Unit = {
+    // If we are entering a new action phase,
+    // resolve plots if necesary and reset the phase targets
+    val (newPhase, skippedPlotResolution) = if (additional) (false, false)
+                                            else newActionPhase(US)
+    if (newPhase) {
+      if (skippedPlotResolution) {
+        if (numUnresolvedPlots > 0) {
+          println()
+          println(separator())
+          println("A US card play starts a new action phase and there are unresolved plots")
+          val choices = List("resolve" -> "Resolve plots", "cancel" -> "Cancel command")
+          if (askMenu(choices).head == "resolve")
+            resolvePlots()
+          return
+        }
+        else
+          resolvePlots() // No plots so allow card play to continue
+      }
+      
+      game = game.copy(
+        targetsLastPhase = game.targetsThisPhase,
+        targetsThisPhase = PhaseTargets()
+      )
+    }
+    
     askCardNumber("Card # ", param) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
-      
-      // If we are entering a new action phase, reset the phase targets
-      val (newPhase, skippedPlotResolution) = if (additional) (false, false)
-                                              else newActionPhase(Jihadist)
-      if (newPhase) {
-        if (skippedPlotResolution)
-          game = game.copy(plotData = game.plotData.copy(resolvedTargets = Set.empty))
-        game = game.copy(
-          targetsLastPhase = game.targetsThisPhase,
-          targetsThisPhase = PhaseTargets()
-        )
-      }
       
       // Add the card to the list of plays for the turn.
       val thisPlay = if (additional)
@@ -5320,22 +5339,34 @@ object LabyrinthAwakening {
     // Skip any additional card plays
     (cardPlays filterNot (_.isInstanceOf[AdditionalCard]) map (_.numCards)).sum == 1
   }
-        
+  
   def jihadistCardPlay(param: Option[String]): Unit = {
+    // If we are entering a new action phase,
+    // resolve plots if necesary and reset the phase targets
+    val (newPhase, skippedPlotResolution) = newActionPhase(Jihadist)
+    if (newPhase) {
+      if (skippedPlotResolution) {
+        if (numUnresolvedPlots > 0) {
+          println()
+          println(separator())
+          println("A Jihadist card play starts a new action phase and there are unresolved plots")
+          val choices = List("resolve" -> "Resolve plots", "cancel" -> "Cancel command")
+          if (askMenu(choices).head == "resolve")
+            resolvePlots()
+          return
+        }
+        else
+          resolvePlots() // No plots so allow card play to continue
+      }
+      
+      game = game.copy(
+        targetsLastPhase = game.targetsThisPhase,
+        targetsThisPhase = PhaseTargets()
+      )
+    }
     askCardNumber("Card # ", param) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
-      
-      // If we are entering a new action phase, reset the phase targets
-      val (newPhase, skippedPlotResolution) = newActionPhase(Jihadist)
-      if (newPhase) {
-        if (skippedPlotResolution)
-          game = game.copy(plotData = game.plotData.copy(resolvedTargets = Set.empty))
-        game = game.copy(
-          targetsLastPhase = game.targetsThisPhase,
-          targetsThisPhase = PhaseTargets()
-        )
-      }
       
       // Add the card to the list of plays for the turn.
       game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
