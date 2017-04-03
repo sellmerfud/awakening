@@ -3548,7 +3548,7 @@ object LabyrinthAwakening {
   // The capacity can be 0, 3, or 5
   
   def updateTrainingCampCapacity(priorCapacity: Int): Unit = {
-    val CampCells(campCelsInCamp, campCellsOnMap) = game.trainingCampCells
+    val CampCells(campCellsInCamp, campCellsOnMap) = game.trainingCampCells
     val capacity = game.trainingCampCapacity
     if (capacity != priorCapacity) {
       capacity match {
@@ -3558,18 +3558,18 @@ object LabyrinthAwakening {
         case x => throw new IllegalStateException(s"Invalid training camp capacity: $x")
       }
       log(s"The training camps available area now has a capacity of ${capacity} cells")
-      if (capacity > campCelsInCamp + campCellsOnMap) {
-        val delta = capacity - (campCelsInCamp + campCellsOnMap)
+      if (capacity > campCellsInCamp + campCellsOnMap) {
+        val delta = capacity - (campCellsInCamp + campCellsOnMap)
         log(s"Add ${amountOf(delta, "out of play cell")} to the training camps available area")
-        game = game.copy(trainingCampCells = game.trainingCampCells.copy(inCamp = campCelsInCamp + delta))
+        game = game.copy(trainingCampCells = game.trainingCampCells.copy(inCamp = campCellsInCamp + delta))
       }
-      else if (campCelsInCamp > capacity) {
-        val delta = campCelsInCamp - capacity  // We do NOT remove training camp cells from the map!
+      else if (campCellsInCamp > capacity) {
+        val delta = campCellsInCamp - capacity  // We do NOT remove training camp cells from the map!
         delta match {
           case 1 => log("Remove 1 cell from the training camps available area to out of play")
           case n => log(s"Remove the $n cells from the training camps available area to out of play")
         }
-        game = game.copy(trainingCampCells = game.trainingCampCells.copy(inCamp = campCelsInCamp - delta))
+        game = game.copy(trainingCampCells = game.trainingCampCells.copy(inCamp = campCellsInCamp - delta))
       }
     }
   }
