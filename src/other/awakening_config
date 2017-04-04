@@ -6,7 +6,9 @@
 # override values in this file.
 
 # Name of the scenario to play
-# Must be one of Awakening, MittsTurn, StatusOfForces, IslamicStateOfIraq
+# Must be one of:
+#  LetsRoll, YouCanCallMeAl, Anaconda, MissionAccomplished
+#  Awakening, MittsTurn, StatusOfForces, IslamicStateOfIraq
 scenario =
 
 # The side that you wish to play:  US or Jihadist

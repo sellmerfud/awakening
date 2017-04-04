@@ -453,6 +453,7 @@ object LabyrinthAwakening {
         x.num compare y.num
   }
   
+  
   type CardEvent       = Role => Unit
   type EventConditions = Role => Boolean
   type EventAlertsPlot = (String, Plot) => Boolean
@@ -545,7 +546,7 @@ object LabyrinthAwakening {
 
   }
   
-  val deck = new CardDeck(AwakeningCards.deck)
+  val deck = new CardDeck(AwakeningCards.deck ++ LabyrinthCards.deck)
   def cardNumAndName(number: Int): String = deck(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
 
@@ -555,6 +556,7 @@ object LabyrinthAwakening {
     val sleeperCells: Int
     val activeCells: Int
     val hasCadre: Boolean
+    val troops: Int
     val plots: List[PlotOnMap]
     val markers: List[String]
     val wmdCache: Int        // Number of WMD plots cached
@@ -567,6 +569,23 @@ object LabyrinthAwakening {
   
     def totalCells = sleeperCells + activeCells
     def hasMarker(name: String) = markers contains name
+    
+    // TODO: Add other markers!!
+    def troopsMarkers: List[TroopsMarker] = markers collect {
+      case "NATO"             => TroopsMarker("NATO", 2,       canDeploy = true,  prestigeLoss = true)
+      case "UNSCR 1973"       => TroopsMarker("UNSCR 1973", 1, canDeploy = false, prestigeLoss = false)
+      case "Operation Serval" => TroopsMarker("Operation Serval", 1, canDeploy = true, prestigeLoss = true)
+    }
+    
+    def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
+    def markerTroopsThatAffectPrestige: Int =
+      troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
+    def totalTroops = troops + markerTroops
+    def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
+  
+    def canDeployTo(ops: Int): Boolean
+    def maxDeployFrom(ops: Int): Int
+    def canDeployFrom(ops: Int) = maxDeployFrom(ops) > 0
   
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
@@ -582,6 +601,7 @@ object LabyrinthAwakening {
     sleeperCells: Int           = 0,
     activeCells: Int            = 0,
     hasCadre: Boolean           = false,
+    troops: Int                 = 0,
     plots: List[PlotOnMap]      = Nil,
     markers: List[String]       = Nil,
     postureValue: String        = PostureUntested,
@@ -608,6 +628,10 @@ object LabyrinthAwakening {
     def canChangePosture = !(iranSpecialCase || name == UnitedStates || name == Israel)
     def canTakeMilitia = false
   
+    // Normally troops cannot deploy to a non-Muslim country.
+    // The exception is the Abu Sayyaf event in the Philippines.
+    def canDeployTo(ops: Int)   = ops >= governance && name == Philippines && hasMarker("Abu Sayyaf")
+    def maxDeployFrom(ops: Int) = troops
   }
 
   case class MuslimCountry(
@@ -671,19 +695,8 @@ object LabyrinthAwakening {
     }
     def recruitSucceeds(die: Int) = autoRecruit || die <= governance
   
-    // TODO: Add other markers!!
-    def troopsMarkers: List[TroopsMarker] = markers collect {
-      case "NATO"             => TroopsMarker("NATO", 2,       canDeploy = true,  prestigeLoss = true)
-      case "UNSCR 1973"       => TroopsMarker("UNSCR 1973", 1, canDeploy = false, prestigeLoss = false)
-      case "Operation Serval" => TroopsMarker("Operation Serval", 1, canDeploy = true, prestigeLoss = true)
-    }
     
     def canTakeMilitia = !(isGood || isIslamistRule)
-    def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
-    def markerTroopsThatAffectPrestige: Int =
-      troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
-    def totalTroops = troops + markerTroops
-    def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
     def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
     def disruptAffectsPrestige = totalTroopsAndMilitia > 1 && totalTroopsThatAffectPrestige > 0
   
@@ -697,7 +710,6 @@ object LabyrinthAwakening {
       if (ops >= 3 && troops - totalCells > 5) (troops - totalCells - 5) else 0
     else
       troops
-    def canDeployFrom(ops: Int) = maxDeployFrom(ops) > 0
     
     def jihadDRM = awakening - reaction
     def jihadOK = !isIslamistRule && totalCells > 0
@@ -722,6 +734,10 @@ object LabyrinthAwakening {
     val markersInPlay: List[String]
     val cardsRemoved: List[Int]
     val offMapTroops: Int
+
+    // Override this if the scenario requires any special setup such 
+    // as the Jihadist player choosing countries in which to place cells.
+    val additionalSetup: () => Unit = () => ()
   }
 
   // There is a limit of 22 construction arguments for case classes
@@ -1019,8 +1035,8 @@ object LabyrinthAwakening {
     // But if that is the only valid destination, then do not include "track" in the
     // list of sources.
     def deployTargets(ops: Int): Option[(List[String], List[String])] = {
-      val fromCountries = countryNames(muslims filter (_.canDeployFrom(ops)))
-      val toCountries   = countryNames(muslims filter (_.canDeployTo(ops)))
+      val fromCountries = countryNames(countries filter (_.canDeployFrom(ops)))
+      val toCountries   = countryNames(countries filter (_.canDeployTo(ops)))
       (fromCountries, toCountries) match {
         case (Nil, Nil )                        => None
         case (Nil, to  ) if troopsAvailable > 0 => Some("track"::Nil, to)
@@ -1032,7 +1048,7 @@ object LabyrinthAwakening {
     }
     
     def regimeChangeSources(ops: Int): List[String] = {
-      val ms = countryNames(muslims filter (_.maxDeployFrom(ops) > 5))
+      val ms = countryNames(countries filter (_.maxDeployFrom(ops) > 5))
       if (troopsAvailable > 5) "track" :: ms else ms
     } 
       
@@ -1043,7 +1059,7 @@ object LabyrinthAwakening {
   
     def withdrawFromTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
     
-    def withdrawToTargets: List[String] = "track" :: countryNames(muslims filter (_.canDeployTo(3)))
+    def withdrawToTargets: List[String] = "track" :: countryNames(countries filter (_.canDeployTo(3)))
       
     def withdrawPossible(ops: Int) = 
         ops >= 3 && usPosture == Soft && withdrawFromTargets.nonEmpty
@@ -1218,6 +1234,7 @@ object LabyrinthAwakening {
             items += "Cadre marker"
           else if (showAll)
             items += "No Cadre marker"
+          item(n.troops, "Troop")
           addItems()
           if (showAll || n.hasPlots)
             b += s"  Plots: ${mapPlotsDisplay(n.plots, humanRole)}"
@@ -1898,7 +1915,7 @@ object LabyrinthAwakening {
     }
   }
   
-  def rollCountryPosture(name: String): Unit = {
+  def rollCountryPosture(name: String, logWorld: Boolean = true): Unit = {
     assert(name != UnitedStates, "rollCountryPosture() called for United States.  Use RollUSPosture()")
     val n = game.getNonMuslim(name)
     val die = dieRoll
@@ -1910,7 +1927,8 @@ object LabyrinthAwakening {
     else {
       game = game.updateCountry(n.copy(postureValue = newPosture))
       log(s"Set the posture of $name to $newPosture")
-      logWorldPosture()
+      if (logWorld)
+        logWorldPosture()
     }
   }
   
@@ -3448,6 +3466,7 @@ object LabyrinthAwakening {
       val n = game.getNonMuslim(name)
       removeCellsFromCountry(name, n.activeCells, n.sleeperCells, addCadre = false)
       removeCadreFromCountry(name)
+      moveTroops(name, "track", n.troops)
       for (p <- n.plots)
         removePlotFromCountry(name, p, toAvailable = true)
       removeEventMarkersFromCountry(name, n.markers:_*)
@@ -3662,13 +3681,18 @@ object LabyrinthAwakening {
       if (source == "track")
         assert(game.troopsAvailable >= num, "moveTroop(): Not enough troops available on track")
       else {
-        val m = game.getMuslim(source)
-        assert(m.troops >= num, s"moveTroop(): Not enough troops available in $source")
-        game  = game.updateCountry(m.copy(troops = m.troops - num))
+        val c = game.getCountry(source)
+        assert(c.troops >= num, s"moveTroop(): Not enough troops available in $source")
+        c match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(troops = m.troops - num))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(troops = n.troops - num))
+        }
       }
       if (dest != "track") {
-        val m = game.getMuslim(dest)
-        game = game.updateCountry(m.copy(troops = m.troops + num))
+        game.getCountry(dest) match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(troops = m.troops + num))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(troops = n.troops + num))
+        }
         removeEventMarkersFromCountry(dest, "Advisors")
       }
     }
@@ -4455,10 +4479,14 @@ object LabyrinthAwakening {
   }
   
   val scenarios = ListMap[String, Scenario](
-    "Awakening"          -> new Awakening,
-    "MittsTurn"          -> new MittsTurn,
-    "StatusOfForces"     -> new StatusOfForces,
-    "IslamicStateOfIraq" -> new IslamicStateOfIraq
+    "LetsRoll"            -> new LetsRoll,
+    "YouCanCallMeAl"      -> new YouCanCallMeAl,
+    "Anaconda"            -> new Anaconda,
+    "MissionAccomplished" -> new MissionAccomplished,
+    "Awakening"           -> new Awakening,
+    "MittsTurn"           -> new MittsTurn,
+    "StatusOfForces"      -> new StatusOfForces,
+    "IslamicStateOfIraq"  -> new IslamicStateOfIraq
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
   
@@ -4527,6 +4555,8 @@ object LabyrinthAwakening {
             log(separator())
             scenario.cardsRemoved map (deck(_).toString) foreach (log(_))
           }
+          log()
+          scenario.additionalSetup()
           saveTurn()  // Save the initial game state as turn-0
           game = game.copy(turn = game.turn + 1)
           logStartOfTurn()
@@ -4573,7 +4603,9 @@ object LabyrinthAwakening {
         reqd[String]("", "--game=name", saved, "Resume a game in progress")
           { (v, c) => c.copy(gameName = Some(v)) }
         
-        val scenarioHelp = "Select a scenario" +: scenarios.keys.toSeq
+        val scenarioHelp = "Select a scenario" +: 
+          (for ((key, sc) <- scenarios.toSeq; mod = if (sc.expansion) "Awakening" else "Labyrinth")
+            yield s"$key ($mod)")
         reqd[String]("", "--scenario=name", scenarios.keys.toSeq, scenarioHelp: _*)
           { (v, c) => c.copy(scenarioName = Some(v)) }
       
@@ -5242,7 +5274,7 @@ object LabyrinthAwakening {
     val troopsMarkers: List[String] = if (source == "track")
       Nil 
     else {
-      val candidates = game.getMuslim(source).troopsMarkers filter (_.canDeploy) map (_.name)
+      val candidates = game.getCountry(source).troopsMarkers filter (_.canDeploy) map (_.name)
       if (candidates.isEmpty)
         Nil
       else {
@@ -5258,7 +5290,7 @@ object LabyrinthAwakening {
     }
     val dest       = askCountry("Deploy troops to: ", to filterNot (_ == source))
     val maxTroops  = if (source == "track") game.troopsAvailable 
-                     else game.getMuslim(source).maxDeployFrom(ops)
+                     else game.getCountry(source).maxDeployFrom(ops)
     val numTroops  = askInt("Deploy how many troops: ", 0, maxTroops)
     log()
     removeEventMarkersFromCountry(source, troopsMarkers:_*)
@@ -5272,7 +5304,7 @@ object LabyrinthAwakening {
     val dest      = askCountry("Regime change in which country: ", game.regimeChangeTargets)
     val source    = askCountry("Deploy troops from: ", game.regimeChangeSources(3))
     val maxTroops = if (source == "track") game.troopsAvailable
-                    else game.getMuslim(source).maxDeployFrom(3)
+                    else game.getCountry(source).maxDeployFrom(3)
     val numTroops = askInt("How many troops: ", 6, maxTroops)
     performRegimeChange(source, dest, numTroops)
   }
@@ -5283,7 +5315,7 @@ object LabyrinthAwakening {
     log(separator())
     val source = askCountry("Withdraw troops from which country: ", game.withdrawFromTargets)
     val dest   = askCountry("Deploy withdrawn troops to: ", (game.withdrawToTargets filter (_ != source)))
-    val numTroops = askInt("How many troops: ", 1, game.getMuslim(source).troops)
+    val numTroops = askInt("How many troops: ", 1, game.getCountry(source).troops)
     performWithdraw(source, dest, numTroops)
   }
 

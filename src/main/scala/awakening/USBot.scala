@@ -733,8 +733,8 @@ object USBot extends BotHelpers {
   
   val DeployToFlowchart = List(
     new CriteriaFilter("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
-        muslimTest(m => globalEventInPlay("Abu Sayyaf") && m.name == Philippines && 
-                         m.totalCells > 0 && m.totalTroops == 0)),
+        nonMuslimTest(n => n.name == Philippines && n.hasMarker("Abu Sayyaf") &&  
+                         n.totalCells > 0 && n.totalTroops == 0)),
     new CriteriaFilter("With cells, but no troops or militia",
       muslimTest(m => m.totalCells > 0 && m.totalTroopsAndMilitia == 0)),
     new CriteriaFilter("Regime Change needs troops + militia for WoI",
@@ -763,7 +763,7 @@ object USBot extends BotHelpers {
   
   val DeployFromFlowchart = List(
     new CriteriaFilter("Philippines if Moro Talks",  // Base game only
-        muslimTest(m => globalEventInPlay("Moro Talks") && m.name == Philippines)),
+        nonMuslimTest(n => n.name == Philippines && n.hasMarker("Moro Talks"))),
     new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
     new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 
@@ -1139,7 +1139,7 @@ object USBot extends BotHelpers {
     
     val opsUsed = to match {
       case "track" => 1
-      case name    => (game getMuslim name).governance
+      case name    => (game getCountry name).governance
     }
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
@@ -1147,8 +1147,8 @@ object USBot extends BotHelpers {
     val (withdraw, numTroops) = from match {
       case "track" => (false, 2)  // Always deploy exactly 2 troops from track
       case name    =>
-        val m = game getMuslim name
-        (m.inRegimeChange, m.maxDeployFrom(opsUsed))
+        val withdraw = (game isMuslim name) && (game getMuslim name).inRegimeChange
+        (withdraw, (game getCountry name).maxDeployFrom(opsUsed))
     }
     if (withdraw) {
       log(s"$US performs a Withdraw operation")
