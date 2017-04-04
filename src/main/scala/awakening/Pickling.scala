@@ -42,12 +42,12 @@ import FUtil.Pathname
 // Since this file rarely changes, sbt will not have to recompile it often.
 
 object Pickling {
-  import LabyrinthAwakening.{ GameState, game, logStartOfTurn }
+  import LabyrinthAwakening.GameState
   // Save the current game state.
-  def saveGameState(filepath: Pathname): Unit = {
+  def saveGameState(filepath: Pathname, gameState: GameState): Unit = {
     try {
       filepath.dirname.mkpath() // Make sure that the game directory exists
-      filepath.write(game.pickle.value)
+      filepath.write(gameState.pickle.value)
     }
     catch {
       case e: IOException =>
@@ -61,17 +61,17 @@ object Pickling {
   
   // The path should be the full path to the file to load.
   // Will set the game global variable
-  def loadGameState(filepath: Pathname): Unit = {
+  def loadGameState(filepath: Pathname): GameState = {
     try {
-      filepath.inputStream { istream =>
-        game = BinaryPickle(istream).unpickle[GameState]
+      val gameState = filepath.inputStream { istream =>
+        BinaryPickle(istream).unpickle[GameState]
       }
       // If we load a game with no plays then it represents
       // the end of a turn so we must advance the turn number.
-      if (game.plays.isEmpty) {
-        game = game.copy(turn = game.turn + 1)
-        logStartOfTurn()
-      }
+      if (gameState.plays.isEmpty)
+        gameState.copy(turn = gameState.turn + 1)
+      else
+        gameState
     }
     catch {
       case e: IOException =>

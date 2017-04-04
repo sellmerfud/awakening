@@ -2384,11 +2384,11 @@ object LabyrinthAwakening {
   // Save the current play
   // 
   def savePlay(): Unit = {
-    saveGameState(playFilePath(game.plays.size))
+    saveGameState(playFilePath(game.plays.size), game)
   }
   
   def saveTurn(): Unit = {
-    saveGameState(turnFilePath(game.turn))
+    saveGameState(turnFilePath(game.turn), game)
     saveGameDescription()
     removePlayFiles() // Remove all of the play files
   }
@@ -2415,10 +2415,12 @@ object LabyrinthAwakening {
       throw new IllegalStateException(s"No saved file found for game '$name'")
     }
     gameName = Some(name)
-    file match {
+    game = file match {
       case PlayFile(n) => loadGameState(playFilePath(n))
       case TurnFile(n) => loadGameState(turnFilePath(n))
     }
+    if (game.plays.isEmpty)
+      logStartOfTurn()
   }
   
   // Return the list of saved games
@@ -2497,19 +2499,27 @@ object LabyrinthAwakening {
       plays ::: defaultChoices
     }
        
-    askMenu(choices, allowAbort = false).head match {
+    val newGS = askMenu(choices, allowAbort = false).head match {
       case PLAY("0") =>
-        loadGameState(turnFilePath(game.turn - 1))
+        val gs = loadGameState(turnFilePath(game.turn - 1))
         removePlayFiles()
+        Some(gs)
       case PLAY(n) => 
-        loadGameState(playFilePath(n.toInt))
+        val gs = loadGameState(playFilePath(n.toInt))
         removePlayFiles(n.toInt + 1)
+        Some(gs)
       case "previous" =>
         val turn = askInt("Enter turn #", 1, game.turn, allowAbort = false)
-        loadGameState(turnFilePath(turn - 1))
+        val gs = loadGameState(turnFilePath(turn - 1))
         removePlayFiles()
         removeTurnFiles(turn)      
-      case _ => // cancel
+        Some(gs)
+      case _ => None
+    }
+    
+    newGS foreach { gs =>
+      displayGameStateDifferences(game, gs)
+      game = gs
     }
   }
   
@@ -2533,15 +2543,13 @@ object LabyrinthAwakening {
   
   // Display a list of what needs to be done to get the game board into
   // the proper state when going from one state to another.
-  def displayGameStateDifferences(from: GameState, to: GameState, heading: String = ""): Unit = {
+  def displayGameStateDifferences(from: GameState, to: GameState): Unit = {
     def show(oldValue: Any, newValue: Any, msg: String) =
       if (oldValue != newValue) println(msg)
     
-    if (heading.nonEmpty) {
-      println()
-      println("The following changes should be made to the game board")
-      println(separator())
-    }
+    println()
+    println("The following changes should be made to the game board")
+    println(separator())
     show(from.params.botDifficulties, to.params.botDifficulties, 
         "Set the bot difficulties to %s".format(to.params.botDifficulties map (_.name) mkString ", ")) 
     show(from.goodResources, to.goodResources, s"Set Good Resources to ${to.goodResources}")
@@ -2581,67 +2589,101 @@ object LabyrinthAwakening {
       to.cardsRemoved.sorted foreach (c => println(s"  ${cardNumAndName(c)}"))
     }
     
-    for (fromC <- from.muslims; toC = to.getMuslim(fromC.name)) {
-      val b = new ListBuffer[String]
-      def showC(oldValue: Any, newValue: Any, msg: String) = if (oldValue != newValue) b += msg
-      def showBool(oldValue: Boolean, newValue: Boolean, marker: String) = 
-        (oldValue, newValue) match {
-          case (true, false) => b += s"  Remove $marker"
-          case (false, true) => b += s"  Add $marker"
-          case _ => // No change
-          
-        }
-      showC(fromC.governance, toC.governance, s"  Set governance to ${govToString(toC.governance)}")    
-      showC(fromC.alignment, toC.alignment, s"  Set alignment to ${toC.alignment}")    
-      showC(fromC.sleeperCells, toC.sleeperCells, s"  Set active cells to ${toC.sleeperCells}")
-      showC(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
-      showBool(fromC.hasCadre, toC.hasCadre, "cadre marker")
-      showC(fromC.troops, toC.troops, s"  Set troops to ${toC.troops}")
-      showC(fromC.militia, toC.militia, s"  Set militia to ${toC.militia}")
-      showC(fromC.aidMarkers, toC.aidMarkers, s"  Set aid markers to ${toC.aidMarkers}")
-      showC(fromC.awakening, toC.awakening, s"  Set awakening markers to ${toC.awakening}")
-      showC(fromC.reaction, toC.reaction, s"  Set reaction markers to ${toC.reaction}")
-      showBool(fromC.besiegedRegime, toC.besiegedRegime, "besieged regime marker")
-      if (fromC.regimeChange != toC.regimeChange) {
-        toC.regimeChange match {
-          case NoRegimeChange => b += "  Remove regime change marker"
-          case x              => b += s"  Add ${x} regime change marker"
-        }
+    val b = new ListBuffer[String]
+    def showChange(value: Any, desc: String) = value match {
+      case true =>  b += s"  Add $desc"
+      case false => b += s"  Remove $desc"
+      case x     => b += s"  Set $desc to $x"
+    }
+    def showC[T](f: Country, optTo: Option[Country], value: (Country) => T, desc: String) = {
+      optTo foreach { t =>
+        val newValue = value(t)
+        if (value(f) != newValue) showChange(newValue, desc)
       }
-      showBool(fromC.caliphateCapital, toC.caliphateCapital, "Caliphate capital marker")
-      showBool(from.isCaliphateMember(fromC.name), to.isCaliphateMember(toC.name), "Caliphate member marker")
-      showC(fromC.plots.sorted, toC.plots.sorted, 
-            s"  Set plots to ${mapPlotsDisplay(toC.plots, to.params.humanRole)}")
-      showC(fromC.markers.sorted,  toC.markers.sorted, 
-        s"  Set markers to: ${markersString(toC.markers)}" )
-      showC(fromC.wmdCache, toC.wmdCache, s"  Set WMD cache to ${amountOf(toC.wmdCache, "WMD plot")}")
+    }    
+    def showM[T](f: MuslimCountry, optTo: Option[MuslimCountry], value: (MuslimCountry) => T, desc: String) = {
+      optTo foreach { t =>
+        val newValue = value(t)
+        if (value(f) != newValue) showChange(newValue, desc)
+      }
+    }
+    def showN[T](f: NonMuslimCountry, optTo: Option[NonMuslimCountry], value: (NonMuslimCountry) => T, desc: String) = {
+      optTo foreach { t =>
+        val newValue = value(t)
+        if (value(f) != newValue) showChange(newValue, desc)
+      }
+    }
+        
+    for (fromM <- from.muslims) {
+      b.clear
+      // Iran and Nigeria can be flipped to non-Muslim side.
+      val toM = if (to isMuslim fromM.name) Some(to getMuslim fromM.name) else None
+      val toN = if (to isNonMuslim fromM.name) Some(to getNonMuslim fromM.name) else None
+        
+      if (toN.nonEmpty)
+        b += s"Flip the country mat to the non-Muslim side"
+      showC(fromM, toM orElse toN, _.governance, "governance")
+      showM(fromM, toM, _.alignment, "alignment")
+      showC(fromM, toM orElse toN, _.sleeperCells, "sleeper cells")
+      showC(fromM, toM orElse toN, _.activeCells, "active cells")
+      showC(fromM, toM orElse toN, _.hasCadre, "cadre marker")
+      showC(fromM, toM orElse toN, _.troops, "troops")
+      showM(fromM, toM, _.militia, "militia")
       
+      showM(fromM, toM, _.aidMarkers, "aid markers")
+      showM(fromM, toM, _.awakening, "awakening markers")
+      showM(fromM, toM, _.reaction, "reaction markers")
+      showM(fromM, toM, _.besiegedRegime, "besieged regime marker")
+      showM(fromM, toM, _.regimeChange, "Regime Change")
+      showM(fromM, toM, _.caliphateCapital, "Caliphate capital marker")
+      toM foreach { t =>
+        val fromVal = from.isCaliphateMember(fromM.name)
+        val toVal   = to.isCaliphateMember(t.name)
+        if (fromVal != toVal)
+          b += s"  ${if (toVal) "Add" else "Remove"} Caliphate member marker"
+      }
+      showC(fromM, toM orElse toN, _.wmdCache, "WMD cache")
+      (toM orElse toN) foreach { t =>
+        val newVal = t.plots.sorted
+        if (fromM.plots.sorted != newVal)
+          b += s"  Set plots to ${mapPlotsDisplay(newVal, to.params.humanRole)}"
+      }
+      (toM orElse toN) foreach { t =>
+        val newVal = t.markers.sorted
+        if (fromM.markers.sorted != newVal)
+          b += s"  Set markers to ${markersString(newVal)}"
+      }
+
       if (b.nonEmpty) {
-        b.prepend(s"\n${toC.name} changes:\n${separator()}")
+        b.prepend(s"\n${fromM.name} changes:\n${separator()}")
         b foreach println
       }
     }
     
-    for (fromC <- from.nonMuslims; toC = to.getNonMuslim(fromC.name)) {
-      val b = new ListBuffer[String]
-      def showC(oldValue: Any, newValue: Any, msg: String) = if (oldValue != newValue) b += msg
-          
-      showC(fromC.posture, toC.posture, s"  Set posture to ${toC.posture}")
-      showC(fromC.sleeperCells, toC.sleeperCells, s"  Set sleeper cells to ${toC.sleeperCells}")
-      showC(fromC.activeCells, toC.activeCells, s"  Set active cells to ${toC.activeCells}")
-      (fromC.hasCadre, toC.hasCadre) match {
-        case (true, false) => b += "  Remove cadre marker"
-        case (false, true) => b += "  Add cadre marker"
-        case _ => // No change
+    for (fromN <- from.nonMuslims) {
+      b.clear
+      // Iran and Nigeria can be flipped to Muslim side.
+      val toM = if (to isMuslim fromN.name) Some(to getMuslim fromN.name) else None
+      val toN = if (to isNonMuslim fromN.name) Some(to getNonMuslim fromN.name) else None
+
+      showN(fromN, toN, _.posture, "posture")
+      showC(fromN, toN orElse toM, _.sleeperCells, "sleeper cells")
+      showC(fromN, toN orElse toM, _.activeCells, "active cells")
+      showC(fromN, toN orElse toM, _.hasCadre, "cadre marker")
+      showC(fromN, toN orElse toM, _.troops, "troops")
+      showC(fromN, toN orElse toM, _.wmdCache, "WMD cache")
+      (toN orElse toM) foreach { t =>
+        val newVal = t.plots.sorted
+        if (fromN.plots.sorted != newVal)
+          b += s"  Set plots to ${mapPlotsDisplay(newVal, to.params.humanRole)}"
       }
-      showC(fromC.plots.sorted, toC.plots.sorted, 
-            s"  Set plots to ${mapPlotsDisplay(toC.plots, to.params.humanRole)}")
-      showC(fromC.markers.sorted,  toC.markers.sorted, 
-        s"  Set markers to: ${markersString(toC.markers)}" )
-      showC(fromC.wmdCache, toC.wmdCache, s"  Set WMD cache to ${amountOf(toC.wmdCache, "WMD plot")}")
-      
+      (toN orElse toM) foreach { t =>
+        val newVal = t.markers.sorted
+        if (fromN.markers.sorted != newVal)
+          b += s"  Set markers to ${markersString(newVal)}"
+      }
       if (b.nonEmpty) {
-        b.prepend(s"\n${toC.name} changes:\n${separator()}")
+        b.prepend(s"\n${fromN.name} changes:\n${separator()}")
         b foreach println
       }
     }
@@ -2674,14 +2716,7 @@ object LabyrinthAwakening {
       log(s"$role reserves set to zero")
     }
   }
-  
-  // Change the current game state and print to the console all
-  // ajdustments that need to be made to the game 
-  def performRollback(previousGameState: GameState): Unit = {
-    displayGameStateDifferences(game, previousGameState)
-    game = previousGameState
-  }
-  
+    
   def polarization(): Unit = {
     val candidates = game.muslims filter (m => (m.awakening - m.reaction).abs > 1)
     log()
@@ -4504,7 +4539,7 @@ object LabyrinthAwakening {
     var cmdLineParams = parseCommandLine(args, UserParams())
     if (cmdLineParams.gameFile.nonEmpty) {
       gameName = Some(askGameName("Enter a name for the game: "))
-      loadGameState(Pathname(cmdLineParams.gameFile.get))
+      game = loadGameState(Pathname(cmdLineParams.gameFile.get))
       printSummary(game.playSummary)
     }
     else if (cmdLineParams.gameName.nonEmpty) {
@@ -5128,7 +5163,8 @@ object LabyrinthAwakening {
         case AbortCardPlay =>
           println("\n>>>> Aborting the current card play <<<<")
           println(separator())
-          performRollback(savedState)
+          displayGameStateDifferences(game, savedState)
+          game = savedState
       }
     }
   }
@@ -5455,7 +5491,8 @@ object LabyrinthAwakening {
         case AbortCardPlay =>
           println("\n>>>> Aborting the current card play <<<<")
           println(separator())
-          performRollback(savedState)
+          displayGameStateDifferences(game, savedState)
+          game = savedState
       }
     }
   }
@@ -6178,39 +6215,42 @@ object LabyrinthAwakening {
       println()
         
       if (game.isMuslim(name)) {
-        val choices = List(
+        val flip = if (name == Iran || name == Nigeria) List("flip to non-Muslim") else Nil
+        val choices = (flip ::: List(
           "alignment", "governance", "active cells", "sleeper cells", "regime change",
           "cadre", "troops", "militia", "aid", "awakening", "reaction", "wmd cache",
           "besieged regime", "civil war", "caliphate capital", "plots", "markers"
-        ).sorted
+        )).sorted
         askOneOf(s"[$name attribute] (? for list): ", choices, allowNone = true, allowAbort = false) match {
           case None        =>
           case Some(attribute) =>
             attribute match {
-              case "alignment"         => adjustAlignment(name)
-              case "governance"        => adjustGovernance(name)
-              case "active cells"      => adjustActiveCells(name)
-              case "sleeper cells"     => adjustSleeperCells(name)
-              case "cadre"             => adjustCadre(name)
-              case "troops"            => adjustTroops(name)
-              case "militia"           => adjustMilitia(name)
-              case "aid"               => adjustAid(name)
-              case "awakening"         => adjustAwakening(name)
-              case "reaction"          => adjustReaction(name)
-              case "besieged regime"   => adjustBesiegedRegime(name)
-              case "regime change"     => adjustRegimeChange(name)
-              case "civil war"         => adjustCivilWar(name)
-              case "caliphate capital" => adjustCaliphateCapital(name)
-              case "plots"             => adJustCountryPlots(name)
-              case "markers"           => adjustCountryMarkers(name)
-              case "wmd cache"         => adjustCountryWMDCache(name)
+              case "alignment"          => adjustAlignment(name)
+              case "governance"         => adjustGovernance(name)
+              case "active cells"       => adjustActiveCells(name)
+              case "sleeper cells"      => adjustSleeperCells(name)
+              case "cadre"              => adjustCadre(name)
+              case "troops"             => adjustTroops(name)
+              case "militia"            => adjustMilitia(name)
+              case "aid"                => adjustAid(name)
+              case "awakening"          => adjustAwakening(name)
+              case "reaction"           => adjustReaction(name)
+              case "besieged regime"    => adjustBesiegedRegime(name)
+              case "regime change"      => adjustRegimeChange(name)
+              case "civil war"          => adjustCivilWar(name)
+              case "caliphate capital"  => adjustCaliphateCapital(name)
+              case "plots"              => adJustCountryPlots(name)
+              case "markers"            => adjustCountryMarkers(name)
+              case "wmd cache"          => adjustCountryWMDCache(name)
+              case "flip to non-Muslim" => adjustToNonMuslim(name)
             }
             getNextResponse()
         }
       }
       else { // Nonmuslim
+        val flip = if (name == Iran || name == Nigeria) List("flip to muslim") else Nil
         val choices = {
-          var xs = List("posture", "active cells", "sleeper cells", "cadre", "plots", "markers").sorted
+          var xs = (flip :::List("posture", "active cells", "sleeper cells", "cadre", "plots", "markers")).sorted
           if (name == UnitedStates || name == Israel || name == Iran)
             xs filterNot (_ == "posture")
           else
@@ -6220,12 +6260,13 @@ object LabyrinthAwakening {
           case None        =>
           case Some(attribute) =>
             attribute match {
-              case "posture"       => adjustPosture(name)
-              case "active cells"  => adjustActiveCells(name)
-              case "sleeper cells" => adjustSleeperCells(name)
-              case "cadre"         => adjustCadre(name)
-              case "plots"         => adJustCountryPlots(name)
-              case "markers"       => adjustCountryMarkers(name)
+              case "posture"        => adjustPosture(name)
+              case "active cells"   => adjustActiveCells(name)
+              case "sleeper cells"  => adjustSleeperCells(name)
+              case "cadre"          => adjustCadre(name)
+              case "plots"          => adJustCountryPlots(name)
+              case "markers"        => adjustCountryMarkers(name)
+              case "flip to muslim" => adjustToMuslim(name)
             }
             getNextResponse()
         }
@@ -6244,9 +6285,9 @@ object LabyrinthAwakening {
         val choices = (PostureUntested::Soft::Hard::Nil) filterNot (_ == n.posture)
         val prompt = s"New posture (${orList(choices)}): "
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newPosture =>
-          logAdjustment(name, "Prestige", n.posture, newPosture)
+          logAdjustment(name, "Posture", n.posture, newPosture)
           game = game.updateCountry(n.copy(postureValue = newPosture))
-          saveAdjustment(name, "Prestige")
+          saveAdjustment(name, "Posture")
         }
     }
   }
@@ -6734,6 +6775,24 @@ object LabyrinthAwakening {
           saveAdjustment(name, "WMD cache")
         }
     }    
+  }
+  
+  def adjustToNonMuslim(name: String): Unit = {
+    assert(name == Iran || name == Nigeria, s"Cannot flip $name to non-Muslim")
+    if (game isMuslim name) {
+      game = game.updateCountry(if (name == Iran) DefaultIran else DefaultNigeria)
+      logAdjustment(name, "Flipped", "Muslim", "non-Muslim")
+      saveAdjustment(name, "Flipped")
+    }
+  }
+  
+  def adjustToMuslim(name: String): Unit = {
+    assert(name == Iran || name == Nigeria, s"Cannot flip $name to muslim")
+    if (game isNonMuslim name) {
+      game = game.updateCountry(if (name == Iran) DefaultMuslimIran else DefaultMuslimNigeria)
+      logAdjustment(name, "Flipped", "non-Muslim", "Muslim")
+      saveAdjustment(name, "Flipped")
+    }
   }
 }
 
