@@ -264,8 +264,7 @@ object LabyrinthCards {
         else
           USBot.markerAlignGovTarget(candidates).get
         addEventTarget(name)
-        improveGovernance(name, 1, canShiftToGood = false)
-        shiftAlignmentLeft(name)
+        setGovernance(name, Poor, Some(Neutral))
       }
     )),
     // ------------------------------------------------------------------------
@@ -338,25 +337,23 @@ object LabyrinthCards {
       ,
       (role: Role) => {
         addEventTarget(Turkey)
-        testCountry(Turkey)
-        val turkey = game getMuslim Turkey
-        turkey.governance match {
-          case Good => degradeGovernance(Turkey, 1, canShiftToIR = false)
-          case Fair =>
-          case Poor => improveGovernance(Turkey, 1, canShiftToGood = false)
-          case _    => improveGovernance(Turkey, 2, canShiftToGood = false) // Islamist Rule
-        }
-        turkey.alignment match {
-          case Ally      => shiftAlignmentRight(Turkey)
-          case Adversary => shiftAlignmentLeft(Turkey)
-          case _         =>
-        }
+        setGovernance(Turkey, Fair, Some(Neutral))
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(20, "King Abdullah", US, 2,
-      Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => {
+        val jordan = game getMuslim Jordan
+        !(jordan.isFair && jordan.isAlly) || game.prestige < 12 || game.funding > 1
+      }
+      ,
+      (role: Role) => {
+        addEventTarget(Jordan)
+        setGovernance(Jordan, Fair, Some(Ally))
+        increasePrestige(1)
+        decreaseFunding(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(21, "“Let’s Roll!”", US, 2,

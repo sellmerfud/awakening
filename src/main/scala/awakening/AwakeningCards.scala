@@ -3752,16 +3752,10 @@ object AwakeningCards {
         val m = game getMuslim name
         addEventTarget(name)
         endCivilWar(name)
-        if (m.totalCells > m.totalTroopsAndMilitia) {
-          setAlignment(name, Adversary)
-          if (m.isFair)
-            degradeGovernance(name, 1, canShiftToIR = false)
-        }
-        if (m.totalTroopsAndMilitia > m.totalCells) {
-          setAlignment(name, Ally)
-          if (m.isPoor)
-            improveGovernance(name, 1, canShiftToGood = false)
-        }
+        if (m.totalCells > m.totalTroopsAndMilitia)
+          setGovernance(name, Poor, Some(Adversary))
+        else if (m.totalTroopsAndMilitia > m.totalCells)
+          setGovernance(name, Fair, Some(Ally))
         else
           log(s"The governance and alignment of $name does not change")
       }

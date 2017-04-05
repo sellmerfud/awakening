@@ -3491,6 +3491,66 @@ object LabyrinthAwakening {
     }
   }
 
+  def setGovernance(name: String, gov: Int, alignment: Option[String] = None): Unit = {
+    val m = game getMuslim name
+    if (m.isUntested) {
+      val align = if (gov == IslamistRule) Adversary
+                  else alignment getOrElse Neutral
+      game = game.updateCountry(m.copy(governance = gov, alignment = align))
+      log(s"Set $name to ${govToString(gov)} $align")
+    }
+    else {
+      // Use the improveGovernance/degradeGovernance functions to make sure
+      // all the details are covered such as ending civil war, etc.
+      val govDelta = m.governance - gov
+      if (govDelta > 0)
+        improveGovernance(name, govDelta, canShiftToGood = true)
+      else if (govDelta < 0)
+        degradeGovernance(name, -govDelta, canShiftToIR = true)
+    
+      // If governance was set to IslamistRule then make sure
+      // the alignment is Adversary
+      if (gov == IslamistRule && m.alignment != Adversary && alignment != Some(Adversary))
+        setAlignment(name, Adversary)
+      else
+        alignment foreach { align => setAlignment(name, align) }
+    }
+  }
+  
+  def setAlignment(name: String, newAlign: String): Unit = {
+    var m = game.getMuslim(name)
+    if (m.alignment != newAlign) {
+      log(s"Set the alignment of $name to $newAlign")
+      game = game.updateCountry(m.copy(alignment = newAlign))
+      if (name == Iran && newAlign != Adversary && (game.getCountry(Iran).hasMarker("Trade Embargo"))) {
+        removeEventMarkersFromCountry(Iran, "Trade Embargo")
+        log("Iran may resume oil exports")
+      }
+      if (newAlign == Adversary)
+        removeEventMarkersFromCountry(name, "Advisors")
+      else if (name == Nigeria && newAlign == Ally && m.totalCells == 0)
+        makeNigeriaNonMuslim() // rule 11.3.3.3
+    }
+  }
+  
+  def shiftAlignmentLeft(name: String): Unit = {
+    var m = game.getMuslim(name)
+    m.alignment match {
+      case Adversary => setAlignment(name, Neutral)
+      case Neutral   => setAlignment(name, Ally)
+      case _         =>
+    }
+  }
+  
+  def shiftAlignmentRight(name: String): Unit = {
+    var m = game.getMuslim(name)
+    m.alignment match {
+      case Ally    => setAlignment(name, Neutral)
+      case Neutral => setAlignment(name, Adversary)
+      case _       =>
+    }
+  }
+  
   // Remove all markers from the country (except any wmd cache)
   // and make it untested.
   def setCountryToUntested(name: String): Unit = {
@@ -3526,40 +3586,6 @@ object LabyrinthAwakening {
       removeEventMarkersFromCountry(name, n.markers:_*)
       game = game.updateCountry(game.getNonMuslim(name).copy(postureValue = PostureUntested))
       log(s"Remove the ${n.posture} posture marker from $name")
-    }
-  }
-  
-  def shiftAlignmentLeft(name: String): Unit = {
-    var m = game.getMuslim(name)
-    m.alignment match {
-      case Adversary => setAlignment(name, Neutral)
-      case Neutral   => setAlignment(name, Ally)
-      case _         =>
-    }
-  }
-  
-  def shiftAlignmentRight(name: String): Unit = {
-    var m = game.getMuslim(name)
-    m.alignment match {
-      case Ally    => setAlignment(name, Neutral)
-      case Neutral => setAlignment(name, Adversary)
-      case _       =>
-    }
-  }
-  
-  def setAlignment(name: String, newAlign: String): Unit = {
-    var m = game.getMuslim(name)
-    if (m.alignment != newAlign) {
-      log(s"Set the alignment of $name to $newAlign")
-      game = game.updateCountry(m.copy(alignment = newAlign))
-      if (name == Iran && newAlign != Adversary && (game.getCountry(Iran).hasMarker("Trade Embargo"))) {
-        removeEventMarkersFromCountry(Iran, "Trade Embargo")
-        log("Iran may resume oil exports")
-      }
-      if (newAlign == Adversary)
-        removeEventMarkersFromCountry(name, "Advisors")
-      else if (name == Nigeria && newAlign == Ally && m.totalCells == 0)
-        makeNigeriaNonMuslim() // rule 11.3.3.3
     }
   }
   
@@ -6378,6 +6404,10 @@ object LabyrinthAwakening {
             var updated = m
             logAdjustment(name, "Governance", govToString(updated.governance), govToString(newGov))
             updated = updated.copy(governance = newGov)
+            if (newGov == IslamistRule && updated.alignment != Adversary) {
+              logAdjustment(name, "Alignment", updated.alignment, Adversary)
+              updated = updated.copy(alignment = Adversary)
+            }
             if (nixCapital) {
               log(s"$name lost Caliphate Capital status.  Caliphate no longer delcared.")
               updated = updated.copy(caliphateCapital = false)
