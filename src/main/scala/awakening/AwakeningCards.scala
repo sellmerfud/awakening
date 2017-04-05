@@ -880,11 +880,12 @@ object AwakeningCards {
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter unNationBuildingCandidate)
-        val (target, die) = if (role == game.humanRole)
-          (askCountry("Select country: ", candidates), humanDieRoll("Enter War of Ideas die roll: "))
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
         else 
-          (USBot.markerAlignGovTarget(candidates).get, dieRoll)
+          USBot.markerAlignGovTarget(candidates).get
         
+        val die = getDieRoll(role, "Enter War of Ideas die roll: ")
         addEventTarget(target)
         addAidMarker(target)
         performWarOfIdeas(target, die, ignoreGwotPenalty = true)

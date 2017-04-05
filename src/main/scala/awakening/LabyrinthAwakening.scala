@@ -2548,12 +2548,18 @@ object LabyrinthAwakening {
   // Display a list of what needs to be done to get the game board into
   // the proper state when going from one state to another.
   def displayGameStateDifferences(from: GameState, to: GameState): Unit = {
-    def show(oldValue: Any, newValue: Any, msg: String) =
-      if (oldValue != newValue) println(msg)
+    var headerShown = false
+    val b = new ListBuffer[String]
+    def showHeader(): Unit = if (!headerShown) {
+      headerShown = true
+      println()
+      println("The following changes should be made to the game board")
+      println(separator())
+    }
     
-    println()
-    println("The following changes should be made to the game board")
-    println(separator())
+    def show(oldValue: Any, newValue: Any, msg: String) =
+      if (oldValue != newValue) b += msg
+    
     show(from.params.botDifficulties, to.params.botDifficulties, 
         "Set the bot difficulties to %s".format(to.params.botDifficulties map (_.name) mkString ", ")) 
     show(from.goodResources, to.goodResources, s"Set Good Resources to ${to.goodResources}")
@@ -2581,19 +2587,23 @@ object LabyrinthAwakening {
             s"  Set global event markers to: ${markersString(to.markers)}" )
     (from.firstPlotCard, to.firstPlotCard) match {
       case (x, y) if x == y =>  // No change
-      case (_, Some(c))     => println(s"Set ${cardNumAndName(c)} as the first plot card")
-      case (_, None)        => println("There should be no first plot card")
+      case (_, Some(c))     => b += s"Set ${cardNumAndName(c)} as the first plot card"
+      case (_, None)        => b += "There should be no first plot card"
     }
     if (from.cardsLapsing.sorted != to.cardsLapsing.sorted) {
-      println("The following cards are lapsing:")
-        to.cardsLapsing.sorted foreach (c => println(s"  ${cardNumAndName(c)}"))
+      b += "The following cards are lapsing:"
+        to.cardsLapsing.sorted foreach (c => b += s"  ${cardNumAndName(c)}")
     }
     if (from.cardsRemoved.sorted != to.cardsRemoved.sorted) {
-      println("The following cards have been removed from play:")
-      to.cardsRemoved.sorted foreach (c => println(s"  ${cardNumAndName(c)}"))
+      b += "The following cards have been removed from play:"
+      to.cardsRemoved.sorted foreach (c => b += s"  ${cardNumAndName(c)}")
     }
     
-    val b = new ListBuffer[String]
+    if (b.nonEmpty) {
+      showHeader()
+      b foreach println
+    }
+    
     def showChange(value: Any, desc: String) = value match {
       case true =>  b += s"  Add $desc"
       case false => b += s"  Remove $desc"
@@ -2659,6 +2669,7 @@ object LabyrinthAwakening {
       }
 
       if (b.nonEmpty) {
+        showHeader()
         b.prepend(s"\n${fromM.name} changes:\n${separator()}")
         b foreach println
       }
@@ -2690,6 +2701,7 @@ object LabyrinthAwakening {
           b += s"  Set markers to ${markersString(newVal)}"
       }
       if (b.nonEmpty) {
+        showHeader()
         b.prepend(s"\n${fromN.name} changes:\n${separator()}")
         b foreach println
       }

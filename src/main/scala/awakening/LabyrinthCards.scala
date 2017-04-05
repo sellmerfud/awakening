@@ -213,18 +213,60 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(13, "Anbar Awakening", US, 2,
-      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => List(Iraq, Syria) map game.getMuslim exists (_.totalTroops > 0)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(List(Iraq, Syria) map game.getMuslim filter (_.totalTroops > 0))
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        
+        addEventTarget(name)
+        addAidMarker(name)
+        increasePrestige(1)
+        addGlobalEventMarker("Anbar Awakening")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(14, "Covert Action", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.muslims exists (_.isAdversary)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.isAdversary))
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        addEventTarget(name)
+        val die = getDieRoll(role)
+        val success = die > 3
+        log(s"Die roll: $die")
+        if (success) {
+          log("Success")
+          shiftAlignmentLeft(name)
+        }
+        else
+          log("Failure")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(15, "Ethiopia Strikes", US, 2,
-      Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => List(Somalia, Sudan) map game.getMuslim exists (_.isIslamistRule)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(List(Somalia, Sudan) map game.getMuslim filter (_.isIslamistRule))
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        addEventTarget(name)
+        improveGovernance(name, 1, canShiftToGood = false)
+        shiftAlignmentLeft(name)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(16, "Euro-Islam", US, 2,
@@ -442,7 +484,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(58, "Al-Anbar", Jihadist, 2,
       Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => () // Blocked by Anbar Awakening
     )),
     // ------------------------------------------------------------------------
     entry(new Card(59, "Amerithrax", Jihadist, 2,
