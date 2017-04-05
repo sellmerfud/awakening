@@ -1197,7 +1197,8 @@ object LabyrinthAwakening {
         case (Some(c), 5) => b += s"Training camps  : $c (Capacity 5, Caliphate country)"
         case _            => b += s"Training camps  : Not in play"
       }
-      b += s"Markers         : ${if (markers.isEmpty) "none" else markers mkString ", "}"
+      val ms = markers ::: (for (c <- countries; m <- c.markers) yield (s"$m (${c.name})"))
+      wrap(s"Markers         : ", ms) foreach (l => b += l)
       b += s"Lapsing         : ${if (cardsLapsing.isEmpty) "none" else cardNumsAndNames(cardsLapsing)}"
       b += s"1st plot        : ${firstPlotCard map cardNumAndName getOrElse "none"}"
       b += s"Available plots : ${plotsDisplay(availablePlots, humanRole == Jihadist)}"
@@ -1213,6 +1214,30 @@ object LabyrinthAwakening {
           b += fmt.format(c.name, mapPlotsDisplay(c.plots, visible))
         }
       }
+      b.toList
+    }
+    
+    def wrap(prefix: String, values: Seq[String]): Seq[String] = {
+      val b = new ListBuffer[String]
+      val s = new StringBuilder(prefix)
+      var first = true
+      if (values.isEmpty)
+        s.append("none")
+      else {
+        val margin = " " * prefix.length
+        s.append(values.head)
+        for (v <- values.tail) {
+          s.append(", ")
+          if (s.length + v.length < 78)
+            s.append(v)
+          else {
+            b += s.toString
+            s.clear
+            s.append(margin).append(v)
+          }
+        }
+      }
+      b += s.toString
       b.toList
     }
     
