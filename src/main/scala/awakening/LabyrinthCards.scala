@@ -39,10 +39,11 @@ object LabyrinthCards {
   // Various tests used by the card events
   val backlashCandidate = (m: MuslimCountry) =>
     (m.plots exists (p => !p.backlashed)) && !game.isCaliphateMember(m.name)
-    
   val unNationBuildingCandidate = (m: MuslimCountry) =>
     (m.inRegimeChange || m.civilWar) &&
     !game.isCaliphateMember(m.name)
+  val massTurnoutCandidate = (m: MuslimCountry) => 
+    m.inRegimeChange && !game.isCaliphateMember(m.name)
     
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -728,23 +729,63 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(40, "Mass Turnout", US, 3,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => () // Not in caliphate member see Awakening cards
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim massTurnoutCandidate
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter massTurnoutCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select regime change country: ", candidates)
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        
+        addEventTarget(target)
+        improveGovernance(target, 1, canShiftToGood = true)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(41, "NATO", US, 3,
-      NoRemove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.gwotPenalty == 0 && (game hasMuslim (m => m.inRegimeChange || m.civilWar))
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
+        val target = if (role == game.humanRole)
+          askCountry("Select country for NATO: ", candidates)
+        else
+          USBot.deployToPriority(candidates).get
+        
+        val MARKER = "NATO"
+        addEventTarget(target)
+        addAidMarker(target)
+        (game.muslims find (_.hasMarker(MARKER)) map (_.name)) match {
+          case Some(`target`) =>
+            log(s"NATO marker remains in $target")
+          case Some(current) =>
+            removeEventMarkersFromCountry(current, MARKER)
+            addEventMarkersToCountry(target, MARKER)
+          case None =>
+            addEventMarkersToCountry(target, MARKER)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(42, "Pakistani Offensive", US, 3,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game getMuslim Pakistan).isAlly &&
+                      (game getMuslim Pakistan).hasMarker("FATA")
+      ,
+      (role: Role) => {
+        removeEventMarkersFromCountry(Pakistan, "FATA")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(43, "Patriot Act", US, 3,
       Remove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        addEventMarkersToCountry(UnitedStates, "Patriot Act")
+        log("The United State is not adjacent to any country except Canada")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(44, "Renditions", US, 3,
@@ -943,7 +984,7 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(80, "FATA", Jihadist, 3,
-      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => ()
     )),
     // ------------------------------------------------------------------------

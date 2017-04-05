@@ -394,10 +394,22 @@ object LabyrinthAwakening {
    Nigeria           -> (Mali :: Sudan :: KenyaTanzania :: Nil)
   )
   
-  // We must filter against countries in the game, so we don't try
-  // to access Mali, Nigeria during a Labyrinth scenario!
-  def getAdjacent(name: String): List[String] = 
-    adjacencyMap(name) filter (adjName => game hasCountry (_.name == adjName))
+  def getAdjacent(name: String): List[String] = {
+    val patriotAct = (game getCountry UnitedStates).hasMarker("Patriot Act")
+    // We must filter against countries in the game, so we don't try
+    // to access Mali, Nigeria during a Labyrinth scenario!
+    val adjFilter = (adjName: String) => {
+      (game hasCountry(_.name == adjName)) &&
+      (patriotAct == false || 
+        ((name, adjName) match {
+          case (UnitedStates, other) => other == Canada
+          case (other, UnitedStates) => other == Canada
+          case _                     => true
+        })
+      )
+    }
+    adjacencyMap(name) filter adjFilter
+  }
   def getAdjacentMuslims(name: String) = getAdjacent(name) filter game.isMuslim
   def getAdjacentNonMuslims(name: String) = getAdjacent(name) filter game.isNonMuslim
   def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
