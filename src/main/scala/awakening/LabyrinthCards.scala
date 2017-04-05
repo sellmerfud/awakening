@@ -40,6 +40,10 @@ object LabyrinthCards {
   val backlashCandidate = (m: MuslimCountry) =>
     (m.plots exists (p => !p.backlashed)) && !game.isCaliphateMember(m.name)
     
+  val unNationBuildingCandidate = (m: MuslimCountry) =>
+    (m.inRegimeChange || m.civilWar) &&
+    !game.isCaliphateMember(m.name)
+    
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
     val withTroops = countryNames(game.countries filter (c => c.totalTroops > 0))
@@ -497,13 +501,45 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(30, "UN Nation Building", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => () // Not in caliphate member, see Awakening card
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => globalEventNotInPlay("Vieira de Mello Slain") && 
+                      (game hasMuslim unNationBuildingCandidate)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter unNationBuildingCandidate)
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else 
+          USBot.markerAlignGovTarget(candidates).get
+        
+        val die = getDieRoll(role, "Enter War of Ideas die roll: ")
+        addEventTarget(target)
+        addAidMarker(target)
+        performWarOfIdeas(target, die, ignoreGwotPenalty = true)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(31, "Wiretapping", US, 2,
-      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => globalEventNotInPlay("Leak") && (
+        List(UnitedStates, UnitedKingdom, Canada) map game.getCountry
+          exists (c => c.hasCadre || c.totalCells > 0 || c.plots.nonEmpty)
+      )
+      ,
+      (role: Role) => {
+
+        for (name <- List(UnitedStates, UnitedKingdom, Canada); c = game getCountry name) {
+          removeCadreFromCountry(name)
+          removeCellsFromCountry(name, c.activeCells, c.sleeperCells, addCadre = false)
+          for (plot <- c.plots)
+            removePlotFromCountry(name, plot)
+        }
+        
+        if (role == game.humanRole)
+          log(s"$US draws one card and adds it to their hand")
+        else
+          log(s"Add one card to the top of the $US Bot hand")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(32, "Back Channel", US, 3,

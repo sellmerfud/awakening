@@ -5892,12 +5892,12 @@ object LabyrinthAwakening {
     if (toAvailable) {
       val updatedPlots = game.plotData.copy(availablePlots = mapPlot.plot :: game.availablePlots)
       game = game.copy(plotData = updatedPlots)
-      log(s"Move $mapPlot to the available plots box")
+      log(s"Move $mapPlot from $name to the available plots box")
     }
     else {
       val updatedPlots = game.plotData.copy(resolvedPlots = mapPlot.plot :: game.resolvedPlots)
       game = game.copy(plotData = updatedPlots)
-      log(s"Move $mapPlot to the resolved plots box")
+      log(s"Move $mapPlot from $name to the resolved plots box")
     }
   }
 
