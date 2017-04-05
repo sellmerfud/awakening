@@ -712,7 +712,7 @@ object LabyrinthAwakening {
       troops
     
     def jihadDRM = awakening - reaction
-    def jihadOK = !isIslamistRule && totalCells > 0
+    def jihadOK = !isIslamistRule && totalCells > 0 && (name != Pakistan || !hasMarker("Benazir Bhutto"))
     def majorJihadOK(ops: Int) = 
       totalCells - totalTroopsAndMilitia >= 5 && (
         (isPoor && (ops  > 1 || besiegedRegime)) || 
@@ -3494,8 +3494,7 @@ object LabyrinthAwakening {
   def setGovernance(name: String, gov: Int, alignment: Option[String] = None): Unit = {
     val m = game getMuslim name
     if (m.isUntested) {
-      val align = if (gov == IslamistRule) Adversary
-                  else alignment getOrElse Neutral
+      val align = alignment getOrElse Neutral
       game = game.updateCountry(m.copy(governance = gov, alignment = align))
       log(s"Set $name to ${govToString(gov)} $align")
     }
@@ -3508,12 +3507,7 @@ object LabyrinthAwakening {
       else if (govDelta < 0)
         degradeGovernance(name, -govDelta, canShiftToIR = true)
     
-      // If governance was set to IslamistRule then make sure
-      // the alignment is Adversary
-      if (gov == IslamistRule && m.alignment != Adversary && alignment != Some(Adversary))
-        setAlignment(name, Adversary)
-      else
-        alignment foreach { align => setAlignment(name, align) }
+      alignment foreach { align => setAlignment(name, align) }
     }
   }
   
@@ -6404,10 +6398,6 @@ object LabyrinthAwakening {
             var updated = m
             logAdjustment(name, "Governance", govToString(updated.governance), govToString(newGov))
             updated = updated.copy(governance = newGov)
-            if (newGov == IslamistRule && updated.alignment != Adversary) {
-              logAdjustment(name, "Alignment", updated.alignment, Adversary)
-              updated = updated.copy(alignment = Adversary)
-            }
             if (nixCapital) {
               log(s"$name lost Caliphate Capital status.  Caliphate no longer delcared.")
               updated = updated.copy(caliphateCapital = false)

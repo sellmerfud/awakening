@@ -529,6 +529,7 @@ object LabyrinthCards {
       (role: Role) => {
 
         for (name <- List(UnitedStates, UnitedKingdom, Canada); c = game getCountry name) {
+          addEventTarget(name)
           removeCadreFromCountry(name)
           removeCellsFromCountry(name, c.activeCells, c.sleeperCells, addCadre = false)
           for (plot <- c.plots)
@@ -543,13 +544,39 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(32, "Back Channel", US, 3,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole && {  // Unplayable by the Bot
+        val neededOps = (game.muslims filter (_.isAdversary) map (_.resources)).distinct.sorted
+        askYorN(s"Do you have a card in hand with and Ops value of ${orList(neededOps)}? ")
+      }
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.isAdversary))
+        val name = askCountry("Select adversary country: ", candidates)
+        val ops = (game getMuslim name).resources
+        log(s"You must discard card with Ops value: $ops")
+        addEventTarget(name)
+        setAlignment(name, Neutral)
+        addAidMarker(name)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(33, "Benazir Bhutto", US, 3,
-      Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => {
+        val pakistan = (game getMuslim Pakistan)
+        !(pakistan.hasMarker("Bhutto Shot") ||
+          pakistan.isIslamistRule           ||
+          game.adjacentToIslamistRule(Pakistan))
+      }
+      ,
+      (role: Role) => {
+        addEventTarget(Pakistan)
+        if ((game getMuslim Pakistan).isPoor)
+          setGovernance(Pakistan, Fair)
+        addEventMarkersToCountry(Pakistan, "Benazir Bhutto")
+        log("No jihad allowed in Pakistan while \"Benazir Bhutto is in effect\"")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(34, "Enhanced Measures", US, 3,
@@ -684,8 +711,13 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(60, "Bhutto Shot", Jihadist, 2,
-      Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      (role: Role) => {
+        // ....
+        
+        removeEventMarkersFromCountry(Pakistan, "Benazir Bhutto")
+        addEventMarkersToCountry(Pakistan, "Bhutto Shot")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(61, "Detainee Release", Jihadist, 2,
@@ -933,7 +965,8 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(108, "Musharraf", Unassociated, 2,
       NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => ()  // Make sure there is no marker
+                          // If there is it must be removed when Benazir Bhutto is played
     )),
     // ------------------------------------------------------------------------
     entry(new Card(109, "Tora Bora", Unassociated, 2,
