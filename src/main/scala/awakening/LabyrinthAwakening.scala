@@ -6280,7 +6280,8 @@ object LabyrinthAwakening {
       else { // Nonmuslim
         val flip = if (name == Iran || name == Nigeria) List("flip to muslim") else Nil
         val choices = {
-          var xs = (flip :::List("posture", "active cells", "sleeper cells", "cadre", "plots", "markers")).sorted
+          var xs = (flip :::List("posture", "active cells", "sleeper cells", 
+                              "cadre", "plots", "markers", "troops")).sorted
           if (name == UnitedStates || name == Israel || name == Iran)
             xs filterNot (_ == "posture")
           else
@@ -6297,6 +6298,7 @@ object LabyrinthAwakening {
               case "plots"          => adJustCountryPlots(name)
               case "markers"        => adjustCountryMarkers(name)
               case "flip to muslim" => adjustToMuslim(name)
+              case "troops"         => adjustTroops(name) // Valid in Philippines if Abu Sayyaf
             }
             getNextResponse()
         }
@@ -6464,21 +6466,21 @@ object LabyrinthAwakening {
   }
     
   def adjustTroops(name: String): Unit = {
-    game.getCountry(name) match {
-      case _: NonMuslimCountry => throw new IllegalArgumentException(s"Cannot add troops to non-Muslim country: $name")
-      case m: MuslimCountry =>
-        val maxTroops = m.troops + game.troopsAvailable
-        if (maxTroops == 0) {
-          println("There a no troops available to add to this country.")
-          pause()
+    val c = game getCountry name
+    val maxTroops = c.troops + game.troopsAvailable
+    if (maxTroops == 0) {
+      println("There a no troops available to add to this country.")
+      pause()
+    }
+    else {
+      adjustInt("Troops", c.troops, 0 to maxTroops) foreach { value =>
+        logAdjustment(name, "Troops", c.troops, value)
+        c match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(troops = value))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(troops = value))
         }
-        else {
-          adjustInt("Troops", m.troops, 0 to maxTroops) foreach { value =>
-            logAdjustment(name, "Troops", m.troops, value)
-            game = game.updateCountry(m.copy(troops = value))
-          }
-          saveAdjustment(name, "Troops")
-        }
+        saveAdjustment(name, "Troops")
+      }
     }
   }
   
