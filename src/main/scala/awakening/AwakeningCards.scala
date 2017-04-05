@@ -54,8 +54,8 @@ object AwakeningCards {
     // Or in any other civil war country that does not have the maker.
     (m.hasMarker("UNSCR 1973") && m.totalCells > 0) || (m.civilWar && !m.hasMarker("UNSCR 1973"))
   }
-  val backlashCandidate = (c: Country) =>
-    (c.plots exists (p => !p.backlashed)) && !game.isCaliphateMember(c.name)
+  val backlashCandidate = (m: MuslimCountry) =>
+    (m.plots exists (p => !p.backlashed)) && !game.isCaliphateMember(m.name)
   val unNationBuildingCandidate = (m: MuslimCountry) =>
     (m.inRegimeChange || m.civilWar) &&
     !game.isCaliphateMember(m.name)
@@ -225,41 +225,36 @@ object AwakeningCards {
     entry(new Card(122, "Backlash", US, 1,
       NoRemove, NoMarker, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => (game.funding > 1 || role != game.botRole) && 
-                      (game hasCountry backlashCandidate)
+                      (game hasMuslim backlashCandidate)
       ,
       (role: Role) => {
-        val candidates = countryNames(game.countries filter backlashCandidate)
+        val candidates = countryNames(game.muslims filter backlashCandidate)
         if (role == game.humanRole) {
           val target = askCountry(s"Backlash in which country: ", candidates)
           // Pick a random plot in the country
           addEventTarget(target)
-          val country = game.getCountry(target)
-          val plot :: remaining = shuffle(country.plots)
+          val m = game.getMuslim(target)
+          val plot :: remaining = shuffle(m.plots)
           val newPlots = plot.copy(backlashed = true) :: remaining
-          country match {
-            case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = newPlots))
-            case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = newPlots))
-          }
+          game = game.updateCountry(m.copy(plots = newPlots))
           println()
           log(s"Backlash applied to a plot in $target")
         }
         else {
           val plots = for {
             name <- candidates
-            country = game.getCountry(name)
-            plot <- country.plots
+            m    = game.getMuslim(name)
+            plot <- m.plots
             if !plot.backlashed
-          } yield PlotInCountry(plot, country)
+          } yield PlotInCountry(plot, m)
 
           // Pick the highest priority plot among the countries
           val PlotInCountry(plotOnMap, country) = USBot.priorityPlot(plots)
           val (matching, other) = country.plots partition (_ == plotOnMap)
           val newPlots = matching.head.copy(backlashed = true) :: matching.tail ::: other
           addEventTarget(country.name)
-          country match {
-            case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = newPlots))
-            case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = newPlots))
-          }
+          val m = country.asInstanceOf[MuslimCountry]
+          game = game.updateCountry(m.copy(plots = newPlots))
           println()
           log(s"Backlash applied to a $plotOnMap in ${country.name}")
         }

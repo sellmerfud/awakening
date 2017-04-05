@@ -727,7 +727,20 @@ object JihadistBot extends BotHelpers {
     log(s"$Jihadist performs a Travel operation")
     log(separator())
     
-    val toName = travelToTarget(countryNames(game.countries)) getOrElse {
+    // If Biometrics is in effect only adjacent travel is allowed.
+    val toCandidates = if (lapsingEventInPlay("Biometrics")) {
+      // Find countries that are adjacent to other countries with cells, or that
+      // have active cells (which can travel in place)
+      val validCountries = game.countries filter { c =>
+        c.activeCells > 0 ||
+        (game.adjacentCountries(c.name) exists (_.totalCells > 0))
+      }
+      countryNames(validCountries)
+    }
+    else
+      countryNames(game.countries)
+    
+    val toName = travelToTarget(toCandidates) getOrElse {
       throw new IllegalStateException("travelOperation() should always find \"travel to\" ttarget")
     }
     
@@ -740,7 +753,10 @@ object JihadistBot extends BotHelpers {
         Nil  // We've used all available Ops
       else {
         val canTravelFrom = (c: Country) => !alreadyTried(c.name) && unusedCells(c) > 0
-        val candidates = countryNames(game.countries filter canTravelFrom)
+        val candidates = if (lapsingEventInPlay("Biometrics"))
+          countryNames(game.adjacentCountries(toName) filter canTravelFrom)
+        else
+          countryNames(game.countries filter canTravelFrom)
         travelFromTarget(toName, candidates) match {
           case None => Nil   // No more viable countries to travel from
           case Some(fromName) =>
@@ -1044,12 +1060,10 @@ object JihadistBot extends BotHelpers {
         if (adjSources.nonEmpty) {
           // Now pick just the destinations that are adjacent to one of the sources
           val adjDests = destinations filter (d => adjSources exists (s => areAdjacent(s, d)))
-          // The travelTo priorities in the case will always select randomly
-          // val to = travelToTarget(adjDests).get
-          val to = shuffle(adjDests).head
+          val to = recruitTravelToPriority(adjDests).get
           // Don't allow travel within the same country
           travelFromTarget(to, adjSources filterNot (_ == to)) match {
-            case None => completed  // No more source countries
+            case None => nextTravel(completed, destinations filterNot (_ == to))
             case Some(from) =>
               if (completed >= cardOps)
                 expendBotReserves(1)
@@ -1060,13 +1074,13 @@ object JihadistBot extends BotHelpers {
               nextTravel(completed + 1, destinations filterNot (_ == to))
           }
         }
+        else if (lapsingEventInPlay("Biometrics")) // Non adjacent travel is not allowd
+          completed
         else {
-         // The travelTo priorities in the case will always select randomly
-         // val to = travelToTarget(destinations).get
-         val to = shuffle(destinations).head
+         val to = recruitTravelToPriority(destinations).get
          // Don't allow travel within the same country
          travelFromTarget(to, sources filterNot (_ == to)) match {
-           case None => completed   // No more source countrie
+           case None => nextTravel(completed, destinations filterNot (_ == to))
            case Some(from) => 
               if (completed >= cardOps)
                expendBotReserves(1)

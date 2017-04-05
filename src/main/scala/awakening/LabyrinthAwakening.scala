@@ -5669,6 +5669,8 @@ object LabyrinthAwakening {
   def travelIsAutomatic(src: String, dest: String): Boolean = {
     if (lapsingEventInPlay("Islamic Maghreb") && (Schengen contains dest))
       false
+    else if (lapsingEventInPlay("Biometrics"))
+      src == dest || (areAdjacent(src, dest) && !(game getCountry dest).isGood)
     else
       src == dest || areAdjacent(src, dest)
   }
@@ -5705,7 +5707,12 @@ object LabyrinthAwakening {
         src.actives > 0
       }
         
-      val dest = askCountry(s"$ord Travel to which destination country: ", countryNames(game.countries))
+      val destCandidates = if (lapsingEventInPlay("Biometrics"))
+        getAdjacent(src.name)
+      else
+        countryNames(game.countries)
+
+      val dest = askCountry(s"$ord Travel to which destination country: ", destCandidates)
       // Remove the selected cell so that it cannot be selected twice.
       if (src.sleepers + src.actives == 1)
         sourceCountries -= src.name

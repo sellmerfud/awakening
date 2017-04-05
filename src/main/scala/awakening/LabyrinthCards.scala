@@ -37,6 +37,8 @@ import USBot.PlotInCountry
 object LabyrinthCards {
   
   // Various tests used by the card events
+  val backlashCandidate = (m: MuslimCountry) =>
+    (m.plots exists (p => !p.backlashed)) && !game.isCaliphateMember(m.name)
 
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
@@ -44,13 +46,50 @@ object LabyrinthCards {
   val deck: Map[Int, Card] = Map(
     // ------------------------------------------------------------------------
     entry(new Card(1, "Backlash", US, 1,
-    NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+    NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game.funding > 1 || role != game.botRole) && 
+                      (game hasMuslim backlashCandidate)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter backlashCandidate)
+        if (role == game.humanRole) {
+          val target = askCountry(s"Backlash in which country: ", candidates)
+          // Pick a random plot in the country
+          addEventTarget(target)
+          val m = game.getMuslim(target)
+          val plot :: remaining = shuffle(m.plots)
+          val newPlots = plot.copy(backlashed = true) :: remaining
+          game = game.updateCountry(m.copy(plots = newPlots))
+          println()
+          log(s"Backlash applied to a plot in $target")
+        }
+        else {
+          val plots = for {
+            name <- candidates
+            m = game.getMuslim(name)
+            plot <- m.plots
+            if !plot.backlashed
+          } yield PlotInCountry(plot, m)
+
+          // Pick the highest priority plot among the countries
+          val PlotInCountry(plotOnMap, country) = USBot.priorityPlot(plots)
+          val (matching, other) = country.plots partition (_ == plotOnMap)
+          val newPlots = matching.head.copy(backlashed = true) :: matching.tail ::: other
+          addEventTarget(country.name)
+          val m = country.asInstanceOf[MuslimCountry]
+          game = game.updateCountry(m.copy(plots = newPlots))
+          println()
+          log(s"Backlash applied to a $plotOnMap in ${country.name}")
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(2, "Biometrics", US, 1,
     NoRemove, NoMarker, Lapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        log("For the rest of the turn travel to adjacent Good countries must roll to succeed")
+        log("and no non-adjacent travel allowed")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(3, "CTR", US, 1,
@@ -193,7 +232,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(30, "UN Nation Building", US, 2,
     NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => () // Not in caliphate member, see Awakening card
     )),
     // ------------------------------------------------------------------------
     entry(new Card(31, "Wiretapping", US, 2,
@@ -243,7 +282,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(40, "Mass Turnout", US, 3,
     NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => () // Not in caliphate member see Awakening cards
     )),
     // ------------------------------------------------------------------------
     entry(new Card(41, "NATO", US, 3,
@@ -298,6 +337,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(51, "FREs", Jihadist, 1,
     NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      // Can create Caliphate (only if Saddam not captured)
       (role: Role) => ()
     )),
     // ------------------------------------------------------------------------
@@ -403,6 +443,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(72, "Opium", Jihadist, 2,
     NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      // Can create Caliphate (only in Afghanistan)
       (role: Role) => ()
     )),
     // ------------------------------------------------------------------------
@@ -448,6 +489,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(81, "Foreign Fighters", Jihadist, 3,
     NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      // Can create Caliphate
       (role: Role) => ()
     )),
     // ------------------------------------------------------------------------
@@ -593,6 +635,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(110, "Zarqawi", Unassociated, 2,
     Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      // Can create Caliphate (onlyinIraq,Syria,Lebanon,orJordan)
       (role: Role) => () // Remove is conditional
     )),
     // ------------------------------------------------------------------------
