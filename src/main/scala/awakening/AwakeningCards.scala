@@ -113,7 +113,7 @@ object AwakeningCards {
   // Countries with cells that are not within two countries with troops/advisor
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
-    val withForces = (game.muslims filter (m => m.totalTroops > 0 || m.hasMarker("Advisors"))) map (_.name)
+    val withForces = countryNames(game.countries filter (c => c.totalTroops > 0 || c.hasMarker("Advisors")))
     // Next get all countries that contain any cells and filter out the ones are are not 
     // within two of a country with forces.
     countryNames(game.countries filter { country =>

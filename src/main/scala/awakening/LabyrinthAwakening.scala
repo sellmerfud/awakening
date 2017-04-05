@@ -422,19 +422,19 @@ object LabyrinthAwakening {
     measure(source, Set.empty).get
   }
   
-  def plotsDisplay(plots: List[Plot], humanRole: Role = Jihadist): String = (plots.size, humanRole) match {
-    case (0, _)        => "none"
-    case (n, US)       => amountOf(n, "hidden plot")
-    case (_, Jihadist) => plots.sorted map (_.name) mkString ", "
+  def plotsDisplay(plots: List[Plot], visible: Boolean = true): String = (plots.size, visible) match {
+    case (0, _)     => "none"
+    case (n, false) => amountOf(n, "hidden plot")
+    case (_, true)  => plots.sorted map (_.name) mkString ", "
   }
   
-  def mapPlotsDisplay(plots: List[PlotOnMap], humanRole: Role = Jihadist): String = {
+  def mapPlotsDisplay(plots: List[PlotOnMap], visible: Boolean = true): String = {
     val lashed = plots count (_.backlashed)
-    (plots.size, humanRole) match {
-      case (0, _)                => "none"
-      case (n, US) if lashed > 0 => s"${amountOf(n, "hidden plot")}, $lashed backlashed"
-      case (n, US)               => amountOf(n, "hidden plot")
-      case (_, Jihadist)         => plots.sorted map (_.toString) mkString ", "
+    (plots.size, visible) match {
+      case (0, _)                   => "none"
+      case (n, false) if lashed > 0 => s"${amountOf(n, "hidden plot")}, $lashed backlashed"
+      case (n, false)               => amountOf(n, "hidden plot")
+      case (_, true)                => plots.sorted map (_.toString) mkString ", "
     }
   }
   
@@ -1199,16 +1199,18 @@ object LabyrinthAwakening {
       b += s"Markers         : ${if (markers.isEmpty) "none" else markers mkString ", "}"
       b += s"Lapsing         : ${if (cardsLapsing.isEmpty) "none" else cardNumsAndNames(cardsLapsing)}"
       b += s"1st plot        : ${firstPlotCard map cardNumAndName getOrElse "none"}"
-      b += s"Available plots : ${plotsDisplay(availablePlots, humanRole)}"
-      b += s"Resolved plots  : ${plotsDisplay(resolvedPlots, Jihadist)}"
-      b += s"Removed plots   : ${plotsDisplay(removedPlots, Jihadist)}"
+      b += s"Available plots : ${plotsDisplay(availablePlots, humanRole == Jihadist)}"
+      b += s"Resolved plots  : ${plotsDisplay(resolvedPlots)}"
+      b += s"Removed plots   : ${plotsDisplay(removedPlots)}"
       if (activePlotCountries.isEmpty)
         b += s"Active plots    : none"
       else {
         b += s"Active plots"
         val fmt = "  %%-%ds : %%s".format(activePlotCountries.map(_.name.length).max)
-        for (c <- activePlotCountries)
-          b += fmt.format(c.name, mapPlotsDisplay(c.plots, humanRole))
+        for (c <- activePlotCountries) {
+          val visible = humanRole == Jihadist || (c.name == UnitedStates && c.hasMarker("NEST"))
+          b += fmt.format(c.name, mapPlotsDisplay(c.plots, visible))
+        }
       }
       b.toList
     }
@@ -1236,8 +1238,10 @@ object LabyrinthAwakening {
             items += "No Cadre marker"
           item(n.troops, "Troop")
           addItems()
-          if (showAll || n.hasPlots)
-            b += s"  Plots: ${mapPlotsDisplay(n.plots, humanRole)}"
+          if (showAll || n.hasPlots) {
+            val visible = humanRole == Jihadist || (name == UnitedStates && n.hasMarker("NEST"))
+            b += s"  Plots: ${mapPlotsDisplay(n.plots, visible)}"
+          }
           if (showAll || n.markers.size > 0)
             b += s"  Markers: ${markersString(n.markers)}"
           if (n.wmdCache > 0)
@@ -1284,7 +1288,7 @@ object LabyrinthAwakening {
             items += "Not Caliphate member"
           addItems()
           if (showAll || m.hasPlots)
-            b += s"  Plots: ${mapPlotsDisplay(m.plots, humanRole)}"
+            b += s"  Plots: ${mapPlotsDisplay(m.plots, humanRole == Jihadist)}"
           if (showAll || m.markers.size > 0)
             b += s"  Markers: ${markersString(m.markers)}"
           if (m.wmdCache > 0)
@@ -2570,9 +2574,9 @@ object LabyrinthAwakening {
     show(from.cellsOnTrack, to.cellsOnTrack, s"Set cells on the funding track to ${to.cellsOnTrack}")
     show(from.trainingCampCells.inCamp, to.trainingCampCells.inCamp, s"Set cells in training camp to ${to.trainingCampCells}")
     show(from.resolvedPlots.sorted, to.resolvedPlots.sorted, 
-          s"Set resolvedPlots plots to ${plotsDisplay(to.resolvedPlots, Jihadist)}")
+          s"Set resolvedPlots plots to ${plotsDisplay(to.resolvedPlots)}")
     show(from.availablePlots.sorted, to.availablePlots.sorted, 
-          s"Set available plots to ${plotsDisplay(to.availablePlots, to.params.humanRole)}")
+          s"Set available plots to ${plotsDisplay(to.availablePlots, to.params.humanRole == Jihadist)}")
     show(from.markers.sorted,  to.markers.sorted, 
             s"  Set global event markers to: ${markersString(to.markers)}" )
     (from.firstPlotCard, to.firstPlotCard) match {
@@ -2646,7 +2650,7 @@ object LabyrinthAwakening {
       (toM orElse toN) foreach { t =>
         val newVal = t.plots.sorted
         if (fromM.plots.sorted != newVal)
-          b += s"  Set plots to ${mapPlotsDisplay(newVal, to.params.humanRole)}"
+          b += s"  Set plots to ${mapPlotsDisplay(newVal, to.params.humanRole == Jihadist)}"
       }
       (toM orElse toN) foreach { t =>
         val newVal = t.markers.sorted
@@ -2674,8 +2678,11 @@ object LabyrinthAwakening {
       showC(fromN, toN orElse toM, _.wmdCache, "WMD cache")
       (toN orElse toM) foreach { t =>
         val newVal = t.plots.sorted
-        if (fromN.plots.sorted != newVal)
-          b += s"  Set plots to ${mapPlotsDisplay(newVal, to.params.humanRole)}"
+        if (fromN.plots.sorted != newVal) {
+          val visible = to.params.humanRole == Jihadist ||
+                      (t.name == UnitedStates && t.hasMarker("NEST"))
+          b += s"  Set plots to ${mapPlotsDisplay(newVal, visible)}"
+        }
       }
       (toN orElse toM) foreach { t =>
         val newVal = t.markers.sorted
@@ -4219,6 +4226,9 @@ object LabyrinthAwakening {
         val country = game getCountry name
         log(separator())
         log(s"Unblocked $mapPlot in $name")
+        if (name == Israel)
+          removeGlobalEventMarker("Abbas")
+        
         country match {
           //------------------------------------------------------------------
           case m: MuslimCountry =>
@@ -5824,7 +5834,8 @@ object LabyrinthAwakening {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(plot) :: m.plots))
       case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = PlotOnMap(plot) :: n.plots))
     }
-    if (game.humanRole == Jihadist)
+    if (game.humanRole == Jihadist || 
+       (name == UnitedStates && (game getCountry UnitedStates).hasMarker("NEST")))
       log(s"Add $plot to $name")
     else
       log(s"Add a hidden plot to $name")
