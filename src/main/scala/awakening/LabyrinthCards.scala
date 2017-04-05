@@ -270,23 +270,88 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(16, "Euro-Islam", US, 2,
-      Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole || 
+                      (game getNonMuslim Benelux).posture != game.usPosture ||
+                      game.funding > 1
+      ,
+      (role: Role) => {
+        val posture = if (role == game.humanRole)
+          askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+        else
+          game.usPosture
+        addEventTarget(Benelux)
+        setCountryPosture(Benelux, posture)
+        decreaseFunding(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(17, "FSB", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => List(Russia, CentralAsia) map game.getCountry exists (_.totalCells > 0)
+      ,
+      (role: Role) => {
+        // In the solo game, the discard option of the event it ignored.
+        val candidates = countryNames(List(Russia, CentralAsia) map game.getCountry filter (_.totalCells > 0))
+        val (name, (active, sleeper)) = if (role == game.humanRole) {
+          val target = askCountry("Select country: ", candidates)
+          (target, askCells(target, 1))
+        }
+        else {
+          var target = USBot.disruptPriority(candidates).get
+          (target, USBot.chooseCellsToRemove(target, 1))
+        }
+        addEventTarget(name)
+        removeCellsFromCountry(name, active, sleeper, addCadre = true)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(18, "Intel Community", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole  // The bot treats this as unplayable
+      ,
+      (role: Role) => {
+        // See Event Instructions table
+        log("US player does not inspect the Jihadist hand in the solo game.")
+        val cadres = countryNames(game.countries filter (_.hasCadre))
+        if (cadres.isEmpty)
+          log("No cadres on the map to remove")
+        else {
+          val target =askCountry("Select country with cadre: ", cadres)
+          addEventTarget(target)
+          removeCadreFromCountry(target)
+        }
+        
+        // US player conducts a 1 Op operations.
+        println()
+        log("US player conducts an operation with 1 Op")
+        humanExecuteOperation(1)
+        println()
+        if (askYorN("Do you wish to play an extra card now during this action phase? (y/n) "))
+          usCardPlay(None, additional = true)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(19, "Kemalist Republic", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole || !(game getMuslim Turkey).isGood
+      ,
+      (role: Role) => {
+        addEventTarget(Turkey)
+        testCountry(Turkey)
+        val turkey = game getMuslim Turkey
+        turkey.governance match {
+          case Good => degradeGovernance(Turkey, 1, canShiftToIR = false)
+          case Fair =>
+          case Poor => improveGovernance(Turkey, 1, canShiftToGood = false)
+          case _    => improveGovernance(Turkey, 2, canShiftToGood = false) // Islamist Rule
+        }
+        turkey.alignment match {
+          case Ally      => shiftAlignmentRight(Turkey)
+          case Adversary => shiftAlignmentLeft(Turkey)
+          case _         =>
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(20, "King Abdullah", US, 2,
