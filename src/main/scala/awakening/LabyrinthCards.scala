@@ -394,45 +394,106 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(22, "Mossad & Shin Bet", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => List(Israel, Jordan, Lebanon) map game.getCountry exists (_.totalCells > 0)
+      ,
+      (role: Role) => {
+        for (c <- List(Israel, Jordan, Lebanon) map game.getCountry filter (_.totalCells > 0)) {
+          addEventTarget(c.name)
+          removeCellsFromCountry(c.name, c.activeCells, c.sleeperCells, addCadre = true)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(23, "Predator", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.hasMuslim (m => m.name != Iran && m.totalCells > 0)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.name != Iran && m.totalCells > 0))
+        val (name, (active, sleeper)) = if (role == game.humanRole) {
+          val target = askCountry("Select country with a cell: ", candidates)
+          (target, askCells(target, 1))
+        }
+        else {
+          var target = USBot.disruptPriority(candidates).get
+          (target, USBot.chooseCellsToRemove(target, 1))
+        }
+        addEventTarget(name)
+        removeCellsFromCountry(name, active, sleeper, addCadre = true)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(24, "Predator", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(23).eventConditions(role),
+      (role: Role) => deck(23).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(25, "Predator", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(23).eventConditions(role),
+      (role: Role) => deck(23).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(26, "Quartet", US, 2,
       NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => globalEventInPlay("Abbas")
+      (role: Role) => {
+        val conditions = globalEventInPlay("Abbas") &&
+                         game.troopCommitment != Overstretch &&
+                         !game.adjacentToIslamistRule(Israel)
+        conditions && (role == game.humanRole || game.prestige < 12 || game.funding > 1)
+      }
       ,
-      (role: Role) => ()
+      (role: Role) => {
+        increasePrestige(2)
+        decreaseFunding(3)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(27, "Saddam Captured", US, 2,
-      Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game getMuslim Iraq).totalTroops > 0
+      ,
+      (role: Role) => {
+        addAidMarker(Iraq)
+        increasePrestige(1)
+        removeGlobalEventMarker("Saddam")
+        addGlobalEventMarker("Saddam Captured")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(28, "Sharia", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.hasMuslim (_.besiegedRegime)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.besiegedRegime))
+        val name = if (role == game.humanRole)
+          askCountry("Select country with besieged regime: ", candidates)
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        addEventTarget(name)
+        removeBesiegedRegimeMarker(name)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(29, "Tony Blair", US, 2,
       Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        setCountryPosture(UnitedKingdom, game.usPosture)
+        val schengens = if (role == game.humanRole) {
+          val num = askInt("Roll War of Ideas in how many Schengen countries", 0, 3)
+          askCountries(num, Schengen)
+        }
+        else 
+          USBot.multipleTargets(3, Schengen, USBot.woiNonMuslimPriority)
+
+        for (name <- schengens) {
+          val die = getDieRoll(role, s"Enter die roll for War of Ideas in $name: ")
+          performWarOfIdeas(name, 3)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(30, "UN Nation Building", US, 2,
@@ -542,7 +603,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(51, "FREs", Jihadist, 1,
       NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      // Can create Caliphate (only if Saddam not captured)
+      // Can create Caliphate (only if globalEventNotInPlay(Saddam Captured))
       (role: Role) => ()
     )),
     // ------------------------------------------------------------------------
@@ -756,7 +817,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(92, "Saddam", Jihadist, 3,
       NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => () // globalEventNotInPlay(Saddam Captured)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(93, "Taliban", Jihadist, 3,

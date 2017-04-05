@@ -725,6 +725,10 @@ object USBot extends BotHelpers {
     topPriority(candidates, WoiNonMuslimPriorities) map (_.name)
   }
 
+  def woiNonMuslimPriority(names: List[String]): Option[String] = {
+    botLog("Find \"non-Muslim WoI\" priority")
+    topPriority(game getCountries names, WoiNonMuslimPriorities) map (_.name)
+  }
   // ------------------------------------------------------------------
   val DeployToPriorities = List(
     PakistanPriority, SyriaPriority, IranPriority, FairPriority,
