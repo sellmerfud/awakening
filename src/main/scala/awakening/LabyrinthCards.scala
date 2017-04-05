@@ -789,8 +789,24 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(44, "Renditions", US, 3,
-      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => globalEventNotInPlay("Leak") &&
+                      game.usPosture == Hard
+      ,
+      (role: Role) => if (role == game.humanRole) {
+        if (game.disruptTargets(3).nonEmpty)
+          humanDisrupt(3)
+        log(s"Discard the top card of the $Jihadist Bot's hand")
+        addGlobalEventMarker("Renditions")
+      }
+      else {
+        val target  = USBot.disruptTarget(game disruptTargets 3) foreach { target =>
+          log(s"$US performs a Disrupt operation in $target")
+          performDisrupt(target)
+        }
+        log(s"$US (you) must discard a random card from your hand")
+        addGlobalEventMarker("Renditions")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(45, "Safer Now", US, 3,
@@ -881,7 +897,8 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(61, "Detainee Release", Jihadist, 2,
       NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => () // Make sure not marker for this card
+                         // If there is, it is removed by Renditions.
     )),
     // ------------------------------------------------------------------------
     entry(new Card(62, "Ex-KGB", Jihadist, 2,
