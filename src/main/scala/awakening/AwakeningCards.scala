@@ -2811,7 +2811,7 @@ object AwakeningCards {
             addEventTarget(name)
             val n = game getNonMuslim name
             if (n.hasPlots)
-              performAlert(name, USBot.selectPriorityPlot(name))
+              performAlert(name, USBot.selectPriorityPlot(name::Nil).onMap)
             else if (n.totalCells > 0) {
               val (actives, sleepers) = USBot.chooseCellsToRemove(name, 1)
               removeCellsFromCountry(name, actives, sleepers, addCadre = true)

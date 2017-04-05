@@ -49,6 +49,13 @@ object LabyrinthCards {
       country.totalCells > 0 && (withTroops exists (forces => distance(forces, country.name) <= 1))
     })
   }
+  
+  def letsRollCandidates: List[String] = countryNames(game.countries filter { c =>
+    c.plots.nonEmpty &&
+    (c.isGood || ((game isMuslim c.name) && (game getMuslim c.name).isAlly))
+  })
+    
+  
 
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
@@ -357,8 +364,33 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(21, "“Let’s Roll!”", US, 2,
-      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => letsRollCandidates.nonEmpty
+      ,
+      (role: Role) => {
+        val plotCandidates    = letsRollCandidates
+        val postureCandidates = countryNames(game.nonMuslims filter (_.canChangePosture))
+        if (role == game.humanRole) {
+          val name = askCountry("Select country with plots: ", plotCandidates)
+          val plot = humanPickPlotToAlert(name)
+          addEventTarget(name)
+          removePlotFromCountry(name, plot)
+          log(s"$US draws one card and adds it to their hand")
+          val postureName = askCountry("Select posture of which country: ", postureCandidates)
+          val newPosture = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+          addEventTarget(postureName)
+          setCountryPosture(postureName, newPosture)
+        }
+        else {
+          val PlotInCountry(plot, c) = USBot.selectPriorityPlot(plotCandidates)
+          addEventTarget(c.name)
+          removePlotFromCountry(c.name, plot)
+          log(s"Add one card to the top of the $US Bot hand")
+          val postureName = USBot.posturePriority(postureCandidates).get
+          addEventTarget(postureName)
+          setCountryPosture(postureName, game.usPosture)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(22, "Mossad & Shin Bet", US, 2,
