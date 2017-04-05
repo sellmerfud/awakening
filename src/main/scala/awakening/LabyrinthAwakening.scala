@@ -1053,7 +1053,11 @@ object LabyrinthAwakening {
     } 
       
     def regimeChangeTargets: List[String] = 
-      countryNames(muslims filter (m => m.isIslamistRule || (m.name == Iraq && m.hasMarker("Iraqi WMD"))))
+      countryNames(muslims filter { m => 
+        m.isIslamistRule                              ||
+        (m.name == Iraq  && m.hasMarker("Iraqi WMD")) ||
+        (m.name == Libya && m.hasMarker("Libyan WMD"))
+      })
       
     def regimeChangePossible(ops: Int) = 
       ops >= 3 && usPosture == Hard && regimeChangeSources(ops).nonEmpty && regimeChangeTargets.nonEmpty
@@ -3121,6 +3125,8 @@ object LabyrinthAwakening {
     flipCaliphateSleepers()
     if (dest == Iraq)
       removeEventMarkersFromCountry(Iraq, "Iraqi WMD")
+    if (dest == Libya)
+      removeEventMarkersFromCountry(Libya, "Libyan WMD")
   }
     
   // • Deploy any number troops out of the Regime Change country (regardless of cells present).

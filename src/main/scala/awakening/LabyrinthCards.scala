@@ -673,13 +673,58 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(38, "Libyan Deal", US, 3,
-      Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => ((game getMuslim Iraq).isAlly || (game getMuslim Syria).isAlly) &&
+                       (game getMuslim Libya).isPoor
+      ,
+      (role: Role) => {
+        addEventTarget(Libya)
+        setAlignment(Libya, Ally)
+        increasePrestige(1)
+        val schengens = if (role == game.humanRole) {
+          println("Select 2 Shegen countries' posture")
+          askCountries(2, Schengen) map { name =>
+            (name, askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get)
+          }
+        }
+        else
+          USBot.multipleTargets(2, Schengen, USBot.posturePriority) map (n => (n, game.usPosture))
+        
+        for ((name, posture) <- schengens) {
+          addEventTarget(name)
+          setCountryPosture(name, posture)
+        }
+        removeEventMarkersFromCountry(Libya, "Libyan WMD")
+        addEventMarkersToCountry(Libya, "Libyan Deal")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(39, "Libyan WMD", US, 3,
-      Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole                      && // Bot treats as unplayable
+                      countryEventNotInPlay(Libya, "Libyan Deal") &&
+                      (game getMuslim Libya).isAdversary          &&
+                      game.usPosture == Hard
+      ,
+      (role: Role) => {
+        addEventTarget(Libya)
+        addEventMarkersToCountry(Libya, "Libyan WMD")
+        val sources = game.regimeChangeSources(3) filterNot (_ == Libya)
+        if (sources.isEmpty) {
+          log("You cannot perform a Regime Change in Libya now, because")
+          log("there are not 6 troops available for the operation")
+        }
+        else if (askYorN("Do you wish to perform a Regime Change in Libya now? (y/n) ")) {
+          log()
+          log(s"$US performs a Regime Change operation")
+          log(separator())
+          val source    = askCountry("Deploy troops from: ", sources)
+          val maxTroops = if (source == "track") game.troopsAvailable
+                          else game.getCountry(source).maxDeployFrom(3)
+          val numTroops = askInt("How many troops: ", 6, maxTroops)
+          performRegimeChange(source, Libya, numTroops)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(40, "Mass Turnout", US, 3,
