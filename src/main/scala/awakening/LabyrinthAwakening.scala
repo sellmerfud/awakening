@@ -1052,7 +1052,8 @@ object LabyrinthAwakening {
       if (troopsAvailable > 5) "track" :: ms else ms
     } 
       
-    def regimeChangeTargets: List[String] = countryNames(muslims filter (_.isIslamistRule))
+    def regimeChangeTargets: List[String] = 
+      countryNames(muslims filter (m => m.isIslamistRule || (m.name == Iraq && m.hasMarker("Iraqi WMD"))))
       
     def regimeChangePossible(ops: Int) = 
       ops >= 3 && usPosture == Hard && regimeChangeSources(ops).nonEmpty && regimeChangeTargets.nonEmpty
@@ -3074,7 +3075,9 @@ object LabyrinthAwakening {
     log()
     moveTroops(source, dest, numTroops)
     val m = game.getMuslim(dest)
-    val newGov = if (dieRoll < 5) Poor else Fair
+    val die = getDieRoll(US, "Enter governance die roll: ")
+    log(s"Governance die roll: $die")
+    val newGov = if (die < 5) Poor else Fair
     addOpsTarget(dest)
     game = game.updateCountry(m.copy(
       governance   = newGov,
@@ -3091,6 +3094,8 @@ object LabyrinthAwakening {
     rollPrestige()
     endCivilWar(dest)  // Can't have civil war in regime change performed due to event, etc.
     flipCaliphateSleepers()
+    if (dest == Iraq)
+      removeEventMarkersFromCountry(Iraq, "Iraqi WMD")
   }
     
   // • Deploy any number troops out of the Regime Change country (regardless of cells present).
@@ -3595,6 +3600,10 @@ object LabyrinthAwakening {
     }
   }
   
+  def countryEventInPlay(countryName: String, markerName: String) =
+    (game getCountry countryName).hasMarker(markerName)
+  def countryEventNotInPlay(countryName: String, markerName: String) =
+    !(countryEventInPlay(countryName, markerName))
   def globalEventInPlay(name: String)     = (game markerInPlay name)
   def globalEventNotInPlay(name: String)  = !globalEventInPlay(name)
   def lapsingEventInPlay(name: String)    = (game lapsingInPlay name)
@@ -4260,6 +4269,9 @@ object LabyrinthAwakening {
         log(s"Unblocked $mapPlot in $name")
         if (name == Israel)
           removeGlobalEventMarker("Abbas")
+        if (name == India)
+          removeEventMarkersFromCountry(Pakistan, "Indo-Pakistani Talks")
+          
         
         country match {
           //------------------------------------------------------------------
@@ -5380,7 +5392,8 @@ object LabyrinthAwakening {
     log(s"$US performs a Regime Change operation")
     log(separator())
     val dest      = askCountry("Regime change in which country: ", game.regimeChangeTargets)
-    val source    = askCountry("Deploy troops from: ", game.regimeChangeSources(3))
+    val sources   = game.regimeChangeSources(3) filterNot (_ == dest)
+    val source    = askCountry("Deploy troops from: ", sources)
     val maxTroops = if (source == "track") game.troopsAvailable
                     else game.getCountry(source).maxDeployFrom(3)
     val numTroops = askInt("How many troops: ", 6, maxTroops)

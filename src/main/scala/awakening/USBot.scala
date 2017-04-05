@@ -1182,7 +1182,7 @@ object USBot extends BotHelpers {
     assert(maxOps >= 3, "regimeChangeOperation() called with less than 3 Ops available")
     val opsUsed = 3
     val target  = regimeChangeTarget(game.regimeChangeTargets).get
-    val source  = regimeChangeFromTarget(game.regimeChangeSources(3)).get
+    val source  = regimeChangeFromTarget(game.regimeChangeSources(3) filterNot (_ == target)).get
     
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)

@@ -580,23 +580,96 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(34, "Enhanced Measures", US, 3,
-      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => globalEventNotInPlay("Leak") &&
+                      game.usPosture == Hard &&
+                      game.disruptTargets(3).nonEmpty
+      ,
+      (role: Role) => if (role == game.humanRole) {
+        humanDisrupt(3)
+        log(s"Take the top card of the $Jihadist Bot's hand")
+        addGlobalEventMarker("Enhanced Measures")
+      }
+      else {
+        val target  = USBot.disruptTarget(game disruptTargets 3).get
+        log(s"$US performs a Disrupt operation in $target")
+        performDisrupt(target)
+        log(s"$US (you) must put a random card from your hand on top card of the $Jihadist Bot's hand")
+        addGlobalEventMarker("Enhanced Measures")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(35, "Hijab", US, 3,
-      Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.numIslamistRule == 0 &&
+                      (role == game.humanRole         ||
+                      !(game getMuslim Turkey).isGood ||
+                      (game getNonMuslim France).posture != game.usPosture ||
+                      game.funding > 1)
+      ,
+      (role: Role) => {
+        addEventTarget(Turkey)
+        testCountry(Turkey)
+        if (!(game getMuslim Turkey).isGood)
+          improveGovernance(Turkey, 1, canShiftToGood = true)
+        val newPosture = if (role == game.humanRole)
+          askOneOf("New posture for France (Soft or Hard): ", Seq(Soft, Hard)).get
+        else
+          game.usPosture
+        addEventTarget(France)
+        setCountryPosture(France, newPosture)
+        decreaseFunding(2)
+      }
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(36, "Indo-Pakistani Talks.", US, 3,
-      Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+    entry(new Card(36, "Indo-Pakistani Talks", US, 3,
+      Remove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => {
+        val pakistan = game getMuslim Pakistan
+        (pakistan.isGood || pakistan.isFair) &&
+        (role == game.humanRole ||
+         !pakistan.isAlly       ||
+         (game getNonMuslim India).posture != game.usPosture)
+      }
+      ,
+      (role: Role) => {
+        addEventTarget(Pakistan)
+        setAlignment(Pakistan, Ally)
+        val newPosture = if (role == game.humanRole)
+          askOneOf("New posture for India (Soft or Hard): ", Seq(Soft, Hard)).get
+        else
+          game.usPosture
+        addEventTarget(India)
+        setCountryPosture(India, newPosture)
+        addEventMarkersToCountry(Pakistan, "Indo-Pakistani Talks")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(37, "Iraqi WMD", US, 3,
-      Remove, GlobalMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, CountryMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole &&  // Unplayable by the Bot
+                      game.usPosture == Hard &&
+                      (game getMuslim Iraq).isAdversary
+      ,
+      (role: Role) => {
+        addEventTarget(Iraq)
+        addEventMarkersToCountry(Iraq, "Iraqi WMD")
+        val sources = game.regimeChangeSources(3) filterNot (_ == Iraq)
+        if (sources.isEmpty) {
+          log("You cannot perform a Regime Change in Iraq now, because")
+          log("there are not 6 troops available for the operation")
+        }
+        else if (askYorN("Do you wish to perform a Regime Change in Iraq now? (y/n) ")) {
+          log()
+          log(s"$US performs a Regime Change operation")
+          log(separator())
+          val source    = askCountry("Deploy troops from: ", sources)
+          val maxTroops = if (source == "track") game.troopsAvailable
+                          else game.getCountry(source).maxDeployFrom(3)
+          val numTroops = askInt("How many troops: ", 6, maxTroops)
+          performRegimeChange(source, Iraq, numTroops)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(38, "Libyan Deal", US, 3,
@@ -772,6 +845,8 @@ object LabyrinthCards {
     entry(new Card(70, "Lashkar-e-Tayyiba", Jihadist, 2,
       NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => ()
+      // Blocked: countryEventNotInPlay(Pakistan, "Indo-Pakistani Talks")
+      
     )),
     // ------------------------------------------------------------------------
     entry(new Card(71, "Loose Nuke", Jihadist, 2,
@@ -841,6 +916,7 @@ object LabyrinthCards {
     entry(new Card(83, "Kashmir", Jihadist, 3,
       NoRemove, NoMarker, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => ()
+        // Blocked: countryEventNotInPlay(Pakistan, "Indo-Pakistani Talks")
     )),
     // ------------------------------------------------------------------------
     entry(new Card(84, "Leak", Jihadist, 3,
