@@ -322,8 +322,8 @@ object USBot extends BotHelpers {
         case _ =>
       }
       if (game hasMuslim (_.isIslamistRule)) prestige -= 1
-      if (globalEventInPlay("Pirates"))      funding += 1
-      if (globalEventInPlay("Fracking"))     funding -= 1
+      if (globalEventInPlay(Pirates))      funding += 1
+      if (globalEventInPlay(Fracking))     funding -= 1
     }
     (funding, prestige)
   }
@@ -489,7 +489,7 @@ object USBot extends BotHelpers {
                   
   //  9. Philippines (if Abu Sayyaf)  (Base game only)
   val PhilippinesPriority = new CriteriaFilter("Philippines (if Abu Sayyaf)",
-                  c => c.name == Philippines && globalEventInPlay("Abu Sayyaf (ISIL)"))
+                  c => c.name == Philippines && globalEventInPlay(AbuSayyaf))
                   
   // 10. Good
   val GoodPriority = new CriteriaFilter("Good Muslim", _.isGood)
@@ -737,7 +737,7 @@ object USBot extends BotHelpers {
   
   val DeployToFlowchart = List(
     new CriteriaFilter("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
-        nonMuslimTest(n => n.name == Philippines && n.hasMarker("Abu Sayyaf") &&  
+        nonMuslimTest(n => n.name == Philippines && n.hasMarker(AbuSayyaf) &&  
                          n.totalCells > 0 && n.totalTroops == 0)),
     new CriteriaFilter("With cells, but no troops or militia",
       muslimTest(m => m.totalCells > 0 && m.totalTroopsAndMilitia == 0)),
@@ -767,7 +767,7 @@ object USBot extends BotHelpers {
   
   val DeployFromFlowchart = List(
     new CriteriaFilter("Philippines if Moro Talks",  // Base game only
-        nonMuslimTest(n => n.name == Philippines && n.hasMarker("Moro Talks"))),
+        nonMuslimTest(n => n.name == Philippines && n.hasMarker(MoroTalks))),
     new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
     new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 
@@ -802,7 +802,7 @@ object USBot extends BotHelpers {
   // ------------------------------------------------------------------
   val RegimeChangeFromFlowchart = List(
     new CriteriaFilter("Philippines if Moro Talks",  // Base game only
-        muslimTest(m => globalEventInPlay("Moro Talks") && m.name == Philippines)),
+        muslimTest(m => globalEventInPlay(MoroTalks) && m.name == Philippines)),
     new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
     new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 

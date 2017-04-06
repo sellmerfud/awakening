@@ -45,12 +45,12 @@ class Anaconda extends Scenario {
     DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, troops = 2),
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
     DefaultPakistan.copy(governance = Poor, alignment = Ally, sleeperCells = 1, 
-                         markers = List("FATA")),
+                         markers = List(FATA)),
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, sleeperCells = 1, 
                             troops = 6, regimeChange = TanRegimeChange),
     DefaultSomalia.copy(besiegedRegime = true),
     DefaultCentralAsia.copy(governance = Poor, alignment = Ally),
-    DefaultUnitedStates.copy(markers = List("Patriot Act")))
+    DefaultUnitedStates.copy(markers = List(PatriotAct)))
   val markersInPlay = List.empty[String]
   val cardsRemoved = List(43, 109)
   val offMapTroops = 0

@@ -47,17 +47,17 @@ class MissionAccomplished extends Scenario {
     DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, sleeperCells = 1),
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
     DefaultPakistan.copy(governance = Fair, alignment = Ally, sleeperCells = 1, 
-                         markers = List("FATA")),
+                         markers = List(FATA)),
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, sleeperCells = 1, 
                             troops = 5, regimeChange = TanRegimeChange),
     DefaultSomalia.copy(besiegedRegime = true),
     DefaultCentralAsia.copy(governance = Fair, alignment = Neutral),
     DefaultIndonesiaMalaysia.copy(governance = Fair, alignment = Neutral, sleeperCells = 1),
     DefaultPhilippines.copy(postureValue = Soft, sleeperCells = 1, /* troops = 2, */
-                             markers = List("Abu Sayyaf")),
+                             markers = List(AbuSayyaf)),
     DefaultUnitedKingdom.copy(postureValue = Hard),
-    DefaultUnitedStates.copy(markers = List("Patriot Act", "NEST")))
-  val markersInPlay = List("Enhanced Measures", "Renditions", "Wiretapping")
+    DefaultUnitedStates.copy(markers = List(PatriotAct, NEST)))
+  val markersInPlay = List(EnhancedMeasures, Renditions, Wiretapping)
   val cardsRemoved = List(43, 109, 5, 57, 116, 37)
   val offMapTroops = 0
   

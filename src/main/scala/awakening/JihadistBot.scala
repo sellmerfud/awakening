@@ -728,7 +728,7 @@ object JihadistBot extends BotHelpers {
     log(separator())
     
     // If Biometrics is in effect only adjacent travel is allowed.
-    val toCandidates = if (lapsingEventInPlay("Biometrics")) {
+    val toCandidates = if (lapsingEventInPlay(Biometrics)) {
       // Find countries that are adjacent to other countries with cells, or that
       // have active cells (which can travel in place)
       val validCountries = game.countries filter { c =>
@@ -753,7 +753,7 @@ object JihadistBot extends BotHelpers {
         Nil  // We've used all available Ops
       else {
         val canTravelFrom = (c: Country) => !alreadyTried(c.name) && unusedCells(c) > 0
-        val candidates = if (lapsingEventInPlay("Biometrics"))
+        val candidates = if (lapsingEventInPlay(Biometrics))
           countryNames(game.adjacentCountries(toName) filter canTravelFrom)
         else
           countryNames(game.countries filter canTravelFrom)
@@ -1074,7 +1074,7 @@ object JihadistBot extends BotHelpers {
               nextTravel(completed + 1, destinations filterNot (_ == to))
           }
         }
-        else if (lapsingEventInPlay("Biometrics")) // Non adjacent travel is not allowd
+        else if (lapsingEventInPlay(Biometrics)) // Non adjacent travel is not allowd
           completed
         else {
          val to = recruitTravelToPriority(destinations).get
