@@ -203,7 +203,7 @@ object AwakeningCards {
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
-  val deck: Map[Int, Card] = Map(
+  val deckMap: Map[Int, Card] = Map(
     // ------------------------------------------------------------------------
     entry(new Card(121, "Advisors", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,

@@ -475,7 +475,7 @@ object LabyrinthAwakening {
   val LeakWiretapping      = "Leak-Wiretapping"
   val LeakEnhancedMeasures = "Leak-Enhanced Measures"
   val LeakRenditions       = "Leak-Renditions"
-  val MoqtadaAlSadr        = "Moqtada al-Sadr"
+  val Sadr                 = "Sadr"
   val VieiraDeMelloSlain   = "Vieira de Mello Slain"
   val AlAnbar              = "Al-Anbar"
   val MaerskAlabama        = "Maersk Alabama"
@@ -508,7 +508,7 @@ object LabyrinthAwakening {
 
   val GlobalMarkers = List(
     Abbas, AnbarAwakening, SaddamCaptured, Wiretapping, EnhancedMeasures, Renditions,
-    MoqtadaAlSadr, VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
+    Sadr, VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
     Censorship, Pirates, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargo
   ).sorted
   
@@ -623,7 +623,7 @@ object LabyrinthAwakening {
 
   }
   
-  val deck = new CardDeck(AwakeningCards.deck ++ LabyrinthCards.deck)
+  val deck = new CardDeck(AwakeningCards.deckMap ++ LabyrinthCards.deckMap)
   def cardNumAndName(number: Int): String = deck(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
 
@@ -665,7 +665,8 @@ object LabyrinthAwakening {
   
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
-    def recruitOK: Boolean = hasCadre || totalCells > 0
+    def recruitOK(madrassas: Boolean): Boolean = 
+      hasCadre || totalCells > 0 || (madrassas && (isPoor || isIslamistRule))
     def autoRecruit: Boolean
     def recruitSucceeds(die: Int): Boolean
     def canTakeMilitia: Boolean
@@ -1195,9 +1196,10 @@ object LabyrinthAwakening {
       warOfIdeasMuslimTargets(ops) ::: warOfIdeasNonMuslimTargets(ops)
     
     
-    def recruitTargets: List[String] = countryNames(countries filter (_.recruitOK))
+    def recruitTargets(madrassas: Boolean): List[String] =
+      countryNames(countries filter (_.recruitOK(madrassas)))
     
-    def recruitPossible = cellsToRecruit > 0 && recruitTargets.nonEmpty
+    def recruitPossible = cellsToRecruit > 0 && recruitTargets(madrassas = false).nonEmpty
     
     def jihadTargets: List[String] = countryNames(muslims filter (_.jihadOK))
     def jihadPossible = jihadTargets.nonEmpty
@@ -5755,8 +5757,8 @@ object LabyrinthAwakening {
     }
   }    
 
-  def humanRecruit(ops: Int): Unit = {
-    val recruitCells = game.cellsToRecruit
+  def humanRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
+    val recruitCells = if (ignoreFunding) game.cellsAvailable else game.cellsToRecruit
     log()
     log(s"$Jihadist performs a Recruit operation with ${opsString(ops)}")
     log(separator())
@@ -5767,7 +5769,7 @@ object LabyrinthAwakening {
     // All of the target destinations must be declared before rolling any dice.
     val targets = for (i <- 1 to ops) yield {
       val ord  = ordinal(i)
-      val dest = askCountry(s"$ord Recruit destination: ", game.recruitTargets)
+      val dest = askCountry(s"$ord Recruit destination: ", game.recruitTargets(madrassas))
       (ord, dest)
     }
     

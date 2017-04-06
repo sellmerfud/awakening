@@ -648,7 +648,7 @@ object JihadistBot extends BotHelpers {
       // the map. (The Bot does not lose when there are no cells on the map).
       // In this case the Bot cannot do anything except add Ops to reserves and wait
       // for an event that places a cell.
-      if (!(game.countries exists (c => c.totalCells > 0 || c.hasCadre))) {
+      if (!(game hasCountry (c => c.totalCells > 0 || c.hasCadre))) {
         val opsAdded = card.ops min (2 - game.reserves.jihadist)
         log("There are no cells or cadres on the map.")
         log(s"The $Jihadist Bot cannot execute an operation until an event places a cell.")
@@ -679,39 +679,45 @@ object JihadistBot extends BotHelpers {
     log(separator())
     if (recruitOps > card.ops)
       expendBotReserves(recruitOps - card.ops)
-    if (recruitOps > 0) {
-      // We should always find a target for recuit operations.
-      val target = recruitTarget(countryNames(game.countries)) getOrElse {
-        throw new IllegalStateException("recruitOperation() should always find a target")
-      }
-      val c = game.getCountry(target)
-      addOpsTarget(target)
-      val results = for (i <- 1 to recruitOps) yield {
-        if (c.autoRecruit) {
-          log(s"${ordinal(i)} Recruit automatically succeeds in $target")
-          true
-        }
-        else {
-          val die     = dieRoll
-          val success = c.recruitSucceeds(die)
-          val result  = if (success) "succeeds" else "fails"
-          log(s"${ordinal(i)} Recruit $result in $target with a roll of $die")
-          success
-        }
-      }
-      val successes = results count (_ == true)
-      val numCells = if (game.jihadistIdeology(Potent)) {
-        log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
-        (successes * 2) min game.cellsToRecruit
-      }
-      else
-        successes
-      
-      addSleeperCellsToCountry(target, numCells)
-      usedCells(target).addSleepers(numCells)
-    }
+    
+    if (recruitOps > 0) 
+      performRecruit(recruitOps)
     recruitOps
   }
+  
+  def performRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
+    // We should always find a target for recuit operations.
+    val target = recruitTarget(game.recruitTargets(madrassas = madrassas)) getOrElse {
+      throw new IllegalStateException("recruitOperation() should always find a target")
+    }
+    val c = game.getCountry(target)
+    addOpsTarget(target)
+    val results = for (i <- 1 to ops) yield {
+      if (c.autoRecruit) {
+        log(s"${ordinal(i)} Recruit automatically succeeds in $target")
+        true
+      }
+      else {
+        val die     = dieRoll
+        val success = c.recruitSucceeds(die)
+        val result  = if (success) "succeeds" else "fails"
+        log(s"${ordinal(i)} Recruit $result in $target with a roll of $die")
+        success
+      }
+    }
+    val successes = results count (_ == true)
+    val available = if (ignoreFunding) game.cellsAvailable else game.cellsToRecruit
+    val numCells = if (game.jihadistIdeology(Potent)) {
+      log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+      (successes * 2) min available
+    }
+    else
+      successes min available
+    
+    addSleeperCellsToCountry(target, numCells)
+    usedCells(target).addSleepers(numCells)
+  }
+  
   
   // First select the target to country.
   // Then select one or more countries from which cells may travel.
@@ -1202,8 +1208,7 @@ object JihadistBot extends BotHelpers {
   def radRecruit(cardOps: Int): Int = {
     log()
     log(s"Radicalization: Recruit")
-    val candidates  = game.muslims filter (m => m.hasCadre || m.totalCells > 0)
-    val target      = recruitTarget(candidates map (_.name)).get
+    val target      = recruitTarget(game.recruitTargets(madrassas = false)).get
     addOpsTarget(target)
     val m = game getMuslim target
     def nextAttempt(completed: Int): Int = {

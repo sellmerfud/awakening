@@ -65,7 +65,7 @@ object LabyrinthCards {
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
-  val deck: Map[Int, Card] = Map(
+  val deckMap: Map[Int, Card] = Map(
     // ------------------------------------------------------------------------
     entry(new Card(1, "Backlash", US, 1,
       NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
@@ -884,8 +884,15 @@ object LabyrinthCards {
             val success = die < 3
             val result  = if (success) "succeeds" else "fails"
             log(s"$ord recruit $result with a roll of $die")
-            if (success)
-              addSleeperCellsToCountry(UnitedStates, 1)
+            if (success) {
+              val numCells = if (game.jihadistIdeology(Potent)) {
+                log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+                2
+              }
+              else
+                1
+              addSleeperCellsToCountry(UnitedStates, numCells min game.cellsToRecruit)
+            }
             nextRecruit(completed + 1)
           }
 
@@ -954,8 +961,32 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(53, "Madrassas", Jihadist, 1,
-      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => firstCardOfPhase(Jihadist) &&
+                      game.cellsAvailable > 0    && // Ignore funding
+                      askYorN(s"Does the $Jihadist player have another card in hand? (y/n) ")
+      ,
+      (role: Role) => {
+        val  prompt = if (role == game.humanRole)
+          "Enter card # of card you wish to use for recruit: "
+        else
+          s"Enter card # of the next card in the $Jihadist Bot's hand: "
+        
+        val card = deck(askCardNumber(prompt, allowNone = false).get)
+        // Add the card to the list of plays for the turn.
+        game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
+        logCardPlay(Jihadist, card, playable = false, triggered = false)
+        val totalOps = card.ops + 1 // Add 1 for the Ops on the Madrassas card.
+        
+        if (role == game.humanRole)
+          humanRecruit(totalOps, ignoreFunding = true, madrassas = true)
+        else {
+          log()
+          log(s"$Jihadist performs a Recruit operation ${opsString(totalOps)}")
+          log(separator())
+          JihadistBot.performRecruit(totalOps, ignoreFunding = true, madrassas = true)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(54, "Moqtada al-Sadr", Jihadist, 1,
