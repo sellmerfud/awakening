@@ -3763,8 +3763,6 @@ object AwakeningCards {
       (role: Role) => {
         // See Event Instructions table
         removeGlobalEventMarker(Fracking) // Cancels effects of "Fracking" marker
-        val spikes = game.eventParams.oilPriceSpikes + 1
-        game = game.copy(eventParams = game.eventParams.copy(oilPriceSpikes = spikes))
         if (role == game.humanRole)
           log(s"$role player draws a card other than Oil Price Spike from the discad pile")
         else if (role == US)

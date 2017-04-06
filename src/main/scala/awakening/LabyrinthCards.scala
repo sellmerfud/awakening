@@ -1193,8 +1193,9 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(118, "Oil Price Spike", Unassociated, 3,
-      NoRemove, Lapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, Lapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(117).eventConditions(role),
+      (role: Role) => deck(117).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(119, "Saleh", Unassociated, 3,

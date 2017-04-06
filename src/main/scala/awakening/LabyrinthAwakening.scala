@@ -522,12 +522,15 @@ object LabyrinthAwakening {
   val Biometrics          = 2
   val TheDoorOfIjtihad    = 47
   val GTMO                = 114
+  val OilPriceSpike1      = 117
+  val OilPriceSpike2      = 118
   val Ferguson            = 166
   val IslamicMaghreb      = 169
   val ArabWinter          = 173
   val KoreanCrisis        = 179
   val USConsulateAttacked = 199
   val EbolaScare          = 204
+  val OilPriceSpike3      = 236
   
   
   type CardEvent       = Role => Unit
@@ -849,7 +852,6 @@ object LabyrinthAwakening {
   )
   
   case class EventParameters(
-    oilPriceSpikes: Int = 0,              // Number of Oil Price Spikes in effect
     sequestrationTroops: Boolean = false  // true if 3 troops off map due to Sequestration event
   )
   
@@ -1082,7 +1084,9 @@ object LabyrinthAwakening {
     def numGoodOrFair    = muslims count (c => c.isGood || c.isFair)
     def numPoorOrIslamic = muslims count (c => c.isPoor || c.isIslamistRule)
     def numIslamistRule  = muslims count (c => c.isIslamistRule)
-    def oilBump(c: MuslimCountry) = if (c.canExportOil) eventParams.oilPriceSpikes else 0
+    val oilSpikeCards    = Set(OilPriceSpike1, OilPriceSpike2, OilPriceSpike3)
+    def oilPriceSpikes   = cardsLapsing count oilSpikeCards.contains
+    def oilBump(c: MuslimCountry) = if (c.canExportOil) oilPriceSpikes else 0
     def goodResources =
       muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
     def islamistResources = 
@@ -1268,7 +1272,7 @@ object LabyrinthAwakening {
       }
       val ms = markers ::: (for (c <- countries; m <- c.markers) yield (s"$m (${c.name})"))
       wrap(s"Markers         : ", ms) foreach (l => b += l)
-      b += s"Lapsing         : ${if (cardsLapsing.isEmpty) "none" else cardNumsAndNames(cardsLapsing)}"
+      wrap(s"Lapsing         : ", cardsLapsing.sorted map cardNumAndName) foreach (l => b += l)
       b += s"1st plot        : ${firstPlotCard map cardNumAndName getOrElse "none"}"
       b += s"Available plots : ${plotsDisplay(availablePlots, humanRole == Jihadist)}"
       b += s"Resolved plots  : ${plotsDisplay(resolvedPlots)}"
@@ -3477,7 +3481,7 @@ object LabyrinthAwakening {
   
   def removeCardFromLapsing(cardNumber: Int): Unit = {
     if (game.cardLapsing(cardNumber)) {
-      log("The \"%s\" card is not longer lapsing".format(deck(cardNumber).name))
+      log("The \"%s\" card is no longer lapsing".format(deck(cardNumber).name))
       game = game.copy(cardsLapsing = game.cardsLapsing filterNot (_ == cardNumber))
     }
   }
@@ -4602,8 +4606,7 @@ object LabyrinthAwakening {
         
         game = game.copy(
           cardsLapsing = Nil,
-          cardsRemoved = remove ::: game.cardsRemoved,
-          eventParams = game.eventParams.copy(oilPriceSpikes = 0)
+          cardsRemoved = remove ::: game.cardsRemoved
         )
       }
       game.firstPlotCard foreach { num => 
@@ -5299,7 +5302,7 @@ object LabyrinthAwakening {
              askYorN("Do you wish to cancel the play of this US associated card? (y/n) "))) {
         
           log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect")
-          removeCardFromLapsing(166)
+          removeCardFromLapsing(Ferguson)
         }
         else 
           game.humanRole match {
@@ -5629,7 +5632,7 @@ object LabyrinthAwakening {
             askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
         
           log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect")
-          removeCardFromLapsing(166)
+          removeCardFromLapsing(Ferguson)
         }
         else
           game.humanRole match {
