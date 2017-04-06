@@ -1051,15 +1051,7 @@ object USBot extends BotHelpers {
   // Returns true if Reassessment performed
   def reassessment(card: Card): Boolean = {
     val tryReassess = {
-      // Must be first US card play of the action phase
-      // The card being currently played has already been added to the list of plays.
-      // Check that the number of US played cards at the front of the plays list
-      // is an odd number.  We cannot just check for 1, because the US may be playing
-      // two action phases without a Jihadist play in between (if the Jihadist hand is empty)
-      val usPlays = (game.plays takeWhile { case PlayedCard(US, _) => true; case _ => false }).size
-      val firstUSCardOfPhase = usPlays % 2 == 1
-
-       firstUSCardOfPhase &&
+       firstCardOfPhase(US) &&
        (card.ops + game.reserves.us >= 3) &&  // Possible if we have at least 3 on hand
        ((game.usPosture == Soft && game.islamistResources >= 2) ||
         (game.usPosture == Hard && game.gwotPenalty == 3 && game.numIslamistRule == 0))

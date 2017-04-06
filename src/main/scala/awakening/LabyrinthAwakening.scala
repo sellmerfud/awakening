@@ -532,6 +532,11 @@ object LabyrinthAwakening {
   val EbolaScare          = 204
   val OilPriceSpike3      = 236
   
+  val LapsingCards = List(
+    Biometrics, TheDoorOfIjtihad, GTMO, OilPriceSpike1, OilPriceSpike2, Ferguson,
+    IslamicMaghreb, ArabWinter, KoreanCrisis, USConsulateAttacked, EbolaScare,
+    OilPriceSpike3
+  )
   
   type CardEvent       = Role => Unit
   type EventConditions = Role => Boolean
@@ -1271,8 +1276,8 @@ object LabyrinthAwakening {
         case _            => b += s"Training camps  : Not in play"
       }
       val ms = markers ::: (for (c <- countries; m <- c.markers) yield (s"$m (${c.name})"))
-      wrap(s"Markers         : ", ms) foreach (l => b += l)
-      wrap(s"Lapsing         : ", cardsLapsing.sorted map cardNumAndName) foreach (l => b += l)
+      wrap( "Markers         : ", ms) foreach (l => b += l)
+      wrap( "Lapsing         : ", cardsLapsing.sorted map cardNumAndName) foreach (l => b += l)
       b += s"1st plot        : ${firstPlotCard map cardNumAndName getOrElse "none"}"
       b += s"Available plots : ${plotsDisplay(availablePlots, humanRole == Jihadist)}"
       b += s"Resolved plots  : ${plotsDisplay(resolvedPlots)}"
@@ -1287,30 +1292,6 @@ object LabyrinthAwakening {
           b += fmt.format(c.name, mapPlotsDisplay(c.plots, visible))
         }
       }
-      b.toList
-    }
-    
-    def wrap(prefix: String, values: Seq[String]): Seq[String] = {
-      val b = new ListBuffer[String]
-      val s = new StringBuilder(prefix)
-      var first = true
-      if (values.isEmpty)
-        s.append("none")
-      else {
-        val margin = " " * prefix.length
-        s.append(values.head)
-        for (v <- values.tail) {
-          s.append(", ")
-          if (s.length + v.length < 78)
-            s.append(v)
-          else {
-            b += s.toString
-            s.clear
-            s.append(margin).append(v)
-          }
-        }
-      }
-      b += s.toString
       b.toList
     }
     
@@ -2256,6 +2237,33 @@ object LabyrinthAwakening {
     println(s"DEBUG: $name == ${value.toString}")
     value
   }
+  
+  // Format the given sequence of strings in a comma separated list 
+  // such that we do not exceed the given number of columns.
+  def wrap(prefix: String, values: Seq[String], columns: Int = 78): Seq[String] = {
+    val b = new ListBuffer[String]
+    val s = new StringBuilder(prefix)
+    var first = true
+    if (values.isEmpty)
+      s.append("none")
+    else {
+      val margin = " " * prefix.length
+      s.append(values.head)
+      for (v <- values.tail) {
+        s.append(", ")
+        if (s.length + v.length < columns)
+          s.append(v)
+        else {
+          b += s.toString
+          s.clear
+          s.append(margin).append(v)
+        }
+      }
+    }
+    b += s.toString
+    b.toList
+  }
+  
   
   def pause() {
     import scala.util.Properties.isWin
@@ -5619,7 +5627,11 @@ object LabyrinthAwakening {
       game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
       
       val playable = card.eventIsPlayable(Jihadist)  
-      val triggered  = card.eventWillTrigger(US)
+      val triggered  = if (game.botRole == Jihadist && lapsingEventInPlay(TheDoorOfIjtihad))
+        false
+      else
+        card.eventWillTrigger(US)
+      
       logCardPlay(Jihadist, card, playable, triggered)
       try {
         // When the Ferguson event is in effect, the Jihadist player
@@ -6151,12 +6163,14 @@ object LabyrinthAwakening {
   def adjustLapsingCards(): Unit = {
     var lapsing = game.cardsLapsing
     @tailrec def getNextResponse(): Unit = {
+      val notLapsing = LapsingCards filterNot lapsing.contains
       println()
-      println("Cards that are currently lapsing:")
-      println(if (lapsing.isEmpty) "none" else cardNumsAndNames(lapsing.sorted))
+      wrap("Lapsing    : ", lapsing.sorted map cardNumAndName) foreach println
+      println()
+      wrap("Not Lapsing: ", notLapsing.sorted map cardNumAndName) foreach println
       println()
       println("Enter a card number to move it between lapsing and not lapsing.")
-      askCardNumber("Card #: ", removedLapsingOK = true) match {
+      askOneOf("Card #: ", LapsingCards, allowNone = true, allowAbort = false).map(_.toInt) match {
         case None =>
         case Some(num) if lapsing contains num =>
           lapsing = lapsing filterNot(_ == num)
@@ -6178,10 +6192,9 @@ object LabyrinthAwakening {
     var outOfPlay = game.cardsRemoved
     @tailrec def getNextResponse(): Unit = {
       println()
-      println("Cards that are currently out of play:")
-      println(if (outOfPlay.isEmpty) "none" else cardNumsAndNames(outOfPlay.sorted))
+      wrap("Removed: ", outOfPlay.sorted map cardNumAndName) foreach println
       println()
-      println("Enter a card number to move it between in play and out of play.")
+      println("Enter a card number to move it between removed and not removed.")
       askCardNumber("Card #: ", removedLapsingOK = true) match {
         case None =>
         case Some(num) if outOfPlay contains num =>

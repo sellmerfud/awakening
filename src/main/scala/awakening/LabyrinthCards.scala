@@ -382,7 +382,7 @@ object LabyrinthCards {
           removePlotFromCountry(name, plot)
           log(s"$US draws one card and adds it to their hand")
           val postureName = askCountry("Select posture of which country: ", postureCandidates)
-          val newPosture = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+          val newPosture = askOneOf(s"New posture for $postureName (Soft or Hard): ", Seq(Soft, Hard)).get
           addEventTarget(postureName)
           setCountryPosture(postureName, newPosture)
         }
@@ -808,23 +808,90 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(45, "Safer Now", US, 3,
-      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.numIslamistRule == 0 && 
+                      !(game hasCountry (c => c.isGood && (c.totalCells > 0 || c.plots.nonEmpty)))
+      ,
+      (role: Role) => {
+        rollUSPosture()
+        increasePrestige(3)
+        val candidates = countryNames(game.nonMuslims filter (n => n.isSchengen && n.canChangePosture))
+        val (name, posture) = if (role == game.humanRole) {
+          val target = askCountry("Select posture of which country: ", candidates)
+          (target, askOneOf(s"New posture for $target (Soft or Hard): ", Seq(Soft, Hard)).get)
+        }
+        else
+          (USBot.posturePriority(candidates).get, game.usPosture)
+        
+        addEventTarget(name)
+        setCountryPosture(name, posture)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(46, "Sistani", US, 3,
-      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim (m => m.isShiaMix && m.inRegimeChange && m.totalCells > 0)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter 
+                 (m => m.isShiaMix && m.inRegimeChange && m.totalCells > 0))
+        val name = if (role == game.humanRole)
+          askCountry("Select Shia-Mix regime change country: ", candidates)
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        
+        improveGovernance(name, 1, canShiftToGood = true)
+      }
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(47, "“The door of Ijtihad was closed”", US, 3,
+    entry(new Card(47, "The door of Ijtihad was closed", US, 3,
       NoRemove, Lapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => if (role == game.humanRole)
+        log(s"During $Jihadist Bot's action phases, US events will not trigger")
+      else {
+        log(s"You ($Jihadist) must select cards to play randomly from your hand")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(48, "Adam Gadahn", Jihadist, 1,
-      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => firstCardOfPhase(Jihadist) &&
+                      game.cellsToRecruit > 0    &&
+                      askYorN(s"Does the $Jihadist player have another card in hand? (y/n) ")
+      ,
+      (role: Role) => {
+        val  prompt = if (role == game.humanRole)
+          "Enter card # of card you wish to use for recruit in the US: "
+        else
+          s"Enter card # of the next card in the $Jihadist Bot's hand: "
+        
+        val card = deck(askCardNumber(prompt, allowNone = false).get)
+        // Add the card to the list of plays for the turn.
+        game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
+        logCardPlay(Jihadist, card, playable = false, triggered = false)
+        log()
+        log(s"$Jihadist performs a Recruit operation in the US with ${opsString(card.ops)}")
+        log(separator())
+        if (game.cellsToRecruit == 1)
+          log(s"There is 1 cell available for recruitment")
+        else
+          log(s"There are ${game.cellsToRecruit} cells available for recruitment")
+        
+        def nextRecruit(completed: Int): Unit = 
+          if (completed < card.ops && game.cellsToRecruit > 0) {
+            val ord = ordinal(completed + 1)
+            val die     = getDieRoll(role, s"Die roll for $ord recruit: ")
+            val success = die < 3
+            val result  = if (success) "succeeds" else "fails"
+            log(s"$ord recruit $result with a roll of $die")
+            if (success)
+              addSleeperCellsToCountry(UnitedStates, 1)
+            nextRecruit(completed + 1)
+          }
+
+        addEventTarget(UnitedStates)
+        nextRecruit(0)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(49, "Al-Ittihad al-Islami", Jihadist, 1,
