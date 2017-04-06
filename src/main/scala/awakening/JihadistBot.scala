@@ -40,8 +40,12 @@ object JihadistBot extends BotHelpers {
   object usedCells {
     // Record the number of active and sleeper cells in a country
     // that have been used.  [Country, (actives, sleepers)]
+    var sadrUsed = false
     var cellMap = Map.empty[String, (Int, Int)].withDefaultValue((0, 0))
-    def clear = cellMap = Map.empty.withDefaultValue((0, 0))
+    def clear = {
+      cellMap = Map.empty.withDefaultValue((0, 0))
+      sadrUsed = false
+    }
     def apply(name: String) = Helper(name)
     
     private object Helper {
@@ -50,7 +54,7 @@ object JihadistBot extends BotHelpers {
     class Helper private (name: String) {
       def actives  = cellMap(name) match { case (a, _) => a } 
       def sleepers = cellMap(name) match { case (_, s) => s } 
-      def total    = cellMap(name) match { case (a, s) => a + s } 
+      def total    = cellMap(name) match { case (a, s) => a + s }
       def addActives(num: Int) = {
         val (a, s) = cellMap(name)
         cellMap += name -> (a + num, s)
@@ -62,17 +66,22 @@ object JihadistBot extends BotHelpers {
     }
   }
   
-  def activeCells(c: Country)  = c.activeCells  - usedCells(c.name).actives
-  def sleeperCells(c: Country) = c.sleeperCells - usedCells(c.name).sleepers
-  def unusedCells(c: Country)  = c.totalCells   - usedCells(c.name).total
-  def unusedCellsOnMap = (game.countries map unusedCells).sum
+  def sadrValue(s: Boolean) = if (s) 1 else 0
+  def activeCells(c: Country)   = c.activeCells  - usedCells(c.name).actives
+  def sleeperCells(c: Country)  = c.sleeperCells - usedCells(c.name).sleepers
+  def unusedCells(c: Country)   = c.totalCells   - usedCells(c.name).total
+  def sadrAvailable(c: Country) = c.hasSadr && !usedCells.sadrUsed
+  def totalUnused(c: Country)   = unusedCells(c) + sadrValue(sadrAvailable(c))
+  def unusedCellsOnMap = (game.countries map totalUnused).sum
+  // Sadr cannot travel
+  def unusedCellsOnMapForTravel = (game.countries map unusedCells).sum
   
   // Poor country with 1 to 4 more cells than Troops and Milita and Jihad success possible
   def poorMuslimNeedsCellsForMajorJihad(m: MuslimCountry): Boolean = 
     m.isPoor &&
     jihadSuccessPossible(m, true) &&
-    (unusedCells(m) - m.totalTroopsAndMilitia) > 0 &&
-    (unusedCells(m) - m.totalTroopsAndMilitia) < 5
+    (totalUnused(m) - m.totalTroopsAndMilitia) > 0 &&
+    (totalUnused(m) - m.totalTroopsAndMilitia) < 5
   
 
   // Pick all candidates that are not the same as the target unless there
@@ -408,7 +417,7 @@ object JihadistBot extends BotHelpers {
     def noPath  = FundingTightDecision
     def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
       m.isPoor &&
-      unusedCells(m) - m.totalTroopsAndMilitia >= 5 &&
+      totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
       jihadSuccessPossible(m, true)
     }
   }
@@ -442,7 +451,7 @@ object JihadistBot extends BotHelpers {
       game hasMuslim { m =>
         (m.isGood || m.isFair) &&
         jihadSuccessPossible(m, false) && 
-        unusedCells(m) > 0
+        totalUnused(m) > 0
       }
     }
   }
@@ -460,7 +469,7 @@ object JihadistBot extends BotHelpers {
         countryNames(game.getMuslims(game.jihadTargets) filter poorMuslimNeedsCellsForMajorJihad)
       travelToTarget(candidates) match {
         case None => false
-        case Some(target) => game.adjacentCountries(target) exists (unusedCells(_) > 0)
+        case Some(target) => game.adjacentCountries(target) exists (totalUnused(_) > 0)
       }
     }
   }
@@ -492,7 +501,7 @@ object JihadistBot extends BotHelpers {
     val desc = "Cell in non-Muslim?"
     def yesPath = PlotOp
     def noPath  = TravelOp
-    def condition(ops: Int) = game hasNonMuslim (unusedCells(_) > 0)
+    def condition(ops: Int) = game hasNonMuslim (totalUnused(_) > 0)
   }
   
   // Follow the operations flowchart to pick which operation will be performed.
@@ -592,12 +601,17 @@ object JihadistBot extends BotHelpers {
   }
 
   // Pick actives before sleepers
-  // Return (actives, sleepers)
-  def chooseCellsToRemove(name: String, num: Int): (Int, Int) = {
-    val c = game getCountry name
-    val actives = num min c.activeCells
-    val sleepers  = (num - actives) min c.sleeperCells
-    (actives, sleepers)
+  // Return (actives, sleepers, sadr)
+  def chooseCellsToRemove(name: String, num: Int): (Int, Int, Boolean) = {
+    if (num == 0)
+      (0, 0, false)
+    else {
+      val c = game getCountry name
+      val actives   = num min c.activeCells
+      val sleepers  = (num - actives) min c.sleeperCells
+      val sadr      = c.hasSadr && (num - actives - sleepers > 0)
+      (actives, sleepers, sadr)
+    }
   }
   
   // The Bot will declare the Calipahate if it results in  an auto win, 
@@ -758,7 +772,7 @@ object JihadistBot extends BotHelpers {
       if (remaining == 0)
         Nil  // We've used all available Ops
       else {
-        val canTravelFrom = (c: Country) => !alreadyTried(c.name) && unusedCells(c) > 0
+        val canTravelFrom = (c: Country) => !alreadyTried(c.name) && totalUnused(c) > 0
         val candidates = if (lapsingEventInPlay(Biometrics))
           countryNames(game.adjacentCountries(toName) filter canTravelFrom)
         else
@@ -829,7 +843,7 @@ object JihadistBot extends BotHelpers {
       }
       else {
         val canPlot = (c: Country) => !alreadyTried(c.name) &&
-                                      unusedCells(c) > 0 && (
+                                      totalUnused(c) > 0 && (
                                         (game isNonMuslim c.name) ||
                                         !(game getMuslim c.name).isIslamistRule
                                       )
@@ -838,14 +852,17 @@ object JihadistBot extends BotHelpers {
           case None => completed
           case Some(name) =>
             val c = game getCountry name
-            val numAttempts = unusedCells(c) min remaining
+            val numAttempts = totalUnused(c) min remaining
             val actives     = activeCells(c) min numAttempts
-            val sleepers    = numAttempts - actives
-            val attempts = List.fill(actives)(PlotAttempt(name, true)) :::
+            val sadr        = sadrAvailable(c) && actives < numAttempts
+            val sleepers    = numAttempts - actives - sadrValue(sadr)
+            val attempts = List.fill(actives + sadrValue(sadr))(PlotAttempt(name, true)) :::
                            List.fill(sleepers)(PlotAttempt(name, false))
             performPlots(card.ops, attempts)
             // All sleepers used will have been flipped to active by performPlots()
             usedCells(name).addActives(actives + sleepers)
+            if (sadr)
+              usedCells.sadrUsed = true
             nextTarget(completed + numAttempts, alreadyTried + name)
         }
       }
@@ -873,26 +890,32 @@ object JihadistBot extends BotHelpers {
         // The Bot will never conduct minor Jihad in a country with Poor governance.
         val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)          &&
                                              jihadSuccessPossible(m, false) &&
-                                             unusedCells(m) > 0 && !m.isPoor
+                                             totalUnused(m) > 0 && !m.isPoor
         val candidates = countryNames(game.muslims filter canJihad)
         minorJihadTarget(candidates) match {
           case None => Nil   // No more candidates
           case Some(name) =>
             val m = game.getMuslim(name)
-            val numAttempts = unusedCells(m) min remaining
-            val actives = activeCells(m) min numAttempts
-            val target = JihadTarget(name, actives, numAttempts - actives)
+            val numAttempts = totalUnused(m) min remaining
+            val actives  = numAttempts min activeCells(m)
+            val sleepers = (numAttempts - actives) min sleeperCells(m)
+            val sadr     = numAttempts - actives - sleepers > 0
+            val target = JihadTarget(name, actives, sleepers, sadr, major = false)
             target :: nextJihadTarget(completed + numAttempts, alreadyTried + name)
         }
       }
     }
 
     val targets = nextJihadTarget(0, Set.empty)
-    val opsUsed = (for (JihadTarget(_, a, s, _) <- targets) yield(a + s)).sum
+    val opsUsed = (for (JihadTarget(_, a, s, sadr, _) <- targets) 
+      yield(a + s + (if (sadr) 1 else 0))).sum
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
-    for ((name, successes) <- performJihads(targets))
+    for ((name, successes, sadr) <- performJihads(targets)) {
       usedCells(name).addActives(successes)
+      if (sadr)
+        usedCells.sadrUsed = true
+    }
     opsUsed
   }
   
@@ -911,25 +934,28 @@ object JihadistBot extends BotHelpers {
         val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)         &&
                                              jihadSuccessPossible(m, true) &&
                                              m.isPoor                &&
-                                             unusedCells(m) - m.totalTroopsAndMilitia >= 5
+                                             totalUnused(m) - m.totalTroopsAndMilitia >= 5
         val candidates = countryNames(game.muslims filter canJihad)
         majorJihadTarget(candidates) match {
           case None => Nil   // No more candidates
           case Some(name) =>
             val m = game.getMuslim(name)
             val numAttempts = remaining
-            val target = JihadTarget(name, numAttempts, 0, major = true)
+            // Sadr never used to roll a die in Major Jihad
+            // There are alway at least 4 other cells in the country.
+            val target = JihadTarget(name, numAttempts, 0, false, major = true)
             target :: nextJihadTarget(completed + numAttempts, alreadyTried + name)
         }
       }
     }
 
     val targets = nextJihadTarget(0, Set.empty)
-    val opsUsed = (for (JihadTarget(_, a, s, _) <- targets) yield(a + s)).sum
+    val opsUsed = (for (JihadTarget(_, a, s, _, _) <- targets) yield(a + s)).sum
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
-    for ((name, successes) <- performJihads(targets))
+    for ((name, successes, _) <- performJihads(targets))
       usedCells(name).addActives(successes)
+    
     opsUsed
   }
   
@@ -948,22 +974,22 @@ object JihadistBot extends BotHelpers {
   // The AddToReserves, Recruit, and TravelToUS action cannot use reserves.
   def getRadicalizationAction(requiresReserves: Boolean): Option[RadicalizationAction] = {
     val canPlotWMDInUs = (game.availablePlots contains PlotWMD) && 
-                         unusedCells(game getCountry UnitedStates) > 0
-    val canTravelToUntestedNonMuslim = game.usPosture == Hard &&
-                                       game.gwotPenalty == 0  &&
-                                       unusedCellsOnMap > 0   &&
+                         totalUnused(game getCountry UnitedStates) > 0
+    val canTravelToUntestedNonMuslim = game.usPosture == Hard        &&
+                                       game.gwotPenalty == 0         &&
+                                       unusedCellsOnMapForTravel > 0 &&
                                        (game hasNonMuslim (_.isUntested))
     val canPlotInSoftMuslim = game.usPosture == Soft &&
                               game.gwotPenalty == 0  &&
                               game.availablePlots.nonEmpty &&
-                              (game hasNonMuslim (n => n.isSoft && unusedCells(n) > 0))
+                              (game hasNonMuslim (n => n.isSoft && totalUnused(n) > 0))
     // I'm allowing recruit in IR countries, not sure if that is the intent?
     val canRecruitAtMuslimCadre = (game hasMuslim (_.hasCadre)) && game.cellsToRecruit > 0
     val canAddToReserves = !requiresReserves && game.reserves.jihadist < 2
     val canRecruit = !requiresReserves && 
                      game.cellsToRecruit > 0 &&
                      (game hasCountry (c => c.totalCells > 0 || c.hasCadre))
-    val canTravelToUS = !requiresReserves && unusedCellsOnMap > 0
+    val canTravelToUS = !requiresReserves && unusedCellsOnMapForTravel > 0
     
     if      (canPlotWMDInUs)               Some(PlotWMDInUS)
     else if (canTravelToUntestedNonMuslim) Some(TravelToUntestedNonMuslim)
@@ -1028,7 +1054,7 @@ object JihadistBot extends BotHelpers {
     val maxOps = cardOps + reserveOps
     def nextAttempt(completed: Int): Int = {
       val us = game getCountry UnitedStates
-      if (completed == maxOps || unusedCells(us) == 0 || game.availablePlots.isEmpty) 
+      if (completed == maxOps || totalUnused(us) == 0 || game.availablePlots.isEmpty) 
         completed
       else {
         if (completed >= cardOps)
@@ -1057,7 +1083,7 @@ object JihadistBot extends BotHelpers {
     }
     // Create the next highest priority travel attempt.  Max of one per destination.
     def nextTravel(completed: Int, destinations: List[String]): Int = {
-      val sources = countryNames(game.countries filter (c => unusedCells(c) > 0))
+      val sources = countryNames(game.countries filter (c => totalUnused(c) > 0))
       if (completed == maxOps || destinations.isEmpty || sources.isEmpty)
         completed
       else {
@@ -1125,7 +1151,7 @@ object JihadistBot extends BotHelpers {
         val target = topPriority(softs, PlotPriorities).get
         
         def nextAttempt(plotsCompleted: Int): Int = {
-          if (plotsCompleted == maxOps || unusedCells(target) == 0 || game.availablePlots.isEmpty) 
+          if (plotsCompleted == maxOps || totalUnused(target) == 0 || game.availablePlots.isEmpty) 
             plotsCompleted
           else {
             if (completed >= cardOps)
@@ -1140,7 +1166,7 @@ object JihadistBot extends BotHelpers {
         nextPlotTarget(completed + numPlots, candidates filterNot (_.name == target.name))
       }
     }
-    nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && unusedCells(n) > 0))
+    nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && totalUnused(n) > 0))
   }
   
   // Recruit in the Muslim county with a cadre that has the best
@@ -1255,7 +1281,7 @@ object JihadistBot extends BotHelpers {
     }
 
     def nextTravel(completed: Int): Int = {
-      val sources = countryNames(game.countries filter (c => c.name != UnitedStates && unusedCells(c) > 0))
+      val sources = countryNames(game.countries filter (c => c.name != UnitedStates && totalUnused(c) > 0))
       if (completed == cardOps || sources.isEmpty)
         completed
       else {

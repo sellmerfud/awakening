@@ -321,10 +321,10 @@ object AwakeningCards {
               case _ =>
               val candidates = game.muslims filter (_.totalCells > 0)
               val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
-              val (actives, sleepers) = askCells(target, 2)
+              val (actives, sleepers, sadr) = askCells(target, 2)
               addEventTarget(target)
               println()
-              removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+              removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
             }
           }
           else
@@ -343,9 +343,9 @@ object AwakeningCards {
             else
               USBot.disruptPriority(withCells).get
             addEventTarget(target)
-            val (actives, sleepers) = USBot.chooseCellsToRemove(target, 2)
+            val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
             println()
-            removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
           }
         }
       }
@@ -368,7 +368,7 @@ object AwakeningCards {
       (_ : Role) => specialForcesCandidates.nonEmpty
       ,
       (role: Role) => {
-        val (target, (actives, sleepers)) = if (role == game.humanRole) {
+        val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val target = askCountry("Remove cell in which country: ", specialForcesCandidates)
           (target, askCells(target, 1))
         }
@@ -378,7 +378,7 @@ object AwakeningCards {
         }
         println()
         addEventTarget(target)
-        removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -419,7 +419,7 @@ object AwakeningCards {
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter (_.civilWar))
-        val (target, (actives, sleepers)) = if (role == game.humanRole) {
+        val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val target = askCountry("Select civil war country: ", candidates)
           (target, askCells(target, 1))
         }
@@ -432,7 +432,7 @@ object AwakeningCards {
 
         println()
         addEventTarget(target)
-        removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
         addMilitiaToCountry(target, game.militiaAvailable min 2)
       }
     )),
@@ -554,18 +554,18 @@ object AwakeningCards {
             USBot.disruptPriority(USBot.highestCellsMinusTandM(candidates)).get
 
           val m = game.getMuslim(target)
-          val (actives, sleepers) = if (m.totalCells <= 2)
-            (m.activeCells, m.sleeperCells)
-          else if (m.sleeperCells == 0)
-            (2, 0)
-          else {
-            // We have 3 or more cells and at least one is a sleeper
-            val sleepers = (m.sleeperCells - 1) min 2  // resereve 1 sleeper to flip to active
-            (2 - sleepers, sleepers)
+          val (actives, sleepers, sadr) = (m.activeCells, m.sleeperCells, m.hasSadr) match {
+            case (0, 0, true)  => (0, 0, true)
+            case (0, s, true)  => (0, 1, true)
+            case (a, _, true)  => (1, 0, true)
+            case (a, s, false) =>
+              val actives  = a min 2
+              val sleepers = s min (2 - a)
+              (actives, sleepers, false)
           }
           println()
           addEventTarget(target)
-          removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
           if (game.getMuslim(target).sleeperCells > 0)
             flipSleeperCells(target, 1)
         }
@@ -917,11 +917,11 @@ object AwakeningCards {
         }
 
         if (m.totalCells > 0) {
-          val (actives, sleepers) = if (role == game.humanRole)
+          val (actives, sleepers, sadr) = if (role == game.humanRole)
             askCells(target, 1, sleeperFocus = true)
           else 
             USBot.chooseCellsToRemove(target, 1)
-          removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
         }
 
         if (!sameCountry)
@@ -1304,7 +1304,7 @@ object AwakeningCards {
         setAlignment(target, Ally)
         if (m.isPoor)
           improveGovernance(target, 1, canShiftToGood = false)
-        removeCellsFromCountry(target, m.activeCells, m.sleeperCells, addCadre = true)
+        removeCellsFromCountry(target, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = true)
         addReactionMarker(target, m.totalCells)
       }
     )),
@@ -1755,9 +1755,9 @@ object AwakeningCards {
           log("Failure")
           val c = game.getCountry(Iran)
           if (c.activeCells > 0)
-            removeActiveCellsFromCountry(Iran, 1, addCadre = true)
+            removeCellsFromCountry(Iran, 1, 0, false, addCadre = true)
           else
-            removeSleeperCellsFromCountry(Iran, 1, addCadre = true)
+            removeCellsFromCountry(Iran, 0, 1, false, addCadre = true)
         }
       }
     )),
@@ -2067,24 +2067,24 @@ object AwakeningCards {
       ,
       (role: Role) => {
         val candidates = countryNames(game.countries filter martyrdomCandidate)
-        val (target, active, plots) = if (role == game.humanRole) {
+        val (target, (active, sleeper, sadr), plots) = if (role == game.humanRole) {
           val target = askCountry("Select country: ", candidates)
-          val (actives, _) = askCells(target, 1)
-          (target, actives > 0, askAvailablePlots(2, ops = 3))
+          val cell = askCells(target, 1)
+          (target, cell, askAvailablePlots(2, ops = 3))
         }
         else {
           // See Event Instructions table
           val target = JihadistBot.plotTarget(candidates).get
           addEventTarget(target)
-          val active = (game getCountry target).activeCells > 0
-          (target, active, shuffle(game.availablePlots) take 2)
+          val c = game getCountry target
+          val cell = if (c.activeCells > 0) (1, 0, false)
+                     else if (c.hasSadr)    (0, 0, true)
+                      else                  (0, 1, false)
+          (target, cell, shuffle(game.availablePlots) take 2)
         }
         
         addEventTarget(target)
-        if (active)
-          removeActiveCellsFromCountry(target, 1, addCadre = false)
-        else
-          removeSleeperCellsFromCountry(target, 1, addCadre = false)
+        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = false)
         for (plot <- plots)
           addAvailablePlotToCountry(target, plot)
       }
@@ -2225,7 +2225,7 @@ object AwakeningCards {
       (role: Role) => {
         // See Event Instructions table
         val candidates = countryNames(game.muslims filter talibanResurgentCandidate)
-        val (target, plots, (actives, sleepers)) = if (role == game.humanRole) {
+        val (target, plots, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val name = askCountry("Select country: ", candidates)
           val plots = askPlots(game.availablePlots filterNot (_ == PlotWMD), 2)
           println("Choose cells to remove:")
@@ -2237,9 +2237,9 @@ object AwakeningCards {
           (name, plots, JihadistBot.chooseCellsToRemove(name, 3))
         }
         addEventTarget(target)
-        removeCellsFromCountry(target, actives, sleepers, addCadre = false)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = false)
         plots foreach { p => addAvailablePlotToCountry(target, p) }
-        performJihads(JihadTarget(target, 2, 0)::Nil, ignoreFailures = true)
+        performJihads(JihadTarget(target, 2, 0, false, major = false)::Nil, ignoreFailures = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2659,10 +2659,8 @@ object AwakeningCards {
               case "-mil" => removeMilitiaFromCountry(name, 2 min (game getMuslim name).militia)
               case "+cel" => addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
               case "-cel" =>
-                val c = game getCountry name
-                val sleepers = 2 min c.sleeperCells
-                val actives  = (2 - sleepers) min c.activeCells
-                removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+                val (actives, sleepers, sadr) = askCells(name, 2, role == US)
+                removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
               case "+pos" =>
                 val posture = askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get
                 setCountryPosture(name, posture) 
@@ -2693,8 +2691,8 @@ object AwakeningCards {
             val candidates = countryNames(mm filter (_.totalCells > 0))
             val name = USBot.disruptPriority(candidates).get
             addEventTarget(name)
-            val (actives, sleepers) = USBot.chooseCellsToRemove(name, 2)
-            removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+            val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 2)
+            removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
           }
           else {
             val candidates = countryNames(mm filter (_.reaction > 0))
@@ -2791,8 +2789,8 @@ object AwakeningCards {
             askMenu(choices).head match {
               case "cell"  => 
                 // Use the Bot routine to pick a sleeper first
-                val (actives, sleepers) = USBot.chooseCellsToRemove(name, 1)
-                removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+                val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 1)
+                removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
               case "cadre" => removeCadreFromCountry(name)
               case "plot"  => performAlert(name, humanPickPlotToAlert(name))
             }
@@ -2810,8 +2808,8 @@ object AwakeningCards {
             if (n.hasPlots)
               performAlert(name, USBot.selectPriorityPlot(name::Nil).onMap)
             else if (n.totalCells > 0) {
-              val (actives, sleepers) = USBot.chooseCellsToRemove(name, 1)
-              removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+              val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 1)
+              removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
             }
             else
               removeCadreFromCountry(name)
@@ -2867,11 +2865,11 @@ object AwakeningCards {
         addEventTarget(name)
         val m = game getMuslim name
         val numCells = if (m.isSunni) 1 else 2
-        val (actives, sleepers) = if (role == game.humanRole)
+        val (actives, sleepers, sadr) = if (role == game.humanRole)
           askCells(name, numCells, sleeperFocus = true)
         else
           USBot.chooseCellsToRemove(name, numCells)
-        removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3094,8 +3092,8 @@ object AwakeningCards {
         addEventTarget(target)
         val m = game getMuslim target
         if (m.totalCells > m.militia) {
-          val (actives, sleepers) = USBot.chooseCellsToRemove(target, m.totalCells - m.militia)
-          removeCellsFromCountry(target, actives, sleepers, addCadre = true)
+          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, m.totalCells - m.militia)
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
         }
         else if (m.militia > m.totalCells)
           removeMilitiaFromCountry(target, m.militia - m.totalCells)
@@ -3207,11 +3205,14 @@ object AwakeningCards {
               println("Remove cells from which countries?")
               askCountries(numCells, withCells)
             }
-            val cells = for (name <- names; (a, s) = askCells(name, 1, sleeperFocus = role == US))
-              yield CellsItem(name, a, s)
             
-            for (CellsItem(name, a, s) <- cells)
-              removeCellsFromCountry(name, a, s, addCadre = true)
+            case class Cells(name: String, cells: (Int, Int, Boolean))
+            
+            val cells = for (name <- names; c = askCells(name, 1, sleeperFocus = role == US))
+              yield Cells(name, c)
+            
+            for (Cells(name, (a, s, sadr)) <- cells)
+              removeCellsFromCountry(name, a, s, sadr, addCadre = true)
           }
           
           val cellsToPlace = (numReaction + numCells) min game.cellsAvailable
@@ -3241,8 +3242,8 @@ object AwakeningCards {
           }
           
           for (name <- countries) {
-            val (a, s) = JihadistBot.chooseCellsToRemove(name, 1)
-            removeCellsFromCountry(name, a, s, addCadre = true)
+            val (a, s, sadr) = JihadistBot.chooseCellsToRemove(name, 1)
+            removeCellsFromCountry(name, a, s, sadr, addCadre = true)
           }
           
           addEventTarget(target)
@@ -3277,8 +3278,8 @@ object AwakeningCards {
                 0
               else {
                 val name = USBot.disruptPriority(countries).get
-                val (a, c) = USBot.chooseCellsToRemove(name, 1)
-                removeCellsFromCountry(name, a, c, addCadre = true)
+                val (a, s, sadr) = USBot.chooseCellsToRemove(name, 1)
+                removeCellsFromCountry(name, a, s, sadr, addCadre = true)
                 1 + nextCell(remaining - 1, countries filterNot (_ == name))
               }
             }
@@ -3549,7 +3550,7 @@ object AwakeningCards {
                       (role == Jihadist && (game hasMuslim selloutCandidate))
       ,               // USBot treats as unplayable
       (role: Role) => {
-        val (name, (actives, sleepers), action) = if (role == game.humanRole) {
+        val (name, (actives, sleepers, sadr), action) = if (role == game.humanRole) {
           val candidates = countryNames(game.muslims filter selloutCandidate)
           val name = askCountry("Select country: ", candidates)
           val m = game getMuslim name
@@ -3581,7 +3582,7 @@ object AwakeningCards {
         }
         
         addEventTarget(name)
-        removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
         increaseFunding((actives + sleepers + 1) / 2)  // half of removed cells rounded up
         action match {
           case Some("gov")   => degradeGovernance(name, 1, canShiftToIR = false)
@@ -3598,7 +3599,7 @@ object AwakeningCards {
       ,
       (role: Role) => if (role == US) {
         val candidates = countryNames(game.muslims filter (m => m.civilWar && m.totalCells > 0))
-        val (name, (actives, sleepers)) = if (role == game.humanRole) {
+        val (name, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val name = askCountry("Select country: ", candidates)
           val cells = askCells(name, 3 min (game getMuslim name).totalCells)
           (name, cells)
@@ -3609,7 +3610,7 @@ object AwakeningCards {
           (name, cells)
         }
         addEventTarget(name)
-        removeCellsFromCountry(name, actives, sleepers, addCadre = true)
+        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
       }
       else {
         val candidates = countryNames(game.muslims filter (m => m.civilWar && m.militia > 0))
@@ -3684,7 +3685,7 @@ object AwakeningCards {
         endCivilWar(name)  // This will remove the militia
         addAwakeningMarker(name, m.militia)
         moveTroops(name, "track", m.troops)
-        removeCellsFromCountry(name, m.activeCells, m.sleeperCells, addCadre = false)
+        removeCellsFromCountry(name, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = false)
         addReactionMarker(name, m.totalCells)
         setAlignment(name, Neutral)
         rollGovernance(name)

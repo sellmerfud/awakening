@@ -475,7 +475,6 @@ object LabyrinthAwakening {
   val LeakWiretapping      = "Leak-Wiretapping"
   val LeakEnhancedMeasures = "Leak-Enhanced Measures"
   val LeakRenditions       = "Leak-Renditions"
-  val Sadr                 = "Sadr"
   val VieiraDeMelloSlain   = "Vieira de Mello Slain"
   val AlAnbar              = "Al-Anbar"
   val MaerskAlabama        = "Maersk Alabama"
@@ -488,6 +487,7 @@ object LabyrinthAwakening {
   val ThreeCupsOfTea       = "3 Cups of Tea"
   val TradeEmbargo         = "Trade Embargo"
   // Country Markers
+  val Sadr                 = "Sadr"
   val CTR                  = "CTR"
   val MoroTalks            = "Moro Talks"
   val NEST                 = "NEST"
@@ -508,12 +508,12 @@ object LabyrinthAwakening {
 
   val GlobalMarkers = List(
     Abbas, AnbarAwakening, SaddamCaptured, Wiretapping, EnhancedMeasures, Renditions,
-    Sadr, VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
+    VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
     Censorship, Pirates, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargo
   ).sorted
   
   val CountryMarkers = List(
-    CTR, MoroTalks, NEST, BenazirBhutto, Indo_PakistaniTalks, IraqiWMD, LibyanDeal,
+    Sadr, CTR, MoroTalks, NEST, BenazirBhutto, Indo_PakistaniTalks, IraqiWMD, LibyanDeal,
     LibyanWMD, PatriotAct, AbuSayyaf, BhuttoShot, FATA, Advisors, UNSCR_1973, NATO,
     TrainingCamps, OperationServal
   ).sorted
@@ -644,8 +644,11 @@ object LabyrinthAwakening {
     def isPoor         = governance == Poor
     def isIslamistRule = governance == IslamistRule
   
-    def totalCells = sleeperCells + activeCells
     def hasMarker(name: String) = markers contains name
+    
+    def cells      = sleeperCells + activeCells
+    def hasSadr    = hasMarker(Sadr)
+    def totalCells = cells + (if (hasSadr) 1 else 0)
     
     def troopsMarkers: List[TroopsMarker] = markers collect {
       case NATO            => TroopsMarker(NATO,            2, canDeploy = true,  prestigeLoss = true)
@@ -745,7 +748,7 @@ object LabyrinthAwakening {
     def inRegimeChange = regimeChange != NoRegimeChange
   
     def isUntestedWithData: Boolean = isUntested && (
-      totalCells > 0            ||
+      cells > 0                 ||
       hasCadre                  ||
       hasPlots                  ||
       markers.nonEmpty          ||
@@ -784,7 +787,9 @@ object LabyrinthAwakening {
 
     def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
     def maxDeployFrom(ops: Int) = if (inRegimeChange)
-      if (ops >= 3 && troops - totalCells > 5) (troops - totalCells - 5) else 0
+      if (ops >= 3 && totalTroopsAndMilitia - totalCells > 5)
+        (totalTroopsAndMilitia - totalCells - 5) min troops
+      else 0
     else
       troops
     
@@ -963,7 +968,7 @@ object LabyrinthAwakening {
         val member = getMuslim(memberName)
         member.copy(
           caliphateCapital = member.name == name,
-          activeCells      = member.totalCells,  // All cells go active in caliphate members
+          activeCells      = member.cells,  // All cells go active in caliphate members
           sleeperCells     = 0
         )
       }
@@ -1064,7 +1069,7 @@ object LabyrinthAwakening {
     def trainingCampCapacity= trainingCamp map (tc => if (isCaliphateMember(tc)) 5 else 3) getOrElse 0 
     def totalCellCapacity   = 15 + trainingCampCapacity
     def totalCellsInPlay    = 15 + trainingCampCells.inCamp + trainingCampCells.onMap
-    def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.totalCells }
+    def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.cells }
     def cellsOnTrack        = {
       // Don't allow it to go negative due to camp cells that are on the map
       // after the training camp has been removed.
@@ -1149,7 +1154,7 @@ object LabyrinthAwakening {
       case _: NonMuslimCountry => false
     }
     
-    // Returns the losses that would occur iif this country is the 
+    // Returns the losses that would occur if this country is the 
     // target of a disrupt operation.
     // Some(Either(cells, ())) or None
     def disruptLosses(name: String): Option[Either[Int, Unit]] = {
@@ -1159,8 +1164,8 @@ object LabyrinthAwakening {
           if ((m.totalTroopsAndMilitia) > 1 && (m.totalTroops > 0 || m.hasMarker(Advisors))) 2 else 1
         case n: NonMuslimCountry => if (n.isHard) 2 else 1
       }
-      if (c.totalCells > 0)
-        Some(Left(numLosses min c.totalCells))
+      if (c.cells > 0)
+        Some(Left(numLosses min c.cells))
       else if (c.hasCadre)
         Some(Right(()))
       else
@@ -1169,14 +1174,14 @@ object LabyrinthAwakening {
     
     def disruptMuslimTargets(ops: Int): List[String] = countryNames(muslims.filter { m =>
       ops >= m.governance &&
-      (m.hasCadre || m.totalCells > 0) && 
+      (m.hasCadre || m.cells > 0) && 
       (m.isAlly || (m.totalTroopsAndMilitia) > 1)
     })
     
     def disruptNonMuslimTargets(ops: Int): List[String] = countryNames(nonMuslims.filter { n =>
       !n.iranSpecialCase  &&
       ops >= n.governance &&
-      (n.hasCadre || n.totalCells > 0) 
+      (n.hasCadre || n.cells > 0) 
     })
       
     def disruptTargets(ops: Int): List[String] = 
@@ -1634,15 +1639,11 @@ object LabyrinthAwakening {
   }
   
   // Returns (actives, sleepers)
-  // If validCells is present it represents the number of (active, sleeper) cells in
-  // the country that can be selected.
-  // If validCells is None, then the total number of cells in the country is considered.
-  def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean = true, 
-               validCells: Option[(Int, Int)] = None): (Int, Int) = {
+  def askCellsNotSadr(countryName: String, numCells: Int, sleeperFocus: Boolean = true): (Int, Int) = {
     val c = game.getCountry(countryName)
-    val (activeCells, sleeperCells) = validCells getOrElse (c.activeCells, c.sleeperCells)
+    val (activeCells, sleeperCells) = (c.activeCells, c.sleeperCells)
     val totalCells = activeCells + sleeperCells
-    val maxCells = numCells min + totalCells
+    val maxCells = numCells min totalCells
     
     if (maxCells == totalCells) (activeCells, sleeperCells)
     else if (activeCells  == 0) (0, maxCells)
@@ -1676,6 +1677,51 @@ object LabyrinthAwakening {
     }
   }
   
+  // Returns (actives, sleepers, sadr)
+  def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean = true): (Int, Int, Boolean) = {
+    val c = game.getCountry(countryName)
+    if (!c.hasSadr) {
+      val (a, s) = askCellsNotSadr(countryName, numCells, sleeperFocus)
+      (a, s, false)
+    }
+    else {
+      val (activeCells, sleeperCells) = (c.activeCells, c.sleeperCells)
+      val totalCells = activeCells + sleeperCells + 1 // +1 for Sadr
+      val maxCells   = numCells min totalCells
+    
+      if (maxCells == totalCells)
+        (activeCells, sleeperCells, true)  // Remove the lot
+      else {
+        val (a, s) = (amountOf(activeCells, "active cell"), amountOf(sleeperCells, "sleeper cell"))
+        println(s"$countryName has $a and $s and Sadr is present")
+        val sadr = askYorN("Do you want to select Sadr? (y/n) ")
+        if (maxCells == 1 && sadr)
+          (0, 0, true)
+        else if (maxCells == 1) {
+          val prompt = if (sleeperFocus) "Which cell (sleeper or active)? "
+                       else "Which cell (active or sleeper)? "
+          askOneOf(prompt, List("active", "sleeper")) match {
+            case Some("active") => (1, 0, false)
+            case _              => (0, 1, false)
+          }
+        }
+        else {
+          if (sleeperFocus) {
+            val smax     = maxCells min sleeperCells
+            val prompt   = s"How many sleeper cells (Default = $smax): "
+            val sleepers = askInt(prompt, 1, smax, Some(smax))
+            (maxCells - sleepers , sleepers, sadr)
+          }
+          else {
+            val amax    = maxCells min activeCells
+            val prompt  = s"How many active cells (Default = $amax): "
+            val actives = askInt(prompt, 1, amax, Some(amax))
+            (actives, maxCells - actives, sadr)
+          }
+        }
+      }      
+    }
+  }
   
   def askCardNumber(prompt: String, 
                     initial: Option[String] = None,
@@ -1818,7 +1864,7 @@ object LabyrinthAwakening {
           val src = sources.find (_.name == name).get
           val mx = numRemaining min src.total
           val n = askInt(s"Choose how many cells from $name", 1, mx, Some(mx))
-          val (a, s) = if (name == "track") (0, n) else askCells(name, n, sleeperFocus)
+          val (a, s) = if (name == "track") (0, n) else askCellsNotSadr(name, n, sleeperFocus)
           val newSources = if (src.total == n)
             sources filterNot (_.name == name)
           else
@@ -2117,7 +2163,7 @@ object LabyrinthAwakening {
         log(s"Activate all sleeper cells in $memberName")
       member.copy(
         caliphateCapital = member.name == name,
-        activeCells      = member.totalCells,  // All cells go active in caliphate members
+        activeCells      = member.cells,  // All cells go active in caliphate members
         sleeperCells     = 0
       )
     }
@@ -2197,7 +2243,7 @@ object LabyrinthAwakening {
       m       =  game.getMuslim(member)
       if m.sleeperCells > 0
     } {
-      game = game.updateCountry(m.copy(sleeperCells = 0, activeCells = m.totalCells))
+      game = game.updateCountry(m.copy(sleeperCells = 0, activeCells = m.cells))
       log(s"$member is now a caliphate member, flip all sleeper cells to active")
     }
   }
@@ -3002,20 +3048,16 @@ object LabyrinthAwakening {
       val unfulfilled   = (losses - m.totalCells) max 0
       val hitsRemaining =  (unfulfilled + multiplier - 1) / multiplier
       
-      val (activesLost, sleepersLost) = if (m.totalCells <= losses)
-        (m.activeCells, m.sleeperCells)
+      val (activesLost, sleepersLost, sadr) = if (m.totalCells <= losses)
+        (m.activeCells, m.sleeperCells, m.hasSadr)
       else if (game.humanRole == Jihadist) {
         println(s"$Jihadist must absorb ${amountOf(losses, "hit")}")
         askCells(m.name, losses, sleeperFocus = false)
       }
-      else {
-        // Bot removes actives first.
-        val active  = m.activeCells min losses
-        val sleeper = m.sleeperCells min (losses - active)
-        (active, sleeper)
-      }
+      else
+        JihadistBot.chooseCellsToRemove(m.name, losses)
 
-      removeCellsFromCountry(m.name, activesLost, sleepersLost, addCadre = true)
+      removeCellsFromCountry(m.name, activesLost, sleepersLost, sadr, addCadre = true)
       hitsRemaining    
     }
   }
@@ -3232,11 +3274,11 @@ object LabyrinthAwakening {
     game.disruptLosses(target) match {
       case Some(Left(numCells)) =>
         val (actives, sleepers) = if (game.humanRole == US)
-          askCells(target, numCells, sleeperFocus = false)
+          askCellsNotSadr(target, numCells, sleeperFocus = false)
         else
           USBot.chooseCellsToDisrupt(target, numCells)
         flipSleeperCells(target, sleepers)
-        removeActiveCellsFromCountry(target, actives, addCadre = true)
+        removeCellsFromCountry(target, actives, 0, false, addCadre = true)
       case Some(Right(_)) =>
         removeCadreFromCountry(target)
       case None =>
@@ -3299,9 +3341,9 @@ object LabyrinthAwakening {
           moveCellsBetweenCountries(from, to, 1, active)
       }
       else if (active)
-        removeActiveCellsFromCountry(from, 1, addCadre = false)
+        removeCellsFromCountry(from, 1, 0, false, addCadre = false)
       else
-        removeSleeperCellsFromCountry(from, 1, addCadre = false)
+        removeCellsFromCountry(from, 0, 1, false, addCadre = false)
       success
     }
     
@@ -3390,20 +3432,20 @@ object LabyrinthAwakening {
     showNext(plots.toList, 1)
   }
   
-  case class JihadTarget(name: String, actives: Int, sleepers: Int, major: Boolean = false)
+  case class JihadTarget(name: String, actives: Int, sleepers: Int, sadr: Boolean, major: Boolean)
   
   // Perform Jihads on the given targets.
-  // Return a List of (name, successes) to indicate the number of success achieved in
+  // Return a List of (name, successes, success with Sadr) to indicate the number of success achieved in
   // each target.
-  def performJihads(targets: List[JihadTarget], ignoreFailures: Boolean = false): List[(String, Int)] = {
+  def performJihads(targets: List[JihadTarget], ignoreFailures: Boolean = false): List[(String, Int, Boolean)] = {
     targets match {
       case Nil => Nil
-      case JihadTarget(name, actives, sleepers, major)::remaining =>
+      case JihadTarget(name, actives, sleepers, sadr, major)::remaining =>
         val m = game.getMuslim(name)
         val jihad = if (major) "Major Jihad" else "Jihad"
         assert(!m.isIslamistRule, s"Cannot perform $jihad in Islamist Rule country")
         assert(!(major && m.isGood), s"Cannot perform $jihad in country with Good governance")
-        val numAttempts = actives + sleepers
+        val numAttempts = actives + sleepers + (if (sadr) 1 else 0)
         log()
         log(s"Conduct $jihad in $name, rolling ${diceString(numAttempts)}")
         log(separator())
@@ -3425,6 +3467,8 @@ object LabyrinthAwakening {
         }
         val successes = nextAttempt(1)
         val failures  = numAttempts - successes
+        val sadrSuccess = sadr && successes > 0  // Sadr is last to fail!
+        val sadrFailure = sadr && failures == numAttempts
         val majorSuccess = major && (
           (m.isPoor && (successes  > 1 || (successes == 1 && m.besiegedRegime))) || 
           (m.isFair && (successes == 3 || (successes == 2 && m.besiegedRegime)))
@@ -3433,7 +3477,11 @@ object LabyrinthAwakening {
           log(s"Major Jihad ${if (majorSuccess) "succeeds" else "fails"}")
         // Remove one active cell for each failure
         if (!ignoreFailures)
-          removeActiveCellsFromCountry(name, failures, addCadre = false)
+          if (sadrFailure)
+            removeCellsFromCountry(name, failures - 1, 0, true, addCadre = true)
+          else
+            removeCellsFromCountry(name, failures, 0, false, addCadre = true)
+        
         // Remove 1 aid marker for each sucessful die roll
         removeAidMarker(name, successes min m.aidMarkers)
         degradeGovernance(name, levels = successes, canShiftToIR = majorSuccess)
@@ -3447,7 +3495,7 @@ object LabyrinthAwakening {
           addBesiegedRegimeMarker(name)
           shiftAlignmentLeft(name)
         }
-        (name, successes) :: performJihads(remaining)
+        (name, successes, sadrSuccess) :: performJihads(remaining)
     }
   }
 
@@ -3637,8 +3685,9 @@ object LabyrinthAwakening {
       }
       if (newAlign == Adversary)
         removeEventMarkersFromCountry(name, "Advisors")
-      else if (name == Nigeria && newAlign == Ally && m.totalCells == 0)
-        makeNigeriaNonMuslim() // rule 11.3.3.3
+      
+      if (name == Nigeria)
+        makeNigeriaNonMuslim_?() // rule 11.3.3.3
     }
   }
   
@@ -3667,7 +3716,7 @@ object LabyrinthAwakening {
     log(separator())
     if (game isMuslim name) {
       val m = game.getMuslim(name)
-      removeCellsFromCountry(name, m.activeCells, m.sleeperCells, addCadre = false)
+      removeCellsFromCountry(name, m.activeCells, m.sleeperCells, true, addCadre = false)
       removeCadreFromCountry(name)
       moveTroops(name, "track", m.troops)
       removeMilitiaFromCountry(name, m.militia)
@@ -3687,7 +3736,7 @@ object LabyrinthAwakening {
     }
     else {
       val n = game.getNonMuslim(name)
-      removeCellsFromCountry(name, n.activeCells, n.sleeperCells, addCadre = false)
+      removeCellsFromCountry(name, n.activeCells, n.sleeperCells, true, addCadre = false)
       removeCadreFromCountry(name)
       moveTroops(name, "track", n.troops)
       for (p <- n.plots)
@@ -3974,13 +4023,6 @@ object LabyrinthAwakening {
     }
   }
 
-  
-  def removeActiveCellsFromCountry(name: String, num: Int, addCadre: Boolean, logPrefix: String = "") =
-    removeCellsFromCountry(name, num, 0, addCadre, logPrefix)
-    
-  def removeSleeperCellsFromCountry(name: String, num: Int, addCadre: Boolean, logPrefix: String = "") =
-    removeCellsFromCountry(name, 0, num, addCadre, logPrefix)
-  
   // Remove cells from the a country.
   // The removed cells will moved to:
   // 1. Out of play if there are cells on the map that came from the training camp and
@@ -3993,13 +4035,13 @@ object LabyrinthAwakening {
   // Caller should ensure there are enough cells of the requested type to satisfy
   // the removal, otherwise the function will throw an exception!
   // Removing zero is OK and will not do anything.
-  def removeCellsFromCountry(name: String, actives: Int, sleepers: Int, addCadre: Boolean, logPrefix: String = ""): Unit = {
+  def removeCellsFromCountry(name: String, actives: Int, sleepers: Int, sadr: Boolean, addCadre: Boolean, logPrefix: String = ""): Unit = {
     val c = game.getCountry(name)
-    if (actives + sleepers > 0) {
+    if (actives + sleepers > 0 || sadr) {
       assert(c.activeCells >= actives, s"removeCellsFromCountry(): not enough active cells present")
       assert(c.sleeperCells >= sleepers, s"removeCellsFromCountry(): not enough sleeper cells present")
 
-      val cadreAdded = addCadre && c.totalCells == (actives + sleepers)
+      val cadreAdded = addCadre && c.cells == (actives + sleepers) && (sadr || !c.hasMarker(Sadr))
       for ((num, active) <- List((actives, true), (sleepers, false)); if num > 0) {
         val cellType = if (active) "active cell" else "sleeper cell"
         val CampCells(campCellsInCamp, campCellsOnMap) = game.trainingCampCells
@@ -4025,14 +4067,13 @@ object LabyrinthAwakening {
         if (toTrack > 0)
           log("%sRemove %s from %s to the funding track".format(logPrefix, amountOf(toTrack, cellType), name))
       }
+      if (sadr)
+        removeEventMarkersFromCountry(name, Sadr)
       if (cadreAdded)
         addCadreToCountry(name)
       removeTrainingCamp_?(name)
-      if (name == Nigeria && (game isMuslim Nigeria)) {
-        val m = game getMuslim Nigeria
-        if (m.isAlly && m.totalCells == 0)
-          makeNigeriaNonMuslim() // rule 11.3.3.3
-      }
+      if (name == Nigeria)
+        makeNigeriaNonMuslim_?() // rule 11.3.3.3
     }
   }
   
@@ -4074,7 +4115,9 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry if makeActive => game = game.updateCountry(n.copy(activeCells = n.activeCells + num, hasCadre = false))
         case n: NonMuslimCountry               => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))
       }
-      removeTrainingCamp_?(fromName)      
+      removeTrainingCamp_?(fromName)
+      if (fromName == Nigeria)
+        makeNigeriaNonMuslim_?() // rule 11.3.3.3
     }
   }
   
@@ -4326,31 +4369,35 @@ object LabyrinthAwakening {
     }
   }
   
-  def makeNigeriaNonMuslim(): Unit = {
-    log("Nigeria is an Ally with no cells, so it becomes a non-Muslim country")
-    endCivilWar(Nigeria)
-    endRegimeChange(Nigeria)
-    val m = game getMuslim Nigeria
-    removeCadreFromCountry(Nigeria)
-    if (m.militia > 0)
-      removeMilitiaFromCountry(Nigeria, m.militia)
-    if (m.troops > 0)
-      moveTroops(Nigeria, "track", m.troops)
-    if (m.aidMarkers > 0)
-      removeAidMarker(Nigeria, m.aidMarkers)
-    if (m.awakening > 0)
-      removeAwakeningMarker(Nigeria, m.awakening)
-    if (m.reaction > 0)
-      removeReactionMarker(Nigeria, m.reaction)
-    for (plotOnMap <- m.plots)
-      removePlotFromCountry(Nigeria, plotOnMap)
-    for (marker <- m.markers)
-      removeEventMarkersFromCountry(Nigeria, m.markers: _*)
-    log("Flip Nigeria over to its non-Muslim side")
-    if (m.governance != Poor)
-      log(s"Place a ${govToString(m.governance)} governance marker in Nigeria")
+  def makeNigeriaNonMuslim_?(): Unit = {
+    if ((game isMuslim Nigeria) && 
+        (game getMuslim Nigeria).isAlly && 
+        (game getMuslim Nigeria).totalCells == 0) {
+      log("Nigeria is an Ally with no cells, so it becomes a non-Muslim country")
+      endCivilWar(Nigeria)
+      endRegimeChange(Nigeria)
+      val m = game getMuslim Nigeria
+      removeCadreFromCountry(Nigeria)
+      if (m.militia > 0)
+        removeMilitiaFromCountry(Nigeria, m.militia)
+      if (m.troops > 0)
+        moveTroops(Nigeria, "track", m.troops)
+      if (m.aidMarkers > 0)
+        removeAidMarker(Nigeria, m.aidMarkers)
+      if (m.awakening > 0)
+        removeAwakeningMarker(Nigeria, m.awakening)
+      if (m.reaction > 0)
+        removeReactionMarker(Nigeria, m.reaction)
+      for (plotOnMap <- m.plots)
+        removePlotFromCountry(Nigeria, plotOnMap)
+      for (marker <- m.markers)
+        removeEventMarkersFromCountry(Nigeria, m.markers: _*)
+      log("Flip Nigeria over to its non-Muslim side")
+      if (m.governance != Poor)
+        log(s"Place a ${govToString(m.governance)} governance marker in Nigeria")
     
-    game = game.updateCountry(DefaultNigeria.copy(governance = m.governance))
+      game = game.updateCountry(DefaultNigeria.copy(governance = m.governance))          
+    }
   }
   
   def resolvePlots(): Unit = {
@@ -5854,7 +5901,7 @@ object LabyrinthAwakening {
     case class Source(name: String, sleepers: Int, actives: Int)
     var sourceCountries = 
       (game.countries
-        filter (_.totalCells > 0) 
+        filter (_.cells > 0) 
         map (c => c.name -> Source(c.name, c.sleeperCells, c.activeCells))
       ).toMap
     
@@ -5865,7 +5912,7 @@ object LabyrinthAwakening {
       val candidates = sourceCountries.keys.toList.sorted
       val src        = sourceCountries(askCountry(s"$ord Travel from which country: ", candidates))
       val active     = if (src.sleepers > 0 && src.actives > 0) {
-        askCells(src.name, 1, sleeperFocus = false) match {
+        askCellsNotSadr(src.name, 1, sleeperFocus = false) match {
           case (1, _) => true
           case _      => false
         }
@@ -5924,12 +5971,12 @@ object LabyrinthAwakening {
           val maxRolls = diceLeft min m.totalCells
           askInt(s"Roll how many dice in $name?", 1, maxRolls, Some(maxRolls))
         }
-        val (actives, sleepers) = if (majorJihad) (numRolls, 0)
-        else if (m.totalCells == numRolls) (m.activeCells, m.sleeperCells)
-        else if (m.activeCells == 0) (0, numRolls)
-        else if (m.sleeperCells == 0) (numRolls,0)
+        val (actives, sleepers, sadr) = if (majorJihad) (numRolls, 0, m.hasSadr)
+        else if (m.totalCells == numRolls) (m.activeCells, m.sleeperCells, m.hasSadr)
+        else if (m.activeCells == 0 && !m.hasSadr)  (0, numRolls, false)
+        else if (m.sleeperCells == 0 && !m.hasSadr) (numRolls, 0, false)
         else askCells(name, numRolls, sleeperFocus = false)
-        val target = JihadTarget(name, actives, sleepers, majorJihad) 
+        val target = JihadTarget(name, actives, sleepers, sadr, majorJihad) 
         target :: getJihadTargets(diceLeft - numRolls, candidates filterNot (_ == name))
       }
     }
@@ -5954,7 +6001,7 @@ object LabyrinthAwakening {
     // Keep track of where cells have been selected. They can only be selected once!
     case class Target(name: String, actives: Int, sleepers: Int)
     var targetCountries = (for (name <- game.plotTargets; c = game.getCountry(name))
-      yield name -> Target(name, c.activeCells, c.sleeperCells)).toMap
+      yield name -> Target(name, c.activeCells + (if (c.hasSadr) 1 else 0), c.sleeperCells)).toMap
     // All of the plotting cells must be declared before rolling any dice.
     val attempts = for (i <- (1 to numAttempts).toList) yield {
       println()
@@ -5963,8 +6010,9 @@ object LabyrinthAwakening {
       val target     = targetCountries(askCountry(s"$ord Plot attempt in which country: ", candidates))
       val active     = if (target.sleepers > 0 && target.actives > 0) {
         askCells(target.name, 1, sleeperFocus = false) match {
-          case (1, _) => true
-          case _      => false
+          case (_, _, true) => true
+          case (1, _, _)    => true
+          case _            => false
         }
       }
       else {
@@ -6570,7 +6618,7 @@ object LabyrinthAwakening {
     else 
       adjustInt("Active cells", c.activeCells, 0 to maxCells) foreach { value =>
         if (value < c.activeCells)
-          removeActiveCellsFromCountry(name, c.activeCells - value, addCadre = false, s"$name adjusted: ")
+          removeCellsFromCountry(name, c.activeCells, 0, false, addCadre = false, s"$name adjusted: ")
         else if (value > c.activeCells)
           addActiveCellsToCountry(name, value - c.activeCells, s"$name adjusted: ")
         saveAdjustment(name, "Active cells")
@@ -6592,7 +6640,7 @@ object LabyrinthAwakening {
     else 
       adjustInt("Sleeper cells", c.sleeperCells, 0 to maxCells) foreach { value =>
         if (value < c.sleeperCells)
-          removeSleeperCellsFromCountry(name, c.sleeperCells - value, addCadre = false, s"$name adjusted: ")
+          removeCellsFromCountry(name, 0, c.sleeperCells - value, false, addCadre = false, s"$name adjusted: ")
         else if (value > c.sleeperCells)
           addSleeperCellsToCountry(name, value - c.sleeperCells, s"$name adjusted: ")
         saveAdjustment(name, "Sleeper cells")

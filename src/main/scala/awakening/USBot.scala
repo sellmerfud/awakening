@@ -44,21 +44,31 @@ object USBot extends BotHelpers {
   def woiNonMuslimTargets(ops: Int): List[NonMuslimCountry] = game.nonMuslims filter (_.warOfIdeasOK(ops))
   
   // Pick sleepers before actives
-  // Return (actives, sleepers)
-  def chooseCellsToRemove(name: String, num: Int): (Int, Int) = {
-    val c = game getCountry name
-    val sleepers = num min c.sleeperCells
-    val actives  = (num - sleepers) min c.activeCells
-    (actives, sleepers)
+  // Return (actives, sleepers, sadr)
+  def chooseCellsToRemove(name: String, num: Int): (Int, Int, Boolean) = {
+    if (num == 0)
+      (0, 0, false)
+    else {
+      val c = game getCountry name
+      val sadr     = c.hasSadr
+      val numCells = num - (if (sadr) 1 else 0)
+      val sleepers = numCells min c.sleeperCells
+      val actives  = (numCells - sleepers) min c.activeCells
+      (actives, sleepers, sadr)
+    }
   }
   
   // Pick actives before sleepers
   // Return (actives, sleepers)
   def chooseCellsToDisrupt(name: String, num: Int): (Int, Int) = {
-    val c = game getCountry name
-    val actives = num min c.activeCells
-    val sleepers  = (num - actives) min c.sleeperCells
-    (actives, sleepers)
+    if (num == 0)
+      (0, 0)
+    else {
+      val c = game getCountry name
+      val actives    = num min c.activeCells
+      val sleepers  = (num - actives) min c.sleeperCells
+      (actives, sleepers)
+    }
   }
   
   val onlyOneActiveCell = (c: Country) => c.activeCells == 1 && c.sleeperCells == 0
@@ -1196,7 +1206,7 @@ object USBot extends BotHelpers {
   // maxOps  is the tota number of Ops available including reserves.
   // The DisruptMuslimToRemoveCadre, WoiNonMuslimOpposite, WoiNonMuslimUntested actions cannot use reserves.
   def getHomelandSecurityAction(cardOps: Int, maxOps: Int): Option[HomelandSecurityAction] = {
-    val canDisruptUS = (game getNonMuslim UnitedStates).totalCells > 0 ||
+    val canDisruptUS = (game getNonMuslim UnitedStates).cells > 0 ||
                        (game getNonMuslim UnitedStates).hasCadre
     val canWoiSoftNonMuslim = game.usPosture == Hard && game.worldPosture == Soft
     val canDisruptNonMuslim = game.disruptNonMuslimTargets(maxOps).nonEmpty
