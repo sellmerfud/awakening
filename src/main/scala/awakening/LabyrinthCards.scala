@@ -895,24 +895,62 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(49, "Al-Ittihad al-Islami", Jihadist, 1,
-      Remove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        addEventTarget(Somalia)
+        addSleeperCellsToCountry(Somalia, 1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(50, "Ansar al-Islam", Jihadist, 1,
-      Remove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0 &&
+                      !((game getMuslim Iraq).isUntested || (game getMuslim Iraq).isGood)
+      ,
+      (role: Role) => {
+        val candidates = List(Iraq, Iran)
+        val name = if (role == game.humanRole)
+          askCountry("Place cell in which country: ", candidates)
+        else
+          JihadistBot.recruitTravelToPriority(candidates).get
+        
+        addEventTarget(name)
+        addSleeperCellsToCountry(name, 1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(51, "FREs", Jihadist, 1,
-      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      // Can create Caliphate (only if globalEventNotInPlay(SaddamCaptured))
-      (role: Role) => ()
+      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game getMuslim Iraq).totalTroops > 0 && game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        // Can create Caliphate (only if globalEventNotInPlay(SaddamCaptured))
+        val num = if (globalEventInPlay(SaddamCaptured))
+          2 min game.cellsAvailable
+        else
+          4 min game.cellsAvailable
+        addEventTarget(Iraq)
+        addSleeperCellsToCountry(Iraq, num)
+        if (num >= 3 && canDeclareCaliphate(Iraq) &&
+          ((role == game.humanRole && askDeclareCaliphate(Iraq)) ||
+           (role == game.botRole   && JihadistBot.willDeclareCaliphate(Iraq)))) {
+          declareCaliphate(Iraq)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(52, "IEDs", Jihadist, 1,
-      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing,  NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim (m => m.inRegimeChange && m.totalCells > 0)
+      ,
+      (role: Role) => {
+        if (role == game.humanRole)
+          log(s"Discard the top card of the $US Bot's hand")
+        else
+          log(s"You ($US) must randomly discard one card")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(53, "Madrassas", Jihadist, 1,
