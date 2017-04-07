@@ -1745,7 +1745,7 @@ object AwakeningCards {
         log(s"Die roll: $die")
         if (success) {
           log("Success")
-          moveWMDCachedToAvailable(Iran)
+          moveWMDCacheToAvailable(Iran)
           // Card only removed if die roll was successful
           removeCardFromGame(181)
         }
@@ -3627,7 +3627,7 @@ object AwakeningCards {
         val iran = game getCountry Iran
         if (iran.wmdCache > 0) {
           log("Remove the Iraninan WMD from the game")
-          increasePrestige(1)
+          increasePrestige(iran.wmdCache)
           iran match {
             case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = 0))
             case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = 0))

@@ -1126,18 +1126,73 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(63, "Gaza War", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        if (role == game.humanRole)
+          log(s"Discard the top card of the $US Bot's hand")
+        else
+          log(s"You ($US) must randomly discard one card")
+        increaseFunding(1)
+        decreasePrestige(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(64, "Hariri Killed", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game getMuslim Lebanon).isUntested || {
+        val syria = game getMuslim Syria
+        syria.isAdversary || syria.isGood || syria.isFair
+      }
+      ,
+      (role: Role) => {
+        addEventTarget(Lebanon)
+        testCountry(Lebanon)
+        addEventTarget(Syria)
+        testCountry(Syria)
+        setAlignment(Syria, Adversary)
+        if (!(game getMuslim Syria).isIslamistRule)
+          degradeGovernance(Syria, 1, canShiftToIR = false)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(65, "HEU", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (List(Russia, CentralAsia) map game.getCountry 
+            exists (c => c.totalCells > 0 && !c.hasMarker(CTR)))
+      ,      
       (role: Role) => {
-        // Blocked if CTR marker present in country
+        val candidates = List(Russia, CentralAsia) filter { name =>
+          val c = game getCountry name
+          c.totalCells > 0 && !c.hasMarker(CTR)
+        } 
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else if (candidates.size == 1)
+          candidates.head
+        else {
+          val casia = game getMuslim CentralAsia
+          if (casia.isPoor || casia.isIslamistRule)
+            CentralAsia
+          else
+            Russia
+        }
+        
+        val die = getDieRoll(role)
+        val success = die <= (game getCountry name).governance
+        log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
+        if (success) {
+          log(s"Move the HEU WMD plot marker to the available plots box")
+          val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
+          game = game.copy(plotData = updatedPlots)
+        }
+        else {
+          val (active, sleeper, sadr) = if (role == game.humanRole) {
+            println("You must remove a cell")
+            askCells(name, 1)
+          }
+          else
+            JihadistBot.chooseCellsToRemove(name, 1)
+          removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+        }
       }
     )),
     // ------------------------------------------------------------------------

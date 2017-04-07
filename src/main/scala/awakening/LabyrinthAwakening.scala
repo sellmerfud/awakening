@@ -3645,7 +3645,7 @@ object LabyrinthAwakening {
             governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
             aidMarkers = 0, militia = 0, besiegedRegime = false)
           game = game.updateCountry(degraded)
-          moveWMDCachedToAvailable(name)
+          moveWMDCacheToAvailable(name)
           removeEventMarkersFromCountry(name, "Advisors")
           endRegimeChange(name)
           endCivilWar(name)
@@ -4286,14 +4286,14 @@ object LabyrinthAwakening {
     }
   }
 
-  def moveWMDCachedToAvailable(name: String): Unit = {
+  def moveWMDCacheToAvailable(name: String): Unit = {
     val c = game.getCountry(name)
     if (c.wmdCache > 0) {
       c match {
         case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = 0))
         case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = 0))
       }
-      log(s"Move ${amountOf(c.wmdCache, "unavailable WMD Plot")} from $name to available plots")
+      log(s"Move ${amountOf(c.wmdCache, "unavailable WMD Plot")} from $name to the available plots box")
       val updatedPlots = game.plotData.copy(availablePlots = List.fill(c.wmdCache)(PlotWMD) ::: game.availablePlots)
       game = game.copy(plotData = updatedPlots)
     }
