@@ -835,15 +835,15 @@ object LabyrinthAwakening {
   // 
   // Some events depend on this.
   case class PhaseTargets(
-    ops:              Set[String] = Set.empty,
-    disrupted:        Set[String] = Set.empty,
-    testedOrImproved: Set[String] = Set.empty,
-    event:            Set[String] = Set.empty
+    ops:                          Set[String] = Set.empty,
+    disrupted:                    Set[String] = Set.empty,
+    testedOrImprovedToFairOrGood: Set[String] = Set.empty,
+    event:                        Set[String] = Set.empty
   ) {
     def wasOpsTarget(name: String)        = ops contains name
     def wasEventTarget(name: String)      = event contains name
     def wasOpsOrEventTarget(name: String) = wasOpsTarget(name) || wasEventTarget(name)
-    def wasTestedOrImproved(name: String) = testedOrImproved contains name
+    def wasTestedOrImprovedToFairOrGood(name: String) = testedOrImprovedToFairOrGood contains name
   }
   
   // Keeps track of Plots that are available, resolved, remove from play
@@ -2008,9 +2008,10 @@ object LabyrinthAwakening {
     game = game.copy(targetsThisPhase = targets.copy(disrupted = targets.disrupted + name))
   }
   
-  def addTestedOrImproved(name: String): Unit = {
+  def addTestedOrImprovedToFairOrGood(name: String): Unit = {
     val targets = game.targetsThisPhase
-    game = game.copy(targetsThisPhase = targets.copy(testedOrImproved = targets.testedOrImproved + name))
+    game = game.copy(targetsThisPhase = targets.copy(
+      testedOrImprovedToFairOrGood = targets.testedOrImprovedToFairOrGood + name))
   }
   
   def addEventTarget(names: String*): Unit = {
@@ -2023,10 +2024,11 @@ object LabyrinthAwakening {
   def testCountry(name: String): Boolean = {
     val country = game.getCountry(name)
     if (country.isUntested) {
-      addTestedOrImproved(name)
       country match {
         case m: MuslimCountry    =>
           val newGov = if (dieRoll < 5) Poor else Fair
+          if (newGov == Fair)
+            addTestedOrImprovedToFairOrGood(name)
           game = game.updateCountry(m.copy(governance = newGov, alignment = Neutral))
           log(s"${m.name} tested: Set to ${govToString(newGov)} Neutral")
           
@@ -3602,7 +3604,6 @@ object LabyrinthAwakening {
       if (delta == 0)
         log(s"The governance of $name remains ${govToString(m.governance)}")
       else {
-        addTestedOrImproved(name)
         if (newGov == Good) {
           // Note: "Training Camps" marker is handle specially.
           log(s"Improve governance of $name to ${govToString(newGov)}")
@@ -3627,6 +3628,8 @@ object LabyrinthAwakening {
                  awakening  = (m.awakening - delta) max 0) // One awakening for each level actually improved
           game = game.updateCountry(improved)
         }
+        if (newGov == Good || newGov == Fair)
+          addTestedOrImprovedToFairOrGood(name)
       }
     }
   }

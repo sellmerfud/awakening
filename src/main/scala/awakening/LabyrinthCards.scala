@@ -870,7 +870,7 @@ object LabyrinthCards {
       }
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(47, "The door of Ijtihad was closed", US, 3,
+    entry(new Card(47, "The door of Itjihad was closed", US, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => if (role == game.humanRole)
         log(s"During $Jihadist Bot's action phases, US events will not trigger")
@@ -1761,7 +1761,7 @@ object LabyrinthCards {
       (role: Role) => ()
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(94, "The door of Ijtihad was closed", Jihadist, 3,
+    entry(new Card(94, "The door of Itjihad was closed", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => ()
     )),
