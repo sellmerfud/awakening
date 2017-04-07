@@ -481,7 +481,8 @@ object LabyrinthAwakening {
   val Fracking             = "Fracking"
   val BloodyThursday       = "Bloody Thursday"
   val Censorship           = "Censorship"
-  val Pirates              = "Pirates"
+  val Pirates1             = "Pirates1"  // From the base game
+  val Pirates2             = "Pirates2"  // From the awakening expansion
   val Sequestration        = "Sequestration"
   val Smartphones          = "Smartphones"
   val ThreeCupsOfTea       = "3 Cups of Tea"
@@ -509,7 +510,7 @@ object LabyrinthAwakening {
   val GlobalMarkers = List(
     Abbas, AnbarAwakening, SaddamCaptured, Wiretapping, EnhancedMeasures, Renditions,
     VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
-    Censorship, Pirates, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargo
+    Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargo
   ).sorted
   
   val CountryMarkers = List(
@@ -4604,7 +4605,12 @@ object LabyrinthAwakening {
     savePlay()  // Save the play so we can roll back
   }
   
-  def piratesConditionsInEffect: Boolean = List(Somalia, Yemen) map game.getMuslim exists { m =>
+  // Pirates from the base game
+  def pirates1ConditionsInEffect: Boolean = List(Somalia, Yemen) map game.getMuslim exists { m =>
+    m.isIslamistRule
+  }
+  // Pirates from the awakening expansion
+  def pirates2ConditionsInEffect: Boolean = List(Somalia, Yemen) map game.getMuslim exists { m =>
     (m.isPoor && m.isAdversary) || m.isIslamistRule
   }
   
@@ -4635,7 +4641,8 @@ object LabyrinthAwakening {
       log("End of turn")
       log(separator(char='='))
     
-      if (globalEventInPlay(Pirates) && piratesConditionsInEffect) {
+      if ((globalEventInPlay(Pirates1) && pirates1ConditionsInEffect) ||
+          (globalEventInPlay(Pirates2) && pirates2ConditionsInEffect)) {
         log("No funding drop because Pirates is in effect")
       }
       else {

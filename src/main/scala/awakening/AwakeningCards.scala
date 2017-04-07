@@ -1820,9 +1820,9 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(183, "Pirates", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => globalEventNotInPlay(MaerskAlabama) && piratesConditionsInEffect
+      (role: Role) => globalEventNotInPlay(MaerskAlabama) && pirates2ConditionsInEffect
       ,
-      (role: Role) => addGlobalEventMarker(Pirates)
+      (role: Role) => addGlobalEventMarker(Pirates2)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(184, "Sequestration", Jihadist, 2,

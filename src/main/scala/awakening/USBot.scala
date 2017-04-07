@@ -331,9 +331,9 @@ object USBot extends BotHelpers {
         case (posture, 3) if posture == game.usPosture => prestige += 1
         case _ =>
       }
-      if (game hasMuslim (_.isIslamistRule)) prestige -= 1
-      if (globalEventInPlay(Pirates))      funding += 1
-      if (globalEventInPlay(Fracking))     funding -= 1
+      if (game hasMuslim (_.isIslamistRule))                          prestige -= 1
+      if (globalEventInPlay(Pirates1) || globalEventInPlay(Pirates2)) funding += 1
+      if (globalEventInPlay(Fracking))                                funding -= 1
     }
     (funding, prestige)
   }

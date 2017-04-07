@@ -1180,6 +1180,7 @@ object LabyrinthCards {
             Russia
         }
         
+        addEventTarget(name)
         val die = getDieRoll(role)
         val success = die <= (game getCountry name).governance
         log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
@@ -1195,7 +1196,6 @@ object LabyrinthCards {
           }
           else
             JihadistBot.chooseCellsToRemove(name, 1)
-          addEventTarget(name)
           removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
         }
       }
@@ -1246,35 +1246,108 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(69, "Kazakh Strain", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) =>
+        (game getCountry CentralAsia).totalCells > 0 && countryEventNotInPlay(CentralAsia, CTR)
+      ,      
       (role: Role) => {
-        // Blocked if CTR marker present in country
+        addEventTarget(CentralAsia)
+        val die = getDieRoll(role)
+        val success = die <= (game getCountry CentralAsia).governance
+        log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
+        if (success) {
+          log(s"Move the Kazakh Strain WMD plot marker to the available plots box")
+          val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
+          game = game.copy(plotData = updatedPlots)
+        }
+        else {
+          val (active, sleeper, sadr) = if (role == game.humanRole) {
+            println("You must remove a cell")
+            askCells(CentralAsia, 1)
+          }
+          else
+            JihadistBot.chooseCellsToRemove(CentralAsia, 1)
+          removeCellsFromCountry(CentralAsia, active, sleeper, sadr, addCadre = true)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(70, "Lashkar-e-Tayyiba", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
-      // Blocked: countryEventNotInPlay(Pakistan, "Indo-Pakistani Talks")
-      
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => countryEventNotInPlay(Pakistan, Indo_PakistaniTalks) &&
+                      game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        val candidates = List(Pakistan, India)
+        val targets = if (game.cellsAvailable > 1)
+          candidates
+        else if (role == game.botRole)
+          JihadistBot.recruitTravelToPriority(candidates).toList
+        else {
+          println("There is only one cell available to be placed")
+          askCountry("Select country for cell: ", candidates)::Nil
+        }
+        for (name <- targets) {
+          addEventTarget(name)
+          testCountry(name)
+          addSleeperCellsToCountry(name, 1)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(71, "Loose Nuke", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) =>
+        (game getCountry Russia).totalCells > 0 && countryEventNotInPlay(Russia, CTR)
+      ,      
       (role: Role) => {
-        // Blocked if CTR marker present in country
+        addEventTarget(Russia)
+        val die = getDieRoll(role)
+        val success = die <= (game getCountry Russia).governance
+        log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
+        if (success) {
+          log(s"Move the Loose Nuke WMD plot marker to the available plots box")
+          val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
+          game = game.copy(plotData = updatedPlots)
+        }
+        else {
+          val (active, sleeper, sadr) = if (role == game.humanRole) {
+            println("You must remove a cell")
+            askCells(Russia, 1)
+          }
+          else
+            JihadistBot.chooseCellsToRemove(Russia, 1)
+          removeCellsFromCountry(Russia, active, sleeper, sadr, addCadre = true)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(72, "Opium", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      // Can create Caliphate (only in Afghanistan)
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game getCountry Afghanistan).totalCells > 0 &&
+                      game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        // Can create Caliphate (only in Afghanistan)
+        val num = if ((game getMuslim Afghanistan).isIslamistRule)
+          game.cellsAvailable
+        else
+          3 min game.cellsAvailable
+        addEventTarget(Afghanistan)
+        addSleeperCellsToCountry(Afghanistan, num)
+        if (num >= 3 && canDeclareCaliphate(Afghanistan) &&
+          ((role == game.humanRole && askDeclareCaliphate(Afghanistan)) ||
+           (role == game.botRole   && JihadistBot.willDeclareCaliphate(Afghanistan)))) {
+          declareCaliphate(Afghanistan)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(73, "Pirates", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => globalEventNotInPlay(MaerskAlabama) && pirates1ConditionsInEffect
+      ,
+      (role: Role) => addGlobalEventMarker(Pirates2)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(74, "Schengen Visas", Jihadist, 2,
