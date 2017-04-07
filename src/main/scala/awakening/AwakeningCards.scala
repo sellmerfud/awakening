@@ -683,19 +683,18 @@ object AwakeningCards {
       (role: Role) => {
         val numActions = if (game.params.scenarioName == "Mitt's Turn") 3 else 2
         if (role == game.humanRole) {
-          def item(test: Boolean, x: (String, String)) = if (test) Some(x) else None
           val canAwakening = (game hasMuslim (_.canTakeAwakeningOrReactionMarker)) && lapsingEventNotInPlay(ArabWinter)
           val canAid       = game hasMuslim (_.canTakeAidMarker)
-          val items = List(
-            item(canAwakening,       "awakening" -> "Place 1 Awakening marker"),
-            item(canAid,             "aid"       -> "Place 1 Aid marker"),
-            item(game.prestige < 12, "prestige"  -> "+1 Prestige"),
-            item(game.funding > 1,   "funding"   -> "-1 Funding"),
-            item(true,               "posture"   -> "Select posture of 1 Schengen country"),
-            item(true,               "draw"      -> "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
+          val choices = List(
+            choice(canAwakening,       "awakening", "Place 1 Awakening marker"),
+            choice(canAid,             "aid",       "Place 1 Aid marker"),
+            choice(game.prestige < 12, "prestige",  "+1 Prestige"),
+            choice(game.funding > 1,   "funding",   "-1 Funding"),
+            choice(true,               "posture",   "Select posture of 1 Schengen country"),
+            choice(true,               "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
           ).flatten 
           println(s"Do any $numActions of the following:")
-          askMenu(items, numActions, repeatsOK = false) foreach { action =>
+          askMenu(choices, numActions, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "awakening" =>
@@ -1485,17 +1484,16 @@ object AwakeningCards {
           val canPlot1    = game.availablePlots contains Plot1
           val canPlot2    = game.availablePlots contains Plot2
           val canBesiege  = besiegeCandidates.nonEmpty
-          def item(test: Boolean, x: (String, String)) = if (test) Some(x) else None
-          val items = List(
-            item(canReaction,"reaction" -> "Place 1 Reaction marker"),
-            item(canCell,    "cell"     -> "Place 1 cell"),
-            item(canPlot1,   "plot1"    -> "Place a level 1 plot"),
-            item(canPlot2,   "plot2"    -> "Place a level 2 plot"),
-            item(canBesiege, "besiege"  -> "Place a besieged regime marker"),
-            item(true,       "draw"     -> "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
+          val choices = List(
+            choice(canReaction,"reaction", "Place 1 Reaction marker"),
+            choice(canCell,    "cell",     "Place 1 cell"),
+            choice(canPlot1,   "plot1",    "Place a level 1 plot"),
+            choice(canPlot2,   "plot2",    "Place a level 2 plot"),
+            choice(canBesiege, "besiege",  "Place a besieged regime marker"),
+            choice(true,       "draw",     "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
           ).flatten 
           println("Do any 2 of the following:")
-          askMenu(items, 2, repeatsOK = false) foreach { action =>
+          askMenu(choices, 2, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "reaction" =>
@@ -1910,8 +1908,8 @@ object AwakeningCards {
           val havePlots = game.availablePlots exists (p => p == Plot2 || p == Plot3)
           val haveCells = game.cellsAvailable > 0
           val choices = List(
-            if (havePlots) Some("plot"  -> "Place a level 2 or level 3 Plot in Nigeria") else None,
-            if (haveCells) Some("cells" -> "Place up to 3 cells in Nigeria") else None
+            choice(havePlots, "plot",  "Place a level 2 or level 3 Plot in Nigeria"),
+            choice(haveCells, "cells", "Place up to 3 cells in Nigeria")
           ).flatten
           if (choices.size > 1)
             println("Choose one of:")
@@ -2355,8 +2353,8 @@ object AwakeningCards {
             val target = askCountry("Select country: ", usCandidates)
             val m = game getMuslim target
             val choices = List(
-              if (m.canTakeAwakeningOrReactionMarker) Some("awakening" -> "Place an awakening marker") else None,
-              if (!m.isAlly) Some("shiftLeft" -> "Shift alignment towards Ally") else None
+              choice(m.canTakeAwakeningOrReactionMarker, "awakening", "Place an awakening marker"),
+              choice(!m.isAlly,                          "shiftLeft", "Shift alignment towards Ally")
             ).flatten
             val action = if (choices.isEmpty) None
             else askMenu(choices).headOption
@@ -2366,8 +2364,8 @@ object AwakeningCards {
             val target = askCountry("Select country: ", jiCandidates)
             val m = game getMuslim target
             val choices = List(
-              if (game.cellsAvailable > 0) Some("cells" -> "Place cells") else None,
-              if (!m.isAdversary)          Some("shiftRight" -> "Shift alignment towards Adversary") else None
+              choice(game.cellsAvailable > 0, "cells",      "Place cells"),
+              choice(!m.isAdversary,          "shiftRight", "Shift alignment towards Adversary")
             ).flatten
             val action = if (choices.isEmpty) None
             else askMenu(choices).headOption
@@ -2444,8 +2442,8 @@ object AwakeningCards {
         val militiaOK = game.militiaAvailable > 0 && (game.getCountries(African) exists (_.canTakeMilitia))
         val (target, action) = if (role == game.humanRole) {
           val choices = List(
-            if (militiaOK) Some("militia" -> "Place militia") else None,
-            if (cellsOK)   Some("cells" -> "Place cells")     else None
+            choice(militiaOK, "militia", "Place militia"),
+            choice(cellsOK,   "cells",   "Place cells")
           ).flatten
           println("What would you like to do:")
           val action = askMenu(choices).head
@@ -2497,11 +2495,10 @@ object AwakeningCards {
         // See Event Instructions table
         if (role == game.humanRole) {
           val choices = List(
-            if (opRes > 0) 
-              Some("reserves" -> s"Steal opponent's ${amountOf(opRes,"reserve Op")}") else None,
-            Some("posture" -> "Set the posture of China, Russia, or India"),
-            Some("place" -> "Place a cadre"),
-            if (cadres) Some("remove" -> "Remove a cadre") else None
+            choice(opRes > 0, "reserves", s"Steal opponent's ${amountOf(opRes,"reserve Op")}"),
+            choice(true,      "posture",  "Set the posture of China, Russia, or India"),
+            choice(true,      "place",    "Place a cadre"),
+            choice(cadres,    "remove",   "Remove a cadre")
           ).flatten
           println("Choose 1 option:")
           askMenu(choices).head match {
@@ -2617,27 +2614,27 @@ object AwakeningCards {
             val canBesiege = !(m.besiegedRegime || m.isGood || m.isIslamistRule)
             val canMilitia = game.militiaAvailable > 0 && !(m.besiegedRegime || m.isGood || m.isIslamistRule)
             List(
-              if (m.canTakeAidMarker)      Some("+aid" -> "Place aid marker") else None,
-              if (m.aidMarkers > 0)        Some("-aid" -> "Remove aid marker") else None,
-              if (canBesiege)              Some("+bsg" -> "Place besiged regime marker") else None,
-              if (m.besiegedRegime)        Some("-bsh" -> "Remove besieged regime marker") else None,
-              if (canAwake)                Some("+awa" -> "Place awakening marker") else None,
-              if (m.awakening > 0)         Some("-awa" -> "Remove awakening marker") else None,
-              if (canAwake)                Some("+rea" -> "Place reaction marker") else None,
-              if (m.reaction > 0)          Some("-rea" -> "Remove reaction marker") else None,
-              if (canMilitia)              Some("+mil" -> "Place 2 milita") else None,
-              if (m.militia > 0)           Some("-mil" -> "Remove 2 militia") else None,
-              if (game.cellsAvailable > 0) Some("+cel" -> "Place 2 cells") else None,
-              if (m.totalCells > 0)        Some("-cel" -> "Remove 2 cells") else None
+              choice(m.canTakeAidMarker,      "+aid", "Place aid marker"),
+              choice(m.aidMarkers > 0,        "-aid", "Remove aid marker"),
+              choice(canBesiege,              "+bsg", "Place besiged regime marker"),
+              choice(m.besiegedRegime,        "-bsh", "Remove besieged regime marker"),
+              choice(canAwake,                "+awa", "Place awakening marker"),
+              choice(m.awakening > 0,         "-awa", "Remove awakening marker"),
+              choice(canAwake,                "+rea", "Place reaction marker"),
+              choice(m.reaction > 0,          "-rea", "Remove reaction marker"),
+              choice(canMilitia,              "+mil", "Place 2 milita"),
+              choice(m.militia > 0,           "-mil", "Remove 2 militia"),
+              choice(game.cellsAvailable > 0, "+cel", "Place 2 cells"),
+              choice(m.totalCells > 0,        "-cel", "Remove 2 cells")
             ).flatten
           }
           else {
             val n = game getNonMuslim name
             List(
-              if (n.isUntested && n.canChangePosture)  Some("+pos" -> "Place posture marker") else None,
-              if (!n.isUntested && n.canChangePosture) Some("-pos" -> "Remove posture marker") else None,
-              if (game.cellsAvailable > 0)             Some("+cel" -> "Place 2 cells") else None,
-              if (n.totalCells > 0)                    Some("-cel" -> "Remove 2 cells") else None
+              choice(n.isUntested && n.canChangePosture,  "+pos", "Place posture marker"),
+              choice(!n.isUntested && n.canChangePosture, "-pos", "Remove posture marker"),
+              choice(game.cellsAvailable > 0,             "+cel", "Place 2 cells"),
+              choice(n.totalCells > 0,                    "-cel", "Remove 2 cells")
             ).flatten
           }
           if (choices.isEmpty)
@@ -2751,8 +2748,8 @@ object AwakeningCards {
             addEventTarget(name)
             testCountry(name)
             val choices = List(
-              if (game.cellsAvailable > 0) Some("cell" -> "Place a cell") else None,
-              if (game.availablePlots contains Plot1) Some("plot" -> "Place a Plot 1") else None
+              choice(game.cellsAvailable > 0,            "cell", "Place a cell"),
+              choice(game.availablePlots contains Plot1, "plot", "Place a Plot 1")
             ).flatten
             println("Select 1:")
             askMenu(choices).head match {
@@ -2781,9 +2778,9 @@ object AwakeningCards {
             addEventTarget(name)
             testCountry(name)
             val choices = List(
-              if (n.totalCells > 0) Some("cell"  -> "Remve a cell") else None,
-              if (n.hasCadre)       Some("cadre" -> "Remove cadre") else None,
-              if (n.hasPlots)       Some("plot"  -> "Alert a plot") else None
+              choice(n.totalCells > 0, "cell" , "Remve a cell"),
+              choice(n.hasCadre,       "cadre", "Remove cadre"),
+              choice(n.hasPlots,       "plot" , "Alert a plot")
             ).flatten
             println("Select 1:")
             askMenu(choices).head match {
@@ -3378,8 +3375,8 @@ object AwakeningCards {
           if (role == game.humanRole) {
             val canPosture = game.usPosture == game.worldPosture && game.worldPosture != Even
             val choices = List(
-              if (canPosture)        Some("posture"  -> "Set US posture to opposite of World") else None,
-              if (game.prestige > 1) Some("prestige" -> "Reduce US prestige by 1/2 die roll (rounded up)") else None
+              choice(canPosture,        "posture" , "Set US posture to opposite of World"),
+              choice(game.prestige > 1, "prestige", "Reduce US prestige by 1/2 die roll (rounded up)")
             ).flatten
             if (choices.isEmpty)
               log("The event has no effect")
@@ -3558,8 +3555,8 @@ object AwakeningCards {
           println(s"Remove ${amountOf(numCells, "cell")} from $name")
           val cells = askCells(name, numCells, sleeperFocus = role == US)
           val choices = List(
-            if (!m.isPoor)      Some("gov"   -> "Worsen governance 1 level") else None,
-            if (!m.isAdversary) Some("align" -> "Shift alignment 1 box toward Adversary") else None
+            choice(!m.isPoor,      "gov",   "Worsen governance 1 level"),
+            choice(!m.isAdversary, "align", "Shift alignment 1 box toward Adversary")
           ).flatten
           val action = choices match {
             case Nil => None

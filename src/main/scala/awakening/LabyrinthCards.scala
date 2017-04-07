@@ -1104,8 +1104,8 @@ object LabyrinthCards {
           Russia
         else if (role == game.humanRole) {
           val choices = List(
-            if (canShift)  Some(CentralAsia -> "Shift Central Asia 1 box toward Adversary")  else None,
-            if (canPosture)Some(Caucasus    -> "Set Caucasus to opposite posture of the US") else None
+            choice(canShift,   CentralAsia, "Shift Central Asia 1 box toward Adversary"),
+            choice(canPosture, Caucasus,    "Set Caucasus to opposite posture of the US")
           ).flatten
           println("Choose one:")
           askMenu(choices).head

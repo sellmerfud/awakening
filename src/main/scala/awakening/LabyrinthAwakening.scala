@@ -1777,6 +1777,10 @@ object LabyrinthAwakening {
     testResponse(initial)
   }
   
+  // Convenience method for createing choices for the askMenu() function.
+  def choice(condition: Boolean, value: String, desc: String): Option[(String, String)] =
+    if (condition) Some(value -> desc) else None
+  
   // Present a numbered menu of choices
   // Allow the user to choose 1 or more choices and return
   // a list of keys to the chosen items.
@@ -2996,8 +3000,8 @@ object LabyrinthAwakening {
           def nextHit(markers: List[TroopsMarker], troops: Int, militia: Int): Unit = {
             if (hitsRemaining > 0 && (markers.nonEmpty || troops > 0 || militia > 0)) {
               val choices = List(
-                if (troops  > 0) Some("troop"   -> "Troop cube") else None,
-                if (militia > 0) Some("militia" -> "Militia cube") else None
+                choice(troops > 0,  "troop",  "Troop cube"),
+                choice(militia > 0, "militia","Militia cube")
               ).flatten ++ (markers map (m => m.name -> s"${m.name}  (absorbs ${amountOf(m.num, "hit")})"))
               println(s"$US must absorb ${amountOf(hitsRemaining, "more hit")}")
               println("Which unit will take the next hit:")
@@ -6337,9 +6341,9 @@ object LabyrinthAwakening {
     def nextAction(): Unit = {
       val nonTargets = countryNames(game.countries) filterNot targets.apply
       val choices = List(
-        if (nonTargets.nonEmpty) Some("add" -> "Add a country to the resolved plot targets") else None,
-        if (targets.nonEmpty)    Some("del" -> "Remove a country to the resolved plot targets") else None,
-        Some("done" -> "Finished")
+        choice(nonTargets.nonEmpty, "add",  "Add a country to the resolved plot targets"),
+        choice(targets.nonEmpty,    "del",  "Remove a country to the resolved plot targets"),
+        choice(true,                "done", "Finished")
       ).flatten
       println("\nCountries where plots were resolved in the last plot resolution phase:")
       if (targets.isEmpty)
@@ -6401,13 +6405,13 @@ object LabyrinthAwakening {
     
     def nextAction(): Unit = {
       val choices = List(
-        if (available.nonEmpty) Some("a-r" -> "Move available plot to the resolved box") else None,
-        if (available.nonEmpty) Some("a-o" -> "Move available plot to out of play") else None,
-        if (resolved.nonEmpty)  Some("r-a" -> "Move resolved plot to the available box") else None,
-        if (resolved.nonEmpty)  Some("r-o" -> "Move resolved plot to out of play") else None,
-        if (outOfPlay.nonEmpty) Some("o-a" -> "Move out of play plot to the available box") else None,
-        if (outOfPlay.nonEmpty) Some("o-a" -> "Move out of play plot to the resolved box") else None,
-        Some("done" -> "Finished")
+        choice(available.nonEmpty, "a-r",  "Move available plot to the resolved box"),
+        choice(available.nonEmpty, "a-o",  "Move available plot to out of play"),
+        choice(resolved.nonEmpty,  "r-a",  "Move resolved plot to the available box"),
+        choice(resolved.nonEmpty,  "r-o",  "Move resolved plot to out of play"),
+        choice(outOfPlay.nonEmpty, "o-a",  "Move out of play plot to the available box"),
+        choice(outOfPlay.nonEmpty, "o-a",  "Move out of play plot to the resolved box"),
+        choice(true,               "done", "Finished")
       ).flatten
       
       showAll()
@@ -6908,13 +6912,13 @@ object LabyrinthAwakening {
         
     def nextAction(): Unit = {
       val choices = List(
-        if (country.nonEmpty)   Some("c-a" -> s"Move plot from $name to the available box") else None,
-        if (country.nonEmpty)   Some("c-r" -> s"Move plot from $name to the resolved box") else None,
-        if (country.nonEmpty)   Some("c-o" -> s"Move plot from $name to out of play") else None,
-        if (available.nonEmpty) Some("a-c" -> s"Move available plot to $name") else None,
-        if (resolved.nonEmpty)  Some("r-c" -> s"Move resolved plot to $name") else None,
-        if (outOfPlay.nonEmpty) Some("o-c" -> s"Move out of play plot to $name") else None,
-        Some("done" -> "Finished")
+        choice(country.nonEmpty,   "c-a",  s"Move plot from $name to the available box"),
+        choice(country.nonEmpty,   "c-r",  s"Move plot from $name to the resolved box"),
+        choice(country.nonEmpty,   "c-o",  s"Move plot from $name to out of play"),
+        choice(available.nonEmpty, "a-c",  s"Move available plot to $name"),
+        choice(resolved.nonEmpty,  "r-c",  s"Move resolved plot to $name"),
+        choice(outOfPlay.nonEmpty, "o-c",  s"Move out of play plot to $name"),
+        choice(true,               "done", "Finished")
       ).flatten
       
       showAll()
