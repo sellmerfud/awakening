@@ -997,23 +997,54 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(55, "Uyghur Jihad", Jihadist, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        addEventTarget(China)
+        testCountry(China)
+        if ((game getNonMuslim China).isSoft)
+          addSleeperCellsToCountry(China, 1)
+        else {
+          addEventTarget(CentralAsia)
+          testCountry(CentralAsia)
+          addSleeperCellsToCountry(CentralAsia, 1)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(56, "Vieira de Mello Slain", Jihadist, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim (m => m.inRegimeChange && m.totalCells > 0)
+      ,
+      (role: Role) => {
+        decreasePrestige(1)
+        addGlobalEventMarker(VieiraDeMelloSlain)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(57, "Abu Sayyaf", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => globalEventNotInPlay(MoroTalks)
+      ,
+      (role: Role) => {
+        addEventTarget(Philippines)
+        if (game.cellsAvailable > 0)
+          addSleeperCellsToCountry(Philippines, 1)
+        addEventMarkersToCountry(Philippines, AbuSayyaf)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(58, "Al-Anbar", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => () // Blocked by Anbar Awakening
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => globalEventNotInPlay(AnbarAwakening)
+      ,
+      (role: Role) => {
+        addEventTarget(Iraq)
+        if (game.cellsAvailable > 0)
+          addSleeperCellsToCountry(Iraq, 1)
+        addGlobalEventMarker(AlAnbar)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(59, "Amerithrax", Jihadist, 2,
@@ -1297,11 +1328,13 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(111, "Zawahiri", Unassociated, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      // US play blocked by AlAnbar
       (role: Role) => () // Remove is conditional
     )),
     // ------------------------------------------------------------------------
     entry(new Card(112, "Bin Ladin", Unassociated, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      // Us play blocked by AlAnbar
       (role: Role) => () // Remove is conditional
     )),
     // ------------------------------------------------------------------------

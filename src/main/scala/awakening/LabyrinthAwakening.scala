@@ -1158,8 +1158,10 @@ object LabyrinthAwakening {
     // target of a disrupt operation.
     // Some(Either(cells, ())) or None
     def disruptLosses(name: String): Option[Either[Int, Unit]] = {
-      val c = getCountry(name) 
+      val c = getCountry(name)
+      val alAnbar = globalEventInPlay(AlAnbar)
       val numLosses = c match {
+        case m: MuslimCountry if alAnbar && (m.name == Iraq || m.name == Syria) => 1
         case m: MuslimCountry =>
           if ((m.totalTroopsAndMilitia) > 1 && (m.totalTroops > 0 || m.hasMarker(Advisors))) 2 else 1
         case n: NonMuslimCountry => if (n.isHard) 2 else 1
@@ -1173,9 +1175,12 @@ object LabyrinthAwakening {
     } 
     
     def disruptMuslimTargets(ops: Int): List[String] = countryNames(muslims.filter { m =>
-      ops >= m.governance &&
-      (m.hasCadre || m.cells > 0) && 
-      (m.isAlly || (m.totalTroopsAndMilitia) > 1)
+      val hasTarget = if (globalEventInPlay(AlAnbar) && (m.name == Iraq || m.name == Syria))
+       m.cells > 0
+      else 
+        (m.hasCadre || m.cells > 0)
+      
+      hasTarget && ops >= m.governance && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
     })
     
     def disruptNonMuslimTargets(ops: Int): List[String] = countryNames(nonMuslims.filter { n =>
@@ -6045,6 +6050,14 @@ object LabyrinthAwakening {
       log(s"Add $plot to $name")
     else
       log(s"Add a hidden plot to $name")
+    
+    if (name == Philippines && countryEventInPlay(Philippines, AbuSayyaf)) {
+      val p = game getNonMuslim Philippines
+      if (p.totalCells >= p.totalTroops) {
+        game = game.adjustPrestige(-1)
+        log(s"Decrease prestige by -1 to ${game.prestige} because Abu Sayyaf is in effect")
+      }
+    }
   }
   
   // The plot will be moved to the resolved plots box unless toAvailable is true
