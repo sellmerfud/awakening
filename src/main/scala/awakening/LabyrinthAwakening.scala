@@ -1866,23 +1866,34 @@ object LabyrinthAwakening {
             fmttrk.format(i.name, i.sleepers)
           else
             fmt.format(i.name, i.actives, i.sleepers)
-          val choices = sources map { i => i.name -> disp(i) }
           if (numRemaining != num)
             println()
-          println(s"${amountOf(numRemaining, "cell")} remaining, choose from:")
-          val name = askMenu(choices).head
-          val src = sources.find (_.name == name).get
-          val mx = numRemaining min src.total
-          val n = askInt(s"Choose how many cells from $name", 1, mx, Some(mx))
-          val (a, s) = if (name == "track") (0, n) else askCellsNotSadr(name, n, sleeperFocus)
-          val newSources = if (src.total == n)
-            sources filterNot (_.name == name)
+          val (src, (a, s)) = sources match {
+            case (src @ CellsItem(name, a, 0))::Nil => (src, (a min numRemaining, 0))
+            case (src @ CellsItem(name, 0, s))::Nil => (src, (0, s min numRemaining))
+            case _ =>
+              val src = if (sources.size == 1)
+                sources.head
+              else {
+                val choices = sources map { i => i.name -> disp(i) }
+                println(s"${amountOf(numRemaining, "cell")} remaining, choose from:")
+                val name = askMenu(choices).head
+                sources.find (_.name == name).get
+              }
+              val name = src.name
+              val mx = numRemaining min src.total
+              val n = askInt(s"Choose how many cells from $name", 1, mx, Some(mx))
+              val (a, s) = if (name == "track") (0, n) else askCellsNotSadr(name, n, sleeperFocus)
+              (src, (a, s))
+          }
+          val newSources = if (src.total == (a + s))
+            sources filterNot (_.name == src.name)
           else
             sources map { x =>
-              if (x.name == name) x.copy(actives = x.actives - a, sleepers = x.sleepers - s)
+              if (x.name == src.name) x.copy(actives = x.actives - a, sleepers = x.sleepers - s)
               else x
             }
-          CellsItem(name, a, s) :: nextChoice(numRemaining - n, newSources)
+          CellsItem(src.name, a, s) :: nextChoice(numRemaining - a - s, newSources)
         }
       }
       

@@ -60,6 +60,16 @@ object LabyrinthCards {
     (c.isGood || ((game isMuslim c.name) && (game getMuslim c.name).isAlly))
   })
     
+  def schengenVisasPlayable(role: Role): Boolean = {
+    if (role == game.humanRole)
+      game.cellsOnMap > 0
+    else {
+      var numAutoRecruits = countryNames(game.countries filter (c => c.autoRecruit && c.totalCells > 0)).size
+      game.cellsOnMap > 0 &&
+      ((game hasMuslim (m => m.cells > 1 || (m.cells == 1 && (!m.autoRecruit || numAutoRecruits > 1)))) ||
+      (game hasNonMuslim (n => n.cells > 1 || (n.cells == 1 && n.posture != game.usPosture))))
+    }
+  }
   
 
   // Convenience method for adding a card to the deck.
@@ -1351,8 +1361,59 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(74, "Schengen Visas", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => schengenVisasPlayable(role)
+      ,
+      (role: Role) => if (role == game.humanRole) {
+        val num = 2 min game.cellsOnMap
+        val travellers = if (num == 1) {
+          for (c <- game.countries; if c.cells > 0)
+            yield CellsItem(c.name, c.activeCells, c.sleeperCells)
+        }
+        else {
+          println(s"Select 2 cells to travel to Schengen countries: ")
+          askCellsFromAnywhere(num, trackOK = false, countryNames(game.countries), sleeperFocus = false)
+        }
+        var i = 1
+        for (CellsItem(from, actives, sleepers) <- travellers) {
+          for (a <- 1 to actives) {
+            val to = askCountry(s"Select ${ordinal(i)} destination country: ", Schengen)
+            testCountry(to)
+            moveCellsBetweenCountries(from, to, 1, true)
+            i += 1
+          }
+          for (a <- 1 to sleepers) {
+            val to = askCountry(s"Select ${ordinal(i)} destination country: ", Schengen)
+            testCountry(to)
+            moveCellsBetweenCountries(from, to, 1, false)
+            i += 1
+          }
+        }
+      }
+      else {
+        var alreadyTravelled = Map.empty[String, Int].withDefaultValue(0)
+        def nextTravel(num: Int): Unit = {
+          var autoRecruits = countryNames(game.countries filter (c => c.autoRecruit && c.totalCells > 0)).toSet
+          val hasTraveler = (c: Country) => {
+            val eligible = c.activeCells + (c.sleeperCells - alreadyTravelled(c.name))
+            if (game isMuslim c.name)
+              (eligible > 1 || (eligible == 1 && (!autoRecruits(c.name) || autoRecruits.size > 1)))
+            else
+              (eligible > 1 || eligible == 1 && (game getNonMuslim c.name).posture != game.usPosture)
+          }
+          val travellers = game.countries filter hasTraveler map (c => (c.name, c.activeCells > 0))
+          if (num <= 2 && travellers.nonEmpty) {
+            val to   = JihadistBot.posturePriority(Schengen).get
+            val from = JihadistBot.travelFromTarget(to, travellers map (_._1) filterNot (_ == to)).get
+            val (_, active) = (travellers find (_._1 == from)).get
+            testCountry(to)
+            moveCellsBetweenCountries(from, to, 1, active)
+            alreadyTravelled += to -> (alreadyTravelled(to) + 1)
+            nextTravel(num + 1)
+          }
+        }
+        nextTravel(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(75, "Schroeder & Chirac", Jihadist, 2,

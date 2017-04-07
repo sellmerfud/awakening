@@ -525,7 +525,8 @@ object JihadistBot extends BotHelpers {
     val priorities = List(
       new CriteriaFilter("Same posture as US",
         nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture == game.usPosture)),
-      new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)))
+      new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)),
+      FewestCellsFilter)
     topPriority(game getNonMuslims names, priorities) map (_.name)
   }
   
