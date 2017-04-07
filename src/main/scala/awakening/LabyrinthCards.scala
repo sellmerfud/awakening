@@ -71,6 +71,21 @@ object LabyrinthCards {
     }
   }
   
+  def cleanOperativesPlayable(role: Role): Boolean = {
+    if (role == game.humanRole)
+      game.cellsOnMap > 0
+    else {
+      var numAutoRecruits = countryNames(game.countries filter (c => c.autoRecruit && c.totalCells > 0)).size
+      game.cellsOnMap > 0 &&
+      ((game hasMuslim (m => m.cells > 1 || (m.cells == 1 && (!m.autoRecruit || numAutoRecruits > 1)))) ||
+      (game hasNonMuslim (n => n.name != UnitedStates && n.cells > 1)))
+    }
+  }
+  
+  def alJazeeraCandidites: List[String] = {
+    val possibles = SaudiArabia::getAdjacentMuslims(SaudiArabia)
+    countryNames(possibles map game.getMuslim filter (m => m.totalTroops > 0 && !m.isAdversary))
+  }
 
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
@@ -1417,28 +1432,125 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(75, "Schroeder & Chirac", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.usPosture == Hard && (
+                        role == game.humanRole ||
+                        !(game getNonMuslim Germany).isSoft ||
+                        !(game getNonMuslim France).isSoft  ||
+                        game.prestige > 1
+                      )
+      ,
+      (role: Role) => {
+        addEventTarget(Germany)
+        addEventTarget(France)
+        setCountryPosture(Germany, Soft)
+        setCountryPosture(France, Soft)
+        decreasePrestige(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(76, "Abu Ghurayb", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim (m => m.inRegimeChange && m.totalCells > 0)
+      ,
+      (role: Role) => {
+        if (role == game.humanRole)
+          log(s"You ($Jihadist) may draw two cards")
+        else
+          log(s"Draw 2 cards and place them on top of the $Jihadist Bot's hand")
+        decreasePrestige(2)
+        val candidates = countryNames(game.muslims filter (_.isAlly))
+        if (candidates.isEmpty)
+          log("There are no Ally Muslim countries. No shift possible.")
+        val name = if (role == game.humanRole)
+          askCountry("Select Ally Muslim country: ", candidates)
+        else
+          JihadistBot.markerAlignGovTarget(candidates).get
+        
+        addEventTarget(name)
+        shiftAlignmentRight(name)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(77, "Al-Jazeera", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => alJazeeraCandidites.nonEmpty
+      ,
+      (role: Role) => {
+        val name = if (role == game.humanRole)
+          askCountry("Select country with troops: ", alJazeeraCandidites)
+        else
+          JihadistBot.markerAlignGovTarget(alJazeeraCandidites).get
+        
+        addEventTarget(name)
+        shiftAlignmentRight(name)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(78, "Axis of Evil", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        if (role == game.humanRole)
+          log(s"The $US Bot does NOT dicard any cards")
+        else
+          log(s"You ($US) must discard any of Iran, Hizballah, or Jaysh al-Mahdi")
+        setUSPosture(Hard)
+        rollPrestige()
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(79, "Clean Operatives", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => cleanOperativesPlayable(role)
+      ,
+      (role: Role) => if (role == game.humanRole) {
+        val allCountries = countryNames(game.countries)
+        val num = 2 min game.cellsOnMap
+        val travellers = if (num == 1) {
+          for (c <- game.countries; if c.cells > 0)
+            yield CellsItem(c.name, c.activeCells, c.sleeperCells)
+        }
+        else {
+          println(s"Select 2 cells to travel anywhere: ")
+          askCellsFromAnywhere(num, trackOK = false, allCountries, sleeperFocus = false)
+        }
+        var i = 1
+        for (CellsItem(from, actives, sleepers) <- travellers) {
+          for (a <- 1 to actives) {
+            val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
+            testCountry(to)
+            moveCellsBetweenCountries(from, to, 1, true)
+            i += 1
+          }
+          for (a <- 1 to sleepers) {
+            val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
+            testCountry(to)
+            moveCellsBetweenCountries(from, to, 1, false)
+            i += 1
+          }
+        }
+      }
+      else {
+        def nextTravel(num: Int): Unit = {
+          var autoRecruits = countryNames(game.countries filter (c => c.autoRecruit && c.totalCells > 0)).toSet
+          val hasTraveler = (c: Country) => {
+            if (game isMuslim c.name)
+              (c.cells > 1 || (c.cells == 1 && (!autoRecruits(c.name) || autoRecruits.size > 1)))
+            else
+              c.cells > 0
+          }
+          val travellers = (game.countries filterNot (_.name == UnitedStates)
+                                           filter hasTraveler
+                                           map (c => (c.name, c.activeCells > 0)))
+          if (num <= 2 && travellers.nonEmpty) {
+            val from = JihadistBot.travelFromTarget(UnitedStates, travellers map (_._1)).get
+            val (_, active) = (travellers find (_._1 == from)).get
+            moveCellsBetweenCountries(from, UnitedStates, 1, active)
+            nextTravel(num + 1)
+          }
+        }
+        nextTravel(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(80, "FATA", Jihadist, 3,
