@@ -1067,14 +1067,61 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(61, "Detainee Release", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => () // Make sure not marker for this card
-                         // If there is, it is removed by Renditions.
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => lapsingEventNotInPlay(GTMO)      &&
+                      globalEventNotInPlay(Renditions) &&
+                      (game.targetsThisPhase.disrupted.nonEmpty ||
+                      game.targetsLastPhase.disrupted.nonEmpty)
+      ,
+      (role: Role) => {
+        if (game.cellsAvailable > 0) {
+          val candidates = (game.targetsThisPhase.disrupted ++ 
+                            game.targetsLastPhase.disrupted).toList.sorted
+          val name = if (role == game.humanRole)
+            askCountry("Select country where disrupt occurred: ", candidates)
+          else
+            JihadistBot.recruitTravelToPriority(candidates).get
+          addEventTarget(name)
+          addSleeperCellsToCountry(name, 1)
+        }
+        if (role == game.humanRole)
+          log(s"You ($Jihadist) may draw a card")
+        else
+          log(s"Add a card to the top of the $Jihadist Bot's hand")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(62, "Ex-KGB", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => countryEventInPlay(Russia, CTR) ||
+                      (game getNonMuslim Caucasus).posture == game.usPosture ||
+                      !(game getMuslim CentralAsia).isAdversary
+      ,
+      (role: Role) => {
+        val canShift   = !(game getMuslim CentralAsia).isAdversary
+        val canPosture = (game getNonMuslim Caucasus).posture != game.usPosture
+        val target = if (countryEventInPlay(Russia, CTR))
+          Russia
+        else if (role == game.humanRole) {
+          val choices = List(
+            if (canShift)  Some(CentralAsia -> "Shift Central Asia 1 box toward Adversary")  else None,
+            if (canPosture)Some(Caucasus    -> "Set Caucasus to opposite posture of the US") else None
+          ).flatten
+          println("Choose one:")
+          askMenu(choices).head
+        }
+        else if (canShift) 
+          CentralAsia
+        else
+          Caucasus
+        
+        addEventTarget(target)
+        target match {
+          case Russia   => removeEventMarkersFromCountry(Russia, CTR)
+          case Caucasus => setCountryPosture(Caucasus, oppositePosture(game.usPosture))
+          case _        => shiftAlignmentRight(CentralAsia)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(63, "Gaza War", Jihadist, 2,
