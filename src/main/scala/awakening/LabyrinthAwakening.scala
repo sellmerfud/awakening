@@ -1645,7 +1645,7 @@ object LabyrinthAwakening {
   }
   
   // Returns (actives, sleepers)
-  def askCellsNotSadr(countryName: String, numCells: Int, sleeperFocus: Boolean = true): (Int, Int) = {
+  def askCellsNotSadr(countryName: String, numCells: Int, sleeperFocus: Boolean): (Int, Int) = {
     val c = game.getCountry(countryName)
     val (activeCells, sleeperCells) = (c.activeCells, c.sleeperCells)
     val totalCells = activeCells + sleeperCells
@@ -1684,7 +1684,7 @@ object LabyrinthAwakening {
   }
   
   // Returns (actives, sleepers, sadr)
-  def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean = true): (Int, Int, Boolean) = {
+  def askCells(countryName: String, numCells: Int, sleeperFocus: Boolean): (Int, Int, Boolean) = {
     val c = game.getCountry(countryName)
     if (!c.hasSadr) {
       val (a, s) = askCellsNotSadr(countryName, numCells, sleeperFocus)
@@ -1851,7 +1851,7 @@ object LabyrinthAwakening {
     val total = actives + sleepers
   }
   
-  def askCellsFromAnywhere(num: Int, trackOK: Boolean, names: List[String], sleeperFocus: Boolean = true): List[CellsItem] = {
+  def askCellsFromAnywhere(num: Int, trackOK: Boolean, names: List[String], sleeperFocus: Boolean): List[CellsItem] = {
     if (num == 0)
       Nil
     else {

@@ -321,7 +321,7 @@ object AwakeningCards {
               case _ =>
               val candidates = game.muslims filter (_.totalCells > 0)
               val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
-              val (actives, sleepers, sadr) = askCells(target, 2)
+              val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
               addEventTarget(target)
               println()
               removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
@@ -370,7 +370,7 @@ object AwakeningCards {
       (role: Role) => {
         val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val target = askCountry("Remove cell in which country: ", specialForcesCandidates)
-          (target, askCells(target, 1))
+          (target, askCells(target, 1, sleeperFocus = true))
         }
         else {
           val target = USBot.disruptPriority(specialForcesCandidates).get
@@ -421,7 +421,7 @@ object AwakeningCards {
         val candidates = countryNames(game.muslims filter (_.civilWar))
         val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val target = askCountry("Select civil war country: ", candidates)
-          (target, askCells(target, 1))
+          (target, askCells(target, 1, sleeperFocus = true))
         }
         else {
           // Bot chooses the candidate with the where (totalCells - TandM) is highest.
@@ -2067,7 +2067,7 @@ object AwakeningCards {
         val candidates = countryNames(game.countries filter martyrdomCandidate)
         val (target, (active, sleeper, sadr), plots) = if (role == game.humanRole) {
           val target = askCountry("Select country: ", candidates)
-          val cell = askCells(target, 1)
+          val cell = askCells(target, 1, sleeperFocus = false)
           (target, cell, askAvailablePlots(2, ops = 3))
         }
         else {
@@ -3598,7 +3598,7 @@ object AwakeningCards {
         val candidates = countryNames(game.muslims filter (m => m.civilWar && m.totalCells > 0))
         val (name, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val name = askCountry("Select country: ", candidates)
-          val cells = askCells(name, 3 min (game getMuslim name).totalCells)
+          val cells = askCells(name, 3 min (game getMuslim name).totalCells, sleeperFocus = true)
           (name, cells)
         }
         else {

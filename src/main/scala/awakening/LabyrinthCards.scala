@@ -176,7 +176,7 @@ object LabyrinthCards {
       (role: Role) => {
         val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val target = askCountry("Remove cell in which country: ", specialForcesCandidates)
-          (target, askCells(target, 1))
+          (target, askCells(target, 1, sleeperFocus = true))
         }
         else {
           val target = USBot.disruptPriority(specialForcesCandidates).get
@@ -306,7 +306,7 @@ object LabyrinthCards {
         val candidates = countryNames(List(Russia, CentralAsia) map game.getCountry filter (_.totalCells > 0))
         val (name, (active, sleeper, sadr)) = if (role == game.humanRole) {
           val target = askCountry("Select country: ", candidates)
-          (target, askCells(target, 1))
+          (target, askCells(target, 1, sleeperFocus = true))
         }
         else {
           var target = USBot.disruptPriority(candidates).get
@@ -418,7 +418,7 @@ object LabyrinthCards {
         val candidates = countryNames(game.muslims filter (m => m.name != Iran && m.totalCells > 0))
         val (name, (active, sleeper, sadr)) = if (role == game.humanRole) {
           val target = askCountry("Select country with a cell: ", candidates)
-          (target, askCells(target, 1))
+          (target, askCells(target, 1, sleeperFocus = true))
         }
         else {
           var target = USBot.disruptPriority(candidates).get
@@ -1192,7 +1192,7 @@ object LabyrinthCards {
         else {
           val (active, sleeper, sadr) = if (role == game.humanRole) {
             println("You must remove a cell")
-            askCells(name, 1)
+            askCells(name, 1, sleeperFocus = false)
           }
           else
             JihadistBot.chooseCellsToRemove(name, 1)
@@ -1263,7 +1263,7 @@ object LabyrinthCards {
         else {
           val (active, sleeper, sadr) = if (role == game.humanRole) {
             println("You must remove a cell")
-            askCells(CentralAsia, 1)
+            askCells(CentralAsia, 1, sleeperFocus = false)
           }
           else
             JihadistBot.chooseCellsToRemove(CentralAsia, 1)
@@ -1313,7 +1313,7 @@ object LabyrinthCards {
         else {
           val (active, sleeper, sadr) = if (role == game.humanRole) {
             println("You must remove a cell")
-            askCells(Russia, 1)
+            askCells(Russia, 1, sleeperFocus = false)
           }
           else
             JihadistBot.chooseCellsToRemove(Russia, 1)
