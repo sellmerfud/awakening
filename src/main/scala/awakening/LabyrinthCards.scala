@@ -1048,15 +1048,19 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(59, "Amerithrax", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.botRole // human player cannot play against US Bot!
+      ,
+      (role: Role) => {
+        log(s"You ($US) must discard your highest-value US associated card (if any)")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(60, "Bhutto Shot", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game getMuslim Pakistan).totalCells > 0
+      ,
       (role: Role) => {
-        // ....
-        
         removeEventMarkersFromCountry(Pakistan, BenazirBhutto)
         addEventMarkersToCountry(Pakistan, BhuttoShot)
       }
