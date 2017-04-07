@@ -907,6 +907,7 @@ object LabyrinthCards {
       ,
       (role: Role) => {
         addEventTarget(Somalia)
+        testCountry(Somalia)
         addSleeperCellsToCountry(Somalia, 1)
       }
     )),
@@ -924,6 +925,7 @@ object LabyrinthCards {
           JihadistBot.recruitTravelToPriority(candidates).get
         
         addEventTarget(name)
+        testCountry(name)
         addSleeperCellsToCountry(name, 1)
       }
     )),
@@ -1029,6 +1031,7 @@ object LabyrinthCards {
       ,
       (role: Role) => {
         addEventTarget(Philippines)
+        testCountry(Philippines)
         if (game.cellsAvailable > 0)
           addSleeperCellsToCountry(Philippines, 1)
         addEventMarkersToCountry(Philippines, AbuSayyaf)
@@ -1041,6 +1044,7 @@ object LabyrinthCards {
       ,
       (role: Role) => {
         addEventTarget(Iraq)
+        testCountry(Iraq)
         if (game.cellsAvailable > 0)
           addSleeperCellsToCountry(Iraq, 1)
         addGlobalEventMarker(AlAnbar)
@@ -1191,24 +1195,54 @@ object LabyrinthCards {
           }
           else
             JihadistBot.chooseCellsToRemove(name, 1)
+          addEventTarget(name)
           removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
         }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(66, "Homegrown", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        addEventTarget(UnitedKingdom)
+        testCountry(UnitedKingdom)
+        addSleeperCellsToCountry(UnitedKingdom, 1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(67, "Islamic Jihad Union", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        val candidates = List(CentralAsia, Afghanistan)
+        val targets = if (game.cellsAvailable > 1)
+          candidates
+        else if (role == game.botRole)
+          JihadistBot.recruitTravelToPriority(candidates).toList
+        else {
+          println("There is only one cell available to be placed")
+          askCountry("Select country for cell: ", candidates)::Nil
+        }
+        for (name <- targets) {
+          addEventTarget(name)
+          testCountry(name)
+          addSleeperCellsToCountry(name, 1)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(68, "Jemaah Islamiya", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        addEventTarget(IndonesiaMalaysia)
+        testCountry(IndonesiaMalaysia)
+        addSleeperCellsToCountry(IndonesiaMalaysia, 2 min game.cellsAvailable)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(69, "Kazakh Strain", Jihadist, 2,
