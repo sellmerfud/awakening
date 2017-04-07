@@ -510,7 +510,8 @@ object LabyrinthAwakening {
   val GlobalMarkers = List(
     Abbas, AnbarAwakening, SaddamCaptured, Wiretapping, EnhancedMeasures, Renditions,
     VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
-    Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargo
+    Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargo,
+    LeakWiretapping, LeakEnhancedMeasures, LeakRenditions
   ).sorted
   
   val CountryMarkers = List(

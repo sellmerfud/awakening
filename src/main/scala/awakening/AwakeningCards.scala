@@ -2015,7 +2015,9 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(189, "Jihadist Videos", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0 // Ignores funding
+      ,
       (role: Role) => {
         var targets = if (role == game.humanRole)
           askCountries(3, countryNames(game.countries filter (_.totalCells == 0)))

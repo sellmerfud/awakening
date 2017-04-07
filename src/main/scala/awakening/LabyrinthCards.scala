@@ -565,6 +565,7 @@ object LabyrinthCards {
           log(s"$US draws one card and adds it to their hand")
         else
           log(s"Add one card to the top of the $US Bot hand")
+        addGlobalEventMarker(Wiretapping)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1393,12 +1394,14 @@ object LabyrinthCards {
         for (CellsItem(from, actives, sleepers) <- travellers) {
           for (a <- 1 to actives) {
             val to = askCountry(s"Select ${ordinal(i)} destination country: ", Schengen)
+            addEventTarget(to)
             testCountry(to)
             moveCellsBetweenCountries(from, to, 1, true)
             i += 1
           }
           for (a <- 1 to sleepers) {
             val to = askCountry(s"Select ${ordinal(i)} destination country: ", Schengen)
+            addEventTarget(to)
             testCountry(to)
             moveCellsBetweenCountries(from, to, 1, false)
             i += 1
@@ -1421,6 +1424,7 @@ object LabyrinthCards {
             val to   = JihadistBot.posturePriority(Schengen).get
             val from = JihadistBot.travelFromTarget(to, travellers map (_._1) filterNot (_ == to)).get
             val (_, active) = (travellers find (_._1 == from)).get
+            addEventTarget(to)
             testCountry(to)
             moveCellsBetweenCountries(from, to, 1, active)
             alreadyTravelled += to -> (alreadyTravelled(to) + 1)
@@ -1518,12 +1522,14 @@ object LabyrinthCards {
         for (CellsItem(from, actives, sleepers) <- travellers) {
           for (a <- 1 to actives) {
             val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
+            addEventTarget(to)
             testCountry(to)
             moveCellsBetweenCountries(from, to, 1, true)
             i += 1
           }
           for (a <- 1 to sleepers) {
             val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
+            addEventTarget(to)
             testCountry(to)
             moveCellsBetweenCountries(from, to, 1, false)
             i += 1
@@ -1539,6 +1545,7 @@ object LabyrinthCards {
             else
               c.cells > 0
           }
+          addEventTarget(UnitedStates)
           val travellers = (game.countries filterNot (_.name == UnitedStates)
                                            filter hasTraveler
                                            map (c => (c.name, c.activeCells > 0)))
@@ -1559,6 +1566,7 @@ object LabyrinthCards {
                       game.cellsAvailable > 0
       ,
       (role: Role) => {
+        addEventTarget(Pakistan)
         if (game.cellsAvailable > 0)
           addSleeperCellsToCountry(Pakistan, 1)
         addEventMarkersToCountry(Pakistan, FATA)
@@ -1602,24 +1610,115 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(82, "Jihadist Videos", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0 // Ignores funding
+      ,
+      (role: Role) => {
+        var targets = if (role == game.humanRole)
+          askCountries(3, countryNames(game.countries filter (_.totalCells == 0)))
+        else {
+          // See Event Instructions table
+          val eligible = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
+          
+          if (eligible contains UnitedStates)
+            UnitedStates :: JihadistBot.multipleTargets(2, eligible filterNot (_ == UnitedStates), 
+                                                JihadistBot.recruitTravelToPriority)
+          else 
+            JihadistBot.multipleTargets(3, eligible, JihadistBot.recruitTravelToPriority)
+        }
+        
+        val numCells = if (role == game.botRole && game.jihadistIdeology(Potent)) {
+          log(s"$Jihadist Bot with Potent Ideology places two cells for each recruit success")
+          2
+        }
+        else
+          1
+        // Process all of the targets
+        for (target <- targets) {
+          addEventTarget(target)
+          testCountry(target)
+          
+          val c = game.getCountry(target)
+          if (game.cellsAvailable > 0) {
+            val cells = numCells min game.cellsAvailable
+            if (c.autoRecruit) {
+              log(s"Recruit in $target succeeds automatically")
+              addSleeperCellsToCountry(target, cells)
+            }
+            else {
+              val die = getDieRoll(role)
+              log(s"Die roll: $die")
+              if (die <= c.governance) {
+                log(s"Recruit in $target succeeds with a die roll of $die")
+                addSleeperCellsToCountry(target, cells)
+              }
+              else {
+                log(s"Recruit in $target fails with a die roll of $die")
+                addCadreToCountry(target)
+              }
+            }
+          }
+          else
+            addCadreToCountry(target)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(83, "Kashmir", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
-        // Blocked: countryEventNotInPlay(Pakistan, "Indo-Pakistani Talks")
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => countryEventNotInPlay(Pakistan, Indo_PakistaniTalks) &&
+              (game.cellsAvailable > 0 || !(game getMuslim Pakistan).isAdversary)
+      ,
+      (role: Role) => {
+        addEventTarget(Pakistan)
+        testCountry(Pakistan)
+        shiftAlignmentRight(Pakistan)
+        if (game.cellsAvailable > 0)
+          addSleeperCellsToCountry(Pakistan, 1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(84, "Leak", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => List(EnhancedMeasures, Renditions, Wiretapping) exists globalEventInPlay
+      ,
+      (role: Role) => {
+        val markers = List(EnhancedMeasures, Renditions, Wiretapping) filter globalEventInPlay
+        val marker = if (markers.size == 1)
+          markers.head
+        else if (role == game.humanRole)
+          askOneOf(s"Block which marker (${orList(markers)})? ", markers).get
+        else
+          shuffle(markers).head
+        log()
+        removeGlobalEventMarker(marker)
+        val leakMarker = marker match {
+          case EnhancedMeasures => LeakEnhancedMeasures
+          case Renditions       => LeakRenditions
+          case Wiretapping      => LeakWiretapping
+        }
+        addGlobalEventMarker(leakMarker)
+        log()
+        rollUSPosture()
+        log()
+        val candidates = countryNames(game.muslims filter (_.isAlly))
+        if (candidates.isEmpty)
+          log("There are no Ally Muslim countries.  Shift no possible")
+        else {
+          val name = if (role == game.humanRole)
+            askCountry("Select Ally Muslim country: ", candidates)
+          else
+            JihadistBot.markerAlignGovTarget(candidates).get
+          addEventTarget(name)
+          shiftAlignmentRight(name)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(85, "Leak", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(84).eventConditions(role),
+      (role: Role) => deck(84).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(86, "Lebanon War", Jihadist, 3,
