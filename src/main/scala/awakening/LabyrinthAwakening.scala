@@ -1177,11 +1177,13 @@ object LabyrinthAwakening {
     
     def disruptMuslimTargets(ops: Int): List[String] = countryNames(muslims.filter { m =>
       val hasTarget = if (globalEventInPlay(AlAnbar) && (m.name == Iraq || m.name == Syria))
-       m.cells > 0
+        m.cells > 0
       else 
         (m.hasCadre || m.cells > 0)
-      
-      hasTarget && ops >= m.governance && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
+      val fataCheck = m.name != Pakistan || 
+                      countryEventNotInPlay(Pakistan, FATA) |
+                      m.inRegimeChange
+      hasTarget && fataCheck && ops >= m.governance && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
     })
     
     def disruptNonMuslimTargets(ops: Int): List[String] = countryNames(nonMuslims.filter { n =>

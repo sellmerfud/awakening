@@ -795,8 +795,8 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(42, "Pakistani Offensive", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => (game getMuslim Pakistan).isAlly &&
-                      (game getMuslim Pakistan).hasMarker(FATA)
+      (role: Role) => countryEventInPlay(Pakistan, FATA) &&
+                      (game getMuslim Pakistan).isAlly
       ,
       (role: Role) => {
         removeEventMarkersFromCountry(Pakistan, FATA)
@@ -1554,14 +1554,51 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(80, "FATA", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => countryEventNotInPlay(Pakistan, FATA) ||
+                      game.cellsAvailable > 0
+      ,
+      (role: Role) => {
+        if (game.cellsAvailable > 0)
+          addSleeperCellsToCountry(Pakistan, 1)
+        addEventMarkersToCountry(Pakistan, FATA)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(81, "Foreign Fighters", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      // Can create Caliphate
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => {
+        val candidates = game.muslims filter (_.inRegimeChange)
+        candidates.nonEmpty && 
+        (game.cellsAvailable > 0 || (candidates exists (m => m.aidMarkers > 0 || !m.besiegedRegime)))
+      }
+      ,
+      (role: Role) => {
+        val candidates = if (game.cellsAvailable > 0)
+          countryNames(game.muslims filter (_.inRegimeChange))
+        else
+          countryNames(game.muslims filter (m => m.inRegimeChange &&
+                                            (m.aidMarkers > 0 || !m.besiegedRegime)))
+        val target = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else
+          JihadistBot.recruitTravelToPriority(candidates).get
+
+        addEventTarget(target)
+        val m = game.getMuslim(target)
+        val numCells = 5 min game.cellsAvailable
+        addSleeperCellsToCountry(target, numCells)
+        if (m.aidMarkers > 0)
+          removeAidMarker(target, 1)
+        else if (!m.besiegedRegime)
+          addBesiegedRegimeMarker(target)
+        
+        if (numCells >= 3 &&
+            canDeclareCaliphate(target) &&
+            ((role == game.humanRole && askDeclareCaliphate(target)) ||
+             (role == game.botRole && JihadistBot.willDeclareCaliphate(target))))
+          declareCaliphate(target)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(82, "Jihadist Videos", Jihadist, 3,

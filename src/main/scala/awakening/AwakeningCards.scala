@@ -1962,10 +1962,18 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(187, "Foreign Fighters", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => game hasMuslim (m => m.inRegimeChange || m.civilWar)
+      (role: Role) => {
+        val candidates = game.muslims filter (m => m.inRegimeChange || m.civilWar)
+        candidates.nonEmpty && 
+        (game.cellsAvailable > 0 || (candidates exists (m => m.aidMarkers > 0 || !m.besiegedRegime)))
+      }
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
+        val candidates = if (game.cellsAvailable > 0)
+          countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
+        else
+          countryNames(game.muslims filter (m => (m.inRegimeChange || m.civilWar) &&
+                                                  (m.aidMarkers > 0 || !m.besiegedRegime)))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else
