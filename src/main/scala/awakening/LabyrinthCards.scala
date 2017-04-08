@@ -120,7 +120,9 @@ object LabyrinthCards {
     game hasMuslim (m => m.isShiaMix && 
        (m.isUntested || m.isGood || m.isFair || (m.isPoor && m.aidMarkers > 0)))
   
-  
+  def jayshAlMahdiCandidates: List[String] = countryNames(
+    (game.muslims filter (m => m.isShiaMix && m.totalCells > 0 && m.totalTroops > 0)))
+
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2185,19 +2187,92 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(106, "Jaysh al-Mahdi", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == US && jayshAlMahdiCandidates.nonEmpty) || 
+       (role == Jihadist && {
+           // Do not include Poor or Islamist Rule since they cannot be degraded
+         jayshAlMahdiCandidates map game.getMuslim exists (m => m.isGood || m.isFair) 
+       })
+      ,      
+      (role: Role) => if (role == US) {
+        val (name, (actives, sleepers, sadr)) = if (role == game.humanRole) {
+          val name = askCountry("Select a Shia-Mix country with troops and cells: ", jayshAlMahdiCandidates)
+          val num = 2 min (game getMuslim name).totalCells
+          (name, askCells(name, num, sleeperFocus = true))
+        }
+        else {
+          val name = USBot.disruptPriority(jayshAlMahdiCandidates).get
+          val num = 2 min (game getMuslim name).totalCells
+          (name, USBot.chooseCellsToRemove(name, num))
+        }
+        addEventTarget(name)
+        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+      }
+      else {  // Jihadist
+        val candidates = countryNames(jayshAlMahdiCandidates 
+                                        map game.getMuslim
+                                        filter (m => m.isGood || m.isFair))
+        
+        val name = if (role == game.humanRole)
+          askCountry("Select a Shia-Mix country with troops and cells: ", candidates)
+        else
+          JihadistBot.markerAlignGovTarget(candidates).get
+        
+        addEventTarget(name)
+        degradeGovernance(name, 1, canShiftToIR = false)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(107, "Kurdistan", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == US || 
+        (List(Turkey, Iraq) map game.getMuslim exists (m => !(m.isPoor || m.isIslamistRule)))
+      ,
+      (role: Role) => if (role == US) {
+        addEventTarget(Iraq)
+        testCountry(Iraq)
+        addAidMarker(Iraq)
+      }
+      else { // Jihadist
+        addEventTarget(Turkey)
+        testCountry(Turkey)
+        val candidates = countryNames(List(Turkey, Iraq) 
+                             map game.getMuslim
+                             filter (m => !(m.isPoor || m.isIslamistRule)))
+        // candidates could be empty if Iraq is Poor and Turkey just tested to Poor
+        if (candidates.nonEmpty) {
+          val name = if (role == game.humanRole)
+            askCountry("Select country degrade governance: ", candidates)
+          else
+            JihadistBot.markerAlignGovTarget(candidates).get
+          
+          addEventTarget(name)
+          degradeGovernance(name, 1, canShiftToIR = false)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(108, "Musharraf", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()  // Make sure there is no marker
-                          // If there is it must be removed when Benazir Bhutto is played
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => countryEventNotInPlay(Pakistan, BenazirBhutto) && {
+        val pak = game getMuslim Pakistan
+        pak.totalCells > 0 &&
+        (role == game.humanRole ||
+         (role == Jihadist && !(pak.isAdversary || pak.isNeutral || pak.isPoor || pak.isIslamistRule)) ||
+         (role == US       && !(pak.isAlly || (pak.isFair && pak.isNeutral) || pak.isGood)))
+      }
+      ,
+      (role: Role) => {
+        val (active, sleeper, sadr) = if (role == game.humanRole)
+          askCells(Pakistan, 1, sleeperFocus = role == US)
+        else if (role == US)
+          USBot.chooseCellsToRemove(Pakistan, 1)
+        else
+          JihadistBot.chooseCellsToRemove(Pakistan, 1)
+        addEventTarget(Pakistan)
+        removeCellsFromCountry(Pakistan, active, sleeper, sadr, addCadre = true)
+        setGovernance(Pakistan, Poor, Some(Ally))
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(109, "Tora Bora", Unassociated, 2,
