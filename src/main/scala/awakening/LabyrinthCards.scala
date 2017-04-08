@@ -95,6 +95,16 @@ object LabyrinthCards {
   else
     game.availablePlots
   
+  def hizballahCanddidates = countryNames(game.muslims filter { m =>
+    m.isShiaMix && m.totalCells > 0 && distance(m.name, Lebanon) <= 3
+  })
+  def hizballahPlayable(role: Role) = role match {
+    case US       => hizballahCanddidates.nonEmpty
+    case Jihadist =>
+      val leb = game getMuslim Lebanon
+      !(leb.isPoor && leb.isNeutral) &&
+      (role == game.humanRole || !(leb.isAdversary || leb.isIslamistRule))
+  }
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2016,33 +2026,94 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(98, "Gaza Withdrawal", Unassociated, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == US && game.funding > 1) ||
+                      (role == Jihadist && game.cellsAvailable > 0)
+      ,
+      (role: Role) => if (role == US)
+        decreaseFunding(1)
+      else {
+        addEventTarget(Israel)
+        addSleeperCellsToCountry(Israel, 1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(99, "HAMAS Elected", Unassociated, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole ||
+        (role != US && (game.prestige > 1 || askYorN(s"Do you ($US) have a card in hand? (y/n) ")))
+      ,      
+      (role: Role) => {
+        if (game.humanRole == US)
+          log(s"You ($US) must select and discard one card if you have any")
+        else
+          log(s"Discard the top card of the $US Bot's hand")
+        decreasePrestige(1)
+        decreaseFunding(1)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(100, "Hizb Ut-Tahrir", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => 
+        (role == game.humanRole && game.troopCommitment != War) ||
+        (role == Jihadist && game.troopCommitment == Overstretch  && game.funding < 9) ||
+        (role == US       && game.troopCommitment == LowIntensity && game.funding > 1)
+      ,      
+      (role: Role) => if (game.troopCommitment == Overstretch)
+        increaseFunding(2)
+      else if (game.troopCommitment == LowIntensity)
+        decreaseFunding(2)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(101, "Kosovo", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole || role == US ||
+         (game getNonMuslim Serbia).posture == game.usPosture
+      ,
+      (role: Role) => {
+        increasePrestige(1)
+        addEventTarget(Serbia)
+        setCountryPosture(Serbia, oppositePosture(game.usPosture))
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(102, "Former Soviet Union", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole || {
+        val ca = game getMuslim CentralAsia
+        val jihadOk = !(ca.isAdversary || ca.isIslamistRule || (ca.isPoor && ca.isNeutral))
+        val usOk    = !(ca.isAlly || ca.isGood || ca.isUntested || (ca.isFair && ca.isNeutral))
+        (role == Jihadist && jihadOk) || (role == US && usOk)
+      }
+      ,
+      (role: Role) => {
+        addEventTarget(CentralAsia)
+        setAlignment(CentralAsia, Neutral)
+        rollGovernance(CentralAsia)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(103, "Hizballah", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => hizballahPlayable(role)
+      ,
+      (role: Role) => if (role == US) {
+        val (name, (active, sleeper, sadr)) = if (role == game.humanRole) {
+          val name = askCountry("Remove a cell from which country: ", hizballahCanddidates)
+          (name, askCells(name, 1, sleeperFocus = true))
+        }
+        else {
+          val name = USBot.disruptPriority(hizballahCanddidates).get
+          (name, USBot.chooseCellsToRemove(name, 1))
+        }
+        addEventTarget(name)
+        removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+      }
+      else { // Jihadist
+        addEventTarget(Lebanon)
+        setGovernance(Lebanon, Poor, Some(Neutral))
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(104, "Iran", Unassociated, 2,
