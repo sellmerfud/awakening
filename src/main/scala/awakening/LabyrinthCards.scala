@@ -429,7 +429,7 @@ object LabyrinthCards {
       }
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(21, "“Let’s Roll!”", US, 2,
+    entry(new Card(21, "Let’s Roll!", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => letsRollCandidates.nonEmpty
       ,
@@ -2281,19 +2281,19 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(110, "Zarqawi", Unassociated, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       // Can create Caliphate (onlyinIraq,Syria,Lebanon,orJordan)
       (role: Role) => () // Remove is conditional
     )),
     // ------------------------------------------------------------------------
     entry(new Card(111, "Zawahiri", Unassociated, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       // US play blocked by AlAnbar
       (role: Role) => () // Remove is conditional
     )),
     // ------------------------------------------------------------------------
     entry(new Card(112, "Bin Ladin", Unassociated, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       // Us play blocked by AlAnbar
       (role: Role) => () // Remove is conditional
     )),
@@ -2309,12 +2309,12 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(115, "Hambali", Unassociated, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => () // Remove is conditional
     )),
     // ------------------------------------------------------------------------
     entry(new Card(116, "KSM", Unassociated, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => () // Remove is conditional
     )),
     // ------------------------------------------------------------------------
