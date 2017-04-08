@@ -31,9 +31,9 @@ package awakening.scenarios
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
-class Anaconda extends Scenario {
-  val name           = "Anaconda"
-  val expansion      = false
+class Anaconda(val campaign: Boolean) extends Scenario {
+  val name           = s"Anaconda${if (campaign)" Campaign" else ""}"
+  val expansion      = campaign
   val prestige       = 8
   val usPosture      = Hard
   val funding        = 6

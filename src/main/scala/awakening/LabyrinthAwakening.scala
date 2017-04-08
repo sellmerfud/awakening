@@ -4757,14 +4757,18 @@ object LabyrinthAwakening {
   }
   
   val scenarios = ListMap[String, Scenario](
-    "LetsRoll"            -> new LetsRoll,
-    "YouCanCallMeAl"      -> new YouCanCallMeAl,
-    "Anaconda"            -> new Anaconda,
-    "MissionAccomplished" -> new MissionAccomplished,
-    "Awakening"           -> new Awakening,
-    "MittsTurn"           -> new MittsTurn,
-    "StatusOfForces"      -> new StatusOfForces,
-    "IslamicStateOfIraq"  -> new IslamicStateOfIraq
+    "LetsRoll"                    -> new LetsRoll(campaign = false),
+    "YouCanCallMeAl"              -> new YouCanCallMeAl(campaign = false),
+    "Anaconda"                    -> new Anaconda(campaign = false),
+    "MissionAccomplished"         -> new MissionAccomplished(campaign = false),
+    "Awakening"                   -> new Awakening,
+    "MittsTurn"                   -> new MittsTurn,
+    "StatusOfForces"              -> new StatusOfForces,
+    "IslamicStateOfIraq"          -> new IslamicStateOfIraq,
+    "LetsRollCampaign"            -> new LetsRoll(campaign = true),
+    "YouCanCallMeAlCampaign"      -> new YouCanCallMeAl(campaign = true),
+    "AnacondaCampaign"            -> new Anaconda(campaign = true),
+    "MissionAccomplishedCampaign" -> new MissionAccomplished(campaign = true)
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
   
@@ -4777,71 +4781,80 @@ object LabyrinthAwakening {
   
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
-    gamesDir.mkpath()
-    var configParams = loadParamsFile(UserParams())
-    var cmdLineParams = parseCommandLine(args, UserParams())
-    if (cmdLineParams.gameFile.nonEmpty) {
-      gameName = Some(askGameName("Enter a name for the game: "))
-      game = loadGameState(Pathname(cmdLineParams.gameFile.get))
-      printSummary(game.playSummary)
-    }
-    else if (cmdLineParams.gameName.nonEmpty) {
-      loadMostRecent(cmdLineParams.gameName.get)
-      printSummary(game.playSummary)
-    }
-    else {
-      val existingGame = if (cmdLineParams.anyNewGameParams) None
-                         else askWhichGame()
-      existingGame match {
-        case Some(name) =>
-          loadMostRecent(name)
-          printSummary(game.playSummary)
-        
-        case None => // Start a new game
-          println()
-          val scenarioName = cmdLineParams.scenarioName orElse 
-                             configParams.scenarioName getOrElse {
-            // prompt for scenario
-            println("Choose a scenario:")
-            askMenu(scenarioChoices, allowAbort = false).head
-          }
-          val scenario = scenarios(scenarioName)
-          val humanRole = cmdLineParams.side orElse
-                          configParams.side getOrElse {
-            // ask which side the user wishes to play
-            val sidePrompt = "Which side do you wish play? (US or Jihadist) "
-            Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
-          }
-          val difficulties = if (humanRole == US)
-            cmdLineParams.jihadistBotDifficulties orElse
-            configParams.jihadistBotDifficulties getOrElse askDifficulties(Jihadist)
-          else
-            cmdLineParams.usBotDifficulties orElse
-            configParams.usBotDifficulties getOrElse askDifficulties(US)
-          val humanAutoRoll = cmdLineParams.autoDice orElse
-                              configParams.autoDice getOrElse
-                              !askYorN("Do you wish to roll your own dice (y/n)? ")
-        
-          gameName = Some(askGameName("Enter a name for your new game: "))
-
-          game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
-          logSummary(game.scenarioSummary)
-          printSummary(game.scoringSummary)
-          if (scenario.cardsRemoved.nonEmpty) {
-            log()
-            log("The following cards are removed for this scenario")
-            log(separator())
-            scenario.cardsRemoved map (deck(_).toString) foreach (log(_))
-          }
-          log()
-          scenario.additionalSetup()
-          saveTurn()  // Save the initial game state as turn-0
-          game = game.copy(turn = game.turn + 1)
-          logStartOfTurn()
+    try {
+      
+      gamesDir.mkpath()
+      var configParams = loadParamsFile(UserParams())
+      var cmdLineParams = parseCommandLine(args, UserParams())
+      // If the user gave an explicit file name we must assign the gama a name.
+      // This is mostly used for loading someone else's file for testing.
+      if (cmdLineParams.gameFile.nonEmpty) {
+        gameName = Some(askGameName("Enter a name for the game: "))
+        game = loadGameState(Pathname(cmdLineParams.gameFile.get))
+        printSummary(game.playSummary)
       }
+      else if (cmdLineParams.gameName.nonEmpty) {
+        loadMostRecent(cmdLineParams.gameName.get)
+        printSummary(game.playSummary)
+      }
+      else {
+        val existingGame = if (cmdLineParams.anyNewGameParams) None
+                           else askWhichGame()
+        existingGame match {
+          case Some(name) =>
+            loadMostRecent(name)
+            printSummary(game.playSummary)
+        
+          case None => // Start a new game
+            println()
+            val scenarioName = cmdLineParams.scenarioName orElse 
+                               configParams.scenarioName getOrElse {
+              // prompt for scenario
+              println("Choose a scenario:")
+              val choices = scenarioChoices :+ ("quit" -> "Quit")
+              askMenu(choices, allowAbort = false).head match {
+                case "quit"   => throw ExitGame
+                case scenario => scenario
+              }
+            }
+            val scenario = scenarios(scenarioName)
+            val humanRole = cmdLineParams.side orElse
+                            configParams.side getOrElse {
+              // ask which side the user wishes to play
+              val sidePrompt = "Which side do you wish play? (US or Jihadist) "
+              Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
+            }
+            val difficulties = if (humanRole == US)
+              cmdLineParams.jihadistBotDifficulties orElse
+              configParams.jihadistBotDifficulties getOrElse askDifficulties(Jihadist)
+            else
+              cmdLineParams.usBotDifficulties orElse
+              configParams.usBotDifficulties getOrElse askDifficulties(US)
+            val humanAutoRoll = cmdLineParams.autoDice orElse
+                                configParams.autoDice getOrElse
+                                !askYorN("Do you wish to roll your own dice (y/n)? ")
+        
+            gameName = Some(askGameName("Enter a name for your new game: "))
+
+            game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
+            logSummary(game.scenarioSummary)
+            printSummary(game.scoringSummary)
+            if (scenario.cardsRemoved.nonEmpty) {
+              log()
+              log("The following cards are removed for this scenario")
+              log(separator())
+              scenario.cardsRemoved map (deck(_).toString) foreach (log(_))
+            }
+            log()
+            scenario.additionalSetup()
+            saveTurn()  // Save the initial game state as turn-0
+            game = game.copy(turn = game.turn + 1)
+            logStartOfTurn()
+        }
+      }
+      
+      commandLoop()
     }
-    
-    try commandLoop()
     catch {
       case ExitGame => 
     }
@@ -4930,12 +4943,13 @@ object LabyrinthAwakening {
         val suffix = if (desc == "") "" else s": $desc"
         name -> s"Resume '$name'$suffix"
       }
-      val choices = ("--new-game--" -> "Start a new game") :: gameChoices
+      val choices = ("--new-game--" -> "Start a new game") :: gameChoices ::: List("--quit-game--" -> "Quit")
       println()
       println("Which game would you like to play:")
       askMenu(choices, allowAbort = false).head match {
-        case "--new-game--" => None
-        case name => Some(name)
+        case "--new-game--"  => None
+        case "--quit-game--" => throw ExitGame
+        case name            => Some(name)
       }
     }
   }

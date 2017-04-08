@@ -31,9 +31,9 @@ package awakening.scenarios
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
-class MissionAccomplished extends Scenario {
-  val name           = "Mission Accomplished?"
-  val expansion      = false
+class MissionAccomplished(val campaign: Boolean) extends Scenario {
+  val name           = s"Mission Accomplished?${if (campaign)" Campaign" else ""}"
+  val expansion      = campaign
   val prestige       = 3
   val usPosture      = Hard
   val funding        = 5

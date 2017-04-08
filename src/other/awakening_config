@@ -9,6 +9,9 @@
 # Must be one of:
 #  LetsRoll, YouCanCallMeAl, Anaconda, MissionAccomplished
 #  Awakening, MittsTurn, StatusOfForces, IslamicStateOfIraq
+#  LetsRollCampaign, YouCanCallMeAlCampaign, AnacondaCampaign,
+#  MissionAccomplishedCampaign
+
 scenario =
 
 # The side that you wish to play:  US or Jihadist
