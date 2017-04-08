@@ -335,6 +335,10 @@ object JihadistBot extends BotHelpers {
     topPriority(candidates, PlotPriorities) map (_.name)
   }
   
+  def plotPriority(names: List[String]): Option[String] = {
+    topPriority(game getCountries names, PlotPriorities) map (_.name)
+  }
+  
   val RecruitFlowchart = List(
     PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        

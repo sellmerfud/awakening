@@ -90,6 +90,11 @@ object LabyrinthCards {
     countryNames(possibles map game.getMuslim filter (m => m.totalTroops > 0 && !m.isAdversary))
   }
 
+  def danishCartoonPlots: List[Plot] = if (game.numIslamistRule == 0)
+    (game.availablePlots find (_ == Plot1)).toList
+  else
+    game.availablePlots
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -1955,13 +1960,59 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(96, "Danish Cartoons", Unassociated, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole ||
+                     (role == Jihadist && danishCartoonPlots.nonEmpty) ||
+                     (role == US && danishCartoonPlots.isEmpty)
+      ,                       
+      (role: Role) => {
+        val posture = if (game.humanRole == US)
+          askOneOf(s"New posture for Scandinavia (Soft or Hard): ", Seq(Soft, Hard)).get
+        else
+          game.usPosture
+        
+        addEventTarget(Scandinavia)
+        setCountryPosture(Scandinavia, posture)
+        
+        if (danishCartoonPlots.nonEmpty) {
+          log()
+          val plot = danishCartoonPlots match {
+            case p::Nil                            => p
+            case plots if game.botRole == Jihadist => shuffle(plots).head
+            case plots                             => askPlots(plots, 1).head
+          }
+          val candidates = countryNames(game.muslims filter (!_.isIslamistRule))
+          val name = if (game.humanRole == Jihadist)
+            askCountry(s"Place $plot in which country: ", candidates)
+          else
+            JihadistBot.plotPriority(candidates).get
+          
+          addEventTarget(name)
+          testCountry(name)
+          addAvailablePlotToCountry(name, plot)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(97, "Fatwa", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => askYorN("Do both players have at least one card in hand? (y/n) ")
+      ,
+      (role: Role) => {
+        log(s"Take the top card of the ${game.botRole} Bot's hand and put a random card")
+        log(s"from your hand on top of the ${game.botRole} Bot's hand")
+        
+        // Create a one Op card to keep the card to satisfy the card play functions.
+        val card = new Card(0, "n/a", Unassociated, 1, 
+               NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, 
+               (_: Role) => false, (_: Role) =>())
+        (role, game.humanRole) match {
+          case (US, US)             => humanUsCardPlay(card, false, false)
+          case (US, _)              => USBot.cardPlay(card, false)
+          case (Jihadist, Jihadist) => humanJihadistCardPlay(card, false, false)
+          case (Jihadist, _)        => JihadistBot.cardPlay(card, false)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(98, "Gaza Withdrawal", Unassociated, 1,
