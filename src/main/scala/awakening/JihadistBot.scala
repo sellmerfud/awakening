@@ -573,6 +573,16 @@ object JihadistBot extends BotHelpers {
     minorJihadTarget(candidates)
   }
   
+  def iranTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      GoodPriority,
+      FairPriority,
+      new CriteriaFilter("Untested Muslim", muslimTest(_.isUntested)))
+      botLog("Find \"Iran\" target")
+      topPriority(game getMuslims names, priorities) map (_.name)
+  }
+  
+  
   def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
     val flowchart = List(
       new CriteriaFilter("Ally",    muslimTest(m => m.isAlly)),

@@ -105,6 +105,22 @@ object LabyrinthCards {
       !(leb.isPoor && leb.isNeutral) &&
       (role == game.humanRole || !(leb.isAdversary || leb.isIslamistRule))
   }
+  
+  def iranWithCells: List[String] = {
+    val shiaMix = countryNames(game.muslims filter (m => m.isShiaMix && m.totalCells > 0))
+    if ((game getCountry Iran).totalCells > 0) Iran :: shiaMix else shiaMix
+  }
+  def iranPlayable(role: Role) = if (role == US) {
+    if (role == game.humanRole)
+      (game hasMuslim (m => m.isShiaMix && m.isUntested)) || iranWithCells.nonEmpty
+    else
+      iranWithCells.nonEmpty  // Bot ignores simply testing a Shia-mix country.
+  }
+  else
+    game hasMuslim (m => m.isShiaMix && 
+       (m.isUntested || m.isGood || m.isFair || (m.isPoor && m.aidMarkers > 0)))
+  
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2117,13 +2133,55 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(104, "Iran", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => iranPlayable(role)
+      ,
+      (role: Role) => if (role == US) {
+        if (role == game.humanRole) {
+          val untested   = countryNames(game.muslims filter (m => m.isShiaMix && m.isUntested))
+          val candidates = untested ::: iranWithCells
+          val prompt = if (candidates contains Iran)
+            "Select a Shia-Mix country or Iran: "
+          else
+            "Select a Shia-Mix country: "
+          val name = askCountry(prompt, candidates)
+          addEventTarget(name)
+          testCountry(name)
+          if ((game getCountry name).totalCells > 0) {
+            val (active, sleeper, sadr) = askCells(name, 1, sleeperFocus = true)
+            removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+          }
+        }
+        else {
+          val name = USBot.disruptPriority(iranWithCells).get
+          val (active, sleeper, sadr) = USBot.chooseCellsToRemove(name, 1)
+          addEventTarget(name)
+          removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+        }
+      }
+      else {  // Jihadist
+        val candidates = countryNames(game.muslims 
+               filter (m => m.isShiaMix && 
+                              (m.isUntested || 
+                               m.isGood     ||
+                               m.isFair     ||
+                              (m.isPoor && m.aidMarkers > 0))))
+
+        val name = if (role == game.humanRole)
+          askCountry("Select a Shix-Mix country: ", candidates)
+        else
+          JihadistBot.iranTarget(candidates).get
+        
+        addEventTarget(name)
+        testCountry(name)
+        performJihads(JihadTarget(name, 2, 0, false, major = false)::Nil, ignoreFailures = true)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(105, "Iran", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(104).eventConditions(role),
+      (role: Role) => deck(104).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(106, "Jaysh al-Mahdi", Unassociated, 2,
