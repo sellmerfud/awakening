@@ -44,6 +44,9 @@ object LabyrinthCards {
     !game.isCaliphateMember(m.name)
   val massTurnoutCandidate = (m: MuslimCountry) => 
     m.inRegimeChange && !game.isCaliphateMember(m.name)
+  val martyrdomCandidate = (c: Country) => c.totalCells > 0 && 
+    !(game.isMuslim(c.name) && game.getMuslim(c.name).isIslamistRule)
+  val regionalAlQaedaCandidate = (m: MuslimCountry) => m.name != Iran && m.isUntested
     
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
@@ -1723,52 +1726,232 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(86, "Lebanon War", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      (role: Role) => {
+        if (role == game.humanRole)
+          log(s"Discard the top card of the $US Bot's hand")
+        else
+          log(s"You ($US) must randomly discard one card")
+        decreasePrestige(1)
+        if (game.cellsAvailable > 0) {
+          val candidates = countryNames(game.muslims filter (_.isShiaMix))
+          val name = if (role == game.humanRole)
+            askCountry("Select a Shia-Mix country: ", candidates)
+          else
+            JihadistBot.recruitTravelToPriority(candidates).get
+          
+          addEventTarget(name)
+          testCountry(name)
+          addSleeperCellsToCountry(name, 1)
+        }
+        else
+          log("No cells available to place in a Shix-Mix country")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(87, "Martyrdom Operation", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.availablePlots.nonEmpty && (game hasCountry martyrdomCandidate)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.countries filter martyrdomCandidate)
+        val (target, (active, sleeper, sadr), plots) = if (role == game.humanRole) {
+          val target = askCountry("Select country: ", candidates)
+          val cell = askCells(target, 1, sleeperFocus = false)
+          (target, cell, askAvailablePlots(2, ops = 3))
+        }
+        else {
+          // See Event Instructions table
+          val target = JihadistBot.plotTarget(candidates).get
+          addEventTarget(target)
+          val c = game getCountry target
+          val cell = if (c.activeCells > 0) (1, 0, false)
+                     else if (c.hasSadr)    (0, 0, true)
+                      else                  (0, 1, false)
+          (target, cell, shuffle(game.availablePlots) take 2)
+        }
+        
+        addEventTarget(target)
+        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = false)
+        for (plot <- plots)
+          addAvailablePlotToCountry(target, plot)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(88, "Martyrdom Operation", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(87).eventConditions(role),
+      (role: Role) => deck(87).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(89, "Martyrdom Operation", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => deck(87).eventConditions(role),
+      (role: Role) => deck(87).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(90, "Quagmire", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (game.prestigeLevel == Medium || game.prestigeLevel == Low) &&
+                      (game hasMuslim (m => m.inRegimeChange && m.totalCells > 0))
+      ,
+      (role: Role) => {
+        if (role == game.botRole) {
+          log(s"You ($US) must randomly discard two cards")
+          log("Playable Jihadist events on the discards are triggered")
+          
+          def nextDiscard(num: Int): List[Int] = {
+            if (num > 2)
+              Nil
+            else {
+              val prompt = s"Card # of the ${ordinal(num)} discard (or blank if none) "
+              askCardNumber(prompt) match {
+                case None         => Nil
+                case Some(cardNo) =>  cardNo :: nextDiscard(num + 1)
+              }
+            }
+          }
+        
+          for (n <- nextDiscard(1); card = deck(n))
+            if (card.eventWillTrigger(Jihadist))
+              performCardEvent(card, Jihadist, triggered = true)
+        }
+        else
+          log(s"Discard the top two cards of the $Jihadist Bot's hand")
+          
+        setUSPosture(Soft)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(91, "Regional al-Qaeda", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0 && (game.muslims count regionalAlQaedaCandidate) >= 2
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter regionalAlQaedaCandidate)
+        val maxPer = if (game.numIslamistRule > 0) 2 else 1
+        case class Target(name: String, cells: Int)
+        val targets = if (role == game.humanRole) {
+          if (game.cellsAvailable == 1) {
+            val name = askCountry("Select country: ", candidates)
+            Target(name, 1)::Nil
+          }
+          else if (maxPer == 2 && game.cellsAvailable < 4) {
+            println(s"There are only ${game.cellsAvailable} available cells")
+            val name1 = askCountry("Select 1st unmarked country: ", candidates)
+            val num1  = askInt(s"Place how many cells in $name1", 1, 2)
+            val remain = game.cellsAvailable - num1
+            if (remain == 0)
+              Target(name1, num1)::Nil
+            else {
+              val name2 = askCountry("Select 2nd unmarked country: ", candidates filterNot (_ == name1))
+              Target(name1, num1):: Target(name2, remain)::Nil
+            }
+          }
+          else {
+            val name1 = askCountry("Select 1st unmarked country: ", candidates)
+            val name2 = askCountry("Select 2nd unmarked country: ", candidates filterNot (_ == name1))
+            Target(name1, maxPer):: Target(name2, maxPer)::Nil
+          }
+        }
+        else {
+          def nextTarget(available: Int, targets: List[String]): List[Target] = targets match {
+            case Nil => Nil
+            case t::ts => 
+              val n = maxPer min available
+              Target(t, n) :: nextTarget(available - n, ts)
+          }
+          var names = JihadistBot.multipleTargets(2, candidates, JihadistBot.recruitTravelToPriority)
+          nextTarget(game.cellsAvailable, names)  
+        }
+        
+        for (Target(name, num) <- targets) {
+          addEventTarget(name)
+          testCountry(name)
+          addSleeperCellsToCountry(name, num)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(92, "Saddam", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => () // globalEventNotInPlay(SaddamCaptured)
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => globalEventNotInPlay(SaddamCaptured) &&
+                      (game getMuslim Iraq).isPoor &&
+                      (game getMuslim Iraq).isAdversary
+      ,
+      (role: Role) => {
+        log("Set funding to 9")
+        game = game.copy(funding = 9)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(93, "Taliban", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.cellsAvailable > 0 || 
+                      game.prestige > 1       ||
+                      !((game getMuslim Afghanistan).isIslamistRule ||
+                        (game getMuslim Afghanistan).besiegedRegime)
+      ,
+      (role: Role) => {
+        val afghanistan = game getMuslim Afghanistan
+        val pakistan    = game getMuslim Pakistan
+        addEventTarget(Afghanistan)
+        addEventTarget(Pakistan)
+        testCountry(Afghanistan)
+        testCountry(Pakistan)
+        if (!(afghanistan.isIslamistRule || afghanistan.besiegedRegime))
+          addBesiegedRegimeMarker(Afghanistan)
+        if (game.cellsAvailable == 0)
+          log("No cells available for placement")
+        else if (game.cellsAvailable > 1) {
+          addSleeperCellsToCountry(Afghanistan, 1)
+          addSleeperCellsToCountry(Pakistan, 1)
+        }
+        else if (role == game.humanRole) {
+          println("There is only 1 cell available for placement")
+          val name = askCountry("Place a cell in which country: ", Afghanistan::Pakistan::Nil)
+          addSleeperCellsToCountry(name, 1)
+        }
+        else {
+          val name = JihadistBot.recruitTravelToPriority(Afghanistan::Pakistan::Nil).get
+          addSleeperCellsToCountry(name, 1)
+        }
+        
+        val delta = if (afghanistan.isIslamistRule || pakistan.isIslamistRule) 3 else 1
+        decreasePrestige(delta)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(94, "The door of Itjihad was closed", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) =>  game.targetsThisPhase.testedOrImprovedToFairOrGood.nonEmpty ||
+                       game.targetsLastPhase.testedOrImprovedToFairOrGood.nonEmpty
+      ,
+      (role: Role) => {
+        val candidates = (game.targetsThisPhase.testedOrImprovedToFairOrGood ++
+                         game.targetsLastPhase.testedOrImprovedToFairOrGood).toList
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", candidates)
+        else
+          JihadistBot.markerAlignGovTarget(candidates).get
+        
+        addEventTarget(name)
+        degradeGovernance(name, 1, canShiftToIR = false)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(95, "Wahhabism", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game.funding < 9 && !(game getMuslim SaudiArabia).isUntested
+      ,
+      (role: Role) => {
+        val saudi = game getMuslim SaudiArabia
+        if (saudi.isIslamistRule) {
+          log("Set funding to 9")
+          game = game.copy(funding = 9)
+        }
+        else
+          increaseFunding(saudi.governance)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(96, "Danish Cartoons", Unassociated, 1,

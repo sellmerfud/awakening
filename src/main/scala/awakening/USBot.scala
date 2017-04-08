@@ -388,7 +388,7 @@ object USBot extends BotHelpers {
     def noPath  = AddToUSReserves
     def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
       val targetPlot = priorityPlot(plots)
-      card.eventAlertsPlot(targetPlot.country.name, targetPlot.onMap.plot) ||
+      (playableEvent && card.eventAlertsPlot(targetPlot.country.name, targetPlot.onMap.plot)) ||
       !firstCardOfPhase(US)
     }
   }

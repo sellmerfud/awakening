@@ -2130,9 +2130,8 @@ object AwakeningCards {
                       (game hasMuslim (m => m.inRegimeChange && m.totalCells > 0))
       ,
       (role: Role) => {
-        val opponent = if (role == Jihadist) US else Jihadist
-        log("US randomly discards 2 cards")
         if (role == game.botRole) {
+          log(s"You ($US) must randomly discard two cards")
           log("Playable Jihadist events on the discards are triggered")
           
           def nextDiscard(num: Int): List[Int] = {
@@ -2151,6 +2150,8 @@ object AwakeningCards {
             if (card.eventWillTrigger(Jihadist))
               performCardEvent(card, Jihadist, triggered = true)
         }
+        else
+          log(s"Discard the top two cards of the $Jihadist Bot's hand")
         
         setUSPosture(Soft)
       }
@@ -2162,7 +2163,7 @@ object AwakeningCards {
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter regionalAlQaedaCandidate)
-        val maxPer = if (game hasMuslim (_.isIslamistRule)) 2 else 1
+        val maxPer = if (game.numIslamistRule > 0) 2 else 1
         case class Target(name: String, cells: Int)
         val targets = if (role == game.humanRole) {
           if (game.cellsAvailable == 1) {
@@ -2171,19 +2172,19 @@ object AwakeningCards {
           }
           else if (maxPer == 2 && game.cellsAvailable < 4) {
             println(s"There are only ${game.cellsAvailable} available cells")
-            val name1 = askCountry("Select 1st country: ", candidates)
+            val name1 = askCountry("Select 1st unmarked country: ", candidates)
             val num1  = askInt(s"Place how many cells in $name1", 1, 2)
             val remain = game.cellsAvailable - num1
             if (remain == 0)
               Target(name1, num1)::Nil
             else {
-              val name2 = askCountry("Select 2nd country: ", candidates filterNot (_ == name1))
+              val name2 = askCountry("Select 2nd unmarked country: ", candidates filterNot (_ == name1))
               Target(name1, num1):: Target(name2, remain)::Nil
             }
           }
           else {
-            val name1 = askCountry("Select 1st country: ", candidates)
-            val name2 = askCountry("Select 2nd country: ", candidates filterNot (_ == name1))
+            val name1 = askCountry("Select 1st unmarked country: ", candidates)
+            val name2 = askCountry("Select 2nd unmarked country: ", candidates filterNot (_ == name1))
             Target(name1, maxPer):: Target(name2, maxPer)::Nil
           }
         }
