@@ -335,8 +335,12 @@ object JihadistBot extends BotHelpers {
     topPriority(candidates, PlotPriorities) map (_.name)
   }
   
-  val RecruitTravelToFlowchart = List(
+  val RecruitFlowchart = List(
     PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
+    FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
+    
+  val TravelToFlowchart = List(
+    PoorNeedCellsforMajorJihad, GoodMuslimFilter,
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
   
   def recruitTravelToPriority(names: List[String]): Option[String] = {
@@ -358,7 +362,7 @@ object JihadistBot extends BotHelpers {
       HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
       MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     botLog("Find \"Recruit\" target")
-    val candidates = selectCandidates(game getCountries names, RecruitTravelToFlowchart)
+    val candidates = selectCandidates(game getCountries names, RecruitFlowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
@@ -371,7 +375,7 @@ object JihadistBot extends BotHelpers {
       SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority,
       OilExporterPriority)
     botLog("Find \"Travel To\" target")
-    val candidates = selectCandidates(game getCountries names, RecruitTravelToFlowchart)
+    val candidates = selectCandidates(game getCountries names, TravelToFlowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   
