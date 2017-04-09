@@ -865,6 +865,7 @@ object LabyrinthAwakening {
   )
   
   case class EventParameters(
+    awakeningExpansion: Boolean  = false,
     sequestrationTroops: Boolean = false  // true if 3 troops off map due to Sequestration event
   )
   
@@ -1444,7 +1445,8 @@ object LabyrinthAwakening {
       scenario.markersInPlay.sorted,
       PlotData(availablePlots = scenario.availablePlots.sorted),
       cardsRemoved = scenario.cardsRemoved,
-      offMapTroops = scenario.offMapTroops)
+      offMapTroops = scenario.offMapTroops,
+      eventParams = EventParameters(awakeningExpansion = scenario.expansion))
   }
   
   
@@ -2159,8 +2161,9 @@ object LabyrinthAwakening {
 
   // Return true if no caliphate exists and the the given country is a caliphate candidate.
   def canDeclareCaliphate(capital: String): Boolean  =
-    !game.caliphateDeclared && 
-    (game isMuslim capital) &&
+    game.eventParams.awakeningExpansion &&
+    !game.caliphateDeclared             && 
+    (game isMuslim capital)             &&
     (game getMuslim capital).caliphateCandidate
 
   def askDeclareCaliphate(capital: String): Boolean =

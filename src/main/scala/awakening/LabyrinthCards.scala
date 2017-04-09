@@ -122,7 +122,11 @@ object LabyrinthCards {
   
   def jayshAlMahdiCandidates: List[String] = countryNames(
     (game.muslims filter (m => m.isShiaMix && m.totalCells > 0 && m.totalTroops > 0)))
-
+    
+  def zarqawiCandidates: List[String] = {
+    val names = List(Iraq, Syria, Lebanon, Jordan)
+    countryNames(names map game.getMuslim filter (_.totalTroops > 0))
+  } 
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2276,14 +2280,64 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(109, "Tora Bora", Unassociated, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => game hasMuslim (m => m.inRegimeChange && m.totalCells > 1)
+      ,
+      (role: Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.inRegimeChange && m.totalCells > 1))
+        val (name, (actives, sleepers, sadr)) = if (role == game.humanRole) {
+          val name = askCountry("Select country: ", candidates)
+          (name, askCells(name, 2, sleeperFocus = role == US))
+        }
+        else if (role == US) {
+          val name = USBot.disruptPriority(candidates).get
+          (name, USBot.chooseCellsToRemove(name, 2))
+        }
+        else {
+          val name = shuffle(candidates).head
+          (name, JihadistBot.chooseCellsToRemove(name, 2))
+        }
+        
+        addEventTarget(name)
+        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+        rollPrestige()
+        if (role == game.humanRole)
+          log(s"You ($role) may draw a card")
+        else
+          log(s"Draw a card and place it on top of the $role Bot's hand")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(110, "Zarqawi", Unassociated, 2,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      // Can create Caliphate (onlyinIraq,Syria,Lebanon,orJordan)
-      (role: Role) => () // Remove is conditional
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => zarqawiCandidates.nonEmpty &&
+        ((role == US && game.prestige < 12) ||
+         (role == Jihadist && (game.cellsAvailable > 0 || (game.availablePlots contains Plot2))))
+      ,
+      (role: Role) => if (role == US) {
+        increasePrestige(3)
+      }
+      else { // Jihadist
+        // Can create Caliphate (onlyinIraq,Syria,Lebanon,orJordan)
+        val name = if (role == game.humanRole)
+          askCountry("Select country: ", zarqawiCandidates)
+        else if (game.availablePlots contains Plot2)
+          JihadistBot.plotPriority(zarqawiCandidates).get
+        else
+          JihadistBot.recruitTravelToPriority(zarqawiCandidates).get
+        
+        addEventTarget(name)
+        val num = 3 min game.cellsAvailable
+        addSleeperCellsToCountry(name, num)
+        if (num == 3 && canDeclareCaliphate(name) &&
+          ((role == game.humanRole && askDeclareCaliphate(name)) ||
+           (role == game.botRole   && JihadistBot.willDeclareCaliphate(name)))) {
+          declareCaliphate(name)
+        }
+        
+        if (game.availablePlots contains Plot2)
+          addAvailablePlotToCountry(name, Plot2)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(111, "Zawahiri", Unassociated, 2,
