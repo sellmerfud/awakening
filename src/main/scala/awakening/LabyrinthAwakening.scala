@@ -4787,7 +4787,6 @@ object LabyrinthAwakening {
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
     try {
-      
       gamesDir.mkpath()
       var configParams = loadParamsFile(UserParams())
       var cmdLineParams = parseCommandLine(args, UserParams())
@@ -4853,6 +4852,14 @@ object LabyrinthAwakening {
             log()
             scenario.additionalSetup()
             saveTurn()  // Save the initial game state as turn-0
+            
+            val usCards = USCardDraw(game.troopCommitment)
+            val jihadistCards = JihadistCardDraw(game.fundingLevel)
+            log()
+            log("Draw Cards")
+            log(separator())
+            log(s"$US player will draw $usCards cards")
+            log(s"Jihadist player will draw $jihadistCards cards")
             game = game.copy(turn = game.turn + 1)
             logStartOfTurn()
         }
