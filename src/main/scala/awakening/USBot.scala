@@ -790,7 +790,8 @@ object USBot extends BotHelpers {
   def deployFromTarget(names: List[String]): Option[String] = {
     botLog("Find \"Deploy From\" target")
     val track        = names find (_ == "track")
-    val countryNames = names filterNot (_ == "track")
+    // The bot will not deploy markers so get rid of any countries without troops cubes
+    val countryNames = names filterNot (_ == "track") filterNot (name => (game getCountry name).troops == 0)
     val target = selectCandidates(game getCountries countryNames, DeployFromFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
@@ -1154,7 +1155,7 @@ object USBot extends BotHelpers {
       case "track" => (false, 2)  // Always deploy exactly 2 troops from track
       case name    =>
         val withdraw = (game isMuslim name) && (game getMuslim name).inRegimeChange
-        (withdraw, (game getCountry name).maxDeployFrom(opsUsed))
+        (withdraw, (game getCountry name).maxDeployFrom)
     }
     if (withdraw) {
       log(s"$US performs a Withdraw operation")
@@ -1184,7 +1185,7 @@ object USBot extends BotHelpers {
     assert(maxOps >= 3, "regimeChangeOperation() called with less than 3 Ops available")
     val opsUsed = 3
     val target  = regimeChangeTarget(game.regimeChangeTargets).get
-    val source  = regimeChangeFromTarget(game.regimeChangeSources(3) filterNot (_ == target)).get
+    val source  = regimeChangeFromTarget(game.regimeChangeSources filterNot (_ == target)).get
     
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)

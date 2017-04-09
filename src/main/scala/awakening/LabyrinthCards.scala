@@ -753,7 +753,7 @@ object LabyrinthCards {
       (role: Role) => {
         addEventTarget(Iraq)
         addEventMarkersToCountry(Iraq, IraqiWMD)
-        val sources = game.regimeChangeSources(3) filterNot (_ == Iraq)
+        val sources = game.regimeChangeSources filterNot (_ == Iraq)
         if (sources.isEmpty) {
           log("You cannot perform a Regime Change in Iraq now, because")
           log("there are not 6 troops available for the operation")
@@ -764,7 +764,7 @@ object LabyrinthCards {
           log(separator())
           val source    = askCountry("Deploy troops from: ", sources)
           val maxTroops = if (source == "track") game.troopsAvailable
-                          else game.getCountry(source).maxDeployFrom(3)
+                          else game.getCountry(source).maxDeployFrom
           val numTroops = askInt("How many troops: ", 6, maxTroops)
           performRegimeChange(source, Iraq, numTroops)
         }
@@ -808,7 +808,7 @@ object LabyrinthCards {
       (role: Role) => {
         addEventTarget(Libya)
         addEventMarkersToCountry(Libya, LibyanWMD)
-        val sources = game.regimeChangeSources(3) filterNot (_ == Libya)
+        val sources = game.regimeChangeSources filterNot (_ == Libya)
         if (sources.isEmpty) {
           log("You cannot perform a Regime Change in Libya now, because")
           log("there are not 6 troops available for the operation")
@@ -819,7 +819,7 @@ object LabyrinthCards {
           log(separator())
           val source    = askCountry("Deploy troops from: ", sources)
           val maxTroops = if (source == "track") game.troopsAvailable
-                          else game.getCountry(source).maxDeployFrom(3)
+                          else game.getCountry(source).maxDeployFrom
           val numTroops = askInt("How many troops: ", 6, maxTroops)
           performRegimeChange(source, Libya, numTroops)
         }
@@ -1094,7 +1094,7 @@ object LabyrinthCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => (game getMuslim Iraq).totalTroops > 0
       ,
-      (role: Role) => addEventMarkersToCountry(Sadr)
+      (role: Role) => addEventMarkersToCountry(Iraq, Sadr)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(55, "Uyghur Jihad", Jihadist, 1,
@@ -1220,9 +1220,13 @@ object LabyrinthCards {
         
         addEventTarget(target)
         target match {
-          case Russia   => removeEventMarkersFromCountry(Russia, CTR)
-          case Caucasus => setCountryPosture(Caucasus, oppositePosture(game.usPosture))
-          case _        => shiftAlignmentRight(CentralAsia)
+          case Russia   => 
+            removeEventMarkersFromCountry(Russia, CTR)
+          case Caucasus => 
+            setCountryPosture(Caucasus, oppositePosture(game.usPosture))
+          case _        => 
+            testCountry(CentralAsia)
+            shiftAlignmentRight(CentralAsia)
         }
       }
     )),

@@ -661,12 +661,15 @@ object LabyrinthAwakening {
     def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
     def markerTroopsThatAffectPrestige: Int =
       troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
+    def markerTroopsThatCanDeploy: Int = 
+      troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.canDeploy) tm.num else 0) }
     def totalTroops = troops + markerTroops
     def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
+    def totalTroopsThatCanDeploy = troops + markerTroopsThatCanDeploy
   
     def canDeployTo(ops: Int): Boolean
-    def maxDeployFrom(ops: Int): Int
-    def canDeployFrom(ops: Int) = maxDeployFrom(ops) > 0
+    def maxDeployFrom: Int
+    def canDeployFrom(ops: Int) = maxDeployFrom > 0 
   
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
@@ -712,8 +715,8 @@ object LabyrinthAwakening {
   
     // Normally troops cannot deploy to a non-Muslim country.
     // The exception is the Abu Sayyaf event in the Philippines.
-    def canDeployTo(ops: Int)   = ops >= governance && name == Philippines && hasMarker(AbuSayyaf)
-    def maxDeployFrom(ops: Int) = troops
+    def canDeployTo(ops: Int) = ops >= governance && name == Philippines && hasMarker(AbuSayyaf)
+    def maxDeployFrom = totalTroopsThatCanDeploy
   }
 
   case class MuslimCountry(
@@ -788,12 +791,12 @@ object LabyrinthAwakening {
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
     def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
-    def maxDeployFrom(ops: Int) = if (inRegimeChange)
-      if (ops >= 3 && totalTroopsAndMilitia - totalCells > 5)
-        (totalTroopsAndMilitia - totalCells - 5) min troops
+    def maxDeployFrom = if (inRegimeChange)
+      if (totalTroopsAndMilitia - totalCells > 5)
+        (totalTroopsAndMilitia - totalCells - 5) min totalTroopsThatCanDeploy
       else 0
     else
-      troops
+      totalTroopsThatCanDeploy
     
     def jihadDRM = awakening - reaction
     def jihadOK = !isIslamistRule && totalCells > 0 && (name != Pakistan || !hasMarker(BenazirBhutto))
@@ -1130,8 +1133,8 @@ object LabyrinthAwakening {
       }
     }
     
-    def regimeChangeSources(ops: Int): List[String] = {
-      val ms = countryNames(countries filter (_.maxDeployFrom(ops) > 5))
+    def regimeChangeSources: List[String] = {
+      val ms = countryNames(countries filter (_.maxDeployFrom > 5))
       if (troopsAvailable > 5) "track" :: ms else ms
     } 
       
@@ -1143,7 +1146,7 @@ object LabyrinthAwakening {
       })
       
     def regimeChangePossible(ops: Int) = 
-      ops >= 3 && usPosture == Hard && regimeChangeSources(ops).nonEmpty && regimeChangeTargets.nonEmpty
+      ops >= 3 && usPosture == Hard && regimeChangeSources.nonEmpty && regimeChangeTargets.nonEmpty
   
     def withdrawFromTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
     
@@ -2295,19 +2298,21 @@ object LabyrinthAwakening {
       getTarget
     }
     
-    if (lapsingEventInPlay(ArabWinter))
-      log("No convergence peformed because \"Arab Winter\" is in effect")
-    else {
-      val target = randomConvergenceTarget.name
-      testCountry(target)
-      val m = game getMuslim target
-      if (awakening) {
-        game = game.updateCountry(m.copy(awakening = m.awakening + 1))
-        log(s"Convergence for ${forCountry}: Add 1 awakening marker to ${target}")
-      }
+    if (game.eventParams.awakeningExpansion) {
+      if (lapsingEventInPlay(ArabWinter))
+        log("No convergence peformed because \"Arab Winter\" is in effect")
       else {
-        game = game.updateCountry(m.copy(reaction = m.reaction + 1))
-        log(s"Convergence for ${forCountry}: Add 1 reaction marker to ${target}")
+        val target = randomConvergenceTarget.name
+        testCountry(target)
+        val m = game getMuslim target
+        if (awakening) {
+          game = game.updateCountry(m.copy(awakening = m.awakening + 1))
+          log(s"Convergence for ${forCountry}: Add 1 awakening marker to ${target}")
+        }
+        else {
+          game = game.updateCountry(m.copy(reaction = m.reaction + 1))
+          log(s"Convergence for ${forCountry}: Add 1 reaction marker to ${target}")
+        }
       }
     }
   }
@@ -2959,7 +2964,7 @@ object LabyrinthAwakening {
             log(s"Add a reaction marker to ${name}")
           case x if x > 2 =>
             if (m.isAlly) {
-              improveGovernance(name, 1, canShiftToGood = true)
+              improveGovernance(name, 1, canShiftToGood = true, endOfTurn = true)
               if (game.getMuslim(name).isGood)
                 convergers = Converger(name, awakening = true) :: convergers
             }
@@ -2967,7 +2972,7 @@ object LabyrinthAwakening {
               shiftAlignmentLeft(m.name)
           case _ => // x < -2
             if (m.isAdversary) {
-              degradeGovernance(name, levels = 1, canShiftToIR = true)
+              degradeGovernance(name, levels = 1, canShiftToIR = true, endOfTurn = true)
               if (game.getMuslim(name).isIslamistRule)
                 convergers = Converger(name, awakening = false) :: convergers
             }
@@ -3144,7 +3149,7 @@ object LabyrinthAwakening {
                 setAlignment(m.name, newAlign)
               val steps = delta - shifts
               if (steps > 0) {
-                degradeGovernance(m.name, levels = steps, canShiftToIR = true)
+                degradeGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = true)
                 if (game.getMuslim(m.name).isIslamistRule)
                   performConvergence(forCountry = m.name, awakening = false)
               }
@@ -3161,7 +3166,7 @@ object LabyrinthAwakening {
                 setAlignment(m.name, newAlign)
               val steps = -delta - shifts
               if (steps > 0) {
-                improveGovernance(m.name, steps, canShiftToGood = true)
+                improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = true)
                 if (game.getMuslim(m.name).isGood)
                   performConvergence(forCountry = m.name, awakening = true)
               }
@@ -3599,7 +3604,7 @@ object LabyrinthAwakening {
 
   // Note: The caller is responsible for handling convergence and the possible
   //       displacement of the caliphate captial.
-  def improveGovernance(name: String, levels: Int, canShiftToGood: Boolean): Unit = {
+  def improveGovernance(name: String, levels: Int, canShiftToGood: Boolean, endOfTurn: Boolean = false): Unit = {
     if (levels > 0) {
       val m = game.getMuslim(name)
       assert(!m.isGood, s"improveGovernance() called on Good country - $name")
@@ -3622,8 +3627,10 @@ object LabyrinthAwakening {
                  militia = 0, besiegedRegime = false)
           game = game.updateCountry(improved)
           removeTrainingCamp_?(name)
-          endRegimeChange(name)
-          endCivilWar(name)
+          endRegimeChange(name, endOfTurn)
+          endCivilWar(name, endOfTurn)
+          if (!endOfTurn)
+            performConvergence(forCountry = name, awakening = true)
         }
         else {
           log(s"Improve the governance of $name to ${govToString(newGov)}")
@@ -3641,7 +3648,7 @@ object LabyrinthAwakening {
 
   // Degrade the governance of the given country and log the results.
   // Note: The caller is responsible for handling convergence!
-  def degradeGovernance(name: String, levels: Int, canShiftToIR: Boolean): Unit = {
+  def degradeGovernance(name: String, levels: Int, canShiftToIR: Boolean, endOfTurn: Boolean = false): Unit = {
     if (levels > 0) {
       val m = game.getMuslim(name)
       assert(!m.isIslamistRule, s"degradeGovernance() called on Islamist Rule country - $name")
@@ -3670,9 +3677,11 @@ object LabyrinthAwakening {
           game = game.updateCountry(degraded)
           moveWMDCacheToAvailable(name)
           removeEventMarkersFromCountry(name, "Advisors")
-          endRegimeChange(name)
-          endCivilWar(name)
+          endRegimeChange(name, endOfTurn)
+          endCivilWar(name, endOfTurn)
           flipCaliphateSleepers()
+          if (!endOfTurn) 
+            performConvergence(forCountry = name, awakening = false)
         }
         else {
           log(s"Degrade the governance of $name to ${govToString(newGov)}")
@@ -3910,7 +3919,7 @@ object LabyrinthAwakening {
     }
   }
     
-  def endCivilWar(name: String): Unit = {
+  def endCivilWar(name: String, endOfTurn: Boolean = false): Unit = {
     val markersRemovedWhenCivilWarEnds = List("Advisors", "UNSCR 1973")
     val m = game.getMuslim(name)
     val priorCampCapacity = game.trainingCampCapacity
@@ -3922,13 +3931,16 @@ object LabyrinthAwakening {
       if (m.caliphateCapital && !m.isIslamistRule && !m.inRegimeChange) {
         game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
         log(s"Remove the Caliphate Capital marker from $name")
-        displaceCaliphateCapital(m.name)
-        updateTrainingCampCapacity(priorCampCapacity)
+        if (!endOfTurn) {
+          // During end of turn we defer this until all countries have been adjusted
+          displaceCaliphateCapital(m.name)
+          updateTrainingCampCapacity(priorCampCapacity)
+        }
       }
     }
   }
   
-  def endRegimeChange(name: String): Unit = {
+  def endRegimeChange(name: String, endOfTurn: Boolean = false): Unit = {
     val m = game.getMuslim(name)
     val priorCampCapacity = game.trainingCampCapacity
     if (m.inRegimeChange) {
@@ -3937,8 +3949,11 @@ object LabyrinthAwakening {
       if (m.caliphateCapital && !m.isIslamistRule && !m.civilWar) {
         game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
         log(s"Remove the Caliphate Capital marker from $name")
-        displaceCaliphateCapital(m.name)
-        updateTrainingCampCapacity(priorCampCapacity)
+        if (!endOfTurn) {
+          // During end of turn we defer this until all countries have been adjusted
+          displaceCaliphateCapital(m.name)
+          updateTrainingCampCapacity(priorCampCapacity)
+        }
       }
     }
   }
@@ -4601,22 +4616,34 @@ object LabyrinthAwakening {
         println("Remove resovled WMD plots from the game")
       
       if (game.countries exists (c => c.plots exists (_.plot != PlotWMD)))
-        println("Put the resolved plots in the resolved plots box")
+        if (game.eventParams.awakeningExpansion)
+          println("Put the resolved plots in the resolved plots box")
+        else
+          println("Put the resolved plots in the available plots box")
       
       (game.countries filter (_.hasPlots)) foreach {
         case m: MuslimCountry =>
           val (removed, resolved) = m.plots map (_.plot) partition (_ == PlotWMD)
-          val updatedPlots = game.plotData.copy(
-            resolvedPlots = resolved ::: game.resolvedPlots,
-            removedPlots  = removed  ::: game.removedPlots
-          )
+          val updatedPlots = if (game.eventParams.awakeningExpansion)
+            game.plotData.copy(
+              resolvedPlots = resolved ::: game.resolvedPlots,
+              removedPlots  = removed  ::: game.removedPlots)
+          else
+            game.plotData.copy(
+              availablePlots = resolved ::: game.availablePlots,
+              removedPlots  = removed   ::: game.removedPlots)
+
           game = game.updateCountry(m.copy(plots = Nil)).copy(plotData = updatedPlots)
         case n: NonMuslimCountry => 
           val (removed, resolved) = n.plots map (_.plot) partition (_ == PlotWMD)
-          val updatedPlots = game.plotData.copy(
-            resolvedPlots = resolved ::: game.resolvedPlots,
-            removedPlots  = removed  ::: game.removedPlots
-          )
+          val updatedPlots = if (game.eventParams.awakeningExpansion)
+            game.plotData.copy(
+              resolvedPlots = resolved ::: game.resolvedPlots,
+              removedPlots  = removed  ::: game.removedPlots)
+          else
+            game.plotData.copy(
+              availablePlots = resolved ::: game.availablePlots,
+              removedPlots  = removed   ::: game.removedPlots)
           game = game.updateCountry(n.copy(plots = Nil)).copy(plotData = updatedPlots)
       }
     }
@@ -4719,8 +4746,10 @@ object LabyrinthAwakening {
         log("Return all resolved plots to the available plots box")
       }
     
-      polarization()
-      civilWarAttrition()
+      if (game.eventParams.awakeningExpansion) {
+        polarization()
+        civilWarAttrition()
+      }
     
       // Calculate number of cards drawn
       val usCards = USCardDraw(game.troopCommitment)
@@ -5575,14 +5604,18 @@ object LabyrinthAwakening {
     // If the only 
     val (from, to) = game.deployTargets(ops).get
     val source     = askCountry("Deploy troops from: ", from)
+    val src = game getCountry source
+    val maxDeploy = src.maxDeployFrom
     // Some troops markers can be deployed out of a country.
-    val troopsMarkers: List[String] = if (source == "track")
+    val markerNames: List[String] = if (source == "track")
       Nil 
     else {
-      val candidates = game.getCountry(source).troopsMarkers filter (_.canDeploy) map (_.name)
-      if (candidates.isEmpty)
+      val markers = src.troopsMarkers filter (m => m.canDeploy && m.num <= maxDeploy)
+      if (markers.isEmpty)
         Nil
       else {
+        val candidates = markers map (_.name)
+        // TODO: Remove combos that exceed maxDeploy
         val combos = for (i <- 1 to candidates.size; combo <- candidates.combinations(i).toList)
           yield (combo.mkString(",") -> andList(combo))
         val choices = ("none" -> "none") :: combos.toList
@@ -5593,13 +5626,19 @@ object LabyrinthAwakening {
         }
       }
     }
-    val dest       = askCountry("Deploy troops to: ", to filterNot (_ == source))
+    val markerNum = (markerNames flatMap (name => src.troopsMarkers.find(_.name == name)) map (_.num)).sum
     val maxTroops  = if (source == "track") game.troopsAvailable 
-                     else game.getCountry(source).maxDeployFrom(ops)
-    val numTroops  = askInt("Deploy how many troops: ", 0, maxTroops)
-    log()
-    removeEventMarkersFromCountry(source, troopsMarkers:_*)
-    moveTroops(source, dest, numTroops)
+                     else src.maxDeployFrom - markerNum
+    val numTroops  = if (maxTroops > 0)  // Could be zero if only markers could deploy out
+      askInt("Deploy how many troops: ", 0, maxTroops)
+    else
+      0
+    if (numTroops > 0) {
+      val dest = askCountry("Deploy troops to: ", to filterNot (_ == source))
+      moveTroops(source, dest, numTroops)
+    }
+    // Troops markers that deploy are simply removed
+    removeEventMarkersFromCountry(source, markerNames:_*)
   }
   
   def humanRegimeChange(): Unit = {
@@ -5607,10 +5646,10 @@ object LabyrinthAwakening {
     log(s"$US performs a Regime Change operation")
     log(separator())
     val dest      = askCountry("Regime change in which country: ", game.regimeChangeTargets)
-    val sources   = game.regimeChangeSources(3) filterNot (_ == dest)
+    val sources   = game.regimeChangeSources filterNot (_ == dest)
     val source    = askCountry("Deploy troops from: ", sources)
     val maxTroops = if (source == "track") game.troopsAvailable
-                    else game.getCountry(source).maxDeployFrom(3)
+                    else game.getCountry(source).maxDeployFrom
     val numTroops = askInt("How many troops: ", 6, maxTroops)
     performRegimeChange(source, dest, numTroops)
   }
