@@ -1214,7 +1214,9 @@ object LabyrinthAwakening {
     def recruitTargets(madrassas: Boolean): List[String] =
       countryNames(countries filter (_.recruitOK(madrassas)))
     
-    def recruitPossible = cellsToRecruit > 0 && recruitTargets(madrassas = false).nonEmpty
+    def recruitPossible = lapsingEventNotInPlay(GTMO) && 
+                          cellsToRecruit > 0 &&
+                          recruitTargets(madrassas = false).nonEmpty
     
     def jihadTargets: List[String] = countryNames(muslims filter (_.jihadOK))
     def jihadPossible = jihadTargets.nonEmpty

@@ -127,6 +127,39 @@ object LabyrinthCards {
     val names = List(Iraq, Syria, Lebanon, Jordan)
     countryNames(names map game.getMuslim filter (_.totalTroops > 0))
   } 
+  
+  def hambaliCandidates: List[String] = {
+    val possibles = IndonesiaMalaysia :: getAdjacent(IndonesiaMalaysia)
+    countryNames(possibles map game.getCountry filter {
+      case m: MuslimCountry    => m.totalCells > 0 && m.isAlly
+      case n: NonMuslimCountry => n.totalCells > 0 && n.isHard
+    })
+  }
+  
+  def ksmUSCandidates: List[String] = {
+    val possibles = game.nonMuslims ::: (game.muslims filter (_.isAlly))
+    countryNames(possibles filter (_.plots.nonEmpty))
+  }
+  def ksmJihadistCandidates: List[String] = {
+    val possibles = game.nonMuslims ::: (game.muslims filter (!_.isIslamistRule))
+    countryNames(possibles filter (_.totalCells > 0))
+  }
+  
+  def oilPriceSpikePlayable(role: Role): Boolean = {
+    if (role == game.humanRole)
+      true
+    else if (role == Jihadist) {
+      // Unplayable if it would cause Jihadist instant victory
+      val usOilExporters = game.muslims count (m => m.isGood && m.oilExporter)
+      game.goodResources + usOilExporters < 12
+    }
+    else {
+      // Unplayable if it would cause US instant victory
+      val jihadOilExporters = game.muslims count (m => m.isIslamistRule && m.oilExporter)
+      game.islamistResources + jihadOilExporters < 6 || !game.islamistAdjacency
+    }
+  }
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2341,40 +2374,149 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(111, "Zawahiri", Unassociated, 2,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      // US play blocked by AlAnbar
-      (role: Role) => () // Remove is conditional
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == Jihadist && game.prestige > 1) ||
+          (role == US &&
+           game.funding > 1 &&
+           game.numIslamistRule == 0 &&
+           globalEventNotInPlay(AlAnbar) &&
+           countryEventNotInPlay(Pakistan, FATA))
+      ,
+      (role: Role) => if (role == US)
+        decreaseFunding(2)
+      else   // Jihadist
+        decreasePrestige(if (game.numIslamistRule > 0) 3 else 1)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(112, "Bin Ladin", Unassociated, 3,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      // Us play blocked by AlAnbar
-      (role: Role) => () // Remove is conditional
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == Jihadist && game.prestige > 1) ||
+          (role == US &&
+           (game.funding > 1 || game.prestige < 12) &&
+           game.numIslamistRule == 0 &&
+           globalEventNotInPlay(AlAnbar) &&
+           countryEventNotInPlay(Pakistan, FATA))
+      ,
+      (role: Role) => if (role == US) {
+        decreaseFunding(4)
+        increasePrestige(1)
+      }
+      else   // Jihadist
+        decreasePrestige(if (game.numIslamistRule > 0) 4 else 2)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(113, "Darfur", Unassociated, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => if (role == game.humanRole )
+        true
+      else if (role == US)
+        (game.prestigeLevel == High || game.prestigeLevel == VeryHigh)
+      else {
+        val sudan = game getMuslim Sudan
+        (game.prestigeLevel == Low || game.prestigeLevel == Medium) &&
+        !(sudan.isAdversary && sudan.besiegedRegime)
+      }
+      ,
+      (role: Role) => {
+        addEventTarget(Sudan)
+        testCountry(Sudan)
+        if (game.prestigeLevel == High || game.prestigeLevel == VeryHigh) {
+          addAidMarker(Sudan)
+          shiftAlignmentLeft(Sudan)
+        }
+        else {
+          addBesiegedRegimeMarker(Sudan)
+          shiftAlignmentRight(Sudan)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(114, "GTMO", Unassociated, 3,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => role == game.humanRole ||
+        (role == US && game.prestigeLevel != High && game.prestigeLevel != VeryHigh) ||
+        (role == Jihadist && game.prestigeLevel != Low)
+      ,
+      (role: Role) => {
+        rollPrestige()
+        log("No recruit operations or Detainee Release for the rest of this turn")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(115, "Hambali", Unassociated, 3,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => () // Remove is conditional
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => hambaliCandidates.nonEmpty && (role == US || game.availablePlots.nonEmpty)
+      ,
+      (role: Role) => if (role == US) {
+        val (name, (active, sleeper, sadr)) = if (role == game.humanRole) {
+          val name = askCountry("Select country: ", hambaliCandidates)
+          (name, askCells(name, 1, sleeperFocus = true))
+        }
+        else {
+          val name = USBot.disruptPriority(hambaliCandidates).get
+          (name, USBot.chooseCellsToRemove(name, 1))
+        }
+        addEventTarget(name)
+        removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+        log("$US player draw 2 cards")
+      }
+      else {  // Jihadist
+        val (name, plot) = if (role == game.humanRole) {
+          val name = askCountry("Select country: ", hambaliCandidates)
+          (name, askAvailablePlots(1, ops = 3).head)
+        }
+        else {
+          val name = JihadistBot.plotPriority(hambaliCandidates).get
+          (name, shuffle(game.availablePlots).head)
+        }
+        
+        addEventTarget(name)
+        addAvailablePlotToCountry(name, plot)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(116, "KSM", Unassociated, 3,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => () // Remove is conditional
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => (role == US && ksmUSCandidates.nonEmpty) ||
+                      (role == Jihadist && ksmJihadistCandidates.nonEmpty && game.availablePlots.nonEmpty)
+      ,
+      (role: Role) => if (role == US) {
+        for (name <- ksmUSCandidates; c = game getCountry name) {
+          addEventTarget(name)
+          for (plot <- c.plots)
+            removePlotFromCountry(name, plot)
+        }
+        log("The US player draws 2 cards")
+      }
+      else {  // Jihadist
+        val (name, plot) = if (role == game.humanRole) {
+          val name = askCountry("Select country: ", ksmJihadistCandidates)
+          (name, askAvailablePlots(1, ops = 3).head)
+        }
+        else if (ksmJihadistCandidates contains UnitedStates)
+          (UnitedStates, shuffle(game.availablePlots).head)
+        else {
+          val name = JihadistBot.plotPriority(ksmJihadistCandidates).get
+          (name, shuffle(game.availablePlots).head)
+        }
+          
+        addEventTarget(name)
+        addAvailablePlotToCountry(name, plot)
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(117, "Oil Price Spike", Unassociated, 3,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => oilPriceSpikePlayable(role)
+      ,
+      (role: Role) => {
+        if (role == game.humanRole)
+          log(s"$role player draws a card other than Oil Price Spike from the discad pile")
+        else if (role == US)
+          log(s"$US Bot draws highest Ops US associated card (at random) from the discard pile ")
+        else
+          log(s"$Jihadist Bot draws highest Ops Jihadist associated card (at random) from the discard pile ")
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(118, "Oil Price Spike", Unassociated, 3,
@@ -2384,8 +2526,27 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(119, "Saleh", Unassociated, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
-      (role: Role) => ()
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role) => {
+        val yemen = game getMuslim Yemen
+        yemen.isUntested || role == Jihadist || (role == US && !yemen.isIslamistRule)
+      }
+      ,
+      (role: Role) => {
+        addEventTarget(Yemen)
+        testCountry(Yemen)
+        if (role == US) {
+          if (!(game getMuslim Yemen).isIslamistRule) {
+            setAlignment(Yemen, Ally)
+            addAidMarker(Yemen)
+          }
+        }
+        else {
+          shiftAlignmentRight(Yemen)
+          if (!(game getMuslim Yemen).isIslamistRule)
+            addBesiegedRegimeMarker(Yemen)
+        }
+      }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(120, "US Election", Unassociated, 3,

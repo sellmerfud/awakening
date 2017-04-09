@@ -441,14 +441,14 @@ object JihadistBot extends BotHelpers {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = PlotOp
-    def condition(ops: Int) = game.cellsToRecruit > 0
+    def condition(ops: Int) = game.recruitPossible
   }
   
   object CellAvailableOrTravelDecision extends OperationDecision {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = TravelOp
-    def condition(ops: Int) = game.cellsToRecruit > 0
+    def condition(ops: Int) = game.recruitPossible
   }
   
   object CellInGoodFairWhereJSP extends OperationDecision {
@@ -502,7 +502,7 @@ object JihadistBot extends BotHelpers {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = CellInNonMuslim
-    def condition(ops: Int) = game.cellsToRecruit > 0
+    def condition(ops: Int) = game.recruitPossible
   }
   
   object CellInNonMuslim extends OperationDecision {
@@ -1003,11 +1003,9 @@ object JihadistBot extends BotHelpers {
                               game.availablePlots.nonEmpty &&
                               (game hasNonMuslim (n => n.isSoft && totalUnused(n) > 0))
     // I'm allowing recruit in IR countries, not sure if that is the intent?
-    val canRecruitAtMuslimCadre = (game hasMuslim (_.hasCadre)) && game.cellsToRecruit > 0
+    val canRecruitAtMuslimCadre = game.recruitPossible && (game hasMuslim (_.hasCadre))
     val canAddToReserves = !requiresReserves && game.reserves.jihadist < 2
-    val canRecruit = !requiresReserves && 
-                     game.cellsToRecruit > 0 &&
-                     (game hasCountry (c => c.totalCells > 0 || c.hasCadre))
+    val canRecruit = game.recruitPossible && !requiresReserves
     val canTravelToUS = !requiresReserves && unusedCellsOnMapForTravel > 0
     
     if      (canPlotWMDInUs)               Some(PlotWMDInUS)
