@@ -467,7 +467,9 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(21, "Let’s Roll!", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger,
+      (name: String, _: Plot)  => letsRollCandidates contains name
+      ,
       (role: Role) => letsRollCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -477,7 +479,7 @@ object LabyrinthCards {
           val name = askCountry("Select country with plots: ", plotCandidates)
           val plot = humanPickPlotToAlert(name)
           addEventTarget(name)
-          removePlotFromCountry(name, plot)
+          performAlert(name, plot)
           log(s"$US draws one card and adds it to their hand")
           val postureName = askCountry("Select posture of which country: ", postureCandidates)
           val newPosture = askOneOf(s"New posture for $postureName (Soft or Hard): ", Seq(Soft, Hard)).get
@@ -487,7 +489,7 @@ object LabyrinthCards {
         else {
           val PlotInCountry(plot, c) = USBot.selectPriorityPlot(plotCandidates)
           addEventTarget(c.name)
-          removePlotFromCountry(c.name, plot)
+          performAlert(c.name, plot)
           log(s"Add one card to the top of the $US Bot hand")
           val postureName = USBot.posturePriority(postureCandidates).get
           addEventTarget(postureName)
@@ -618,7 +620,9 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(31, "Wiretapping", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger,
+      (name: String, _: Plot) => List(UnitedStates, UnitedKingdom, Canada) contains name
+      ,
       (role: Role) => globalEventNotInPlay(LeakWiretapping) && (
         List(UnitedStates, UnitedKingdom, Canada) map game.getCountry
           exists (c => c.hasCadre || c.totalCells > 0 || c.plots.nonEmpty)
@@ -631,7 +635,7 @@ object LabyrinthCards {
           removeCadreFromCountry(name)
           removeCellsFromCountry(name, c.activeCells, c.sleeperCells, c.hasSadr, addCadre = false)
           for (plot <- c.plots)
-            removePlotFromCountry(name, plot)
+            performAlert(name, plot)
         }
         
         if (role == game.humanRole)
@@ -2480,7 +2484,9 @@ object LabyrinthCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(116, "KSM", Unassociated, 3,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      USRemove, NoLapsing, NoAutoTrigger,
+      (name: String, _: Plot) => ksmUSCandidates contains name
+      ,
       (role: Role) => (role == US && ksmUSCandidates.nonEmpty) ||
                       (role == Jihadist && ksmJihadistCandidates.nonEmpty && game.availablePlots.nonEmpty)
       ,
@@ -2488,7 +2494,7 @@ object LabyrinthCards {
         for (name <- ksmUSCandidates; c = game getCountry name) {
           addEventTarget(name)
           for (plot <- c.plots)
-            removePlotFromCountry(name, plot)
+            performAlert(name, plot)
         }
         log("The US player draws 2 cards")
       }

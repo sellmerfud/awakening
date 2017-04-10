@@ -542,7 +542,7 @@ object LabyrinthAwakening {
   
   type CardEvent       = Role => Unit
   type EventConditions = Role => Boolean
-  type EventAlertsPlot = (String, Plot) => Boolean
+  type EventAlertsPlot = (String, Plot) => Boolean   // Country Name, Plot
   val AlwaysPlayable: EventConditions =  _ => true
   val DoesNotAlertPlot: EventAlertsPlot = (_, _) => false
     
@@ -4436,7 +4436,7 @@ object LabyrinthAwakening {
       if (m.reaction > 0)
         removeReactionMarker(Nigeria, m.reaction)
       for (plotOnMap <- m.plots)
-        removePlotFromCountry(Nigeria, plotOnMap)
+        removePlotFromCountry(Nigeria, plotOnMap, toAvailable = true)
       for (marker <- m.markers)
         removeEventMarkersFromCountry(Nigeria, m.markers: _*)
       log("Flip Nigeria over to its non-Muslim side")
