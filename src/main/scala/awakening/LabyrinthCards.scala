@@ -650,7 +650,7 @@ object LabyrinthCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => role == game.humanRole && {  // Unplayable by the Bot
         val neededOps = (game.muslims filter (_.isAdversary) map (_.resources)).distinct.sorted
-        askYorN(s"Do you have a card in hand with and Ops value of ${orList(neededOps)}? ")
+        cacheQuestion(askYorN(s"Do you have a card in hand with and Ops value of ${orList(neededOps)}? "))
       }
       ,
       (role: Role) => {
@@ -950,7 +950,7 @@ object LabyrinthCards {
     entry(new Card(47, "The door of Itjihad was closed", US, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => if (role == game.humanRole)
-        log(s"During $Jihadist Bot's action phases, US events will not trigger")
+        log(s"During US action phases, events on $Jihadist associated cards will not trigger")
       else {
         log(s"You ($Jihadist) must select cards to play randomly from your hand")
       }
@@ -960,7 +960,7 @@ object LabyrinthCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => firstCardOfPhase(Jihadist) &&
                       game.cellsToRecruit > 0    &&
-                      askYorN(s"Does the $Jihadist player have another card in hand? (y/n) ")
+                      cacheQuestion(askYorN(s"Does the $Jihadist player have another card in hand? (y/n) "))
       ,
       (role: Role) => {
         val  prompt = if (role == game.humanRole)
@@ -971,7 +971,7 @@ object LabyrinthCards {
         val card = deck(askCardNumber(prompt, allowNone = false).get)
         // Add the card to the list of plays for the turn.
         game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
-        logCardPlay(Jihadist, card, playable = false, triggered = false)
+        logCardPlay(Jihadist, card, playable = false)
         log()
         log(s"$Jihadist performs a Recruit operation in the US with ${opsString(card.ops)}")
         log(separator())
@@ -1069,7 +1069,7 @@ object LabyrinthCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => firstCardOfPhase(Jihadist) &&
                       game.cellsAvailable > 0    && // Ignore funding
-                      askYorN(s"Does the $Jihadist player have another card in hand? (y/n) ")
+                      cacheQuestion(askYorN(s"Does the $Jihadist player have another card in hand? (y/n) "))
       ,
       (role: Role) => {
         val  prompt = if (role == game.humanRole)
@@ -1080,7 +1080,7 @@ object LabyrinthCards {
         val card = deck(askCardNumber(prompt, allowNone = false).get)
         // Add the card to the list of plays for the turn.
         game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
-        logCardPlay(Jihadist, card, playable = false, triggered = false)
+        logCardPlay(Jihadist, card, playable = false)
         val totalOps = card.ops + 1 // Add 1 for the Ops on the Madrassas card.
         
         if (role == game.humanRole)
@@ -2069,7 +2069,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(97, "Fatwa", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => askYorN("Do both players have at least one card in hand? (y/n) ")
+      (role: Role) => cacheQuestion(askYorN("Do both players have at least one card in hand? (y/n) "))
       ,
       (role: Role) => {
         log(s"Take the top card of the ${game.botRole} Bot's hand and put a random card")
@@ -2080,9 +2080,9 @@ object LabyrinthCards {
                NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, 
                (_: Role) => false, (_: Role) =>())
         (role, game.humanRole) match {
-          case (US, US)             => humanUsCardPlay(card, false, false)
+          case (US, US)             => humanUsCardPlay(card, false)
           case (US, _)              => USBot.cardPlay(card, false)
-          case (Jihadist, Jihadist) => humanJihadistCardPlay(card, false, false)
+          case (Jihadist, Jihadist) => humanJihadistCardPlay(card, false)
           case (Jihadist, _)        => JihadistBot.cardPlay(card, false)
         }
       }
@@ -2104,7 +2104,7 @@ object LabyrinthCards {
     entry(new Card(99, "HAMAS Elected", Unassociated, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => role == game.humanRole ||
-        (role != US && (game.prestige > 1 || askYorN(s"Do you ($US) have a card in hand? (y/n) ")))
+        (role != US && (game.prestige > 1 || cacheQuestion(askYorN(s"Do you ($US) have a card in hand? (y/n) "))))
       ,      
       (role: Role) => {
         if (game.humanRole == US)

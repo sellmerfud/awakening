@@ -495,7 +495,7 @@ object AwakeningCards {
     entry(new Card(135, "Delta / SEALS", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => (role == game.humanRole || (game.availablePlots contains PlotWMD) ||
-                         askYorN(s"Do you ($Jihadist) have any cards in hand (y/n)? "))
+                         cacheQuestion(askYorN(s"Do you ($Jihadist) have any cards in hand (y/n)? ")))
       ,
       (role: Role) => {
         if (role == game.humanRole) {
@@ -1188,7 +1188,7 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(160, "Operation Neptune Spear", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => role == game.humanRole || askYorN("Is one of the indicated cards in the discard pile (y/n)? ")
+      (role: Role) => role == game.humanRole || cacheQuestion(askYorN("Is one of the indicated cards in the discard pile (y/n)? "))
       ,
       (role: Role) => {
         val cards = List("Ayman al-Zawahiri", "Abu Bakr al-Baghdadi", "Abu Sayyaf (ISIL)",
@@ -2579,7 +2579,7 @@ object AwakeningCards {
       Remove, USLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => role == game.humanRole ||
                       role == US ||
-                      askYorN(s"Does the $US player have any cards in hand (y/n) ?")
+                      cacheQuestion(askYorN(s"Does the $US player have any cards in hand (y/n) ?"))
       ,  
       (role: Role) => {
         // See Event Instructions table
@@ -3065,7 +3065,7 @@ object AwakeningCards {
                      "Revolution", "Houthi Rebels", "Congress Acts")
         println("The following cards cause Civil War or Regime Change")
         cards foreach println
-        askYorN("Is at least one of these cards in the discard pile (y/n)? ")
+        cacheQuestion(askYorN("Is at least one of these cards in the discard pile (y/n)? "))
       }
       ,
       (role: Role) => {

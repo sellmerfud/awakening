@@ -1081,7 +1081,7 @@ object USBot extends BotHelpers {
         val card2 = deck(cardNum)
         if (card2.ops >= opsNeeded) {
           game = game.copy(plays = PlayedCard(US, card2.number) :: game.plays)
-          logCardPlay(US, card2, false, false)
+          logCardPlay(US, card2, false)
           // Check to see if either of the cards played has the autoTrigger
           // US Elections event.  If so the event happens first.
           // Calculate the new Posture before any change caused by the Elections.

@@ -664,7 +664,7 @@ object JihadistBot extends BotHelpers {
   def cardPlay(card: Card, playable: Boolean): Unit = {
     usedCells.clear
     
-    // If the event is playable then the event is alwasy executed
+    // If the event is playable then the event is always executed
     if (playable) {
       performCardEvent(card, Jihadist)
       // If the card event is Unassociated add ops to the Bot's reserves.
