@@ -5614,23 +5614,30 @@ object LabyrinthAwakening {
       if (markers.isEmpty)
         Nil
       else {
-        val candidates = markers map (_.name)
-        // TODO: Remove combos that exceed maxDeploy
-        val combos = for (i <- 1 to candidates.size; combo <- candidates.combinations(i).toList)
-          yield (combo.mkString(",") -> andList(combo))
-        val choices = ("none" -> "none") :: combos.toList
-        println(s"Which troops markers will deploy out of $source")
-        askMenu(choices).head match {
-          case "none" => Nil
-          case str    => str.split(",").toList
+        val combos = for {
+          i <- 1 to markers.size
+          combo <- markers.combinations(i).toList
+          if (combo map (_.num)).sum <= maxDeploy
+          names = combo map (_.name)
+        } yield (names.mkString(",") -> andList(names))
+        if (combos.isEmpty)
+          Nil
+        else {
+          val choices = ("none" -> "Do not deploy any markers") :: combos.toList
+          println(s"Which troops markers will deploy out of $source")
+          askMenu(choices).head match {
+            case "none" => Nil
+            case str    => str.split(",").toList
+          }
         }
       }
     }
     val markerNum = (markerNames flatMap (name => src.troopsMarkers.find(_.name == name)) map (_.num)).sum
     val maxTroops  = if (source == "track") game.troopsAvailable 
                      else src.maxDeployFrom - markerNum
+    val minTroops  = if (markerNames.isEmpty) 1 else 0
     val numTroops  = if (maxTroops > 0)  // Could be zero if only markers could deploy out
-      askInt("Deploy how many troops: ", 0, maxTroops)
+      askInt("Deploy how many troops: ", minTroops, maxTroops)
     else
       0
     if (numTroops > 0) {
