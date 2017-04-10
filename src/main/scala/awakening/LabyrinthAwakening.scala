@@ -2401,20 +2401,15 @@ object LabyrinthAwakening {
     logAdjustment(s"$countryName: $attributeName", oldValue, newValue)
   
   def logCardPlay(player: Role, card: Card, playable: Boolean): Unit = {
-    val opponent = if (player == US) Jihadist else US
-    val triggered = card.eventWillTrigger(opponent)
-    val eventMsg = if (card.autoTrigger)
-      s"  (The ${card.association} event will automatically trigger)"
-    else if (playable)
-      s"  (The ${card.association} event is playable)"
-    else if (card.association == opponent)
-      s"  (The ${card.association} event will ${if (triggered) "" else "not "}be triggered)"
-    else 
-      s"  (The ${card.association} event is not playable)"
     log()
     log(separator(char = '='), echo = false)
     log(s"$player plays $card")
-    log(eventMsg)
+    if (card.autoTrigger)
+      log(s"  (The ${card.association} event will automatically trigger)")
+    else if (card.association == player || card.association == Unassociated && playable)
+      log(s"  (The ${card.association} event is playable)")
+    else if (card.association == player || card.association == Unassociated && !playable)
+      log(s"  (The ${card.association} event is not playable)")
   }
 
   def separator(length: Int = 52, char: Char = '-'): String = char.toString * length
@@ -4742,7 +4737,7 @@ object LabyrinthAwakening {
         if (remove.nonEmpty)
           log(s"Remove the following lapsing cards from the game: ${cardNumsAndNames(remove)}")
         if (discard.nonEmpty)
-          log(s"Discard the lapsing cards: ${cardNumsAndNames(discard)}")
+          wrap("Discard lapsing cards: ", discard.sorted map cardNumAndName) foreach (log(_))
         
         game = game.copy(
           cardsLapsing = Nil,
@@ -5417,7 +5412,7 @@ object LabyrinthAwakening {
           case US       => USBot.performTriggeredEvent(card)
         }
       else
-        log("%s event \"%s\" does not trigger".format(card.association, card.name))
+        log("\n%s event \"%s\" does not trigger".format(card.association, card.name))
     }
   }
   
@@ -5897,7 +5892,7 @@ object LabyrinthAwakening {
         log(s"Place the $card card in the first plot box")
         game = game.copy(firstPlotCard = Some(card.number))
         if (game.usResolve(Ruthless)) {
-          log(s"$US Bot with Ruthless executes US associated events on first plot")
+          log(s"\n$US Bot with Ruthless executes US associated events on first plot")
           getActionOrder(card, opponent = US) match {
             case Nil => throw AbortCardPlay
             case actions => actions foreach {
@@ -5907,7 +5902,7 @@ object LabyrinthAwakening {
           }
         }
         else {
-          log("%s event \"%s\" does not trigger".format(US, card.name))
+          log("\n%s event \"%s\" does not trigger".format(US, card.name))
           humanPlot(opsAvailable)
         }
       }

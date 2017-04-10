@@ -674,8 +674,10 @@ object JihadistBot extends BotHelpers {
     else {
       // US Elections is the only auto trigger event.
       // The Bot will execute the event first.
-      if (card.autoTrigger)
+      if (card.autoTrigger) {
         performCardEvent(card, Jihadist)
+        log()
+      }
       
       // There is an unlikely, but possible chance that there are no cells or cadres on
       // the map. (The Bot does not lose when there are no cells on the map).

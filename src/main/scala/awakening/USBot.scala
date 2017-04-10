@@ -717,9 +717,6 @@ object USBot extends BotHelpers {
   }
   
   // ------------------------------------------------------------------
-  // Not in the Priorities Table, but listed in OpP flowchard.
-  val WoiNonMuslimPriorities = List(
-    PoorPriority, FairPriority, GoodPriority, FewestCellsPriority)
   
   val WoiNonMuslimFlowchart = List(
     new CriteriaFilter("Opposite posture of US",
@@ -730,14 +727,24 @@ object USBot extends BotHelpers {
   )
   
   def woiNonMuslimTarget(names: List[String]): Option[String] = {
+    // Not in the Priorities Table, but listed in OpP flowchard.
+    val priorities = List(
+      PoorPriority, FairPriority, GoodPriority, FewestCellsPriority)
     botLog("Find \"non-Muslim WoI\" target")
     val candidates = selectCandidates(game getCountries names, WoiNonMuslimFlowchart)
-    topPriority(candidates, WoiNonMuslimPriorities) map (_.name)
+    topPriority(candidates, priorities) map (_.name)
   }
 
   def woiNonMuslimPriority(names: List[String]): Option[String] = {
+    val priorities = List(
+      new CriteriaFilter("Opposite posture of US",
+        nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
+      new CriteriaFilter("Same posture as US",
+        nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture == game.usPosture)),
+        FewestCellsPriority, GoodPriority, FairPriority, PoorPriority)
+    
     botLog("Find \"non-Muslim WoI\" priority")
-    topPriority(game getCountries names, WoiNonMuslimPriorities) map (_.name)
+    topPriority(game getCountries names, priorities) map (_.name)
   }
   // ------------------------------------------------------------------
   val DeployToPriorities = List(
@@ -1029,8 +1036,10 @@ object USBot extends BotHelpers {
       else {
         // US Elections is the only auto trigger event.
         // The Bot will execute the event first.
-        if (card.autoTrigger)
+        if (card.autoTrigger) {
           performCardEvent(card, US)
+          log()
+        }
     
         val opsUsed = operationsFlowchart(maxOps) match {
           case WoiMuslimHighestDRM  => woiMuslimHighestDRMOperation(card)
@@ -1154,7 +1163,7 @@ object USBot extends BotHelpers {
     val (withdraw, numTroops) = from match {
       case "track" => (false, 2)  // Always deploy exactly 2 troops from track
       case name    =>
-        val withdraw = (game isMuslim name) && (game getMuslim name).inRegimeChange
+        val withdraw = game.usPosture == Soft && (game isMuslim name) && (game getMuslim name).inRegimeChange
         (withdraw, (game getCountry name).maxDeployFrom)
     }
     if (withdraw) {
