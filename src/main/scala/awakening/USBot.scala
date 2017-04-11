@@ -1243,6 +1243,7 @@ object USBot extends BotHelpers {
   // If this value is less than the number of Ops on the card, then we will 
   // perform homeland using the remainder of ops on the card plus reserves as needed.
   // This may result in more than 3 total Ops being used for the current card.
+  // But no single operation can be peformed using only resrvere ops.
   // If the opUsed is greater than or equal to the number of Ops on the card,
   // then we do nothing.
   def homelandSecurity(card: Card, opsUsed: Int): Unit = {
@@ -1254,11 +1255,11 @@ object USBot extends BotHelpers {
       log(s"$US performs Homeland Security with ${amountOf(unusedOps, "unused Op")} (${amountOf(game.reserves.us,"reserve")})")
       log(separator())
       
-      // Returns the number of actions executed
       def nextAction(completed: Int): Unit = {
-        if (completed < maxRadOps) {
-          val cardOps    = (unusedOps - completed) max 0  // Ops remaining from the card
-          val reserveOps = maxRadOps - cardOps                   // Ops remaining from reserves
+        // Stop once all of the used cards ops have been used
+        if (completed < unusedOps) {
+          val cardOps    = unusedOps - completed      // Ops remaining from the card
+          val reserveOps = maxRadOps - cardOps        // Ops remaining from reserves
           val ops = getHomelandSecurityAction(cardOps, maxRadOps - completed) match {
             case Some(DisruptUS)            => hsDisruptUS(cardOps, reserveOps)
             case Some(WoiSoftNonMuslim)     => hsWoiSoftNonMuslim(cardOps, reserveOps)
