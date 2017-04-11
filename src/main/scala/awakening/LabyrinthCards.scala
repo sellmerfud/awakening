@@ -382,7 +382,7 @@ object LabyrinthCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role) => role == game.humanRole || 
                       (game getNonMuslim Benelux).posture != game.usPosture ||
-                      game.funding > 1
+                      (game.numIslamistRule == 0 && game.funding > 1)
       ,
       (role: Role) => {
         val posture = if (role == game.humanRole)
@@ -391,7 +391,8 @@ object LabyrinthCards {
           game.usPosture
         addEventTarget(Benelux)
         setCountryPosture(Benelux, posture)
-        decreaseFunding(1)
+        if (game.numIslamistRule == 0)
+          decreaseFunding(1)
       }
     )),
     // ------------------------------------------------------------------------

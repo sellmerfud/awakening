@@ -5438,7 +5438,7 @@ object LabyrinthAwakening {
           case US       => USBot.performTriggeredEvent(card)
         }
       else
-        log("\n%s event \"%s\" does not trigger".format(card.association, card.name))
+        log("\n%s event \"%s\" has no effect".format(card.association, card.name))
     }
   }
   
