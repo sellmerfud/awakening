@@ -2427,9 +2427,9 @@ object LabyrinthAwakening {
     log(s"$player plays $card")
     if (card.autoTrigger)
       log(s"  (The ${card.association} event will automatically trigger)")
-    else if (card.association == player || card.association == Unassociated && playable)
+    else if ((card.association == player || card.association == Unassociated) && playable)
       log(s"  (The ${card.association} event is playable)")
-    else if (card.association == player || card.association == Unassociated && !playable)
+    else if ((card.association == player || card.association == Unassociated) && !playable)
       log(s"  (The ${card.association} event is not playable)")
   }
 
@@ -2540,7 +2540,7 @@ object LabyrinthAwakening {
       val START = 0
       val END   = game.turn + 1
       val (start, end) = param match {
-        case None => (game.turn, game.turn + 1)
+        case None                                   => (game.turn, game.turn + 1)
         case Some(POS(n))                           => (normalize(n.toInt), normalize(n.toInt + 1))
         case Some(NEG(n))                           => (normalize(game.turn - n.toInt), END)
         case Some(PRE(e))                           => (START, normalize(e.toInt + 1))
@@ -2551,7 +2551,7 @@ object LabyrinthAwakening {
         case Some(p)                                => throw Error(s"Invalid parameter: $p")
       }
       
-      val SOT = """%s\s+(\d+)\s*""".format(START_OF_TURN).r
+      val SOT = """%s\s+(\d+)""".format(START_OF_TURN).r
       def turnIndex(num: Int): Int = {
         val turnMatch = (x: String) => x match {
           case SOT(n) if n.toInt == num => true
@@ -2749,6 +2749,8 @@ object LabyrinthAwakening {
     newGS foreach { gs =>
       displayGameStateDifferences(game, gs)
       game = gs
+      if (game.plays.isEmpty)
+        logStartOfTurn()
     }
   }
   
@@ -4859,6 +4861,8 @@ object LabyrinthAwakening {
         gameName = Some(askGameName("Enter a name for the game: "))
         game = loadGameState(Pathname(cmdLineParams.gameFile.get))
         printSummary(game.playSummary)
+        if (game.plays.isEmpty)
+          logStartOfTurn()
       }
       else if (cmdLineParams.gameName.nonEmpty) {
         loadMostRecent(cmdLineParams.gameName.get)
