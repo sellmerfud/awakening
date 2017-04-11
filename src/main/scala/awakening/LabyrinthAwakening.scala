@@ -434,6 +434,13 @@ object LabyrinthAwakening {
     measure(source, Set.empty).get
   }
   
+  def plotsToStrings(plots: List[Plot], visible: Boolean = true): List[String] = 
+    (plots.size, visible) match {
+      case (0, _)     => List("none")
+      case (n, false) => List(amountOf(n, "hidden plot"))
+      case (_, true)  => plots.sorted map (_.name)
+    }
+  
   def plotsDisplay(plots: List[Plot], visible: Boolean = true): String = (plots.size, visible) match {
     case (0, _)     => "none"
     case (n, false) => amountOf(n, "hidden plot")
@@ -1288,25 +1295,39 @@ object LabyrinthAwakening {
       b += f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}  (GWOT penalty $gwotPenalty)"
       b += f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d"
       b += f"US reserves     : ${reserves.us}%2d   | Jihadist reserves : ${reserves.jihadist}%2d"
-      b += f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"
-      b += s"Troop commitment: $troopCommitment"
       b += separator()
-      b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track  : $militiaAvailable%2d"
-      b += f"Cells in camp   : ${trainingCampCells.inCamp}%2d   | Camp cells on map : ${trainingCampCells.onMap}%2d" 
+      if (game.eventParams.awakeningExpansion) {
+        b += f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"
+        b += s"Troop commitment: $troopCommitment"
+        b += separator()
+        b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track  : $militiaAvailable%2d"
+      }
+      else {
+        b += f"Troops on track : $troopsAvailable%2d   | Troop commitment  : $troopCommitment"
+        b += separator()
+        b += f"Cells on track  : $cellsOnTrack%2d"
+      }
       b += f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}"
-      b += separator()
-      (trainingCamp, trainingCampCapacity) match {
-        case (Some(c), 3) => b += s"Training camps  : $c (Capacity 3, non-Caliphate country)"
-        case (Some(c), 5) => b += s"Training camps  : $c (Capacity 5, Caliphate country)"
-        case _            => b += s"Training camps  : Not in play"
+      if (game.eventParams.awakeningExpansion) {
+        b += f"Cells in camp   : ${trainingCampCells.inCamp}%2d   | Camp cells on map : ${trainingCampCells.onMap}%2d" 
+        b += separator()
+        (trainingCamp, trainingCampCapacity) match {
+          case (Some(c), 3) => b += s"Training camps  : $c (Capacity 3, non-Caliphate country)"
+          case (Some(c), 5) => b += s"Training camps  : $c (Capacity 5, Caliphate country)"
+          case _            => b += s"Training camps  : Not in play"
+        }
       }
       val ms = markers ::: (for (c <- countries; m <- c.markers) yield (s"$m (${c.name})"))
+      b += separator()
       wrap( "Markers         : ", ms) foreach (l => b += l)
       wrap( "Lapsing         : ", cardsLapsing.sorted map cardNumAndName) foreach (l => b += l)
       b += s"1st plot        : ${firstPlotCard map cardNumAndName getOrElse "none"}"
-      b += s"Available plots : ${plotsDisplay(availablePlots, humanRole == Jihadist)}"
-      b += s"Resolved plots  : ${plotsDisplay(resolvedPlots)}"
-      b += s"Removed plots   : ${plotsDisplay(removedPlots)}"
+      
+      
+      wrap( "Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist)) foreach (l => b += l)
+      if (game.eventParams.awakeningExpansion)
+        wrap( "Resolved plots  : ", plotsToStrings(resolvedPlots)) foreach (l => b += l)
+      wrap( "Removed plots   : ", plotsToStrings(removedPlots)) foreach (l => b += l)
       if (activePlotCountries.isEmpty)
         b += s"Active plots    : none"
       else {
@@ -5319,6 +5340,9 @@ object LabyrinthAwakening {
   def showCommand(param: Option[String]): Unit = {
     val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" ::
                   "civil wars" :: countryNames(game.countries)
+    val opts = if (game.eventParams.awakeningExpansion) options
+               else options filterNot(o => o == "caliphate" || o == "civil wars")
+                  
     askOneOf("Show: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
       case "plays"      => printSummary(game.playSummary)
       case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
@@ -5356,8 +5380,10 @@ object LabyrinthAwakening {
       printCountries("Iran Special Case", iranSpecial.toList)
     printSummary(game.scoringSummary)
     printSummary(game.statusSummary)
-    printSummary(game.civilWarSummary)
-    printSummary(game.caliphateSummary)
+    if (game.eventParams.awakeningExpansion) {
+      printSummary(game.civilWarSummary)
+      printSummary(game.caliphateSummary)
+    }
   }
   
   sealed trait CardAction
