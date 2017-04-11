@@ -2618,14 +2618,13 @@ object LabyrinthAwakening {
   
   def saveTurn(): Unit = {
     saveGameState(turnFilePath(game.turn), game)
-    saveGameDescription()
     removePlayFiles() // Remove all of the play files
   }
 
   // Save a brief description of the game.
   // The descriptions are used by the askWhichGame() function.
-  def saveGameDescription(): Unit = {
-    val desc = s"${game.params.scenarioName}, playing ${game.humanRole}, ${amountOf(game.turn, "turn")} completed"
+  def saveGameDescription(turnsCompleted: Int): Unit = {
+    val desc = s"${game.params.scenarioName}, playing ${game.humanRole}, ${amountOf(turnsCompleted, "turn")} completed"
     gameDescPath(gameName.get).writeFile(desc)
   }
   
@@ -2749,6 +2748,7 @@ object LabyrinthAwakening {
     newGS foreach { gs =>
       displayGameStateDifferences(game, gs)
       game = gs
+      saveGameDescription(game.turn - 1)
       if (game.plays.isEmpty)
         logStartOfTurn()
     }
@@ -2802,7 +2802,6 @@ object LabyrinthAwakening {
           s"Set troops on the track to ${to.troopsAvailable} (${to.troopCommitment})") 
     show(from.offMapTroops, to.offMapTroops, s"Set troops in of map box to ${to.offMapTroops}")
     show(from.militiaAvailable, to.militiaAvailable, s"Set available militia to ${to.militiaAvailable}")
-    show(from.reserves.jihadist, to.reserves.jihadist, s"Set Jihadist reserves to ${to.reserves.jihadist}")
     show(from.funding, to.funding, s"Set jihadist funding to ${to.funding} (${to.fundingLevel})")
     show(from.cellsOnTrack, to.cellsOnTrack, s"Set cells on the funding track to ${to.cellsOnTrack}")
     show(from.trainingCampCells.inCamp, to.trainingCampCells.inCamp, s"Set cells in training camp to ${to.trainingCampCells}")
@@ -4819,7 +4818,9 @@ object LabyrinthAwakening {
     
       // Reset history list of plays. They are not store in turn files.
       game = game.copy(plays = Nil)
-      saveTurn()     
+      saveTurn()
+      saveGameDescription(turnsCompleted = game.turn)
+      
       // Increase the turn number and log it. 
       game = game.copy(turn = game.turn + 1)
       logStartOfTurn()
@@ -4864,9 +4865,23 @@ object LabyrinthAwakening {
         if (game.plays.isEmpty)
           logStartOfTurn()
       }
+      else if (cmdLineParams.listGames) {
+        val saved = savedGames
+        val fmt = "%%-%ds - %%s".format((saved map (_.length)).max)
+        for (s <- saved)
+          println(fmt.format(s, loadGameDescription(s)))
+        throw ExitGame
+      }
       else if (cmdLineParams.gameName.nonEmpty) {
-        loadMostRecent(cmdLineParams.gameName.get)
-        printSummary(game.playSummary)
+        val gameName = cmdLineParams.gameName.get
+        if (cmdLineParams.deleteGame) {
+          (gamesDir/gameName).rmtree()
+          throw ExitGame
+        }
+        else {
+          loadMostRecent(gameName)
+          printSummary(game.playSummary)
+        }
       }
       else {
         val existingGame = if (cmdLineParams.anyNewGameParams) None
@@ -4919,6 +4934,7 @@ object LabyrinthAwakening {
             log()
             scenario.additionalSetup()
             saveTurn()  // Save the initial game state as turn-0
+            saveGameDescription(turnsCompleted = 0)
             
             val usCards = USCardDraw(game.troopCommitment)
             val jihadistCards = JihadistCardDraw(game.fundingLevel)
@@ -4967,12 +4983,22 @@ object LabyrinthAwakening {
         separator("Options:")
         val saved = savedGames
         if (saved.isEmpty)
-        reqd[String]("", "--game=name", "Resume a game in progress")
-          { (v, c) => throw new InvalidArgumentException("You do not have any saved games") }
+          reqd[String]("-g", "--game=name", "Resume a game in progress")
+            { (v, c) => throw new InvalidArgumentException("You do not have any saved games") }
         else
-        reqd[String]("", "--game=name", saved, "Resume a game in progress")
-          { (v, c) => c.copy(gameName = Some(v)) }
+          reqd[String]("-g", "--game=name", saved, "Resume a game in progress")
+            { (v, c) => c.copy(gameName = Some(v)) }
+
+        flag("-l", "--list", "Display a list of saved games")
+          { (c) => c.copy(listGames = true) }
         
+        if (saved.isEmpty)
+          reqd[String]("", "--delete=name", "Delete a game in progress")
+            { (v, c) => throw new InvalidArgumentException("You do not have any saved games") }
+        else
+          reqd[String]("", "--delete=name", saved, "Delete a game in progress")
+            { (v, c) => c.copy(gameName = Some(v), deleteGame = true) }
+          
         val scenarioHelp = "Select a scenario" +: 
           (for ((key, sc) <- scenarios.toSeq; mod = if (sc.expansion) "Awakening" else "Labyrinth")
             yield s"$key ($mod)")
@@ -5035,6 +5061,8 @@ object LabyrinthAwakening {
     
   case class UserParams(
     val gameName: Option[String] = None,
+    val deleteGame: Boolean = false,
+    val listGames: Boolean = false,
     val scenarioName: Option[String] = None,
     val side: Option[Role] = None,
     val level: Option[Int] = None,
