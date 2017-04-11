@@ -3257,7 +3257,6 @@ object LabyrinthAwakening {
             log("Success")
             improveGovernance(name, 1, canShiftToGood = true)
             if (game.getMuslim(name).isGood) {
-              performConvergence(forCountry = name, awakening = true)
               if (caliphateCapital) {
                 displaceCaliphateCapital(name)
                 updateTrainingCampCapacity(priorCampCapacity)
@@ -3556,9 +3555,6 @@ object LabyrinthAwakening {
         // Remove 1 aid marker for each sucessful die roll
         removeAidMarker(name, successes min m.aidMarkers)
         degradeGovernance(name, levels = successes, canShiftToIR = majorSuccess)
-        // If we just shifted to Islamic Rule, the perform convergence
-        if (game.getMuslim(name).isIslamistRule)
-          performConvergence(forCountry = name, awakening = false)
         // A major jihad failure rolling 3 dice in a country that was 
         // already at Poor governance before the operation begain will
         // add a besieged regime marker and shift alignment toward ally
@@ -5011,7 +5007,7 @@ object LabyrinthAwakening {
         reqd[Int]("", "--level=n", Seq.range(1, 7), "Select difficulty level (1 - 6)")
           { (v, c) => c.copy(level = Some(v)) }
 
-        reqd[String]("", "--dice=<auto|human>", scenarios.keys.toSeq, "How to roll the human player's dice",
+        reqd[String]("", "--dice=auto|human", scenarios.keys.toSeq, "How to roll the human player's dice",
                                                              "auto  - the program rolls them automatically",
                                                              "human - you enter your dice rolls manually")
           { (v, c) => c.copy(autoDice = Some(v == "auto")) }
