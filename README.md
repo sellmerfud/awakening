@@ -1,4 +1,4 @@
-## Overview##
+## Overview
 This is a console application that implements the AI Bots for the board game
 *Labyrinth: The Awakening, 2010 - ?*, designed by Trevor Bender and published by GMT Games.
 The AI Bots were designed by Adam Zahm.
@@ -9,7 +9,7 @@ to use this program.
 
 You can play as either the US or the Jihadist player and the AI will take the opposing side.
 
-## Running the program##
+## Running the program
 
 This is a Scala program, so you will need to have the Java JVM installed and make sure that
 the `java` command is on your `PATH`
@@ -19,7 +19,7 @@ There are two scripts provided that will start the program.
 * `awakening` -- As bash script used on Mac and Linux
 * `awakening.cmd` -- A Windows command file for use on Windoze
 
-## Using the program##
+## Using the program
 
 When you first run the program, it will prompt you to enter:
 
@@ -33,7 +33,7 @@ Your game is saved after each card play, plot resolution, etc.  You can use the
 
 The next time you run the program, it will ask if you want to resume a saved game.
 
-## Entering commands ##
+## Entering commands
 To enter a card play for the Jihadist side simply enter `j 121`.  This indicates that the
 Jihadist plays card #121.  For a US card play you would enter `u 200`.
 
@@ -69,7 +69,7 @@ resloved.
 When all cards for a turn have been played, use the `end turn` command to perform the
 end of turn housekeeping.
 
-## License ##
+## License
 
     Copyright (c) 2017 Curt Sellmer
     
