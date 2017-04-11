@@ -3376,15 +3376,23 @@ object LabyrinthAwakening {
       case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = remaining))
     }
     if (plot == PlotWMD) {
-      val updatePlots = game.plotData.copy(removedPlots = plot :: game.removedPlots)
-      game = game.copy(plotData = updatePlots).adjustPrestige(1)
+      val updatedPlots = game.plotData.copy(removedPlots = plot :: game.removedPlots)
+      game = game.copy(plotData = updatedPlots)
       log(s"$plot alerted in $countryName, remove it from the game.")
-      log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot")
+      if (game.eventParams.awakeningExpansion) {
+        log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot")
+        game = game.adjustPrestige(1)
+      }
+    }
+    else if (game.eventParams.awakeningExpansion) {
+      val updatedPlots = game.plotData.copy(resolvedPlots = plot :: game.resolvedPlots)
+      game = game.copy(plotData = updatedPlots)
+      log(s"$plot alerted in $countryName, move it to the resolved plots box.")
     }
     else {
-      val updatePlots = game.plotData.copy(resolvedPlots = plot :: game.resolvedPlots)
-      game = game.copy(plotData = updatePlots).adjustPrestige(1)
-      log(s"$plot alerted in $countryName, move it to the resolved plots box.")
+      val updatedPlots = game.plotData.copy(availablePlots = plot :: game.availablePlots)
+      game = game.copy(plotData = updatedPlots)
+      log(s"$plot alerted in $countryName, move it to the available plots box.")
     }
   }
   
