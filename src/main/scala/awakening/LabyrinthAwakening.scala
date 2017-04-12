@@ -4854,9 +4854,13 @@ object LabyrinthAwakening {
       }
       else if (cmdLineParams.listGames) {
         val saved = savedGames
-        val fmt = "%%-%ds - %%s".format((saved map (_.length)).max)
-        for (s <- saved)
-          println(fmt.format(s, loadGameDescription(s)))
+        if (saved.isEmpty) 
+          println("You do not have any saved games")
+        else {
+          val fmt = "%%-%ds - %%s".format((saved map (_.length)).max)
+          for (s <- saved)
+            println(fmt.format(s, loadGameDescription(s)))
+        }
         throw ExitGame
       }
       else if (cmdLineParams.gameName.nonEmpty) {
