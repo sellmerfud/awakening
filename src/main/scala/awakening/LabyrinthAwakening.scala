@@ -2028,23 +2028,6 @@ object LabyrinthAwakening {
     }
   }
   
-  // When selecting a country for a posture roll the bot will 
-  // select first among those with the same posture as the US,
-  // then among untested.
-  def botCountryForPostureRoll(include: Set[String] = Set.empty, exclude: Set[String] = Set.empty): Option[String] = {
-    def allowed(name: String) = (include.isEmpty || include(name)) && !exclude(name)
-    val possibles = game.nonMuslims filter (_.canChangePosture)
-    val candidates = List(
-      possibles filter (c=> c.posture == game.usPosture && allowed(c.name)) map (_.name),
-      possibles filter (c=> c.isUntested && allowed(c.name)) map (_.name),
-      possibles filter (c=> allowed(c.name)) map (_.name)
-    ).dropWhile(_.isEmpty)
-    candidates match {
-      case Nil   => None
-      case x::xs => Some(shuffle(x).head)
-    }
-  }
-  
   def addOpsTarget(name: String): Unit = {
     val targets = game.targetsThisPhase
     game = game.copy(targetsThisPhase = targets.copy(ops = targets.ops + name))
@@ -4623,8 +4606,8 @@ object LabyrinthAwakening {
               if (n.isSchengen)
                 if (game.botRole == Jihadist) {
                   val omit = Set(n.name)
-                  val s1 = botCountryForPostureRoll(include = Schengen.toSet, exclude = omit).get
-                  val s2 = botCountryForPostureRoll(include = Schengen.toSet, exclude = omit ++ Set(s1)).get
+                  val s1 = JihadistBot.posturePriority(Schengen filterNot (_ == n.name)).get
+                  val s2 = JihadistBot.posturePriority(Schengen filterNot (x => x == n.name || x == s1)).get
                   log(s"Jihadist selects two other Schengen countries: $s1 and $s2")
                   rollCountryPosture(s1)
                   rollCountryPosture(s2)
