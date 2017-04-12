@@ -22,6 +22,7 @@ There are two scripts provided that will start the program.
 ## Downloading the package
 
 You can download the zip file with the latest release [here][1]
+
 [1]: https://www.dropbox.com/s/v6vu7qj4r9hgekm/awakening-1.1.zip?dl=0
 
 ## Using the program
