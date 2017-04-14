@@ -457,6 +457,7 @@ object JihadistBot extends BotHelpers {
     def noPath  = PoorNeedCellsforMajorJihadDecision
     def condition(ops: Int) = {
       game hasMuslim { m =>
+        m.jihadOK &&
         (m.isGood || m.isFair) &&
         jihadSuccessPossible(m, false) && 
         totalUnused(m) > 0
@@ -912,7 +913,7 @@ object JihadistBot extends BotHelpers {
         val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)          &&
                                              jihadSuccessPossible(m, false) &&
                                              totalUnused(m) > 0 && !m.isPoor
-        val candidates = countryNames(game.muslims filter canJihad)
+        val candidates = countryNames(game.jihadTargets map game.getMuslim filter canJihad)
         minorJihadTarget(candidates) match {
           case None => Nil   // No more candidates
           case Some(name) =>
@@ -954,9 +955,9 @@ object JihadistBot extends BotHelpers {
         // The Bot will only conduct major Jihad in a countries with Poor governance.
         val canJihad = (m: MuslimCountry) => !alreadyTried(m.name)         &&
                                              jihadSuccessPossible(m, true) &&
-                                             m.isPoor                &&
+                                             m.isPoor                      &&
                                              totalUnused(m) - m.totalTroopsAndMilitia >= 5
-        val candidates = countryNames(game.muslims filter canJihad)
+        val candidates = countryNames(game.majorJihadTargets(3) map game.getMuslim filter canJihad)
         majorJihadTarget(candidates) match {
           case None => Nil   // No more candidates
           case Some(name) =>

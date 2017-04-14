@@ -811,6 +811,7 @@ object LabyrinthAwakening {
     def jihadDRM = awakening - reaction
     def jihadOK = !isIslamistRule && totalCells > 0 && (name != Pakistan || !hasMarker(BenazirBhutto))
     def majorJihadOK(ops: Int) = 
+      (name != Pakistan || !hasMarker(BenazirBhutto)) &&
       totalCells - totalTroopsAndMilitia >= 5 && (
         (isPoor && (ops  > 1 || besiegedRegime)) || 
         (isFair && (ops >= 3 || (ops == 2 && besiegedRegime)))
@@ -3539,9 +3540,9 @@ object LabyrinthAwakening {
         // Remove one active cell for each failure
         if (!ignoreFailures)
           if (sadrFailure)
-            removeCellsFromCountry(name, failures - 1, 0, true, addCadre = true)
+            removeCellsFromCountry(name, failures - 1, 0, true, addCadre = false)
           else
-            removeCellsFromCountry(name, failures, 0, false, addCadre = true)
+            removeCellsFromCountry(name, failures, 0, false, addCadre = false)
         
         // Remove 1 aid marker for each sucessful die roll
         removeAidMarker(name, successes min m.aidMarkers)
