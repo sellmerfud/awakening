@@ -1,0 +1,15 @@
+Building a release
+-----------------------------------
+1. Update the version number in the build.sbt file
+2. Edit source/other/awakening, source/other/awakening.cmd to
+   update the name of the awakening jar file to reflect the
+   new version number.
+3. Reload the sbt configuration.
+4. In sbt, use the `stage` command to build and stage the files to
+   target/awakening-<ver>
+5. Remove and .DS_Store files in the staged directories.
+6. In the Finder, right click on the target/awakening-<ver> folder
+   and select Compress..
+7. Test that new package works
+8. Copy zip file to Dropbox/awakening
+9. Update the download link in the README.md file

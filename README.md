@@ -23,6 +23,10 @@ There are two scripts provided that will start the program.
 
 You can download the zip file with the latest release [here][1]
 
+If you are upgrading to a newer version and you have games in progress,
+simply copy the *games* folder from the older *awakening-x.x* directory to the 
+new *awakening-x.x* directory.
+
 [1]: https://www.dropbox.com/s/xac4wqrffl782f2/awakening-1.2.zip?dl=0
 
 ## Using the program
