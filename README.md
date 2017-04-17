@@ -27,7 +27,7 @@ If you are upgrading to a newer version and you have games in progress,
 simply copy the *games* folder from the older *awakening-x.x* directory to the 
 new *awakening-x.x* directory.
 
-[1]: https://www.dropbox.com/s/xac4wqrffl782f2/awakening-1.2.zip?dl=0
+[1]: https://www.dropbox.com/s/5cm61k9g7cb5x9m/awakening-1.3.zip?dl=0
 
 ## Using the program
 
