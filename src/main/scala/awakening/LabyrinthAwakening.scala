@@ -493,7 +493,8 @@ object LabyrinthAwakening {
   val Sequestration        = "Sequestration"
   val Smartphones          = "Smartphones"
   val ThreeCupsOfTea       = "3 Cups of Tea"
-  val TradeEmbargo         = "Trade Embargo"
+  val TradeEmbargoUS       = "Trade Embargo-US"
+  val TradeEmbargoJihadist = "Trade Embargo-Jihadist"
   // Country Markers
   val Sadr                 = "Sadr"
   val CTR                  = "CTR"
@@ -517,8 +518,8 @@ object LabyrinthAwakening {
   val GlobalMarkers = List(
     Abbas, AnbarAwakening, SaddamCaptured, Wiretapping, EnhancedMeasures, Renditions,
     VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
-    Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargo,
-    LeakWiretapping, LeakEnhancedMeasures, LeakRenditions
+    Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargoUS,
+    TradeEmbargoJihadist, LeakWiretapping, LeakEnhancedMeasures, LeakRenditions
   ).sorted
   
   val CountryMarkers = List(
@@ -757,7 +758,7 @@ object LabyrinthAwakening {
     def isNeutral   = alignment == Neutral
     def isAdversary = alignment == Adversary
   
-    def canExportOil = oilExporter && !hasMarker(TradeEmbargo)
+    def canExportOil = oilExporter && !hasMarker(TradeEmbargoJihadist)
     
     def isShiaMix = !isSunni
     def inRegimeChange = regimeChange != NoRegimeChange
@@ -1378,7 +1379,7 @@ object LabyrinthAwakening {
         case m: MuslimCountry =>
           val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
           val res = amountOf(m.resources, "resource")
-          val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargo)) ", Oil exporter" else ""
+          val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) ", Oil exporter" else ""
           b += s"$name -- $gov, $res$oil"
           item(m.activeCells, "Active cell")
           item(m.sleeperCells, "Sleeper cell")
@@ -3743,10 +3744,14 @@ object LabyrinthAwakening {
     if (m.alignment != newAlign) {
       log(s"Set the alignment of $name to $newAlign")
       game = game.updateCountry(m.copy(alignment = newAlign))
-      if (name == Iran && newAlign != Adversary && (game.getCountry(Iran).hasMarker(TradeEmbargo))) {
-        removeEventMarkersFromCountry(Iran, "Trade Embargo")
+      if (name == Iran && newAlign != Adversary && (game.getCountry(Iran).hasMarker(TradeEmbargoJihadist))) {
+        removeEventMarkersFromCountry(Iran, TradeEmbargoJihadist)
         log("Iran may resume oil exports")
       }
+      else if (name == Iran && newAlign != Adversary && (game.getCountry(Iran).hasMarker(TradeEmbargoUS))) {
+        removeEventMarkersFromCountry(Iran, TradeEmbargoUS)
+      }
+      
       if (newAlign == Adversary)
         removeEventMarkersFromCountry(name, "Advisors")
       

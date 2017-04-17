@@ -1736,7 +1736,8 @@ object AwakeningCards {
     entry(new Card(181, "NPT Safeguards Ignored", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,  
       (role: Role) => game.getCountry(Iran).wmdCache   > 0 &&
-                      game.getCountry(Iran).totalCells > 0
+                      game.getCountry(Iran).totalCells > 0 &&
+                      countryEventNotInPlay(Iran, TradeEmbargoUS)
       ,
       (role: Role) => {
         addEventTarget(Iran)
@@ -3335,6 +3336,7 @@ object AwakeningCards {
           addReactionMarker(Iran, 2)
           addAwakeningMarker(Iran)
         }
+        decreaseFunding(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3645,14 +3647,15 @@ object AwakeningCards {
           }
         }
         addEventTarget(Iran)
-        if (iran.hasMarker(TradeEmbargo)) {
-          removeEventMarkersFromCountry(Iran, TradeEmbargo)
+        if (iran.hasMarker(TradeEmbargoJihadist)) {
+          removeEventMarkersFromCountry(Iran, TradeEmbargoJihadist)
           log("Iran may resume oil exports")
+          addEventMarkersToCountry(Iran, TradeEmbargoUS)
         }
       }
       else { // Jihadist
         val candidates = countryNames(game.muslims filter (m => m.isShiaMix && m.canTakeAwakeningOrReactionMarker))
-        val shiaMix = if (candidates.isEmpty || lapsingEventNotInPlay(ArabWinter))
+        val shiaMix = if (candidates.isEmpty || lapsingEventInPlay(ArabWinter))
           None
         else if (role == game.humanRole)
           Some(askCountry("Select Shia-Mix country to place reaction marker: ", candidates))
@@ -3665,9 +3668,9 @@ object AwakeningCards {
           addEventTarget(name)
           addReactionMarker(name)
         }
-        if (!game.getCountry(Iran).hasMarker(TradeEmbargo)) {
+        if (!game.getCountry(Iran).hasMarker(TradeEmbargoJihadist)) {
           // If Iran becomes Neutral or Ally, remove any Trade Embargo marker. [11.3.3.1]
-          addEventMarkersToCountry(Iran, TradeEmbargo)
+          addEventMarkersToCountry(Iran, TradeEmbargoJihadist)
           log("Iran is no longer an oil exporter")
         }
       }
