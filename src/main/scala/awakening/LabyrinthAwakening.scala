@@ -3136,59 +3136,78 @@ object LabyrinthAwakening {
       } 
       
       for (m <- civilWars) {
-        val jihadHits = m.totalCells            / 6 + (if (dieRoll <= m.totalCells % 6) 1 else 0)
-        val usHits    = m.totalTroopsAndMilitia / 6 + (if (dieRoll <= m.totalTroopsAndMilitia % 6) 1 else 0)
-        if (jihadHits + usHits == 0)
-          log(s"${m.name}: no attrition suffered by either side")
+        val jihadDie = dieRoll
+        val usDie    = dieRoll
+        val jihadHits = m.totalCells            / 6 + (if (jihadDie <= m.totalCells % 6) 1 else 0)
+        val usHits    = m.totalTroopsAndMilitia / 6 + (if (usDie <= m.totalTroopsAndMilitia % 6) 1 else 0)
+        
+        log(s"${m.name}:")
+        if (m.totalCells == 0 && m.totalTroopsAndMilitia == 0)
+          log("No cells, troops or militia present")
         else {
-          log(s"${m.name}:")
-          log(s"The Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
-          log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
-          val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits)
-          val unfulfilledUSHits    = jihadistCivilWarLosses(m, usHits)
-          
-          val delta = unfulfilledJihadHits - unfulfilledUSHits
-          if (delta == 0) {
-            if (unfulfilledJihadHits != 0)
-              log(s"Both sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No futher effects.")
-          }
+          if (m.totalCells == 0)
+            log("No Jihadist cells present")
           else {
-            if (unfulfilledJihadHits > 0)
-              log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
-            if (unfulfilledUSHits > 0)
-              log(s"${amountOf(unfulfilledUSHits, "unfulfilled US hit")} against the Jihadist")
-            if (delta > 0) {
-              val (shifts, newAlign) = (delta, m.alignment) match {
-                case (_, Adversary) => (0, Adversary)
-                case (1, Ally)      => (1, Neutral)
-                case (_, Neutral)   => (1, Adversary)
-                case _              => (2, Adversary)
-              }
-            
-              if (shifts > 0)
-                setAlignment(m.name, newAlign)
-              val steps = delta - shifts
-              if (steps > 0) {
-                degradeGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = true)
-                if (game.getMuslim(m.name).isIslamistRule)
-                  performConvergence(forCountry = m.name, awakening = false)
-              }
+            if (m.totalCells > 0 && m.totalCells % 6 != 0)
+              log(s"Jihadist die roll: $jihadDie")
+            log(s"The Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
+          }
+          
+          if (m.totalTroopsAndMilitia == 0)
+            log("No US troops or militia present")
+          else {
+            if (m.totalTroopsAndMilitia > 0 && m.totalTroopsAndMilitia % 6 != 0)
+              log(s"US die roll : $usDie")
+            log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
+          }
+          
+          if (jihadHits + usHits > 0) {
+            val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits)
+            val unfulfilledUSHits    = jihadistCivilWarLosses(m, usHits)
+          
+            val delta = unfulfilledJihadHits - unfulfilledUSHits
+            if (delta == 0) {
+              if (unfulfilledJihadHits != 0)
+                log(s"Both sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No futher effects.")
             }
             else {
-              // Shift toward Ally/Improve governance
-              val (shifts, newAlign) = (-delta, m.alignment) match {
-                case (_, Ally)      => (0, Ally)
-                case (1, Adversary) => (1, Neutral)
-                case (_, Neutral)   => (1, Ally)
-                case _              => (2, Ally)
+              if (unfulfilledJihadHits > 0)
+                log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
+              if (unfulfilledUSHits > 0)
+                log(s"${amountOf(unfulfilledUSHits, "unfulfilled US hit")} against the Jihadist")
+              if (delta > 0) {
+                val (shifts, newAlign) = (delta, m.alignment) match {
+                  case (_, Adversary) => (0, Adversary)
+                  case (1, Ally)      => (1, Neutral)
+                  case (_, Neutral)   => (1, Adversary)
+                  case _              => (2, Adversary)
+                }
+            
+                if (shifts > 0)
+                  setAlignment(m.name, newAlign)
+                val steps = delta - shifts
+                if (steps > 0) {
+                  degradeGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = true)
+                  if (game.getMuslim(m.name).isIslamistRule)
+                    performConvergence(forCountry = m.name, awakening = false)
+                }
               }
-              if (shifts > 0)
-                setAlignment(m.name, newAlign)
-              val steps = -delta - shifts
-              if (steps > 0) {
-                improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = true)
-                if (game.getMuslim(m.name).isGood)
-                  performConvergence(forCountry = m.name, awakening = true)
+              else {
+                // Shift toward Ally/Improve governance
+                val (shifts, newAlign) = (-delta, m.alignment) match {
+                  case (_, Ally)      => (0, Ally)
+                  case (1, Adversary) => (1, Neutral)
+                  case (_, Neutral)   => (1, Ally)
+                  case _              => (2, Ally)
+                }
+                if (shifts > 0)
+                  setAlignment(m.name, newAlign)
+                val steps = -delta - shifts
+                if (steps > 0) {
+                  improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = true)
+                  if (game.getMuslim(m.name).isGood)
+                    performConvergence(forCountry = m.name, awakening = true)
+                }
               }
             }
           }
