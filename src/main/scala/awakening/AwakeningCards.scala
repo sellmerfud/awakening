@@ -150,8 +150,10 @@ object AwakeningCards {
   }
   
   def cyberWarfarePlayable(role: Role): Boolean = role == game.humanRole || {
-    val postureUS = game.getNonMuslims(China::Russia::India::Nil) exists (_.posture !=  game.usPosture)
-    val postureJ  = game.getNonMuslims(China::Russia::India::Nil) exists (_.posture ==  game.usPosture)
+    val postureUS = (game.getNonMuslims(China::Russia::India::Nil) 
+                        exists (c => c.isUntested || c.posture !=  game.usPosture))
+    val postureJ  = (game.getNonMuslims(China::Russia::India::Nil) 
+                        exists (c => c.isUntested || c.posture == game.usPosture))
     (role == US      ) && (postureUS || game.reserves.jihadist > 0) ||
     (role == Jihadist) && (postureJ  || game.reserves.us       > 0)
   }
@@ -2536,7 +2538,7 @@ object AwakeningCards {
           }
         }
         else if (role == US) {
-          countryNames(game.getNonMuslims(COUNTRIES) filter (_.posture != game.usPosture)) match {
+          countryNames(game.getNonMuslims(COUNTRIES) filter (c => c.isUntested || c.posture != game.usPosture)) match {
             case Nil =>
               clearReserves(Jihadist)
               addToReserves(role, opRes)
@@ -2548,7 +2550,7 @@ object AwakeningCards {
           }
         }
         else {
-          countryNames(game.getNonMuslims(COUNTRIES) filter (_.posture == game.usPosture)) match {
+          countryNames(game.getNonMuslims(COUNTRIES) filter (c => c.isUntested || c.posture == game.usPosture)) match {
             case Nil =>
               clearReserves(US)
               addToReserves(role, opRes)
