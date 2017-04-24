@@ -477,7 +477,7 @@ object JihadistBot extends BotHelpers {
       val candidates = 
         countryNames(game.getMuslims(game.jihadTargets) filter poorMuslimNeedsCellsForMajorJihad)
       travelToTarget(candidates) match {
-        case None => false
+        case None         => false
         case Some(target) => game.adjacentCountries(target) exists (totalUnused(_) > 0)
       }
     }

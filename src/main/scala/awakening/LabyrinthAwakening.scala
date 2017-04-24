@@ -380,7 +380,7 @@ object LabyrinthAwakening {
    Jordan            -> (Israel :: Syria :: Iraq :: SaudiArabia :: Nil),
    Syria             -> (Iraq :: Lebanon :: Jordan :: Turkey :: Nil),
    CentralAsia       -> (Russia :: Caucasus :: Iran :: Afghanistan :: China :: Nil),
-   IndonesiaMalaysia -> (Pakistan :: IndonesiaMalaysia :: Thailand :: Philippines :: Nil),
+   IndonesiaMalaysia -> (Pakistan :: India :: Thailand :: Philippines :: Nil),
    Turkey            -> (Serbia :: Russia :: Caucasus :: Syria :: Iran :: Schengen),
    Lebanon           -> (Syria :: Israel :: Schengen),
    Yemen             -> (SaudiArabia :: Somalia :: Nil),
