@@ -66,7 +66,7 @@ object AwakeningCards {
     (!m.isAlly || !m.isFair || m.totalCells > 0)
   val statusQuoCandidate = (m: MuslimCountry) => 
     m.regimeChange == TanRegimeChange && 
-    (m.totalTroopsAndMilitia / 2) > m.totalCells &&
+    (m.totalTroopsAndMilitia / 2) >= m.totalCells &&
     !game.isCaliphateMember(m.name)
   
   val coupCandidate = (m: MuslimCountry) => 
