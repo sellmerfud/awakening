@@ -3717,29 +3717,18 @@ object AwakeningCards {
       }
       ,
       (role: Role) => {
-        val syria = game getMuslim Syria
+        addEventTarget(Syria)
+        startCivilWar(Syria)
         val (cells, militia) = if (role == game.humanRole) {
-          val choices = if (syria.canTakeMilitia)
-            List("cells"   -> "Place 2 cells and 1 milita in Syria",
-                 "militia" -> "Place 2 militia and 1 cell in Syria")
-          else
-            List("cells"   -> "Place 2 cells in Syria",
-                 "militia" -> "Place 1 cell in Syria")
-          if (syria.isGood)
-            println("Syria cannot take militia because it is at Good governance")
-          else if (syria.isIslamistRule)
-            println("Syria cannot take militia because it is at Islamist Rule")
+          val choices = List("cells"   -> "Place 2 cells and 1 milita in Syria",
+                             "militia" -> "Place 2 militia and 1 cell in Syria")
           println("Choose one: ")
           if (askMenu(choices).head == "cells") (2, 1) else (1, 2)
         }
         else if (role == Jihadist) (2, 1)
         else (1, 2)
-          
-        addEventTarget(Syria)
-        startCivilWar(Syria)
         addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
-        if (syria.canTakeMilitia)
-          addMilitiaToCountry(Syria, militia min game.militiaAvailable)
+        addMilitiaToCountry(Syria, militia min game.militiaAvailable)
         addEventTarget(Turkey)
         testCountry(Turkey)
         addAidMarker(Turkey)
