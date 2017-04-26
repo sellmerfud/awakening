@@ -3736,6 +3736,7 @@ object AwakeningCards {
         else (1, 2)
           
         addEventTarget(Syria)
+        startCivilWar(Syria)
         addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
         if (syria.canTakeMilitia)
           addMilitiaToCountry(Syria, militia min game.militiaAvailable)
