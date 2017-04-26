@@ -117,28 +117,32 @@ trait BotHelpers {
   // random.
   // Note: The only time this function will return Nil, is if the original list of
   //       countries is empty.
-  @tailrec final def topPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
+  def topPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
     botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")
-    (countries, priorities) match {
-      case (Nil, _)    => None
-      case (c::Nil, _) => 
-        botLog(s"topPriority: Picked a winner [${c.name}]")
-        Some(c)                             // We've narrowed it to one
-      case (cs, Nil)   =>
-        val c = shuffle(cs).head              // Take one at random
-        botLog(s"topPriority: Picked random country [${c.name}]")
-        Some(c)
-      case (cs, f::fs) =>
-        (f filter cs) match {
-          case Nil =>
-            botLog(s"topPriority ($f) falied")
-            topPriority(cs, fs) // Filter entire list by next priority
-          case rs  =>
-            botLog(s"topPriority ($f) [${(rs map (_.name) mkString ", ")}]")
-            topPriority(rs, fs) // Filter matched list by next priority
-        }
+    @tailrec def nextPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
+      (countries, priorities) match {
+        case (Nil, _)    => None
+        case (c::Nil, _) => 
+          botLog(s"topPriority: Picked a winner [${c.name}]")
+          Some(c)                             // We've narrowed it to one
+        case (cs, Nil)   =>
+          val c = shuffle(cs).head              // Take one at random
+          botLog(s"topPriority: Picked random country [${c.name}]")
+          Some(c)
+        case (cs, f::fs) =>
+          (f filter cs) match {
+            case Nil =>
+              botLog(s"topPriority ($f) falied")
+              nextPriority(cs, fs) // Filter entire list by next priority
+            case rs  =>
+              botLog(s"topPriority ($f) [${(rs map (_.name) mkString ", ")}]")
+              nextPriority(rs, fs) // Filter matched list by next priority
+          }
+      }
     }
+    nextPriority(countries, priorities)
   }
+  
   
   // Helper function for CountryFilter boolean tests that only apply Muslim countries
   // All non-Muslim countries will return a given value (false by default)
