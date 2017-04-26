@@ -165,13 +165,13 @@ object JihadistBot extends BotHelpers {
   val IslamistRulePriority = new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule))
   
   // 18. Poor
-  val PoorPriority = new CriteriaFilter("Poor", muslimTest(_.isPoor))
+  val PoorPriority = new CriteriaFilter("Poor", _.isPoor)
   
   // 19. Fair
-  val FairPriority = new CriteriaFilter("Fair", muslimTest(_.isFair))
+  val FairPriority = new CriteriaFilter("Fair", _.isFair)
   
   // 20. Good
-  val GoodPriority = new CriteriaFilter("Good", muslimTest(_.isGood))
+  val GoodPriority = new CriteriaFilter("Good", _.isGood)
   
   // 21. Highest Resource (Already defined at #12)
   
