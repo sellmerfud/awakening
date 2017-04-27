@@ -21,13 +21,13 @@ There are two scripts provided that will start the program.
 
 ## Downloading the package
 
-You can download the zip file with the latest release (version 1.7) [here][1]
+You can download the zip file with the latest release (version 1.8) [here][1]
 
 If you are upgrading to a newer version and you have games in progress,
 simply copy the *games* folder from the older *awakening-x.x* directory to the 
 new *awakening-x.x* directory.
 
-[1]: https://www.dropbox.com/s/7oto6hjg5ww86jk/awakening-1.7.zip?dl=0
+[1]: https://www.dropbox.com/s/3yxatwmdpfs37ox/awakening-1.8.zip?dl=0
 
 ## Using the program
 
