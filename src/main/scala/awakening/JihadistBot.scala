@@ -67,9 +67,9 @@ object JihadistBot extends BotHelpers {
   }
   
   def sadrValue(s: Boolean) = if (s) 1 else 0
-  def activeCells(c: Country)   = c.activeCells  - usedCells(c.name).actives
-  def sleeperCells(c: Country)  = c.sleeperCells - usedCells(c.name).sleepers
-  def unusedCells(c: Country)   = c.totalCells   - usedCells(c.name).total
+  def activeCells(c: Country)   = (c.activeCells  - usedCells(c.name).actives) max 0
+  def sleeperCells(c: Country)  = (c.sleeperCells - usedCells(c.name).sleepers) max 0
+  def unusedCells(c: Country)   = (c.totalCells   - usedCells(c.name).total) max 0
   def sadrAvailable(c: Country) = c.hasSadr && !usedCells.sadrUsed
   def totalUnused(c: Country)   = unusedCells(c) + sadrValue(sadrAvailable(c))
   def unusedCellsOnMap = (game.countries map totalUnused).sum
@@ -754,6 +754,22 @@ object JihadistBot extends BotHelpers {
     usedCells(target).addSleepers(numCells)
   }
   
+  // Test the country to see if it has an unused cells that 
+  // can travel.
+  // If the country is an auto-recruit country, then it must
+  // have more than one cell, unless there are at least two 
+  // other auto-recruit countries with cells.
+  def hasCellForTravel(c: Country): Boolean = {
+    if (c.autoRecruit) {
+      val numAutoRecruit = game.muslims count (m => m.autoRecruit && totalUnused(m) > 0)
+      if (numAutoRecruit > 2)
+        unusedCells(c) > 0
+      else
+        unusedCells(c) > 1
+    }
+    else
+      unusedCells(c) > 0
+  }
   
   // First select the target to country.
   // Then select one or more countries from which cells may travel.
@@ -786,7 +802,8 @@ object JihadistBot extends BotHelpers {
       throw new IllegalStateException("travelOperation() should always find \"travel to\" ttarget")
     }
     
-    def numAutoRecruit = game.muslims count (m => m.autoRecruit && m.totalCells > 0)
+    // Count sadr here, but below when finding cells to move.
+    def numAutoRecruit = game.muslims count (m => m.autoRecruit && totalUnused(m) > 0)
     val maxTravel = maxOpsPlusReserves(card)
     
     def nextTravelFrom(completed: Int, alreadyTried: Set[String]): List[TravelAttempt] = {
@@ -794,7 +811,7 @@ object JihadistBot extends BotHelpers {
       if (remaining == 0)
         Nil  // We've used all available Ops
       else {
-        val canTravelFrom = (c: Country) => !alreadyTried(c.name) && totalUnused(c) > 0
+        val canTravelFrom = (c: Country) => !alreadyTried(c.name) && hasCellForTravel(c)
         val candidates = if (lapsingEventInPlay(Biometrics))
           countryNames(game.adjacentCountries(toName) filter canTravelFrom)
         else
@@ -806,11 +823,11 @@ object JihadistBot extends BotHelpers {
             // Limit numAttempts to only active cells within same country
             // and to not allow last cell out of auto recruit (if only 1 other auto recruit with cells)
             val numAttempts = if (fromName == toName)
-              from.activeCells min remaining
+              activeCells(from) min remaining
             else if (from.autoRecruit && numAutoRecruit < 3)
-              (from.totalCells - 1) max 0 min remaining
+              (unusedCells(from) - 1) max 0 min remaining
             else
-              from.totalCells min remaining
+              unusedCells(from) min remaining
           
             if (numAttempts == 0) {
               botLog(s"No cells in $fromName are allowed to travel")
@@ -822,7 +839,7 @@ object JihadistBot extends BotHelpers {
                 (numAttempts, 0) // We've limited the number of attempts to sleepers above
               else {
                 // Actives first
-                val actives = from.activeCells min numAttempts
+                val actives = activeCells(from) min numAttempts
                 val sleepers = numAttempts - actives
                 (actives, sleepers)
               }
@@ -1103,7 +1120,7 @@ object JihadistBot extends BotHelpers {
     }
     // Create the next highest priority travel attempt.  Max of one per destination.
     def nextTravel(completed: Int, destinations: List[String]): Int = {
-      val sources = countryNames(game.countries filter (c => totalUnused(c) > 0))
+      val sources = countryNames(game.countries filter hasCellForTravel)
       if (completed == maxOps || destinations.isEmpty || sources.isEmpty)
         completed
       else {
@@ -1301,7 +1318,7 @@ object JihadistBot extends BotHelpers {
     }
 
     def nextTravel(completed: Int): Int = {
-      val sources = countryNames(game.countries filter (c => c.name != UnitedStates && totalUnused(c) > 0))
+      val sources = countryNames(game.countries filter (c => c.name != UnitedStates && hasCellForTravel(c)))
       if (completed == cardOps || sources.isEmpty)
         completed
       else {
