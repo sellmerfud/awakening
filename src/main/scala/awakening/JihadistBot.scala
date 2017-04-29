@@ -386,15 +386,17 @@ object JihadistBot extends BotHelpers {
   def travelFromTarget(toCountry: String, names: List[String]): Option[String] = {
     botLog("Find \"Travel From\" target")
     val flowchart = List(
-      new AdjacentCountriesNode(toCountry), AutoRecruitFilter, FewestCellsFilter)
+      new AdjacentCountriesNode(toCountry), 
+      AutoRecruitFilter,
+      FewestCellsFilter)
 
     val priorities = List(
       new NotDestinationPriority(toCountry), IslamistRulePriority,
       PoorPriority, FairPriority, GoodPriority, NotUSPriority,
       MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
       DisruptPrestigePriority, LowestRECPriority)
-      
-    val candidates = selectCandidates(game getCountries names, flowchart)
+    val withCells  = game.getCountries(names) filter hasCellForTravel
+    val candidates = selectCandidates(withCells, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
   

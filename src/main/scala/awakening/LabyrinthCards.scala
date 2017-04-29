@@ -1491,17 +1491,9 @@ object LabyrinthCards {
         }
       }
       else {
-        var alreadyTravelled = Map.empty[String, Int].withDefaultValue(0)
         def nextTravel(num: Int): Unit = {
-          var autoRecruits = countryNames(game.countries filter (c => c.autoRecruit && c.totalCells > 0)).toSet
-          val hasTraveler = (c: Country) => {
-            val eligible = c.activeCells + (c.sleeperCells - alreadyTravelled(c.name))
-            if (game isMuslim c.name)
-              (eligible > 1 || (eligible == 1 && (!autoRecruits(c.name) || autoRecruits.size > 1)))
-            else
-              (eligible > 1 || eligible == 1 && (game getNonMuslim c.name).posture != game.usPosture)
-          }
-          val travellers = game.countries filter hasTraveler map (c => (c.name, c.activeCells > 0))
+          val canTravelFrom = (c: Country) => JihadistBot.hasCellForTravel(c)
+          val travellers = game.countries filter canTravelFrom map (c => (c.name, JihadistBot.activeCells(c) > 0))
           if (num <= 2 && travellers.nonEmpty) {
             val to   = JihadistBot.posturePriority(Schengen).get
             val from = JihadistBot.travelFromTarget(to, travellers map (_._1) filterNot (_ == to)).get
@@ -1509,7 +1501,7 @@ object LabyrinthCards {
             addEventTarget(to)
             testCountry(to)
             moveCellsBetweenCountries(from, to, 1, active)
-            alreadyTravelled += to -> (alreadyTravelled(to) + 1)
+            JihadistBot.usedCells(to).addSleepers(1)
             nextTravel(num + 1)
           }
         }
@@ -1620,17 +1612,11 @@ object LabyrinthCards {
       }
       else {
         def nextTravel(num: Int): Unit = {
-          var autoRecruits = countryNames(game.countries filter (c => c.autoRecruit && c.totalCells > 0)).toSet
-          val hasTraveler = (c: Country) => {
-            if (game isMuslim c.name)
-              (c.cells > 1 || (c.cells == 1 && (!autoRecruits(c.name) || autoRecruits.size > 1)))
-            else
-              c.cells > 0
-          }
+          val canTravelFrom = (c: Country) => JihadistBot.hasCellForTravel(c)
           addEventTarget(UnitedStates)
           val travellers = (game.countries filterNot (_.name == UnitedStates)
-                                           filter hasTraveler
-                                           map (c => (c.name, c.activeCells > 0)))
+                                           filter canTravelFrom
+                                           map (c => (c.name, JihadistBot.activeCells(c) > 0)))
           if (num <= 2 && travellers.nonEmpty) {
             val from = JihadistBot.travelFromTarget(UnitedStates, travellers map (_._1)).get
             val (_, active) = (travellers find (_._1 == from)).get

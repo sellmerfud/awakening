@@ -2410,15 +2410,18 @@ object AwakeningCards {
                   else if (countries.isEmpty)
                     Nil
                   else {
-                    val name = JihadistBot.travelFromTarget(target, countries).get
-                    val c = (game getCountry name)
-                    val n = remaining min c.totalCells
-                    val a = n min c.activeCells
-                    val s = n - a
-                    CellsItem(name, a, s)::nextFrom(countries filterNot (_ == name), remaining - n)
+                    JihadistBot.travelFromTarget(target, countries) match {
+                      case Some(name) =>
+                        val c = (game getCountry name)
+                        val n = remaining min c.totalCells
+                        val a = n min c.activeCells
+                        val s = n - a
+                        CellsItem(name, a, s)::nextFrom(countries filterNot (_ == name), remaining - n)
+                      case None => Nil
+                    }
                   }
 
-                val fromCandidates = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
+                val fromCandidates = countryNames(game.countries filter (c => c.name != target && JihadistBot.hasCellForTravel(c)))
                 (target, Some("cells"), nextFrom(fromCandidates, 2))
                 
               case xs  => (JihadistBot.markerAlignGovTarget(xs).get, Some("shiftRight"), Nil)
