@@ -4135,7 +4135,7 @@ object LabyrinthAwakening {
       assert(c.activeCells >= actives, s"removeCellsFromCountry(): not enough active cells present")
       assert(c.sleeperCells >= sleepers, s"removeCellsFromCountry(): not enough sleeper cells present")
 
-      val cadreAdded = addCadre && c.cells == (actives + sleepers) && (sadr || !c.hasMarker(Sadr))
+      val cadreAdded = addCadre && c.hasCadre == false && c.cells == (actives + sleepers) && (sadr || !c.hasMarker(Sadr))
       for ((num, active) <- List((actives, true), (sleepers, false)); if num > 0) {
         val cellType = if (active) "active cell" else "sleeper cell"
         val CampCells(campCellsInCamp, campCellsOnMap) = game.trainingCampCells
