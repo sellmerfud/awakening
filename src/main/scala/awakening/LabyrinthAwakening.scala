@@ -4193,8 +4193,6 @@ object LabyrinthAwakening {
           case 1 => log(s"Move 1 $fromType from $fromName to $toName as a $toType cell")
           case n => log(s"Move $n ${fromType}s from $fromName to $toName as $toType cells")
         }
-        if (to.hasCadre)
-          log(s"Remove the cadre marker in $toName")
       }
     
       from match {
@@ -4204,10 +4202,10 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells - num))
       }
       to match {
-        case m: MuslimCountry    if makeActive => game = game.updateCountry(m.copy(activeCells = m.activeCells + num, hasCadre = false))
-        case m: MuslimCountry                  => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num, hasCadre = false))
-        case n: NonMuslimCountry if makeActive => game = game.updateCountry(n.copy(activeCells = n.activeCells + num, hasCadre = false))
-        case n: NonMuslimCountry               => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num, hasCadre = false))
+        case m: MuslimCountry    if makeActive => game = game.updateCountry(m.copy(activeCells = m.activeCells + num))
+        case m: MuslimCountry                  => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num))
+        case n: NonMuslimCountry if makeActive => game = game.updateCountry(n.copy(activeCells = n.activeCells + num))
+        case n: NonMuslimCountry               => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num))
       }
       removeTrainingCamp_?(fromName)
       if (fromName == Nigeria)
