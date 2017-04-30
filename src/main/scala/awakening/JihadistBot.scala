@@ -480,7 +480,7 @@ object JihadistBot extends BotHelpers {
         countryNames(game.getMuslims(game.jihadTargets) filter poorMuslimNeedsCellsForMajorJihad)
       travelToTarget(candidates) match {
         case None         => false
-        case Some(target) => game.adjacentCountries(target) exists (totalUnused(_) > 0)
+        case Some(target) => game.adjacentCountries(target) exists hasCellForTravel
       }
     }
   }
