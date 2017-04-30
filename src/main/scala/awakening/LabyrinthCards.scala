@@ -1131,7 +1131,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(57, "Abu Sayyaf", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => globalEventNotInPlay(MoroTalks)
+      (role: Role) => countryEventNotInPlay(Philippines, MoroTalks)
       ,
       (role: Role) => {
         addEventTarget(Philippines)
