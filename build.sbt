@@ -6,7 +6,7 @@ import java.util.HashSet
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
-  version      := "1.9",
+  version      := "1.10",
   scalaVersion := "2.11.0"
 )
 
@@ -23,9 +23,6 @@ lazy val awakening = (project in file("."))
       "org.sellmerfud"         %% "optparse"       % "2.2"
     ),
     // Task to create the distribution zip file
-    // To create a zip file that is readable on windoze
-    //  1. Remove target/awakening-1.0/.DS_Store, target/awakening-1.0/lib/.DS_Store
-    //  2. In the Mac Finder, right click target/awakening-1.0 and compress
     stage in Compile := {
       val log = streams.value.log
       (packageBin in Compile).value  // Depends on the package being built
