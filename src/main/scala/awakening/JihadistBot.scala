@@ -878,8 +878,6 @@ object JihadistBot extends BotHelpers {
     def nextTarget(completed: Int, alreadyTried: Set[String]): Int = {
       val remaining = maxAttempts - completed
       if (remaining == 0 || game.availablePlots.isEmpty) {
-        if (game.availablePlots.isEmpty && completed == 0) 
-          log(s"There are no available plots")
         completed
       }
       else {
@@ -899,12 +897,20 @@ object JihadistBot extends BotHelpers {
             val sleepers    = numAttempts - actives - sadrValue(sadr)
             val attempts = List.fill(actives + sadrValue(sadr))(PlotAttempt(name, true)) :::
                            List.fill(sleepers)(PlotAttempt(name, false))
-            performPlots(card.ops, attempts)
+            val numCompleted = performPlots(card.ops, attempts)
             // All sleepers used will have been flipped to active by performPlots()
-            usedCells(name).addActives(actives + sleepers)
-            if (sadr)
-              usedCells.sadrUsed = true
-            nextTarget(completed + numAttempts, alreadyTried + name)
+            if (numCompleted <= actives)
+              usedCells(name).addActives(numCompleted)
+            else {
+              // Mark the originally active as used
+              // Mark sadr if present, then finally
+              // account for any sleepers that were used.
+              usedCells(name).addActives(actives)  
+              if (sadr)                            
+                usedCells.sadrUsed = true
+              usedCells(name).addActives(numCompleted - actives - sadrValue(sadr))
+            }
+            nextTarget(completed + numCompleted, alreadyTried + name)
         }
       }
     }

@@ -3466,11 +3466,14 @@ object LabyrinthAwakening {
   //       are available for selection.
   // BUT : The Bot ignores this and simply selects at random
   //       among all available plots.
-  def performPlots(ops: Int, attempts: List[PlotAttempt]): Unit = {
+  // Returns the number of attempts actually made as it is possible
+  // that we run out of available plots.
+  def performPlots(ops: Int, attempts: List[PlotAttempt]): Int = {
     attempts match {
-      case Nil =>
+      case Nil => 0
       case _ if game.availablePlots.isEmpty =>
         log(s"There are no more available plots")
+        0
       case PlotAttempt(name, active) :: remaining =>
         log()
         log(s"Plot attempt in $name")
@@ -3500,7 +3503,7 @@ object LabyrinthAwakening {
             addAvailablePlotToCountry(name, plot)
         }
       
-        performPlots(ops, remaining)
+        1 + performPlots(ops, remaining)
     }
   }
   
