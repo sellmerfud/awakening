@@ -444,11 +444,14 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(19, "Kemalist Republic", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => role == game.humanRole || !(game getMuslim Turkey).isGood
+      (role: Role) => role == game.humanRole || {
+         val turkey = game getMuslim Turkey
+         !(turkey.isGood || (turkey.isFair && turkey.isAlly))
+      }
       ,
       (role: Role) => {
         addEventTarget(Turkey)
-        setGovernance(Turkey, Fair, Some(Neutral))
+        setGovernance(Turkey, Fair, Some(Ally))
       }
     )),
     // ------------------------------------------------------------------------
