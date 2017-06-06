@@ -1198,7 +1198,7 @@ object LabyrinthAwakening {
       else 
         (m.hasCadre || m.cells > 0)
       val fataCheck = m.name != Pakistan || 
-                      countryEventNotInPlay(Pakistan, FATA) |
+                      countryEventNotInPlay(Pakistan, FATA) ||
                       m.inRegimeChange
       hasTarget && fataCheck && ops >= m.governance && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
     })
@@ -4660,14 +4660,17 @@ object LabyrinthAwakening {
         log() // blank line before next one
       } // for 
       // Move all of the plots to the resolved plots box.
-      if (game.countries exists (c => c.plots exists (_.plot == PlotWMD)))
-        println("Remove resovled WMD plots from the game")
       
-      if (game.countries exists (c => c.plots exists (_.plot != PlotWMD)))
+      val wmdCount   = game.countries.foldLeft(0) { (num, c) => num + (c.plots count (_.plot == PlotWMD)) }
+      val otherCount = game.countries.foldLeft(0) { (num, c) => num + (c.plots count (_.plot != PlotWMD)) }
+      if (wmdCount > 0)
+        println(s"Remove the ${amountOf(wmdCount, "resolved WMD plot")} from the game")
+      
+      if (otherCount > 0)
         if (game.eventParams.awakeningExpansion)
-          println("Put the resolved plots in the resolved plots box")
+          println(s"Put the ${amountOf(otherCount, "resolved non-WMD plot")} in the resolved plots box")
         else
-          println("Put the resolved plots in the available plots box")
+          println(s"Put the ${amountOf(otherCount, "resolved non-WMD plot")} in the available plots box")
       
       (game.countries filter (_.hasPlots)) foreach {
         case m: MuslimCountry =>
@@ -4787,11 +4790,12 @@ object LabyrinthAwakening {
       clearReserves(game.humanRole)
     
       if (game.resolvedPlots.nonEmpty) {
+        val num = game.resolvedPlots.size
         val updatedPlots = game.plotData.copy(
           resolvedPlots  = Nil,
           availablePlots = game.availablePlots ::: game.resolvedPlots)
         game = game.copy(plotData = updatedPlots)
-        log("Return all resolved plots to the available plots box")
+        log(s"Return ${amountOf(num, "resolved plot")} to the available plots box")
       }
     
       if (game.eventParams.awakeningExpansion) {

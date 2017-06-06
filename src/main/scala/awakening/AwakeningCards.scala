@@ -2926,6 +2926,7 @@ object AwakeningCards {
           USBot.markerAlignGovTarget(candidates).get
         
         addEventTarget(name)
+        testCountry(name)
         if (role == Jihadist)
           addReactionMarker(name)
         else
