@@ -1426,6 +1426,7 @@ object AwakeningCards {
           val candidates = countryNames(if (better.nonEmpty) better else maghrebs)
           val t = JihadistBot.travelToTarget(candidates).get
           val action = if (game.funding < 8) "funding" else "cells"
+          log(s"Jihadist Bot chooses $t")
           (t, action)
         }
         
