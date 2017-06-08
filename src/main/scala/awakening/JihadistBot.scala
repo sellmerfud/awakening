@@ -272,7 +272,7 @@ object JihadistBot extends BotHelpers {
   def minorJihadTarget(names: List[String]): Option[String] = {
     val priorities = List(
       BestJihadDRMPriority(false), PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-      WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
+      WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
       IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     
     botLog("Find \"Minor Jihad\" target")
@@ -283,7 +283,7 @@ object JihadistBot extends BotHelpers {
   def majorJihadTarget(names: List[String]): Option[String] = {
     val priorities = List(
       BestJihadDRMPriority(true), PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-      WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
+      WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
       IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     
     botLog("Find \"Major Jihad\" target")
@@ -293,7 +293,7 @@ object JihadistBot extends BotHelpers {
   def markerAlignGovTarget(names: List[String]): Option[String] = {
     val priorities = List(
       PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-      WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
+      WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
       IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     
     botLog("Find \"Marker/Align/Gov\" target")
@@ -303,7 +303,7 @@ object JihadistBot extends BotHelpers {
   def troopsMilitiaTarget(names: List[String]): Option[String] = {
     val priorities = List(
       PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-      WithAidPriority, BesiegedRegimePriority, HighestResourcePriority, WithTroopsPriority,
+      WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
       IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     
     botLog("Find \"Troops/Militia\" target")
