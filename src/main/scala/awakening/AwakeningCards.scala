@@ -56,9 +56,9 @@ object AwakeningCards {
   }
   val backlashCandidate = (m: MuslimCountry) =>
     (m.plots exists (p => !p.backlashed)) && !game.isCaliphateMember(m.name)
-  val unNationBuildingCandidate = (m: MuslimCountry) =>
-    (m.inRegimeChange || m.civilWar) &&
-    !game.isCaliphateMember(m.name)
+  val unNationBuildingCandidate = (m: MuslimCountry) => 
+    (m.inRegimeChange || m.civilWar) && !m.isAdversary && !(m.isGood && m.isAlly)
+
   val massTurnoutCandidate = (m: MuslimCountry) => 
     m.inRegimeChange && m.awakening > 0 && !game.isCaliphateMember(m.name)
   val scafCandidate = (m: MuslimCountry) => 
@@ -886,10 +886,9 @@ object AwakeningCards {
         else 
           USBot.markerAlignGovTarget(candidates).get
         
-        val die = getDieRoll(role, "Enter War of Ideas die roll: ")
         addEventTarget(target)
         addAidMarker(target)
-        performWarOfIdeas(target, die, ignoreGwotPenalty = true)
+        performWarOfIdeas(target, 3, ignoreGwotPenalty = true)
       }
     )),
     // ------------------------------------------------------------------------
