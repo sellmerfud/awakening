@@ -30,14 +30,15 @@ package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
 
-class MittsTurn extends Scenario {
+object MittsTurn extends Scenario {
   val name           = "Mitt's Turn"
-  val expansion      = true
+  val scenarioType   = AwakeningScenario
   val prestige       = 7
   val usPosture      = Hard
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
   val countries = List(
+    DefaultSyria.copy(isSunni = false, wmdCache = 2),
     DefaultAlgeriaTunisia.copy(governance = Poor, alignment = Neutral, awakening = 1),
     DefaultIraq.copy(governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),

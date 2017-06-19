@@ -1862,7 +1862,7 @@ object AwakeningCards {
             addEventTarget(name)
           takeTroopsOffMap(name, num)
         }
-        game = game.copy(eventParams = game.eventParams.copy(sequestrationTroops = true))
+        game = game.copy(params = game.params.copy(sequestrationTroops = true))
         addGlobalEventMarker(Sequestration)
       }
     )),

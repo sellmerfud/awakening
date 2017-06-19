@@ -30,9 +30,17 @@ package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
 
-class YouCanCallMeAl(val campaign: Boolean) extends Scenario {
-  val name           = s"You Can Call Me Al${if (campaign)" Campaign" else ""}"
-  val expansion      = campaign
+object YouCanCallMeAl extends YouCanCallMeAlDetails {
+  val name           = "You Can Call Me Al"
+  val scenarioType = LabyrinthScenario
+}
+
+object YouCanCallMeAlCampaign extends YouCanCallMeAlDetails {
+  val name           = "You Can Call Me Al -- Campaign"
+  val scenarioType = CampaignScenario
+}
+
+trait YouCanCallMeAlDetails extends Scenario {
   val prestige       = 7
   val usPosture      = Soft
   val funding        = 9

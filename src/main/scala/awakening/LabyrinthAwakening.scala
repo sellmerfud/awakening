@@ -281,7 +281,7 @@ object LabyrinthAwakening {
   val DefaultSudan             = MuslimCountry(Sudan, resources = 1, oilExporter = true)
   val DefaultSomalia           = MuslimCountry(Somalia, resources = 1)
   val DefaultJordan            = MuslimCountry(Jordan, resources = 1)
-  val DefaultSyria             = MuslimCountry(Syria, resources = 2, wmdCache = 2)
+  val DefaultSyria             = MuslimCountry(Syria, resources = 2)
   val DefaultCentralAsia       = MuslimCountry(CentralAsia, resources = 2)
   val DefaultTurkey            = MuslimCountry(Turkey, isSunni = false, resources = 2)
   val DefaultLebanon           = MuslimCountry(Lebanon, isSunni = false, resources = 1)
@@ -336,9 +336,7 @@ object LabyrinthAwakening {
   )
   
   val AwakeningDefaultCountries = DefaultNigeria :: DefaultMali :: LabyrinthDefaultCountries
-  
-    
-  
+  val CampaignDefaultCountries  = DefaultNigeria :: DefaultMali :: LabyrinthDefaultCountries
   
   val CountryAbbreviations = Map("US" -> UnitedStates, "UK" -> UnitedKingdom)
   
@@ -821,10 +819,19 @@ object LabyrinthAwakening {
       def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
       def removeMarkers(names: String*): MuslimCountry = this.copy(markers = markers filterNot names.contains)
   }
+  
+  val LabyrinthScenario = 1
+  val AwakeningScenario = 2
+  val CampaignScenario  = 3
+
+  val StartingCountries = Map(
+    LabyrinthScenario -> LabyrinthDefaultCountries,
+    AwakeningScenario -> AwakeningDefaultCountries,
+    CampaignScenario  -> CampaignDefaultCountries)
 
   trait Scenario {
     val name: String
-    val expansion: Boolean     // false for Labyrinth scenario, true for Awakening scenario
+    val scenarioType: Int
     val prestige: Int
     val usPosture: String
     val funding: Int
@@ -873,15 +880,13 @@ object LabyrinthAwakening {
   
   case class GameParameters(
     scenarioName: String,
+    scenarioType: Int,
+    useExpansionRules: Boolean,
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
+    sequestrationTroops: Boolean = false,  // true if 3 troops off map due to Sequestration event
     botLogging: Boolean = false
-  )
-  
-  case class EventParameters(
-    awakeningExpansion: Boolean  = false,
-    sequestrationTroops: Boolean = false  // true if 3 troops off map due to Sequestration event
   )
   
   case class GameState(
@@ -897,7 +902,6 @@ object LabyrinthAwakening {
     offMapTroops: Int = 0,
     reserves: Reserves = Reserves(0, 0),
     trainingCampCells: CampCells = CampCells(0, 0),
-    eventParams: EventParameters = EventParameters(),
     plays: List[Play] = Nil,               // Cards plays/plot resolutions during current turn (most recent first).
     firstPlotCard: Option[Int] = None,     // Card number
     cardsLapsing: List[Int] = Nil,         // Card numbers
@@ -1298,7 +1302,7 @@ object LabyrinthAwakening {
       b += f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d"
       b += f"US reserves     : ${reserves.us}%2d   | Jihadist reserves : ${reserves.jihadist}%2d"
       b += separator()
-      if (game.eventParams.awakeningExpansion) {
+      if (game.params.useExpansionRules) {
         b += f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"
         b += s"Troop commitment: $troopCommitment"
         b += separator()
@@ -1310,7 +1314,7 @@ object LabyrinthAwakening {
         b += f"Cells on track  : $cellsOnTrack%2d"
       }
       b += f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}"
-      if (game.eventParams.awakeningExpansion) {
+      if (game.params.useExpansionRules) {
         b += f"Cells in camp   : ${trainingCampCells.inCamp}%2d   | Camp cells on map : ${trainingCampCells.onMap}%2d" 
         b += separator()
         (trainingCamp, trainingCampCapacity) match {
@@ -1327,7 +1331,7 @@ object LabyrinthAwakening {
       
       
       wrap( "Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist)) foreach (l => b += l)
-      if (game.eventParams.awakeningExpansion)
+      if (game.params.useExpansionRules)
         wrap( "Resolved plots  : ", plotsToStrings(resolvedPlots)) foreach (l => b += l)
       wrap( "Removed plots   : ", plotsToStrings(removedPlots)) foreach (l => b += l)
       if (activePlotCountries.isEmpty)
@@ -1454,20 +1458,27 @@ object LabyrinthAwakening {
       b.toList
     }
   }
-  
   def initialGameState(
     scenario: Scenario,
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty]) = {
-    var countries:List[Country] = if (scenario.expansion) AwakeningDefaultCountries 
-                                  else LabyrinthDefaultCountries
+      
+    var countries = StartingCountries(scenario.scenarioType)
     // Apply scenario overrides to countries.
     for (c <- scenario.countries)
       countries = c :: (countries filterNot (_.name == c.name))
     
+    val params = GameParameters(
+      scenario.name,
+      scenario.scenarioType,
+      scenario.scenarioType == AwakeningScenario, // useExpansionRules
+      humanRole,
+      humanAutoRoll,
+      botDifficulties)
+    
     GameState(
-      GameParameters(scenario.name, humanRole,humanAutoRoll, botDifficulties),
+      params,
       0, // Turn number, zero indicates start of game.
       scenario.prestige,
       scenario.usPosture,
@@ -1476,13 +1487,12 @@ object LabyrinthAwakening {
       scenario.markersInPlay.sorted,
       PlotData(availablePlots = scenario.availablePlots.sorted),
       cardsRemoved = scenario.cardsRemoved,
-      offMapTroops = scenario.offMapTroops,
-      eventParams = EventParameters(awakeningExpansion = scenario.expansion))
+      offMapTroops = scenario.offMapTroops)
   }
   
   
   // Global variables
-  var game = initialGameState(new Awakening, US, true, Muddled :: Nil)
+  var game = initialGameState(Awakening, US, true, Muddled :: Nil)
   
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -2191,7 +2201,7 @@ object LabyrinthAwakening {
 
   // Return true if no caliphate exists and the the given country is a caliphate candidate.
   def canDeclareCaliphate(capital: String): Boolean  =
-    game.eventParams.awakeningExpansion &&
+    game.params.useExpansionRules       &&
     !game.caliphateDeclared             && 
     (game isMuslim capital)             &&
     (game getMuslim capital).caliphateCandidate
@@ -2323,7 +2333,7 @@ object LabyrinthAwakening {
       getTarget
     }
     
-    if (game.eventParams.awakeningExpansion) {
+    if (game.params.useExpansionRules) {
       if (lapsingEventInPlay(ArabWinter))
         log("No convergence peformed because \"Arab Winter\" is in effect")
       else {
@@ -3383,12 +3393,12 @@ object LabyrinthAwakening {
       val updatedPlots = game.plotData.copy(removedPlots = plot :: game.removedPlots)
       game = game.copy(plotData = updatedPlots)
       log(s"$plot alerted in $countryName, remove it from the game.")
-      if (game.eventParams.awakeningExpansion) {
+      if (game.params.useExpansionRules) {
         log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot")
         game = game.adjustPrestige(1)
       }
     }
-    else if (game.eventParams.awakeningExpansion) {
+    else if (game.params.useExpansionRules) {
       val updatedPlots = game.plotData.copy(resolvedPlots = plot :: game.resolvedPlots)
       game = game.copy(plotData = updatedPlots)
       log(s"$plot alerted in $countryName, move it to the resolved plots box.")
@@ -4553,7 +4563,7 @@ object LabyrinthAwakening {
               log(s"Decrease prestige by -1 to ${game.prestige} (Troops present)")
             }
             // Sequestration
-            if (mapPlot.plot == PlotWMD && game.eventParams.sequestrationTroops) {
+            if (mapPlot.plot == PlotWMD && game.params.sequestrationTroops) {
               log("Resolved WMD plot releases the troops off map for Sequestration")
               returnSequestrationTroopsToAvailable()
             }
@@ -4649,7 +4659,7 @@ object LabyrinthAwakening {
             }
             
             // Sequestration
-            if (mapPlot.plot == PlotWMD && game.eventParams.sequestrationTroops) {
+            if (mapPlot.plot == PlotWMD && game.params.sequestrationTroops) {
               log("Resolved WMD plot releases the troops off map for Sequestration")
               returnSequestrationTroopsToAvailable()
             }
@@ -4667,7 +4677,7 @@ object LabyrinthAwakening {
         println(s"Remove the ${amountOf(wmdCount, "resolved WMD plot")} from the game")
       
       if (otherCount > 0)
-        if (game.eventParams.awakeningExpansion)
+        if (game.params.useExpansionRules)
           println(s"Put the ${amountOf(otherCount, "resolved non-WMD plot")} in the resolved plots box")
         else
           println(s"Put the ${amountOf(otherCount, "resolved non-WMD plot")} in the available plots box")
@@ -4675,7 +4685,7 @@ object LabyrinthAwakening {
       (game.countries filter (_.hasPlots)) foreach {
         case m: MuslimCountry =>
           val (removed, resolved) = m.plots map (_.plot) partition (_ == PlotWMD)
-          val updatedPlots = if (game.eventParams.awakeningExpansion)
+          val updatedPlots = if (game.params.useExpansionRules)
             game.plotData.copy(
               resolvedPlots = resolved ::: game.resolvedPlots,
               removedPlots  = removed  ::: game.removedPlots)
@@ -4687,7 +4697,7 @@ object LabyrinthAwakening {
           game = game.updateCountry(m.copy(plots = Nil)).copy(plotData = updatedPlots)
         case n: NonMuslimCountry => 
           val (removed, resolved) = n.plots map (_.plot) partition (_ == PlotWMD)
-          val updatedPlots = if (game.eventParams.awakeningExpansion)
+          val updatedPlots = if (game.params.useExpansionRules)
             game.plotData.copy(
               resolvedPlots = resolved ::: game.resolvedPlots,
               removedPlots  = removed  ::: game.removedPlots)
@@ -4717,10 +4727,10 @@ object LabyrinthAwakening {
     // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
     // then return the troops to available.
   def returnSequestrationTroopsToAvailable(): Unit = {
-    if (game.eventParams.sequestrationTroops) {
+    if (game.params.sequestrationTroops) {
       log("Return 3 (Sequestration) troops from the off map box to the troops track")
       game = game.copy(offMapTroops = game.offMapTroops - 3,
-                       eventParams = game.eventParams.copy(sequestrationTroops = false))
+                       params = game.params.copy(sequestrationTroops = false))
     }
   }
   
@@ -4730,6 +4740,25 @@ object LabyrinthAwakening {
     log(separator(char = '='))
     log(s"$START_OF_TURN ${game.turn}")
     log(separator(char = '='))
+  }
+  
+  // This is used when playing a campaign scenario.
+  // When the Awakening cards are added we must:
+  // Change Syria to Shia-Mix
+  // Add WMD cache to Syria(2) and Iran (1)
+  // set params.useExpansionRules = true
+  // Test Algeria and add an awakening marker (if possible)
+  def addAwakeningCards(): Unit = {
+    val syria = game.getMuslim(Syria)
+    val iran  = game.getNonMuslim(Iran)
+    game = game.updateCountry(syria.copy(isSunni = false, wmdCache = 2)).
+                updateCountry(iran.copy(wmdCache = 1)).
+                copy(params = game.params.copy(useExpansionRules = true))
+    log()
+    log("Syria is now Shia-Mix country with 2 unavailable WMD plots")
+    log("Iran now contains 1 unavailable WMD plot")
+    testCountry(AlgeriaTunisia)
+    addAwakeningMarker(AlgeriaTunisia)
   }
   
   def endTurn(): Unit = {
@@ -4798,7 +4827,7 @@ object LabyrinthAwakening {
         log(s"Return ${amountOf(num, "resolved plot")} to the available plots box")
       }
     
-      if (game.eventParams.awakeningExpansion) {
+      if (game.params.useExpansionRules) {
         polarization()
         civilWarAttrition()
       }
@@ -4814,7 +4843,7 @@ object LabyrinthAwakening {
     
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
-      if (game.eventParams.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
+      if (game.params.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
         log("There is a 3 Resource Muslim country at Islamist Rule")
         returnSequestrationTroopsToAvailable()
       }
@@ -4845,18 +4874,18 @@ object LabyrinthAwakening {
   }
   
   val scenarios = ListMap[String, Scenario](
-    "LetsRoll"                    -> new LetsRoll(campaign = false),
-    "YouCanCallMeAl"              -> new YouCanCallMeAl(campaign = false),
-    "Anaconda"                    -> new Anaconda(campaign = false),
-    "MissionAccomplished"         -> new MissionAccomplished(campaign = false),
-    "Awakening"                   -> new Awakening,
-    "MittsTurn"                   -> new MittsTurn,
-    "StatusOfForces"              -> new StatusOfForces,
-    "IslamicStateOfIraq"          -> new IslamicStateOfIraq,
-    "LetsRollCampaign"            -> new LetsRoll(campaign = true),
-    "YouCanCallMeAlCampaign"      -> new YouCanCallMeAl(campaign = true),
-    "AnacondaCampaign"            -> new Anaconda(campaign = true),
-    "MissionAccomplishedCampaign" -> new MissionAccomplished(campaign = true)
+    "LetsRoll"                    -> LetsRoll,
+    "YouCanCallMeAl"              -> YouCanCallMeAl,
+    "Anaconda"                    -> Anaconda,
+    "MissionAccomplished"         -> MissionAccomplished,
+    "Awakening"                   -> Awakening,
+    "MittsTurn"                   -> MittsTurn,
+    "StatusOfForces"              -> StatusOfForces,
+    "IslamicStateOfIraq"          -> IslamicStateOfIraq,
+    "LetsRollCampaign"            -> LetsRollCampaign,
+    "YouCanCallMeAlCampaign"      -> YouCanCallMeAlCampaign,
+    "AnacondaCampaign"            -> AnacondaCampaign,
+    "MissionAccomplishedCampaign" -> MissionAccomplishedCampaign
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
   
@@ -5020,9 +5049,7 @@ object LabyrinthAwakening {
           reqd[String]("", "--delete=name", saved, "Delete a game in progress")
             { (v, c) => c.copy(gameName = Some(v), deleteGame = true) }
           
-        val scenarioHelp = "Select a scenario" +: 
-          (for ((key, sc) <- scenarios.toSeq; mod = if (sc.expansion) "Awakening" else "Labyrinth")
-            yield s"$key ($mod)")
+        val scenarioHelp = "Select a scenario" +: scenarios.keys.toSeq
         reqd[String]("", "--scenario=name", scenarios.keys.toSeq, scenarioHelp: _*)
           { (v, c) => c.copy(scenarioName = Some(v)) }
       
@@ -5301,6 +5328,8 @@ object LabyrinthAwakening {
                                 |This should be done after the last US card play.
                                 |Any plots will be resolved and the end of turn
                                 |actions will be conducted."""),
+      Command("add awakening cards", """Add the Awakening cards to the draw deck and
+                                |begin using the Awakening expansion rules.""".stripMargin),
       Command("show",         """Display the current game state
                                 |  show all        - entire game state
                                 |  show plays      - cards played during the current turn
@@ -5340,8 +5369,9 @@ object LabyrinthAwakening {
       Command("help",         """List available commands"""),
       Command("quit",         """Quit the game.  All plays for the current turn will be saved.""")
     ) filter { 
-      case Command("remove cadre", _) => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
-      case _                          => true
+      case Command("remove cadre", _)        => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
+      case Command("add awakening cards", _) => game.params.scenarioType == CampaignScenario && game.params.useExpansionRules == false
+      case _                                 => true
     } 
 
     val CmdNames = (Commands map (_.name))
@@ -5352,16 +5382,17 @@ object LabyrinthAwakening {
     tokens.headOption foreach { verb =>
       val param = if (tokens.tail.nonEmpty) Some(tokens.tail.mkString(" ")) else None
       matchOne(verb, CmdNames) foreach {
-        case "us"            => usCardPlay(param)
-        case "jihadist"      => jihadistCardPlay(param)
-        case "remove cadre"  => humanRemoveCadre()
-        case "resolve plots" => resolvePlots()
-        case "end turn"      => endTurn()
-        case "show"          => showCommand(param)
-        case "adjust"        => adjustSettings(param)
-        case "history"       => history(param)
-        case "rollback"      => rollback()
-        case "quit"          => if (askYorN("Really quit (y/n)? ")) throw ExitGame
+        case "us"                    => usCardPlay(param)
+        case "jihadist"              => jihadistCardPlay(param)
+        case "remove cadre"          => humanRemoveCadre()
+        case "resolve plots"         => resolvePlots()
+        case "end turn"              => endTurn()
+        case "add awakening cards"   => addAwakeningCards()
+        case "show"                  => showCommand(param)
+        case "adjust"                => adjustSettings(param)
+        case "history"               => history(param)
+        case "rollback"              => rollback()
+        case "quit"                  => if (askYorN("Really quit (y/n)? ")) throw ExitGame
         case "help" if param.isEmpty =>
           println("Available commands: (type help <command> for more detail)")
           println(orList(CmdNames))
@@ -5393,7 +5424,7 @@ object LabyrinthAwakening {
   def showCommand(param: Option[String]): Unit = {
     val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" ::
                   "civil wars" :: countryNames(game.countries)
-    val opts = if (game.eventParams.awakeningExpansion) options
+    val opts = if (game.params.useExpansionRules) options
                else options filterNot(o => o == "caliphate" || o == "civil wars")
                   
     askOneOf("Show: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
@@ -5433,7 +5464,7 @@ object LabyrinthAwakening {
       printCountries("Iran Special Case", iranSpecial.toList)
     printSummary(game.scoringSummary)
     printSummary(game.statusSummary)
-    if (game.eventParams.awakeningExpansion) {
+    if (game.params.useExpansionRules) {
       printSummary(game.civilWarSummary)
       printSummary(game.caliphateSummary)
     }

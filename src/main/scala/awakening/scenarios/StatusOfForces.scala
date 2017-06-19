@@ -30,9 +30,9 @@ package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
 
-class StatusOfForces extends Scenario {
+object StatusOfForces extends Scenario {
   val name           = "Status of Force Agreement"
-  val expansion      = true
+  val scenarioType   = AwakeningScenario
   val prestige       = 6
   val usPosture      = Soft
   val funding        = 6
@@ -44,8 +44,8 @@ class StatusOfForces extends Scenario {
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
                             regimeChange = TanRegimeChange),
     DefaultPakistan.copy(governance = Poor, alignment = Neutral, sleeperCells = 1, reaction = 1),
-    DefaultSyria.copy(governance = Poor, alignment = Neutral, sleeperCells = 4,
-                      awakening = 1, reaction = 1),
+    DefaultSyria.copy(isSunni = false, wmdCache = 2, governance = Poor, alignment = Neutral, 
+                      sleeperCells = 4, awakening = 1, reaction = 1),
     DefaultEgypt.copy(governance = Fair, alignment = Neutral, awakening = 1, reaction = 1),
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultFrance.copy(postureValue = Hard),

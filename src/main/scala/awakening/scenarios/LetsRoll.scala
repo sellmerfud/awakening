@@ -30,9 +30,17 @@ package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
 
-class LetsRoll(val campaign: Boolean) extends Scenario {
-  val name           = s"Let's Roll${if (campaign)" Campaign" else ""}"
-  val expansion      = campaign
+object LetsRoll extends LetsRollDetails {
+  val name           = "Let's Roll"
+  val scenarioType = LabyrinthScenario
+}
+
+object LetsRollCampaign extends LetsRollDetails {
+  val name           = "Let's Roll -- Campaign"
+  val scenarioType = CampaignScenario
+}
+
+trait LetsRollDetails extends Scenario {
   val prestige       = 7
   val usPosture      = Hard
   val funding        = 9
