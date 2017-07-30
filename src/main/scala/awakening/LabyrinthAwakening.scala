@@ -3241,8 +3241,6 @@ object LabyrinthAwakening {
       case m: MuslimCountry =>
         assert(!m.isAdversary, "Cannot do War of Ideas in Adversary country")
         assert(!(m.isGood && m.isAlly), "Cannot do War of Ideas in muslim Good Ally")
-        assert(!(m.inRegimeChange && (m.totalTroopsAndMilitia - m.totalCells) < 5),
-                 "Cannot do War of Ideas in regime change country, not enought troops + militia")
         addOpsTarget(name)
         log()
         testCountry(name)

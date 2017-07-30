@@ -2456,7 +2456,7 @@ object LabyrinthCards {
         }
         addEventTarget(name)
         removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
-        log("$US player draw 2 cards")
+        log(s"$US player draw 2 cards")
       }
       else {  // Jihadist
         val (name, plot) = if (role == game.humanRole) {
