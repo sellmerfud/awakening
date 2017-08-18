@@ -1183,7 +1183,7 @@ object JihadistBot extends BotHelpers {
     log(s"Radicalization: Plot in Soft non-Muslim countries")
     val maxOps = cardOps + reserveOps
     def nextPlotTarget(completed: Int, candidates: List[NonMuslimCountry]): Int = {
-      if (completed == maxOps || candidates.isEmpty)
+      if (completed == maxOps || candidates.isEmpty || game.availablePlots.isEmpty)
         completed
       else {
         // Give preference to countries with the worst governance 
@@ -1195,19 +1195,19 @@ object JihadistBot extends BotHelpers {
         }
         val target = topPriority(softs, PlotPriorities).get
         
-        def nextAttempt(plotsCompleted: Int): Int = {
-          if (plotsCompleted == maxOps || totalUnused(target) == 0 || game.availablePlots.isEmpty) 
-            plotsCompleted
+        def nextAttempt(plotsPerformed: Int): Int = {
+          if (completed + plotsPerformed == maxOps || totalUnused(target) == 0 || game.availablePlots.isEmpty) 
+            plotsPerformed
           else {
-            if (completed >= cardOps)
+            if (completed + plotsPerformed >= cardOps)
               expendBotReserves(1)              
             
             performPlots(3, PlotAttempt(target.name, activeCells(target) > 0)::Nil)
             usedCells(target.name).addActives(1)
-            nextAttempt(plotsCompleted + 1)
+            nextAttempt(plotsPerformed + 1)
           }
         }
-        val numPlots = nextAttempt(completed)
+        val numPlots = nextAttempt(0)
         nextPlotTarget(completed + numPlots, candidates filterNot (_.name == target.name))
       }
     }
