@@ -547,9 +547,9 @@ object LabyrinthAwakening {
   )
   
   type CardEvent       = Role => Unit
-  type EventConditions = Role => Boolean
+  type EventConditions = (Role, Boolean) => Boolean
   type EventAlertsPlot = (String, Plot) => Boolean   // Country Name, Plot
-  val AlwaysPlayable: EventConditions =  _ => true
+  val AlwaysPlayable: EventConditions =  (_, _) => true
   val DoesNotAlertPlot: EventAlertsPlot = (_, _) => false
     
   sealed trait CardRemoval
@@ -585,12 +585,12 @@ object LabyrinthAwakening {
     override def toString() = s"${numAndName} (${opsString(ops)})"
     
     def eventIsPlayable(role: Role): Boolean =
-      (association == Unassociated || association == role) && eventConditions(role)
+      (association == Unassociated || association == role) && eventConditions(role, false)
       
     def eventWillTrigger(opponentRole: Role): Boolean = {
       association  == opponentRole &&
       opponentRole == game.botRole && 
-      eventConditions(opponentRole)
+      eventConditions(opponentRole, true)
     }
   }
   
