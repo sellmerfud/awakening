@@ -1869,33 +1869,44 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(185, "al-Maliki", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role) => game hasMuslim (_.totalTroops > 0)
+      (role: Role) => game hasCountry (_.totalTroops > 0)
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter (_.totalTroops > 0))
+        // The only non-muslim country that may contain troops is the Philippines
+        // if (abu Sayyaf is in effect)
+        val candidates = countryNames(game.countries filter (_.totalTroops > 0))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else {
           // See Event Instructions table
-          val candidates = {
-            val eligible = game.muslims filter (_.totalTroops > 0)
-            countryNames(if (eligible exists (_.isAlly))
-              eligible filter (_.isAlly)
-            else if (eligible exists (_.isNeutral))
-              eligible filter (_.isNeutral)
-            else
-              eligible)
+          // Only choose the Philippines if it is the only candidate
+          val eligibleMuslims = game.muslims filter (_.totalTroops > 0)
+            if (eligibleMuslims.isEmpty)
+              (game.countries filter (_.totalTroops > 0) map (_.name)).head
+            else {
+              val candidates = {
+                countryNames(if (eligibleMuslims exists (_.isAlly))
+                  eligibleMuslims filter (_.isAlly)
+                else if (eligibleMuslims exists (_.isNeutral))
+                  eligibleMuslims filter (_.isNeutral)
+                else
+                  eligibleMuslims)
+            }
+            JihadistBot.troopsMilitiaTarget(candidates).get
           }
-          JihadistBot.troopsMilitiaTarget(candidates).get
         }
 
         addEventTarget(target)
-        val m = game.getMuslim(target)
-        moveTroops(target, "track", m.troops)
-        removeAllTroopsMarkers(target)
-        setAlignment(target, Neutral)
-        addAidMarker(target)
-        endRegimeChange(target)
+        if (game isNonMuslim target)
+          moveTroops(target, "track", game.getCountry(target).troops)
+        else {
+          val m = game.getMuslim(target)
+          moveTroops(target, "track", m.troops)
+          removeAllTroopsMarkers(target)
+          setAlignment(target, Neutral)
+          addAidMarker(target)
+          endRegimeChange(target)
+        }
       }
     )),
     // ------------------------------------------------------------------------
