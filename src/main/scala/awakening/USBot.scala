@@ -1140,7 +1140,7 @@ object USBot extends BotHelpers {
   def woiNonMuslimOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     val target  = woiNonMuslimTarget(countryNames(woiNonMuslimTargets(maxOps))).get
-    val opsUsed = (game getMuslim target).governance
+    val opsUsed = (game getNonMuslim target).governance
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
     performWarOfIdeas(target, opsUsed)
