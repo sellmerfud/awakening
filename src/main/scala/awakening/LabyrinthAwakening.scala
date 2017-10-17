@@ -1067,11 +1067,11 @@ object LabyrinthAwakening {
       case _          => Ample
     }
     
-    def troopsAvailable  = 15 - offMapTroops - muslims.foldLeft(0) { (a, c) => a + c.troops }
-    def militiaAvailable = 15 - muslims.foldLeft(0) { (a, c) => a + c.militia }
-    
-    def troopsOnMap   = muslims.foldLeft(0) { (a, m) => a + m.troops }
+    def troopsOnMap   = countries.foldLeft(0) { (a, c) => a + c.troops }
     def militiaOnMap  = muslims.foldLeft(0) { (a, m) => a + m.militia }
+    
+    def troopsAvailable  = 15 - offMapTroops - troopsOnMap
+    def militiaAvailable = 15 - militiaOnMap
     
     // If the "Training Camps" marker is in a country we add 3 extra cells available cells.
     // (5 cells if the "Training Camps" is in a caliphate country.)
