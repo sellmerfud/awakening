@@ -11,11 +11,6 @@ and therefore requires the Java JVM.  It is a text based
 console application and should run on Mac OSX, Windows and
 Linux.
 
-Currently this program only supports the cards from the 
-Awakening expansion. I may add support for the cards from
-the original Labyrinth game in future.
-
-
 To run the program
 -----------------------------------------------------------------------
 1. Ensure that Java is installed on you system and that the java 
