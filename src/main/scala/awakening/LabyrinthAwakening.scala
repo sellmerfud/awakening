@@ -5540,8 +5540,8 @@ object LabyrinthAwakening {
           println()
           println(separator())
           println("A US card play starts a new action phase and there are unresolved plots")
-          val choices = List("resolve" -> "Resolve plots", "cancel" -> "Cancel command")
-          if (askMenu(choices).head == "resolve")
+          val choices = List("resolve" -> "Resolve plots", "cancel" -> "Abort the US card play")
+          if (askMenu(choices, allowAbort = false).head == "resolve")
             resolvePlots()
           return
         }
@@ -5896,8 +5896,8 @@ object LabyrinthAwakening {
           println()
           println(separator())
           println("A Jihadist card play starts a new action phase and there are unresolved plots")
-          val choices = List("resolve" -> "Resolve plots", "cancel" -> "Cancel command")
-          if (askMenu(choices).head == "resolve")
+          val choices = List("resolve" -> "Resolve plots", "cancel" -> "Abort the Jihadist card play")
+          if (askMenu(choices, allowAbort = false).head == "resolve")
             resolvePlots()
           return
         }
