@@ -4582,10 +4582,13 @@ object LabyrinthAwakening {
               }
               
               if (!m.isPoor || m.aidMarkers > 0) {
+                // Rare for a plot to exist in an IR country.  Jihadist would have to
+                // place the plot with one card, then do Major Jihad with the second
+                def isSuccess(die: Int) = m.isIslamistRule || die <= m.governance
                 // roll plot dice
                 val dice = List.fill(mapPlot.plot.number)(dieRoll)
-                val successes = dice count (_ <= m.governance)
-                val diceStr = dice map (d => s"$d (${if (d <= m.governance) "success" else "failure"})")
+                val successes = dice count isSuccess
+                val diceStr = dice map (d => s"$d (${if (isSuccess(d)) "success" else "failure"})")
                 log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
                 // Remove 1 aid marker for each sucessful die roll
                 removeAidMarker(name, successes min m.aidMarkers)

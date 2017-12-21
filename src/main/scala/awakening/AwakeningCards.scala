@@ -2082,7 +2082,7 @@ object AwakeningCards {
             else {
               val die = getDieRoll(role)
               log(s"Die roll: $die")
-              if (die <= c.governance) {
+              if (c.recruitSucceeds(die)) {
                 log(s"Recruit in $target succeeds with a die roll of $die")
                 addSleeperCellsToCountry(target, cells)
               }

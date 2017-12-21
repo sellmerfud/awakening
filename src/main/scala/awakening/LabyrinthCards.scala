@@ -1302,8 +1302,13 @@ object LabyrinthCards {
         
         addEventTarget(name)
         val die = getDieRoll(role)
-        val success = die <= (game getCountry name).governance
-        log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
+        val success = if (name == CentralAsia && game.getMuslim(name).isIslamistRule)
+          true
+        else {
+          val ok = die <= game.getCountry(name).governance
+          log(s"Die roll: $die  (${if (ok) "Success" else "Failure"})")
+          ok
+        }
         if (success) {
           log(s"Move the HEU WMD plot marker to the available plots box")
           val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
@@ -1373,8 +1378,13 @@ object LabyrinthCards {
       (role: Role) => {
         addEventTarget(CentralAsia)
         val die = getDieRoll(role)
-        val success = die <= (game getCountry CentralAsia).governance
-        log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
+        val success = if (game.getMuslim(CentralAsia).isIslamistRule)
+          true
+        else {
+          val ok = die <= game.getCountry(CentralAsia).governance
+          log(s"Die roll: $die  (${if (ok) "Success" else "Failure"})")
+          ok
+        }
         if (success) {
           log(s"Move the Kazakh Strain WMD plot marker to the available plots box")
           val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
@@ -1729,7 +1739,7 @@ object LabyrinthCards {
             else {
               val die = getDieRoll(role)
               log(s"Die roll: $die")
-              if (die <= c.governance) {
+              if (c.recruitSucceeds(die)) {
                 log(s"Recruit in $target succeeds with a die roll of $die")
                 addSleeperCellsToCountry(target, cells)
               }
