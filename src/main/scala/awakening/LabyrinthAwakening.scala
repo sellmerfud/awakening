@@ -4511,7 +4511,7 @@ object LabyrinthAwakening {
     var wmdsInCivilWars = Set.empty[String]
     log()
     log(separator(char='='))
-    log("Reslove plots")
+    log("Resolve plots")
     if (unblocked.isEmpty) {
       log(separator())
       log("There are no unblocked plots on the map")
