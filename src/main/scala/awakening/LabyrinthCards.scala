@@ -655,7 +655,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(32, "Back Channel", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, forTrigger: Boolean) => role == game.humanRole && {  // Unplayable by the Bot
+      (role: Role, forTrigger: Boolean) => game.usPosture == Soft && role == game.humanRole && {  // Unplayable by the Bot
         val neededOps = (game.muslims filter (_.isAdversary) map (_.resources)).distinct.sorted
         cacheQuestion(askYorN(s"Do you have a card in hand with and Ops value of ${orList(neededOps)}? "))
       }
