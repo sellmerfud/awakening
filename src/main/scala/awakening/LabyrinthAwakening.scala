@@ -760,23 +760,7 @@ object LabyrinthAwakening {
     
     def isShiaMix = !isSunni
     def inRegimeChange = regimeChange != NoRegimeChange
-  
-    def isUntestedWithData: Boolean = isUntested && (
-      cells > 0                 ||
-      hasCadre                  ||
-      hasPlots                  ||
-      markers.nonEmpty          ||
-      totalTroopsAndMilitia > 0 ||
-      inRegimeChange            ||
-      besiegedRegime            ||
-      civilWar                  ||
-      caliphateCapital          ||
-      aidMarkers > 0            ||
-      awakening > 0             ||
-      reaction > 0              ||
-      wmdCache > 0
-    )
-  
+    
     // If a muslim country is untest, then it is valid a WoI target.
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) =
       (isUntested      || ops >= governance)  &&
@@ -5458,7 +5442,6 @@ object LabyrinthAwakening {
     printCountries("Muslim Countries with Poor Governance",  countryNames(game.muslims filter (_.isPoor)))
     printCountries("Muslim Countries under Islamic Rule",    countryNames(game.muslims filter (_.isIslamistRule)))
     printCountries("Untested Muslim Countries",    countryNames(game.muslims filter (_.isUntested)))
-    // printCountries("Untested Muslim Countries with Data",    countryNames(game.muslims filter (_.isUntestedWithData)))
     printCountries("Non-Muslim Countries with Hard Posture", countryNames(game.nonMuslims filter (_.isHard)))
     printCountries("Non-Muslim Countries with Soft Posture", countryNames(game.nonMuslims filter (_.isSoft)))
     printCountries("Untested Non-Muslim Countries", countryNames(game.nonMuslims filter (_.isUntested)))
