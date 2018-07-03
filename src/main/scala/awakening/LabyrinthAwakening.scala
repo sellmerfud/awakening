@@ -6102,9 +6102,9 @@ object LabyrinthAwakening {
     if (lapsingEventInPlay(IslamicMaghreb) && (Schengen contains dest))
       false
     else if (lapsingEventInPlay(Biometrics))
-      src == dest || (areAdjacent(src, dest) && !(game getCountry dest).isGood)
+      src == dest || ((areAdjacent(src, dest) && !(game getCountry dest).isGood))
     else
-      src == dest || areAdjacent(src, dest)
+      src == dest || areAdjacent(src, dest) || (game getCountry dest).isIslamistRule
   }
   
   def humanTravel(ops: Int): Unit = {
