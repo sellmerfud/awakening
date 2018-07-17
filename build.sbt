@@ -41,7 +41,7 @@ lazy val awakening = (project in file("."))
       IO.delete(new File(s"$base.zip"))
       IO.delete(new File(base))
       IO.createDirectory(new File(lib))
-      IO.copy(files, overwrite = true)
+      IO.copy(files, CopyOptions().withOverwrite(true))
       val perms = new HashSet[PosixFilePermission]()
       val permsList = List(OWNER_READ,  OWNER_WRITE,   OWNER_EXECUTE, 
                            GROUP_READ,  GROUP_EXECUTE,
