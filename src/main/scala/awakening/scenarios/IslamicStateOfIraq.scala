@@ -50,6 +50,6 @@ object IslamicStateOfIraq extends Scenario {
     DefaultFrance.copy(postureValue = Hard),
     DefaultBenelux.copy(postureValue = Hard))
   val markersInPlay = List(Sequestration)
-  val cardsRemoved = 133::185::237::Nil
+  val cardsRemoved = 133::151::174::184::185::188::194::234::237::Nil
   val offMapTroops = 3
 }
