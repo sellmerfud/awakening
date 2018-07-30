@@ -38,15 +38,16 @@ object StatusOfForces extends Scenario {
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
   val countries = List(
-    DefaultIraq.copy(governance = Poor, alignment = Neutral, militia = 1, activeCells = 2,
+    DefaultIraq.copy(governance = Poor, alignment = Neutral, militia = 1, sleeperCells = 2,
                      awakening = 1, reaction = 1),
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2, awakening = 1),
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
                             regimeChange = TanRegimeChange),
     DefaultPakistan.copy(governance = Poor, alignment = Neutral, sleeperCells = 1, reaction = 1),
     DefaultSyria.copy(isSunni = false, wmdCache = 2, governance = Poor, alignment = Neutral, 
-                      sleeperCells = 4, awakening = 1, reaction = 1),
+                      sleeperCells = 2, awakening = 1, reaction = 1),
     DefaultEgypt.copy(governance = Fair, alignment = Neutral, awakening = 1, reaction = 1),
+    DefaultLibya.copy(governance = Fair, alignment = Ally),
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultFrance.copy(postureValue = Hard),
     DefaultBenelux.copy(postureValue = Soft))
