@@ -687,6 +687,7 @@ object LabyrinthAwakening {
     def autoRecruit: Boolean
     def recruitSucceeds(die: Int): Boolean
     def canTakeMilitia: Boolean
+    def disruptAffectsPrestige: Boolean
   }
 
   case class NonMuslimCountry(
@@ -726,6 +727,8 @@ object LabyrinthAwakening {
     // The exception is the Abu Sayyaf event in the Philippines.
     def canDeployTo(ops: Int) = ops >= governance && name == Philippines && hasMarker(AbuSayyaf)
     def maxDeployFrom = totalTroopsThatCanDeploy
+    def disruptAffectsPrestige = totalTroops > 1
+    
   }
 
   case class MuslimCountry(
@@ -1155,11 +1158,6 @@ object LabyrinthAwakening {
     def withdrawPossible(ops: Int) = 
         ops >= 3 && usPosture == Soft && withdrawFromTargets.nonEmpty
 
-    def disruptAffectsPrestige(name: String): Boolean = getCountry(name) match {
-      case m: MuslimCountry    => m.disruptAffectsPrestige
-      case _: NonMuslimCountry => false
-    }
-    
     // Returns the losses that would occur if this country is the 
     // target of a disrupt operation.
     // Some(Either(cells, ())) or None
@@ -1170,7 +1168,9 @@ object LabyrinthAwakening {
         case m: MuslimCountry if alAnbar && (m.name == Iraq || m.name == Syria) => 1
         case m: MuslimCountry =>
           if ((m.totalTroopsAndMilitia) > 1 && (m.totalTroops > 0 || m.hasMarker(Advisors))) 2 else 1
-        case n: NonMuslimCountry => if (n.isHard) 2 else 1
+        case n: NonMuslimCountry =>
+          // Note only Philippines can have troops if AbuSayyaf marker is there
+          if (n.isHard || n.totalTroops > 1) 2 else 1
       }
       if (c.cells > 0)
         Some(Left(numLosses min c.cells))
@@ -3334,7 +3334,7 @@ object LabyrinthAwakening {
   }
   
   def performDisrupt(target: String): Unit = {
-    val bumpPrestige = game.disruptAffectsPrestige(target)
+    val bumpPrestige = game.getCountry(target).disruptAffectsPrestige
     addOpsTarget(target)
     addDisruptedTarget(target)
     game.disruptLosses(target) match {
