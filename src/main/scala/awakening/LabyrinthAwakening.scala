@@ -1143,13 +1143,15 @@ object LabyrinthAwakening {
       
     def regimeChangeTargets: List[String] = 
       countryNames(muslims filter { m => 
-        m.isIslamistRule                              ||
+        m.isIslamistRule                           ||
         (m.name == Iraq  && m.hasMarker(IraqiWMD)) ||
         (m.name == Libya && m.hasMarker(LibyanWMD))
       })
       
-    def regimeChangePossible(ops: Int) = 
-      ops >= 3 && usPosture == Hard && regimeChangeSources.nonEmpty && regimeChangeTargets.nonEmpty
+    def regimeChangePossible(ops: Int) = {
+      def haveSourceFor(target: String) = (regimeChangeSources filterNot (_ == target)).nonEmpty
+      ops >= 3 && usPosture == Hard && (regimeChangeTargets exists haveSourceFor)
+    }
   
     def withdrawFromTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
     
