@@ -39,7 +39,7 @@ When you first run the program, it will prompt you to enter:
 1. The scenario that you wish to play
 2. This side you wish to play (US or Jihadist)
 3. The difficulty level
-4. A name for you game (so you progress can be saved)
+4. A name for your game (so you progress can be saved)
 
 Your game is saved after each card play, plot resolution, etc.  You can use the 
 `show plays` command to see the cards that have been played during the current turn.
