@@ -1792,6 +1792,8 @@ object LabyrinthCards {
         log()
         rollUSPosture()
         log()
+        rollPrestige()
+        log()
         val candidates = countryNames(game.muslims filter (_.isAlly))
         if (candidates.isEmpty)
           log("There are no Ally Muslim countries.  Shift no possible")
