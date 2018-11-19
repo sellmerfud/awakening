@@ -61,7 +61,7 @@ trait MissionAccomplishedDetails extends Scenario {
     DefaultSomalia.copy(besiegedRegime = true),
     DefaultCentralAsia.copy(governance = Fair, alignment = Neutral),
     DefaultIndonesiaMalaysia.copy(governance = Fair, alignment = Neutral, sleeperCells = 1),
-    DefaultPhilippines.copy(postureValue = Soft, sleeperCells = 1, /* troops = 2, */
+    DefaultPhilippines.copy(postureValue = Soft, sleeperCells = 1, troops = 2,
                              markers = List(AbuSayyaf)),
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultUnitedStates.copy(markers = List(PatriotAct, NEST)))

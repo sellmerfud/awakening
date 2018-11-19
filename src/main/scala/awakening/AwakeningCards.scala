@@ -2112,11 +2112,10 @@ object AwakeningCards {
         else {
           // See Event Instructions table
           val target = JihadistBot.plotTarget(candidates).get
-          addEventTarget(target)
           val c = game getCountry target
           val cell = if (c.activeCells > 0) (1, 0, false)
                      else if (c.hasSadr)    (0, 0, true)
-                      else                  (0, 1, false)
+                     else                   (0, 1, false)
           (target, cell, shuffle(game.availablePlots) take 2)
         }
         
