@@ -30,7 +30,7 @@ Simply copy the *games* folder from the older *awakening-x.x* directory to the
 new *awakening-x.x* directory.
 
 
-[1]: https://www.dropbox.com/s/dzrb7ehsbl1grzd/awakening-2.12.zip?dl=0
+[1]: https://www.dropbox.com/s/giifmi9hauzahse/awakening-2.13.zip?dl=0
 
 ## Using the program
 
