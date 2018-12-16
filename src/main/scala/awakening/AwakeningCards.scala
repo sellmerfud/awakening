@@ -1179,14 +1179,14 @@ object AwakeningCards {
         
         addEventTarget(target)
         addAidMarker(target)
-        (game.muslims find (_.hasMarker(NATO)) map (_.name)) match {
+        (game.muslims find (_.hasMarker(NATO2)) map (_.name)) match {
           case Some(`target`) =>
             log(s"NATO marker remains in $target")
           case Some(current) =>
-            removeEventMarkersFromCountry(current, NATO)
-            addEventMarkersToCountry(target, NATO)
+            removeEventMarkersFromCountry(current, NATO2)
+            addEventMarkersToCountry(target, NATO2)
           case None =>
-            addEventMarkersToCountry(target, NATO)
+            addEventMarkersToCountry(target, NATO2)
         }
       }
     )),

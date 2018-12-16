@@ -510,6 +510,7 @@ object LabyrinthAwakening {
   val Advisors             = "Advisors"
   val UNSCR_1973           = "UNSCR 1973"
   val NATO                 = "NATO"
+  val NATO2                = "NATO-2" // NATO marker from Awakening.  In campaign game, both NATO markers can be in play
   val TrainingCamps        = "Training Camps"
   val OperationServal      = "Operation Serval"
 
@@ -522,7 +523,7 @@ object LabyrinthAwakening {
   
   val CountryMarkers = List(
     Sadr, CTR, MoroTalks, NEST, BenazirBhutto, Indo_PakistaniTalks, IraqiWMD, LibyanDeal,
-    LibyanWMD, PatriotAct, AbuSayyaf, BhuttoShot, FATA, Advisors, UNSCR_1973, NATO,
+    LibyanWMD, PatriotAct, AbuSayyaf, BhuttoShot, FATA, Advisors, UNSCR_1973, NATO, NATO2,
     TrainingCamps, OperationServal
   ).sorted
   
@@ -663,6 +664,7 @@ object LabyrinthAwakening {
     
     def troopsMarkers: List[TroopsMarker] = markers collect {
       case NATO            => TroopsMarker(NATO,            2, canDeploy = true,  prestigeLoss = true)
+      case NATO2           => TroopsMarker(NATO2,           2, canDeploy = true,  prestigeLoss = true)
       case UNSCR_1973      => TroopsMarker(UNSCR_1973,      1, canDeploy = false, prestigeLoss = false)
       case OperationServal => TroopsMarker(OperationServal, 1, canDeploy = true,  prestigeLoss = true)
     }
