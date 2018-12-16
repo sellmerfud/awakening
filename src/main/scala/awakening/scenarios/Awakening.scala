@@ -40,6 +40,7 @@ object Awakening extends Scenario {
   val countries = List(
     DefaultSyria.copy(isSunni = false, wmdCache = 2),
     DefaultAlgeriaTunisia.copy(governance = Poor, alignment = Neutral, awakening = 1),
+    DefaultIran.copy(wmdCache = 1),
     DefaultIraq.copy(governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,

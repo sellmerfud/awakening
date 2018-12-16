@@ -40,6 +40,7 @@ object IslamicStateOfIraq extends Scenario {
   val countries = List(
     DefaultSyria.copy(isSunni = false, governance = Fair, alignment = Neutral, civilWar = true, 
                       militia = 3, caliphateCapital = true, activeCells = 4, wmdCache = 0),
+    DefaultIran.copy(wmdCache = 1),
     DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 2,
                       activeCells = 3),
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
