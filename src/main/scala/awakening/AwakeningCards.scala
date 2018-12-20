@@ -178,13 +178,13 @@ object AwakeningCards {
       val canPlaceMarker = (USBot.servalTarget(servalCandidates) map 
                  (name => !game.getMuslim(name).hasMarker(OperationServal)) 
                  getOrElse false)
-      game.militiaAvailable > 0 || canPlaceMarker
+      servalCandidates.nonEmpty && (game.militiaAvailable > 0 || canPlaceMarker)
     }
     else { // JihadistBot
       val canStartCivilWar = (JihadistBot.minorJihadTarget(servalCandidates) map
                       (name => !game.getMuslim(name).civilWar) 
                       getOrElse false)
-      game.cellsAvailable > 0 || canStartCivilWar
+      servalCandidates.nonEmpty && (game.cellsAvailable > 0 || canStartCivilWar)
     }
   }
   
