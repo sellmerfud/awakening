@@ -5258,7 +5258,7 @@ object LabyrinthAwakening {
     else if (game.numPoorOrIslamic >= 15 && game.prestige == 1) {
       val reason = s"${game.numPoorOrIslamic} Muslim countries have Poor or Islamist rule governance " +
                     "and US prestige is 1"
-      gameOver(US, reason)
+      gameOver(Jihadist, reason)
     }
   }
   
