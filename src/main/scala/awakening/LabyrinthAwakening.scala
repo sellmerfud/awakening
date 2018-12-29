@@ -2606,6 +2606,10 @@ object LabyrinthAwakening {
 
   // Save a brief description of the game.
   // The descriptions are used by the askWhichGame() function.
+  def saveGameDescription(desc: String): Unit = {
+    gameDescPath(gameName.get).writeFile(desc)
+  }
+  
   def saveGameDescription(turnsCompleted: Int): Unit = {
     val desc = s"${game.params.scenarioName}, playing ${game.humanRole}, ${amountOf(turnsCompleted, "turn")} completed"
     gameDescPath(gameName.get).writeFile(desc)
@@ -4784,26 +4788,6 @@ object LabyrinthAwakening {
         log(s"US prestige increases +1 to ${game.prestige} (World posture is $worldPosture $level and US posture is ${game.usPosture})")
       }
     
-      val ebolaScare = lapsingEventInPlay(EbolaScare)
-      val koreanCrisis = lapsingEventInPlay(KoreanCrisis)
-      
-      if (game.cardsLapsing.nonEmpty) {
-        // some lapsing cards are removed at the end of the turn.
-        val (remove, discard) = game.cardsLapsing.partition (deck(_).remove == Remove)
-        if (remove.nonEmpty)
-          log(s"Remove the following lapsing cards from the game: ${cardNumsAndNames(remove)}")
-        if (discard.nonEmpty)
-          wrap("Discard lapsing cards: ", discard.sorted map cardNumAndName) foreach (log(_))
-        
-        game = game.copy(
-          cardsLapsing = Nil,
-          cardsRemoved = remove ::: game.cardsRemoved
-        )
-      }
-      game.firstPlotCard foreach { num => 
-        log(s"Discard the first   plot card: ${cardNumAndName(num)}")
-        game = game.copy(firstPlotCard = None)
-      }
       // The Bot's reserves are not cleared
       clearReserves(game.humanRole)
     
@@ -4821,6 +4805,29 @@ object LabyrinthAwakening {
         civilWarAttrition()
       }
     
+      checkAutomaticVictory() // Will Exit game if auto victory has been achieved
+    
+      val ebolaScare = lapsingEventInPlay(EbolaScare)
+      val koreanCrisis = lapsingEventInPlay(KoreanCrisis)
+    
+      if (game.cardsLapsing.nonEmpty) {
+        // some lapsing cards are removed at the end of the turn.
+        val (remove, discard) = game.cardsLapsing.partition (deck(_).remove == Remove)
+        if (remove.nonEmpty)
+          log(s"Remove the following lapsing cards from the game: ${cardNumsAndNames(remove)}")
+        if (discard.nonEmpty)
+          wrap("Discard lapsing cards: ", discard.sorted map cardNumAndName) foreach (log(_))
+      
+        game = game.copy(
+          cardsLapsing = Nil,
+          cardsRemoved = remove ::: game.cardsRemoved
+        )
+      }
+      game.firstPlotCard foreach { num => 
+        log(s"Discard the first   plot card: ${cardNumAndName(num)}")
+        game = game.copy(firstPlotCard = None)
+      }
+      
       // Calculate number of cards drawn
       val usCards = USCardDraw(game.troopCommitment)
       val jihadistCards = JihadistCardDraw(game.fundingLevel)
@@ -4829,14 +4836,14 @@ object LabyrinthAwakening {
       log(separator())
       log(s"$US player will draw $usCards cards")
       log(s"Jihadist player will draw $jihadistCards cards")
-    
+  
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
       if (game.params.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
         log("There is a 3 Resource Muslim country at Islamist Rule")
         returnSequestrationTroopsToAvailable()
       }
-      
+    
       if (ebolaScare) {
         log(s"Ebola Scare ends: return 1 troop from the off map box to the troops track")
         game = game.copy(offMapTroops = game.offMapTroops - 1)
@@ -4845,7 +4852,7 @@ object LabyrinthAwakening {
         log(s"Korean Crisis ends: return 2 troops from the off map box to the troops track")
         game = game.copy(offMapTroops = game.offMapTroops - 2)
       }
-    
+  
       for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
         game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
         log(s"Flip green regime change marker in ${rc.name} to its tan side")
@@ -5236,12 +5243,19 @@ object LabyrinthAwakening {
   // Check to see if any automatic victory condition has been met.
   // Note: The WMD resolved in United States condition is checked by resolvePlots()
   def checkAutomaticVictory(): Unit = {
-    def gameOver(victor: Role, reason: String) = {
+    def gameOver(victor: Role, reason: String): Nothing = {
+      val summary = s"Game Over - $victor automatic victory!"
       log()
       log(separator())
-      log(s"Game Over - $victor automatic victory!")
+      log(summary)
       log(reason)
+      
+      game = game.copy(plays = Nil)
+      saveTurn()
+      saveGameDescription(summary)
+      throw ExitGame
     }
+    
     if (game.goodResources >= 12)
       gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance")
     else if (game.numGoodOrFair >= 15)
@@ -5267,8 +5281,8 @@ object LabyrinthAwakening {
   // ---------------------------------------------
   // Process all top level user commands.
   @tailrec def commandLoop(): Unit = {
-    checkAutomaticVictory()
-    
+    checkAutomaticVictory() // Will Exit game if auto victory has been achieved
+        
     val cardsPlayed     = (game.plays map (_.numCards)).sum
     val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved])
                                       filterNot (_.isInstanceOf[AdditionalCard])
