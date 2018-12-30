@@ -4744,11 +4744,23 @@ object LabyrinthAwakening {
   def addAwakeningCards(): Unit = {
     val syria = game.getMuslim(Syria)
     val iran  = game.getNonMuslim(Iran)
-    game = game.updateCountry(syria.copy(isSunni = false, wmdCache = 2)).
+    val updatedParams = game.params.copy(useExpansionRules = true)
+    // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
+    val (updatedPlots, syriaCache) = if (syria.isIslamistRule)
+      (game.plotData.copy(availablePlots = PlotWMD :: PlotWMD :: game.availablePlots), 0)
+    else
+      (game.plotData, 2)
+      
+    game = game.updateCountry(syria.copy(isSunni = false, wmdCache = syriaCache)).
                 updateCountry(iran.copy(wmdCache = 1)).
-                copy(params = game.params.copy(useExpansionRules = true))
+                copy(plotData = updatedPlots, params = updatedParams)
     log()
-    log("Syria is now Shia-Mix country with 2 unavailable WMD plots")
+    if (syria.isIslamistRule) {
+      log("Syria is now Shia-Mix country")
+      log("Add the two WMD plots from the Syria cache to the available plots box")
+    }
+    else
+      log("Syria is now Shia-Mix country with 2 unavailable WMD plots")
     log("Iran now contains 1 unavailable WMD plot")
     testCountry(AlgeriaTunisia)
     addAwakeningMarker(AlgeriaTunisia)
