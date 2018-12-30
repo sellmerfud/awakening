@@ -6641,6 +6641,24 @@ object LabyrinthAwakening {
       }
     }
     
+    def addNewPlot(): Unit = {
+      val choices = List(
+        "1"    -> "Add new Plot 1 to the available box",
+        "2"    -> "Add new Plot 2 to the available box",
+        "3"    -> "Add new Plot 3 to the available box",
+        "wmd"  -> "Add new WMD Plot to the available box",
+        "none" -> "Do not add a new plot to the available box"
+      )
+      println("\nChoose one: ")
+      askMenu(choices, allowAbort = false).head  match {
+        case "1"   => available = available :+ Plot1
+        case "2"   => available = available :+ Plot2
+        case "3"   => available = available :+ Plot3
+        case "wmd" => available = available :+ PlotWMD
+        case _     => 
+      }
+    }
+    
     def nextAction(): Unit = {
       val choices = List(
         choice(available.nonEmpty, "a-r",  "Move available plot to the resolved box"),
@@ -6649,13 +6667,15 @@ object LabyrinthAwakening {
         choice(resolved.nonEmpty,  "r-o",  "Move resolved plot to out of play"),
         choice(outOfPlay.nonEmpty, "o-a",  "Move out of play plot to the available box"),
         choice(outOfPlay.nonEmpty, "o-a",  "Move out of play plot to the resolved box"),
+        choice(true,               "new",  "Add a new plot to the available box"),
         choice(true,               "done", "Finished")
       ).flatten
       
       showAll()
       println("\nChoose one: ")
-      askMenu(choices, allowAbort = false).head  match {
+      askMenu(choices, allowAbort = false).head match {
         case "done" =>
+        case "new"  => addNewPlot(); nextAction()
         case spec   => doMove(spec); nextAction()
       }
     }
