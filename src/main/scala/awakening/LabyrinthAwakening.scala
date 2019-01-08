@@ -790,9 +790,7 @@ object LabyrinthAwakening {
 
     def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
     def maxDeployFrom = if (inRegimeChange)
-      if (totalTroopsAndMilitia - totalCells > 5)
-        (totalTroopsAndMilitia - totalCells - 5) min totalTroopsThatCanDeploy
-      else 0
+      (totalTroopsAndMilitia - totalCells - 5) min totalTroopsThatCanDeploy max 0
     else
       totalTroopsThatCanDeploy
     

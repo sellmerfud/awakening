@@ -1192,10 +1192,24 @@ object USBot extends BotHelpers {
   def regimeChangeOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     assert(maxOps >= 3, "regimeChangeOperation() called with less than 3 Ops available")
+    assert(game.regimeChangePossible(maxOps), s"regimeChangeOperation() called but regimeChangePossible($maxOps) == false")
     val opsUsed = 3
-    val target  = regimeChangeTarget(game.regimeChangeTargets).get
-    val source  = regimeChangeFromTarget(game.regimeChangeSources filterNot (_ == target)).get
-    
+    // Returns (target, source)
+    def getTarget(candidates: List[String]): (String, String) = {
+      if (candidates.isEmpty)
+        throw new IllegalStateException("regimeChangeOperation() no valid regime change target")
+      else {
+        // Get the highest priority target.  But we must make sure that it is not also
+        // the only space with enough cells to act as the source!
+        val target = regimeChangeTarget(candidates).get
+        val sourceCandidates = game.regimeChangeSources filterNot (_ == target)
+        regimeChangeFromTarget(sourceCandidates) match {
+          case Some(source) => (target, source)
+          case None => getTarget(candidates filterNot (_ == target))
+        }
+      }
+    }
+    val (target, source)  = getTarget(game.regimeChangeTargets)
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
     log(s"$US performs a Regime Change operation in $target")
