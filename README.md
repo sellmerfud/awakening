@@ -21,7 +21,7 @@ There are two scripts provided that will start the program.
 
 ## Downloading the package
 
-You can download the zip file with the latest release (version 2.16) [here][1]
+You can download the zip file with the latest release (version 2.17) [here][1]
 
 If you are upgrading to a newer version and the **major** version numbers of the two versions
 are the same, then any saved games in progress will be compatible.
@@ -30,7 +30,7 @@ Simply copy the *games* folder from the older *awakening-x.x* directory to the
 new *awakening-x.x* directory.
 
 
-[1]: https://www.dropbox.com/s/upvcvakum2sgsm0/awakening-2.16.zip?dl=0
+[1]: https://www.dropbox.com/s/sqrl678ivxbbwhk/awakening-2.17.zip?dl=0
 
 ## Using the program
 
