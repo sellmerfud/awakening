@@ -666,21 +666,18 @@ object LabyrinthAwakening {
       case NATO            => TroopsMarker(NATO,            2, canDeploy = true,  prestigeLoss = true)
       case NATO2           => TroopsMarker(NATO2,           2, canDeploy = true,  prestigeLoss = true)
       case UNSCR_1973      => TroopsMarker(UNSCR_1973,      1, canDeploy = false, prestigeLoss = false)
-      case OperationServal => TroopsMarker(OperationServal, 1, canDeploy = true,  prestigeLoss = true)
+      case OperationServal => TroopsMarker(OperationServal, 1, canDeploy = false,  prestigeLoss = true)
     }
     
     def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
     def markerTroopsThatAffectPrestige: Int =
       troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
-    def markerTroopsThatCanDeploy: Int = 
-      troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.canDeploy) tm.num else 0) }
     def totalTroops = troops + markerTroops
     def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
-    def totalTroopsThatCanDeploy = troops + markerTroopsThatCanDeploy
   
     def canDeployTo(ops: Int): Boolean
     def maxDeployFrom: Int
-    def canDeployFrom(ops: Int) = maxDeployFrom > 0 
+    def canDeployFrom(ops: Int) = maxDeployFrom > 0 || (troopsMarkers exists (_.canDeploy))
   
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
@@ -728,7 +725,7 @@ object LabyrinthAwakening {
     // Normally troops cannot deploy to a non-Muslim country.
     // The exception is the Abu Sayyaf event in the Philippines.
     def canDeployTo(ops: Int) = ops >= governance && name == Philippines && hasMarker(AbuSayyaf)
-    def maxDeployFrom = totalTroopsThatCanDeploy
+    def maxDeployFrom = troops
     def disruptAffectsPrestige = totalTroops > 1
     
   }
@@ -789,10 +786,20 @@ object LabyrinthAwakening {
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
     def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
+    
+    // To deploy troops out of a regime change country, we must leave behind
+    // at least five more (troops + militia) than cells.  Those troops that are left
+    // behind may include marker troops (eg NATO), but marker troops are NOT included
+    // in those that can leave.
     def maxDeployFrom = if (inRegimeChange)
-      (totalTroopsAndMilitia - totalCells - 5) min totalTroopsThatCanDeploy max 0
+      troops min (totalTroopsAndMilitia - totalCells - 5) max 0
     else
-      totalTroopsThatCanDeploy
+      troops
+    
+    // NATO can always deploy out if not in regime change even if it is the only troop present.
+    // In regime change we the maxDeployFrom (cubes onoy) must be > 0
+    override def canDeployFrom(ops: Int) = if (inRegimeChange) maxDeployFrom > 0
+                                           else maxDeployFrom > 0 || (troopsMarkers exists (_.canDeploy))
     
     def jihadDRM = awakening - reaction
     def jihadOK = !isIslamistRule && totalCells > 0 && (name != Pakistan || !hasMarker(BenazirBhutto))
@@ -5738,7 +5745,8 @@ object LabyrinthAwakening {
     performWarOfIdeas(target, ops)
   }
   
-  // Troops can alwasy deploy to the track.
+  // Troops can always deploy to the track.
+  
   def humanDeploy(ops: Int): Unit = {
     log()
     log(s"$US performs a Deploy operation")
@@ -5746,46 +5754,48 @@ object LabyrinthAwakening {
     // If the only 
     val (from, to) = game.deployTargets(ops).get
     val source     = askCountry("Deploy troops from: ", from)
-    val maxDeploy = if (source == "track")
+    val maxCanLeave = if (source == "track")
       game.troopsAvailable
     else
       (game getCountry source).maxDeployFrom
     
-    // Some troops markers can be deployed out of a country.
-    val markerNames: List[String] = if (source == "track")
-      Nil 
+    // If th NATO or NATO-2 marker is present, the player has the option
+    // of deploying it out of the country and removing it from the game.
+    val (markersRemoved, markersValue): (List[String], Int) = if (source == "track")
+      (Nil, 0) 
     else {
       val src = game getCountry source
-      val markers = src.troopsMarkers filter (m => m.canDeploy && m.num <= maxDeploy)
-      if (markers.isEmpty)
-        Nil
+      val markers = src.troopsMarkers filter (m => m.canDeploy)
+      // If the sourc is in regime change then we must take care not to allow too many
+      // markers to be removed so that we do not leave enough troops/militia behind.
+      val regimeChange = (game isMuslim source) && (game getMuslim source).inRegimeChange
+      val canRemoveAll: List[TroopsMarker] => Boolean = if (regimeChange)
+        markerList => (markerList map (_.num)).sum <= maxCanLeave
+      else
+        _ => true  // Always possible if not in regime change
+      
+      val combos = for {
+        i     <- 1 to markers.size
+        combo <- markers.combinations(i).toList if canRemoveAll(combo)
+        names = combo map (_.name)
+      } yield (names.mkString(",") -> andList(names))
+        
+      if (combos.isEmpty)
+        (Nil, 0)
       else {
-        val combos = for {
-          i <- 1 to markers.size
-          combo <- markers.combinations(i).toList
-          if (combo map (_.num)).sum <= maxDeploy
-          names = combo map (_.name)
-        } yield (names.mkString(",") -> andList(names))
-        if (combos.isEmpty)
-          Nil
-        else {
-          val choices = ("none" -> "Do not deploy any markers") :: combos.toList
-          println(s"Which troops markers will deploy out of $source")
-          askMenu(choices).head match {
-            case "none" => Nil
-            case str    => str.split(",").toList
-          }
+        val choices = ("none" -> "Do not deploy any markers") :: combos.toList
+        println(s"Which troops markers will deploy out of $source")
+        val markerNames = askMenu(choices).head match {
+          case "none" => Nil
+          case str    => str.split(",").toList
         }
+        val value = markerNames.foldLeft(0) { (sum, name) => sum + (markers find (_.name == name) map (_.num) getOrElse 0) }
+        (markerNames, value)
       }
     }
-    val markerNum = if (markerNames.isEmpty)
-      0
-    else {
-      val src = game getCountry source
-      (markerNames flatMap (name => src.troopsMarkers.find(_.name == name)) map (_.num)).sum 
-    }
-    val maxTroops  = maxDeploy - markerNum
-    val minTroops  = if (markerNames.isEmpty) 1 else 0
+    
+    val maxTroops  = maxCanLeave - markersValue
+    val minTroops  = if (markersRemoved.isEmpty) 1 else 0
     val numTroops  = if (maxTroops > 0)  // Could be zero if only markers could deploy out
       askInt("Deploy how many troops: ", minTroops, maxTroops)
     else
@@ -5795,7 +5805,7 @@ object LabyrinthAwakening {
       moveTroops(source, dest, numTroops)
     }
     // Troops markers that deploy are simply removed
-    removeEventMarkersFromCountry(source, markerNames:_*)
+    removeEventMarkersFromCountry(source, markersRemoved:_*)
   }
   
   def humanRegimeChange(): Unit = {
