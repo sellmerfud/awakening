@@ -9,7 +9,7 @@ rem Set the current working directory to the directory where this script is runn
 rem This is important so that all of our relative path references work correctly.
 pushd %~dp0
 
-set CLASSPATH=lib\awakening_2.11-2.17.jar;lib\optparse_2.11-2.2.jar;lib\scala-library-2.11.0.jar;^
+set CLASSPATH=lib\awakening_2.11-2.18.jar;lib\optparse_2.11-2.2.jar;lib\scala-library-2.11.0.jar;^
 lib\scala-reflect-2.11.0.jar;lib\scala-pickling_2.11-0.10.1.jar
 java -cp %CLASSPATH%  awakening.LabyrinthAwakening %*
 
