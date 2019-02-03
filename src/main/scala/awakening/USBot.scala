@@ -1232,7 +1232,9 @@ object USBot extends BotHelpers {
   def getHomelandSecurityAction(cardOps: Int, maxOps: Int): Option[HomelandSecurityAction] = {
     val canDisruptUS = (game getNonMuslim UnitedStates).cells > 0 ||
                        (game getNonMuslim UnitedStates).hasCadre
-    val canWoiSoftNonMuslim = game.usPosture == Hard && game.worldPosture == Soft
+    val canWoiSoftNonMuslim = game.usPosture == Hard && game.worldPosture == Soft &&
+                              (game.warOfIdeasNonMuslimTargets(maxOps) map game.getNonMuslim filter (_.isSoft)).nonEmpty
+    
     val canDisruptNonMuslim = game.disruptNonMuslimTargets(maxOps).nonEmpty
     // The following can only use cardOps (no reserves)
     val canAddToReserves = cardOps > 0 && game.reserves.us < 2
