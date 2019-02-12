@@ -2557,7 +2557,9 @@ object LabyrinthCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) => {
         val yemen = game getMuslim Yemen
-        yemen.isUntested || role == Jihadist || (role == US && !yemen.isIslamistRule)
+        yemen.isUntested ||
+        (role == Jihadist && !(yemen.isAdversary && yemen.besiegedRegime) ) || 
+        (role == US && !yemen.isIslamistRule)
       }
       ,
       (role: Role) => {
@@ -2571,8 +2573,7 @@ object LabyrinthCards {
         }
         else {
           shiftAlignmentRight(Yemen)
-          if (!(game getMuslim Yemen).isIslamistRule)
-            addBesiegedRegimeMarker(Yemen)
+          addBesiegedRegimeMarker(Yemen)
         }
       }
     )),
