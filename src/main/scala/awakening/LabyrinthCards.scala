@@ -1981,8 +1981,7 @@ object LabyrinthCards {
       (role: Role, forTrigger: Boolean) =>
         game.cellsAvailable > 0 || 
         game.prestige > 1       ||
-        !((game getMuslim Afghanistan).isIslamistRule ||
-          (game getMuslim Afghanistan).besiegedRegime)
+        !(game getMuslim Afghanistan).besiegedRegime
       ,
       (role: Role) => {
         val afghanistan = game getMuslim Afghanistan
@@ -1991,7 +1990,7 @@ object LabyrinthCards {
         addEventTarget(Pakistan)
         testCountry(Afghanistan)
         testCountry(Pakistan)
-        if (!(afghanistan.isIslamistRule || afghanistan.besiegedRegime))
+        if (!afghanistan.besiegedRegime)
           addBesiegedRegimeMarker(Afghanistan)
         if (game.cellsAvailable == 0)
           log("No cells available for placement")
