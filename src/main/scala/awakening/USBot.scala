@@ -834,7 +834,7 @@ object USBot extends BotHelpers {
   )
   
   // Used to determine from where to get troops to use in a Regime Change Operation.
-  def regimeChangeFromTarget(names: List[String]): Option[String] = {
+  def regimeChangeSource(names: List[String]): Option[String] = {
     botLog("Find \"Regime Change From\" target")
     val track        = names find (_ == "track")
     val countryNames = names filterNot (_ == "track")
@@ -1202,8 +1202,7 @@ object USBot extends BotHelpers {
         // Get the highest priority target.  But we must make sure that it is not also
         // the only space with enough cells to act as the source!
         val target = regimeChangeTarget(candidates).get
-        val sourceCandidates = game.regimeChangeSources filterNot (_ == target)
-        regimeChangeFromTarget(sourceCandidates) match {
+        regimeChangeSource(game.regimeChangeSourcesFor(target)) match {
           case Some(source) => (target, source)
           case None => getTarget(candidates filterNot (_ == target))
         }

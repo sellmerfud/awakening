@@ -1142,22 +1142,25 @@ object LabyrinthAwakening {
         case (from, to )                        => Some(from, "track"::to)
       }
     }
-    
-    def regimeChangeSources: List[String] = {
-      val ms = countryNames(countries filter (_.maxDeployFrom > 5))
+
+    def regimeChangeSourcesFor(target: String): List[String] = {
+      val ms = countryNames(countries filter (_.maxDeployFrom > 5)) filterNot (_ == target)
       if (troopsAvailable > 5) "track" :: ms else ms
     } 
       
-    def regimeChangeTargets: List[String] = 
-      countryNames(muslims filter { m => 
+    def regimeChangeTargets: List[String] = {
+      val haveSource = (target: String) => regimeChangeSourcesFor(target).nonEmpty
+      val targets = countryNames(muslims filter { m => 
         m.isIslamistRule                           ||
         (m.name == Iraq  && m.hasMarker(IraqiWMD)) ||
         (m.name == Libya && m.hasMarker(LibyanWMD))
       })
+      // Only a valid target if there is a source of troops available
+      targets filter haveSource
+    }
       
     def regimeChangePossible(ops: Int) = {
-      def haveSourceFor(target: String) = (regimeChangeSources filterNot (_ == target)).nonEmpty
-      ops >= 3 && usPosture == Hard && (regimeChangeTargets exists haveSourceFor)
+      ops >= 3 && usPosture == Hard && regimeChangeTargets.nonEmpty
     }
   
     def withdrawFromTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
@@ -5813,8 +5816,7 @@ object LabyrinthAwakening {
     log(s"$US performs a Regime Change operation")
     log(separator())
     val dest      = askCountry("Regime change in which country: ", game.regimeChangeTargets)
-    val sources   = game.regimeChangeSources filterNot (_ == dest)
-    val source    = askCountry("Deploy troops from: ", sources)
+    val source    = askCountry("Deploy troops from: ", game.regimeChangeSourcesFor(dest))
     val maxTroops = if (source == "track") game.troopsAvailable
                     else game.getCountry(source).maxDeployFrom
     val numTroops = askInt("How many troops: ", 6, maxTroops)

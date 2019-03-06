@@ -767,7 +767,7 @@ object LabyrinthCards {
       (role: Role) => {
         addEventTarget(Iraq)
         addEventMarkersToCountry(Iraq, IraqiWMD)
-        val sources = game.regimeChangeSources filterNot (_ == Iraq)
+        val sources = game.regimeChangeSourcesFor(Iraq)
         if (sources.isEmpty) {
           log("You cannot perform a Regime Change in Iraq now, because")
           log("there are not 6 troops available for the operation")
@@ -823,7 +823,7 @@ object LabyrinthCards {
       (role: Role) => {
         addEventTarget(Libya)
         addEventMarkersToCountry(Libya, LibyanWMD)
-        val sources = game.regimeChangeSources filterNot (_ == Libya)
+        val sources = game.regimeChangeSourcesFor(Libya)
         if (sources.isEmpty) {
           log("You cannot perform a Regime Change in Libya now, because")
           log("there are not 6 troops available for the operation")
