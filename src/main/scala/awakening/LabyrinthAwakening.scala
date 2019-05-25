@@ -47,7 +47,6 @@ import scala.collection.mutable.ListBuffer
 import scala.io.StdIn.readLine
 import scenarios._
 import FUtil.Pathname
-import Pickling.{ loadGameState, saveGameState }
 
 object LabyrinthAwakening {
   def dieRoll = nextInt(6) + 1
@@ -151,6 +150,16 @@ object LabyrinthAwakening {
   case object Plot2 extends NumberedPlot(2)
   case object Plot3 extends NumberedPlot(3)
 
+  object Plot {
+    def apply(name: String): Plot = name match {
+      case "Plot WMD" => PlotWMD
+      case "Plot 1" => Plot1
+      case "Plot 2" => Plot2
+      case "Plot 3" => Plot3
+      case x        => throw new IllegalArgumentException(s"Invalid plot name: $x")
+    }
+  }
+  
   case class PlotOnMap(plot: Plot, backlashed: Boolean = false) {
     override def toString() = if (backlashed) s"${plot.name} (backlashed)" else plot.name
   }
@@ -611,6 +620,7 @@ object LabyrinthAwakening {
   }
   
   sealed trait Play {
+    def name: String  // Used for qantifying type in save game files
     def numCards: Int
   }
   sealed trait CardPlay extends Play {
@@ -620,18 +630,22 @@ object LabyrinthAwakening {
   // Used to keep track of cards played during the current turn
   // for display purposes only.  This is stored in the game state.
   case class PlayedCard(role: Role, cardNum: Int) extends CardPlay {
+    override def name = "PlayedCard"
     override def numCards = 1
     override def toString() = s"$role played ${cardNumAndName(cardNum)}"
   }
   case class AdditionalCard(role: Role, cardNum: Int) extends CardPlay {
+    override def name = "AdditionalCard"
     override def numCards = 1
     override def toString() = s"$role played additional card ${cardNumAndName(cardNum)}"
   }
   case class PlotsResolved(num: Int) extends Play {
+    override def name = "PlotsResolved"
     override def numCards = 0
     override def toString() = s"$num Plots were resolved"
   }
   case class AdjustmentMade(desc: String) extends Play {
+    override def name = "AdjustmentMade"
     override def numCards = 0
     override def toString() = s"Adjustment made: $desc"
   }
@@ -701,17 +715,17 @@ object LabyrinthAwakening {
 
   case class NonMuslimCountry(
     name: String,
-    governance: Int             = Good,
-    sleeperCells: Int           = 0,
-    activeCells: Int            = 0,
-    hasCadre: Boolean           = false,
-    troops: Int                 = 0,
-    plots: List[PlotOnMap]      = Nil,
-    markers: List[String]       = Nil,
-    postureValue: String        = PostureUntested,
-    recruitOverride: Int        = 0,
-    wmdCache: Int               = 0,  // Number of WMD plots cached
-    iranSpecialCase: Boolean    = false
+    governance: Int            = Good,
+    sleeperCells: Int          = 0,
+    activeCells: Int           = 0,
+    hasCadre: Boolean          = false,
+    troops: Int                = 0,
+    plots: List[PlotOnMap] = Nil,
+    markers: List[String]      = Nil,
+    postureValue: String       = PostureUntested,
+    recruitOverride: Int       = 0,
+    wmdCache: Int              = 0,  // Number of WMD plots cached
+    iranSpecialCase: Boolean   = false
   ) extends Country {
     override def isUntested = posture == PostureUntested && 
                               !(Set(UnitedStates, Israel, Iran) contains name)
@@ -742,26 +756,26 @@ object LabyrinthAwakening {
 
   case class MuslimCountry(
     name: String,
-    governance: Int             = GovernanceUntested,
-    sleeperCells: Int           = 0,
-    activeCells: Int            = 0,
-    hasCadre: Boolean           = false,
-    plots: List[PlotOnMap]      = Nil,
-    markers: List[String]       = Nil,
-    isSunni: Boolean            = true,
-    resources: Int              = 0,
-    alignment: String           = Neutral,
-    troops: Int                 = 0,
-    militia: Int                = 0,
-    oilExporter: Boolean        = false,
-    aidMarkers: Int             = 0,
-    regimeChange: String        = NoRegimeChange,
-    besiegedRegime: Boolean     = false,
-    civilWar: Boolean           = false,
-    caliphateCapital: Boolean   = false,
-    awakening: Int              = 0,  // number of awakening markers
-    reaction: Int               = 0,  // number of reaction markers
-    wmdCache: Int               = 0   // Number of WMD plots cached
+    governance: Int            = GovernanceUntested,
+    sleeperCells: Int          = 0,
+    activeCells: Int           = 0,
+    hasCadre: Boolean          = false,
+    plots: List[PlotOnMap] = Nil,
+    markers: List[String]      = Nil,
+    isSunni: Boolean           = true,
+    resources: Int             = 0,
+    alignment: String          = Neutral,
+    troops: Int                = 0,
+    militia: Int               = 0,
+    oilExporter: Boolean       = false,
+    aidMarkers: Int            = 0,
+    regimeChange: String       = NoRegimeChange,
+    besiegedRegime: Boolean    = false,
+    civilWar: Boolean          = false,
+    caliphateCapital: Boolean  = false,
+    awakening: Int             = 0,  // number of awakening markers
+    reaction: Int              = 0,  // number of reaction markers
+    wmdCache: Int              = 0   // Number of WMD plots cached
   ) extends Country {
     override def isUntested = governance == GovernanceUntested
     def isAlly      = alignment == Ally
@@ -873,7 +887,7 @@ object LabyrinthAwakening {
   }
   
   // Keeps track of Plots that are available, resolved, remove from play
-  // And also records which countries has plot resolve in the most recent
+  // And also records which countries had plots resolved in the most recent
   // resolve plots phase.
   case class PlotData(
     availablePlots: List[Plot]   = Nil,
@@ -2614,11 +2628,11 @@ object LabyrinthAwakening {
   // Save the current play
   // 
   def savePlay(): Unit = {
-    saveGameState(playFilePath(game.plays.size), game)
+    SavedGame.save(playFilePath(game.plays.size), game)
   }
   
   def saveTurn(): Unit = {
-    saveGameState(turnFilePath(game.turn), game)
+    SavedGame.save(turnFilePath(game.turn), game)
     removePlayFiles() // Remove all of the play files
   }
 
@@ -2649,8 +2663,8 @@ object LabyrinthAwakening {
     }
     gameName = Some(name)
     game = file match {
-      case PlayFile(n) => loadGameState(playFilePath(n))
-      case TurnFile(n) => loadGameState(turnFilePath(n))
+      case PlayFile(n) => SavedGame.load(playFilePath(n))
+      case TurnFile(n) => SavedGame.load(turnFilePath(n))
     }
     if (game.plays.isEmpty)
       logStartOfTurn()
@@ -2734,16 +2748,16 @@ object LabyrinthAwakening {
        
     val newGS = askMenu(choices, allowAbort = false).head match {
       case PLAY("0") =>
-        val gs = loadGameState(turnFilePath(game.turn - 1))
+        val gs = SavedGame.load(turnFilePath(game.turn - 1))
         removePlayFiles()
         Some(gs)
       case PLAY(n) => 
-        val gs = loadGameState(playFilePath(n.toInt))
+        val gs = SavedGame.load(playFilePath(n.toInt))
         removePlayFiles(n.toInt + 1)
         Some(gs)
       case "previous" =>
         val turn = askInt("Enter turn #", 1, game.turn, allowAbort = false)
-        val gs = loadGameState(turnFilePath(turn - 1))
+        val gs = SavedGame.load(turnFilePath(turn - 1))
         removePlayFiles()
         removeTurnFiles(turn)      
         Some(gs)
@@ -4932,7 +4946,7 @@ object LabyrinthAwakening {
       // This is mostly used for loading someone else's file for testing.
       if (cmdLineParams.gameFile.nonEmpty) {
         gameName = Some(askGameName("Enter a name for the game: "))
-        game = loadGameState(Pathname(cmdLineParams.gameFile.get))
+        game = SavedGame.load(Pathname(cmdLineParams.gameFile.get))
         printSummary(game.playSummary)
         if (game.plays.isEmpty)
           logStartOfTurn()

@@ -6,7 +6,7 @@ import java.util.HashSet
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
-  version      := "2.21",
+  version      := "3.0",
   scalaVersion := "2.11.0"
 )
 
@@ -19,7 +19,7 @@ lazy val awakening = (project in file("."))
     description := "A scala implementation of the solo AI for Labyrinth The Awakening",
     scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
     libraryDependencies ++= Seq(
-      "org.scala-lang.modules" %% "scala-pickling" % "0.10.1",
+      "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
       "org.sellmerfud"         %% "optparse"       % "2.2"
     ),
     // Task to create the distribution zip file
