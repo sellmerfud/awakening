@@ -694,14 +694,16 @@ object LabyrinthAwakening {
     }
     
     def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
+    def deployableMarkerTroops = (troopsMarkers filter (_.canDeploy)).foldLeft(0) { (total, tm) => total + tm.num }
     def markerTroopsThatAffectPrestige: Int =
       troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
     def totalTroops = troops + markerTroops
+    def totalDeployableTroops = troops + deployableMarkerTroops
     def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
   
     def canDeployTo(ops: Int): Boolean
     def maxDeployFrom: Int
-    def canDeployFrom(ops: Int) = maxDeployFrom > 0 || (troopsMarkers exists (_.canDeploy))
+    def canDeployFrom(ops: Int) = maxDeployFrom > 0
   
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
@@ -749,7 +751,7 @@ object LabyrinthAwakening {
     // Normally troops cannot deploy to a non-Muslim country.
     // The exception is the Abu Sayyaf event in the Philippines.
     def canDeployTo(ops: Int) = ops >= governance && name == Philippines && hasMarker(AbuSayyaf)
-    def maxDeployFrom = troops
+    def maxDeployFrom = totalDeployableTroops
     def disruptAffectsPrestige = totalTroops > 1
     
   }
@@ -816,15 +818,10 @@ object LabyrinthAwakening {
     // behind may include marker troops (eg NATO), but marker troops are NOT included
     // in those that can leave.
     def maxDeployFrom = if (inRegimeChange)
-      troops min (totalTroopsAndMilitia - totalCells - 5) max 0
+      totalDeployableTroops min (totalTroops - totalCells - 5) max 0
     else
-      troops
-    
-    // NATO can always deploy out if not in regime change even if it is the only troop present.
-    // In regime change we the maxDeployFrom (cubes onoy) must be > 0
-    override def canDeployFrom(ops: Int) = if (inRegimeChange) maxDeployFrom > 0
-                                           else maxDeployFrom > 0 || (troopsMarkers exists (_.canDeploy))
-    
+      totalDeployableTroops
+        
     def jihadDRM = awakening - reaction
     def jihadOK = !isIslamistRule && totalCells > 0 && (name != Pakistan || !hasMarker(BenazirBhutto))
     def majorJihadOK(ops: Int) = 
