@@ -1748,13 +1748,13 @@ object LabyrinthAwakening {
       else {
         if (sleeperFocus) {
           val smax     = maxCells min sleeperCells
-          val prompt   = s"How many sleeper cells (Default = $smax): "
+          val prompt   = "How many sleeper cells? "
           val sleepers = askInt(prompt, 1, smax, Some(smax))
           (maxCells - sleepers , sleepers)
         }
         else {
           val amax    = maxCells min activeCells
-          val prompt  = s"How many active cells (Default = $amax): "
+          val prompt  = "How many active cells? "
           val actives = askInt(prompt, 1, amax, Some(amax))
           (actives, maxCells - actives)
         }
@@ -1793,13 +1793,13 @@ object LabyrinthAwakening {
         else {
           if (sleeperFocus) {
             val smax     = maxCells min sleeperCells
-            val prompt   = s"How many sleeper cells (Default = $smax): "
+            val prompt   = "How many sleeper cells? "
             val sleepers = askInt(prompt, 1, smax, Some(smax))
             (maxCells - sleepers , sleepers, sadr)
           }
           else {
             val amax    = maxCells min activeCells
-            val prompt  = s"How many active cells (Default = $amax): "
+            val prompt  = "How many active cells? "
             val actives = askInt(prompt, 1, amax, Some(amax))
             (actives, maxCells - actives, sadr)
           }
