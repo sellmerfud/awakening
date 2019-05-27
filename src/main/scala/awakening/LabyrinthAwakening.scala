@@ -2628,8 +2628,8 @@ object LabyrinthAwakening {
     SavedGame.save(playFilePath(game.plays.size), game)
   }
   
-  def saveTurn(): Unit = {
-    SavedGame.save(turnFilePath(game.turn), game)
+  def saveTurn(turnNum: Int): Unit = {
+    SavedGame.save(turnFilePath(turnNum), game)
     removePlayFiles() // Remove all of the play files
   }
 
@@ -2753,11 +2753,18 @@ object LabyrinthAwakening {
         removePlayFiles(n.toInt + 1)
         Some(gs)
       case "previous" =>
-        val turn = askInt("Enter turn #", 1, game.turn, allowAbort = false)
-        val gs = SavedGame.load(turnFilePath(turn - 1))
-        removePlayFiles()
-        removeTurnFiles(turn)      
-        Some(gs)
+        try {
+          val turn = askInt("Enter turn #", 1, game.turn, allowAbort = true)
+          val gs = SavedGame.load(turnFilePath(turn - 1))
+          removePlayFiles()
+          removeTurnFiles(turn)      
+          Some(gs)
+        }
+        catch {
+          case AbortCardPlay =>
+            None
+        }
+        
       case _ => None
     }
     
@@ -4900,12 +4907,9 @@ object LabyrinthAwakening {
       }
     
       // Reset history list of plays. They are not store in turn files.
-      game = game.copy(plays = Nil)
-      saveTurn()
-      saveGameDescription(turnsCompleted = game.turn)
-      
-      // Increase the turn number and log it. 
-      game = game.copy(turn = game.turn + 1)
+      game = game.copy(plays = Nil, turn = game.turn + 1)
+      saveTurn(game.turn - 1)
+      saveGameDescription(turnsCompleted = game.turn - 1)
       logStartOfTurn()
     }
   }
@@ -5020,7 +5024,7 @@ object LabyrinthAwakening {
             }
             log()
             scenario.additionalSetup()
-            saveTurn()  // Save the initial game state as turn-0
+            saveTurn(0)  // Save the initial game state as turn-0
             saveGameDescription(turnsCompleted = 0)
             
             val usCards = USCardDraw(game.troopCommitment)
@@ -5292,7 +5296,7 @@ object LabyrinthAwakening {
       log(reason)
       
       game = game.copy(plays = Nil)
-      saveTurn()
+      saveTurn(game.turn)
       saveGameDescription(summary)
       throw ExitGame
     }
