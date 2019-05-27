@@ -5161,12 +5161,12 @@ object LabyrinthAwakening {
     val gameFile: Option[String] = None) {
       
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
-      case Nil => level map (AllUSLevels take _)
+      case Nil => level map (AllJihadistLevels take _)
       case xs  => Some(xs)
     }
     
     def usBotDifficulties: Option[List[BotDifficulty]] = usResolve match {
-      case Nil => level map (AllJihadistLevels take _)
+      case Nil => level map (AllUSLevels take _)
       case xs  => Some(xs)
     }
     
