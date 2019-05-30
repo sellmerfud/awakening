@@ -10,7 +10,7 @@ rem This is important so that all of our relative path references work correctly
 pushd %~dp0
 
 set CLASSPATH=lib\awakening_2.11-3.0.jar;lib\optparse_2.11-2.2.jar;lib\scala-library-2.11.0.jar;^
-scala-parser-combinators_2.11-1.1.2.jar
+lib\scala-parser-combinators_2.11-1.1.2.jar
 java -cp %CLASSPATH%  awakening.LabyrinthAwakening %*
 
 popd
