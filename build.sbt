@@ -23,12 +23,12 @@ lazy val awakening = (project in file("."))
       "org.sellmerfud"         %% "optparse"       % "2.2"
     ),
     // Task to create the distribution zip file
-    stage in Compile := {
+    Compile / stage := {
       val log = streams.value.log
-      (packageBin in Compile).value  // Depends on the package being built
-      val jar    = (artifactPath in packageBin in Compile).value
+      (Compile / packageBin).value  // Depends on the package being built
+      val jar    = (Compile / packageBin/ artifactPath).value
       // Filter out the scala-compiler jar file.
-      val cp     = (managedClasspath in Compile).value.files filterNot (_.getName contains "compiler")
+      val cp     = (Compile / managedClasspath).value.files filterNot (_.getName contains "compiler")
       val base   = s"./target/awakening-${version.value}"
       val lib    = s"./target/awakening-${version.value}/lib"
       val others = Seq("src/other/README.txt",
