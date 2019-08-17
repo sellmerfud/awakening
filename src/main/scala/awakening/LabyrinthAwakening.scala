@@ -1867,6 +1867,8 @@ object LabyrinthAwakening {
   def choice(condition: Boolean, value: String, desc: String): Option[(String, String)] =
     if (condition) Some(value -> desc) else None
   
+  def choice(condition: Boolean, value: String): Option[String] = if (condition) Some(value) else None
+  
   // Present a numbered menu of choices
   // Allow the user to choose 1 or more choices and return
   // a list of keys to the chosen items.
@@ -5677,16 +5679,16 @@ object LabyrinthAwakening {
     @tailrec def getAction(): String = {
       val canReassess = firstCardOfPhase(US) && card.ops == 3 && reservesUsed == 0
       val actions = List(
-        if (playable && reservesUsed == 0)                      Some(ExecuteEvent) else None,
-                                                                Some(WarOfIdeas),
-        if (game.deployPossible(opsAvailable))                  Some(Deploy)       else None,
-        if (game.regimeChangePossible(opsAvailable))            Some(RegimeChg)    else None,
-        if (game.withdrawPossible(opsAvailable))                Some(Withdraw)     else None,
-        if (game.disruptTargets(opsAvailable).nonEmpty)         Some(Disrupt)      else None,
-        if (game.alertPossible(opsAvailable))                   Some(Alert)        else None,
-        if (canReassess)                                        Some(Reassess)     else None,
-        if (card.ops < 3 && inReserve < 2)                      Some(AddReserves)  else None,
-        if (opsAvailable < 3 && inReserve > 0)                  Some(UseReserves)  else None,
+        choice(playable && reservesUsed == 0,              ExecuteEvent),
+        Some(WarOfIdeas),
+        choice(game.deployPossible(opsAvailable),          Deploy),
+        choice(game.regimeChangePossible(opsAvailable),    RegimeChg),
+        choice(game.withdrawPossible(opsAvailable),        Withdraw),
+        choice(game.disruptTargets(opsAvailable).nonEmpty, Disrupt),
+        choice(game.alertPossible(opsAvailable),           Alert),
+        choice(canReassess,                                Reassess),
+        choice(card.ops < 3 && inReserve < 2,              AddReserves),
+        choice(opsAvailable < 3 && inReserve > 0,          UseReserves),
         Some(AbortCard)
       ).flatten
     
@@ -5782,12 +5784,11 @@ object LabyrinthAwakening {
     val Disrupt      = "disrupt"
     val Alert        = "alert"
     val actions = List(
-                                             Some(WarOfIdeas),
-      if (game.deployPossible(ops))          Some(Deploy)       else None,
-      if (game.regimeChangePossible(ops))    Some(RegimeChg)    else None,
-      if (game.withdrawPossible(ops))        Some(Withdraw)     else None,
-      if (game.disruptTargets(ops).nonEmpty) Some(Disrupt)      else None,
-      if (game.alertPossible(ops))           Some(Alert)        else None
+      choice(game.deployPossible(ops),          Deploy),
+      choice(game.regimeChangePossible(ops),    RegimeChg),
+      choice(game.withdrawPossible(ops),        Withdraw),
+      choice(game.disruptTargets(ops).nonEmpty, Disrupt),
+      choice(game.alertPossible(ops),           Alert)
     ).flatten
     println(s"Available actions: ${actions.mkString(", ")}")
     askOneOf(s"$US action: ", actions).get match {
@@ -6056,17 +6057,17 @@ object LabyrinthAwakening {
       val actions = if (firstPlot)
         List(
           Some(PlotAction),
-          if (opsAvailable < 3 && inReserve > 0) Some(UseReserves) else None
+          choice(opsAvailable < 3 && inReserve > 0, UseReserves)
         ).flatten
       else
         List(
-          if (playable && reservesUsed == 0)      Some(ExecuteEvent) else None,
-          if (game.recruitPossible)               Some(Recruit) else None,
+          choice(playable && reservesUsed == 0,      ExecuteEvent),
+          choice(game.recruitPossible,               Recruit),
           Some(Travel), // Travel must be possible or the Jihadist has lost
-          if (game.jihadPossible)                 Some(Jihad) else None,
-          if (game.plotPossible(opsAvailable))    Some(PlotAction) else None,
-          if (card.ops < 3 && inReserve < 2)      Some(AddReserves) else None,
-          if (opsAvailable < 3 && inReserve > 0)  Some(UseReserves) else None
+          choice(game.jihadPossible,                 Jihad),
+          choice(game.plotPossible(opsAvailable),    PlotAction),
+          choice(card.ops < 3 && inReserve < 2,      AddReserves),
+          choice(opsAvailable < 3 && inReserve > 0,  UseReserves)
         ).flatten
   
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
