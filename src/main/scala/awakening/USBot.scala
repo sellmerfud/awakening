@@ -1099,7 +1099,8 @@ object USBot extends BotHelpers {
         val cardNum = askCardNumber("Enter the next card in the US hand. Card # ", initial = None, allowNone = false).get
         val card2 = deck(cardNum)
         if (card2.ops >= opsNeeded) {
-          game = game.copy(plays = PlayedCard(US, card2.number) :: game.plays)
+          // Replace the head card play with a reassessment 
+          game = game.copy(plays = PlayedReassement(card.number, card2.number) :: game.plays.tail)
           logCardPlay(US, card2, false)
           // Check to see if either of the cards played has the autoTrigger
           // US Elections event.  If so the event happens first.

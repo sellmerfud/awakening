@@ -168,10 +168,11 @@ object SavedGame {
 
   private def playToMap(play: Play): Map[String, Any] = {
     val params = play match {
-      case p: PlayedCard     => Map("role" -> p.role.toString, "cardNum" ->  p.cardNum)
-      case p: AdditionalCard => Map("role" -> p.role.toString, "cardNum" ->  p.cardNum)
-      case p: PlotsResolved  => Map("num" -> p.num)
-      case p: AdjustmentMade => Map("desc" -> p.desc)
+      case p: PlayedCard       => Map("role"  -> p.role.toString, "cardNum" -> p.cardNum)
+      case p: PlayedReassement => Map("card1" -> p.card1,         "card2"   -> p.card2)
+      case p: AdditionalCard   => Map("role"  -> p.role.toString, "cardNum" -> p.cardNum)
+      case p: PlotsResolved    => Map("num"   -> p.num)
+      case p: AdjustmentMade   => Map("desc"  -> p.desc)
     }
     Map("playType" -> play.name, "params" -> params)
   }
@@ -179,10 +180,11 @@ object SavedGame {
   private def playFromMap(data: Map[String, Any]): Play = {
     val params = asMap(data("params"))
     asString(data("playType")) match {
-      case "PlayedCard"     => PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")))
-      case "AdditionalCard" => AdditionalCard(Role(asString(params("role"))), asInt(params("cardNum")))
-      case "PlotsResolved"  => PlotsResolved(asInt(params("num")))
-      case "AdjustmentMade" => AdjustmentMade(asString(params("desc")))
+      case "PlayedCard"       => PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")))
+      case "PlayedReassement" => PlayedReassement(asInt(params("card1")), asInt(params("card2")))
+      case "AdditionalCard"   => AdditionalCard(Role(asString(params("role"))), asInt(params("cardNum")))
+      case "PlotsResolved"    => PlotsResolved(asInt(params("num")))
+      case "AdjustmentMade"   => AdjustmentMade(asString(params("desc")))
     }
   }
   

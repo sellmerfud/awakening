@@ -634,6 +634,12 @@ object LabyrinthAwakening {
     override def numCards = 1
     override def toString() = s"$role played ${cardNumAndName(cardNum)}"
   }
+  case class PlayedReassement(card1: Int, card2: Int) extends CardPlay {
+    val role = US
+    override def name = "PlayedReassement"
+    override def numCards = 2
+    override def toString() = s"$role played ${cardNumAndName(card1)} and ${cardNumAndName(card2)}"
+  }
   case class AdditionalCard(role: Role, cardNum: Int) extends CardPlay {
     override def name = "AdditionalCard"
     override def numCards = 1
@@ -5699,7 +5705,8 @@ object LabyrinthAwakening {
             case None => throw AbortCardPlay
             case Some(cardNum) =>
               val card2 = deck(cardNum)
-              game = game.copy(plays = PlayedCard(US, card2.number) :: game.plays)
+              // Replace the head card play with a reassessment 
+              game = game.copy(plays = PlayedReassement(card.number, card2.number) :: game.plays.tail)
               secondCard = Some(card2)
               logCardPlay(US, card2, card2.eventIsPlayable(US))
               Reassess
