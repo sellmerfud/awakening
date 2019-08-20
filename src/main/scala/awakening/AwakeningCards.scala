@@ -1388,7 +1388,7 @@ object AwakeningCards {
     entry(new Card(166, "Ferguson", Jihadist, 1,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
-        log("Jihadist player my block 1 US associated event played later this turn.")
+        log("Jihadist player may block 1 US associated event played later this turn.")
         if (role == game.botRole)
           log("The Jihadist Bot will cancel the NEXT US associated event played by the US")
       }
