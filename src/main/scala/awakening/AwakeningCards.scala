@@ -83,7 +83,7 @@ object AwakeningCards {
     m.resources == 1 && m.totalCells >= 2 && !(m.civilWar && m.besiegedRegime)
     
   val islamicMaghrebCountry = Set(AlgeriaTunisia, Libya, Mali, Morocco, Nigeria)
-  val islamicMaghrebCandidate = (m: MuslimCountry) => islamicMaghrebCountry(m.name) && m.isPoor
+  val islamicMaghrebCandidate = (c: Country) => islamicMaghrebCountry(c.name) && c.isPoor
   val theftOfStateCandidate = (m: MuslimCountry) => m.isPoor && m.awakening > 0
   val changeOfStateCandidate = (m: MuslimCountry) => {
     (m.isShiaMix || m.name == Jordan || m.name == Morocco) && !m.isUntested &&
@@ -1423,23 +1423,23 @@ object AwakeningCards {
     entry(new Card(169, "Islamic Maghreb", Jihadist, 1,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) => if (role == game.botRole)
-        (game hasMuslim islamicMaghrebCandidate) && (game.funding < 8 || game.cellsAvailable > 0)
+        (game hasCountry islamicMaghrebCandidate) && (game.funding < 8 || game.cellsAvailable > 0)
       else  
-        (game hasMuslim islamicMaghrebCandidate) && (game.funding < 9 || game.cellsAvailable > 0)
+        (game hasCountry islamicMaghrebCandidate) && (game.funding < 9 || game.cellsAvailable > 0)
       ,  
       (role: Role) => {
         val (target, action) = if (role == game.humanRole) {
-          val candidates = countryNames(game.muslims filter islamicMaghrebCandidate)
+          val candidates = countryNames(game.countries filter islamicMaghrebCandidate)
           val t = askCountry("Select country: ", candidates)
-          val two = (game.getMuslim(t).civilWar || game.isCaliphateMember(t))
+          val two = (game isMuslim t) && ((game getMuslim t).civilWar || (game isCaliphateMember t))
           val choices = List(
-            "cells" -> (if (two) "Place cells" else "Place a cell"),
+            "cells"   -> (if (two) "Place 2 cells" else "Place a cell"),
             "funding" -> "Increase funding")
           (t, askMenu(choices).head)
         }
         else {
-          val maghrebs = game.muslims filter islamicMaghrebCandidate
-          val better = maghrebs filter (m => m.civilWar || game.isCaliphateMember(m.name))
+          val maghrebs = game.countries filter islamicMaghrebCandidate
+          val better = maghrebs filter (c => c.isMuslim && (game.getMuslim(c.name).civilWar || (game isCaliphateMember c.name)))
           val candidates = countryNames(if (better.nonEmpty) better else maghrebs)
           val t = JihadistBot.travelToTarget(candidates).get
           val action = if (game.funding < 8) "funding" else "cells"
@@ -1448,7 +1448,8 @@ object AwakeningCards {
         }
         
         addEventTarget(target)
-        val num = if (game.getMuslim(target).civilWar || game.isCaliphateMember(target)) 2 else 1
+        testCountry(target)
+        val num = if (game.isMuslim(target) && (game.getMuslim(target).civilWar || game.isCaliphateMember(target))) 2 else 1
         if (action == "funding")
           increaseFunding(num)
         else
@@ -2326,13 +2327,21 @@ object AwakeningCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(197, "Unconfirmed", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role, forTrigger: Boolean) => {
+        val candidates = Set(219, 215, 216, 225, 237)
+        game.cardsRemoved exists (n => candidates contains n)
+      },
       (role: Role) => {
         // See Event Instructions table
         if (role == game.humanRole)
-          log("Draw one of the indicated cards from the discard pile.")
+          log("Draw one of the indicated cards from the removed cards pile.")
         else
-          log(s"The $Jihadist Bot draws the candidate card nearest the top of the dicard pile")
+          log(s"The $Jihadist Bot draws the candidate card nearest the top of the removed cards pile...")
+        
+        val prompt = s"Enter # of the card retrieved from out of play: "
+        val cardNum = askCardNumber(prompt, None, false, false, true).get
+        game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
         decreasePrestige(1)
       }
     )),

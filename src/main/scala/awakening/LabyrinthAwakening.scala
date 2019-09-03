@@ -680,6 +680,9 @@ object LabyrinthAwakening {
     val markers: List[String]
     val wmdCache: Int        // Number of WMD plots cached
   
+    def isMuslim: Boolean
+    def isNonMuslim: Boolean = !isMuslim
+    
     def isUntested: Boolean
     def isGood         = governance == Good
     def isFair         = governance == Fair
@@ -735,6 +738,9 @@ object LabyrinthAwakening {
     wmdCache: Int              = 0,  // Number of WMD plots cached
     iranSpecialCase: Boolean   = false
   ) extends Country {
+    
+    override def isMuslim: Boolean = false
+
     override def isUntested = posture == PostureUntested && 
                               !(Set(UnitedStates, Israel, Iran) contains name)
     def posture = if (name == UnitedStates) game.usPosture else postureValue
@@ -785,6 +791,9 @@ object LabyrinthAwakening {
     reaction: Int              = 0,  // number of reaction markers
     wmdCache: Int              = 0   // Number of WMD plots cached
   ) extends Country {
+    
+    override def isMuslim: Boolean = true
+    
     override def isUntested = governance == GovernanceUntested
     def isAlly      = alignment == Ally
     def isNeutral   = alignment == Neutral
@@ -1000,7 +1009,7 @@ object LabyrinthAwakening {
         Nil
     }
     
-    def setCaliphateCapital(name: String): GameState = {
+    def setCaliphateCapitaxl(name: String): GameState = {
       assert(isMuslim(name), s"setCaliphateCapital() called on non-muslim country: $name")
       val capital = getMuslim(name);
       assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
@@ -1224,10 +1233,9 @@ object LabyrinthAwakening {
         m.cells > 0
       else 
         (m.hasCadre || m.cells > 0)
-      val fataCheck = m.name != Pakistan || 
-                      countryEventNotInPlay(Pakistan, FATA) ||
-                      m.inRegimeChange
-      hasTarget && fataCheck && ops >= m.governance && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
+      val fataCheck = m.name != Pakistan || countryEventNotInPlay(Pakistan, FATA) || m.inRegimeChange
+      val opsCheck  = ops >= (m.governance min Poor) // Treat IslamicRule same as Poor for ops value
+      hasTarget && fataCheck && opsCheck && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
     })
     
     def disruptNonMuslimTargets(ops: Int): List[String] = countryNames(nonMuslims.filter { n =>
@@ -2201,25 +2209,27 @@ object LabyrinthAwakening {
   def modifyJihadRoll(die: Int, m: MuslimCountry, major: Boolean, silent: Boolean = false): Int = {
     def logNotZero(value: Int, msg: String): Unit =
       if (!silent && value != 0) log(f"$value%+2d $msg")
+        
     val awakeningMod   = m.awakening
     val reactionMod    = -m.reaction
+    val drm =  m.awakening + m.reaction
     logNotZero(awakeningMod,   "Awakening")
     logNotZero(reactionMod,    "Reaction")
     
-    val drm = if (game.jihadistIdeology(Virulent)) {
-      if (!silent && awakeningMod > 0)
+    val finalDrm = if (game.jihadistIdeology(Virulent)) {
+      if (!silent && drm > 0)
         log(s"$Jihadist Bot with Virulent Ideology ignores DRM penalty for Jihad")
-      reactionMod
+      0
     }
     else if (game.jihadistIdeology(Coherent) && !major) {
-      if (!silent && awakeningMod > 0)
+      if (!silent && drm > 0)
         log(s"$Jihadist Bot with Coherent Ideology ignores DRM penalty for Minor Jihad")
-      reactionMod
+      0
     }
     else
-      awakeningMod + reactionMod
-    val modRoll = die + drm
-    if (!silent && (awakeningMod > 0 || reactionMod < 0))
+      drm
+    val modRoll = die + finalDrm
+    if (!silent && (awakeningMod != 0 || reactionMod != 0))
       log(s"Modified roll: $modRoll")
     modRoll
   }
@@ -2261,6 +2271,7 @@ object LabyrinthAwakening {
         sleeperCells     = 0
       )
     }
+    log(s"Place Caliphate capital marker in ${capital}")
     game = game.updateCountries(daisyChain)
   }
   
@@ -2320,8 +2331,7 @@ object LabyrinthAwakening {
         val best   = sorted.takeWhile(compareCapitalCandidates(_, sorted.head) == 0) map (_.m.name)
         shuffle(best).head
       }
-      game = game.setCaliphateCapital(newCapitalName)
-      log(s"Move Caliphate capital to ${newCapitalName}")
+      setCaliphateCapital(newCapitalName)
       decreaseFunding(1)
       increasePrestige(1)
       logSummary(game.caliphateSummary)
@@ -4055,6 +4065,7 @@ object LabyrinthAwakening {
   def moveTroops(source: String, dest: String, num: Int): Unit = {
     if (num > 0) {
       assert(source != dest, "The source and destination for moveTroops() cannot be the same.")
+      val startingCommitment = game.troopCommitment
       def disp(name: String) = if (name == "track") "the troops track" else name
       log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to ${disp(dest)}")
       if (source == "track")
@@ -4074,6 +4085,8 @@ object LabyrinthAwakening {
         }
         removeEventMarkersFromCountry(dest, "Advisors")
       }
+      if (game.troopCommitment != startingCommitment)
+        log(s"Move the troop commitment marker from ${startingCommitment} to ${game.troopCommitment}")
     }
   }
   
@@ -4084,6 +4097,7 @@ object LabyrinthAwakening {
   
   def takeTroopsOffMap(source: String, num: Int): Unit = {
     if (num > 0) {
+      val startingCommitment = game.troopCommitment      
       def disp(name: String) = if (name == "track") "the troops track" else name
         log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to the off map box")
         // Note: No need to "remove" them from the track as the number on the track is
@@ -4096,6 +4110,9 @@ object LabyrinthAwakening {
           game  = game.updateCountry(m.copy(troops = m.troops - num))
         }
         game = game.copy(offMapTroops = game.offMapTroops + num)
+        
+        if (game.troopCommitment != startingCommitment)
+          log(s"Move the troop commitment marker from ${startingCommitment} to ${game.troopCommitment}")
     }
   }
   
@@ -4849,6 +4866,7 @@ object LabyrinthAwakening {
           resolvedPlots  = Nil,
           availablePlots = game.availablePlots ::: game.resolvedPlots)
         game = game.copy(plotData = updatedPlots)
+        log()
         log(s"Return ${amountOf(num, "resolved plot")} to the available plots box")
       }
     
@@ -4865,18 +4883,27 @@ object LabyrinthAwakening {
       if (game.cardsLapsing.nonEmpty) {
         // some lapsing cards are removed at the end of the turn.
         val (remove, discard) = game.cardsLapsing.partition (deck(_).remove == Remove)
+        if (remove.nonEmpty || discard.nonEmpty) {
+          log()
+          log("Lapsing Cards")
+          log(separator())
+        }
         if (remove.nonEmpty)
-          log(s"Remove the following lapsing cards from the game: ${cardNumsAndNames(remove)}")
+          wrap("Remove from the game: ", remove.sorted map cardNumAndName) foreach (log(_))
         if (discard.nonEmpty)
-          wrap("Discard lapsing cards: ", discard.sorted map cardNumAndName) foreach (log(_))
+          wrap("Discard: ", discard.sorted map cardNumAndName) foreach (log(_))
       
         game = game.copy(
           cardsLapsing = Nil,
           cardsRemoved = remove ::: game.cardsRemoved
         )
       }
+      
       game.firstPlotCard foreach { num => 
-        log(s"Discard the first   plot card: ${cardNumAndName(num)}")
+        log()
+        log("First Plot Card")
+        log(separator())
+        log(s"Discard : ${cardNumAndName(num)}")
         game = game.copy(firstPlotCard = None)
       }
       
@@ -4889,6 +4916,8 @@ object LabyrinthAwakening {
       log(s"$US player will draw $usCards cards")
       log(s"Jihadist player will draw $jihadistCards cards")
   
+      log()  // Add a blank line for readability
+      
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
       if (game.params.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
@@ -6975,7 +7004,7 @@ object LabyrinthAwakening {
     else 
       adjustInt("Active cells", c.activeCells, 0 to maxCells) foreach { value =>
         if (value < c.activeCells)
-          removeCellsFromCountry(name, c.activeCells, 0, false, addCadre = false, s"$name adjusted: ")
+          removeCellsFromCountry(name, c.activeCells - value, 0, false, addCadre = false, s"$name adjusted: ")
         else if (value > c.activeCells)
           addActiveCellsToCountry(name, value - c.activeCells, s"$name adjusted: ")
         saveAdjustment(name, "Active cells")
