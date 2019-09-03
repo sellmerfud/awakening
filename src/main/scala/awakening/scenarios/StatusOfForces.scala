@@ -41,7 +41,7 @@ package awakening.scenarios
 import awakening.LabyrinthAwakening._
 
 object StatusOfForces extends Scenario {
-  val name           = "Status of Force Agreement"
+  val name           = "Status of Forces Agreement"
   val scenarioType   = AwakeningScenario
   val prestige       = 6
   val usPosture      = Soft
