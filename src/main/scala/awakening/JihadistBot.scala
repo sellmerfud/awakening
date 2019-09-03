@@ -109,6 +109,15 @@ object JihadistBot extends BotHelpers {
     }
   }
 
+  // The Bot will never travel sleeper cells within the same country.
+  // Also will not travel active cells with the same country if it is
+  // part of a caliphate (because they are always active anyway).
+  class WouldMoveOrTravelWithinToSleep(toCountry: String) extends CountryFilter {
+    val desc = s"Would move or make sleeper cell"
+    val isOK = (c: Country) => c.name != toCountry || (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
+    def filter(countries: List[Country]) = countries filter isOK
+  }
+
   // Jihadist Priorities Table entries
 
   // 1. Best Jihad DRM
@@ -396,7 +405,8 @@ object JihadistBot extends BotHelpers {
   def travelFromTarget(toCountry: String, names: List[String]): Option[String] = {
     botLog("Find \"Travel From\" target")
     val flowchart = List(
-      new AdjacentCountriesNode(toCountry), 
+      new WouldMoveOrTravelWithinToSleep(toCountry),
+      new AdjacentCountriesNode(toCountry),
       AutoRecruitFilter,
       FewestCellsFilter)
 
@@ -755,13 +765,11 @@ object JihadistBot extends BotHelpers {
     }
     val successes = results count (_ == true)
     val available = if (ignoreFunding) game.cellsAvailable else game.cellsToRecruit
-    val numCells = if (game.jihadistIdeology(Potent)) {
-      log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
-      (successes * 2) min available
-    }
-    else
-      successes min available
+    val numCells  = (if (game.jihadistIdeology(Potent)) (successes * 2) else successes) min available
     
+    if (successes > 0 && game.jihadistIdeology(Potent))
+      log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+      
     addSleeperCellsToCountry(target, numCells)
     usedCells(target).addSleepers(numCells)
   }
