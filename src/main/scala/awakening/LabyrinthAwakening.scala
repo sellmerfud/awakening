@@ -3030,19 +3030,25 @@ object LabyrinthAwakening {
           case 0 =>  // Nothing happens
           case 2 =>
             game = game.updateCountry(m.copy(awakening = m.awakening + 1))
+            log()
             log(s"Add an awakening marker to ${name}")
           case -2 =>
             game = game.updateCountry(m.copy(reaction = m.reaction + 1))
+            log()
             log(s"Add a reaction marker to ${name}")
           case x if x > 2 =>
+            log()
             if (m.isAlly) {
               improveGovernance(name, 1, canShiftToGood = true, endOfTurn = true)
               if (game.getMuslim(name).isGood)
                 convergers = Converger(name, awakening = true) :: convergers
             }
-            else 
+            else
               shiftAlignmentLeft(m.name)
+            
+              
           case _ => // x < -2
+            log()
             if (m.isAdversary) {
               degradeGovernance(name, levels = 1, canShiftToIR = true, endOfTurn = true)
               if (game.getMuslim(name).isIslamistRule)

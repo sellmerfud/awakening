@@ -3120,10 +3120,11 @@ object AwakeningCards {
     entry(new Card(217, "Agitators", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) => (role == game.humanRole) || {
-        val cards = List("Coup", "ISIL", "Free Syrian Army", "Benghazi Falls", "Operation Serval",
-                     "Revolution", "Houthi Rebels", "Congress Acts")
+        val cardNums = List(165, 188, 234, 133, 226, 238, 167, 152) :::
+                      (if (game.params.scenarioType == CampaignScenario) List(37, 39) else Nil)
+          
         println("The following cards cause Civil War or Regime Change")
-        cards foreach println
+        cardNums.sorted foreach (n => println(deck(n).numAndName))
         cacheQuestion(askYorN("Is at least one of these cards in the discard pile (y/n)? "))
       }
       ,
