@@ -6,7 +6,7 @@ windowTitle = '$TM_DISPLAYNAME – $relativeDir $scmDisplay'
 excludeFilesInBrowser       = "{$excludeFilesInBrowser,*.class,*.jar}"
 excludeDirectoriesInBrowser = "{$excludeDirectoriesInBrowser,classes,lib}"
 excludeInFileChooser        = "{$excludeInFileChooser,classes,lib,help,robo-help,scaladoc,*.jar}"
-excludeInFolderSearch       = "{$excludeInFolderSearch,classes,lib,log,scaladoc,help,games,robo-help,*.jar}" 
+excludeInFolderSearch       = "{$excludeInFolderSearch,classes,lib,log,scaladoc,help,project,target,games,robo-help,*.jar}" 
 
 showWrapColumn = true
 wrapColumn     = 100
