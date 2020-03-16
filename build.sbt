@@ -6,7 +6,7 @@ import java.util.HashSet
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
-  version      := "3.2",
+  version      := "3.3",
   scalaVersion := "2.11.0"
 )
 

@@ -9,7 +9,7 @@ Building a release
    target/awakening-<ver>
 5. Remove and .DS_Store files in the staged directories.
 6. Compress the  target/awakening-<ver> folder
-   cd to target; zip -r awakening-<ver>.zip awakening-<ver
+   cd to target; zip -r awakening-<ver>.zip awakening-<ver>
 7. Test that new package works
 8. Copy zip file to Dropbox/awakening
 9. Update the download link in the README.md file
