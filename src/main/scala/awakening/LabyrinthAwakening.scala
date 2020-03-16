@@ -3177,7 +3177,7 @@ object LabyrinthAwakening {
   }
   
   def civilWarAttrition(): Unit = {
-    val civilWars = game.muslims filter (m => (m.civilWar))
+    def civilWars = game.muslims filter (m => (m.civilWar))
     log()
     log("Civil War Attrition")
     log(separator())
