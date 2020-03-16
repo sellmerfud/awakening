@@ -21,7 +21,7 @@ There are two scripts provided that will start the program.
 
 ## Downloading the package
 
-You can download the zip file with the latest release (version 3.3) [here][1]
+You can download the zip file with the latest release (version 3.4) [here][1]
 
 If you are upgrading to a newer version and the **major** version numbers of the two versions
 are the same, then any saved games in progress will be compatible.
@@ -30,7 +30,7 @@ Simply copy the *games* folder from the older *awakening-x.x* directory to the
 new *awakening-x.x* directory.
 
 
-[1]: https://www.dropbox.com/s/n9da4butx35kh6x/awakening-3.3.zip?dl=0
+[1]: https://www.dropbox.com/s/z8vrw7n89n6g1bt/awakening-3.4.zip?dl=0
 
 ## Using the program
 
