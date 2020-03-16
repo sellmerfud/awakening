@@ -5819,6 +5819,7 @@ object LabyrinthAwakening {
     val Disrupt      = "disrupt"
     val Alert        = "alert"
     val actions = List(
+      Some(WarOfIdeas),
       choice(game.deployPossible(ops),          Deploy),
       choice(game.regimeChangePossible(ops),    RegimeChg),
       choice(game.withdrawPossible(ops),        Withdraw),
