@@ -2145,7 +2145,7 @@ object AwakeningCards {
         val candidates = countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))
         
         val other2 = if (role == game.humanRole)
-          askCountries(2, candidates)
+          askCountries(2, candidates, allowDuplicates = true)
         else 
           JihadistBot.multipleTargets(2, candidates, JihadistBot.markerAlignGovTarget)
         

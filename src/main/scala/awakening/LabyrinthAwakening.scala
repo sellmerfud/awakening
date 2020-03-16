@@ -1700,11 +1700,12 @@ object LabyrinthAwakening {
   }
   
   // Ask the user to select multiple countries from the given candidates.
-  def askCountries(num: Int, candidates: List[String]): List[String] = {
+  def askCountries(num: Int, candidates: List[String], allowDuplicates: Boolean = false): List[String] = {
     def nextCountry(n: Int, targets: List[String]): List[String] = {
       if (n <= num && targets.nonEmpty) {
         val name = askCountry(s"Select ${ordinal(n)} country: ", targets)
-        name :: nextCountry(n + 1, targets filterNot (_ == name))
+        val newTargets = if (allowDuplicates) targets else (targets filterNot (_ == name))
+        name :: nextCountry(n + 1, newTargets)
       }
       else
         Nil
