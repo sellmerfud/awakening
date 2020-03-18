@@ -2272,7 +2272,7 @@ object LabyrinthAwakening {
         sleeperCells     = 0
       )
     }
-    log(s"Place Caliphate capital marker in ${capital}")
+    log(s"Place Caliphate capital marker in ${capital.name}")
     game = game.updateCountries(daisyChain)
   }
   
@@ -3313,16 +3313,8 @@ object LabyrinthAwakening {
             setAlignment(name, Ally)
           }
           else {
-            val caliphateCapital = tested.caliphateCapital
-            val priorCampCapacity = game.trainingCampCapacity
             log("Success")
             improveGovernance(name, 1, canShiftToGood = true)
-            if (game.getMuslim(name).isGood) {
-              if (caliphateCapital) {
-                displaceCaliphateCapital(name)
-                updateTrainingCampCapacity(priorCampCapacity)
-              }
-            }
           }          
         }  
         
@@ -3729,7 +3721,7 @@ object LabyrinthAwakening {
           val improved = m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
                  militia = 0, besiegedRegime = false)
           game = game.updateCountry(improved)
-          removeTrainingCamp_?(name)
+          removeTrainingCamp_?(name, endOfTurn)
           endRegimeChange(name, endOfTurn)
           endCivilWar(name, endOfTurn)
           if (!endOfTurn)
@@ -3960,13 +3952,14 @@ object LabyrinthAwakening {
   // If it does, but no longer meets the requirements for housing
   // the "Training Camps", the remove it and log all necessary 
   // changes to the game.
-  def removeTrainingCamp_?(name: String): Unit = {
+  def removeTrainingCamp_?(name: String, endOfTurn: Boolean = false): Unit = {
     if (game.isTrainingCamp(name)) {
       val m = game.getMuslim(name)
       if (m.isGood || (m.totalCells == 0 && !m.hasCadre)) {
         val priorCapacity  = game.trainingCampCapacity
         removeEventMarkersFromCountry(name, "Training Camps")
-        updateTrainingCampCapacity(priorCapacity)
+        if (!endOfTurn)
+          updateTrainingCampCapacity(priorCapacity)
       }
     }
   }
