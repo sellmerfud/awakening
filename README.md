@@ -37,9 +37,9 @@ new *awakening-x.x* directory.
 When you first run the program, it will prompt you to enter:
 
 1. The scenario that you wish to play
-2. This side you wish to play (US or Jihadist)
+2. The side you wish to play (US or Jihadist)
 3. The difficulty level
-4. A name for your game (so you progress can be saved)
+4. A name for your game (so your progress can be saved)
 
 Your game is saved after each card play, plot resolution, etc.  You can use the 
 `show plays` command to see the cards that have been played during the current turn.
@@ -67,7 +67,7 @@ The `rollback` command will let you restart the game from:
 You can also abort the current card that you are playing at most prompts by entering `abort`.
 
 
-All commands can be shorted to the prefix of the command name that is unique.  The `j 121` 
+All commands can be shortened to the prefix of the command name that is unique.  The `j 121` 
 command is actually shorthand for `jihadist 121`.
 
 In fact this use of abbreviated prefixes works at every prompt in the game.  So if you are
@@ -75,7 +75,7 @@ choosing the country where you want to conduct a Jihad, you can enter `sau` to i
 `Saudi Arabia` or `uk` for `United Kingdom`.  If the prefix you type is not unqiue, the 
 program will display the valid choices.
 
-There is a `resolve plots` command, but you will rarely need to used it.  The program will
+There is a `resolve plots` command, but you will rarely need to use it.  The program will
 detect when a new action phase has started and if there are unresolved plots, they will be
 resloved.
 
