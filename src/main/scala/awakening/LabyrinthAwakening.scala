@@ -6282,7 +6282,7 @@ object LabyrinthAwakening {
       }
         
       val destCandidates = if (lapsingEventInPlay(Biometrics))
-        getAdjacent(src.name)
+        src.name :: getAdjacent(src.name)
       else
         countryNames(game.countries)
 

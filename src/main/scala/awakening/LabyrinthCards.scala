@@ -258,7 +258,7 @@ object LabyrinthCards {
       ,
       (role: Role) => {
         addEventMarkersToCountry(UnitedStates, NEST)
-        log("Add plots in the US are now placed face up")
+        log("Plots in the US are now placed face up")
       }
     )),
     // ------------------------------------------------------------------------
