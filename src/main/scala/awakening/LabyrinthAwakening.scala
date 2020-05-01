@@ -4630,7 +4630,7 @@ object LabyrinthAwakening {
                 }
               }
               
-              if (!m.isPoor || m.aidMarkers > 0) {
+              if (m.isGood || m.isFair || m.aidMarkers > 0) {
                 // Rare for a plot to exist in an IR country.  Jihadist would have to
                 // place the plot with one card, then do Major Jihad with the second
                 def isSuccess(die: Int) = m.isIslamistRule || die <= m.governance
