@@ -4641,7 +4641,8 @@ object LabyrinthAwakening {
                 log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
                 // Remove 1 aid marker for each sucessful die roll
                 removeAidMarker(name, successes min m.aidMarkers)
-                degradeGovernance(name, levels = successes, canShiftToIR = false)
+                if (!m.isIslamistRule)
+                  degradeGovernance(name, levels = successes, canShiftToIR = false)
               }
             }
             
