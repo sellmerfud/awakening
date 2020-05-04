@@ -2211,9 +2211,9 @@ object LabyrinthAwakening {
     def logNotZero(value: Int, msg: String): Unit =
       if (!silent && value != 0) log(f"$value%+2d $msg")
         
-    val awakeningMod   = m.awakening
-    val reactionMod    = -m.reaction
-    val drm =  m.awakening + m.reaction
+    val awakeningMod = m.awakening
+    val reactionMod  = -m.reaction
+    val drm          =  awakeningMod + reactionMod
     logNotZero(awakeningMod,   "Awakening")
     logNotZero(reactionMod,    "Reaction")
     
