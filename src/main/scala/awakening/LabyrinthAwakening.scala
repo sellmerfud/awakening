@@ -764,7 +764,7 @@ object LabyrinthAwakening {
     // The exception is the Abu Sayyaf event in the Philippines.
     def canDeployTo(ops: Int) = ops >= governance && name == Philippines && hasMarker(AbuSayyaf)
     def maxDeployFrom = totalDeployableTroops
-    def disruptAffectsPrestige = totalTroops > 1
+    def disruptAffectsPrestige = totalTroopsThatAffectPrestige > 1
     
   }
 
