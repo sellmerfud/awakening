@@ -4798,11 +4798,20 @@ object LabyrinthAwakening {
   // Change Syria to Shia-Mix
   // Add WMD cache to Syria(2) and Iran (1)
   // set params.useExpansionRules = true
-  // Test Algeria and add an awakening marker (if possible)
+  // Test Algeria and add an awakening marker
+  // (if possible, otherwise a random muslim country - From Forever War rules)
   def addAwakeningCards(): Unit = {
-    val syria = game.getMuslim(Syria)
-    val iran  = game.getNonMuslim(Iran)
+    val syria         = game.getMuslim(Syria)
+    val iran          = game.getNonMuslim(Iran)
+    val algeria       = game.getMuslim(AlgeriaTunisia)
     val updatedParams = game.params.copy(useExpansionRules = true)
+    @tailrec def randomAwakeTarget: String = {
+        randomMuslimCountry match {
+          case m if m.canTakeAwakeningOrReactionMarker => m.name
+          case _ => randomAwakeTarget
+        }
+    }
+    
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
     val (updatedPlots, syriaCache) = if (syria.isIslamistRule)
       (game.plotData.copy(availablePlots = PlotWMD :: PlotWMD :: game.availablePlots), 0)
@@ -4820,8 +4829,16 @@ object LabyrinthAwakening {
     else
       log("Syria is now Shia-Mix country with 2 unavailable WMD plots")
     log("Iran now contains 1 unavailable WMD plot")
-    testCountry(AlgeriaTunisia)
-    addAwakeningMarker(AlgeriaTunisia)
+    
+    //  Place an awakening marker in Ageria/Tunisa if possible
+    //  otherwise in a random muslim country
+    val awakeningTarget = if (algeria.canTakeAwakeningOrReactionMarker)
+      AlgeriaTunisia
+    else
+      randomAwakeTarget
+    
+    testCountry(awakeningTarget)
+    addAwakeningMarker(awakeningTarget)
   }
   
   def endTurn(): Unit = {
