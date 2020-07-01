@@ -666,14 +666,14 @@ object LabyrinthCards {
     entry(new Card(32, "Back Channel", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) => game.usPosture == Soft && role == game.humanRole && {  // Unplayable by the Bot
-        val neededOps = (game.muslims filter (_.isAdversary) map (_.resources)).distinct.sorted
+        val neededOps = (game.muslims filter (_.isAdversary) map (_.resourceValue)).distinct.sorted
         cacheQuestion(askYorN(s"Do you have a card in hand with and Ops value of ${orList(neededOps)}? "))
       }
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter (_.isAdversary))
         val name = askCountry("Select adversary country: ", candidates)
-        val ops = (game getMuslim name).resources
+        val ops = (game getMuslim name).resourceValue
         log(s"You must discard card with Ops value: $ops")
         addEventTarget(name)
         setAlignment(name, Neutral)

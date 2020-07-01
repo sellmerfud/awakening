@@ -167,7 +167,7 @@ object JihadistBot extends BotHelpers {
                   muslimTest(m => m.inRegimeChange && m.totalTroops > 0))
                   
   // 12. Highest Resource
-  val HighestResourcePriority = new HighestScorePriority("Highest resource", muslimScore(_.resources))
+  val HighestResourcePriority = new HighestScorePriority("Highest resource", muslimScore(_.resourceValue))
   
   // 13. With Troops
   val WithTroopsPriority = new CriteriaFilter("With troops", muslimTest(_.totalTroops > 0))

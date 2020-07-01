@@ -47,7 +47,7 @@ import USBot.PlotInCountry
 object AwakeningCards {
   
   // Various tests used by the card events
-  val advisorsCandidate = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.totalTroops == 0 && !m.hasMarker(Advisors)
+  val advisorsCandidate = (m: MuslimCountry) => !m.isAdversary && m.civilWar && m.totalTroops == 0
   val humanitarianAidCandidate = (m: MuslimCountry) => m.canTakeAidMarker && m.totalCells > 0
   val peshmergaCandidate = (m: MuslimCountry) => (m.name == Iraq || m.name == Syria) && 
                                      m.totalCells > 0 && !m.isGood && !m.isIslamistRule
@@ -80,7 +80,7 @@ object AwakeningCards {
     !game.isCaliphateMember(m.name)
   
   val coupCandidate = (m: MuslimCountry) => 
-    m.resources == 1 && m.totalCells >= 2 && !(m.civilWar && m.besiegedRegime)
+    m.resourceValue == 1 && m.totalCells >= 2 && !(m.civilWar && m.besiegedRegime)
     
   val islamicMaghrebCountry = Set(AlgeriaTunisia, Libya, Mali, Morocco, Nigeria)
   val islamicMaghrebCandidate = (c: Country) => islamicMaghrebCountry(c.name) && c.isPoor
@@ -147,9 +147,9 @@ object AwakeningCards {
     }
   }
   
-  val criticalMiddleUSCandidate = (m: MuslimCountry) => m.isFair && m.resources > 1 &&
+  val criticalMiddleUSCandidate = (m: MuslimCountry) => m.isFair && m.resourceValue > 1 &&
                                      (!m.isAlly || m.canTakeAwakeningOrReactionMarker)
-  val criticalMiddleJihadistCandidate = (m: MuslimCountry) => m.isPoor && m.resources < 3
+  val criticalMiddleJihadistCandidate = (m: MuslimCountry) => m.isPoor && m.resourceValue < 3
   
   def crossBorderSupportPlayable(role: Role, forTrigger: Boolean) = {
     val cellsOK   = game.cellsAvailable > 0
@@ -219,7 +219,7 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(121, "Advisors", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => (game.muslims count (_.hasMarker(Advisors))) < 3 && (game hasMuslim advisorsCandidate)
+      (_: Role, _: Boolean) => game.muslims.map(_.numAdvisors).sum < 3 && (game hasMuslim advisorsCandidate)
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter advisorsCandidate)
@@ -685,7 +685,7 @@ object AwakeningCards {
 
         println()
         addEventTarget(target)
-        addMilitiaToCountry(target, game.getMuslim(target).resources min game.militiaAvailable)
+        addMilitiaToCountry(target, game.getMuslim(target).resourceValue min game.militiaAvailable)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3230,8 +3230,8 @@ object AwakeningCards {
           game hasCountry (c => c.name != target && c.totalCells > 0)
         }
         else if (role == US && candidates.nonEmpty) {
-          val lowResource = (game getMuslims candidates map (_.resources)).min
-          val target = shuffle(countryNames(game getMuslims candidates filter (_.resources == lowResource))).head
+          val lowResource = (game getMuslims candidates map (_.resourceValue)).min
+          val target = shuffle(countryNames(game getMuslims candidates filter (_.resourceValue == lowResource))).head
           (game hasMuslim (m => m.name != target && m.reaction > 0)) ||
           (game hasCountry (c => c.name != target && c.totalCells > 0))
         }
@@ -3323,8 +3323,8 @@ object AwakeningCards {
         }
         else {  // US Bot
           // Will remove reaction markers before cells, 2 max
-          val lowResource = (game getMuslims candidates map (_.resources)).min
-          val target = shuffle(countryNames(game getMuslims candidates filter (_.resources == lowResource))).head
+          val lowResource = (game getMuslims candidates map (_.resourceValue)).min
+          val target = shuffle(countryNames(game getMuslims candidates filter (_.resourceValue == lowResource))).head
           val withReaction = countryNames(game.muslims filter (_.reaction > 0))
           def nextReaction(remaining: Int, countries: List[String]): List[String] = {
             if (remaining == 0 || countries.isEmpty)

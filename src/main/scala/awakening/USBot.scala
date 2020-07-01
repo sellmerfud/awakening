@@ -183,7 +183,7 @@ object USBot extends BotHelpers {
               getMuslim(plot).isPoor &&
               getMuslim(plot).aidMarkers > 0),
     new PlotHighestScore("Resource", 
-      plot => if (inMuslimCountry(plot)) getMuslim(plot).resources else 0)
+      plot => if (inMuslimCountry(plot)) getMuslim(plot).resourceValue else 0)
   )
   
   // Process the list of PlotInCountry instances by each PlotFilter in the priorities list.
@@ -522,7 +522,7 @@ object USBot extends BotHelpers {
   
   // 12. Highest Resource
   val HighestResourcePriority = new HighestScorePriority("Highest resource",
-                  muslimScore(_.resources))
+                  muslimScore(_.resourceValue))
   
   // 13. Neutral
   val NeutralPriority = new CriteriaFilter("Neutral Muslim", muslimTest(_.isNeutral))
@@ -546,7 +546,7 @@ object USBot extends BotHelpers {
   
   // 19. Lowest Resource
   val LowestResourcePriority = new LowestScorePriority("Lowest resource",
-                  muslimScore(_.resources, nonMuslimScore = 100))
+                  muslimScore(_.resourceValue, nonMuslimScore = 100))
   
   // 20. Most Plots
   val MostPlotsPriority = new HighestScorePriority("Most Plots", _.plots.size)

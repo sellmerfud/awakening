@@ -512,38 +512,59 @@ object LabyrinthAwakening {
   val ThreeCupsOfTea       = "3 Cups of Tea"
   val TradeEmbargoUS       = "Trade Embargo-US"
   val TradeEmbargoJihadist = "Trade Embargo-Jihadist"
+  
+  val TrumpTweetsOn        = "Trump Tweets ON"
+  val TrumpTweetsOff       = "Trump Tweets OFF"
+  val Euroscepticism       = "Euroscepticism"
+  val EarlyExit            = "Early Exit"
+  val QatariCrisis         = "Qatari Crisis"
+  val SouthChinaSeaCrisis  = "South China Sea Crisis"
+  val USNKSummit           = "US/NK Summit" // Blocks play of Korean Crisis from Awakening Cards
+  val GulenMovement        = "Gulen Movement"
+  val TravelBan            = "Travel Ban"
+  val AlBaghdadi           = "al-Baghdadi"
+  val PoliticalIsamism     = "Political Isamism"
+  val PanArabNationalism   = "Pan Arab Nationalism"
+  val USChinaTradeWar      = "US China Trade War"
+  
   // Country Markers
-  val Sadr                 = "Sadr"
-  val CTR                  = "CTR"
-  val MoroTalks            = "Moro Talks"
-  val NEST                 = "NEST"
-  val BenazirBhutto        = "Benazir Bhutto"
-  val Indo_PakistaniTalks  = "Indo-Pakistani Talks"
-  val IraqiWMD             = "Iraqi WMD"
-  val LibyanDeal           = "Libyan Deal"
-  val LibyanWMD            = "Libyan WMD"
-  val PatriotAct           = "Patriot Act"
-  val AbuSayyaf            = "Abu Sayyaf"
-  val BhuttoShot           = "Bhutto Shot"
-  val FATA                 = "FATA"
-  val Advisors             = "Advisors"
-  val UNSCR_1973           = "UNSCR 1973"
-  val NATO                 = "NATO"
-  val NATO2                = "NATO-2" // NATO marker from Awakening.  In campaign game, both NATO markers can be in play
-  val TrainingCamps        = "Training Camps"
-  val OperationServal      = "Operation Serval"
+  val Sadr                     = "Sadr"
+  val CTR                      = "CTR"
+  val MoroTalks                = "Moro Talks"
+  val NEST                     = "NEST"
+  val BenazirBhutto            = "Benazir Bhutto"
+  val Indo_PakistaniTalks      = "Indo-Pakistani Talks"
+  val IraqiWMD                 = "Iraqi WMD"
+  val LibyanDeal               = "Libyan Deal"
+  val LibyanWMD                = "Libyan WMD"
+  val PatriotAct               = "Patriot Act"
+  val AbuSayyaf                = "Abu Sayyaf"
+  val BhuttoShot               = "Bhutto Shot"
+  val FATA                     = "FATA"
+  val Advisors                 = "Advisors"
+  val UNSCR_1973               = "UNSCR 1973"
+  val NATO                     = "NATO"
+  val NATO2                    = "NATO-2" // NATO marker from Awakening.  In campaign game, both NATO markers can be in play
+  val TrainingCamps            = "Training Camps"
+  val OperationServal          = "Operation Serval"
+  val TehranBeirutLandCorridor = "Tehran-Beirut Land Corridor"
+  val BREXIT                   = "BREXIT"
 
   val GlobalMarkers = List(
     Abbas, AnbarAwakening, SaddamCaptured, Wiretapping, EnhancedMeasures, Renditions,
     VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
     Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargoUS,
-    TradeEmbargoJihadist, LeakWiretapping, LeakEnhancedMeasures, LeakRenditions
+    TradeEmbargoJihadist, LeakWiretapping, LeakEnhancedMeasures, LeakRenditions,
+    TrumpTweetsOn, TrumpTweetsOff, Euroscepticism, EarlyExit, QatariCrisis, SouthChinaSeaCrisis, USNKSummit,
+    GulenMovement, TravelBan, AlBaghdadi, PoliticalIsamism, PanArabNationalism,USChinaTradeWar
   ).sorted
+  
+  
   
   val CountryMarkers = List(
     Sadr, CTR, MoroTalks, NEST, BenazirBhutto, Indo_PakistaniTalks, IraqiWMD, LibyanDeal,
     LibyanWMD, PatriotAct, AbuSayyaf, BhuttoShot, FATA, Advisors, UNSCR_1973, NATO, NATO2,
-    TrainingCamps, OperationServal
+    TrainingCamps, OperationServal, TehranBeirutLandCorridor, BREXIT
   ).sorted
   
   // Lapsing Event card numbers
@@ -559,11 +580,21 @@ object LabyrinthAwakening {
   val USConsulateAttacked = 199
   val EbolaScare          = 204
   val OilPriceSpike3      = 236
+  val FullyResourcedCOIN = 273
+  val SiegeofMosul       = 278
+  val StraitofHormuz     = 289
+  val PublicDebate       = 306
+  val USBorderCrisis     = 337
+  val EUBolstersIranDeal = 340
+  val FakeNews           = 355
+  val OPECProductionCut  = 356
+  
   
   val LapsingCards = List(
     Biometrics, TheDoorOfItjihad, GTMO, OilPriceSpike1, OilPriceSpike2, Ferguson,
-    IslamicMaghreb, ArabWinter, KoreanCrisis, USConsulateAttacked, EbolaScare,
-    OilPriceSpike3
+    IslamicMaghreb, ArabWinter, KoreanCrisis, USConsulateAttacked, EbolaScare, OilPriceSpike3,
+    FullyResourcedCOIN, SiegeofMosul, StraitofHormuz, PublicDebate, USBorderCrisis,
+    EUBolstersIranDeal, FakeNews, OPECProductionCut
   )
   
   type CardEvent       = Role => Unit
@@ -799,6 +830,7 @@ object LabyrinthAwakening {
     def isNeutral   = alignment == Neutral
     def isAdversary = alignment == Adversary
   
+    def resourceValue = if (name == Iran && hasMarker(TehranBeirutLandCorridor)) resources + 1 else resources
     def canExportOil = oilExporter && !hasMarker(TradeEmbargoJihadist)
     
     def isShiaMix = !isSunni
@@ -847,7 +879,20 @@ object LabyrinthAwakening {
       )
   
       def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
-      def removeMarkers(names: String*): MuslimCountry = this.copy(markers = markers filterNot names.contains)
+      //  A Muslim country can have multiple Advisors markers so we cannot simply 
+      //  filter out all markers with matching name.
+      def removeMarkers(names: String*): MuslimCountry = {
+        var updatedMarkers = markers
+        for (name <- names)
+          updatedMarkers.indexOf(name) match {
+            case -1 =>
+            case x  => updatedMarkers = updatedMarkers.patch(x, Seq.empty, 1)
+          }
+            
+        this.copy(markers = updatedMarkers)
+      }
+      
+      def numAdvisors = markers count (_ == Advisors)
   }
   
   val LabyrinthScenario = 1
@@ -934,8 +979,8 @@ object LabyrinthAwakening {
     trainingCampCells: CampCells = CampCells(0, 0),
     plays: List[Play] = Nil,               // Cards plays/plot resolutions during current turn (most recent first).
     firstPlotCard: Option[Int] = None,     // Card number
-    cardsLapsing: List[Int] = Nil,         // Card numbers
-    cardsRemoved: List[Int] = Nil,         // Cards removed from the game.
+    cardsLapsing: List[Int] = Nil,         // Card numbers currently lapsing
+    cardsRemoved: List[Int] = Nil,         // Card numbers removed from the game.
     targetsThisPhase: PhaseTargets = PhaseTargets(),
     targetsLastPhase: PhaseTargets = PhaseTargets()
   ) {
@@ -1151,9 +1196,9 @@ object LabyrinthAwakening {
     def oilPriceSpikes   = cardsLapsing count oilSpikeCards.contains
     def oilBump(c: MuslimCountry) = if (c.canExportOil) oilPriceSpikes else 0
     def goodResources =
-      muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resources + oilBump(c) }
+      muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resourceValue + oilBump(c) }
     def islamistResources = 
-      muslims.filter(_.isIslamistRule).foldLeft(0) { (a, c) => a + c.resources + oilBump(c)} +
+      muslims.filter(_.isIslamistRule).foldLeft(0) { (a, c) => a + c.resourceValue + oilBump(c)} +
       (if (caliphateDeclared) 1 else 0)
     // Return true if any two Islamist Rule countries are adjacent.
     def islamistAdjacency: Boolean =
@@ -1413,7 +1458,7 @@ object LabyrinthAwakening {
 
         case m: MuslimCountry =>
           val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
-          val res = amountOf(m.resources, "resource")
+          val res = amountOf(m.resourceValue, "resource")
           val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) ", Oil exporter" else ""
           b += s"$name -- $gov, $res$oil"
           item(m.activeCells, "Active cell")
@@ -3187,11 +3232,14 @@ object LabyrinthAwakening {
     else {
       val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
       val priorCampCapacity = game.trainingCampCapacity
-      // First if an "Advisors" marker is present in any of the countries, then 
+      // First for each "Advisors" marker is present in any of the countries, then 
       // add one militia to that country.
-      for (m <- civilWars filter (_.hasMarker(Advisors)) if game.militiaAvailable > 0) {
-        log(s"Add one militia to ${m.name} due to presence of Advisors")
-        game = game.updateCountry(m.copy(militia = m.militia + 1))
+      for (m <- civilWars) {
+        var numMiltitia = m.numAdvisors min game.militiaAvailable
+        if (numMiltitia > 0) {
+          log(s"Add ${numMiltitia} militia to ${m.name} due to presence of Advisors")
+          game = game.updateCountry(m.copy(militia = m.militia + numMiltitia))          
+        }
       } 
       
       for (m <- civilWars) {
@@ -3755,7 +3803,7 @@ object LabyrinthAwakening {
       else {
         if (newGov == IslamistRule) {
           log(s"Set governance of $name to ${govToString(newGov)}")
-          increaseFunding(m.resources)
+          increaseFunding(m.resourceValue)
           if (m.totalTroopsThatAffectPrestige > 0) {
             log(s"Set US prestige to 1  (troops present)")
             game = game.copy(prestige = 1)
@@ -3771,7 +3819,7 @@ object LabyrinthAwakening {
             aidMarkers = 0, militia = 0, besiegedRegime = false)
           game = game.updateCountry(degraded)
           moveWMDCacheToAvailable(name)
-          removeEventMarkersFromCountry(name, "Advisors")
+          removeAllAdvisorsFromCountry(name)
           endRegimeChange(name, endOfTurn)
           endCivilWar(name, endOfTurn)
           flipCaliphateSleepers()
@@ -3824,7 +3872,7 @@ object LabyrinthAwakening {
       }
       
       if (newAlign == Adversary)
-        removeEventMarkersFromCountry(name, "Advisors")
+        removeAllAdvisorsFromCountry(name)
       
       if (name == Nigeria)
         makeNigeriaNonMuslim_?() // rule 11.3.3.3
@@ -3934,6 +3982,22 @@ object LabyrinthAwakening {
       }
     }
   }
+  
+  def trumpTweetsOn: Boolean = globalEventInPlay(TrumpTweetsOn)
+  
+  def turnTrumpTweetsOn(): Unit = if (!trumpTweetsOn) {
+    if (globalEventInPlay(TrumpTweetsOff)) {
+      game = game.removeMarker(TrumpTweetsOff).addMarker(TrumpTweetsOn)
+      log(s"Flip the Trump Tweets marker to ON")
+    }
+    else
+      addGlobalEventMarker(TrumpTweetsOff)
+  }
+  
+  def turnTrumpTweetsOff(): Unit = if (trumpTweetsOn) {
+    game = game.removeMarker(TrumpTweetsOn).addMarker(TrumpTweetsOff)
+    log(s"Flip the Trump Tweets marker to OFF")
+  }  
 
   def removeEventMarkersFromCountry(countryName: String, markers: String*): Unit = {
     for (marker <- markers) {
@@ -3945,6 +4009,14 @@ object LabyrinthAwakening {
           case n: NonMuslimCountry => game = game.updateCountry(n.removeMarkers(marker))
         }
       }
+    }
+  }
+
+  def removeAllAdvisorsFromCountry(countryName: String): Unit = {
+    if (game.isMuslim(countryName)) {
+      var m = game.getMuslim(countryName)
+      val advisors = List.fill(m.numAdvisors)(Advisors)
+      removeEventMarkersFromCountry(countryName, advisors:_*)
     }
   }
 
@@ -4020,14 +4092,14 @@ object LabyrinthAwakening {
   }
     
   def endCivilWar(name: String, endOfTurn: Boolean = false): Unit = {
-    val markersRemovedWhenCivilWarEnds = List("Advisors", "UNSCR 1973")
     val m = game.getMuslim(name)
     val priorCampCapacity = game.trainingCampCapacity
     if (m.civilWar) {
       game = game.updateCountry(m.copy(civilWar = false))
       log(s"Remove civil war marker from $name")
       removeMilitiaFromCountry(name, m.militia)
-      removeEventMarkersFromCountry(name, markersRemovedWhenCivilWarEnds:_*)
+      removeEventMarkersFromCountry(name, UNSCR_1973)
+      removeAllAdvisorsFromCountry(name)
       if (m.caliphateCapital && !m.isIslamistRule && !m.inRegimeChange) {
         game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
         log(s"Remove the Caliphate Capital marker from $name")
@@ -4083,7 +4155,7 @@ object LabyrinthAwakening {
           case m: MuslimCountry    => game = game.updateCountry(m.copy(troops = m.troops + num))
           case n: NonMuslimCountry => game = game.updateCountry(n.copy(troops = n.troops + num))
         }
-        removeEventMarkersFromCountry(dest, "Advisors")
+        removeAllAdvisorsFromCountry(dest)
       }
       if (game.troopCommitment != startingCommitment)
         log(s"Move the troop commitment marker from ${startingCommitment} to ${game.troopCommitment}")
@@ -4834,8 +4906,11 @@ object LabyrinthAwakening {
     //  otherwise in a random muslim country
     val awakeningTarget = if (algeria.canTakeAwakeningOrReactionMarker)
       AlgeriaTunisia
-    else
+    else {
+      log(s"$AlgeriaTunisia cannot take an awakening marker.")
+      log("An awakening marker will be added to a random Muslim country.")
       randomAwakeTarget
+    }
     
     testCountry(awakeningTarget)
     addAwakeningMarker(awakeningTarget)
@@ -4895,12 +4970,14 @@ object LabyrinthAwakening {
     
       checkAutomaticVictory() // Will Exit game if auto victory has been achieved
     
-      val ebolaScare = lapsingEventInPlay(EbolaScare)
-      val koreanCrisis = lapsingEventInPlay(KoreanCrisis)
+      val endEbolaScare   = lapsingEventInPlay(EbolaScare)
+      val endKoreanCrisis = lapsingEventInPlay(KoreanCrisis)
+      val endSouthChinaSeasCrisis = globalEventInPlay(SouthChinaSeaCrisis) && 
+                                    game.usPosture == game.getNonMuslim(China).posture
     
       if (game.cardsLapsing.nonEmpty) {
         // some lapsing cards are removed at the end of the turn.
-        val (remove, discard) = game.cardsLapsing.partition (deck(_).remove == Remove)
+        val (remove, discard) = game.cardsLapsing.partition (deck(_).remove != NoRemove)
         if (remove.nonEmpty || discard.nonEmpty) {
           log()
           log("Lapsing Cards")
@@ -4938,18 +5015,27 @@ object LabyrinthAwakening {
       
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
-      if (game.params.sequestrationTroops && (game hasMuslim (m => m.resources == 3 && m.isIslamistRule))) {
-        log("There is a 3 Resource Muslim country at Islamist Rule")
-        returnSequestrationTroopsToAvailable()
+      
+      val threeResIR = (game.muslims find (m => m.resourceValue == 3 && m.isIslamistRule))
+      (game.params.sequestrationTroops, threeResIR) match {
+        case (true, Some(m)) => 
+          log(s"There is a 3 Resource Muslim country at Islamist Rule: ${m.name}")
+          returnSequestrationTroopsToAvailable()
+        case _ =>
       }
-    
-      if (ebolaScare) {
+          
+      if (endEbolaScare) {
         log(s"Ebola Scare ends: return 1 troop from the off map box to the troops track")
         game = game.copy(offMapTroops = game.offMapTroops - 1)
       }
-      if (koreanCrisis) {
+      if (endKoreanCrisis) {
         log(s"Korean Crisis ends: return 2 troops from the off map box to the troops track")
         game = game.copy(offMapTroops = game.offMapTroops - 2)
+      }
+      if (endSouthChinaSeasCrisis) {
+        log(s"South China Seas Crisis ends: return 2 troops from the off map box to the troops track")
+        game = game.copy(offMapTroops = game.offMapTroops - 2)
+        removeGlobalEventMarker(SouthChinaSeaCrisis)
       }
   
       for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
