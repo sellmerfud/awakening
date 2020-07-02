@@ -971,9 +971,43 @@ object ForeverCards {
     // ------------------------------------------------------------------------
     entry(new Card(352, "al-Baghdadi", Unassociated, 3,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => {
+        (role == US       && (game hasMuslim (m => m.civilWar && m.totalTroopsAndMilitia > m.totalCells))) ||
+        (role == Jihadist && (globalEventNotInPlay(AlBaghdadi) || (game.cellsAvailable > 0 && game.hasMuslim (m => m.isPoor))))
+      }
       ,
-      (role: Role) => {
+      (role: Role) => if (role == US) {
+        increasePrestige(2)
+        decreaseFunding(1)
+        removeGlobalEventMarker(AlBaghdadi)
+        //  If Training Camps is is in play then the extra cell capacity
+        //  is not changed.
+        if (game.trainingCamp.isEmpty)
+          game = game.copy(extraCellCapacity = 0)
+      }
+      else {  // role == Jihadist
+        val candidates = countryNames(game.muslims filter (m => m.isPoor))
+        if (game.cellsAvailable > 0 && candidates.nonEmpty) {
+          val target = if (role == game.humanRole)
+            askCountry("Place cells in which country: ", candidates)
+          else
+            JihadistBot.recruitTravelToPriority(candidates).get
+          
+          val cellsToAdd = game.cellsAvailable min 3
+          addEventTarget(target)
+          addSleeperCellsToCountry(target, cellsToAdd)
+          
+          if (cellsToAdd == 3 &&
+              canDeclareCaliphate(target) &&
+              ((role == game.humanRole && askDeclareCaliphate(target)) ||
+               (role == game.botRole && JihadistBot.willDeclareCaliphate(target))))
+            declareCaliphate(target)
+        }
+        addGlobalEventMarker(AlBaghdadi)
+        //  If this is a campaign game and the TrainingCamps event is in play
+        //  then we do not alter the trainging camp capacity (should be rare)
+        if (game.trainingCamp.isEmpty) 
+          placeExtraCells(if (game.caliphateDeclared) 5 else 3)
       }
     )),
     // ------------------------------------------------------------------------

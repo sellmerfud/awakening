@@ -144,11 +144,11 @@ object SavedGame {
   private def reservesFromMap(data: Map[String, Any]): Reserves =
     Reserves(asInt(data("us")), asInt(data("jihadist")))
   
-  private def campCellsToMap(data: CampCells): Map[String, Any] =
-    Map("inCamp" -> data.inCamp, "onMap" -> data.onMap)
+  private def extraCellsToMap(data: ExtraCells): Map[String, Any] =
+    Map("available" -> data.available, "onMap" -> data.onMap)
   
-  private def campCellsFromMap(data: Map[String, Any]): CampCells =
-    CampCells(asInt(data("inCamp")), asInt(data("onMap")))
+  private def extraCellsFromMap(data: Map[String, Any]): ExtraCells =
+    ExtraCells(asInt(data("available")), asInt(data("onMap")))
   
   private def phaseTargetsToMap(data: PhaseTargets): Map[String, Any] =
     Map(
@@ -293,7 +293,8 @@ object SavedGame {
       "history"           -> gameState.history,
       "offMapTroops"      -> gameState.offMapTroops,
       "reserves"          -> reservesToMap(gameState.reserves),
-      "trainingCampCells" -> campCellsToMap(gameState.trainingCampCells),
+      "extraCellCapacity" -> gameState.extraCellCapacity,
+      "extraCells"        -> extraCellsToMap(gameState.extraCells),
       "plays"             -> (gameState.plays map playToMap),
       "firstPlotCard"     -> (gameState.firstPlotCard getOrElse null),
       "cardsLapsing"      -> gameState.cardsLapsing,
@@ -318,7 +319,8 @@ object SavedGame {
       (asList(top("history")) map asString).toVector,
       asInt(top("offMapTroops")),
       reservesFromMap(asMap(top("reserves"))),
-      campCellsFromMap(asMap(top("trainingCampCells"))),
+      asInt(top("extraCellCapacity")),
+      extraCellsFromMap(asMap(top("extraCells"))),
       asList(top("plays")) map (p => playFromMap(asMap(p))),
       if (top("firstPlotCard") == null) None else Some(asInt(top("firstPlotCard"))),
       asList(top("cardsLapsing")) map asInt,

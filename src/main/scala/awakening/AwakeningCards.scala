@@ -2314,13 +2314,14 @@ object AwakeningCards {
           JihadistBot.recruitTravelToPriority(candidates).get
         }
         println()
-        val priorCapacity = game.trainingCampCapacity
         game.trainingCamp foreach { name => 
           removeEventMarkersFromCountry(name, TrainingCamps)
         }
         addEventTarget(target)
         addEventMarkersToCountry(target, TrainingCamps)
-        updateTrainingCampCapacity(priorCapacity)
+        
+        if (globalEventNotInPlay(AlBaghdadi))
+            placeExtraCells(if (game.isCaliphateMember(target)) 5 else 3)
         val cellsToAdd = game.cellsAvailable min 2
         addSleeperCellsToCountry(target, cellsToAdd)
       }
@@ -3105,8 +3106,7 @@ object AwakeningCards {
     entry(new Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) =>
-        game hasMuslim (m => m.oilExporter && 
-        (m.isIslamistRule || m.inRegimeChange || m.civilWar))
+        game hasMuslim (m => m.oilExporter && (m.isIslamistRule || m.inRegimeChange || m.civilWar))
       ,
       (role: Role) => if (role == US) {
         increasePrestige(2)
