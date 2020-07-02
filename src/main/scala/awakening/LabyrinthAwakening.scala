@@ -530,8 +530,8 @@ object LabyrinthAwakening {
   val TradeEmbargoUS       = "Trade Embargo-US"
   val TradeEmbargoJihadist = "Trade Embargo-Jihadist"
   
-  val TrumpTweetsOn        = "Trump Tweets ON"
-  val TrumpTweetsOff       = "Trump Tweets OFF"
+  val TrumpTweetsON        = "Trump Tweets ON"
+  val TrumpTweetsOFF       = "Trump Tweets OFF"
   val Euroscepticism       = "Euroscepticism"
   val EarlyExit            = "Early Exit"
   val QatariCrisis         = "Qatari Crisis"
@@ -572,7 +572,7 @@ object LabyrinthAwakening {
     VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
     Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargoUS,
     TradeEmbargoJihadist, LeakWiretapping, LeakEnhancedMeasures, LeakRenditions,
-    TrumpTweetsOn, TrumpTweetsOff, Euroscepticism, EarlyExit, QatariCrisis, SouthChinaSeaCrisis, USNKSummit,
+    TrumpTweetsON, TrumpTweetsOFF, Euroscepticism, EarlyExit, QatariCrisis, SouthChinaSeaCrisis, USNKSummit,
     GulenMovement, TravelBan, AlBaghdadi, PoliticalIsamism, PanArabNationalism,USChinaTradeWar
   ).sorted
   
@@ -928,6 +928,7 @@ object LabyrinthAwakening {
     val markersInPlay: List[String]
     val cardsRemoved: List[Int]
     val offMapTroops: Int
+    val notes: Seq[String] = Seq.empty
 
     // Override this if the scenario requires any special setup such 
     // as the Jihadist player choosing countries in which to place cells.
@@ -970,6 +971,7 @@ object LabyrinthAwakening {
     scenarioName: String,
     startingMode: GameMode,
     campaign: Boolean,
+    scenarioNotes: Seq[String],
     currentMode: GameMode,
     humanRole: Role,
     humanAutoRoll: Boolean,
@@ -1246,13 +1248,14 @@ object LabyrinthAwakening {
     } 
       
     def regimeChangeTargets: List[String] = {
-      val haveSource = (target: String) => regimeChangeSourcesFor(target).nonEmpty
-      val isAllowed = (m: MuslimCountry) => if (m.name != Iran || game.params.currentMode != ForeverWarMode)
-         true
-      else {
-        val (world, value) = gwot
+      val haveSource     = (target: String) => regimeChangeSourcesFor(target).nonEmpty
+      val iranStrict     = game.params.currentMode == ForeverWarMode || game.params.campaign
+      val (world, value) = gwot
+      
+      def isAllowed(m: MuslimCountry) = if (m.name == Iran && iranStrict)
         (game.prestigeLevel == High || game.prestigeLevel == VeryHigh) && world == Hard && value == 3
-      }
+      else
+        true
       
       val targets = countryNames(muslims filter { m => 
         (m.isIslamistRule && isAllowed(m))         ||
@@ -1370,6 +1373,12 @@ object LabyrinthAwakening {
       b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
       for (difficulty <- params.botDifficulties)
         b += s"  $difficulty"
+      if (params.scenarioNotes.nonEmpty) {
+        b += ""
+        b += "Scenario Notes:"
+        b += separator()
+        params.scenarioNotes foreach (line => b += line)
+      }
       b.toList
     }
       
@@ -1574,6 +1583,7 @@ object LabyrinthAwakening {
       scenario.name,
       scenario.startingMode,  // startingMode
       campaign,
+      scenario.notes,
       scenario.startingMode,  // currentMode
       humanRole,
       humanAutoRoll,
@@ -4005,19 +4015,19 @@ object LabyrinthAwakening {
     }
   }
   
-  def trumpTweetsOn: Boolean = globalEventInPlay(TrumpTweetsOn)
+  def trumpTweetsOn: Boolean = globalEventInPlay(TrumpTweetsON)
   
-  def turnTrumpTweetsOn(): Unit = if (!trumpTweetsOn) {
-    if (globalEventInPlay(TrumpTweetsOff)) {
-      game = game.removeMarker(TrumpTweetsOff).addMarker(TrumpTweetsOn)
+  def turnTrumpTweetsON(): Unit = if (!trumpTweetsOn) {
+    if (globalEventInPlay(TrumpTweetsOFF)) {
+      game = game.removeMarker(TrumpTweetsOFF).addMarker(TrumpTweetsON)
       log(s"Flip the Trump Tweets marker to ON")
     }
     else
-      addGlobalEventMarker(TrumpTweetsOff)
+      addGlobalEventMarker(TrumpTweetsOFF)
   }
   
-  def turnTrumpTweetsOff(): Unit = if (trumpTweetsOn) {
-    game = game.removeMarker(TrumpTweetsOn).addMarker(TrumpTweetsOff)
+  def turnTrumpTweetsOFF(): Unit = if (trumpTweetsOn) {
+    game = game.removeMarker(TrumpTweetsON).addMarker(TrumpTweetsOFF)
     log(s"Flip the Trump Tweets marker to OFF")
   }  
 
@@ -5073,14 +5083,17 @@ object LabyrinthAwakening {
   }
   
   val scenarios = ListMap[String, Scenario](
-    "LetsRoll"                    -> LetsRoll,
-    "YouCanCallMeAl"              -> YouCanCallMeAl,
-    "Anaconda"                    -> Anaconda,
-    "MissionAccomplished"         -> MissionAccomplished,
-    "Awakening"                   -> Awakening,
-    "MittsTurn"                   -> MittsTurn,
-    "StatusOfForces"              -> StatusOfForces,
-    "IslamicStateOfIraq"          -> IslamicStateOfIraq
+    "LetsRoll"            -> LetsRoll,
+    "YouCanCallMeAl"      -> YouCanCallMeAl,
+    "Anaconda"            -> Anaconda,
+    "MissionAccomplished" -> MissionAccomplished,
+    "Awakening"           -> Awakening,
+    "MittsTurn"           -> MittsTurn,
+    "StatusOfForces"      -> StatusOfForces,
+    "IslamicStateOfIraq"  -> IslamicStateOfIraq,
+    "FallOfISIL"          -> FallOfISIL,
+    "TrumpTakesCommand"   -> TrumpTakesCommand,
+    "HillaryWins"         -> HillaryWins
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
   
@@ -5149,19 +5162,23 @@ object LabyrinthAwakening {
               }
             }
             val scenario = scenarios(scenarioName)
-            val campaign = cmdLineParams.campaign orElse
-                           configParams.campaign getOrElse {
-               println("\nChoose one:")
-               val choices = List(
-                 "single"   -> "Play single scenario",
-                 "campaign" -> "Play a campaign game",
-                 "quit"     -> "Quit")
-               askMenu(choices, allowAbort = false).head match {
-                 case "quit"   => throw ExitGame
-                 case "single" => false
-                 case _        => true
-               }
-                             
+            //  campaing always false when starting with a scenario in the
+            //  lastest expansion
+            val campaign = if (scenario.startingMode == ForeverWarMode)
+              false
+            else {
+              cmdLineParams.campaign orElse configParams.campaign getOrElse {
+                 println("\nChoose one:")
+                 val choices = List(
+                   "single"   -> "Play single scenario",
+                   "campaign" -> "Play a campaign game",
+                   "quit"     -> "Quit")
+                 askMenu(choices, allowAbort = false).head match {
+                   case "quit"   => throw ExitGame
+                   case "single" => false
+                   case _        => true
+                 }
+              }
             }
             val humanRole = cmdLineParams.side orElse
                             configParams.side getOrElse {
@@ -5271,7 +5288,7 @@ object LabyrinthAwakening {
         reqd[Int]("", "--level=n", Seq.range(1, 7), "Select difficulty level (1 - 6)")
           { (v, c) => c.copy(level = Some(v)) }
 
-        reqd[String]("", "--dice=auto|human", scenarios.keys.toSeq, "How to roll the human player's dice",
+        reqd[String]("", "--dice=auto|human", Seq("auto", "human"), "How to roll the human player's dice",
                                                              "auto  - the program rolls them automatically",
                                                              "human - you enter your dice rolls manually")
           { (v, c) => c.copy(autoDice = Some(v == "auto")) }

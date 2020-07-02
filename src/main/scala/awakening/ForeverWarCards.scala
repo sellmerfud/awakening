@@ -170,6 +170,10 @@ object ForeverWarCards {
       (_: Role, _: Boolean) => false
       ,
       (role: Role) => {
+        //  Note: if scenario is HillaryWins then we add a +1 modifer to the die roll
+        if (game.params.scenarioName == scenarios.HillaryWins.name) {
+          
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -1076,7 +1080,7 @@ object ForeverWarCards {
           removeGlobalEventMarker(USChinaTradeWar)
         else
           addGlobalEventMarker(USChinaTradeWar)
-        turnTrumpTweetsOff()
+        turnTrumpTweetsOFF()
         decreasePrestige(1)
       }
     ))
