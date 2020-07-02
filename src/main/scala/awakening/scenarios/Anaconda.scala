@@ -41,20 +41,9 @@ package awakening.scenarios
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
-object Anaconda extends AnacondaDetails {
+object Anaconda extends Scenario {
   val name           = "Anaconda"
   val startingMode   = LabyrinthMode
-  val campaign       = false
-}
-
-object AnacondaCampaign extends AnacondaDetails {
-  val name           = "Anaconda -- Campaign"
-  val startingMode   = LabyrinthMode
-  val campaign       = true
-}
-
-
-trait AnacondaDetails extends Scenario {
   val prestige       = 8
   val usPosture      = Hard
   val funding        = 6

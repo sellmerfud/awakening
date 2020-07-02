@@ -43,7 +43,6 @@ import awakening.LabyrinthAwakening._
 object IslamicStateOfIraq extends Scenario {
   val name           = "Islamic State of Iraq & the Levant (ISIL)"
   val startingMode   = AwakeningMode
-  val campaign       = false
   val prestige       = 5
   val usPosture      = Hard
   val funding        = 7

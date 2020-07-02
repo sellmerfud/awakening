@@ -40,20 +40,9 @@ package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
 
-object LetsRoll extends LetsRollDetails {
+object LetsRoll extends Scenario {
   val name           = "Let's Roll"
   val startingMode   = LabyrinthMode
-  val campaign       = false
-}
-
-object LetsRollCampaign extends LetsRollDetails {
-  val name           = "Let's Roll -- Campaign"
-  val startingMode   = LabyrinthMode
-  val campaign       = true
-
-}
-
-trait LetsRollDetails extends Scenario {
   val prestige       = 7
   val usPosture      = Hard
   val funding        = 9

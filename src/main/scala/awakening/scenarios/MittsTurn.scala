@@ -43,7 +43,6 @@ import awakening.LabyrinthAwakening._
 object MittsTurn extends Scenario {
   val name           = "Mitt's Turn"
   val startingMode   = AwakeningMode
-  val campaign       = false
   val prestige       = 7
   val usPosture      = Hard
   val funding        = 6

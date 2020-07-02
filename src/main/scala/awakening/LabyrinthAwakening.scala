@@ -920,7 +920,6 @@ object LabyrinthAwakening {
   trait Scenario {
     val name: String
     val startingMode: GameMode
-    val campaign: Boolean
     val prestige: Int
     val usPosture: String
     val funding: Int
@@ -979,6 +978,7 @@ object LabyrinthAwakening {
     botLogging: Boolean = false
   ) {
     val useExpansionRules = currentMode == AwakeningMode || currentMode == ForeverWarMode
+    val scenarioNameDisplay = if (campaign) s"$scenarioName -- Campaign" else scenarioName
   }
   
   case class GameState(
@@ -1364,7 +1364,7 @@ object LabyrinthAwakening {
     
     def scenarioSummary: Seq[String] = {
       val b = new ListBuffer[String]
-      b += s"Scenario: ${params.scenarioName}"
+      b += s"Scenario: ${params.scenarioNameDisplay}"
       b += separator()
       b += s"The Bot is playing the $botRole"
       b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
@@ -1556,11 +1556,12 @@ object LabyrinthAwakening {
   }
   def initialGameState(
     scenario: Scenario,
+    campaign: Boolean,
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty]) = {
       
-    var countries = if (scenario.startingMode == LabyrinthMode && !scenario.campaign)
+    var countries = if (scenario.startingMode == LabyrinthMode && !campaign)
       LabyrinthDefaultCountries
     else
       ExpansionDefaultCountries
@@ -1572,7 +1573,7 @@ object LabyrinthAwakening {
     val params = GameParameters(
       scenario.name,
       scenario.startingMode,  // startingMode
-      scenario.campaign,
+      campaign,
       scenario.startingMode,  // currentMode
       humanRole,
       humanAutoRoll,
@@ -1593,7 +1594,7 @@ object LabyrinthAwakening {
   
   
   // Global variables
-  var game = initialGameState(Awakening, US, true, Muddled :: Nil)
+  var game = initialGameState(Awakening, false, US, true, Muddled :: Nil)
   
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -2729,7 +2730,7 @@ object LabyrinthAwakening {
   }
   
   def saveGameDescription(turnsCompleted: Int): Unit = {
-    val desc = s"${game.params.scenarioName}, playing ${game.humanRole}, ${amountOf(turnsCompleted, "turn")} completed"
+    val desc = s"${game.params.scenarioNameDisplay}, playing ${game.humanRole}, ${amountOf(turnsCompleted, "turn")} completed"
     gameDescPath(gameName.get).writeFile(desc)
   }
   
@@ -5079,11 +5080,7 @@ object LabyrinthAwakening {
     "Awakening"                   -> Awakening,
     "MittsTurn"                   -> MittsTurn,
     "StatusOfForces"              -> StatusOfForces,
-    "IslamicStateOfIraq"          -> IslamicStateOfIraq,
-    "LetsRollCampaign"            -> LetsRollCampaign,
-    "YouCanCallMeAlCampaign"      -> YouCanCallMeAlCampaign,
-    "AnacondaCampaign"            -> AnacondaCampaign,
-    "MissionAccomplishedCampaign" -> MissionAccomplishedCampaign
+    "IslamicStateOfIraq"          -> IslamicStateOfIraq
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
   
@@ -5152,6 +5149,20 @@ object LabyrinthAwakening {
               }
             }
             val scenario = scenarios(scenarioName)
+            val campaign = cmdLineParams.campaign orElse
+                           configParams.campaign getOrElse {
+               println("\nChoose one:")
+               val choices = List(
+                 "single"   -> "Play single scenario",
+                 "campaign" -> "Play a campaign game",
+                 "quit"     -> "Quit")
+               askMenu(choices, allowAbort = false).head match {
+                 case "quit"   => throw ExitGame
+                 case "single" => false
+                 case _        => true
+               }
+                             
+            }
             val humanRole = cmdLineParams.side orElse
                             configParams.side getOrElse {
               // ask which side the user wishes to play
@@ -5170,7 +5181,7 @@ object LabyrinthAwakening {
         
             gameName = Some(askGameName("Enter a name for your new game: "))
 
-            game = initialGameState(scenario, humanRole, humanAutoRoll, difficulties)
+            game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties)
             logSummary(game.scenarioSummary)
             printSummary(game.scoringSummary)
             if (scenario.cardsRemoved.nonEmpty) {
@@ -5250,6 +5261,9 @@ object LabyrinthAwakening {
         val scenarioHelp = "Select a scenario" +: scenarios.keys.toSeq
         reqd[String]("", "--scenario=name", scenarios.keys.toSeq, scenarioHelp: _*)
           { (v, c) => c.copy(scenarioName = Some(v)) }
+
+        reqd[String]("", "--campaign=yes|no", Seq("yes","no"), "Play a campaign game from selected scenario")
+          { (v, c) => c.copy(campaign = Some(v == "yes")) }
       
         reqd[String]("", "--side=us|jihadist", Seq("us","jihadist"), "Select a side to play")
           { (v, c) => c.copy(side = Some(if (v == "us") US else Jihadist)) }
@@ -5310,6 +5324,7 @@ object LabyrinthAwakening {
     val deleteGame: Boolean = false,
     val listGames: Boolean = false,
     val scenarioName: Option[String] = None,
+    val campaign: Option[Boolean] = None,
     val side: Option[Role] = None,
     val level: Option[Int] = None,
     val autoDice: Option[Boolean] = None,
@@ -5328,7 +5343,7 @@ object LabyrinthAwakening {
     }
     
     def anyNewGameParams =
-      (scenarioName orElse side orElse level orElse autoDice).nonEmpty ||
+      (scenarioName orElse campaign orElse side orElse level orElse autoDice).nonEmpty ||
       ideology.nonEmpty || usResolve.nonEmpty
   }
   
@@ -5353,6 +5368,15 @@ object LabyrinthAwakening {
           else
             println(s"Ignoring invalid scenario name ($value) in awakening_config file")
         }
+        
+        propValue("campaign") foreach { value =>
+          value.toLowerCase match {
+            case "yes" => params = params.copy(campaign = Some(true))
+            case "no"  => params = params.copy(campaign = Some(false))
+            case _ => println(s"Ignoring invalid campaign value ($value) in awakening_config file")
+          }
+        }
+        
         propValue("side") foreach { value =>
           value.toLowerCase match {
             case "jihadist" => params = params.copy(side = Some(Jihadist))
