@@ -43,12 +43,14 @@ import awakening.JihadistBot
 
 object Anaconda extends AnacondaDetails {
   val name           = "Anaconda"
-  val scenarioType = LabyrinthScenario
+  val startingMode   = LabyrinthMode
+  val campaign       = false
 }
 
 object AnacondaCampaign extends AnacondaDetails {
   val name           = "Anaconda -- Campaign"
-  val scenarioType = CampaignScenario
+  val startingMode   = LabyrinthMode
+  val campaign       = true
 }
 
 

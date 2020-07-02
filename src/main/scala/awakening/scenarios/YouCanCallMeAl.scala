@@ -42,12 +42,14 @@ import awakening.LabyrinthAwakening._
 
 object YouCanCallMeAl extends YouCanCallMeAlDetails {
   val name           = "You Can Call Me Al"
-  val scenarioType = LabyrinthScenario
+  val startingMode   = LabyrinthMode
+  val campaign       = false
 }
 
 object YouCanCallMeAlCampaign extends YouCanCallMeAlDetails {
   val name           = "You Can Call Me Al -- Campaign"
-  val scenarioType = CampaignScenario
+  val startingMode   = LabyrinthMode
+  val campaign       = true
 }
 
 trait YouCanCallMeAlDetails extends Scenario {

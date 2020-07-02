@@ -94,9 +94,10 @@ object SavedGame {
     
   private def gameParametersToMap(params: GameParameters): Map[String, Any] =
     Map(
-      "scenarioName"        -> params.scenarioName,
-      "scenarioType"        -> params.scenarioType,
-      "useExpansionRules"   -> params.useExpansionRules,
+      "scenarioName"        -> params.scenarioName,      
+      "startingMode"        -> params.startingMode,
+      "campaign"            -> params.campaign,
+      "currentMode"         -> params.currentMode,
       "humanRole"           -> params.humanRole.toString,
       "humanAutoRoll"       -> params.humanAutoRoll,
       "botDifficulties"     -> (params.botDifficulties map (_.name)),
@@ -107,8 +108,9 @@ object SavedGame {
   private def gameParametersFromMap(data: Map[String, Any]): GameParameters =
     GameParameters(
       asString(data("scenarioName")),
-      asInt(data("scenarioType")),
-      asBoolean(data("useExpansionRules")),
+      GameMode(asString(data("startingMode"))),
+      asBoolean(data("campaign")),
+      GameMode(asString(data("currentMode"))),
       Role(asString(data("humanRole"))),
       asBoolean(data("humanAutoRoll")),
       asList(data("botDifficulties")) map (x => BotDifficulty(asString(x))),

@@ -44,7 +44,7 @@ import scala.util.Random.shuffle
 import LabyrinthAwakening._
 import USBot.PlotInCountry
 
-object ForeverCards {
+object ForeverWarCards {
   
   // Various tests used by the card events
   val backlashCandidate = (m: MuslimCountry) =>

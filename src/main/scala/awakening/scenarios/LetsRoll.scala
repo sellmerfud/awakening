@@ -42,12 +42,15 @@ import awakening.LabyrinthAwakening._
 
 object LetsRoll extends LetsRollDetails {
   val name           = "Let's Roll"
-  val scenarioType = LabyrinthScenario
+  val startingMode   = LabyrinthMode
+  val campaign       = false
 }
 
 object LetsRollCampaign extends LetsRollDetails {
   val name           = "Let's Roll -- Campaign"
-  val scenarioType = CampaignScenario
+  val startingMode   = LabyrinthMode
+  val campaign       = true
+
 }
 
 trait LetsRollDetails extends Scenario {

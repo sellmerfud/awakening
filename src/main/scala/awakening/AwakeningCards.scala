@@ -212,6 +212,24 @@ object AwakeningCards {
       game.islamistResources + jihadOilExporters < 6 || !game.islamistAdjacency
     }
   }
+  
+  def agitatorsCards = {
+    val labCards = if (GameModeOrdering.lt(game.params.startingMode, AwakeningMode))
+      List(37, 39)
+    else
+      Nil 
+    val awakeCards = if (GameModeOrdering.lt(game.params.startingMode, ForeverWarMode))
+      List(165, 188, 234, 133, 226, 238, 167, 152)
+    else
+      Nil
+    val foreverCards = if (GameModeOrdering.gt(game.params.currentMode, AwakeningMode))
+      List(272, 277, 293)
+    else
+      Nil
+    
+    labCards ::: awakeCards ::: foreverCards
+  }
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -3115,16 +3133,14 @@ object AwakeningCards {
       else { // Jihadist
         increaseFunding(if (game.caliphateDeclared) 3 else 2)
       }
-    )),
+    )), 
     // ------------------------------------------------------------------------
     entry(new Card(217, "Agitators", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) => (role == game.humanRole) || {
-        val cardNums = List(165, 188, 234, 133, 226, 238, 167, 152) :::
-                      (if (game.params.scenarioType == CampaignScenario) List(37, 39) else Nil)
-          
-        println("The following cards cause Civil War or Regime Change")
-        cardNums.sorted foreach (n => println(deck(n).numAndName))
+        val cards = agitatorsCards.sorted map (n => deck(n).numAndName)
+        println("The following cards cause Civil War or Regime Change:")
+        wrap("", cards) foreach (l => println(l))
         cacheQuestion(askYorN("Is at least one of these cards in the discard pile (y/n)? "))
       }
       ,
@@ -3132,8 +3148,12 @@ object AwakeningCards {
         // See Event Instructions table
         if (role == game.botRole)
           log(s"$role takes the candidate card nearest the bottom of the discard pile")
-        else
+        else {
+          val cards = agitatorsCards.sorted map (n => deck(n).numAndName)
+          
+          wrap("Candidate cards: ", cards) foreach (l => println(l))
           log(s"$role takes one of the candidate cards from the discard pile")
+        }
       }
     )),
     // ------------------------------------------------------------------------

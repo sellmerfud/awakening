@@ -66,6 +66,24 @@ object LabyrinthAwakening {
   
   val INTEGER = """(\d+)""".r
   
+  sealed trait GameMode {
+    val orderValue: Int
+  }
+  case object LabyrinthMode extends GameMode  { val orderValue = 1; override def toString() = "Labyrinth"   }
+  case object AwakeningMode extends GameMode  { val orderValue = 2; override def toString() = "Awakening"   }
+  case object ForeverWarMode extends GameMode { val orderValue = 3; override def toString() = "Forever War" }
+  object GameMode {
+    def apply(name: String): GameMode = name.toLowerCase match {
+      case "labyrinth"   => LabyrinthMode
+      case "awakening"   => AwakeningMode
+      case "forever war" => ForeverWarMode
+      case _ => throw new IllegalArgumentException(s"Invalid game mode name: $name")
+    }
+  }
+  
+  implicit val GameModeOrdering = Ordering.by { m: GameMode => m.orderValue }
+  
+  
   sealed trait CardAssociation
   case object Unassociated extends CardAssociation { override def toString() = "Unassociated" }
   
@@ -354,8 +372,7 @@ object LabyrinthAwakening {
     DefaultIndonesiaMalaysia
   )
   
-  val AwakeningDefaultCountries = DefaultNigeria :: DefaultMali :: LabyrinthDefaultCountries
-  val CampaignDefaultCountries  = DefaultNigeria :: DefaultMali :: LabyrinthDefaultCountries
+  val ExpansionDefaultCountries  = DefaultNigeria :: DefaultMali :: LabyrinthDefaultCountries
   
   val CountryAbbreviations = Map("US" -> UnitedStates, "UK" -> UnitedKingdom)
   
@@ -696,7 +713,7 @@ object LabyrinthAwakening {
 
   }
   
-  val deck = new CardDeck(AwakeningCards.deckMap ++ LabyrinthCards.deckMap)
+  val deck = new CardDeck(AwakeningCards.deckMap ++ LabyrinthCards.deckMap ++ ForeverWarCards.deckMap)
   def cardNumAndName(number: Int): String = deck(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
 
@@ -895,18 +912,15 @@ object LabyrinthAwakening {
       def numAdvisors = markers count (_ == Advisors)
   }
   
-  val LabyrinthScenario = 1
-  val AwakeningScenario = 2
-  val CampaignScenario  = 3
-
-  val StartingCountries = Map(
-    LabyrinthScenario -> LabyrinthDefaultCountries,
-    AwakeningScenario -> AwakeningDefaultCountries,
-    CampaignScenario  -> CampaignDefaultCountries)
+  val LabyrinthScenario  = 1
+  val AwakeningScenario  = 2
+  val ForeverWarScenario = 3
+  val CampaignScenario   = 4
 
   trait Scenario {
     val name: String
-    val scenarioType: Int
+    val startingMode: GameMode
+    val campaign: Boolean
     val prestige: Int
     val usPosture: String
     val funding: Int
@@ -955,14 +969,17 @@ object LabyrinthAwakening {
   
   case class GameParameters(
     scenarioName: String,
-    scenarioType: Int,
-    useExpansionRules: Boolean,
+    startingMode: GameMode,
+    campaign: Boolean,
+    currentMode: GameMode,
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
     sequestrationTroops: Boolean = false,  // true if 3 troops off map due to Sequestration event
     botLogging: Boolean = false
-  )
+  ) {
+    val useExpansionRules = currentMode == AwakeningMode || currentMode == ForeverWarMode
+  }
   
   case class GameState(
     params: GameParameters,
@@ -1536,15 +1553,20 @@ object LabyrinthAwakening {
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty]) = {
       
-    var countries = StartingCountries(scenario.scenarioType)
+    var countries = if (scenario.startingMode == LabyrinthMode && !scenario.campaign)
+      LabyrinthDefaultCountries
+    else
+      ExpansionDefaultCountries
+    
     // Apply scenario overrides to countries.
     for (c <- scenario.countries)
       countries = c :: (countries filterNot (_.name == c.name))
     
     val params = GameParameters(
       scenario.name,
-      scenario.scenarioType,
-      scenario.scenarioType == AwakeningScenario, // useExpansionRules
+      scenario.startingMode,  // startingMode
+      scenario.campaign,
+      scenario.startingMode,  // currentMode
       humanRole,
       humanAutoRoll,
       botDifficulties)
@@ -4856,13 +4878,14 @@ object LabyrinthAwakening {
     val syria         = game.getMuslim(Syria)
     val iran          = game.getNonMuslim(Iran)
     val algeria       = game.getMuslim(AlgeriaTunisia)
-    val updatedParams = game.params.copy(useExpansionRules = true)
+    val updatedParams = game.params.copy(currentMode = AwakeningMode)
     @tailrec def randomAwakeTarget: String = {
         randomMuslimCountry match {
           case m if m.canTakeAwakeningOrReactionMarker => m.name
           case _ => randomAwakeTarget
         }
     }
+    
     
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
     val (updatedPlots, syriaCache) = if (syria.isIslamistRule)
@@ -4894,6 +4917,11 @@ object LabyrinthAwakening {
     
     testCountry(awakeningTarget)
     addAwakeningMarker(awakeningTarget)
+  }
+  
+  def addForeverWarCards(): Unit = {
+    val updatedParams = game.params.copy(currentMode = ForeverWarMode)
+    game = game.copy(params = updatedParams)
   }
   
   def endTurn(): Unit = {
@@ -5496,6 +5524,8 @@ object LabyrinthAwakening {
                                 |actions will be conducted."""),
       Command("add awakening cards", """Add the Awakening cards to the draw deck and
                                 |begin using the Awakening expansion rules.""".stripMargin),
+      Command("add forever cards", """Add the Forever War cards to the draw deck and
+                                |begin using the Forever War expansion rules.""".stripMargin),
       Command("show",         """Display the current game state
                                 |  show all        - entire game state
                                 |  show plays      - cards played during the current turn
@@ -5537,7 +5567,8 @@ object LabyrinthAwakening {
     ) filter { 
       case Command("rollback", _)            => game.turn > 1 || cardsPlayed > 0
       case Command("remove cadre", _)        => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
-      case Command("add awakening cards", _) => game.params.scenarioType == CampaignScenario && game.params.useExpansionRules == false
+      case Command("add awakening cards", _) => game.params.currentMode == LabyrinthMode && game.params.campaign
+      case Command("add forever cards", _)   => game.params.currentMode == AwakeningMode && game.params.campaign
       case _                                 => true
     } 
 
@@ -5555,6 +5586,7 @@ object LabyrinthAwakening {
         case "resolve plots"         => resolvePlots()
         case "end turn"              => endTurn()
         case "add awakening cards"   => addAwakeningCards()
+        case "add forever cards"     => addForeverWarCards()
         case "show"                  => showCommand(param)
         case "adjust"                => adjustSettings(param)
         case "history"               => history(param)

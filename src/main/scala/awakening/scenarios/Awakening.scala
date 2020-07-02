@@ -42,7 +42,8 @@ import awakening.LabyrinthAwakening._
 
 object Awakening extends Scenario {
   val name           = "Awakening"
-  val scenarioType   = AwakeningScenario
+  val startingMode   = AwakeningMode
+  val campaign       = false
   val prestige       = 5
   val usPosture      = Soft
   val funding        = 5

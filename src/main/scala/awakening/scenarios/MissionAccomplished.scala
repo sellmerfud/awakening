@@ -43,12 +43,14 @@ import awakening.JihadistBot
 
 object MissionAccomplished extends MissionAccomplishedDetails {
   val name           = "Mission Accomplished"
-  val scenarioType = LabyrinthScenario
+  val startingMode   = LabyrinthMode
+  val campaign       = false
 }
 
 object MissionAccomplishedCampaign extends MissionAccomplishedDetails {
   val name           = "Mission Accomplished -- Campaign"
-  val scenarioType = CampaignScenario
+  val startingMode   = LabyrinthMode
+  val campaign       = true
 }
 
 trait MissionAccomplishedDetails extends Scenario {
