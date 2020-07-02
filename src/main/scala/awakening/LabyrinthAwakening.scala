@@ -1247,8 +1247,15 @@ object LabyrinthAwakening {
       
     def regimeChangeTargets: List[String] = {
       val haveSource = (target: String) => regimeChangeSourcesFor(target).nonEmpty
+      val isAllowed = (m: MuslimCountry) => if (m.name != Iran || game.params.currentMode != ForeverWarMode)
+         true
+      else {
+        val (world, value) = gwot
+        (game.prestigeLevel == High || game.prestigeLevel == VeryHigh) && world == Hard && value == 3
+      }
+      
       val targets = countryNames(muslims filter { m => 
-        m.isIslamistRule                           ||
+        (m.isIslamistRule && isAllowed(m))         ||
         (m.name == Iraq  && m.hasMarker(IraqiWMD)) ||
         (m.name == Libya && m.hasMarker(LibyanWMD))
       })
@@ -4871,7 +4878,7 @@ object LabyrinthAwakening {
   // When the Awakening cards are added we must:
   // Change Syria to Shia-Mix
   // Add WMD cache to Syria(2) and Iran (1)
-  // set params.useExpansionRules = true
+  // update the currentMode
   // Test Algeria and add an awakening marker
   // (if possible, otherwise a random muslim country - From Forever War rules)
   def addAwakeningCards(): Unit = {
@@ -4919,6 +4926,11 @@ object LabyrinthAwakening {
     addAwakeningMarker(awakeningTarget)
   }
   
+  // This is used when playing a campaign scenario.
+  // When the Forever War cards are added we must:
+  // update the currentMode
+  // This mainly affects restrictions on Regime Change in Iran.
+  // See rule 15.2.2.1 in the Forever War Rulebook
   def addForeverWarCards(): Unit = {
     val updatedParams = game.params.copy(currentMode = ForeverWarMode)
     game = game.copy(params = updatedParams)
