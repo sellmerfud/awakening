@@ -214,15 +214,15 @@ object AwakeningCards {
   }
   
   def agitatorsCards = {
-    val labCards = if (GameModeOrdering.lt(game.params.startingMode, AwakeningMode))
+    val labCards = if (GameModeOrdering.lt(game.startingMode, AwakeningMode))
       List(37, 39)
     else
       Nil 
-    val awakeCards = if (GameModeOrdering.lt(game.params.startingMode, ForeverWarMode))
+    val awakeCards = if (GameModeOrdering.lt(game.startingMode, ForeverWarMode))
       List(165, 188, 234, 133, 226, 238, 167, 152)
     else
       Nil
-    val foreverCards = if (GameModeOrdering.gt(game.params.currentMode, AwakeningMode))
+    val foreverCards = if (GameModeOrdering.gt(game.currentMode, AwakeningMode))
       List(272, 277, 293)
     else
       Nil
@@ -710,11 +710,11 @@ object AwakeningCards {
     entry(new Card(143, "Obama Doctrine", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) =>
-        if (game.params.scenarioName == "Mitt's Turn") game.usPosture == Hard
+        if (game.scenarioName == "Mitt's Turn") game.usPosture == Hard
         else game.usPosture == Soft
       ,
       (role: Role) => {
-        val numActions = if (game.params.scenarioName == "Mitt's Turn") 3 else 2
+        val numActions = if (game.scenarioName == "Mitt's Turn") 3 else 2
         if (role == game.humanRole) {
           val canAwakening = (game hasMuslim (_.canTakeAwakeningOrReactionMarker)) && lapsingEventNotInPlay(ArabWinter)
           val canAid       = game hasMuslim (_.canTakeAidMarker)
@@ -784,7 +784,7 @@ object AwakeningCards {
       }
     ) {
       // For "Mitt's Turn" scenario this card has 3 ops.
-      override def ops: Int = if (game.params.scenarioName == "Mitt's Turn") 3 else 2
+      override def ops: Int = if (game.scenarioName == "Mitt's Turn") 3 else 2
     }),
     // ------------------------------------------------------------------------
     entry(new Card(144, "Operation New Dawn", US, 2,
@@ -1906,7 +1906,7 @@ object AwakeningCards {
             addEventTarget(name)
           takeTroopsOffMap(name, num)
         }
-        game = game.copy(params = game.params.copy(sequestrationTroops = true))
+        game = game.copy(sequestrationTroops = true)
         addGlobalEventMarker(Sequestration)
       }
     )),

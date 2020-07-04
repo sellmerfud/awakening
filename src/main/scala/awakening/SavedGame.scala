@@ -92,33 +92,6 @@ object SavedGame {
     case _      => throw new Exception(s"Not a valid List value!")
   }  
     
-  private def gameParametersToMap(params: GameParameters): Map[String, Any] =
-    Map(
-      "scenarioName"        -> params.scenarioName,      
-      "startingMode"        -> params.startingMode,
-      "campaign"            -> params.campaign,
-      "scenarioNotes"       -> params.scenarioNotes,
-      "currentMode"         -> params.currentMode,
-      "humanRole"           -> params.humanRole.toString,
-      "humanAutoRoll"       -> params.humanAutoRoll,
-      "botDifficulties"     -> (params.botDifficulties map (_.name)),
-      "sequestrationTroops" -> params.sequestrationTroops,
-      "botLogging"          -> params.botLogging
-    )
-  
-  private def gameParametersFromMap(data: Map[String, Any]): GameParameters =
-    GameParameters(
-      asString(data("scenarioName")),
-      GameMode(asString(data("startingMode"))),
-      asBoolean(data("campaign")),
-      asList(data("scenarioNotes")) map asString,
-      GameMode(asString(data("currentMode"))),
-      Role(asString(data("humanRole"))),
-      asBoolean(data("humanAutoRoll")),
-      asList(data("botDifficulties")) map (x => BotDifficulty(asString(x))),
-      asBoolean(data("sequestrationTroops")),
-      asBoolean(data("botLogging"))
-    )
   
   private def plotDataToMap(data: PlotData): Map[String, Any] =
     Map(
@@ -286,25 +259,34 @@ object SavedGame {
   
   private def toGameJson(gameState: GameState): String = {
     val top = Map(
-      "params"            -> gameParametersToMap(gameState.params),
-      "turn"              -> gameState.turn,
-      "prestige"          -> gameState.prestige,
-      "usPosture"         -> gameState.usPosture,
-      "funding"           -> gameState.funding,
-      "countries"         -> (gameState.countries map countryToMap),
-      "markers"           -> gameState.markers,
-      "plotData"          -> plotDataToMap(gameState.plotData),
-      "history"           -> gameState.history,
-      "offMapTroops"      -> gameState.offMapTroops,
-      "reserves"          -> reservesToMap(gameState.reserves),
-      "extraCellCapacity" -> gameState.extraCellCapacity,
-      "extraCells"        -> extraCellsToMap(gameState.extraCells),
-      "plays"             -> (gameState.plays map playToMap),
-      "firstPlotCard"     -> (gameState.firstPlotCard getOrElse null),
-      "cardsLapsing"      -> gameState.cardsLapsing,
-      "cardsRemoved"      -> gameState.cardsRemoved,
-      "targetsThisPhase"  -> phaseTargetsToMap(gameState.targetsThisPhase),
-      "targetsLastPhase"  -> phaseTargetsToMap(gameState.targetsLastPhase)
+      "scenarioName"        -> gameState.scenarioName,      
+      "startingMode"        -> gameState.startingMode,
+      "campaign"            -> gameState.campaign,
+      "scenarioNotes"       -> gameState.scenarioNotes,
+      "currentMode"         -> gameState.currentMode,
+      "humanRole"           -> gameState.humanRole.toString,
+      "humanAutoRoll"       -> gameState.humanAutoRoll,
+      "botDifficulties"     -> (gameState.botDifficulties map (_.name)),
+      "sequestrationTroops" -> gameState.sequestrationTroops,
+      "botLogging"          -> gameState.botLogging,
+      "turn"                -> gameState.turn,
+      "prestige"            -> gameState.prestige,
+      "usPosture"           -> gameState.usPosture,
+      "funding"             -> gameState.funding,
+      "countries"           -> (gameState.countries map countryToMap),
+      "markers"             -> gameState.markers,
+      "plotData"            -> plotDataToMap(gameState.plotData),
+      "history"             -> gameState.history,
+      "offMapTroops"        -> gameState.offMapTroops,
+      "reserves"            -> reservesToMap(gameState.reserves),
+      "extraCellCapacity"   -> gameState.extraCellCapacity,
+      "extraCells"          -> extraCellsToMap(gameState.extraCells),
+      "plays"               -> (gameState.plays map playToMap),
+      "firstPlotCard"       -> (gameState.firstPlotCard getOrElse null),
+      "cardsLapsing"        -> gameState.cardsLapsing,
+      "cardsRemoved"        -> gameState.cardsRemoved,
+      "targetsThisPhase"    -> phaseTargetsToMap(gameState.targetsThisPhase),
+      "targetsLastPhase"    -> phaseTargetsToMap(gameState.targetsLastPhase)
     )
     Json.build(top)
   }
@@ -312,7 +294,16 @@ object SavedGame {
   private def fromGameJson(jsonValue: String): GameState = {
     val top = asMap(Json.parse(jsonValue))
     GameState(
-      gameParametersFromMap(asMap(top("params"))),
+      asString(top("scenarioName")),
+      GameMode(asString(top("startingMode"))),
+      asBoolean(top("campaign")),
+      asList(top("scenarioNotes")) map asString,
+      GameMode(asString(top("currentMode"))),
+      Role(asString(top("humanRole"))),
+      asBoolean(top("humanAutoRoll")),
+      asList(top("botDifficulties")) map (x => BotDifficulty(asString(x))),
+      asBoolean(top("sequestrationTroops")),
+      asBoolean(top("botLogging")),
       asInt(top("turn")),
       asInt(top("prestige")),
       asString(top("usPosture")),

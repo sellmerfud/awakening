@@ -680,11 +680,30 @@ object USBot extends BotHelpers {
 
 
   // ------------------------------------------------------------------
-  val DisruptPriorities = List(
-    PakistanPriority, SyriaPriority, IranPriority, PhilippinesPriority,  // Base game only if Aby Sayyaf event is in play
+  // Note: I put PhilippinesPriority in all three lists.
+  // It will only trigger if Aby Sayyaf event is in play and that
+  // can only happen if a campaign game is being played that started
+  // with one of the Labyrinth scenarios.
+  val LabyrinthDisruptPriorities = List(
+    PakistanPriority, PhilippinesPriority, GoodPriority, FairPriority, HighestResourcePriority, 
+    BesiegedRegimePriority, MostCellsPriority, AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
+    
+  val AwakeningDisruptPriorities = List(
+    PakistanPriority, SyriaPriority, IranPriority, PhilippinesPriority, 
+    GoodPriority, FairPriority, HighestResourcePriority, BesiegedRegimePriority,
+    MostCellsPriority, AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
+    
+  val ForeverWarDisruptPriorities = List(
+    PakistanPriority, IranPriority, SyriaPriority, PhilippinesPriority,
     GoodPriority, FairPriority, HighestResourcePriority, BesiegedRegimePriority,
     MostCellsPriority, AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
 
+  def disruptPriorities: List[CountryFilter] = game.currentMode match {
+    case LabyrinthMode   => LabyrinthDisruptPriorities
+    case AwakeningMode   => AwakeningDisruptPriorities
+    case ForeverWarMode  => ForeverWarDisruptPriorities
+  }
+  
   val DisruptFlowchart = List(
     new CriteriaFilter("Muslim at least 2 more cells than TandM and JSP", 
       muslimTest(m => m.totalCells - m.totalTroopsAndMilitia >= 2 && jihadSuccessPossible(m, false))),
@@ -695,11 +714,11 @@ object USBot extends BotHelpers {
   def disruptTarget(names: List[String]): Option[String] = {
     botLog("Find \"Disrupt\" target")
     val candidates = selectCandidates(game getCountries names, DisruptFlowchart)
-    topPriority(candidates, DisruptPriorities) map (_.name)
+    topPriority(candidates, disruptPriorities) map (_.name)
   }
   
   def disruptPriority(names: List[String]): Option[String] = {
-   topPriority(names map game.getCountry, DisruptPriorities) map (_.name) 
+   topPriority(names map game.getCountry, disruptPriorities) map (_.name) 
   }
   
   // Narrow a list of Muslim countries to those were the
@@ -757,10 +776,26 @@ object USBot extends BotHelpers {
     topPriority(game getCountries names, priorities) map (_.name)
   }
   // ------------------------------------------------------------------
-  val DeployToPriorities = List(
+  val LabyrinthDeployToPriorities = List(
+    PakistanPriority, FairPriority,
+    HighestResourcePriority, BesiegedRegimePriority, MostCellsPriority,
+    AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
+    
+  val AwakeningDeployToPriorities = List(
     PakistanPriority, SyriaPriority, IranPriority, FairPriority,
     HighestResourcePriority, BesiegedRegimePriority, MostCellsPriority,
     AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
+  
+  val ForeverWarDeployToPriorities = List(
+    PakistanPriority, IranPriority, SyriaPriority, FairPriority,
+    HighestResourcePriority, BesiegedRegimePriority, MostCellsPriority,
+    AdjacentIslamistRulePriority, WithAidPriority, OilExporterPriority)
+  
+  def deployToPriorities: List[CountryFilter] = game.currentMode match {
+    case LabyrinthMode   => LabyrinthDeployToPriorities
+    case AwakeningMode   => AwakeningDeployToPriorities
+    case ForeverWarMode  => ForeverWarDeployToPriorities
+  }
   
   val DeployToFlowchart = List(
     new CriteriaFilter("Philippines if Abu Sayyaf, cell, no troops",  // Base game only
@@ -778,14 +813,14 @@ object USBot extends BotHelpers {
     val countryNames = names filterNot (_ == "track")
     val target = selectCandidates(game getCountries countryNames, DeployToFlowchart) match {
       case Nil        => track
-      case candidates => topPriority(candidates, DeployToPriorities) map (_.name)
+      case candidates => topPriority(candidates, deployToPriorities) map (_.name)
     }
     botLog(s"Deploy To result: ${target getOrElse "<none>"}")
     target
   }
   
   def deployToPriority(names: List[String]): Option[String] = {
-   topPriority(names map game.getCountry, DeployToPriorities) map (_.name) 
+   topPriority(names map game.getCountry, deployToPriorities) map (_.name) 
   }
   
   // ------------------------------------------------------------------
@@ -855,16 +890,35 @@ object USBot extends BotHelpers {
   }
   
   // ------------------------------------------------------------------
-  val WoiMuslimPriorities = List(
+  val LabyrinthWoiMuslimPriorities = List(
+    FewestPlotDicePriority, RegimeChangePriority, CaliphateCaptialPriority,
+    PakistanPriority, AdjacentGoodAllyPriority, HighestResourcePriority, NeutralPriority,
+    BesiegedRegimePriority, AdjacentIslamistRulePriority, FewestCellsPriority,
+    MostTroopsPriority, OilExporterPriority)
+  
+  val AwakeningWoiMuslimPriorities = List(
     FewestPlotDicePriority, RegimeChangePriority, CaliphateCaptialPriority,
     PakistanPriority, SyriaPriority, IranPriority, CivilWArPriority,
     AdjacentGoodAllyPriority, HighestResourcePriority, NeutralPriority,
     BesiegedRegimePriority, AdjacentIslamistRulePriority, FewestCellsPriority,
     MostTroopsPriority, OilExporterPriority)
   
+  val ForeverWarWoiMuslimPriorities = List(
+    FewestPlotDicePriority, RegimeChangePriority, CaliphateCaptialPriority,
+    PakistanPriority, IranPriority, SyriaPriority, CivilWArPriority,
+    AdjacentGoodAllyPriority, HighestResourcePriority, NeutralPriority,
+    BesiegedRegimePriority, AdjacentIslamistRulePriority, FewestCellsPriority,
+    MostTroopsPriority, OilExporterPriority)
+  
+  def woiMuslimPriorities: List[CountryFilter] = game.currentMode match {
+    case LabyrinthMode   => LabyrinthWoiMuslimPriorities
+    case AwakeningMode   => AwakeningWoiMuslimPriorities
+    case ForeverWarMode  => ForeverWarWoiMuslimPriorities
+  }
+  
   def markerAlignGovTarget(names: List[String]): Option[String] = {
     botLog("Find \"Marker/Align/Gov\" target")
-    topPriority(game getCountries names, WoiMuslimPriorities) map (_.name)
+    topPriority(game getCountries names, woiMuslimPriorities) map (_.name)
   }
   
   val BestWoiDRMFilter = new HighestScoreNode("Highest WoI DRM",
@@ -875,7 +929,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Best DRM WoI\" target")
     val flowchart  = BestWoiDRMFilter::Nil
     val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, WoiMuslimPriorities) map (_.name)
+    topPriority(candidates, woiMuslimPriorities) map (_.name)
   }
   
   val WoiDrmMinusOneFilter = new CriteriaFilter("WoI DRM -1",
@@ -885,7 +939,7 @@ object USBot extends BotHelpers {
     botLog("Find \"DRM -1 WoI\" target")
     val flowchart = WoiDrmMinusOneFilter::Nil
     val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, WoiMuslimPriorities) map (_.name)
+    topPriority(candidates, woiMuslimPriorities) map (_.name)
   }
   
   // ------------------------------------------------------------------
@@ -895,7 +949,7 @@ object USBot extends BotHelpers {
       
     botLog("Find \"UNSCR 1973\" target")
     val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, DisruptPriorities) map (_.name) 
+    topPriority(candidates, disruptPriorities) map (_.name) 
   }
   
   // ------------------------------------------------------------------
@@ -904,7 +958,7 @@ object USBot extends BotHelpers {
     val flowchart = List(
       new CriteriaFilter("Adversary Muslim", muslimTest(_.isAdversary)),
       new CriteriaFilter("Neutral Muslim", muslimTest(_.isNeutral)))
-    val priorities = FewestCellsPriority::PoorPriority::WoiMuslimPriorities
+    val priorities = FewestCellsPriority::PoorPriority::woiMuslimPriorities
       
     botLog("Find \"SCAF\" target")
     val candidates = selectCandidates(game getCountries names, flowchart)

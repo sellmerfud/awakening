@@ -286,48 +286,55 @@ object JihadistBot extends BotHelpers {
                   muslimScore(m => jihadDRM(m, true), nonMuslimScore = 100))
   val FewestCellsFilter = new LowestScoreNode("Fewest cells", _ => true, _.totalCells)
   
+  // jihad == None        - Do not include jihad drm priority
+  // jihad == Some(true)  - Include major jihad drm priority
+  // jihad == Some(false) - Include minor jihad drm priority
+  def jihadMarkerAlignGovPriorities(jihad: Option[Boolean]): List[CountryFilter] = {
+    val jihadPriorities = jihad match {
+      case None    => List.empty
+      case Some(x) => List(BestJihadDRMPriority(x))
+    }
+    
+    game.currentMode match {
+      case LabyrinthMode =>
+        List(
+          PakistanPriority, BesiegedRegimePriority,  WithAidPriority, RegimeChangeTroopsPriority, 
+          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority,
+          OilExporterPriority)
+      case AwakeningMode =>
+        jihadPriorities ::: List(
+          PakistanPriority, BesiegedRegimePriority, SyriaPriority, WithAidPriority, RegimeChangeTroopsPriority, 
+          HighestResourcePriority, WithTroopsPriority, IranPriority, MostCellsPriority, AdjacentIslamistRulePriority,
+          OilExporterPriority)
+      case ForeverWarMode =>
+        jihadPriorities ::: List(
+          PakistanPriority, BesiegedRegimePriority, IranPriority, WithAidPriority, RegimeChangeTroopsPriority, 
+          HighestResourcePriority, WithTroopsPriority, SyriaPriority, MostCellsPriority, AdjacentIslamistRulePriority,
+          OilExporterPriority)
+    }
+  }
+  
     
   // Bot will not try minor Jihad in Poor countries
   def minorJihadTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      BestJihadDRMPriority(false), PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-      WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
-      IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
-    
     botLog("Find \"Minor Jihad\" target")
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getMuslims names, jihadMarkerAlignGovPriorities(Some(false))) map (_.name)
   }
   
   // Bot will only try major Jihad in Poor countries
   def majorJihadTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      BestJihadDRMPriority(true), PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-      WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
-      IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
-    
     botLog("Find \"Major Jihad\" target")
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getMuslims names, jihadMarkerAlignGovPriorities(Some(true))) map (_.name)
   }
   
   def markerAlignGovTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-      WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
-      IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
-    
     botLog("Find \"Marker/Align/Gov\" target")
-    topPriority(game getCountries names, priorities) map (_.name)
+    topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)) map (_.name)
   }
   
   def troopsMilitiaTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      PakistanPriority, BesiegedRegimePriority, SyriaPriority,
-      WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
-      IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
-    
     botLog("Find \"Troops/Militia\" target")
-    topPriority(game getCountries names, priorities) map (_.name)
-    
+    topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)) map (_.name)    
   }
 
   val TightPlotFlowchart = List(
@@ -337,12 +344,32 @@ object JihadistBot extends BotHelpers {
     PoorTroopsActiveCellsFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter,
     PoorMuslimFilter)
   
-  val PlotPriorities = List(
+  val LabyrinthPlotPriorities = List(
     USPriority, WithPrestigeTroopsPriority, PakistanPriority, PhilippinesPriority,
-    MostActveCellsPriority, SyriaPriority, WithAidPriority, RegimeChangeTroopsPriority,
-    HighestResourcePriority, IranPriority, CivilWarPriority, NeutralPriority,
+    MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
+    HighestResourcePriority, NeutralPriority, BesiegedRegimePriority,
     AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority, 
     LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+
+  val AwakeningPlotPriorities = List(
+    USPriority, WithPrestigeTroopsPriority, PakistanPriority,
+    MostActveCellsPriority, SyriaPriority, WithAidPriority, RegimeChangeTroopsPriority,
+    HighestResourcePriority, IranPriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
+    AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority, 
+    LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+    
+  val ForeverWarPlotPriorities = List(
+    USPriority, WithPrestigeTroopsPriority, PakistanPriority,
+    MostActveCellsPriority, IranPriority, WithAidPriority, RegimeChangeTroopsPriority,
+    HighestResourcePriority, SyriaPriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
+    AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority, 
+    LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+    
+  def plotPriorities: List[CountryFilter] = game.currentMode match {
+    case LabyrinthMode   => LabyrinthPlotPriorities
+    case AwakeningMode   => AwakeningPlotPriorities
+    case ForeverWarMode  => ForeverWarPlotPriorities
+  }
   
   def plotTarget(names: List[String]): Option[String] = {
     val flowchart = if (game.fundingLevel == Tight)
@@ -351,11 +378,11 @@ object JihadistBot extends BotHelpers {
       OtherPlotFlowchart
     botLog("Find \"Plot\" target")
     val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, PlotPriorities) map (_.name)
+    topPriority(candidates, plotPriorities) map (_.name)
   }
   
   def plotPriority(names: List[String]): Option[String] = {
-    topPriority(game getCountries names, PlotPriorities) map (_.name)
+    topPriority(game getCountries names, plotPriorities) map (_.name)
   }
   
   val RecruitFlowchart = List(
@@ -366,40 +393,57 @@ object JihadistBot extends BotHelpers {
     PoorNeedCellsforMajorJihad, GoodMuslimFilter,
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
   
+  val LabyrinthRecruitAndTravelToPriorities = List(
+    NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+    USPriority, PoorPriority, FairPriority, GoodPriority, HighestResourcePriority, 
+    RussiaPriority, NoDisruptPretigePriority, HighestRECPriority, SamePostureAsUSPriority,
+    MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority
+  )
+  val AwakeningRecruitAndTravelToPriorities = List(
+    NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+    SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority,
+    GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
+    HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
+    MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority
+  )
+  val ForeverWarRecruitAndTravelToPriorities = List(
+    NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+    IranPriority, SyriaPriority, USPriority, PoorPriority, FairPriority,
+    GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
+    HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
+    MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority
+  )
+  
+  def recruitAndTravelToPriorities: List[CountryFilter] = game.currentMode match {
+    case LabyrinthMode   => LabyrinthRecruitAndTravelToPriorities
+    case AwakeningMode   => AwakeningRecruitAndTravelToPriorities
+    case ForeverWarMode  => ForeverWarRecruitAndTravelToPriorities
+  }
+  
   def recruitTravelToPriority(names: List[String]): Option[String] = {
-    val priorities = List(
-      NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
-      SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority,
-      GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
-      HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
-      MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
-    topPriority(game getCountries names, priorities) map (_.name)
+    topPriority(game getCountries names, recruitAndTravelToPriorities) map (_.name)
   }
   
   
   def recruitTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
-      SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority,
-      GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
-      HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
-      MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     botLog("Find \"Recruit\" target")
     val candidates = selectCandidates(game getCountries names, RecruitFlowchart)
-    topPriority(candidates, priorities) map (_.name)
+    topPriority(candidates, recruitAndTravelToPriorities) map (_.name)
   }
   
 
   def travelToTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
-      SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority, GoodPriority,
-      HighestResourcePriority, NoDisruptPretigePriority, BestJihadDRMPriority(false),
-      SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority,
-      OilExporterPriority)
     botLog("Find \"Travel To\" target")
     val candidates = selectCandidates(game getCountries names, TravelToFlowchart)
-    topPriority(candidates, priorities) map (_.name)
+    topPriority(candidates, recruitAndTravelToPriorities) map (_.name)
+  }
+  
+
+  
+  def travelFromPriorities: List[CountryFilter] = game.currentMode match {
+    case LabyrinthMode   => LabyrinthRecruitAndTravelToPriorities
+    case AwakeningMode   => AwakeningRecruitAndTravelToPriorities
+    case ForeverWarMode  => ForeverWarRecruitAndTravelToPriorities
   }
   
   def travelFromTarget(toCountry: String, names: List[String]): Option[String] = {
@@ -410,11 +454,10 @@ object JihadistBot extends BotHelpers {
       AutoRecruitFilter,
       FewestCellsFilter)
 
-    val priorities = List(
-      new NotDestinationPriority(toCountry), IslamistRulePriority,
-      PoorPriority, FairPriority, GoodPriority, NotUSPriority,
-      MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
-      DisruptPrestigePriority, LowestRECPriority)
+    val priorities = List(new NotDestinationPriority(toCountry), IslamistRulePriority,
+                          PoorPriority, FairPriority, GoodPriority, NotUSPriority,
+                          MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
+                          DisruptPrestigePriority, LowestRECPriority)
     val withCells  = game.getCountries(names) filter hasCellForTravel
     val candidates = selectCandidates(withCells, flowchart)
     topPriority(candidates, priorities) map (_.name)
@@ -1211,7 +1254,7 @@ object JihadistBot extends BotHelpers {
           val ss = candidates sortBy (n => -n.governance) // sort so worst comes first
           ss takeWhile (_.governance == ss.head.governance)
         }
-        val target = topPriority(softs, PlotPriorities).get
+        val target = topPriority(softs, plotPriorities).get
         
         def nextAttempt(plotsPerformed: Int): Int = {
           if (completed + plotsPerformed == maxOps || totalUnused(target) == 0 || game.availablePlots.isEmpty) 

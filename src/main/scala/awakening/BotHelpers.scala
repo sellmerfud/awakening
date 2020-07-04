@@ -45,7 +45,7 @@ import LabyrinthAwakening._
 // Common routines used by both of the Bots.
 
 trait BotHelpers {
-  def botLog(msg: => String) = if (game.params.botLogging) log(msg)
+  def botLog(msg: => String) = if (game.botLogging) log(msg)
   
   // jihadDRM for a given Muslim country
   def jihadDRM(m: MuslimCountry, major: Boolean): Int = 

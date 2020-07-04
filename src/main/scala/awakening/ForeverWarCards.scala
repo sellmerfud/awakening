@@ -171,7 +171,7 @@ object ForeverWarCards {
       ,
       (role: Role) => {
         //  Note: if scenario is HillaryWins then we add a +1 modifer to the die roll
-        if (game.params.scenarioName == scenarios.HillaryWins.name) {
+        if (game.scenarioName == scenarios.HillaryWins.name) {
           
         }
       }

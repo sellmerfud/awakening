@@ -51,7 +51,7 @@ import FUtil.Pathname
 object LabyrinthAwakening {
   def dieRoll = nextInt(6) + 1
   def humanDieRoll(prompt: String = "Enter die roll: ", allowAbort: Boolean = true) =
-    if (game.params.humanAutoRoll)
+    if (game.humanAutoRoll)
       dieRoll
     else
       (askOneOf(prompt, 1 to 6, allowAbort = allowAbort) map (_.toInt)).get
@@ -966,8 +966,8 @@ object LabyrinthAwakening {
     removedPlots: List[Plot]     = Nil,
     resolvedTargets: Set[String] = Set.empty
   )
-  
-  case class GameParameters(
+    
+  case class GameState(
     scenarioName: String,
     startingMode: GameMode,
     campaign: Boolean,
@@ -977,14 +977,7 @@ object LabyrinthAwakening {
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
     sequestrationTroops: Boolean = false,  // true if 3 troops off map due to Sequestration event
-    botLogging: Boolean = false
-  ) {
-    val useExpansionRules = currentMode == AwakeningMode || currentMode == ForeverWarMode
-    val scenarioNameDisplay = if (campaign) s"$scenarioName -- Campaign" else scenarioName
-  }
-  
-  case class GameState(
-    params: GameParameters,
+    botLogging: Boolean = false,
     turn: Int,
     prestige: Int,
     usPosture: String,
@@ -1005,11 +998,13 @@ object LabyrinthAwakening {
     targetsLastPhase: PhaseTargets = PhaseTargets()
   ) {
     
-    def humanRole = params.humanRole
+    def useExpansionRules   = currentMode == AwakeningMode || currentMode == ForeverWarMode
+    def scenarioNameDisplay = if (campaign) s"$scenarioName -- Campaign" else scenarioName
+    
     def botRole = if (humanRole == US) Jihadist else US
     
-    def usResolve(name: BotDifficulty) = botRole == US && (params.botDifficulties contains name)
-    def jihadistIdeology(name: BotDifficulty) = botRole == Jihadist && (params.botDifficulties contains name)
+    def usResolve(name: BotDifficulty) = botRole == US && (botDifficulties contains name)
+    def jihadistIdeology(name: BotDifficulty) = botRole == Jihadist && (botDifficulties contains name)
       
     def cardRemoved(num: Int) = cardsRemoved contains num
     def cardLapsing(num: Int) = cardsLapsing contains num
@@ -1249,7 +1244,7 @@ object LabyrinthAwakening {
       
     def regimeChangeTargets: List[String] = {
       val haveSource     = (target: String) => regimeChangeSourcesFor(target).nonEmpty
-      val iranStrict     = game.params.currentMode == ForeverWarMode || game.params.campaign
+      val iranStrict     = game.currentMode == ForeverWarMode || game.campaign
       val (world, value) = gwot
       
       def isAllowed(m: MuslimCountry) = if (m.name == Iran && iranStrict)
@@ -1367,17 +1362,17 @@ object LabyrinthAwakening {
     
     def scenarioSummary: Seq[String] = {
       val b = new ListBuffer[String]
-      b += s"Scenario: ${params.scenarioNameDisplay}"
+      b += s"Scenario: ${scenarioNameDisplay}"
       b += separator()
       b += s"The Bot is playing the $botRole"
       b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
-      for (difficulty <- params.botDifficulties)
+      for (difficulty <- botDifficulties)
         b += s"  $difficulty"
-      if (params.scenarioNotes.nonEmpty) {
+      if (scenarioNotes.nonEmpty) {
         b += ""
         b += "Scenario Notes:"
         b += separator()
-        params.scenarioNotes foreach (line => b += line)
+        scenarioNotes foreach (line => b += line)
       }
       b.toList
     }
@@ -1410,7 +1405,7 @@ object LabyrinthAwakening {
       b += f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d"
       b += f"US reserves     : ${reserves.us}%2d   | Jihadist reserves : ${reserves.jihadist}%2d"
       b += separator()
-      if (game.params.useExpansionRules) {
+      if (game.useExpansionRules) {
         b += f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"
         b += s"Troop commitment: $troopCommitment"
         b += separator()
@@ -1422,7 +1417,7 @@ object LabyrinthAwakening {
         b += f"Cells on track  : $cellsOnTrack%2d"
       }
       b += f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}"
-      if (game.params.useExpansionRules) {
+      if (game.useExpansionRules) {
         b += separator()
         b += "Extra cells"
         b += f"Available       : ${extraCells.available}%2d   | On map            : ${extraCells.onMap}%2d" 
@@ -1436,7 +1431,7 @@ object LabyrinthAwakening {
       
       
       wrap( "Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist)) foreach (l => b += l)
-      if (game.params.useExpansionRules)
+      if (game.useExpansionRules)
         wrap( "Resolved plots  : ", plotsToStrings(resolvedPlots)) foreach (l => b += l)
       wrap( "Removed plots   : ", plotsToStrings(removedPlots)) foreach (l => b += l)
       if (activePlotCountries.isEmpty)
@@ -1579,19 +1574,18 @@ object LabyrinthAwakening {
     for (c <- scenario.countries)
       countries = c :: (countries filterNot (_.name == c.name))
     
-    val params = GameParameters(
+    GameState(
       scenario.name,
-      scenario.startingMode,  // startingMode
+      scenario.startingMode,
       campaign,
       scenario.notes,
-      scenario.startingMode,  // currentMode
+      scenario.startingMode,
       humanRole,
       humanAutoRoll,
-      botDifficulties)
-    
-    GameState(
-      params,
-      0, // Turn number, zero indicates start of game.
+      botDifficulties,
+      false,  // sequestrationTroops: true if 3 troops off map due to Sequestration event
+      false,  // botLogging
+      0,      // Turn number, zero indicates start of game.
       scenario.prestige,
       scenario.usPosture,
       scenario.funding,
@@ -2318,9 +2312,9 @@ object LabyrinthAwakening {
 
   // Return true if no caliphate exists and the the given country is a caliphate candidate.
   def canDeclareCaliphate(capital: String): Boolean  =
-    game.params.useExpansionRules       &&
-    !game.caliphateDeclared             && 
-    (game isMuslim capital)             &&
+    game.useExpansionRules       &&
+    !game.caliphateDeclared      && 
+    (game isMuslim capital)      &&
     (game getMuslim capital).caliphateCandidate
 
   def askDeclareCaliphate(capital: String): Boolean =
@@ -2450,7 +2444,7 @@ object LabyrinthAwakening {
       getTarget
     }
     
-    if (game.params.useExpansionRules) {
+    if (game.useExpansionRules) {
       if (lapsingEventInPlay(ArabWinter))
         log("No convergence peformed because \"Arab Winter\" is in effect")
       else {
@@ -2740,7 +2734,7 @@ object LabyrinthAwakening {
   }
   
   def saveGameDescription(turnsCompleted: Int): Unit = {
-    val desc = s"${game.params.scenarioNameDisplay}, playing ${game.humanRole}, ${amountOf(turnsCompleted, "turn")} completed"
+    val desc = s"${game.scenarioNameDisplay}, playing ${game.humanRole}, ${amountOf(turnsCompleted, "turn")} completed"
     gameDescPath(gameName.get).writeFile(desc)
   }
   
@@ -2906,8 +2900,8 @@ object LabyrinthAwakening {
     def show(oldValue: Any, newValue: Any, msg: String) =
       if (oldValue != newValue) b += msg
     
-    show(from.params.botDifficulties, to.params.botDifficulties, 
-        "Set the bot difficulties to %s".format(to.params.botDifficulties map (_.name) mkString ", ")) 
+    show(from.botDifficulties, to.botDifficulties, 
+        "Set the bot difficulties to %s".format(to.botDifficulties map (_.name) mkString ", ")) 
     show(from.goodResources, to.goodResources, s"Set Good Resources to ${to.goodResources}")
     show(from.islamistResources, to.islamistResources, s"Set Islamic Resources to ${to.islamistResources}")
     show(from.numGoodOrFair, to.numGoodOrFair, s"Set Good/Fair Countries to ${to.numGoodOrFair}")
@@ -2927,7 +2921,7 @@ object LabyrinthAwakening {
     show(from.resolvedPlots.sorted, to.resolvedPlots.sorted, 
           s"Set resolvedPlots plots to ${plotsDisplay(to.resolvedPlots)}")
     show(from.availablePlots.sorted, to.availablePlots.sorted, 
-          s"Set available plots to ${plotsDisplay(to.availablePlots, to.params.humanRole == Jihadist)}")
+          s"Set available plots to ${plotsDisplay(to.availablePlots, to.humanRole == Jihadist)}")
     show(from.markers.sorted,  to.markers.sorted, 
             s"  Set global event markers to: ${markersString(to.markers)}" )
     (from.firstPlotCard, to.firstPlotCard) match {
@@ -3005,7 +2999,7 @@ object LabyrinthAwakening {
       (toM orElse toN) foreach { t =>
         val newVal = t.plots.sorted
         if (fromM.plots.sorted != newVal)
-          b += s"  Set plots to ${mapPlotsDisplay(newVal, to.params.humanRole == Jihadist)}"
+          b += s"  Set plots to ${mapPlotsDisplay(newVal, to.humanRole == Jihadist)}"
       }
       (toM orElse toN) foreach { t =>
         val newVal = t.markers.sorted
@@ -3035,7 +3029,7 @@ object LabyrinthAwakening {
       (toN orElse toM) foreach { t =>
         val newVal = t.plots.sorted
         if (fromN.plots.sorted != newVal) {
-          val visible = to.params.humanRole == Jihadist ||
+          val visible = to.humanRole == Jihadist ||
                       (t.name == UnitedStates && t.hasMarker(NEST))
           b += s"  Set plots to ${mapPlotsDisplay(newVal, visible)}"
         }
@@ -3512,12 +3506,12 @@ object LabyrinthAwakening {
       val updatedPlots = game.plotData.copy(removedPlots = plot :: game.removedPlots)
       game = game.copy(plotData = updatedPlots)
       log(s"$plot alerted in $countryName, remove it from the game.")
-      if (game.params.useExpansionRules) {
+      if (game.useExpansionRules) {
         log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot")
         game = game.adjustPrestige(1)
       }
     }
-    else if (game.params.useExpansionRules) {
+    else if (game.useExpansionRules) {
       val updatedPlots = game.plotData.copy(resolvedPlots = plot :: game.resolvedPlots)
       game = game.copy(plotData = updatedPlots)
       log(s"$plot alerted in $countryName, move it to the resolved plots box.")
@@ -4702,7 +4696,7 @@ object LabyrinthAwakening {
               log(s"Decrease prestige by -1 to ${game.prestige} (Troops present)")
             }
             // Sequestration
-            if (mapPlot.plot == PlotWMD && game.params.sequestrationTroops) {
+            if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
               log("Resolved WMD plot releases the troops off map for Sequestration")
               returnSequestrationTroopsToAvailable()
             }
@@ -4802,7 +4796,7 @@ object LabyrinthAwakening {
             }
             
             // Sequestration
-            if (mapPlot.plot == PlotWMD && game.params.sequestrationTroops) {
+            if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
               log("Resolved WMD plot releases the troops off map for Sequestration")
               returnSequestrationTroopsToAvailable()
             }
@@ -4820,7 +4814,7 @@ object LabyrinthAwakening {
         println(s"Remove the ${amountOf(wmdCount, "resolved WMD plot")} from the game")
       
       if (otherCount > 0)
-        if (game.params.useExpansionRules)
+        if (game.useExpansionRules)
           println(s"Put the ${amountOf(otherCount, "resolved non-WMD plot")} in the resolved plots box")
         else
           println(s"Put the ${amountOf(otherCount, "resolved non-WMD plot")} in the available plots box")
@@ -4828,7 +4822,7 @@ object LabyrinthAwakening {
       (game.countries filter (_.hasPlots)) foreach {
         case m: MuslimCountry =>
           val (removed, resolved) = m.plots map (_.plot) partition (_ == PlotWMD)
-          val updatedPlots = if (game.params.useExpansionRules)
+          val updatedPlots = if (game.useExpansionRules)
             game.plotData.copy(
               resolvedPlots = resolved ::: game.resolvedPlots,
               removedPlots  = removed  ::: game.removedPlots)
@@ -4840,7 +4834,7 @@ object LabyrinthAwakening {
           game = game.updateCountry(m.copy(plots = Nil)).copy(plotData = updatedPlots)
         case n: NonMuslimCountry => 
           val (removed, resolved) = n.plots map (_.plot) partition (_ == PlotWMD)
-          val updatedPlots = if (game.params.useExpansionRules)
+          val updatedPlots = if (game.useExpansionRules)
             game.plotData.copy(
               resolvedPlots = resolved ::: game.resolvedPlots,
               removedPlots  = removed  ::: game.removedPlots)
@@ -4870,10 +4864,9 @@ object LabyrinthAwakening {
     // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
     // then return the troops to available.
   def returnSequestrationTroopsToAvailable(): Unit = {
-    if (game.params.sequestrationTroops) {
+    if (game.sequestrationTroops) {
       log("Return 3 (Sequestration) troops from the off map box to the troops track")
-      game = game.copy(offMapTroops = game.offMapTroops - 3,
-                       params = game.params.copy(sequestrationTroops = false))
+      game = game.copy(offMapTroops = game.offMapTroops - 3, sequestrationTroops = false)
     }
   }
   
@@ -4896,7 +4889,6 @@ object LabyrinthAwakening {
     val syria         = game.getMuslim(Syria)
     val iran          = game.getNonMuslim(Iran)
     val algeria       = game.getMuslim(AlgeriaTunisia)
-    val updatedParams = game.params.copy(currentMode = AwakeningMode)
     @tailrec def randomAwakeTarget: String = {
         randomMuslimCountry match {
           case m if m.canTakeAwakeningOrReactionMarker => m.name
@@ -4913,7 +4905,7 @@ object LabyrinthAwakening {
       
     game = game.updateCountry(syria.copy(isSunni = false, wmdCache = syriaCache)).
                 updateCountry(iran.copy(wmdCache = 1)).
-                copy(plotData = updatedPlots, params = updatedParams)
+                copy(plotData = updatedPlots, currentMode = AwakeningMode)
     log()
     if (syria.isIslamistRule) {
       log("Syria is now Shia-Mix country")
@@ -4943,8 +4935,7 @@ object LabyrinthAwakening {
   // This mainly affects restrictions on Regime Change in Iran.
   // See rule 15.2.2.1 in the Forever War Rulebook
   def addForeverWarCards(): Unit = {
-    val updatedParams = game.params.copy(currentMode = ForeverWarMode)
-    game = game.copy(params = updatedParams)
+    game = game.copy(currentMode = ForeverWarMode)
   }
   
   def endTurn(): Unit = {
@@ -4994,7 +4985,7 @@ object LabyrinthAwakening {
         log(s"Return ${amountOf(num, "resolved plot")} to the available plots box")
       }
     
-      if (game.params.useExpansionRules) {
+      if (game.useExpansionRules) {
         polarization()
         civilWarAttrition()
       }
@@ -5048,7 +5039,7 @@ object LabyrinthAwakening {
       // then return the troops to available.
       
       val threeResIR = (game.muslims find (m => m.resourceValue == 3 && m.isIslamistRule))
-      (game.params.sequestrationTroops, threeResIR) match {
+      (game.sequestrationTroops, threeResIR) match {
         case (true, Some(m)) => 
           log(s"There is a 3 Resource Muslim country at Islamist Rule: ${m.name}")
           returnSequestrationTroopsToAvailable()
@@ -5620,8 +5611,8 @@ object LabyrinthAwakening {
     ) filter { 
       case Command("rollback", _)            => game.turn > 1 || cardsPlayed > 0
       case Command("remove cadre", _)        => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
-      case Command("add awakening cards", _) => game.params.currentMode == LabyrinthMode && game.params.campaign
-      case Command("add forever cards", _)   => game.params.currentMode == AwakeningMode && game.params.campaign
+      case Command("add awakening cards", _) => game.currentMode == LabyrinthMode && game.campaign
+      case Command("add forever cards", _)   => game.currentMode == AwakeningMode && game.campaign
       case _                                 => true
     } 
 
@@ -5676,7 +5667,7 @@ object LabyrinthAwakening {
   def showCommand(param: Option[String]): Unit = {
     val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" ::
                   "civil wars" :: countryNames(game.countries)
-    val opts = if (game.params.useExpansionRules) options
+    val opts = if (game.useExpansionRules) options
                else options filterNot(o => o == "caliphate" || o == "civil wars")
                   
     askOneOf("Show: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
@@ -5717,7 +5708,7 @@ object LabyrinthAwakening {
       printCountries("Iran Special Case", iranSpecial.toList)
     printSummary(game.scoringSummary)
     printSummary(game.statusSummary)
-    if (game.params.useExpansionRules) {
+    if (game.useExpansionRules) {
       printSummary(game.civilWarSummary)
       printSummary(game.caliphateSummary)
     }
@@ -6647,8 +6638,8 @@ object LabyrinthAwakening {
           saveAdjustment("Offmap troops")
         }
       case "auto roll" => 
-        logAdjustment("Human auto roll", game.params.humanAutoRoll, !game.params.humanAutoRoll)
-        game = game.copy(params = game.params.copy(humanAutoRoll = !game.params.humanAutoRoll))
+        logAdjustment("Human auto roll", game.humanAutoRoll, !game.humanAutoRoll)
+        game = game.copy(humanAutoRoll = !game.humanAutoRoll)
         saveAdjustment("Human auto roll")
       
       case "resolved plot countries" => adjustPlotTargets()
@@ -6698,7 +6689,7 @@ object LabyrinthAwakening {
     val AllLevels = if (game.botRole == US) AllUSLevels
     else AllJihadistLevels
     val AllNames = AllLevels map (_.name)
-    var inEffect = game.params.botDifficulties map (_.name)
+    var inEffect = game.botDifficulties map (_.name)
     
     val label = if (game.botRole == US) "US resolve" else "Jihadist ideology"
     val standard = for (num <- 1 to AllNames.size; included = AllNames take num)
@@ -6732,17 +6723,17 @@ object LabyrinthAwakening {
     }
     getNextResponse()
     val updated = inEffect map BotDifficulty.apply
-    if (updated != game.params.botDifficulties) {
-      logAdjustment(s"$label", game.params.botDifficulties.map(_.name), updated.map(_.name))
-      game = game.copy(params = game.params.copy(botDifficulties = updated))
+    if (updated != game.botDifficulties) {
+      logAdjustment(s"$label", game.botDifficulties.map(_.name), updated.map(_.name))
+      game = game.copy(botDifficulties = updated)
       saveAdjustment("Bot difficulty")
     }  
   }
   
   def adjustBotLogging(): Unit = {
-    val newValue = !game.params.botLogging
-    logAdjustment("Bot logging", game.params.botLogging, newValue)
-    game = game.copy(params = game.params.copy(botLogging = newValue))
+    val newValue = !game.botLogging
+    logAdjustment("Bot logging", game.botLogging, newValue)
+    game = game.copy(botLogging = newValue)
     saveAdjustment("Bot logging")
   }
   
