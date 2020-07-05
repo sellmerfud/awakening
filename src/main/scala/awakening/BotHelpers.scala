@@ -125,7 +125,7 @@ trait BotHelpers {
   // in the list to narrow the choices to a single country.  If we go through all of
   // the filters and we stil have more than one viable country, then we pick one at
   // random.
-  // Note: The only time this function will return Nil, is if the original list of
+  // Note: The only time this function will return None, is if the original list of
   //       countries is empty.
   def topPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
     botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")

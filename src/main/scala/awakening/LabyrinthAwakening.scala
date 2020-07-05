@@ -757,6 +757,7 @@ object LabyrinthAwakening {
     def totalTroops = troops + markerTroops
     def totalDeployableTroops = troops + deployableMarkerTroops
     def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
+    def numAdvisors = markers count (_ == Advisors)
   
     def canDeployTo(ops: Int): Boolean
     def maxDeployFrom: Int
@@ -908,8 +909,6 @@ object LabyrinthAwakening {
             
         this.copy(markers = updatedMarkers)
       }
-      
-      def numAdvisors = markers count (_ == Advisors)
   }
   
   val LabyrinthScenario  = 1
@@ -1111,7 +1110,7 @@ object LabyrinthAwakening {
     def prestigeModifier = prestige match {
       case x if x <  4 => -1
       case x if x <  7 =>  0
-      case x if x < 10 =>  2
+      case x if x < 10 =>  1
       case _           =>  2
     }
     
@@ -2245,12 +2244,7 @@ object LabyrinthAwakening {
   def modifyWoiRoll(die: Int, m: MuslimCountry, ignoreGwotPenalty: Boolean = false, silent: Boolean = false): Int = {
     def logNotZero(value: Int, msg: String): Unit =
       if (!silent && value != 0) log(f"$value%+2d $msg")
-    val prestigeMod = game.prestige match {
-      case x if x < 4  => -1
-      case x if x < 7  =>  0
-      case x if x < 10 =>  1
-      case _           =>  2
-    }
+    val prestigeMod      = game.prestigeModifier
     val shiftToGoodMod   = if (m.isAlly && m.isFair) -1 else 0
     val gwotMod          = if (ignoreGwotPenalty) 0 else -game.gwotPenalty
     val aidMod           = m.aidMarkers
@@ -3985,22 +3979,38 @@ object LabyrinthAwakening {
   def addGlobalEventMarker(marker: String): Unit = {
     if (globalEventNotInPlay(marker)) {
       game = game.addMarker(marker)
-      log(s"Place $marker marker in the Events In Play box")
+      log(s"""Place "$marker" marker in the Events In Play box""")
     }
   }
   
   def removeGlobalEventMarker(marker: String): Unit = {
     if (globalEventInPlay(marker)) {
       game = game.removeMarker(marker)
-      log(s"Remove $marker marker from the Events In Play box")
+      log(s"""Remove "$marker" marker from the Events In Play box""")
     }
   }
+  
+  def trumpTweetsON: Boolean = globalEventInPlay(TrumpTweetsON)
+  
+  def turnTrumpTweetsON(): Unit = if (!trumpTweetsON) {
+    if (globalEventInPlay(TrumpTweetsOFF)) {
+      game = game.removeMarker(TrumpTweetsOFF).addMarker(TrumpTweetsON)
+      log(s"""Flip the "Trump Tweets" marker to ON""")
+    }
+    else
+      addGlobalEventMarker(TrumpTweetsON)
+  }
+  
+  def turnTrumpTweetsOFF(): Unit = if (trumpTweetsON) {
+    game = game.removeMarker(TrumpTweetsON).addMarker(TrumpTweetsOFF)
+    log(s"""Flip the "Trump Tweets" marker to OFF""")
+  }  
   
   def addEventMarkersToCountry(countryName: String, markers: String*): Unit = {
     for (marker <- markers) {
       val c = game.getCountry(countryName)
       if (!(c hasMarker marker)) {
-        log(s"Place $marker marker in $countryName")
+        log(s"""Place "$marker" marker in $countryName""")
         c match {
           case m: MuslimCountry    => game = game.updateCountry(m.addMarkers(marker))
           case n: NonMuslimCountry => game = game.updateCountry(n.addMarkers(marker))
@@ -4009,27 +4019,12 @@ object LabyrinthAwakening {
     }
   }
   
-  def trumpTweetsOn: Boolean = globalEventInPlay(TrumpTweetsON)
-  
-  def turnTrumpTweetsON(): Unit = if (!trumpTweetsOn) {
-    if (globalEventInPlay(TrumpTweetsOFF)) {
-      game = game.removeMarker(TrumpTweetsOFF).addMarker(TrumpTweetsON)
-      log(s"Flip the Trump Tweets marker to ON")
-    }
-    else
-      addGlobalEventMarker(TrumpTweetsOFF)
-  }
-  
-  def turnTrumpTweetsOFF(): Unit = if (trumpTweetsOn) {
-    game = game.removeMarker(TrumpTweetsON).addMarker(TrumpTweetsOFF)
-    log(s"Flip the Trump Tweets marker to OFF")
-  }  
 
   def removeEventMarkersFromCountry(countryName: String, markers: String*): Unit = {
     for (marker <- markers) {
       val c = game.getCountry(countryName)
       if (c hasMarker marker) {
-        log(s"Remove $marker marker from $countryName")
+        log(s"""Remove "$marker" marker from $countryName""")
         c match {
           case m: MuslimCountry    => game = game.updateCountry(m.removeMarkers(marker))
           case n: NonMuslimCountry => game = game.updateCountry(n.removeMarkers(marker))

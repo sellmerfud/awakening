@@ -41,15 +41,36 @@ package awakening
 // Awakening expansion.
 
 import scala.util.Random.shuffle
+import scala.annotation.tailrec
 import LabyrinthAwakening._
 import USBot.PlotInCountry
 
 object ForeverWarCards {
   
   // Various tests used by the card events
+  val abdelFattahCandidate = (m: MuslimCountry) => 
+    m.canTakeAwakeningOrReactionMarker && (m.name == Egypt || m.militia > 0)
+  
   val backlashCandidate = (m: MuslimCountry) =>
-    (m.plots exists (p => !p.backlashed)) && !game.isCaliphateMember(m.name)
+    (m.plots exists (!_.backlashed)) && !game.isCaliphateMember(m.name)
 
+  val foreignInternalDefenseCandidate = (m: MuslimCountry) => m.alignment != Adversary && m.totalCells > 0
+  
+  val nadiaMuradCandidate = (m: MuslimCountry) => (m.name == Iraq || areAdjacent(m.name, Iraq)) && 
+                                                  m.canTakeAwakeningOrReactionMarker            &&
+                                                  !game.isCaliphateMember(m.name)
+                                                  
+  val patrioticArabDemocraciesCandidate = (m: MuslimCountry) => m.alignment != Adversary &&
+                                                                m.canTakeAwakeningOrReactionMarker &&
+                                                                !game.isCaliphateMember(m.name)
+  val saudiAirStrikesCandidate = (m: MuslimCountry) => 
+    m.totalCells > 0 && (m.name == SaudiArabia || 
+      (areAdjacent(m.name, SaudiArabia) && (m.civilWar || m.inRegimeChange || m.isIslamistRule)))
+    
+  // Countries with cells and with troops/advisors
+  def specialForcesCandidates: List[String] =
+    countryNames(game.countries filter (c => c.totalCells > 0 && (c.totalTroops > 0 || c.numAdvisors > 0)))
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -57,17 +78,65 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(241, "Abdel Fattah el-Sisi", US, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => globalEventNotInPlay(PanArabNationalism) && (game hasMuslim abdelFattahCandidate)
       ,
       (role: Role) => {
+        val egypt = if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker) List(Egypt) else Nil
+        val candidates = countryNames(game.muslims filter abdelFattahCandidate)
+        val target = if (role == game.humanRole)
+          askCountry(s"Place an awakening marker in which country: ", candidates)
+        else 
+          USBot.markerAlignGovTarget(candidates).get
+        println()
+        addEventTarget(target)
+        testCountry(target)
+        addAwakeningMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(242, "Avenger", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => 
+        (role == game.humanRole && game.hasMuslim(_.totalCells > 0)) ||
+        (role == game.botRole && game.hasMuslim(m => m.totalCells - m.totalTroopsAndMilitia > 4)) ||
+        cacheQuestion(askYorN(s"Does the $Jihadist player have any cards in hand (y/n) ?"))
       ,
       (role: Role) => {
+        if (role == game.humanRole) {
+          val candidates = countryNames(game.muslims filter (_.totalCells > 0))
+          val canDiscard = cacheQuestion(askYorN(s"Does the $Jihadist player have any cards in hand (y/n) ?"))
+          val choices = List(
+            choice(candidates.nonEmpty, "remove", "Remove up to 2 Cells in any one Muslim country"),
+            choice(canDiscard,          "discard", s"Discard top card of the $Jihadist hand")
+          ).flatten
+
+          println("Choose one:")
+          askMenu(choices).head match {
+            case "discard" => 
+              println()
+              log(s"Discard top card of the $Jihadist hand")
+            case _ =>
+              val target = askCountry("Remove cells from which country: ", candidates)
+              val num = game.getMuslim(target).totalCells min 2
+              val (actives, sleepers, sadr) = askCells(target, num, true)
+              addEventTarget(target)
+              removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          }
+        }
+        else {
+          // Bot
+          val candidates = countryNames(game.muslims.filter(m => m.totalCells - m.totalTroopsAndMilitia > 4))
+          if (candidates.nonEmpty)
+          {
+            val target = USBot.disruptPriority(candidates).get
+            val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
+            addEventTarget(target)
+            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          }
+          else
+            println()
+            log(s"You ($Jihadist) must discard one random card")
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -111,69 +180,204 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(244, "Foreign Internal Defense", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.militiaAvailable > 0 && (game hasMuslim foreignInternalDefenseCandidate)
       ,
       (role: Role) => {
+        val candidates = countryNames(game.muslims filter foreignInternalDefenseCandidate)
+        val target = if (role == game.humanRole)
+          askCountry(s"Select country: ", candidates)
+        else 
+          USBot.deployToPriority(candidates).get
+        
+        addEventTarget(target)        
+        println()
+        addMilitiaToCountry(target, 1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(245, "Green Movement 2.0", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => {
+        game.getCountry(Iran) match {
+          case n: NonMuslimCountry => !n.iranSpecialCase
+          case m: MuslimCountry    => !(m.isIslamistRule || game.isCaliphateMember(Iran))
+        }
+      }
       ,
       (role: Role) => {
+        println()
+        addEventTarget(Iran)
+        testCountry(Iran)
+        addAwakeningMarker(Iran)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(246, "Holiday Surprise", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => 
+        // Check countries here because Philippines can sometimes contain troops
+        (game hasCountry (c => (c.totalTroops > 0 || c.numAdvisors > 0) && c.totalCells > 1)) ||
+        (game hasMuslim  (m => (m.totalTroops > 0 || m.numAdvisors > 0) && (m.inRegimeChange || m.civilWar)))
       ,
       (role: Role) => {
+        increasePrestige(1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(247, "Nadia Murad", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => {
+        val iraq = game.getMuslim(Iraq)
+        (iraq.civilWar || iraq.isIslamistRule || iraq.besiegedRegime || game.isCaliphateMember(Iraq)) &&
+        (game hasMuslim nadiaMuradCandidate)
+      }
       ,
       (role: Role) => {
+        val candidates = countryNames(game.muslims filter nadiaMuradCandidate)
+        val target = if (role == game.humanRole)
+          askCountry(s"Place an awakening marker in which country: ", candidates)
+        else 
+          USBot.markerAlignGovTarget(candidates).get
+        println()
+        addEventTarget(target)
+        testCountry(target)
+        addAwakeningMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(248, "Patriotic Arab Democracies Movement", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game hasMuslim patrioticArabDemocraciesCandidate
       ,
       (role: Role) => {
+        val candidates = countryNames(game.muslims filter patrioticArabDemocraciesCandidate)
+        val target = if (role == game.humanRole)
+          askCountry(s"Place an awakening marker in which country: ", candidates)
+        else 
+          USBot.markerAlignGovTarget(candidates).get
+        println()
+        addEventTarget(target)
+        testCountry(target)
+        addAwakeningMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(249, "Saudi Air Strikes", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => (game.getMuslim(SaudiArabia).alignment == Neutral ||
+                               game.getMuslim(SaudiArabia).alignment == Ally) &&
+                               (game hasMuslim saudiAirStrikesCandidate)
       ,
       (role: Role) => {
+        val candidates = countryNames(game.muslims filter saudiAirStrikesCandidate)
+        val target = if (role == game.humanRole)
+          askCountry(s"Remove cell(s) from which country: ", candidates)
+        else 
+          USBot.disruptPriority(candidates).get
+
+        val c = game.getMuslim(target)
+        val num = if (c.name == Yemen) c.totalCells min 2 else 1
+          
+        val (actives, sleepers, sadr) = if (role == game.humanRole)
+          askCells(target, num, true)
+        else
+          USBot.chooseCellsToRemove(target, num)
+        
+        addEventTarget(target)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(250, "Special Forces", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => specialForcesCandidates.nonEmpty
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Remove cell in which country: ", specialForcesCandidates)
+        else
+          USBot.disruptPriority(specialForcesCandidates).get
+        
+        val (actives, sleepers, sadr) = if (role == game.humanRole)
+          askCells(target, 1, sleeperFocus = true)
+        else
+          USBot.chooseCellsToRemove(target, 1)
+  
+        println()
+        addEventTarget(target)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(251, "Trump Tweets", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
-      ,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
-        //  Note: if scenario is HillaryWins then we add a +1 modifer to the die roll
-        if (game.scenarioName == scenarios.HillaryWins.name) {
+        def logNotZero(value: Int, msg: String): Unit = if (value != 0) log(f"$value%+2d $msg")
           
+        @tailrec def randomCountry: String = randomMuslimCountry match {
+          case m if m.canTakeAwakeningOrReactionMarker => m.name
+          case _ => randomCountry
         }
+        
+        def removeAidTarget: Option[String] = {
+          if (role == game.botRole)
+            USBot.removeAidTarget
+          else
+            countryNames(game.muslims filter (_.aidMarkers > 0)) match {
+              case Nil => None
+              case candidates =>
+                Some(askCountry("Remove an aid marker from which country: ", candidates))
+            }
+        }
+        
+        def addAidTarget: Option[String] = {
+          val candidates = countryNames(game.muslims filter (_.canTakeAidMarker))
+          if (candidates.isEmpty)
+            None
+          else if (role == game.botRole) 
+            USBot.markerAlignGovTarget(candidates)
+          else
+            Some(askCountry("Place an aid marker in which country: ", candidates))
+        }
+        
+        //  Note: if scenario is HillaryWins then we add a +1 modifer to the die roll
+        val hillaryMod  = if (game.scenarioName == scenarios.HillaryWins.name) 1 else 0
+        val prestigeMod = game.prestigeModifier
+        val die = getDieRoll(role)
+        val modRoll = die + hillaryMod + prestigeMod
+        
+        log(s"Die roll: $die")
+        logNotZero(prestigeMod, "Prestige")
+        logNotZero(hillaryMod,  s"${scenarios.HillaryWins.name} scenario rule")
+        if (modRoll != die)
+          log(s"Modified roll: $modRoll")
+        println()
+        modRoll match {
+          case 0 => 
+            val target = randomCountry
+            addEventTarget(target)
+            addReactionMarker(target)
+          case 1 => decreasePrestige(1)
+          case 2 =>
+            removeAidTarget foreach { target =>
+              addEventTarget(target)
+              removeAidMarker(target)
+            }
+          case 3 => increaseFunding(1)
+          case 4 => decreaseFunding(1)
+          case 5 => 
+            addAidTarget foreach { target =>
+              addEventTarget(target)
+              addAidMarker(target)
+            }            
+          case 6 => increasePrestige(1)
+          case _ =>
+            val target = randomCountry
+            addEventTarget(target)
+            addAwakeningMarker(target)
+        }
+        
+        turnTrumpTweetsON()
       }
     )),
     // ------------------------------------------------------------------------
@@ -1073,7 +1277,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(360, "US China Trade War", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => game.usPosture != game.getNonMuslim(China).posture && trumpTweetsOn
+      (_: Role, _: Boolean) => game.usPosture != game.getNonMuslim(China).posture && trumpTweetsON
       ,
       (role: Role) => {
         if (globalEventInPlay(USChinaTradeWar))

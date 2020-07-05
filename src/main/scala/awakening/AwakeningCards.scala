@@ -398,14 +398,16 @@ object AwakeningCards {
       (role : Role, forTrigger: Boolean) => specialForcesCandidates.nonEmpty
       ,
       (role: Role) => {
-        val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
-          val target = askCountry("Remove cell in which country: ", specialForcesCandidates)
-          (target, askCells(target, 1, sleeperFocus = true))
-        }
-        else {
-          val target = USBot.disruptPriority(specialForcesCandidates).get
-          (target, USBot.chooseCellsToRemove(target, 1))
-        }
+        val target = if (role == game.humanRole)
+          askCountry("Remove cell in which country: ", specialForcesCandidates)
+        else
+          USBot.disruptPriority(specialForcesCandidates).get
+        
+        val (actives, sleepers, sadr) = if (role == game.humanRole)
+          askCells(target, 1, sleeperFocus = true)
+        else
+          USBot.chooseCellsToRemove(target, 1)
+  
         println()
         addEventTarget(target)
         removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
@@ -710,11 +712,10 @@ object AwakeningCards {
     entry(new Card(143, "Obama Doctrine", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) =>
-        if (game.scenarioName == "Mitt's Turn") game.usPosture == Hard
-        else game.usPosture == Soft
+        if (game.scenarioName == scenarios.MittsTurn.name) game.usPosture == Hard else game.usPosture == Soft
       ,
       (role: Role) => {
-        val numActions = if (game.scenarioName == "Mitt's Turn") 3 else 2
+        val numActions = if (game.scenarioName == scenarios.MittsTurn.name) 3 else 2
         if (role == game.humanRole) {
           val canAwakening = (game hasMuslim (_.canTakeAwakeningOrReactionMarker)) && lapsingEventNotInPlay(ArabWinter)
           val canAid       = game hasMuslim (_.canTakeAidMarker)
@@ -784,7 +785,7 @@ object AwakeningCards {
       }
     ) {
       // For "Mitt's Turn" scenario this card has 3 ops.
-      override def ops: Int = if (game.scenarioName == "Mitt's Turn") 3 else 2
+      override def ops: Int = if (game.scenarioName == scenarios.MittsTurn.name) 3 else 2
     }),
     // ------------------------------------------------------------------------
     entry(new Card(144, "Operation New Dawn", US, 2,
@@ -1434,7 +1435,10 @@ object AwakeningCards {
       )
       ,  
       (role: Role) => {
-        log("US player randomly discards one card")
+        if (game.humanRole == US)
+          log(s"You ($US) must randomly discard one card")
+        else
+          log(s"Discard the top card of the $US hand")
       }
     )),
     // ------------------------------------------------------------------------
@@ -3279,8 +3283,10 @@ object AwakeningCards {
               println("Remove reaction markers from which countries?")
               askCountries(numReaction, withReaction)
             }
-            for (name <- names)
+            for (name <- names) {
+              addEventTarget(name)
               removeReactionMarker(name)
+            }
             names
           }
           
@@ -3301,8 +3307,10 @@ object AwakeningCards {
             val cells = for (name <- names; c = askCells(name, 1, sleeperFocus = role == US))
               yield Cells(name, c)
             
-            for (Cells(name, (a, s, sadr)) <- cells)
-              removeCellsFromCountry(name, a, s, sadr, addCadre = true)
+            for (Cells(name, (a, s, sadr)) <- cells) {
+              addEventTarget(name)
+              removeCellsFromCountry(name, a, s, sadr, addCadre = true)              
+            }
           }
           
           val cellsToPlace = (numReaction + numCells) min game.cellsAvailable

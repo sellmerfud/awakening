@@ -915,6 +915,26 @@ object USBot extends BotHelpers {
     case AwakeningMode   => AwakeningWoiMuslimPriorities
     case ForeverWarMode  => ForeverWarWoiMuslimPriorities
   }
+
+  // The Trump Tweets event can for the US to remove an aid marker.
+  // The rules do not specify how to prioritize this so I will
+  // get the list of all countries with aid markers using the woiMuslimPriorities
+  // then select the last one in the list.
+  def removeAidTarget: Option[String] = {
+    val withAid = countryNames(game.muslims filter (_.aidMarkers > 0))
+    
+    @tailrec def nextPriority(candidates: List[String], inOrder: List[String]): List[String] = candidates match {
+      case Nil => inOrder
+      case xs  => 
+        val winner = markerAlignGovTarget(xs).get
+        nextPriority(candidates filterNot (_ == winner), winner :: inOrder)
+    }
+    
+    if (withAid.isEmpty)
+      None
+    else
+      Some(nextPriority(withAid, Nil).head)
+  }
   
   def markerAlignGovTarget(names: List[String]): Option[String] = {
     botLog("Find \"Marker/Align/Gov\" target")
