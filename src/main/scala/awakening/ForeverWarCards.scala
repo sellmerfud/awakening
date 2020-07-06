@@ -42,6 +42,8 @@ package awakening
 
 import scala.util.Random.shuffle
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
+
 import LabyrinthAwakening._
 import USBot.PlotInCountry
 
@@ -87,6 +89,22 @@ object ForeverWarCards {
   def popularMobilForcesCandidates: List[String] = countryNames(
     game.muslims filter (m => m.canTakeMilitia && m.civilWar && m.totalCells > m.totalTroopsAndMilitia)
   )
+  
+  def trumpTripAlignmentCandidates = countryNames(game.muslims filter (m => !m.isIslamistRule && !m.isAlly))
+  def trumpTripPostureCandidates   = countryNames(game.nonMuslims filter (n => n.canChangePosture && n.posture != game.usPosture))
+  
+  def airAmericaCaliphateCandidates = countryNames(
+    game.muslims filter (m => m.totalCells > 0 && game.isCaliphateMember(m.name))
+  )
+  def airAmericaNonCaliphateCandidates = countryNames(
+    game.muslims filter (m => m.totalCells > 0 && (m.civilWar || m.inRegimeChange))
+  )
+  
+  def deepStateCandidates = countryNames(
+    game.getMuslims(List(Egypt, Syria, Pakistan, Turkey)) filter (m => !(m.isUntested || m.isIslamistRule || m.civilWar || m.isGood))
+  )
+  
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -115,14 +133,14 @@ object ForeverWarCards {
       (role: Role, _: Boolean) => 
         (role == game.humanRole && game.hasMuslim(_.totalCells > 0)) ||
         (role == game.botRole && game.hasMuslim(m => m.totalCells - m.totalTroopsAndMilitia > 4)) ||
-        cacheQuestion(askYorN(s"Does the $Jihadist player have any cards in hand (y/n) ?"))
+        cacheQuestion(askYorN(s"Does the $Jihadist player have any cards in hand? (y/n) "))
       ,
       (role: Role) => {
         if (role == game.humanRole) {
           val candidates = countryNames(game.muslims filter (_.totalCells > 0))
-          val canDiscard = cacheQuestion(askYorN(s"Does the $Jihadist player have any cards in hand (y/n) ?"))
+          val canDiscard = cacheQuestion(askYorN(s"Does the $Jihadist player have any cards in hand? (y/n) "))
           val choices = List(
-            choice(candidates.nonEmpty, "remove", "Remove up to 2 Cells in any one Muslim country"),
+            choice(candidates.nonEmpty, "remove", "Remove up to 2 cells in any one Muslim country"),
             choice(canDiscard,          "discard", s"Discard top card of the $Jihadist hand")
           ).flatten
 
@@ -432,7 +450,7 @@ object ForeverWarCards {
         val opsInReserve = game.reserves.us
         println()
         println(s"You have ${opsString(opsInReserve)} in reserve.")
-        val ops = if (askYorN(s"Do you wish to add them for this operation (y/n) ?")) {
+        val ops = if (askYorN(s"Do you wish to add them for this operation? (y/n) ")) {
           println()
           log(s"$US player expends their reserves of ${opsString(opsInReserve)}")
           game = game.copy(reserves = game.reserves.copy(us = 0))
@@ -720,31 +738,31 @@ object ForeverWarCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, _: Boolean) => {
         val prereq = !(game hasMuslim (m => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)))
-        val cardExists = cacheQuestion(askYorN("""Is there a "Trump Tweets" card or any card \nwith prerequisite "Trump Tweets ON" in the discard pile (y/n) ?"""))
+        val cardExists = cacheQuestion(askYorN("""Is there a "Trump Tweets" card or any card with prerequisite "Trump Tweets ON" in the discard pile? (y/n) """))
         prereq && cardExists
       }
       ,
       (role: Role) => {
         if (role == game.humanRole) {
           log()
-          log(s"""$role player draws a from the discard pile either "Trump Tweets" or""")
-          log("""a card with the prerequisite "Trump Tweets ON"""")
+          log(s"""$role player draws from the discard pile either "Trump Tweets" or""")
+          log("""a card with the prerequisite "Trump Tweets ON".""")
         }
         else {
           // Bot
           println()
           val getTrumpTweets = if (!trumpTweetsON)
-            askYorN("Is there a \"Trump Tweets\" card in the discard pile? (y/n )")
+            askYorN("Is there a \"Trump Tweets\" card in the discard pile? (y/n) ")
           else
             false
           
           if (getTrumpTweets) {
             log("""Place the "Trump Tweets" card closest to the bottom of the""")
-            log(s"discard pile on top of the $US hand")            
+            log(s"discard pile on top of the $US hand.")            
           }
           else {
             log("Place the card closest to the bottom of the discard pile")
-            log(s"""with a prerequisite of "Trump Tweets ON" on top of the $US hand""")
+            log(s"""with a prerequisite of "Trump Tweets ON" on top of the $US hand.""")
           }
         }
       }
@@ -752,33 +770,173 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(267, "Third Offset Strategy", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => cacheQuestion(askYorN(s"Does the $Jihadist player have more than one card in hand? (y/n) "))
       ,
       (role: Role) => {
+        if (role == game.humanRole)
+          log(s"Discard the top card of the $Jihadist hand.")
+        else
+          log(s"You ($Jihadist) must randomly discard one card.")
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(268, "Trump Trip", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => trumpTripAlignmentCandidates.nonEmpty || trumpTripPostureCandidates.nonEmpty
       ,
       (role: Role) => {
+        val action = if (role == game.humanRole) {
+          val choices = List(
+            choice(trumpTripAlignmentCandidates.nonEmpty, "align",   "Shift alignment of 1 country"),
+            choice(trumpTripPostureCandidates.nonEmpty,   "posture", "Set posture of 1 country")
+          ).flatten
+
+          println("\nChoose one:")
+          askMenu(choices).head
+        }
+        else if (trumpTripAlignmentCandidates.nonEmpty)  // Bot
+          "align"
+        else
+          "posture"
+        
+        val target = if (role == game.humanRole)
+          askCountry("\nWhich country: ", if (action == "align") trumpTripAlignmentCandidates else trumpTripPostureCandidates)
+        else if (action == "align")
+            USBot.markerAlignGovTarget(trumpTripAlignmentCandidates).get
+        else
+          USBot.posturePriority(trumpTripPostureCandidates).get
+        
+        addEventTarget(target)
+        
+        action match {
+          case "align" =>
+            testCountry(target)
+            shiftAlignmentLeft(target)
+            
+          case _ =>
+            // No need to test before setting posture
+            setCountryPosture(target, game.usPosture)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(269, "Air America", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => airAmericaCaliphateCandidates.nonEmpty || airAmericaNonCaliphateCandidates.nonEmpty
       ,
       (role: Role) => {
+        //  Allows US player to remove up to 4 cells from any calipate members
+        //  or up to 3 cells from any Civil War/Regime Change countries
+        if (role == game.humanRole) {
+          val choices = List(
+            choice(airAmericaNonCaliphateCandidates.nonEmpty, "non-cal", "Remove up to 3 cells in Civil War/Regime Change countries"),
+            choice(airAmericaCaliphateCandidates.nonEmpty,    "cal",     "Remove up to 4 cells in Caliphate countries")
+          ).flatten
+
+          println("\nChoose one:")
+          val (candidates, maxCells) = askMenu(choices).head match {
+            case "non-cal" => (airAmericaNonCaliphateCandidates, 3)
+            case _         => (airAmericaCaliphateCandidates, 4)
+          }
+          
+          case class Cells(name: String, cells: (Int, Int, Boolean))
+          @tailrec def askNext(numLeft: Int, countries: List[String], removed: List[Cells]): List[Cells] = {
+            if (numLeft == 0 || countries.isEmpty)
+              removed
+            else {
+              val name = askCountry("Remove cells from which country: ", countries)
+              val maxNum = game.getMuslim(name).totalCells min numLeft              
+              val num  = if (countries.size == 1)
+                maxNum
+              else
+                askInt(s"Remove how many cells from $name", 1, maxNum)
+              val (actives, sleepers, sadr) = askCells(name, num, true)
+              askNext(numLeft - num, countries filterNot (_ == name), Cells(name, (actives, sleepers, sadr)) :: removed)
+            }
+          }
+          
+          println()
+          println("Target countries")
+          println(separator())
+          for (name <- candidates) {
+            val b = new ListBuffer[String]
+            val m = game.getMuslim(name)
+            if (m.sleeperCells > 0)
+              b += amountOf(m.sleeperCells, "sleeper")
+            if (m.activeCells > 0)
+              b += amountOf(m.activeCells, "active")
+            if (m.hasSadr)
+              b += "Sadr"
+              
+            println(s"  $name ${b.toList.mkString("(", ", ", ")")}")
+          }
+          val removed = askNext(maxCells, candidates, List.empty)
+          
+          for (Cells(name, (actives, sleepers, sadr)) <- removed) {
+            addEventTarget(name)
+            removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+          }
+        }
+        else {
+          // Bot will remove cells from caliphate countries only if it can remove
+          // four cells (or there are no Civil War/Regime change countries)
+          // Otherwise it will remove the max it can from Civil War/Regime change countries
+          val caliphateNum = airAmericaCaliphateCandidates.foldLeft(0) { (sum, name) => game.getMuslim(name).totalCells }
+          val (candidates, maxCells) = if (caliphateNum > 3 || airAmericaNonCaliphateCandidates.isEmpty)
+            (airAmericaCaliphateCandidates, 4)
+          else
+            (airAmericaNonCaliphateCandidates, 3)
+          
+          // We will select the cells one at a time, because
+          // removal of a cell could change the Bots priorities
+          @tailrec def nextRemoval(numLeft: Int): Unit = {
+            val withCells = candidates filter (name => game.getMuslim(name).totalCells > 0)
+            if (numLeft > 0 && withCells.nonEmpty) {
+              val target = USBot.disruptPriority(withCells).get
+              val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 1)
+        
+              addEventTarget(target)
+              removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+              nextRemoval(numLeft - 1)
+            }
+          }
+          
+          nextRemoval(maxCells)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(270, "Deep State", US, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => {
+        val candidates = deepStateCandidates
+        if (role == game.humanRole)
+          candidates.nonEmpty
+        else {
+          if (candidates.isEmpty)
+            false
+          else if (game.usPosture == Hard)
+            true
+          else {
+            // If US posture is Soft, Bot will only play event if priority country is already Adversary
+            val target = USBot.markerAlignGovTarget(candidates).get
+            game.getMuslim(target).alignment == Adversary
+          }
+        }
+      }
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole) {
+          askCountry("Which country: ", deepStateCandidates)
+        }
+        else
+          USBot.markerAlignGovTarget(deepStateCandidates).get // Bot
+        
+        println()
+        addEventTarget(target)
+        improveGovernance(target, 1, true)
+        if (game.usPosture == Soft)
+          shiftAlignmentRight(target)
       }
     )),
     // ------------------------------------------------------------------------
