@@ -622,6 +622,9 @@ object LabyrinthAwakening {
     EUBolstersIranDeal, FakeNews, OPECProductionCut
   )
   
+  val OilSpikeCards = Set(OilPriceSpike1, OilPriceSpike2, OilPriceSpike3)
+  
+  
   type CardEvent       = Role => Unit
   type EventConditions = (Role, Boolean) => Boolean
   type EventAlertsPlot = (String, Plot) => Boolean   // Country Name, Plot
@@ -856,8 +859,12 @@ object LabyrinthAwakening {
     def isNeutral   = alignment == Neutral
     def isAdversary = alignment == Adversary
   
-    def resourceValue = if (name == Iran && hasMarker(TehranBeirutLandCorridor)) resources + 1 else resources
     def canExportOil = oilExporter && !hasMarker(TradeEmbargoJihadist)
+    def resourceValue = {
+      val corridorBump = if (name == Iran && hasMarker(TehranBeirutLandCorridor)) 1 else 0
+      val spikeBump    = if (canExportOil) (game.oilPriceSpikes) else 0
+      resources + corridorBump + spikeBump
+    }
     
     def isShiaMix = !isSunni
     def inRegimeChange = regimeChange != NoRegimeChange
@@ -1212,14 +1219,11 @@ object LabyrinthAwakening {
     def numGoodOrFair    = muslims count (c => c.isGood || c.isFair)
     def numPoorOrIslamic = muslims count (c => c.isPoor || c.isIslamistRule)
     def numIslamistRule  = muslims count (c => c.isIslamistRule)
-    val oilSpikeCards    = Set(OilPriceSpike1, OilPriceSpike2, OilPriceSpike3)
-    def oilPriceSpikes   = cardsLapsing count oilSpikeCards.contains
-    def oilBump(c: MuslimCountry) = if (c.canExportOil) oilPriceSpikes else 0
+    def oilPriceSpikes   = cardsLapsing count OilSpikeCards.contains
     def goodResources =
-      muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resourceValue + oilBump(c) }
+      muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resourceValue }
     def islamistResources = 
-      muslims.filter(_.isIslamistRule).foldLeft(0) { (a, c) => a + c.resourceValue + oilBump(c)} +
-      (if (caliphateDeclared) 1 else 0)
+      muslims.filter(_.isIslamistRule).foldLeft(0) { (a, c) => a + c.resourceValue } + (if (caliphateDeclared) 1 else 0)
     // Return true if any two Islamist Rule countries are adjacent.
     def islamistAdjacency: Boolean =
       muslims.filter(_.isIslamistRule).combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
@@ -5041,7 +5045,7 @@ object LabyrinthAwakening {
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
       
-      val threeResIR = (game.muslims find (m => m.resourceValue == 3 && m.isIslamistRule))
+      val threeResIR = (game.muslims find (m => m.resourceValue >= 3 && m.isIslamistRule))
       (game.sequestrationTroops, threeResIR) match {
         case (true, Some(m)) => 
           log(s"There is a 3 Resource Muslim country at Islamist Rule: ${m.name}")

@@ -73,9 +73,20 @@ object ForeverWarCards {
   
   def arabNatoCandidates: List[String] = {
     val list = game.getMuslim(GulfStates) :: (game.muslims filter (m => m.isSunni || adjacentToSunni(m.name)))
-    countryNames(list filter (m => !(m.isGood  || m.isIslamistRule)))
+    countryNames(list filter (_.canTakeMilitia))
   }
   
+  def moabCandidates: List[String] = countryNames(
+    game.countries filter (c => c.totalCells > 0 && (c.totalTroops > 0 || c.hasMarker(Advisors)))
+  )
+  
+  def personalSecContractorsCandidates: List[String] = countryNames(
+    game.muslims filter (m => m.canTakeMilitia && (m.civilWar || m.inRegimeChange || m.totalCells > m.governance))
+  )
+  
+  def popularMobilForcesCandidates: List[String] = countryNames(
+    game.muslims filter (m => m.canTakeMilitia && m.civilWar && m.totalCells > m.totalTroopsAndMilitia)
+  )
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -508,7 +519,7 @@ object ForeverWarCards {
           val reposCandidates = {
             val xs = game.getMuslims(SaudiArabia::GulfStates::Turkey::Nil) ::: game.adjacentMuslims(SaudiArabia) :::
                      game.adjacentMuslims(GulfStates) ::: game.adjacentMuslims(Turkey)
-            countryNames(xs filter (m => !(m.isGood || m.isIslamistRule)))
+            countryNames(xs filter (_.canTakeMilitia))
           }
           
           val reposMilitia = reposCandidates.foldLeft(0) { (sum, name) => sum + game.getMuslim(name).militia }
@@ -593,7 +604,7 @@ object ForeverWarCards {
           //  The militia do not have to be place in the same country
           //  so add them one at a time.
           for (x <- 1 to numMilita) {
-            val target = USBot.deployToPriority(USBot.highestCellsMinusTandM(candidates)).get
+            val target = USBot.deployToPriority(candidates).get
             addEventTarget(target)
             testCountry(target)
             addMilitiaToCountry(target, 1)
@@ -604,57 +615,138 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(260, "Imran Khan", US, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => {
+        val pakistan = game.getMuslim(Pakistan)
+        !pakistan.isIslamistRule && pakistan.totalCells == 0 && !game.isCaliphateMember(Pakistan)
+      }
       ,
       (role: Role) => {
+        testCountry(Pakistan)
+        improveGovernance(Pakistan, 1, true)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(261, "Intel Community", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => role == game.humanRole  // The bot treats this as unplayable
       ,
       (role: Role) => {
+        // See Event Instructions table
+        log("US player does not inspect the Jihadist hand in the solo game.")
+        val cadres = countryNames(game.countries filter (_.hasCadre))
+        if (cadres.isEmpty)
+          log("No cadres on the map to remove")
+        else {
+          val target = askCountry("Select country with cadre: ", cadres)
+          addEventTarget(target)
+          removeCadreFromCountry(target)
+        }
+        
+        // US player conducts a 1 Op operations.
+        println()
+        log("US player conducts an operation with 1 Op")
+        humanExecuteOperation(1)
+        println()
+        if (askYorN("Do you wish to play an extra card now during this action phase? (y/n) "))
+          usCardPlay(None, additional = true)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(262, "MOAB", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => moabCandidates.nonEmpty
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Remove a cell from which country: ", moabCandidates)
+        else
+          USBot.disruptPriority(moabCandidates).get
+        
+        val (actives, sleepers, sadr) = if (role == game.humanRole)
+          askCells(target, 1, true)
+        else
+          USBot.chooseCellsToRemove(target, 1)
+        
+        addEventTarget(target)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        increasePrestige(1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(263, "Operation Tidal Wave II", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.caliphateDeclared && game.funding > 0
       ,
       (role: Role) => {
+        decreaseFunding(2)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(264, "Personal Security Contractors", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => personalSecContractorsCandidates.nonEmpty && game.militiaAvailable > 0
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Place militia in which country: ", personalSecContractorsCandidates)
+        else
+          USBot.deployToPriority(personalSecContractorsCandidates).get
+        
+        val num = game.getMuslim(target).resourceValue min game.militiaAvailable
+        addEventTarget(target)
+        testCountry(target)
+        addMilitiaToCountry(target, num)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(265, "Popular Mobilization Forces", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => popularMobilForcesCandidates.nonEmpty && game.militiaAvailable > 0
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Place militia in which country: ", popularMobilForcesCandidates)
+        else
+          USBot.deployToPriority(personalSecContractorsCandidates).get
+          
+          val num = game.getMuslim(target).governance min game.militiaAvailable
+          addEventTarget(target)
+          testCountry(target)
+          addMilitiaToCountry(target, num)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(266, "Presidential Reality Show", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => {
+        val prereq = !(game hasMuslim (m => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)))
+        val cardExists = cacheQuestion(askYorN("""Is there a "Trump Tweets" card or any card \nwith prerequisite "Trump Tweets ON" in the discard pile (y/n) ?"""))
+        prereq && cardExists
+      }
       ,
       (role: Role) => {
+        if (role == game.humanRole) {
+          log()
+          log(s"""$role player draws a from the discard pile either "Trump Tweets" or""")
+          log("""a card with the prerequisite "Trump Tweets ON"""")
+        }
+        else {
+          // Bot
+          println()
+          val getTrumpTweets = if (!trumpTweetsON)
+            askYorN("Is there a \"Trump Tweets\" card in the discard pile? (y/n )")
+          else
+            false
+          
+          if (getTrumpTweets) {
+            log("""Place the "Trump Tweets" card closest to the bottom of the""")
+            log(s"discard pile on top of the $US hand")            
+          }
+          else {
+            log("Place the card closest to the bottom of the discard pile")
+            log(s"""with a prerequisite of "Trump Tweets ON" on top of the $US hand""")
+          }
+        }
       }
     )),
     // ------------------------------------------------------------------------

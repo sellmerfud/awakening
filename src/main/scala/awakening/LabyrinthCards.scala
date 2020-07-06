@@ -666,12 +666,13 @@ object LabyrinthCards {
     entry(new Card(32, "Back Channel", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, forTrigger: Boolean) => game.usPosture == Soft && role == game.humanRole && {  // Unplayable by the Bot
-        val neededOps = (game.muslims filter (_.isAdversary) map (_.resourceValue)).distinct.sorted
+        //  Oil price spike can make 3 resource countries unplayable this turn
+        val neededOps = (game.muslims filter (m => m.isAdversary && m.resourceValue < 4) map (_.resourceValue)).distinct.sorted
         cacheQuestion(askYorN(s"Do you have a card in hand with and Ops value of ${orList(neededOps)}? "))
       }
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter (_.isAdversary))
+        val candidates = countryNames(game.muslims filter (m => m.isAdversary && m.resourceValue < 4))
         val name = askCountry("Select adversary country: ", candidates)
         val ops = (game getMuslim name).resourceValue
         log(s"You must discard card with Ops value: $ops")
