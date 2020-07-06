@@ -447,6 +447,14 @@ object LabyrinthAwakening {
   def getAdjacentMuslims(name: String) = getAdjacent(name) filter game.isMuslim
   def getAdjacentNonMuslims(name: String) = getAdjacent(name) filter game.isNonMuslim
   def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
+  // Return true if the given country is adjacent to at least on Sunni Muslim Country
+  def adjacentToSunni(name: String) = getAdjacent(name) exists { adjName =>
+    game.isMuslim(adjName) && game.getMuslim(adjName).isSunni
+  }
+  // Return true if the given country is adjacent to at least on Shi Mix Muslim Country
+  def adjacentToShiaMix(name: String) = getAdjacent(name) exists { adjName =>
+    game.isMuslim(adjName) && !game.getMuslim(adjName).isSunni
+  }
 
   // Shortest distance between countries
   def distance(source: String, target: String): Int = {
@@ -2541,7 +2549,7 @@ object LabyrinthAwakening {
     markers mkString ", "
 
   // Return a sorted list of the names of the given countries
-  def countryNames(candidates: List[Country]) = (candidates map (_.name)).sorted
+  def countryNames(candidates: List[Country]) = (candidates map (_.name)).sorted.distinct
 
   // Get ordinal number.  Good for 1 to 20.
   def ordinal(i: Int): String = i match {
@@ -3992,7 +4000,7 @@ object LabyrinthAwakening {
   
   def trumpTweetsON: Boolean = globalEventInPlay(TrumpTweetsON)
   
-  def turnTrumpTweetsON(): Unit = if (!trumpTweetsON) {
+  def setTrumpTweetsON(): Unit = if (!trumpTweetsON) {
     if (globalEventInPlay(TrumpTweetsOFF)) {
       game = game.removeMarker(TrumpTweetsOFF).addMarker(TrumpTweetsON)
       log(s"""Flip the "Trump Tweets" marker to ON""")
@@ -4001,7 +4009,7 @@ object LabyrinthAwakening {
       addGlobalEventMarker(TrumpTweetsON)
   }
   
-  def turnTrumpTweetsOFF(): Unit = if (trumpTweetsON) {
+  def setTrumpTweetsOFF(): Unit = if (trumpTweetsON) {
     game = game.removeMarker(TrumpTweetsON).addMarker(TrumpTweetsOFF)
     log(s"""Flip the "Trump Tweets" marker to OFF""")
   }  
@@ -5489,7 +5497,7 @@ object LabyrinthAwakening {
       gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance")
     else if (game.numGoodOrFair >= 15)
       gameOver(US, s"${game.numGoodOrFair} Muslim countries have Fair or Good governance")
-    else if (game.cellsOnMap == 0 && game.humanRole == Jihadist)
+    else if (game.cellsOnMap == 0)
       gameOver(US, s"There are no cells on the map")
     else if (game.islamistResources >= 6 && game.botRole == Jihadist)
       gameOver(Jihadist, s"${game.islamistResources} resources controlled by countries with Islamist Rule governance")

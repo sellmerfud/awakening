@@ -1097,6 +1097,10 @@ object AwakeningCards {
               val totalMilitia = GulfUnionCountries.foldLeft(0) { (sum, name) =>
                 sum + game.getMuslim(name).militia
               }
+              println("\nThe Gulf Union countries are:")
+              println(separator())
+              wrap("", GulfUnionCountries) foreach (println(_))
+              println()
               println(s"There are a total of $totalMilitia militia in the Gulf Union countries.")
               println("Assume that we start by taking all of those militia off of the map.")
               println("You will be prompted with the name of each Gulf Union country one by one.")
@@ -1116,7 +1120,7 @@ object AwakeningCards {
                     GulfUnion(x, num) :: nextCountry(xs, remaining - num)
                 }
               }
-              val placements = nextCountry(GulfUnionCountries, maxMilitia) filterNot (_.noChange)
+              val placements = nextCountry(GulfUnionCountries, totalMilitia) filterNot (_.noChange)
               if (placements.isEmpty)
                 log("No change to the position of the existing militia in the Gulf Union")
               else {

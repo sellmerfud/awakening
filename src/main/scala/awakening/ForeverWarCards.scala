@@ -71,6 +71,11 @@ object ForeverWarCards {
   def specialForcesCandidates: List[String] =
     countryNames(game.countries filter (c => c.totalCells > 0 && (c.totalTroops > 0 || c.numAdvisors > 0)))
   
+  def arabNatoCandidates: List[String] = {
+    val list = game.getMuslim(GulfStates) :: (game.muslims filter (m => m.isSunni || adjacentToSunni(m.name)))
+    countryNames(list filter (m => !(m.isGood  || m.isIslamistRule)))
+  }
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -110,7 +115,7 @@ object ForeverWarCards {
             choice(canDiscard,          "discard", s"Discard top card of the $Jihadist hand")
           ).flatten
 
-          println("Choose one:")
+          println("\nChoose one:")
           askMenu(choices).head match {
             case "discard" => 
               println()
@@ -377,7 +382,7 @@ object ForeverWarCards {
             addAwakeningMarker(target)
         }
         
-        turnTrumpTweetsON()
+        setTrumpTweetsON()
       }
     )),
     // ------------------------------------------------------------------------
@@ -395,49 +400,205 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(254, "US Embassy to Jerusalem", US, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => game.usPosture == Hard && trumpTweetsON &&
+                                  (role == game.humanRole || game.prestigeLevel == Low)
       ,
       (role: Role) => {
+        rollPrestige()
+        increaseFunding(1)
+        setTrumpTweetsOFF()
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(255, "Western Arms Sales", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => role == game.humanRole && (game hasMuslim (_.alignment == Ally))
       ,
       (role: Role) => {
+        val numToAdd = if (game.getMuslim(SaudiArabia).alignment == Ally) 2 else 1
+        addToReserves(US, numToAdd)
+        
+        val opsInReserve = game.reserves.us
+        println()
+        println(s"You have ${opsString(opsInReserve)} in reserve.")
+        val ops = if (askYorN(s"Do you wish to add them for this operation (y/n) ?")) {
+          println()
+          log(s"$US player expends their reserves of ${opsString(opsInReserve)}")
+          game = game.copy(reserves = game.reserves.copy(us = 0))
+          opsInReserve + 1
+        }
+        else
+          1
+        humanExecuteOperation(ops)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(256, "White Helmets", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => (game hasMuslim (m => m.militia > 0 && m.civilWar)) &&
+                               (game.prestige < 12 || game.funding > 1)
       ,
       (role: Role) => {
+        val action = if (role == game.humanRole) {
+          val choices = List(
+            choice(game.prestige < 12, "prestige", "+1 Prestige"),
+            choice(game.funding > 1,   "funding", "-1 Funding")
+          ).flatten
+
+          println("\nChoose one:")
+          askMenu(choices).head
+        }
+        else {
+          // Bot
+          if (game.prestige < 12) "prestige" else "funding"
+        }
+        action match {
+          case "prestige" => increasePrestige(1)
+          case _          => decreaseFunding(1)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(257, "Women's Rights Activism", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game hasMuslim (_.reaction > 0)
       ,
       (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.reaction > 0))
+        val target = if (role == game.humanRole)
+          askCountry("Remove reaction marker from which country: ", candidates)
+        else
+          USBot.markerAlignGovTarget(candidates).get
+        
+        addEventTarget(target)
+        removeReactionMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(258, "75th Ranger Regiment", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game hasMuslim (m => m.civilWar && m.totalCells > 0)
       ,
       (role: Role) => {
+        val candidates = countryNames(game.muslims filter (m => m.civilWar && m.totalCells > 0))
+        val target = if (role == game.humanRole)
+          askCountry("Remove cells from which Civil War country: ", candidates)
+        else
+          USBot.disruptPriority(candidates).get
+        
+        val num = game.getMuslim(target).totalCells min 2
+        val (actives, sleepers, sadr) = if (role == game.humanRole)
+          askCells(target, num, true)
+        else
+          USBot.chooseCellsToRemove(target, num)
+        
+        addEventTarget(target)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(259, "Arab NATO", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => (game.getMuslim(SaudiArabia).governance == Good ||
+                                   game.getMuslim(GulfStates).governance  == Good) &&
+                                  (role == game.humanRole || (game.militiaAvailable > 0 && arabNatoCandidates.nonEmpty))
       ,
       (role: Role) => {
+        if (role == game.humanRole) {
+          val reposCandidates = {
+            val xs = game.getMuslims(SaudiArabia::GulfStates::Turkey::Nil) ::: game.adjacentMuslims(SaudiArabia) :::
+                     game.adjacentMuslims(GulfStates) ::: game.adjacentMuslims(Turkey)
+            countryNames(xs filter (m => !(m.isGood || m.isIslamistRule)))
+          }
+          
+          val reposMilitia = reposCandidates.foldLeft(0) { (sum, name) => sum + game.getMuslim(name).militia }
+          
+          val choices = List(
+            choice(game.militiaAvailable > 0 && arabNatoCandidates.nonEmpty, "place", "Place militia"),
+            choice(reposMilitia > 1,                                         "repos", "Reposition militia")
+          ).flatten
+
+          println("\nChoose one:")
+            askMenu(choices).head match {
+              case "place" =>
+                val numMilita  = game.militiaAvailable min 2
+                val candidates = arabNatoCandidates
+              
+                @tailrec def placeMilitia(numLeft: Int): Unit = {
+                  numLeft match {
+                    case 0 =>
+                    case x =>
+                      println()
+                      val target = askCountry("Place militia in which country: ", candidates)
+                      val num    = askInt(s"Place how many militia in $target", 1, numLeft, Some(numLeft))
+                      addEventTarget(target)
+                      testCountry(target)
+                      addMilitiaToCountry(target, num)
+                      placeMilitia(numLeft - num)
+                  }
+                }
+              
+                placeMilitia(numMilita)
+                
+            case _ =>  // Reposition
+              println("\nThe target countries are:")
+              println(separator())
+              wrap("", reposCandidates) foreach (println(_))
+              println()
+              println(s"There are a total of $reposMilitia militia in the target countries.")
+              println("Assume that we start by taking all of those militia off of the map.")
+              println("You will be prompted with the name of each country one by one.")
+              println("Specify the number of militia that you would like in each country:")
+              case class MilitiaCountry(name: String, newMilitia: Int) {
+                val muslim   = game.getMuslim(name)
+                def hasLess  = newMilitia < muslim.militia
+                def noChange = newMilitia == muslim.militia
+              }
+              def nextCountry(members: List[String], remaining: Int): List[MilitiaCountry] = {
+                members match {
+                  case Nil                     => Nil
+                  case x::Nil                  => MilitiaCountry(x, remaining) :: Nil
+                  case x::xs if remaining == 0 => MilitiaCountry(x, 0) :: nextCountry(xs, 0)
+                  case x::xs                   =>
+                    val num = askInt(s"How many militia in $x", 0, remaining)
+                    MilitiaCountry(x, num) :: nextCountry(xs, remaining - num)
+                }
+              }
+              val placements = nextCountry(reposCandidates, reposMilitia) filterNot (_.noChange)
+              if (placements.isEmpty)
+                log("No change to the position of the existing militia")
+              else {
+                for (p <- placements; if p.hasLess) {
+                  addEventTarget(p.name)
+                  testCountry(p.name)
+                  val m = game.getMuslim(p.name) // Get fresh copy after testCountry()
+                  game = game.updateCountry(m.copy(militia = p.newMilitia))
+                  log(s"Remove ${p.muslim.militia - p.newMilitia} militia from ${p.name}")
+                }
+                for (p <- placements; if !p.hasLess) {
+                  addEventTarget(p.name)
+                  testCountry(p.name)
+                  val m = game.getMuslim(p.name) // Get fresh copy after testCountry()
+                  game = game.updateCountry(m.copy(militia = p.newMilitia))
+                  log(s"Add ${p.newMilitia - p.muslim.militia} militia to ${p.name}")
+                }
+              }
+          }
+        }
+        else {
+          // Bot
+          val numMilita = game.militiaAvailable min 2
+          
+          val candidates = arabNatoCandidates
+          //  The militia do not have to be place in the same country
+          //  so add them one at a time.
+          for (x <- 1 to numMilita) {
+            val target = USBot.deployToPriority(USBot.highestCellsMinusTandM(candidates)).get
+            addEventTarget(target)
+            testCountry(target)
+            addMilitiaToCountry(target, 1)
+          }
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -1284,7 +1445,7 @@ object ForeverWarCards {
           removeGlobalEventMarker(USChinaTradeWar)
         else
           addGlobalEventMarker(USChinaTradeWar)
-        turnTrumpTweetsOFF()
+        setTrumpTweetsOFF()
         decreasePrestige(1)
       }
     ))
