@@ -605,14 +605,15 @@ object LabyrinthAwakening {
   val USConsulateAttacked = 199
   val EbolaScare          = 204
   val OilPriceSpike3      = 236
-  val FullyResourcedCOIN = 273
-  val SiegeofMosul       = 278
-  val StraitofHormuz     = 289
-  val PublicDebate       = 306
-  val USBorderCrisis     = 337
-  val EUBolstersIranDeal = 340
-  val FakeNews           = 355
-  val OPECProductionCut  = 356
+  val ExpandedROE         = 271
+  val FullyResourcedCOIN  = 273
+  val SiegeofMosul        = 278
+  val StraitofHormuz      = 289
+  val PublicDebate        = 306
+  val USBorderCrisis      = 337
+  val EUBolstersIranDeal  = 340
+  val FakeNews            = 355
+  val OPECProductionCut   = 356
   
   
   val LapsingCards = List(
@@ -3231,13 +3232,14 @@ object LabyrinthAwakening {
   
   // Process the Jihadist civil war losses.
   // If the Jihadist is human then prompt for pieces to remove.
-  // Return the number of unresolved losses
+  // Return the number of unresolved hits
   def jihadistCivilWarLosses(m: MuslimCountry, hits: Int): Int = {
     if (hits == 0 || m.totalCells == 0)
       hits
     else {
       // Remove two cells per hit if any troops present or if "Advisors" marker present.
-      val multiplier    = if (m.totalTroops > 0 || m.hasMarker(Advisors)) 2 else 1
+      val multiplier    = (if (m.totalTroops > 0 || m.hasMarker(Advisors)) 2 else 1) +
+                          (if (lapsingEventInPlay(ExpandedROE)) 1 else 0)
       val losses        = hits * multiplier
       val unfulfilled   = (losses - m.totalCells) max 0
       val hitsRemaining =  (unfulfilled + multiplier - 1) / multiplier
@@ -4946,7 +4948,7 @@ object LabyrinthAwakening {
   }
   
   def endTurn(): Unit = {
-    if (askYorN("Really end the turn (y/n)? ")) {
+    if (askYorN("Really end the turn (y/n)? ")) {      
       if (numUnresolvedPlots > 0)
         resolvePlots()
       
@@ -4999,6 +5001,7 @@ object LabyrinthAwakening {
     
       checkAutomaticVictory() // Will Exit game if auto victory has been achieved
     
+      val extraUSCards    = if (lapsingEventInPlay(FullyResourcedCOIN)) 2 else 0
       val endEbolaScare   = lapsingEventInPlay(EbolaScare)
       val endKoreanCrisis = lapsingEventInPlay(KoreanCrisis)
       val endSouthChinaSeasCrisis = globalEventInPlay(SouthChinaSeaCrisis) && 
@@ -5032,7 +5035,7 @@ object LabyrinthAwakening {
       }
       
       // Calculate number of cards drawn
-      val usCards = USCardDraw(game.troopCommitment)
+      val usCards       = USCardDraw(game.troopCommitment) + extraUSCards
       val jihadistCards = JihadistCardDraw(game.fundingLevel)
       log()
       log("Draw Cards")

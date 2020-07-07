@@ -103,8 +103,7 @@ object ForeverWarCards {
   def deepStateCandidates = countryNames(
     game.getMuslims(List(Egypt, Syria, Pakistan, Turkey)) filter (m => !(m.isUntested || m.isIslamistRule || m.civilWar || m.isGood))
   )
-  
-  
+    
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -940,19 +939,51 @@ object ForeverWarCards {
       }
     )),
     // ------------------------------------------------------------------------
-    entry(new Card(272, "Fire and Fury", US, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+    entry(new Card(271, "Expanded ROE", US, 3,
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (_: Role, _: Boolean) => true
       ,
       (role: Role) => {
+        log("During Attrition at the end of this turn, Add +1 to the")
+        log("number of cells to be removed for each hit secured by the US player.")
+        decreasePrestige(1)
+      }
+    )),
+    // ------------------------------------------------------------------------
+    entry(new Card(272, "Fire and Fury", US, 3,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role, _: Boolean) => role == game.humanRole && // Unplayable by Bot
+                                  game.troopsAvailable >= 6 &&
+                                  game.usPosture == Hard &&
+                                  trumpTweetsON
+      ,
+      (role: Role) => {
+        val candidates = countryNames(
+          game.muslims filter (m => m.name != Iran && (m.civilWar || m.alignment == Adversary))
+        )
+        
+        if (candidates.nonEmpty && askYorN("Do you wish to perform a Regime Change Operation? (y/n) ")) {
+          log()
+          log(s"$US performs a Regime Change operation")
+          log(separator())
+          val dest      = askCountry("Regime change in which country: ", candidates)
+          val source    = askCountry("Deploy troops from: ", game.regimeChangeSourcesFor(dest))
+          val maxTroops = if (source == "track") game.troopsAvailable
+                          else game.getCountry(source).maxDeployFrom
+          val numTroops = askInt("How many troops: ", 6, maxTroops)
+          addEventTarget(dest)
+          performRegimeChange(source, dest, numTroops)
+        }
+        setTrumpTweetsOFF()
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(273, "Fully Resourced COIN", US, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.usPosture == Hard && (game hasMuslim (_.inRegimeChange))
       ,
       (role: Role) => {
+        log("US player will draw 2 additional cards next turn.")
       }
     )),
     // ------------------------------------------------------------------------
