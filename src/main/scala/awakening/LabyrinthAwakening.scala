@@ -540,7 +540,7 @@ object LabyrinthAwakening {
   
   val TrumpTweetsON        = "Trump Tweets ON"
   val TrumpTweetsOFF       = "Trump Tweets OFF"
-  val Euroscepticism       = "Euroscepticism"
+  val Euroscepticism       = "Populism/Euroscepticism"
   val EarlyExit            = "Early Exit"
   val QatariCrisis         = "Qatari Crisis"
   val SouthChinaSeaCrisis  = "South China Sea Crisis"
@@ -750,6 +750,7 @@ object LabyrinthAwakening {
     def isIslamistRule = governance == IslamistRule
   
     def hasMarker(name: String) = markers contains name
+    def countMarker(name: String) = markers count (_ == name)
     
     def cells      = sleeperCells + activeCells
     def hasSadr    = hasMarker(Sadr)
@@ -769,7 +770,7 @@ object LabyrinthAwakening {
     def totalTroops = troops + markerTroops
     def totalDeployableTroops = troops + deployableMarkerTroops
     def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
-    def numAdvisors = markers count (_ == Advisors)
+    def numAdvisors = countMarker(Advisors)
   
     def canDeployTo(ops: Int): Boolean
     def maxDeployFrom: Int
@@ -816,7 +817,17 @@ object LabyrinthAwakening {
     def autoRecruit = false
     def recruitSucceeds(die: Int) = die <= recruitNumber
     def addMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers ++ names)
-    def removeMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers filterNot names.contains)
+    def removeMarkers(names: String*): NonMuslimCountry = {
+      var updatedMarkers = markers
+      for (name <- names)
+        updatedMarkers.indexOf(name) match {
+          case -1 =>
+          case x  => updatedMarkers = updatedMarkers.patch(x, Seq.empty, 1)
+        }
+          
+      this.copy(markers = updatedMarkers)
+    }
+    
     // US posture is stored in the GameState
     def canChangePosture = !(iranSpecialCase || name == UnitedStates || name == Israel)
     def canTakeMilitia = false
@@ -913,8 +924,6 @@ object LabyrinthAwakening {
       )
   
       def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
-      //  A Muslim country can have multiple Advisors markers so we cannot simply 
-      //  filter out all markers with matching name.
       def removeMarkers(names: String*): MuslimCountry = {
         var updatedMarkers = markers
         for (name <- names)
@@ -4047,6 +4056,15 @@ object LabyrinthAwakening {
     }
   }
 
+  // A country can have more than one Advisors counter
+  // so we cannot call addEventMarkersToCountry() as it
+  // only adds a marker if it is not already present.
+  def addAdvisorsToCountry(countryName: String): Unit = if (game isMuslim countryName) {
+    val m = game.getMuslim(countryName)
+    log(s"""Place "$Advisors" marker in $countryName""")
+    game = game.updateCountry(m.addMarkers(Advisors))
+  }
+  
   def removeAllAdvisorsFromCountry(countryName: String): Unit = {
     if (game.isMuslim(countryName)) {
       var m = game.getMuslim(countryName)
@@ -5619,7 +5637,7 @@ object LabyrinthAwakening {
       Command("help",         """List available commands"""),
       Command("quit",         """Quit the game.  All plays for the current turn will be saved.""")
     ) filter { 
-      case Command("rollback", _)            => game.turn > 1 || cardsPlayed > 0
+      case Command("rollback", _)            => game.turn > 1 || game.plays.size > 0
       case Command("remove cadre", _)        => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
       case Command("add awakening cards", _) => game.currentMode == LabyrinthMode && game.campaign
       case Command("add forever cards", _)   => game.currentMode == AwakeningMode && game.campaign
