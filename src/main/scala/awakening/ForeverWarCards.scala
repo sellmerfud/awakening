@@ -970,7 +970,7 @@ object ForeverWarCards {
           val source    = askCountry("Deploy troops from: ", game.regimeChangeSourcesFor(dest))
           val maxTroops = if (source == "track") game.troopsAvailable
                           else game.getCountry(source).maxDeployFrom
-          val numTroops = askInt("How many troops: ", 6, maxTroops)
+          val numTroops = askInt("Deploy how many troops: ", 6, maxTroops)
           addEventTarget(dest)
           performRegimeChange(source, dest, numTroops)
         }
@@ -1120,11 +1120,12 @@ object ForeverWarCards {
         val numHard     = game.getNonMuslims(Schengen) count (_.posture == Hard)
         val numSoft     = game.getNonMuslims(Schengen) count (_.posture == Soft)
         val numUntested = game.getNonMuslims(Schengen) count (_.posture == PostureUntested)
+        val basicRequirement = game.usPosture == Hard && numSoft > 0
         if (role == game.humanRole)
-          game.usPosture == Hard && numSoft > 0
+          basicRequirement
         else {
           val prestigeAdjust = ((numHard + 1) + (if (trumpTweetsON && numUntested > 0) 1 else 0)) - (numSoft - 1)
-          game.usPosture == Hard && numSoft > 0 && prestigeAdjust > 0
+          basicRequirement && prestigeAdjust > 0
         }
       }
       ,
@@ -1173,17 +1174,43 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(277, "Regime Change Policy", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => {
+        val basicRequirement = game.troopsAvailable >= 6 && game.islamistResources > game.goodResources
+        if (role == game.humanRole)
+          basicRequirement
+        else
+          basicRequirement && game.usPosture == Soft && (game hasMuslim (_.isIslamistRule))
+      }
       ,
       (role: Role) => {
+        // Bot will only select IR countries
+        val (target, source, numTroops) = if (role == game.humanRole) {
+          val t = askCountry("Regime Change in which country: ", countryNames(game.muslims))
+          val s = askCountry("Deploy troops from: ", game.regimeChangeSourcesFor(t))
+          val maxTroops = if (s == "track") game.troopsAvailable
+                          else game.getCountry(s).maxDeployFrom
+          val numTroops = askInt("Deploy how many troops: ", 6, maxTroops)
+          (t, s, numTroops)
+        }
+        else
+          (USBot.regimeChangeTarget(countryNames(game.muslims filter (_.isIslamistRule))).get, "track", 6)
+
+        addEventTarget(target)
+        performRegimeChange(source, target, numTroops)
+        decreasePrestige(2)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(278, "Siege of Mosul", US, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => (game hasMuslim (_.civilWar)) && (game.troopsOnMap + game.militiaOnMap) > game.cellsOnMap
       ,
       (role: Role) => {
+        log("During Attrition at the end of this turn, in each Civi War")
+        log("the number of cells will be halved and the number of troops")
+        log("plus militia will be doubled prior to rolling attrition dice.")
+        println()
+        increasePrestige(1)
       }
     )),
     // ------------------------------------------------------------------------

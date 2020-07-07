@@ -3287,27 +3287,35 @@ object LabyrinthAwakening {
       } 
       
       for (m <- civilWars) {
+        // If Siege of Mosul in play then cells are halved and (troops + milita)
+        // are doubled
+        val siegeOfMosul = lapsingEventInPlay(SiegeofMosul)
         val jihadDie = dieRoll
         val usDie    = dieRoll
-        val jihadHits = m.totalCells            / 6 + (if (jihadDie <= m.totalCells % 6) 1 else 0)
-        val usHits    = m.totalTroopsAndMilitia / 6 + (if (usDie <= m.totalTroopsAndMilitia % 6) 1 else 0)
+        val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
+        val totalTroopsAndMilitia = if (siegeOfMosul) m.totalTroopsAndMilitia * 2 else m.totalTroopsAndMilitia
+        val jihadHits = totalCells            / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
+        val usHits    = totalTroopsAndMilitia / 6 + (if (usDie <= totalTroopsAndMilitia % 6) 1 else 0)
         
-        log(s"${m.name}:")
-        if (m.totalCells == 0 && m.totalTroopsAndMilitia == 0)
+        if (siegeOfMosul)
+            log(s"${m.name} (Siege of Mosul is in effect):")
+          else
+            log(s"${m.name}:")
+        if (totalCells == 0 && totalTroopsAndMilitia == 0)
           log("No cells, troops or militia present")
         else {
-          if (m.totalCells == 0)
-            log("No Jihadist cells present")
+          if (totalCells == 0)
+            log("No Jihadist cells to inflict hits")
           else {
-            if (m.totalCells > 0 && m.totalCells % 6 != 0)
+            if (totalCells > 0 && totalCells % 6 != 0)
               log(s"Jihadist die roll: $jihadDie")
             log(s"The Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
           }
           
-          if (m.totalTroopsAndMilitia == 0)
-            log("No US troops or militia present")
+          if (totalTroopsAndMilitia == 0)
+            log("No US troops or militia present to inflict hits")
           else {
-            if (m.totalTroopsAndMilitia > 0 && m.totalTroopsAndMilitia % 6 != 0)
+            if (totalTroopsAndMilitia > 0 && totalTroopsAndMilitia % 6 != 0)
               log(s"US die roll : $usDie")
             log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
           }
@@ -7147,6 +7155,10 @@ object LabyrinthAwakening {
             var updated = m
             logAdjustment(name, "Governance", govToString(updated.governance), govToString(newGov))
             updated = updated.copy(governance = newGov)
+            if (updated.alignment != Adversary) {
+              logAdjustment(name, "Alignment", updated.alignment, Adversary)
+              updated = updated.copy(alignment = Adversary)
+            }
             if (nixCapital) {
               log(s"$name lost Caliphate Capital status.  Caliphate no longer delcared.")
               updated = updated.copy(caliphateCapital = false)
