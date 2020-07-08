@@ -1160,7 +1160,7 @@ object AwakeningCards {
         val candidates = countryNames(game.muslims filter (_.civilWar))
         val (target, adjacent) = if (role == game.humanRole) {
           val t = askCountry("Select country: ", candidates)
-          val adjacents = getAdjacentMuslims(t) filter (n => game.getMuslim(n).canTakeAwakeningOrReactionMarker)
+          val adjacents = countryNames(game.adjacentMuslims(t) filter (_.canTakeAwakeningOrReactionMarker))
           if (adjacents.nonEmpty)
             (t, Some(askCountry("Place awakening marker in which adjacent country: ", adjacents)))
           else
@@ -1168,7 +1168,7 @@ object AwakeningCards {
         }
         else {
           val t = USBot.deployToPriority(USBot.highestCellsMinusTandM(candidates)).get
-          val a = (getAdjacentMuslims(t) filter (n => game.getMuslim(n).canTakeAwakeningOrReactionMarker))
+          val a = countryNames(game.adjacentMuslims(t) filter (_.canTakeAwakeningOrReactionMarker))
           val bestAdjacent = USBot.markerAlignGovTarget(a)
           (t, bestAdjacent)
         }
@@ -1402,8 +1402,10 @@ object AwakeningCards {
           JihadistBot.goodPriority(candidates).get
         }
         
+        val m = game.getMuslim(target)
         addEventTarget(target)
-        startCivilWar(target)
+        if (!m.civilWar)
+          startCivilWar(target)
         addBesiegedRegimeMarker(target)
       }
     )),
@@ -1517,13 +1519,12 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
         if (role == game.humanRole) {
-          val candidates = Somalia :: getAdjacent(Somalia).sorted
+          val candidates = (Somalia :: getAdjacent(Somalia)).sorted
           val reactionCandidates = candidates filter game.isMuslim filter { name =>
             game.getMuslim(name).canTakeAwakeningOrReactionMarker
           }
           val besiegeCandidates = candidates filter game.isMuslim filter { name =>
-            !(game.getMuslim(name).canTakeAwakeningOrReactionMarker ||
-              game.getMuslim(name).besiegedRegime)
+            game.getMuslim(name).canTakeBesiegedRegimeMarker
           }
           val canReaction = reactionCandidates.nonEmpty && lapsingEventNotInPlay(ArabWinter)
           val canCell     = game.cellsAvailable > 0
@@ -2702,7 +2703,7 @@ object AwakeningCards {
           val choices = if (game isMuslim name) {
             val m = game getMuslim name
             val canAwake = m.canTakeAwakeningOrReactionMarker && lapsingEventNotInPlay(ArabWinter)
-            val canBesiege = !(m.besiegedRegime || m.isGood || m.isIslamistRule)
+            val canBesiege = m.canTakeBesiegedRegimeMarker
             val canMilitia = game.militiaAvailable > 0 && !(m.besiegedRegime || m.isGood || m.isIslamistRule)
             List(
               choice(m.canTakeAidMarker,      "+aid", "Place aid marker"),
@@ -3581,7 +3582,7 @@ object AwakeningCards {
         val candidates = countryNames(game.muslims filter (_.awakening > 0))
         val (name, adjacent) = if (role == game.humanRole) {
           val name = askCountry("Select country with awakening marker: ", candidates)
-          val adjCandidates = getAdjacentMuslims(name) filter (x => game.getMuslim(x).canTakeAwakeningOrReactionMarker)
+          val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
           val adjacent = if (adjCandidates.nonEmpty)
             Some(askCountry("Select an adjacent Muslim country: ", adjCandidates))
           else {
@@ -3592,7 +3593,7 @@ object AwakeningCards {
         }
         else {
           val name = USBot.markerAlignGovTarget(candidates).get
-          val adjCandidates = getAdjacentMuslims(name) filter (x => game.getMuslim(x).canTakeAwakeningOrReactionMarker)
+          val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
           val adjacent = USBot.markerAlignGovTarget(adjCandidates)
           (name, adjacent)
         }
@@ -3609,7 +3610,7 @@ object AwakeningCards {
         val candidates = countryNames(game.muslims filter (_.reaction > 0))
         val (name, adjacent) = if (role == game.humanRole) {
           val name = askCountry("Select country with reaction marker: ", candidates)
-          val adjCandidates = getAdjacentMuslims(name) filter (x => game.getMuslim(x).canTakeAwakeningOrReactionMarker)
+          val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
           val adjacent = if (adjCandidates.nonEmpty)
             Some(askCountry("Select an adjacent Muslim country: ", adjCandidates))
           else {
@@ -3620,7 +3621,7 @@ object AwakeningCards {
         }
         else {
           val name = JihadistBot.markerAlignGovTarget(candidates).get
-          val adjCandidates = getAdjacentMuslims(name) filter (x => game.getMuslim(x).canTakeAwakeningOrReactionMarker)
+          val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
           val adjacent = JihadistBot.markerAlignGovTarget(adjCandidates)
           (name, adjacent)
         }

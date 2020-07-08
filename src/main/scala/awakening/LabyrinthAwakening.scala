@@ -444,17 +444,7 @@ object LabyrinthAwakening {
     }
     adjacencyMap(name) filter adjFilter
   }
-  def getAdjacentMuslims(name: String) = getAdjacent(name) filter game.isMuslim
-  def getAdjacentNonMuslims(name: String) = getAdjacent(name) filter game.isNonMuslim
   def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
-  // Return true if the given country is adjacent to at least on Sunni Muslim Country
-  def adjacentToSunni(name: String) = getAdjacent(name) exists { adjName =>
-    game.isMuslim(adjName) && game.getMuslim(adjName).isSunni
-  }
-  // Return true if the given country is adjacent to at least on Shi Mix Muslim Country
-  def adjacentToShiaMix(name: String) = getAdjacent(name) exists { adjName =>
-    game.isMuslim(adjName) && !game.getMuslim(adjName).isSunni
-  }
 
   // Shortest distance between countries
   def distance(source: String, target: String): Int = {
@@ -515,42 +505,41 @@ object LabyrinthAwakening {
   }
   
   // Global Markers 
-  val Abbas                = "Abbas"
-  val AnbarAwakening       = "Anbar Awakening"
-  val SaddamCaptured       = "Saddam Captured"
-  val Wiretapping          = "Wiretapping"
-  val EnhancedMeasures     = "Enhanced Measures"
-  val Renditions           = "Renditions"
-  val LeakWiretapping      = "Leak-Wiretapping"
-  val LeakEnhancedMeasures = "Leak-Enhanced Measures"
-  val LeakRenditions       = "Leak-Renditions"
-  val VieiraDeMelloSlain   = "Vieira de Mello Slain"
-  val AlAnbar              = "Al-Anbar"
-  val MaerskAlabama        = "Maersk Alabama"
-  val Fracking             = "Fracking"
-  val BloodyThursday       = "Bloody Thursday"
-  val Censorship           = "Censorship"
-  val Pirates1             = "Pirates1"  // From the base game
-  val Pirates2             = "Pirates2"  // From the awakening expansion
-  val Sequestration        = "Sequestration"
-  val Smartphones          = "Smartphones"
-  val ThreeCupsOfTea       = "3 Cups of Tea"
-  val TradeEmbargoUS       = "Trade Embargo-US"
-  val TradeEmbargoJihadist = "Trade Embargo-Jihadist"
-  
-  val TrumpTweetsON        = "Trump Tweets ON"
-  val TrumpTweetsOFF       = "Trump Tweets OFF"
-  val Euroscepticism       = "Populism/Euroscepticism"
-  val EarlyExit            = "Early Exit"
-  val QatariCrisis         = "Qatari Crisis"
-  val SouthChinaSeaCrisis  = "South China Sea Crisis"
-  val USNKSummit           = "US/NK Summit" // Blocks play of Korean Crisis from Awakening Cards
-  val GulenMovement        = "Gulen Movement"
-  val TravelBan            = "Travel Ban"
-  val AlBaghdadi           = "al-Baghdadi"
-  val PoliticalIsamism     = "Political Isamism"
-  val PanArabNationalism   = "Pan Arab Nationalism"
-  val USChinaTradeWar      = "US China Trade War"
+  val Abbas                     = "Abbas"
+  val AnbarAwakening            = "Anbar Awakening"
+  val SaddamCaptured            = "Saddam Captured"
+  val Wiretapping               = "Wiretapping"
+  val EnhancedMeasures          = "Enhanced Measures"
+  val Renditions                = "Renditions"
+  val LeakWiretapping           = "Leak-Wiretapping"
+  val LeakEnhancedMeasures      = "Leak-Enhanced Measures"
+  val LeakRenditions            = "Leak-Renditions"
+  val VieiraDeMelloSlain        = "Vieira de Mello Slain"
+  val AlAnbar                   = "Al-Anbar"
+  val MaerskAlabama             = "Maersk Alabama"
+  val Fracking                  = "Fracking"
+  val BloodyThursday            = "Bloody Thursday"
+  val Censorship                = "Censorship"
+  val Pirates1                  = "Pirates1"  // From the base game
+  val Pirates2                  = "Pirates2"  // From the awakening expansion
+  val Sequestration             = "Sequestration"
+  val Smartphones               = "Smartphones"
+  val ThreeCupsOfTea            = "3 Cups of Tea"
+  val TradeEmbargoUS            = "Trade Embargo-US"
+  val TradeEmbargoJihadist      = "Trade Embargo-Jihadist"
+  val TrumpTweetsON             = "Trump Tweets ON"
+  val TrumpTweetsOFF            = "Trump Tweets OFF"
+  val Euroscepticism            = "Populism/Euroscepticism"
+  val EarlyExit                 = "Early Exit"
+  val QatariCrisis              = "Qatari Crisis"
+  val SouthChinaSeaCrisis       = "South China Sea Crisis"
+  val USNKSummit                = "US/NK Summit" // Blocks play of Korean Crisis from Awakening Cards
+  val GulenMovement             = "Gulen Movement"
+  val TravelBan                 = "Travel Ban"
+  val AlBaghdadi                = "al-Baghdadi"
+  val PoliticalIslamismUS       = "Political Islamism-US"
+  val PoliticalIslamismJihadist = "Political Islamism-Jihadist"
+  val USChinaTradeWar           = "US China Trade War"
   
   // Country Markers
   val Sadr                     = "Sadr"
@@ -581,7 +570,7 @@ object LabyrinthAwakening {
     Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargoUS,
     TradeEmbargoJihadist, LeakWiretapping, LeakEnhancedMeasures, LeakRenditions,
     TrumpTweetsON, TrumpTweetsOFF, Euroscepticism, EarlyExit, QatariCrisis, SouthChinaSeaCrisis, USNKSummit,
-    GulenMovement, TravelBan, AlBaghdadi, PoliticalIsamism, PanArabNationalism,USChinaTradeWar
+    GulenMovement, TravelBan, AlBaghdadi, PoliticalIslamismUS, PoliticalIslamismJihadist, USChinaTradeWar
   ).sorted
   
   
@@ -900,10 +889,11 @@ object LabyrinthAwakening {
   
   
     def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar)
+    def canTakeBesiegedRegimeMarker = !(isIslamistRule || besiegedRegime)
     def canTakeAidMarker = !(isGood || isIslamistRule)
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
-    def canDeployTo(ops: Int) = alignment == Ally && ops >= governance
+    def canDeployTo(ops: Int) = isAlly && ops >= governance
     
     // To deploy troops out of a regime change country, we must leave behind
     // at least five more (troops + militia) than cells.  Those troops that are left
@@ -1064,6 +1054,11 @@ object LabyrinthAwakening {
   
     def adjacentToGoodAlly(name: String)     = game.adjacentMuslims(name) exists (m => m.isGood && m.isAlly)
     def adjacentToIslamistRule(name: String) = game.adjacentMuslims(name) exists (_.isIslamistRule)
+    
+    // Return true if the given country is adjacent to at least on Sunni Muslim Country
+    def adjacentToSunni(name: String) = adjacentMuslims(name) exists (_.isSunni)
+    // Return true if the given country is adjacent to at least on Shi Mix Muslim Country
+    def adjacentToShiaMix(name: String) = adjacentMuslims(name) exists (_.isShiaMix)
     
     def caliphateCapital: Option[String] = muslims find (_.caliphateCapital) map (_.name)
     def caliphateDeclared = caliphateCapital.nonEmpty
@@ -1481,8 +1476,8 @@ object LabyrinthAwakening {
 
       getCountry(name) match {
         case n: NonMuslimCountry =>
-          val posture = if (n.iranSpecialCase) "" else s", ${n.posture}"
-          b += s"$name -- ${govToString(n.governance)}$posture"
+          val posture = if (n.iranSpecialCase) "(Special Case)" else n.posture
+          b += s"$name -- ${govToString(n.governance)}, $posture"
           item(n.activeCells, "Active cell")
           item(n.sleeperCells, "Sleeper cell")
           if (n.hasCadre)
@@ -2099,7 +2094,47 @@ object LabyrinthAwakening {
       nextChoice(num, trackSrc ::: countrySrcs)
     }
   }
+
+  //  cells: (activeCells, sleeperCells, Sadr)
+  case class CellsToRemove(countryName: String, cells: (Int, Int, Boolean))
   
+  def askToRemoveCells(maxCells: Int, countryNames: List[String], sleeperFocus: Boolean): List[CellsToRemove] = {
+    
+    @tailrec def askNext(numLeft: Int, countries: List[String], removed: List[CellsToRemove]): List[CellsToRemove] = {
+      if (numLeft == 0 || countries.isEmpty)
+        removed.reverse
+      else {
+        val name = askCountry("Remove cells from which country: ", countries)
+        val maxNum = game.getMuslim(name).totalCells min numLeft              
+        val num  = if (countries.size == 1)
+          maxNum
+        else
+          askInt(s"Remove how many cells from $name", 1, maxNum)
+        val (actives, sleepers, sadr) = askCells(name, num, sleeperFocus)
+        askNext(numLeft - num, countries filterNot (_ == name), CellsToRemove(name, (actives, sleepers, sadr)) :: removed)
+      }
+    }
+
+    if (countryNames.isEmpty)
+      Nil
+    else {
+      println("Cells in target countries")
+      println(separator())
+      for (name <- countryNames) {
+        val b = new ListBuffer[String]
+        val m = game.getMuslim(name)
+        if (m.sleeperCells > 0)
+          b += amountOf(m.sleeperCells, "sleeper")
+        if (m.activeCells > 0)
+          b += amountOf(m.activeCells, "active")
+        if (m.hasSadr)
+          b += "Sadr"
+  
+        println(s"  $name ${b.toList.mkString("(", ", ", ")")}")
+      }
+      askNext(maxCells, countryNames, List.empty)
+    }
+  }
     
   // Use the random Muslim table.
   val randomMuslimTable = Vector(
@@ -2443,22 +2478,24 @@ object LabyrinthAwakening {
       log(s"$member is now a caliphate member, flip all sleeper cells to active")
     }
   }
+
+  // Select a random county to take an awkakening or reaction marker
+  def randomConvergenceTarget: MuslimCountry = {
+    @tailrec def getTarget: MuslimCountry = {
+      val rmc = randomMuslimCountry
+      if (rmc.canTakeAwakeningOrReactionMarker)
+        rmc
+      else 
+        shuffle(game.adjacentMuslims(rmc.name) filter (_.canTakeAwakeningOrReactionMarker)) match {
+          case Nil    => getTarget  // Try again
+          case x :: _ => x
+        }
+    }
+    getTarget
+  }
   
   // Convergence
   def performConvergence(forCountry: String, awakening: Boolean): Unit = {
-    def randomConvergenceTarget: MuslimCountry = {
-      @tailrec def getTarget: MuslimCountry = {
-        val rmc = randomMuslimCountry
-        if (rmc.canTakeAwakeningOrReactionMarker)
-          rmc
-        else 
-          shuffle(game.adjacentMuslims(rmc.name) filter (_.canTakeAwakeningOrReactionMarker)) match {
-            case Nil    => getTarget  // Try again
-            case x :: _ => x
-          }
-      }
-      getTarget
-    }
     
     if (game.useExpansionRules) {
       if (lapsingEventInPlay(ArabWinter))
@@ -3996,6 +4033,11 @@ object LabyrinthAwakening {
       log(s"Set posture of $name to $newPosture")
       logWorldPosture()
     }
+  }
+  
+  def isIranSpecialCase = game.getCountry(Iran) match {
+    case n: NonMuslimCountry if n.iranSpecialCase => true
+    case _ => false
   }
   
   def countryEventInPlay(countryName: String, markerName: String) =

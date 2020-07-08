@@ -96,8 +96,8 @@ object LabyrinthCards {
   }
   
   def alJazeeraCandidites: List[String] = {
-    val possibles = SaudiArabia::getAdjacentMuslims(SaudiArabia)
-    countryNames(possibles map game.getMuslim filter (m => m.totalTroops > 0 && !m.isAdversary))
+    val possibles = game.getMuslim(SaudiArabia)::game.adjacentMuslims(SaudiArabia)
+    countryNames(possibles filter (m => m.totalTroops > 0 && !m.isAdversary))
   }
 
   def danishCartoonPlots: List[Plot] = if (game.numIslamistRule == 0)
