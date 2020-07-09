@@ -135,7 +135,6 @@ object ForeverWarCards {
    def sayyedHassanCellCandidates = countryNames(
      game.countries filter (c => distance(Lebanon, c.name) <= 2)
    )
-   
   
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
@@ -1422,7 +1421,7 @@ object ForeverWarCards {
             addReactionMarker(target)
           }
           else if (sayyedHassanBesiegedRegimeCandidates.nonEmpty) {
-            val target = JihadistBot.recruitTravelToPriority(sayyedHassanBesiegedRegimeCandidates).get
+            val target = JihadistBot.markerAlignGovTarget(sayyedHassanBesiegedRegimeCandidates).get
             addEventTarget(target)
             testCountry(target)
             addBesiegedRegimeMarker(target)
@@ -1439,17 +1438,113 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(288, "Soldiers of the Caliphate", Jihadist, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.caliphateDeclared
       ,
       (role: Role) => {
+        val die = dieRoll
+        log(s"Die roll = $die")
+        die match {
+          case 1 =>
+            if (game.cellsAvailable > 0) {
+              addEventTarget(UnitedStates)
+              addSleeperCellsToCountry(UnitedStates, 1)
+            }
+            else
+              log("There are no cells on the funding track.")
+              
+          case 2 =>
+            if (game.availablePlots contains Plot1) {
+              val target = randomSchengenCountry.name
+              testCountry(target)
+              addEventTarget(target)
+              addAvailablePlotToCountry(target, Plot1)
+            }
+            else
+              log("There are no available level 1 plots.")
+            
+          case 3 =>
+              val target = randomConvergenceTarget.name
+              testCountry(target)
+              addEventTarget(target)
+              addReactionMarker(target)
+              
+          case 4 =>
+            val candidates = countryNames(game.nonMuslims filter (_.isFair))
+            val target = if (role == game.humanRole)
+              askCountry("Set the posture of which country: ", candidates)
+            else
+              JihadistBot.posturePriority(candidates).get
+            
+            val posture = if (role == game.humanRole)
+              askOneOf(s"New posture for $target (Soft or Hard): ", Seq(Soft, Hard)).get
+            else
+              oppositePosture(game.usPosture)
+            
+            testCountry(target)
+            addEventTarget(target)
+            setCountryPosture(target, posture)
+            
+          case 5 =>
+            val candidates = countryNames(game.muslims filter (_.aidMarkers > 0))
+            if (candidates.nonEmpty) {
+              val target = if (role == game.humanRole)
+                askCountry("Remove Aid marker from which country: ", candidates)
+              else
+                JihadistBot.markerAlignGovTarget(candidates).get
+                
+              addEventTarget(target)
+              removeAidMarker(target)
+            }
+            else
+              log("There are no Aid markers on the map.")
+            
+          case _ => // 6
+            val candidates = countryNames(game.muslims filter (_.canTakeBesiegedRegimeMarker))
+            if (candidates.nonEmpty) {
+              val target = if (role == game.humanRole)
+                askCountry("Place a Besieged Regime marker in which country: ", candidates)
+              else
+                JihadistBot.markerAlignGovTarget(candidates).get
+              
+              testCountry(target)
+              addEventTarget(target)
+              addBesiegedRegimeMarker(target)
+            }
+            else
+              log("There are no countries that can take a Besieged Regime marker.") // Not likely
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(289, "Strait of Hormuz", Jihadist, 1,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => {
+         val basicReq = (isIranSpecialCase || game.getMuslim(Iran).isAdversary)
+         if (role == game.humanRole)
+           basicReq
+         else {
+           // First field of tuple is IR, second is Good
+           val (irDown, goodDown) = persianGulfExporters.foldLeft((0, 0)) { case ((ir, good), m) => 
+             val newIr   = ir   + (if (m.isIslamistRule) 1 else 0)
+             val newGood = good + (if (m.isGood) 1 else 0)
+             (newIr, newGood)
+           }
+           val (irUp, goodUp) = nonPersianGulfExporters.foldLeft((0, 0)) { case ((ir, good), m) => 
+             val newIr   = ir +   (if (m.isIslamistRule) 1 else 0)
+             val newGood = good + (if (m.isGood) 1 else 0)
+             (newIr, newGood)
+           }
+           // Bot only plays if it would increase IR resources and not increase Good resources
+           basicReq && (irUp - irDown) > 0 && (goodUp - goodDown) <= 0
+         }
+      }
       ,
       (role: Role) => {
+        val gulf = countryNames(persianGulfExporters)
+        log(s"Resource value of ${andList(gulf)}")
+        log("is decreased by 1 until the end of turn.")
+        log("Resource value of all other oil exporters")
+        log("is increased by 1 until the end of turn.")
       }
     )),
     // ------------------------------------------------------------------------

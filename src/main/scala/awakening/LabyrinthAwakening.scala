@@ -466,6 +466,22 @@ object LabyrinthAwakening {
     measure(source, Set.empty).get
   }
   
+  
+  val PersionGulfExporterNames = SaudiArabia::GulfStates::Iraq::Iran::Nil
+  
+  def persianGulfExporters = {
+    val names = if (isIranSpecialCase)
+      PersionGulfExporterNames filterNot (_ == Iran)
+    else
+      PersionGulfExporterNames
+    game.getMuslims(names)
+  }
+  
+  def nonPersianGulfExporters = game.muslims filter (m => m.oilExporter && !PersionGulfExporterNames.contains(m.name))
+  
+  def isPersionGulflExporter(name: String) = countryNames(persianGulfExporters) contains name
+  def isNonPersionGulflExporter(name: String) = countryNames(nonPersianGulfExporters) contains name
+  
   def plotsToStrings(plots: List[Plot], visible: Boolean = true): List[String] = 
     (plots.size, visible) match {
       case (0, _)     => List("none")
@@ -862,9 +878,11 @@ object LabyrinthAwakening {
   
     def canExportOil = oilExporter && !hasMarker(TradeEmbargoJihadist)
     def resourceValue = {
-      val corridorBump = if (name == Iran && hasMarker(TehranBeirutLandCorridor)) 1 else 0
-      val spikeBump    = if (canExportOil) (game.oilPriceSpikes) else 0
-      resources + corridorBump + spikeBump
+      val corridorPlus = if (name == Iran && hasMarker(TehranBeirutLandCorridor)) 1 else 0
+      val spikePlus    = if (canExportOil) (game.oilPriceSpikes) else 0
+      val hormuzPlus   = if (game.cardLapsing(StraitofHormuz) && isNonPersionGulflExporter(name)) 1 else 0
+      val hormuzMinus  = if (game.cardLapsing(StraitofHormuz) && isPersionGulflExporter(name)) 1 else 0
+      resources + corridorPlus + spikePlus + hormuzPlus - hormuzMinus
     }
     
     def isShiaMix = !isSunni
