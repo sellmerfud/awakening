@@ -192,9 +192,7 @@ object ForeverWarCards {
             choice(candidates.nonEmpty, "remove", "Remove up to 2 cells in any one Muslim country"),
             choice(canDiscard,          "discard", s"Discard top card of the $Jihadist hand")
           ).flatten
-
-          println("\nChoose one:")
-          askMenu(choices).head match {
+          askMenu("\nChoose one:", choices).head match {
             case "discard" => 
               println()
               log(s"Discard top card of the $Jihadist hand")
@@ -521,9 +519,7 @@ object ForeverWarCards {
             choice(game.prestige < 12, "prestige", "+1 Prestige"),
             choice(game.funding > 1,   "funding", "-1 Funding")
           ).flatten
-
-          println("\nChoose one:")
-          askMenu(choices).head
+          askMenu("\nChoose one:", choices).head
         }
         else {
           // Bot
@@ -595,27 +591,26 @@ object ForeverWarCards {
             choice(reposMilitia > 1,                                         "repos", "Reposition militia")
           ).flatten
 
-          println("\nChoose one:")
-            askMenu(choices).head match {
-              case "place" =>
-                val numMilita  = game.militiaAvailable min 2
-                val candidates = arabNatoCandidates
-              
-                @tailrec def placeMilitia(numLeft: Int): Unit = {
-                  numLeft match {
-                    case 0 =>
-                    case x =>
-                      println()
-                      val target = askCountry("Place militia in which country: ", candidates)
-                      val num    = askInt(s"Place how many militia in $target", 1, numLeft, Some(numLeft))
-                      addEventTarget(target)
-                      testCountry(target)
-                      addMilitiaToCountry(target, num)
-                      placeMilitia(numLeft - num)
-                  }
+          askMenu("\nChoose one:", choices).head match {
+            case "place" =>
+              val numMilita  = game.militiaAvailable min 2
+              val candidates = arabNatoCandidates
+            
+              @tailrec def placeMilitia(numLeft: Int): Unit = {
+                numLeft match {
+                  case 0 =>
+                  case x =>
+                    println()
+                    val target = askCountry("Place militia in which country: ", candidates)
+                    val num    = askInt(s"Place how many militia in $target", 1, numLeft, Some(numLeft))
+                    addEventTarget(target)
+                    testCountry(target)
+                    addMilitiaToCountry(target, num)
+                    placeMilitia(numLeft - num)
                 }
-              
-                placeMilitia(numMilita)
+              }
+            
+              placeMilitia(numMilita)
                 
             case _ =>  // Reposition
               println("\nThe target countries are:")
@@ -838,9 +833,7 @@ object ForeverWarCards {
             choice(trumpTripAlignmentCandidates.nonEmpty, "align",   "Shift alignment of 1 country"),
             choice(trumpTripPostureCandidates.nonEmpty,   "posture", "Set posture of 1 country")
           ).flatten
-
-          println("\nChoose one:")
-          askMenu(choices).head
+          askMenu("\nChoose one:", choices).head
         }
         else if (trumpTripAlignmentCandidates.nonEmpty)  // Bot
           "align"
@@ -881,8 +874,7 @@ object ForeverWarCards {
             choice(airAmericaCaliphateCandidates.nonEmpty,    "cal",     "Remove up to 4 cells in Caliphate countries")
           ).flatten
 
-          println("\nChoose one:")
-          val (candidates, maxCells) = askMenu(choices).head match {
+          val (candidates, maxCells) = askMenu("\nChoose one:", choices).head match {
             case "non-cal" => (airAmericaNonCaliphateCandidates, 3)
             case _         => (airAmericaCaliphateCandidates, 4)
           }
@@ -1409,8 +1401,7 @@ object ForeverWarCards {
             choice(cellOK,    "cell",     "Place a cell")
           ).flatten
 
-          println("\nChoose one:")
-          askMenu(choices).head match {
+          askMenu("\nChoose one:", choices).head match {
             case "reaction" =>
               val target = askCountry("Place reaction marker in which country: ", sayyedHassanReactionCandidates)
               addEventTarget(target)
@@ -1731,8 +1722,7 @@ object ForeverWarCards {
             choice(postureCandidates.nonEmpty, "posture", "Remove posture marker from non-Muslim country")
           ).flatten
 
-          println("\nChoose one:")
-          askMenu(choices).head match {
+          askMenu("\nChoose one:", choices).head match {
             case "plot" =>
               val target = askCountry("Place plot in which country: ", countryNames(game.countries))
               val plot  = askPlots(plots, 1).head

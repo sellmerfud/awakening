@@ -1238,8 +1238,7 @@ object LabyrinthCards {
             choice(canShift,   CentralAsia, "Shift Central Asia 1 box toward Adversary"),
             choice(canPosture, Caucasus,    "Set Caucasus to opposite posture of the US")
           ).flatten
-          println("Choose one:")
-          askMenu(choices).head
+          askMenu("\nChoose one:", choices).head
         }
         else if (canShift) 
           CentralAsia

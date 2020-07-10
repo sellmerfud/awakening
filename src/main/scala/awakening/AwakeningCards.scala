@@ -345,16 +345,17 @@ object AwakeningCards {
             val choices = List(
               "remove"  -> "Remove up to 2 cells in one Muslim country",
               "discard" -> "Randomly discard 1 card from the Jihadist hand")
-            println("Choose one:")
-            askMenu(choices).head match {
-              case "discard" => log("Discard the top card in the Jihadist hand")
+
+            askMenu("\nChoose one:", choices).head match {
+              case "discard" =>
+                log("Discard the top card in the Jihadist hand")
               case _ =>
-              val candidates = game.muslims filter (_.totalCells > 0)
-              val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
-              val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
-              addEventTarget(target)
-              println()
-              removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+                val candidates = game.muslims filter (_.totalCells > 0)
+                val target = askCountry("Remove 2 cells in which country? ", countryNames(candidates))
+                val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
+                addEventTarget(target)
+                println()
+                removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
             }
           }
           else
@@ -535,9 +536,10 @@ object AwakeningCards {
           val choices = List(
             "reveal" -> "Reveal all WMD plots and remove one",
             "draw"  -> "Randomly draw 1 card from the Jihadist hand")
-          println("Choose one:")
-          askMenu(choices).head match {
-            case "draw" => log("Draw the top card in the Jihadist Bot's hand")
+
+          askMenu("\nChoose one:", choices).head match {
+            case "draw" =>
+              log("Draw the top card in the Jihadist Bot's hand")
             case _ =>
               val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
                 yield c.name
@@ -727,8 +729,8 @@ object AwakeningCards {
             choice(true,               "posture",   "Select posture of 1 Schengen country"),
             choice(true,               "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
           ).flatten 
-          println(s"Do any $numActions of the following:")
-          askMenu(choices, numActions, repeatsOK = false) foreach { action =>
+
+          askMenu(s"Do any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "awakening" =>
@@ -1081,10 +1083,9 @@ object AwakeningCards {
             "reposition" -> "Repositon militia in Gulf Union countries")
           val placeCandidates = gulfUnionCandidates.toList.sorted
           val action = if (actions.size == 1) actions.head 
-          else {
-            println("Choose one:")
-            askMenu(choices).head
-          }
+          else
+            askMenu("\nChoose one:", choices).head
+
           action match {
             case "place" =>
               val target = askCountry("Place militia in which country: ", placeCandidates)
@@ -1262,10 +1263,9 @@ object AwakeningCards {
           if (actions.nonEmpty) {
             val action = if (actions.size == 1)
               actions.head
-            else {
-              println("Choose one:")
-              askMenu(choices).head
-            }
+            else
+              askMenu("\nChoose one:", choices).head
+
 
             if (action == "activate") {
               val numToFlip = (game.sleeperCellsOnMap + 1) / 2  // half rounded up
@@ -1463,7 +1463,7 @@ object AwakeningCards {
           val choices = List(
             "cells"   -> (if (two) "Place 2 cells" else "Place a cell"),
             "funding" -> "Increase funding")
-          (t, askMenu(choices).head)
+          (t, askMenu("\nChoose one:", choices).head)
         }
         else {
           val maghrebs = game.countries filter islamicMaghrebCandidate
@@ -1539,8 +1539,7 @@ object AwakeningCards {
             choice(canBesiege, "besiege",  "Place a besieged regime marker"),
             choice(true,       "draw",     "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
           ).flatten 
-          println("Do any 2 of the following:")
-          askMenu(choices, 2, repeatsOK = false) foreach { action =>
+          askMenu("\nDo any 2 of the following:", choices, 2, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "reaction" =>
@@ -1974,9 +1973,8 @@ object AwakeningCards {
             choice(havePlots, "plot",  "Place a level 2 or level 3 Plot in Nigeria"),
             choice(haveCells, "cells", "Place up to 3 cells in Nigeria")
           ).flatten
-          if (choices.size > 1)
-            println("Choose one of:")
-          askMenu(choices).head match {
+
+          askMenu("\nChoose one:", choices).head match {
             case "plot" =>
               val options = Seq(Plot2, Plot3) filter game.availablePlots.contains map {
                 case Plot2 => "2"
@@ -2440,8 +2438,7 @@ object AwakeningCards {
               choice(m.canTakeAwakeningOrReactionMarker, "awakening", "Place an awakening marker"),
               choice(!m.isAlly,                          "shiftLeft", "Shift alignment towards Ally")
             ).flatten
-            val action = if (choices.isEmpty) None
-            else askMenu(choices).headOption
+            val action = if (choices.isEmpty) None else askMenu("\nChoose one:", choices).headOption
             (target, action, Nil)
               
           case (Jihadist, true) =>
@@ -2451,8 +2448,7 @@ object AwakeningCards {
               choice(game.cellsAvailable > 0, "cells",      "Place cells"),
               choice(!m.isAdversary,          "shiftRight", "Shift alignment towards Adversary")
             ).flatten
-            val action = if (choices.isEmpty) None
-            else askMenu(choices).headOption
+            val action = if (choices.isEmpty) None else askMenu("\nChoose one:", choices).headOption
             val from = if (action == Some("cells")) {
               val sources = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
               askCellsFromAnywhere(2, true, sources, sleeperFocus = false)
@@ -2532,8 +2528,8 @@ object AwakeningCards {
             choice(militiaOK, "militia", "Place militia"),
             choice(cellsOK,   "cells",   "Place cells")
           ).flatten
-          println("What would you like to do:")
-          val action = askMenu(choices).head
+
+          val action = askMenu("\nChoose one:", choices).head
           val candidates = if (action == "militia")
             countryNames(game.getCountries(African) filter (_.canTakeMilitia))
           else
@@ -2587,8 +2583,8 @@ object AwakeningCards {
             choice(true,      "place",    "Place a cadre"),
             choice(cadres,    "remove",   "Remove a cadre")
           ).flatten
-          println("Choose 1 option:")
-          askMenu(choices).head match {
+
+          askMenu("\nChoose one:", choices).head match {
             case "reserves" =>
               clearReserves(if (role == US) Jihadist else US)
               addToReserves(role, opRes)
@@ -2730,8 +2726,7 @@ object AwakeningCards {
           else {
             addEventTarget(name)
             testCountry(name)
-            println("Choose 1: ")
-            askMenu(choices).head match {
+            askMenu("\nChoose one:", choices).head match {
               case "+aid" => addAidMarker(name)
               case "-aid" => removeAidMarker(name)
               case "+bsg" => addBesiegedRegimeMarker(name)
@@ -2840,8 +2835,7 @@ object AwakeningCards {
               choice(game.cellsAvailable > 0,            "cell", "Place a cell"),
               choice(game.availablePlots contains Plot1, "plot", "Place a Plot 1")
             ).flatten
-            println("Select 1:")
-            askMenu(choices).head match {
+            askMenu("\nChoose one:", choices).head match {
               case "cell" => addSleeperCellsToCountry(name, 1)
               case "plot" => addAvailablePlotToCountry(name, Plot1)
             }
@@ -2871,8 +2865,7 @@ object AwakeningCards {
               choice(n.hasCadre,       "cadre", "Remove cadre"),
               choice(n.hasPlots,       "plot" , "Alert a plot")
             ).flatten
-            println("Select 1:")
-            askMenu(choices).head match {
+            askMenu("\nChoose one:", choices).head match {
               case "cell"  => 
                 // Use the Bot routine to pick a sleeper first
                 val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 1)
@@ -3094,8 +3087,7 @@ object AwakeningCards {
               "cell" -> "Place a cell from the track in a random Schengen country",
               "draw" -> "Draw \"Paris Attacks\" or \"Training Camps\" from the discard pile")
             println()
-            println("Choose 1:")
-            askMenu(choices).head match {
+            askMenu("\nChoose one:", choices).head match {
               case "draw" => log("Jihadist draws \"Paris Attacks\" or \"Training Camps\" from the discard pile")
               case "cell" => 
                 val schengen = randomSchengenCountry
@@ -3484,8 +3476,7 @@ object AwakeningCards {
             if (choices.isEmpty)
               log("The event has no effect")
             else {
-              println("Choose 1:")
-              askMenu(choices).head match {
+              askMenu("\nChoose one:", choices).head match {
                 case "posture"  => setUSPosture(oppositePosture(game.worldPosture))
                 case "prestige" =>
                   val die = getDieRoll(role)
@@ -3664,11 +3655,9 @@ object AwakeningCards {
             choice(!m.isAdversary, "align", "Shift alignment 1 box toward Adversary")
           ).flatten
           val action = choices match {
-            case Nil => None
+            case Nil                => None
             case (action, _) :: Nil => Some(action)
-            case _ =>
-              println("Choose one: ")
-              Some(askMenu(choices).head)
+            case _                  => Some(askMenu("\nChoose one:", choices).head)
           }
           (name, cells, action)
         }
@@ -3813,8 +3802,7 @@ object AwakeningCards {
         val (cells, militia) = if (role == game.humanRole) {
           val choices = List("cells"   -> "Place 2 cells and 1 milita in Syria",
                              "militia" -> "Place 2 militia and 1 cell in Syria")
-          println("Choose one: ")
-          if (askMenu(choices).head == "cells") (2, 1) else (1, 2)
+          if (askMenu("\nChoose one:", choices).head == "cells") (2, 1) else (1, 2)
         }
         else if (role == Jihadist) (2, 1)
         else (1, 2)
