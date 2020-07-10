@@ -154,6 +154,14 @@ object ForeverWarCards {
     game.countries filter (c => (c.hasCadre || c.totalCells > 0) && (c.totalTroops > 0 || c.numAdvisors > 0))
   )
   
+  def goingUnderGroundBotMajorCandidates = countryNames(
+    game.getMuslims(game.majorJihadTargets(2)) filter (m => m.isPoor && JihadistBot.jihadSuccessPossible(m, true))
+  )
+  
+  def goingUnderGroundBotMinorCandidates = countryNames(
+    game.getMuslims(game.jihadTargets) filter (m => (m.isFair || m.isGood) && JihadistBot.jihadSuccessPossible(m, false))
+  )
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -1753,17 +1761,85 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(299, "Foreign Fighters Return", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => !game.caliphateDeclared &&
+                               game.cellsAvailable > 0 &&
+                               ((game hasNonMuslim (n => n.isGood && n.name != UnitedStates)) ||
+                                (game hasNonMuslim (_.isFair)))
       ,
       (role: Role) => {
+        val goodCandidates = countryNames(game.nonMuslims filter (n => n.isGood && n.name != UnitedStates))
+        val fairCandidates = countryNames(game.nonMuslims filter (_.isFair))
+        
+          val goodTarget: Option[String] = if (goodCandidates.nonEmpty) {
+            if (role == game.humanRole)
+              Some(askCountry("Place a cell in which Good non-Muslim country: ", goodCandidates))
+            else
+              JihadistBot.recruitTravelToPriority(goodCandidates)
+          }
+          else
+            None
+          
+          val fairTarget: Option[String] = if (fairCandidates.nonEmpty && (goodTarget.isEmpty || game.cellsAvailable > 1)) {
+            if (role == game.humanRole)
+              Some(askCountry("Place a cell in which Fair non-Muslim country: ", fairCandidates))
+            else
+              JihadistBot.recruitTravelToPriority(fairCandidates)
+          }
+          else
+            None
+          
+          for (target <- List(goodTarget, fairTarget).flatten) {
+            addEventTarget(target)
+            addSleeperCellsToCountry(target, 1)
+          }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(300, "Going Underground", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => {
+        val majorCandidates = game.majorJihadTargets(2) // 2 Ops only
+        val minorCandidates = game.jihadTargets
+        if (role == game.humanRole)
+          majorCandidates.nonEmpty || minorCandidates.nonEmpty
+        else
+          goingUnderGroundBotMajorCandidates.nonEmpty || goingUnderGroundBotMinorCandidates.nonEmpty
+      }
       ,
       (role: Role) => {
+        val (target, major) = if (role == game.humanRole) {
+          val majorCandidates = game.majorJihadTargets(2) // 2 Ops only
+          val minorCandidates = game.jihadTargets
+          val choices = List(
+            choice(majorCandidates.nonEmpty, "major",   s"Major Jihad (${orList(majorCandidates)})"),
+            choice(minorCandidates.nonEmpty, "discard", s"Minor Jihad (${orList(minorCandidates)})")
+          ).flatten
+          askMenu("\nExecute which type of Jihad:", choices).head match {
+            case "major" => (askCountry("Major Jihad in which country: ", majorCandidates), true)
+            case _       => (askCountry("Minor Jihad in which country: ", minorCandidates), false)
+          }
+        }
+        else if (goingUnderGroundBotMajorCandidates.nonEmpty)
+          (JihadistBot.majorJihadTarget(goingUnderGroundBotMajorCandidates).get, true)
+        else
+          (JihadistBot.minorJihadTarget(goingUnderGroundBotMinorCandidates).get, false)
+        
+        
+        val numCells = game.getMuslim(target).totalCells min 2
+        val (actives, sleepers, sadr) = if (role == game.humanRole)
+          askCells(target, numCells, sleeperFocus = false)
+        else
+            JihadistBot.chooseCellsToRemove(target, numCells)
+        val jihadTarget       = JihadTarget(target, actives, sleepers, sadr, major)
+        val (_, successes, _) = performJihads(jihadTarget::Nil).head
+        
+        // Remaining cells that participated become sleepers
+        val successCells = successes - (if (sadr) 1 else 0)  // Sadr does not flip
+        
+        if (successCells > 0 && !game.isCaliphateMember(target)) {
+          log("\nSuccessful participating cells become sleeper cells.")
+          hideActiveCells(target, successCells)
+        }
       }
     )),
     // ------------------------------------------------------------------------
