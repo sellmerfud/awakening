@@ -424,6 +424,21 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, recruitAndTravelToPriorities) map (_.name)
   }
   
+  def fewestCellsPriority(names: List[String]): Option[String] = {
+    val priorities = List(new LowestScorePriority("Least cells", (_.totalCells)))
+    topPriority(game getCountries names, priorities) map (_.name)
+  }
+
+  // For the Early Exit event, Forever War card #297
+  def earlyExitPriority(names: List[String]): Option[String] = {
+    val withAdvisors = (game getCountries names) filter (_.numAdvisors > 0)
+    
+    if (withAdvisors.nonEmpty)
+      topPriority(withAdvisors, List(new HighestScorePriority("Most Advisors", (_.numAdvisors)))) map (_.name)
+    else
+      topPriority(game getCountries names, List(new LowestScorePriority("Fewest Troops", (_.totalTroops)))) map (_.name)
+  }
+  
   
   def recruitTarget(names: List[String]): Option[String] = {
     botLog("Find \"Recruit\" target")

@@ -136,6 +136,24 @@ object ForeverWarCards {
      game.countries filter (c => distance(Lebanon, c.name) <= 2)
    )
   
+  def vehicleRammingCandidates = countryNames(
+    game.getNonMuslims(Schengen) filter (_.isHard)
+    
+  )
+  
+  def amaqNewsAgencyCandidates =  countryNames(
+    game.countries filter (c => c.totalCells == 0 && c.hasCadre == false)
+  )
+  
+  def attemptedCoupCandidates = countryNames(
+    game.muslims filter (m => m.totalCells >= 2 && !m.civilWar &&
+                         ((m.isAlly && m.isPoor) || (game.adjacentToCivilWar(m.name) && !m.isGood)))
+  )
+  
+  def earlyExitCandidates = countryNames(
+    game.countries filter (c => (c.hasCadre || c.totalCells > 0) && (c.totalTroops > 0 || c.numAdvisors > 0))
+  )
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -1549,74 +1567,197 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(290, "Uyghur Nationalism", Jihadist, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
-      ,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
+        val die = dieRoll
+        log(s"Die roll = $die")
+        die match {
+          case 1 | 2 =>
+            if (game.getMuslim(CentralAsia).canTakeAwakeningOrReactionMarker) {
+              testCountry(CentralAsia)
+              addEventTarget(CentralAsia)
+              addReactionMarker(UnitedStates)
+            }
+            else
+              log(s"$CentralAsia cannot take a reaction marker.")
+              
+          case 3 | 4 =>
+            if (game.cellsAvailable > 0) {
+              testCountry(China)
+              addEventTarget(China)
+              addSleeperCellsToCountry(China, 1)
+            }
+            else
+              log("There are no cells on the funding track.")
+                      
+          case _ => // 5 | 6
+            if (game.availablePlots contains Plot1) {
+              testCountry(China)
+              addEventTarget(China)
+              addAvailablePlotToCountry(China, Plot1)
+            }
+            else
+              log("There are no available level 1 plots.")
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(291, "Vehicle-ramming Attacks", Jihadist, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => lapsingEventNotInPlay(IslamicMaghreb) &&
+                               globalEventNotInPlay(TravelBan)       &&
+                               (game.availablePlots contains Plot1)  &&
+                               vehicleRammingCandidates.nonEmpty
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Place level 1 Plot in which Hard Schengen country: ", vehicleRammingCandidates)
+        else
+          JihadistBot.plotPriority(vehicleRammingCandidates).get
+        
+        addEventTarget(target)
+        addAvailablePlotToCountry(target, Plot1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(292, "Amaq News Agency", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => amaqNewsAgencyCandidates.nonEmpty
       ,
       (role: Role) => {
+        @tailrec def nextCadre(num: Int, candidates: List[String]): Unit =
+          if (num <= 3 && candidates.nonEmpty) {
+            val target = if (role == game.humanRole)
+              askCountry(s"Place ${ordinal(num)} cadre is which country: ", candidates)
+            else
+              JihadistBot.recruitTravelToPriority(candidates).get
+            
+            testCountry(target)
+            addEventTarget(target)
+            addCadreToCountry(target)
+            nextCadre(num + 1, candidates filterNot (_ == target))
+          }
+        
+        nextCadre(1, amaqNewsAgencyCandidates)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(293, "Attempted Coup", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => attemptedCoupCandidates.nonEmpty
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Place which country in Civil War: ", attemptedCoupCandidates)
+        else
+          JihadistBot.fewestCellsPriority(attemptedCoupCandidates).get
+      
+        addEventTarget(target)
+        flipAllSleepersCells(target)
+        startCivilWar(target)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(294, "Barcelona Bombs", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => (game.availablePlots contains Plot1)
       ,
       (role: Role) => {
+        val maxPlots = (game.availablePlots count (_ == Plot1)) min 2
+        val numPlots = if (maxPlots == 1 || role == game.botRole)
+          maxPlots
+        else
+          askInt(s"Place how many Level 1 plots in $Spain", 1, maxPlots, Some(maxPlots))
+        
+        testCountry(Spain)
+        addEventTarget(Spain)
+        for (i <- 1 to numPlots)
+          addAvailablePlotToCountry(Spain, Plot1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(295, "Black Gold", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.caliphateDeclared && game.funding < 9
       ,
       (role: Role) => {
+        val die = dieRoll
+        log(s"Die roll = $die")
+        increaseFunding((die + 1) / 2)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(296, "Botched Yemeni Raid", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.prestigeLevel == High || game.prestigeLevel == VeryHigh
       ,
       (role: Role) => {
+        decreasePrestige(2)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(297, "Early Exit", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => !game.caliphateDeclared && trumpTweetsON && earlyExitCandidates.nonEmpty
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Which country: ", earlyExitCandidates)
+        else
+          JihadistBot.earlyExitPriority(earlyExitCandidates).get
+          
+        addEventTarget(target)
+        removeAllTroopsFromCountry(target)
+        removeAllAdvisorsFromCountry(target)
+        decreasePrestige(1)
+        addGlobalEventMarker(EarlyExit)
+        setTrumpTweetsOFF()
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(298, "False Flag Attacks", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => (game.availablePlots exists (_ != PlotWMD)) ||
+        (role == game.humanRole && game.hasNonMuslim(_.canRemovePosture))     ||
+        (role == game.botRole   && game.hasNonMuslim(n => n.canRemovePosture && n.isOppositeUsPosture))
       ,
       (role: Role) => {
+        val plots = (game.availablePlots filterNot (_ == PlotWMD)).sorted
+        if (role == game.humanRole) {
+          val postureCandidates = countryNames(game.nonMuslims filter (n => n.canRemovePosture))
+          
+          val choices = List(
+            choice(plots.nonEmpty,             "plot",    "Place non-WMD plot in any country"),
+            choice(postureCandidates.nonEmpty, "posture", "Remove posture marker from non-Muslim country")
+          ).flatten
+
+          println("\nChoose one:")
+          askMenu(choices).head match {
+            case "plot" =>
+              val target = askCountry("Place plot in which country: ", countryNames(game.countries))
+              val plot  = askPlots(plots, 1).head
+              addEventTarget(target)
+              addAvailablePlotToCountry(target, plot)
+              
+            case _ =>
+              val target = askCountry("Remove posture maker from which country: ", postureCandidates)
+              addEventTarget(target)
+              setCountryPosture(target, PostureUntested)
+          }
+        }
+        else {
+          // Bot
+          if (plots.nonEmpty) {
+            addEventTarget(UnitedStates)
+            addAvailablePlotToCountry(UnitedStates, plots.head)
+          }
+          else {
+            val candidates = countryNames(game.nonMuslims filter (n => n.canRemovePosture && n.isOppositeUsPosture))
+            val target = JihadistBot.posturePriority(candidates).get
+            addEventTarget(target)
+            setCountryPosture(target, PostureUntested)
+          }
+        }
       }
     )),
     // ------------------------------------------------------------------------

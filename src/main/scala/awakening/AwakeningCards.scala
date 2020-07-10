@@ -1950,12 +1950,8 @@ object AwakeningCards {
         }
 
         addEventTarget(target)
-        if (game isNonMuslim target)
-          moveTroops(target, "track", game.getCountry(target).troops)
-        else {
-          val m = game.getMuslim(target)
-          moveTroops(target, "track", m.troops)
-          removeAllTroopsMarkers(target)
+        removeAllTroopsFromCountry(target)
+        if (game isMuslim target) {
           setAlignment(target, Neutral)
           addAidMarker(target)
           endRegimeChange(target)

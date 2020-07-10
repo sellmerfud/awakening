@@ -815,6 +815,7 @@ object LabyrinthAwakening {
     def isHard = posture == Hard
     def isSoft = posture == Soft
     def isOppositeUsPosture = !isUntested && posture != game.usPosture
+    def canRemovePosture = !isUntested && !(iranSpecialCase || name == UnitedStates || name == Israel)
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) = 
       ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
 
@@ -1072,6 +1073,7 @@ object LabyrinthAwakening {
   
     def adjacentToGoodAlly(name: String)     = game.adjacentMuslims(name) exists (m => m.isGood && m.isAlly)
     def adjacentToIslamistRule(name: String) = game.adjacentMuslims(name) exists (_.isIslamistRule)
+    def adjacentToCivilWar(name: String)     = game.adjacentMuslims(name) exists (_.civilWar)
     
     // Return true if the given country is adjacent to at least on Sunni Muslim Country
     def adjacentToSunni(name: String) = adjacentMuslims(name) exists (_.isSunni)
@@ -1104,24 +1106,6 @@ object LabyrinthAwakening {
         tryNext(List(m), Nil)
       else
         Nil
-    }
-    
-    def setCaliphateCapitaxl(name: String): GameState = {
-      assert(isMuslim(name), s"setCaliphateCapital() called on non-muslim country: $name")
-      val capital = getMuslim(name);
-      assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
-      
-      // First make sure there is no country marked as the capital
-      val clearedState = updateCountries(muslims.map(_.copy(caliphateCapital = false)))
-      val daisyChain = clearedState.caliphateDaisyChain(name).map { memberName =>
-        val member = getMuslim(memberName)
-        member.copy(
-          caliphateCapital = member.name == name,
-          activeCells      = member.cells,  // All cells go active in caliphate members
-          sleeperCells     = 0
-        )
-      }
-      clearedState.updateCountries(daisyChain)
     }
     
     def updateCountry(changed: Country): GameState =
@@ -4274,6 +4258,14 @@ object LabyrinthAwakening {
   def removeAllTroopsMarkers(name: String): Unit = {
     val markers = game.getMuslim(name).troopsMarkers map (_.name)
     removeEventMarkersFromCountry(name: String, markers:_*)
+  }
+  
+  //  Move all troops cubes in the country to the track
+  //  and remove all troops markers
+  def removeAllTroopsFromCountry(name: String): Unit = {
+    val c = game getCountry name
+    moveTroops(name, "track", c.troops)
+    removeAllTroopsMarkers(name)
   }
   
   def takeTroopsOffMap(source: String, num: Int): Unit = {
