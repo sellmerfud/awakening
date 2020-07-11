@@ -3209,64 +3209,76 @@ object LabyrinthAwakening {
   // Process the US civil war losses.
   // If the US is human then prompt for pieces to remove.
   // Return the number of unresolved hits
-  def usCivilWarLosses(m: MuslimCountry, hits: Int): Int = {
+  def usCivilWarLosses(m: MuslimCountry, hits: Int, hamaOffensive: Boolean = false): Int = {
     if (hits == 0 || m.totalTroopsAndMilitia == 0)
       hits
     else {
-      val (markersLost, troopsLost, militiaLost, hitsRemaining) = if (game.humanRole == US) {
+      val maxAbsorb     = m.troops + m.militia + (m.troopsMarkers map (_.num)).sum
+      val multiplier    = if (hamaOffensive) 2 else 1
+      val losses        = hits * multiplier
+      val unfulfilled   = (losses - maxAbsorb) max 0
+      val hitsRemaining =  (unfulfilled + multiplier - 1) / multiplier
+      
+      log()
+      log(s"$US must absorb ${amountOf(losses, "loss", Some("losses"))}")
+      
+      val (markersLost, troopsLost, militiaLost) = if (game.humanRole == US) {
         // If there are any markers representing troops or
         // if there is a mix of multiple type of cubes that can take losses (troops and militia),
         // and the hits are not sufficient to eliminate all forces present, 
         // then allow the user to choose which units aborb the losses.
         val mixedCubes = m.troops > 0 && m.militia > 0
-        if (hits >= m.totalTroopsAndMilitia)
-           (m.troopsMarkers map (_.name), m.troops, m.militia, hits - m.totalTroopsAndMilitia)
+        if (losses >= m.totalTroopsAndMilitia)
+           (m.troopsMarkers map (_.name), m.troops, m.militia)
         else if (!mixedCubes && m.troopsMarkers.isEmpty) {
           if (m.troops > 0)
-            (Nil, m.troops min hits, 0, (hits - m.troops) max 0)
+            (Nil, m.troops min losses, 0)
           else
-            (Nil, 0, m.militia min hits, (hits - m.militia) max 0)
+            (Nil, 0, m.militia min losses)
         }
         else {
-          var markersLost = List.empty[String]
-          var (troopsLost, militiaLost, hitsRemaining) = (0, 0, hits)
-          def nextHit(markers: List[TroopsMarker], troops: Int, militia: Int): Unit = {
-            if (hitsRemaining > 0 && (markers.nonEmpty || troops > 0 || militia > 0)) {
+          var (troopsLost, militiaLost, markersLost) = (0, 0, List.empty[String])
+          
+          def nextHit(lossesRemaining: Int, markers: List[TroopsMarker], troops: Int, militia: Int): Unit = {
+            if (lossesRemaining > 0 && (markers.nonEmpty || troops > 0 || militia > 0)) {
               val choices = List(
                 choice(troops > 0,  "troop",  "Troop cube"),
                 choice(militia > 0, "militia","Militia cube")
-              ).flatten ++ (markers map (m => m.name -> s"${m.name}  (absorbs ${amountOf(m.num, "hit")})"))
-              println(s"$US must absorb ${amountOf(hitsRemaining, "more hit")}")
-              askMenu("Which unit will take the next hit:", choices).head match {
-                case "troop"   => troopsLost  += 1; hitsRemaining -=1; nextHit(markers, troops - 1, militia)
-                case "militia" => militiaLost += 1; hitsRemaining -=1; nextHit(markers, troops, militia - 1)
+              ).flatten ++ (markers map (m => m.name -> s"${m.name}  (absorbs ${amountOf(m.num, "loss", Some("losses"))})"))
+              println(s"$US must take ${amountOf(lossesRemaining, "more loss", Some("more losses"))}")
+              askMenu("Which unit will take the next loss:", choices).head match {
+                case "troop"   => troopsLost  += 1; nextHit(lossesRemaining - 1, markers, troops - 1, militia)
+                case "militia" => militiaLost += 1; nextHit(lossesRemaining - 1, markers, troops, militia - 1)
                 case name      => 
                   val marker = (markers find (_.name == name)).get
+                  val lossesAbsorbed = marker.num
                   markersLost = name :: markersLost
-                  hitsRemaining = (hitsRemaining - marker.num) max 0
-                  nextHit(markers filterNot (_.name == name), troops, militia)
+                  nextHit(lossesRemaining - lossesAbsorbed, markers filterNot (_.name == name), troops, militia)
               }
             }
           }
-          nextHit(m.troopsMarkers, m.troops, m.militia)
-          (markersLost, troopsLost, militiaLost, hitsRemaining)
+          
+          nextHit(losses, m.troopsMarkers, m.troops, m.militia)
+          (markersLost, troopsLost, militiaLost)
         }
       }
       else {
         // Calculate the losses for the bot.
         // [Rule 13.3.7] The bot removes troops cubes first.
         // Then militia, then troops markers
-        var hitsRemaining = hits
-        val troopsLost = hitsRemaining min m.troops
-        hitsRemaining -= troopsLost
-        val militiaLost = hitsRemaining min  m.militia
-        hitsRemaining -= militiaLost
-        val markersLost = for (TroopsMarker(name, num, _, _) <- m.troopsMarkers.sorted; if hitsRemaining > 0) 
+        var lossesRemaining = losses
+        val troopsLost = lossesRemaining min m.troops
+        lossesRemaining -= troopsLost
+        val militiaLost = lossesRemaining min m.militia
+        lossesRemaining -= militiaLost
+        
+        val markersLost = for (TroopsMarker(name, num, _, _) <- m.troopsMarkers.sorted; if lossesRemaining > 0) 
           yield {
-            hitsRemaining = (hitsRemaining - num) max 0
+            lossesRemaining = lossesRemaining - num
             name
           }
-        (markersLost, troopsLost, militiaLost, hitsRemaining)
+          
+        (markersLost, troopsLost, militiaLost)
       }
       
       removeEventMarkersFromCountry(m.name, markersLost:_*)
@@ -3289,13 +3301,14 @@ object LabyrinthAwakening {
       val losses        = hits * multiplier
       val unfulfilled   = (losses - m.totalCells) max 0
       val hitsRemaining =  (unfulfilled + multiplier - 1) / multiplier
+
+      log()
+      log(s"$Jihadist must absorb ${amountOf(losses, "loss", Some("losses"))}")
       
       val (activesLost, sleepersLost, sadr) = if (m.totalCells <= losses)
         (m.activeCells, m.sleeperCells, m.hasSadr)
-      else if (game.humanRole == Jihadist) {
-        println(s"$Jihadist must absorb ${amountOf(losses, "hit")}")
+      else if (game.humanRole == Jihadist)
         askCells(m.name, losses, sleeperFocus = false)
-      }
       else
         JihadistBot.chooseCellsToRemove(m.name, losses)
 
@@ -3304,7 +3317,114 @@ object LabyrinthAwakening {
     }
   }
   
-  def civilWarAttrition(): Unit = {
+  //  Perform Civial War attrition in the named country
+  def civilWarAttrition(name: String, hamaOffensive: Boolean = false): Unit = {
+    assert(game.getMuslim(name).civilWar, s"civilWarAttrition() called on non-Civil War country: $name")
+
+    val siegeOfMosul = lapsingEventInPlay(SiegeofMosul)
+    val effectsList = List(
+      if (hamaOffensive) Some("Hama Offensive") else None,
+      if (siegeOfMosul)  Some("Siege of Mosul") else None
+    ).flatten
+    val effects = if (effectsList.nonEmpty) effectsList.mkString(" (", ", ", ")") else ""
+    
+    log()
+    log(s"Attrition: $name$effects")
+    log(separator())
+
+    // Add milita for Advisors before we get the muslim country instance below
+    game.getMuslim(name) match {
+      case m if m.numAdvisors > 0 && game.militiaAvailable > 0 =>
+        val n = m.numAdvisors min game.militiaAvailable
+        log(s"Add $n militia to $name due to presence of Advisors")
+        game = game.updateCountry(m.copy(militia = m.militia + n))          
+      case _ =>
+    }
+
+    // Get the fresh instance of the Muslim country
+    val m = game.getMuslim(name)
+    // If Siege of Mosul in play then cells are halved and (troops + milita)
+    // are doubled
+    val jihadDie = dieRoll
+    val usDie    = dieRoll
+    val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
+    val totalTroopsAndMilitia = if (siegeOfMosul) m.totalTroopsAndMilitia * 2 else m.totalTroopsAndMilitia
+    val jihadHits = totalCells            / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
+    val usHits    = totalTroopsAndMilitia / 6 + (if (usDie <= totalTroopsAndMilitia % 6) 1 else 0)
+    
+    if (totalCells == 0 && totalTroopsAndMilitia == 0)
+      log("No cells, troops or militia present")
+    else {
+      if (totalCells == 0)
+        log("No Jihadist cells to inflict hits")
+      else {
+        if (totalCells > 0 && totalCells % 6 != 0)
+          log(s"Jihadist die roll: $jihadDie")        
+        log(s"The Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
+      }
+      
+      if (totalTroopsAndMilitia == 0)
+        log("No US troops or militia present to inflict hits")
+      else {
+        if (totalTroopsAndMilitia > 0 && totalTroopsAndMilitia % 6 != 0)
+          log(s"US die roll : $usDie")
+        log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
+      }
+      
+      if (jihadHits + usHits > 0) {
+        val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits, hamaOffensive)
+        val unfulfilledUSHits    = jihadistCivilWarLosses(m, usHits)
+      
+        val delta = unfulfilledJihadHits - unfulfilledUSHits
+        if (delta == 0) {
+          if (unfulfilledJihadHits != 0)
+            log(s"Both sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No futher effects.")
+        }
+        else {
+          if (unfulfilledJihadHits > 0)
+            log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
+          if (unfulfilledUSHits > 0)
+            log(s"${amountOf(unfulfilledUSHits, "unfulfilled US hit")} against the Jihadist")
+          if (delta > 0) {
+            val (shifts, newAlign) = (delta, m.alignment) match {
+              case (_, Adversary) => (0, Adversary)
+              case (1, Ally)      => (1, Neutral)
+              case (_, Neutral)   => (1, Adversary)
+              case _              => (2, Adversary)
+            }
+        
+            if (shifts > 0)
+              setAlignment(m.name, newAlign)
+            val steps = delta - shifts
+            if (steps > 0) {
+              degradeGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = true)
+              if (game.getMuslim(m.name).isIslamistRule)
+                performConvergence(forCountry = m.name, awakening = false)
+            }
+          }
+          else {
+            // Shift toward Ally/Improve governance
+            val (shifts, newAlign) = (-delta, m.alignment) match {
+              case (_, Ally)      => (0, Ally)
+              case (1, Adversary) => (1, Neutral)
+              case (_, Neutral)   => (1, Ally)
+              case _              => (2, Ally)
+            }
+            if (shifts > 0)
+              setAlignment(m.name, newAlign)
+            val steps = -delta - shifts
+            if (steps > 0) {
+              improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = true)
+              if (game.getMuslim(m.name).isGood)
+                performConvergence(forCountry = m.name, awakening = true)
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  def endTurnCivilWarAttrition(): Unit = {
     def civilWars = game.muslims filter (m => (m.civilWar))
     log()
     log("Civil War Attrition")
@@ -3313,103 +3433,9 @@ object LabyrinthAwakening {
       log("No countries in civil war")
     else {
       val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
-      // First for each "Advisors" marker is present in any of the countries, then 
-      // add one militia to that country.
-      for (m <- civilWars) {
-        var numMiltitia = m.numAdvisors min game.militiaAvailable
-        if (numMiltitia > 0) {
-          log(s"Add ${numMiltitia} militia to ${m.name} due to presence of Advisors")
-          game = game.updateCountry(m.copy(militia = m.militia + numMiltitia))          
-        }
-      } 
       
-      for (m <- civilWars) {
-        // If Siege of Mosul in play then cells are halved and (troops + milita)
-        // are doubled
-        val siegeOfMosul = lapsingEventInPlay(SiegeofMosul)
-        val jihadDie = dieRoll
-        val usDie    = dieRoll
-        val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
-        val totalTroopsAndMilitia = if (siegeOfMosul) m.totalTroopsAndMilitia * 2 else m.totalTroopsAndMilitia
-        val jihadHits = totalCells            / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
-        val usHits    = totalTroopsAndMilitia / 6 + (if (usDie <= totalTroopsAndMilitia % 6) 1 else 0)
-        
-        if (siegeOfMosul)
-            log(s"${m.name} (Siege of Mosul is in effect):")
-          else
-            log(s"${m.name}:")
-        if (totalCells == 0 && totalTroopsAndMilitia == 0)
-          log("No cells, troops or militia present")
-        else {
-          if (totalCells == 0)
-            log("No Jihadist cells to inflict hits")
-          else {
-            if (totalCells > 0 && totalCells % 6 != 0)
-              log(s"Jihadist die roll: $jihadDie")
-            log(s"The Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
-          }
-          
-          if (totalTroopsAndMilitia == 0)
-            log("No US troops or militia present to inflict hits")
-          else {
-            if (totalTroopsAndMilitia > 0 && totalTroopsAndMilitia % 6 != 0)
-              log(s"US die roll : $usDie")
-            log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
-          }
-          
-          if (jihadHits + usHits > 0) {
-            val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits)
-            val unfulfilledUSHits    = jihadistCivilWarLosses(m, usHits)
-          
-            val delta = unfulfilledJihadHits - unfulfilledUSHits
-            if (delta == 0) {
-              if (unfulfilledJihadHits != 0)
-                log(s"Both sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No futher effects.")
-            }
-            else {
-              if (unfulfilledJihadHits > 0)
-                log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
-              if (unfulfilledUSHits > 0)
-                log(s"${amountOf(unfulfilledUSHits, "unfulfilled US hit")} against the Jihadist")
-              if (delta > 0) {
-                val (shifts, newAlign) = (delta, m.alignment) match {
-                  case (_, Adversary) => (0, Adversary)
-                  case (1, Ally)      => (1, Neutral)
-                  case (_, Neutral)   => (1, Adversary)
-                  case _              => (2, Adversary)
-                }
-            
-                if (shifts > 0)
-                  setAlignment(m.name, newAlign)
-                val steps = delta - shifts
-                if (steps > 0) {
-                  degradeGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = true)
-                  if (game.getMuslim(m.name).isIslamistRule)
-                    performConvergence(forCountry = m.name, awakening = false)
-                }
-              }
-              else {
-                // Shift toward Ally/Improve governance
-                val (shifts, newAlign) = (-delta, m.alignment) match {
-                  case (_, Ally)      => (0, Ally)
-                  case (1, Adversary) => (1, Neutral)
-                  case (_, Neutral)   => (1, Ally)
-                  case _              => (2, Ally)
-                }
-                if (shifts > 0)
-                  setAlignment(m.name, newAlign)
-                val steps = -delta - shifts
-                if (steps > 0) {
-                  improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = true)
-                  if (game.getMuslim(m.name).isGood)
-                    performConvergence(forCountry = m.name, awakening = true)
-                }
-              }
-            }
-          }
-        }
-        log()
-      }
+      for (m <- civilWars)
+        civilWarAttrition(m.name)
       
       // Check to see if the Caliphate Capital has been displaced because its country
       // was improved to Good governance.
@@ -3907,7 +3933,7 @@ object LabyrinthAwakening {
             aidMarkers = 0, militia = 0, besiegedRegime = false)
           game = game.updateCountry(degraded)
           moveWMDCacheToAvailable(name, m.wmdCache)
-          removeAllAdvisorsFromCountry(name)
+          removeAllAdvisorsFromCountry(name) // Country becomes Adversary
           endRegimeChange(name, endOfTurn)
           endCivilWar(name, endOfTurn)
           flipCaliphateSleepers()
@@ -4312,7 +4338,7 @@ object LabyrinthAwakening {
   
   def addSleeperCellsToCountry(name: String, num: Int, logPrefix: String = "") =
     addCellsToCountry(name, false, num, logPrefix)
-  
+    
   // Move cells from the track (or training camp) to a country on the map.
   // Caller should ensure there are enough available cells to satisfy the move.
   // otherwise the function will throw an exception!
@@ -5078,7 +5104,7 @@ object LabyrinthAwakening {
     
       if (game.useExpansionRules) {
         polarization()
-        civilWarAttrition()
+        endTurnCivilWarAttrition()
       }
     
       checkAutomaticVictory() // Will Exit game if auto victory has been achieved

@@ -679,7 +679,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
       
     botLog("Find \"UN Ceasefire\" target")
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getCountries names, priorities) map (_.name)
   }
   
   def qadhafiTarget(names: List[String]): Option[String] = {
@@ -688,7 +688,7 @@ object JihadistBot extends BotHelpers {
       HighestResourcePriority)
       
     botLog("Find \"Qadhafi\" target")
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getCountries names, priorities) map (_.name)
   }
 
   def revolutionTarget(names: List[String]): Option[String] = {
@@ -697,7 +697,16 @@ object JihadistBot extends BotHelpers {
       HighestResourcePriority)
       
     botLog("Find \"Revolution\" target")
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getCountries names, priorities) map (_.name)
+  }
+  
+  def hamaOffensiveTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new HighestScorePriority("Largest Cells - TandM", muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)),
+      HighestResourcePriority)
+      
+    botLog("Find \"Hama Offensive\" target")
+    topPriority(game getCountries names, priorities) map (_.name)
   }
 
   // Pick actives before sleepers

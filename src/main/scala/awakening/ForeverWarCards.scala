@@ -2114,9 +2114,32 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(312, "Hama Offensive", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => if (role == game.humanRole)
+        game hasMuslim (_.civilWar)
+      else {
+        // Don't let Bot execute event if only civil war countries with no cells
+        // unless there is a least one available cell to place there
+        game hasMuslim (m => m.civilWar && (m.totalCells > 0 || game.cellsAvailable > 0))
+      }
       ,
       (role: Role) => {
+        val candidates = countryNames(game.muslims filter (_.civilWar))
+        val target = if (role == game.humanRole)
+          askCountry("Which country: ", candidates)
+        else
+          JihadistBot.hamaOffensiveTarget(candidates).get
+        
+        println()
+        addSleeperCellsToCountry(target, 2 min game.cellsAvailable)
+        
+        val caliphateCapital = game.getMuslim(target).caliphateCapital
+        
+        civilWarAttrition(target, hamaOffensive = true)
+      
+        // Check to see if the Caliphate Capital has been displaced
+        // because its country was improved to Good governance.
+        if (caliphateCapital && !game.getMuslim(target).caliphateCapital)
+            displaceCaliphateCapital(target)
       }
     )),
     // ------------------------------------------------------------------------
