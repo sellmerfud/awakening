@@ -162,6 +162,10 @@ object ForeverWarCards {
     game.getMuslims(game.jihadTargets) filter (m => (m.isFair || m.isGood) && JihadistBot.jihadSuccessPossible(m, false))
   )
   
+  def easterBombingsCandidates = countryNames(
+    game.nonMuslims filter (n => n.isUntested && !n.isGood && (game.adjacentMuslims(n.name) exists (!_.isUntested)))
+  )
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -1830,6 +1834,7 @@ object ForeverWarCards {
           askCells(target, numCells, sleeperFocus = false)
         else
             JihadistBot.chooseCellsToRemove(target, numCells)
+        addEventTarget(target)
         val jihadTarget       = JihadTarget(target, actives, sleepers, sadr, major)
         val (_, successes, _) = performJihads(jihadTarget::Nil).head
         
@@ -1845,53 +1850,140 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(301, "Green on Blue", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => game.plotData.resolvedInGreenOnBlue &&
+                                  (role == game.humanRole || game.gwotPenalty == 0)
       ,
       (role: Role) => {
+        val die = dieRoll
+        increaseFunding(1)
+        log(s"Die roll = $die")
+        val newPosture = if (die < 4) oppositePosture(game.usPosture) else game.usPosture
+        setUSPosture(newPosture)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(302, "Imperial Overstretch", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.troopCommitment != LowIntensity
       ,
       (role: Role) => {
+        if (role == game.humanRole)
+          log(s"Discard the top card of the $US hand")
+        else
+          log(s"You ($US) discard a random card")
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(303, "Iranian Withdrawal", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
-      ,
+      (_: Role, _: Boolean) => {
+        val iran = game.getCountry(Iran)
+        game.usPosture == Hard && iran.wmdCache > 0 && iran.totalCells > 0
+      },
       (role: Role) => {
-        // NOTE: If the die roll is successful, then the card is removed!
-        if (true)
+        val die = dieRoll
+        
+        addEventTarget(Iran)
+        
+        log(s"Die roll = $die")
+        if (die < 4) {
+          moveWMDCacheToAvailable(Iran, 1)
+          if (isIranSpecialCase) {
+            log("Flip Iran country mat to its Shia-Mix Muslim side")
+            log("Set Iran to Fair Adversary")
+            val iran = game.getNonMuslim(Iran)
+            game = game.updateCountry(DefaultMuslimIran.copy(
+              sleeperCells = iran.sleeperCells,
+              activeCells  = iran.activeCells,
+              hasCadre     = iran.hasCadre,
+              plots        = iran.plots,
+              markers      = iran.markers,
+              wmdCache     = iran.wmdCache
+            ))
+          }
+          // Card only removed if die roll was successful
           removeCardFromGame(303)
+        }
+        else {
+          val (actives, sleepers, sadr) = if (role == game.humanRole)
+            askCells(Iran, 1, sleeperFocus = false)
+          else
+              JihadistBot.chooseCellsToRemove(Iran, 1)
+          
+          removeCellsFromCountry(Iran, actives, sleepers, sadr, addCadre = false)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(304, "Loose Chemicals", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
-      ,
+      (_: Role, _: Boolean) => {
+        val syria = game.getMuslim(Syria)
+        syria.civilWar && syria.wmdCache > 0 && syria.totalCells > 0
+      },
       (role: Role) => {
-        // NOTE: If the die roll is successful, then the card is removed!
-        if (true)
+        val die = dieRoll
+        
+        addEventTarget(Syria)
+        
+        log(s"Die roll = $die")
+        if (die < 4) {
+          moveWMDCacheToAvailable(Syria, 1)
+          // Card only removed if die roll was successful
           removeCardFromGame(304)
+        }
+        else {
+          val (actives, sleepers, sadr) = if (role == game.humanRole)
+            askCells(Syria, 1, sleeperFocus = false)
+          else
+              JihadistBot.chooseCellsToRemove(Syria, 1)
+          
+          removeCellsFromCountry(Syria, actives, sleepers, sadr, addCadre = false)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(305, "Presidential Whistleblower", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => trumpTweetsON
       ,
       (role: Role) => {
+        testCountry(Caucasus)
+        val result = game.prestigeModifier - game.gwotPenalty
+        val opPoints = -result
+        log(s"GWOT penalty (-${game.gwotPenalty}) + prestige modifer (${game.prestigeModifier}) = $result")
+        if (result >= 0)
+          log("There is no effect")
+        else if (role == game.botRole) {
+          log(s"You ($US) must discard cards until the combined Operational value")
+          log(s"is at least $opPoints")
+        
+          def nextDiscard(num: Int, pointsDiscarded: Int): List[Int] = {
+            if (pointsDiscarded >= opPoints)
+              Nil
+            else {
+              val prompt = s"Card # of the ${ordinal(num)} discard (or blank if none) "
+              askCardNumber(prompt) match {
+                case None         => Nil
+                case Some(cardNo) =>  cardNo :: nextDiscard(num + 1, pointsDiscarded + deck(cardNo).printedOps)
+              }
+            }
+          }
+          
+          for (n <- nextDiscard(1, 0).reverse; card = deck(n))
+            if (card.eventWillTrigger(Jihadist))
+              performCardEvent(card, Jihadist, triggered = true)
+        }
+        else {
+          log(s"Discard from the top of the $Jihadist Bot's hand until the combined")
+          log(s"Operational value is at least $opPoints")
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(306, "Public Debate", Jihadist, 2,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => false // Not playable in Solo game
       ,
       (role: Role) => {
       }
@@ -1899,41 +1991,124 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(307, "Russian Subterfuge", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => {
+        val russia = game.getNonMuslim(Russia)
+        russia.isUntested || russia.posture == oppositePosture(game.usPosture)
+      }
       ,
       (role: Role) => {
+        if (role == game.humanRole)
+          log(s"Discard the top card of the $US hand")
+        else
+          log(s"You ($US) must discard a random card")
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(308, "Battle of Marawi City", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.cellsAvailable > 0 || game.availablePlots.nonEmpty
       ,
       (role: Role) => {
+        addEventTarget(Philippines)
+        
+        val plot = if (game.availablePlots.isEmpty)
+           None
+        else if (role == game.humanRole)
+          Some(askPlots(game.availablePlots, 1).head)
+        else
+          Some(game.availablePlots.sorted.head)
+
+        println()
+        testCountry(Philippines)
+        if (game.cellsAvailable > 0)
+          addActiveCellsToCountry(Philippines, 1)
+        plot foreach (addAvailablePlotToCountry(Philippines, _))
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(309, "Easter Bombings", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => (game.availablePlots contains Plot1) && easterBombingsCandidates.nonEmpty
       ,
       (role: Role) => {
+        val maxPlots = (game.availablePlots count (_ == Plot1))
+        val (target, numPlots) = if (role == game.humanRole) {
+            val t = askCountry("Place plot(s) in which country: ", easterBombingsCandidates)
+            val n = askInt(s"Place how many Level 1 Plots in $t", 1, maxPlots, Some(maxPlots))
+            (t, n)
+        }
+        else
+          (JihadistBot.plotPriority(easterBombingsCandidates).get, maxPlots)
+        
+        addEventTarget(target)
+        testCountry(target)
+        for (i <- 1 to numPlots)
+          addAvailablePlotToCountry(target, Plot1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(310, "Forever War", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.troopsOnMap + game.militiaOnMap - game.cellsOnMap > 0
       ,
       (role: Role) => {
+        log(f"${game.troopsOnMap}%2d troops on map")
+        log(f"${game.militiaOnMap}%2d militia on map")
+        log(f"${game.cellsOnMap}%2d cells on map")
+        decreasePrestige(game.troopsOnMap + game.militiaOnMap - game.cellsOnMap)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(311, "Gaza Border Protests", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => {
+        val numCells = game.getCountry(Israel).totalCells
+        game.availablePlots exists (_.number <= numCells)
+      }
       ,
       (role: Role) => {
+        val USEmbassyToJerusalem = 254
+        val numCells = game.getCountry(Israel).totalCells
+        val maxPlots = if (game.cardRemoved(USEmbassyToJerusalem)) 2 else 1
+        
+        addEventTarget(Israel)
+        flipAllSleepersCells(Israel)
+        val plots = if (role == game.humanRole) {
+          def nextPlot(numLeft: Int, plotSum: Int, remainingPlots: List[Plot]): List[Plot] = {
+            if (numLeft == 0)
+              Nil
+            else
+              (remainingPlots dropWhile (_.number > numCells - plotSum)) match {
+                case Nil => Nil
+                case ps  => 
+                  val p = askPlots(ps, 1).head
+                  val index = ps.indexOf(p)
+                  val pps = ps.take(index) ::: ps.drop(index + 1)
+                  p :: nextPlot(numLeft - 1, plotSum + p.number, pps)
+              }
+          }
+          
+          println()
+          nextPlot(maxPlots, 0, game.availablePlots.sorted).reverse
+        }
+        else {
+          // Bot
+          def nextPlot(numLeft: Int, plotSum: Int, remainingPlots: List[Plot]): List[Plot] = {
+            if (numLeft == 0)
+              Nil
+            else
+              (remainingPlots dropWhile (_.number > numCells - plotSum)) match {
+                case Nil => Nil
+                case p::ps => p::nextPlot(numLeft - 1, plotSum + p.number, ps)
+              }
+          }
+            
+          nextPlot(maxPlots, 0, game.availablePlots.sorted).reverse
+        }
+        
+        println()
+        for (p <- plots)
+          addAvailablePlotToCountry(Israel, p)
       }
     )),
     // ------------------------------------------------------------------------

@@ -614,7 +614,7 @@ object LabyrinthAwakening {
   val FullyResourcedCOIN  = 273
   val SiegeofMosul        = 278
   val StraitofHormuz      = 289
-  val PublicDebate        = 306
+  val PublicDebate        = 306 // Not playable in solo game
   val USBorderCrisis      = 337
   val EUBolstersIranDeal  = 340
   val FakeNews            = 355
@@ -994,10 +994,11 @@ object LabyrinthAwakening {
   // And also records which countries had plots resolved in the most recent
   // resolve plots phase.
   case class PlotData(
-    availablePlots: List[Plot]   = Nil,
-    resolvedPlots: List[Plot]    = Nil,
-    removedPlots: List[Plot]     = Nil,
-    resolvedTargets: Set[String] = Set.empty
+    availablePlots: List[Plot]     = Nil,
+    resolvedPlots: List[Plot]      = Nil,
+    removedPlots: List[Plot]       = Nil,
+    resolvedTargets: Set[String]   = Set.empty,
+    resolvedInGreenOnBlue: Boolean = false // See Forever War card #301
   )
     
   case class GameState(
@@ -3905,7 +3906,7 @@ object LabyrinthAwakening {
             governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0, 
             aidMarkers = 0, militia = 0, besiegedRegime = false)
           game = game.updateCountry(degraded)
-          moveWMDCacheToAvailable(name)
+          moveWMDCacheToAvailable(name, m.wmdCache)
           removeAllAdvisorsFromCountry(name)
           endRegimeChange(name, endOfTurn)
           endCivilWar(name, endOfTurn)
@@ -4599,15 +4600,17 @@ object LabyrinthAwakening {
     }
   }
 
-  def moveWMDCacheToAvailable(name: String): Unit = {
-    val c = game.getCountry(name)
-    if (c.wmdCache > 0) {
+  def moveWMDCacheToAvailable(name: String, num: Int): Unit = {
+    if (num > 0) {
+      val c = game.getCountry(name)
+      assert(c.wmdCache >= num, s"moveWMDCacheToAvailable(): not enough WMD in $name")
+      val  newCache = c.wmdCache - num;
       c match {
-        case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = 0))
-        case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = 0))
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = newCache))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = newCache))
       }
-      log(s"Move ${amountOf(c.wmdCache, "unavailable WMD Plot")} from $name to the available plots box")
-      val updatedPlots = game.plotData.copy(availablePlots = List.fill(c.wmdCache)(PlotWMD) ::: game.availablePlots)
+      log(s"Move ${amountOf(num, "unavailable WMD Plot")} from $name to the available plots box")
+      val updatedPlots = game.plotData.copy(availablePlots = List.fill(num)(PlotWMD) ::: game.availablePlots)
       game = game.copy(plotData = updatedPlots)
     }
   }
@@ -4727,6 +4730,9 @@ object LabyrinthAwakening {
     def chng(amt: Int) = if (amt > 0) "Increase" else "Decrease"
     val unblocked = for (c <- game.countries filter (_.hasPlots); p <- c.plots)
       yield Unblocked(c.name, p)
+    val greenOnBlue = game.muslims exists (m => m.hasPlots && 
+                                          (m.inRegimeChange || m.civilWar) &&
+                                          (m.totalTroops > 0 || m.numAdvisors > 0))
     var wmdsInCivilWars = Set.empty[String]
     log()
     log(separator(char='='))
@@ -4930,7 +4936,8 @@ object LabyrinthAwakening {
       }
     }
     game = game.copy(
-      plotData = game.plotData.copy(resolvedTargets = (unblocked map (_.name)).toSet),
+      plotData = game.plotData.copy(resolvedTargets       = (unblocked map (_.name)).toSet, 
+                                    resolvedInGreenOnBlue = greenOnBlue),
       plays    = PlotsResolved(unblocked.size) :: game.plays
     )
     savePlay()  // Save the play so we can roll back

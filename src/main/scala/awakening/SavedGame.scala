@@ -95,10 +95,11 @@ object SavedGame {
   
   private def plotDataToMap(data: PlotData): Map[String, Any] =
     Map(
-      "availablePlots"  -> (data.availablePlots map (_.name)),
-      "resolvedPlots"   -> (data.resolvedPlots map (_.name)),
-      "removedPlots"    -> (data.removedPlots map (_.name)),
-      "resolvedTargets" -> data.resolvedTargets
+      "availablePlots"        -> (data.availablePlots map (_.name)),
+      "resolvedPlots"         -> (data.resolvedPlots map (_.name)),
+      "removedPlots"          -> (data.removedPlots map (_.name)),
+      "resolvedTargets"       -> data.resolvedTargets,
+      "resolvedInGreenOnBlue" -> data.resolvedInGreenOnBlue
     )
   
   private def plotDataFromMap(data: Map[String, Any]): PlotData =
@@ -106,7 +107,8 @@ object SavedGame {
       asList(data("availablePlots")) map (x => Plot.apply(asString(x))),
       asList(data("resolvedPlots")) map (x => Plot.apply(asString(x))),
       asList(data("removedPlots")) map (x => Plot.apply(asString(x))),
-      (asList(data("resolvedTargets")) map asString).toSet
+      (asList(data("resolvedTargets")) map asString).toSet,
+      asBoolean(data("resolvedInGreenOnBlue"))
     )
     
   private def plotOnMapToMap(pom: PlotOnMap): Map[String, Any] =

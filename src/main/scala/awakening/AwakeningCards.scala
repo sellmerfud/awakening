@@ -1800,7 +1800,7 @@ object AwakeningCards {
         log(s"Die roll: $die")
         if (success) {
           log("Success")
-          moveWMDCacheToAvailable(Iran)
+          moveWMDCacheToAvailable(Iran, game.getCountry(Iran).wmdCache)
           // Card only removed if die roll was successful
           removeCardFromGame(181)
         }
