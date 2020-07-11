@@ -708,6 +708,17 @@ object JihadistBot extends BotHelpers {
     botLog("Find \"Hama Offensive\" target")
     topPriority(game getCountries names, priorities) map (_.name)
   }
+  
+  //  To select from which country adjacent to Syria
+  //  with cells to move cells from.
+  def hayatTahirTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new CriteriaFilter("With troops", muslimTest(m => m.totalTroops > 0)),
+      new HighestScorePriority("Largest Cells - TandM", muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)))
+      
+    botLog("Best \"Hayat Tahir\" adjacent with cells")
+    topPriority(game getCountries names, priorities) map (_.name)
+  }
 
   // Pick actives before sleepers
   // Return (actives, sleepers, sadr)

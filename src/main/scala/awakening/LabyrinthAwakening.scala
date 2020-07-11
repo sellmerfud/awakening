@@ -1071,6 +1071,7 @@ object LabyrinthAwakening {
     def adjacentCountries(name: String)   = getCountries(getAdjacent(name))
     def adjacentMuslims(name: String)     = getMuslims(getAdjacent(name) filter isMuslim)
     def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
+    def adjacentCountriesWithCells(name: String) = getCountries(getAdjacent(name)) filter (_.cells > 0)
   
     def adjacentToGoodAlly(name: String)     = game.adjacentMuslims(name) exists (m => m.isGood && m.isAlly)
     def adjacentToIslamistRule(name: String) = game.adjacentMuslims(name) exists (_.isIslamistRule)

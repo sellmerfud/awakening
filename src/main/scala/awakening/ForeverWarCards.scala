@@ -1751,7 +1751,7 @@ object ForeverWarCards {
           // Bot
           if (plots.nonEmpty) {
             addEventTarget(UnitedStates)
-            addAvailablePlotToCountry(UnitedStates, plots.head)
+            addAvailablePlotToCountry(UnitedStates, shuffle(plots).head)
           }
           else {
             val candidates = countryNames(game.nonMuslims filter (n => n.canRemovePosture && n.isOppositeUsPosture))
@@ -1970,7 +1970,7 @@ object ForeverWarCards {
             }
           }
           
-          for (n <- nextDiscard(1, 0).reverse; card = deck(n))
+          for (n <- nextDiscard(1, 0); card = deck(n))
             if (card.eventWillTrigger(Jihadist))
               performCardEvent(card, Jihadist, triggered = true)
         }
@@ -2016,7 +2016,7 @@ object ForeverWarCards {
         else if (role == game.humanRole)
           Some(askPlots(game.availablePlots, 1).head)
         else
-          Some(game.availablePlots.sorted.head)
+          Some(shuffle(game.availablePlots).head)
 
         println()
         testCountry(Philippines)
@@ -2089,7 +2089,7 @@ object ForeverWarCards {
           }
           
           println()
-          nextPlot(maxPlots, 0, game.availablePlots.sorted).reverse
+          nextPlot(maxPlots, 0, game.availablePlots.sorted)
         }
         else {
           // Bot
@@ -2103,7 +2103,7 @@ object ForeverWarCards {
               }
           }
             
-          nextPlot(maxPlots, 0, game.availablePlots.sorted).reverse
+          nextPlot(maxPlots, 0, shuffle(game.availablePlots))
         }
         
         println()
@@ -2129,6 +2129,7 @@ object ForeverWarCards {
         else
           JihadistBot.hamaOffensiveTarget(candidates).get
         
+        addEventTarget(target)
         println()
         addSleeperCellsToCountry(target, 2 min game.cellsAvailable)
         
@@ -2145,17 +2146,127 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(313, "Hayat Tahir al-Sham", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.getMuslim(Syria).civilWar &&
+                               (game.cellsAvailable > 0 || game.adjacentCountriesWithCells(Syria).nonEmpty)
       ,
       (role: Role) => {
+        val trackCells   = 3 min game.cellsAvailable
+        val adjWithCells = game.adjacentCountriesWithCells(Syria)
+        val maxAdjCells  = (adjWithCells map (_.cells)).sum
+        val mapCells     = (3 - trackCells) min maxAdjCells
+        
+        addEventTarget(Syria)
+        addSleeperCellsToCountry(Syria, trackCells)
+        // If there were not enough cells on the track
+        // then we must make up the difference from adjacent
+        // countries as much as possible.
+        if (mapCells > 0) {
+          println()
+          val cellItems = if (role == game.humanRole)
+            askCellsFromAnywhere(mapCells, false, adjWithCells map (_.name), sleeperFocus = false)
+          else {
+            def nextAdjacent(cellsLeft: Int, candidates: List[String]): List[CellsItem] = {
+              if (cellsLeft == 0 || candidates.isEmpty)
+                Nil
+              else {
+                val target = JihadistBot.hayatTahirTarget(candidates).get
+                val m = game.getMuslim(target)
+                val actives  = cellsLeft min m.activeCells
+                val sleepers = (cellsLeft - actives) min m.sleeperCells
+                val remain   = cellsLeft - actives - sleepers
+                CellsItem(target, actives, sleepers) :: nextAdjacent(remain, candidates filterNot (_ == target))
+              }
+            }
+            
+            nextAdjacent(mapCells, adjWithCells map (_.name))
+          }
+          
+          for (CellsItem(name, actives, sleepers) <- cellItems) {
+            moveCellsBetweenCountries(name, Syria, actives,  active = true)
+            moveCellsBetweenCountries(name, Syria, sleepers, active = false)
+          }
+        }
+        
+        // Finally see if the caliphate will be declared
+        if (trackCells + mapCells == 3 &&
+           ((role == game.humanRole && canDeclareCaliphate(Syria) && askDeclareCaliphate(Syria)) ||
+            (role == game.botRole && JihadistBot.willDeclareCaliphate(Syria))))
+          declareCaliphate(Syria)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(314, "Jihadist African Safari", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.availablePlots.nonEmpty || game.cellsAvailable > 0
       ,
       (role: Role) => {
+        case class Action(name: String, item: Either[Unit, Plot])
+        
+        
+        val actions = if (role == game.humanRole) {
+          def nextAction(actionNum: Int, cellsRemaining: Int, plots: List[Plot], candidates: List[String]): List[Action] = {
+            if (actionNum > 3 || (cellsRemaining == 0 && plots.isEmpty))
+              Nil
+            else {
+              val choices = List(
+                choice(cellsRemaining > 0, "cell", "Place a Cell"),
+                choice(plots.nonEmpty,     "plot", "Place a Plot")
+              ).flatten
+              println()
+              askMenu(s"${ordinal(actionNum)} action:", choices).head match {
+                case "cell" =>
+                  val target = askCountry("Place a Cell in which country: ", candidates)
+                  Action(target, Left(())) :: nextAction(actionNum+1, cellsRemaining-1, plots, candidates filterNot (_ == target))
+                  
+                case _ =>
+                  val target = askCountry("Place a Plot in which country: ", candidates)
+                  val plot   = askPlots(plots, 1).head
+                  val index  = plots.indexOf(plot)
+                  val others = plots.take(index) ::: plots.drop(index + 1)
+                  Action(target, Right(plot)) :: nextAction(actionNum+1, cellsRemaining, others, candidates filterNot (_ == target))
+              }
+            }
+          }
+          nextAction(1, game.cellsAvailable, game.availablePlots, African)
+        }
+        else {
+          // Bot
+          val plotsFirst = game.funding < 9
+          val plotsToPlace = if (plotsFirst)
+            shuffle(game.availablePlots) take 3
+          else
+            shuffle(game.availablePlots) take ((3 - game.cellsAvailable) max 0)
+          
+          val numCells = (3 - plotsToPlace.size) min game.cellsAvailable
+
+          def nextAction(cellsLeft: Int, plots: List[Plot], candidates: List[String]): List[Action] = {
+            if (cellsLeft == 0 && plots.isEmpty)
+              Nil
+            else if (plots.nonEmpty && (plotsFirst || cellsLeft == 0)) {
+              val target = JihadistBot.plotPriority(candidates).get
+              Action(target, Right(plots.head)) :: nextAction(cellsLeft, plots.tail, candidates filterNot (_ == target))
+            }
+            else {
+              val target = JihadistBot.recruitTravelToPriority(candidates).get
+              Action(target, Left(())) :: nextAction(cellsLeft - 1, plots, candidates filterNot (_ == target))
+            }
+          }
+          
+          nextAction(numCells, plotsToPlace, African)
+        }
+        
+        println()
+        actions foreach {
+          case Action(name, Left(_)) =>
+            addEventTarget(name)
+            testCountry(name)
+            addSleeperCellsToCountry(name, 1)
+            
+          case Action(name, Right(plot)) =>
+            addEventTarget(name)
+            testCountry(name)
+            addAvailablePlotToCountry(name, plot)
+        }
       }
     )),
     // ------------------------------------------------------------------------
