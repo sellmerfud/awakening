@@ -3333,15 +3333,6 @@ object LabyrinthAwakening {
     log(s"Attrition: $name$effects")
     log(separator())
 
-    // Add milita for Advisors before we get the muslim country instance below
-    game.getMuslim(name) match {
-      case m if m.numAdvisors > 0 && game.militiaAvailable > 0 =>
-        val n = m.numAdvisors min game.militiaAvailable
-        log(s"Add $n militia to $name due to presence of Advisors")
-        game = game.updateCountry(m.copy(militia = m.militia + n))          
-      case _ =>
-    }
-
     // Get the fresh instance of the Muslim country
     val m = game.getMuslim(name)
     // If Siege of Mosul in play then cells are halved and (troops + milita)
@@ -3435,8 +3426,16 @@ object LabyrinthAwakening {
     else {
       val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
       
-      for (m <- civilWars)
+      for (m <- civilWars) {
+        // Add militia for any Advisors present
+        val newMilita = m.numAdvisors min game.militiaAvailable
+        if (newMilita > 0) {
+          log(s"Add $newMilita militia to ${m.name} due to presence of Advisors")
+          game = game.updateCountry(m.copy(militia = m.militia + newMilita))
+        }
+        
         civilWarAttrition(m.name)
+      }
       
       // Check to see if the Caliphate Capital has been displaced because its country
       // was improved to Good governance.
