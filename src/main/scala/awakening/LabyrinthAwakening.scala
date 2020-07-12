@@ -428,6 +428,14 @@ object LabyrinthAwakening {
    Nigeria           -> (Mali :: Sudan :: KenyaTanzania :: Nil)
   )
   
+  val qatariCrisisAdjacencyMap: Map[String, List[String]] = Map(
+    Iran         -> (Afghanistan :: Pakistan :: GulfStates :: SaudiArabia:: Yemen :: Iraq :: 
+                     Turkey :: Caucasus :: CentralAsia :: Nil),
+    Yemen        -> (SaudiArabia :: Somalia :: GulfStates :: Iran :: Nil),
+    SaudiArabia  -> (Jordan :: Iraq :: GulfStates :: Yemen :: Iran :: Nil),
+    GulfStates   -> (SaudiArabia :: Iraq :: Iran :: Pakistan :: Yemen :: Nil)
+  )
+  
   def getAdjacent(name: String): List[String] = {
     val patriotAct = (game getCountry UnitedStates).hasMarker(PatriotAct)
     // We must filter against countries in the game, so we don't try
@@ -442,7 +450,13 @@ object LabyrinthAwakening {
         })
       )
     }
-    adjacencyMap(name) filter adjFilter
+    //  If QatariCrisis in play then SaudiArabia, GulfStates, Yemen, Iran are all
+    //  considered adjacent
+    val names = if (globalEventInPlay(QatariCrisis) && (qatariCrisisAdjacencyMap contains name))
+      qatariCrisisAdjacencyMap(name)
+    else
+      adjacencyMap(name)
+    names filter adjFilter
   }
   def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
 

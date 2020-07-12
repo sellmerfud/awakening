@@ -166,6 +166,10 @@ object ForeverWarCards {
     game.nonMuslims filter (n => n.isUntested && !n.isGood && (game.adjacentMuslims(n.name) exists (!_.isUntested)))
   )
   
+  def martyrdomCandidates = countryNames(
+    game.countries filter (c => c.totalCells > 0 && !(game.isMuslim(c.name) && game.getMuslim(c.name).isIslamistRule)) 
+  ) 
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2272,25 +2276,89 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(315, "Khashoggi Crisis", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => role == game.humanRole ||
+                                  game.prestige > 3      ||
+                                  !game.getMuslim(SaudiArabia).isAdversary
       ,
       (role: Role) => {
+        testCountry(Turkey)
+        testCountry(SaudiArabia)
+        if (role == game.humanRole) {
+          val choices = List(
+            "shift"    -> "Shift alignment of Saudi Arabia toward Adversary",
+            "prestige" -> "Decrease prestige by 2"
+          )
+          askMenu("\nChoose one:", choices).head match {
+            case "shift" => shiftAlignmentRight(SaudiArabia)
+            case _       => decreasePrestige(2)
+          }
+        }
+        else {
+          // Bot
+          if (game.prestige > 3)
+            decreasePrestige(2)
+          else {
+            addEventTarget(SaudiArabia)
+            shiftAlignmentRight(SaudiArabia)
+          }
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(316, "Martyrdom Operation", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.availablePlots.nonEmpty && martyrdomCandidates.nonEmpty
       ,
       (role: Role) => {
+        val (target, (active, sleeper, sadr), plots) = if (role == game.humanRole) {
+          val target = askCountry("Select country: ", martyrdomCandidates)
+          val cell = askCells(target, 1, sleeperFocus = false)
+          (target, cell, askAvailablePlots(2, ops = 3))
+        }
+        else {
+          // See Event Instructions table
+          val target = JihadistBot.plotTarget(martyrdomCandidates).get
+          val c = game getCountry target
+          val cell = if (c.activeCells > 0) (1, 0, false)
+                     else if (c.hasSadr)    (0, 0, true)
+                     else                   (0, 1, false)
+          (target, cell, shuffle(game.availablePlots) take 2)
+        }
+        
+        addEventTarget(target)
+        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = false)
+        for (plot <- plots)
+          addAvailablePlotToCountry(target, plot)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(317, "Qatari Crisis", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.hasMuslim(m => m.isShiaMix && m.civilWar)
       ,
       (role: Role) => {
+        addEventTarget(GulfStates)
+        testCountry(GulfStates)
+        val m = game.getMuslim(GulfStates)
+        if (m.isGood || m.isFair || !m.isAdversary) {
+          if (role == game.humanRole) {
+            val choices = List(
+              choice(m.isGood || m.isFair, "worsen", "Worsen governance of Gulf States"),
+              choice(!m.isAdversary,       "shift",  "Shift alignment of Gulf States towards Adversary")
+            ).flatten
+            askMenu("\nChoose one:", choices).head match {
+              case "worsen" => degradeGovernance(GulfStates, 1, canShiftToIR = false)
+              case _        => shiftAlignmentRight(GulfStates)
+            }
+          }
+          else if (m.isGood || m.isFair)
+            degradeGovernance(GulfStates, 1, canShiftToIR = false)
+          else
+            shiftAlignmentRight(GulfStates)
+        }
+        
+        log("Iran, Gulf States, Saudi Arabia and Yemen are all now adjacent.")
+        addGlobalEventMarker(QatariCrisis)
       }
     )),
     // ------------------------------------------------------------------------
