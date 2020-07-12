@@ -3999,6 +3999,9 @@ object LabyrinthAwakening {
         removeEventMarkersFromCountry(Iran, TradeEmbargoUS)
       }
       
+      //  Setting a country to Ally could disrupt the Tehran Beirut Land Corridor
+      checkTehranBeirutLandCorridor()
+      
       if (newAlign == Adversary)
         removeAllAdvisorsFromCountry(name)
       
@@ -4078,6 +4081,31 @@ object LabyrinthAwakening {
   def isIranSpecialCase = game.getCountry(Iran) match {
     case n: NonMuslimCountry if n.iranSpecialCase => true
     case _ => false
+  }
+  
+  //  Used to enforce the Tehran Beirut Corridor
+  //  event. Card #319
+  def tehranBeirutLandCorridorSatisfied = {
+    val tehranBeirutCandidate = (name: String) => name match {
+      case Iran if isIranSpecialCase =>
+        !game.getNonMuslim(Iran).isUntested
+      
+      case _ =>
+        val m = game.getMuslim(name)
+        !(m.isUntested || m.isAlly || m.civilWar) 
+    }
+    
+    (List(Iran, Syria, Lebanon) forall tehranBeirutCandidate) &&
+    (List(Iraq, Turkey)         exists tehranBeirutCandidate)
+  }
+  
+  //  Check to see if the Tehran Beirut Land Corridor has been disrupted.
+  def checkTehranBeirutLandCorridor(): Unit = {
+    if (countryEventInPlay(Iran, TehranBeirutLandCorridor) && !tehranBeirutLandCorridorSatisfied) {
+      log(s"The $TehranBeirutLandCorridor has been disrupted.")
+      log("Iran is now a 2 Resource country again.")
+      removeEventMarkersFromCountry(Iran, TehranBeirutLandCorridor)
+    }
   }
   
   def countryEventInPlay(countryName: String, markerName: String) =
@@ -4223,6 +4251,9 @@ object LabyrinthAwakening {
       val newSleepers = m.reaction min game.cellsAvailable
       addSleeperCellsToCountry(name, newSleepers)
       flipCaliphateSleepers()
+      
+      //  This civil war may disrupt the Tehran Beirut Land Corridor
+      checkTehranBeirutLandCorridor()
     }
   }
     
@@ -7212,6 +7243,7 @@ object LabyrinthAwakening {
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newAlignment =>
           logAdjustment(name, "Alignment", m.alignment, newAlignment)
           game = game.updateCountry(m.copy(alignment = newAlignment))
+          checkTehranBeirutLandCorridor()
           saveAdjustment(name, "Alignment")
         }
     }

@@ -2408,9 +2408,15 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => tehranBeirutLandCorridorSatisfied
       ,
       (role: Role) => {
+        increaseFunding(3)
+        addEventMarkersToCountry(Iran, TehranBeirutLandCorridor)
+        log()
+        log("Iran is now a 3 Resource country and will remain so as long as")
+        log("neither Iran, Syria or Lebanon become Ally or Civil War")
+        log("and at least one of Iraq and Turkey are not Ally or Civil War")
       }
     )),
     // ------------------------------------------------------------------------
