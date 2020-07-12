@@ -1461,17 +1461,12 @@ object JihadistBot extends BotHelpers {
   // only call this if there were not enough troops on the track
   // to satisfy the event.
   def troopsToTakeOffMap(remaining: Int, candidates: List[String]): List[MapItem] = {
-    if (remaining == 0)
+    if (remaining == 0 || candidates.isEmpty)
       Nil
     else {
-      troopsMilitiaTarget(candidates) match {
-        case None => Nil
-        case Some(t) if game.getMuslim(t).troops >= remaining =>
-          MapItem(t, remaining) :: Nil
-        case Some(t) =>
-          MapItem(t, 1) :: troopsToTakeOffMap(remaining - 1, candidates filterNot (_ == t))
-      }
+      val target = troopsMilitiaTarget(candidates).get
+      val num    = game.getCountry(target).troops min remaining
+      MapItem(target, num) :: troopsToTakeOffMap(remaining - num, candidates filterNot (_ == target))
     }
-  }
-  
+  }  
 }

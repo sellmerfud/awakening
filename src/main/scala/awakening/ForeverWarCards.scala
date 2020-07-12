@@ -2363,10 +2363,46 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(318, "South China Sea Crisis", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
-      ,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
+        // Take troops from available if possible, otherwise we must 
+        // ask the user where to take them from.
+        val numToRemove  = 2 min (game.troopsAvailable + game.troopsOnMap)
+        val numFromTrack = numToRemove min game.troopsAvailable
+        val numFromMap   = numToRemove - numFromTrack
+        
+        val countries = if (numFromMap == 0)
+          Nil
+        else if (role == game.humanRole) {
+          val targets = game.countries filter (_.troops > 0) map (c => MapItem(c.name, c.troops))
+          println(s"Select ${amountOf(numFromMap, "troop")} from the map to remove")
+          askMapItems(targets.sortBy(_.country), numFromMap, "troop")
+        }
+        else
+          JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
+        
+        for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries; if num > 0) {
+          if (name != "track")
+            addEventTarget(name)
+          takeTroopsOffMap(name, num)
+        }
+        
+        val postureCandidates = List(Thailand, Philippines)
+        val postureTarget = if (role == game.humanRole)
+          askCountry("Roll posture for which country: ", postureCandidates)
+        else
+          JihadistBot.posturePriority(postureCandidates).get
+        
+        val die = dieRoll
+        val modifiedDie = (die + game.prestigeModifier) max 1 min 6
+        val newPosture = if (modifiedDie < 5) Soft else Hard
+        log(s"Die roll = $die")
+        log(f"${game.prestigeModifier}%+d (US prestige modifier)")
+        log(s"Modified die roll = $modifiedDie")
+        
+        addEventTarget(postureTarget)
+        setCountryPosture(postureTarget, newPosture)
+        addGlobalEventMarker(SouthChinaSeaCrisis)
       }
     )),
     // ------------------------------------------------------------------------

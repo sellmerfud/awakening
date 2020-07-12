@@ -990,8 +990,7 @@ object AwakeningCards {
         }
       ,
       (role: Role) => {
-        removeGlobalEventMarker(Sequestration)
-        returnSequestrationTroopsToAvailable()
+        returnSequestrationTroopsToAvailable("Congress Acts releases the off map Sequestration troops")
         
         if (role == game.humanRole) {
           val candidates = countryNames(game.muslims filter (m => m.civilWar))
@@ -1752,7 +1751,6 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) => (game.troopsAvailable + game.troopsOnMap) > 0
       ,
       (role: Role) => {
-        import JihadistBot.troopsToTakeOffMap
         // Take troops from available if possible, otherwise we must 
         // ask the user where to take them from.
         val numToRemove  = 2 min (game.troopsAvailable + game.troopsOnMap)
@@ -1762,12 +1760,12 @@ object AwakeningCards {
         val countries = if (numFromMap == 0)
           Nil
         else if (role == game.humanRole) {
-          val targets = game.muslims filter (_.troops > 0) map (m => MapItem(m.name, m.troops))
+          val targets = game.countries filter (_.troops > 0) map (c => MapItem(c.name, c.troops))
           println(s"Select ${amountOf(numFromMap, "troop")} from the map to remove")
           askMapItems(targets.sortBy(_.country), numFromMap, "troop")
         }
         else
-          troopsToTakeOffMap(numFromMap, countryNames(game.muslims filter (_.troops > 0)))
+          JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
         
         for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries; if num > 0) {
           if (name != "track")

@@ -4310,20 +4310,37 @@ object LabyrinthAwakening {
     if (num > 0) {
       val startingCommitment = game.troopCommitment      
       def disp(name: String) = if (name == "track") "the troops track" else name
-        log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to the off map box")
-        // Note: No need to "remove" them from the track as the number on the track is
-        // calcualted base on those on the map and in the off map box.
-        if (source == "track")
-          assert(game.troopsAvailable >= num, "takeTroopsOffMap(): Not enough troops available on track")
-        else {
-          val m = game.getMuslim(source)
-          assert(m.troops >= num, s"takeTroopsOffMap(): Not enough troops available in $source")
-          game  = game.updateCountry(m.copy(troops = m.troops - num))
-        }
-        game = game.copy(offMapTroops = game.offMapTroops + num)
         
-        if (game.troopCommitment != startingCommitment)
-          log(s"Move the troop commitment marker from ${startingCommitment} to ${game.troopCommitment}")
+      log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to the off map box")
+      // Note: No need to "remove" them from the track as the number on the track is
+      // calcualted base on those on the map and in the off map box.
+      if (source == "track")
+        assert(game.troopsAvailable >= num, "takeTroopsOffMap(): Not enough troops available on track")
+      else {
+        val m = game.getMuslim(source)
+        assert(m.troops >= num, s"takeTroopsOffMap(): Not enough troops available in $source")
+        game  = game.updateCountry(m.copy(troops = m.troops - num))
+      }
+      game = game.copy(offMapTroops = game.offMapTroops + num)
+      
+      if (game.troopCommitment != startingCommitment)
+        log(s"Move the troop commitment marker from ${startingCommitment} to ${game.troopCommitment}")
+    }
+  }
+  
+  def moveOfMapTroopsToTrack(num: Int): Unit = {
+    if (num > 0) {
+      assert(game.offMapTroops >= num, "moveOfMapTroopsToTrack() num too high")
+      val startingCommitment = game.troopCommitment
+      
+      def disp(name: String) = if (name == "track") "the troops track" else name
+      log(s"Move ${amountOf(num, "troop")} from the off map box to the troops track")
+      // Note: No need to "add" them from the track as the number on the track is
+      // calcualted base on those on the map and in the off map box.
+      game = game.copy(offMapTroops = game.offMapTroops - num)
+      
+      if (game.troopCommitment != startingCommitment)
+        log(s"Move the troop commitment marker from ${startingCommitment} to ${game.troopCommitment}")
     }
   }
   
@@ -4827,8 +4844,7 @@ object LabyrinthAwakening {
             }
             // Sequestration
             if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
-              log("Resolved WMD plot releases the troops off map for Sequestration")
-              returnSequestrationTroopsToAvailable()
+              returnSequestrationTroopsToAvailable("\nResolved WMD plot releases the off map Sequestration troops")
             }
             
             // rule 11.2.6    (WMD in Civil War)
@@ -4927,8 +4943,7 @@ object LabyrinthAwakening {
             
             // Sequestration
             if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
-              log("Resolved WMD plot releases the troops off map for Sequestration")
-              returnSequestrationTroopsToAvailable()
+              returnSequestrationTroopsToAvailable("\nResolved WMD plot releases the off map Sequestration troops")
             }
             // Prestige
             if (name == UnitedStates)
@@ -4994,10 +5009,12 @@ object LabyrinthAwakening {
   
     // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
     // then return the troops to available.
-  def returnSequestrationTroopsToAvailable(): Unit = {
+  def returnSequestrationTroopsToAvailable(msg: String): Unit = {
     if (game.sequestrationTroops) {
-      log("Return 3 (Sequestration) troops from the off map box to the troops track")
-      game = game.copy(offMapTroops = game.offMapTroops - 3, sequestrationTroops = false)
+      log(msg)
+      moveOfMapTroopsToTrack(3)
+      game = game.copy(sequestrationTroops = false)
+      removeGlobalEventMarker(Sequestration)
     }
   }
   
@@ -5164,37 +5181,34 @@ object LabyrinthAwakening {
       log(separator())
       log(s"$US player will draw $usCards cards")
       log(s"Jihadist player will draw $jihadistCards cards")
-  
-      log()  // Add a blank line for readability
-      
+        
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
       
       val threeResIR = (game.muslims find (m => m.resourceValue >= 3 && m.isIslamistRule))
       (game.sequestrationTroops, threeResIR) match {
         case (true, Some(m)) => 
-          log(s"There is a 3 Resource Muslim country at Islamist Rule: ${m.name}")
-          returnSequestrationTroopsToAvailable()
+          returnSequestrationTroopsToAvailable(s"\nA 3 Resource Muslim country at Islamist Rule (${m.name})\nreleases the off map Sequestration troops")
         case _ =>
       }
           
       if (endEbolaScare) {
-        log(s"Ebola Scare ends: return 1 troop from the off map box to the troops track")
-        game = game.copy(offMapTroops = game.offMapTroops - 1)
+        log(s"\nEbola Scare ends")
+        moveOfMapTroopsToTrack(1)
       }
       if (endKoreanCrisis) {
-        log(s"Korean Crisis ends: return 2 troops from the off map box to the troops track")
-        game = game.copy(offMapTroops = game.offMapTroops - 2)
+        log(s"\nKorean Crisis ends")
+        moveOfMapTroopsToTrack(2)
       }
       if (endSouthChinaSeasCrisis) {
-        log(s"South China Seas Crisis ends: return 2 troops from the off map box to the troops track")
-        game = game.copy(offMapTroops = game.offMapTroops - 2)
+        log(s"\nSouth China Seas Crisis ends")
+        moveOfMapTroopsToTrack(2)
         removeGlobalEventMarker(SouthChinaSeaCrisis)
       }
   
       for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
         game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
-        log(s"Flip green regime change marker in ${rc.name} to its tan side")
+        log(s"\nFlip green regime change marker in ${rc.name} to its tan side")
       }
     
       // Reset history list of plays. They are not store in turn files.
