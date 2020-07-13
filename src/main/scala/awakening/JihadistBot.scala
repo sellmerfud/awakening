@@ -951,7 +951,12 @@ object JihadistBot extends BotHelpers {
       }
     }
     
-    val attempts = nextTravelFrom(0, Set.empty)
+    val uk = game.getNonMuslim(UnitedKingdom)
+    val notAllowed = if (toName == UnitedKingdom && uk.hasMarker(BREXIT) && uk.isHard)
+      Schengen.toSet
+    else
+      Set.empty[String]
+    val attempts = nextTravelFrom(0, notAllowed)
     val opsUsed = attempts.size
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)

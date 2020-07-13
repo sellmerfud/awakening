@@ -480,6 +480,16 @@ object LabyrinthAwakening {
     measure(source, Set.empty).get
   }
   
+  //  Return a list of countries with at least 1 cell that are closest to the
+  //  target country
+  def closestWithCells(target: String, allowSadr: Boolean = false): List[String] = {
+    val candidates = countryNames(game.countries filter (c => c.name != target && (if (allowSadr) c.totalCells > 0 else c.cells > 0)))
+    val ordered = (candidates map (name => (name, distance(name, target)))).sortWith((a, b) => a._2 < b._2)
+    if (ordered.isEmpty)
+      Nil
+    else
+      (ordered takeWhile (_._2 == ordered.head._2)) map (_._1)
+  }
   
   val PersionGulfExporterNames = SaudiArabia::GulfStates::Iraq::Iran::Nil
   
@@ -833,7 +843,13 @@ object LabyrinthAwakening {
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) = 
       ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
 
-    val recruitNumber = governance max recruitOverride
+    def recruitNumber = if (name == UnitedKingdom && hasMarker(BREXIT))
+      1
+    else if (recruitOverride != 0)
+      recruitOverride
+    else
+      governance
+    
     def autoRecruit = false
     def recruitSucceeds(die: Int) = die <= recruitNumber
     def addMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers ++ names)
@@ -1495,7 +1511,7 @@ object LabyrinthAwakening {
       getCountry(name) match {
         case n: NonMuslimCountry =>
           val posture = if (n.iranSpecialCase) "(Special Case)" else n.posture
-          b += s"$name -- ${govToString(n.governance)}, $posture"
+          b += s"$name -- ${govToString(n.governance)}, $posture, Recruit ${n.recruitNumber}"
           item(n.activeCells, "Active cell")
           item(n.sleeperCells, "Sleeper cell")
           if (n.hasCadre)
@@ -6650,12 +6666,20 @@ object LabyrinthAwakening {
         src.actives > 0
       }
         
-      val destCandidates = if (lapsingEventInPlay(Biometrics))
-        src.name :: getAdjacent(src.name)
-      else
-        countryNames(game.countries)
+      val destCandidates = {
+        val uk = game.getNonMuslim(UnitedKingdom)
+        val names = if (lapsingEventInPlay(Biometrics))
+          src.name :: getAdjacent(src.name)
+        else
+          countryNames(game.countries)
+        
+        if (Schengen.contains(src.name) && uk.hasMarker(BREXIT) && uk.isHard)
+          names filterNot (_ == UnitedKingdom)
+        else
+          names
+      }
 
-      val dest = askCountry(s"$ord Travel to which destination country: ", destCandidates)
+      val dest = askCountry(s"$ord Travel to which destination country: ", destCandidates.sorted)
       // Remove the selected cell so that it cannot be selected twice.
       if (src.sleepers + src.actives == 1)
         sourceCountries -= src.name

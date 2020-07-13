@@ -179,6 +179,23 @@ object ForeverWarCards {
     (game.muslims filter (_.civilWar)) ::: 
     (game.getCountries(African) filter (_.isUntested))
   )
+  
+  def amnestyInternationUSCandidates = countryNames(
+    game.muslims filter (m => m.isAdversary && m.canTakeAwakeningOrReactionMarker)
+  )
+  
+  def amnestyInternationJihadistCandidates = countryNames(
+    game.muslims filter (m => m.isAlly && m.canTakeAwakeningOrReactionMarker)
+  )
+  
+  def blasphemyUSCandidates = countryNames(
+    game.muslims filter (m => m.totalCells > 0 && !m.isAdversary && m.canTakeAwakeningOrReactionMarker)
+  )
+  
+  def blasphemyJihadistCandidates = countryNames(
+    game.muslims filter (m => m.totalCells > 0 && !m.isAlly && m.canTakeAwakeningOrReactionMarker)
+  )
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2490,49 +2507,129 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(322, "Amnesty International", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => (role == US       && amnestyInternationUSCandidates.nonEmpty) ||
+                                  (role == Jihadist && amnestyInternationJihadistCandidates.nonEmpty)
       ,
-      (role: Role) => {
+      (role: Role) => if (role == US) {
+          val target = if (role == game.humanRole)
+            askCountry("Place Awakening marker in which country: ", amnestyInternationUSCandidates)
+          else
+            USBot.markerAlignGovTarget(amnestyInternationUSCandidates).get
+          
+          addEventTarget(target)
+          testCountry(target)
+          addAwakeningMarker(target)
+      }
+      else { // Jihadist
+        val target = if (role == game.humanRole)
+          askCountry("Place Reaction marker in which country: ", amnestyInternationJihadistCandidates)
+        else
+          JihadistBot.markerAlignGovTarget(amnestyInternationJihadistCandidates).get
+        
+        addEventTarget(target)
+        testCountry(target)
+        addReactionMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(323, "Blasphemy", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => (role == US && blasphemyUSCandidates.nonEmpty) ||
+                                  (role == Jihadist && blasphemyJihadistCandidates.nonEmpty)
       ,
-      (role: Role) => {
+      (role: Role) => if (role == US) {
+        val target = if (role == game.humanRole)
+          askCountry("Place Awakening marker in which country: ", blasphemyUSCandidates)
+        else
+          USBot.markerAlignGovTarget(blasphemyUSCandidates).get
+        
+        addEventTarget(target)
+        testCountry(target)
+        addAwakeningMarker(target)
+      }
+      else { // Jihadist
+        val target = if (role == game.humanRole)
+          askCountry("Place Reaction marker in which country: ", blasphemyJihadistCandidates)
+        else
+          JihadistBot.markerAlignGovTarget(blasphemyJihadistCandidates).get
+        
+        addEventTarget(target)
+        testCountry(target)
+        addReactionMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(324, "BREXIT", Unassociated, 1,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => globalEventInPlay(Euroscepticism) ||
+                                  (game hasNonMuslim (n => n.isSchengen && n.totalCells > 0)) ||
+                                  (game.plotData.resolvedTargets exists Schengen.contains)
       ,
-      (role: Role) => {
-        removeGlobalEventMarker(Euroscepticism)
-        // Add BREXIT marker to UK
+      (role: Role) => if (role == US) {
+        addEventTarget(UnitedKingdom)
+        setCountryPosture(UnitedKingdom, Hard)
+        addEventMarkersToCountry(UnitedKingdom, BREXIT)
       }
+      else { // Jihadist
+        decreasePrestige(1)
+        addEventTarget(UnitedKingdom)
+        testCountry(UnitedKingdom)
+        val source = closestWithCells(UnitedKingdom) match {
+          case Nil => None
+          case candidates if role == game.humanRole =>
+            Some(askCountry(s"Move cell to $UnitedKingdom from which country: ", candidates))
+          case candidates =>
+            JihadistBot.travelFromTarget(UnitedKingdom, candidates)
+        }
+        
+        source foreach { name =>
+          moveCellsBetweenCountries(name, UnitedKingdom, 1, game.getCountry(name).activeCells > 0)
+        }
+      }  
     )),
     // ------------------------------------------------------------------------
     entry(new Card(325, "Dissent Channel", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => (role == US && game.funding > 1) ||
+                                  (role == Jihadist && game.prestige > 1)
       ,
       (role: Role) => {
+        if (role == US)
+          decreaseFunding(1)
+        else
+          decreasePrestige(1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(326, "Filibuster/Nuclear Option", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => {
+         val basic = globalEventInPlay(TrumpTweetsON) || globalEventInPlay(TrumpTweetsOFF)
+         if (role == game.humanRole)
+           basic
+         else if (role == US)
+           globalEventInPlay(TrumpTweetsOFF)
+         else
+           globalEventInPlay(TrumpTweetsON)
+      }
       ,
       (role: Role) => {
+        val action = if (role == game.humanRole) {
+          val choices = List("on" -> "Set Trump Tweets ON", "off" -> "Set Trump Tweets OFF")
+          askMenu("\nChoose one: ", choices).head
+        }
+        else if (role == US) "on" else "off"
+        
+        if (action == "on")
+          setTrumpTweetsON()
+        else
+          setTrumpTweetsOFF()
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(327, "Gaza Aid", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2540,7 +2637,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(328, "Hafiz Saeed Khan", Unassociated, 1,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2548,7 +2645,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(329, "Hamza bin Laden", Unassociated, 1,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2556,7 +2653,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(330, "IRGC", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2564,7 +2661,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(331, "JASTA", Unassociated, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2572,7 +2669,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(332, "Khan Shaykhun Chemical Attack", Unassociated, 1,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2580,7 +2677,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(333, "MbS", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2588,7 +2685,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(334, "Novichok Agent", Unassociated, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2596,7 +2693,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(335, "Rohingya Genocide", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2604,7 +2701,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(336, "US/NK Summit", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2612,7 +2709,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(337, "US Border Crisis", Unassociated, 1,
       NoRemove, USLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2620,7 +2717,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(338, "US Border Crisis", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2628,7 +2725,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(339, "Erdogan Dance", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2636,7 +2733,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(340, "EU Bolsters Iran Deal", Unassociated, 2,
       JihadistRemove, JihadistLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2644,7 +2741,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(341, "Gulen Movement", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2652,7 +2749,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(342, "Gulmurod Khalimov", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2660,7 +2757,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(343, "JCPOA", Unassociated, 2,
       JihadistRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2668,7 +2765,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(344, "Media Manipulation", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2676,7 +2773,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(345, "Operation Euphrates Shield", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2684,7 +2781,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(346, "Pakistani Intelligence (ISI)", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2692,7 +2789,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(347, "Switching Jerseys", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2700,7 +2797,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(348, "Travel Ban", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2708,7 +2805,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(349, "Turkish Coup", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2716,7 +2813,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(350, "UN Peace Envoy", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2724,7 +2821,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(351, "Advanced Persistent Threat (APT)", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2774,7 +2871,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(353, "Bowling Green Massacre", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2790,7 +2887,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(355, "Fake News", Unassociated, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2798,7 +2895,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(356, "OPEC Production Cut", Unassociated, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2806,7 +2903,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(357, "Peace Dividend", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2814,7 +2911,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(358, "Political Islamism/Pan Arab Nationalism", Unassociated, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2822,7 +2919,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(359, "Quick Win/Bad Intel", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false
       ,
       (role: Role) => {
       }
@@ -2830,7 +2927,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(360, "US China Trade War", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => game.usPosture != game.getNonMuslim(China).posture && trumpTweetsON
+      (role: Role, _: Boolean) => game.usPosture != game.getNonMuslim(China).posture && trumpTweetsON
       ,
       (role: Role) => {
         if (globalEventInPlay(USChinaTradeWar))
