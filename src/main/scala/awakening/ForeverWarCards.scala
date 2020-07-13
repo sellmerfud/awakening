@@ -170,6 +170,15 @@ object ForeverWarCards {
     game.countries filter (c => c.totalCells > 0 && !(game.isMuslim(c.name) && game.getMuslim(c.name).isIslamistRule)) 
   ) 
   
+  def tribalLeadersCandidates = countryNames(
+    game.muslims filter (m => m.militia > 0 && (m.inRegimeChange || m.civilWar))
+  )
+  
+  def ungovernedSpaceCandidates = countryNames(
+    (game.countries filter (_.isPoor)) ::: 
+    (game.muslims filter (_.civilWar)) ::: 
+    (game.getCountries(African) filter (_.isUntested))
+  )
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2412,6 +2421,7 @@ object ForeverWarCards {
       ,
       (role: Role) => {
         increaseFunding(3)
+        addEventTarget(Iran)
         addEventMarkersToCountry(Iran, TehranBeirutLandCorridor)
         log()
         log("Iran is now a 3 Resource country and will remain so as long as")
@@ -2422,17 +2432,59 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => tribalLeadersCandidates.nonEmpty
       ,
       (role: Role) => {
+        if (role == game.humanRole) {
+          def nextResponse(numLeft: Int): Unit = {
+            val candidates = tribalLeadersCandidates
+            if (numLeft > 0 && candidates.nonEmpty) {
+              val target = askCountry("Remove militia from which country: ", candidates)
+              val maxNum = game.getMuslim(target).militia min numLeft
+              val num    = if (candidates.size == 1) maxNum else askInt(s"Remove how many from $target", 1, maxNum)
+              addEventTarget(target)
+              removeMilitiaFromCountry(target, num)
+              nextResponse(numLeft - num)
+            }
+          }
+          nextResponse(3)
+        }
+        else {
+          // Bot
+          def nextMilitia(numLeft: Int): Unit = {
+            val candidates = tribalLeadersCandidates
+            if (numLeft > 0 && candidates.nonEmpty) {
+              val target = JihadistBot.troopsMilitiaTarget(candidates).get
+              val num    = game.getMuslim(target).militia min numLeft
+              addEventTarget(target)
+              removeMilitiaFromCountry(target, num)
+              nextMilitia(numLeft - num)
+            }
+          }
+          nextMilitia(3)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(321, "Ungoverned Spaces", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      (_: Role, _: Boolean) => game.cellsAvailable > 0 && ungovernedSpaceCandidates.nonEmpty
       ,
       (role: Role) => {
+        val (target, num) = if (role == game.humanRole)
+          (askCountry("Which country: ", ungovernedSpaceCandidates), askInt("Place how many cells", 1, game.cellsAvailable min 3))
+        else
+          (JihadistBot.recruitTravelToPriority(ungovernedSpaceCandidates).get, game.cellsAvailable min 3)
+        
+        addEventTarget(target)
+        testCountry(target)
+        addSleeperCellsToCountry(target, num)
+        
+        if (num == 3 &&
+            canDeclareCaliphate(target) &&
+            ((role == game.humanRole && askDeclareCaliphate(target)) ||
+             (role == game.botRole && JihadistBot.willDeclareCaliphate(target))))
+          declareCaliphate(target)
       }
     )),
     // ------------------------------------------------------------------------
