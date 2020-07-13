@@ -196,6 +196,23 @@ object ForeverWarCards {
     game.muslims filter (m => m.totalCells > 0 && !m.isAlly && m.canTakeAwakeningOrReactionMarker)
   )
   
+  def hafizSaeedKhanMuslimUSCandidates = countryNames(
+    game.getMuslims(Afghanistan::Pakistan::Nil) filter { m =>
+      (m.inRegimeChange && !m.isAlly) || (m.isAdversary && !m.isIslamistRule)
+    }
+  )
+  def hafizSaeedKhanMuslimJihadistCandidates = countryNames(
+    game.getMuslims(Afghanistan::Pakistan::Nil) filter (m => m.inRegimeChange || m.isAdversary) 
+  )
+
+  def hafizSaeedKhanNonMuslimUSCandidates = countryNames(
+    game.getNonMuslims(India::Nil) filter (n => n.totalCells > 0 && n.posture == Soft && game.usPosture == Hard)
+  )
+  
+  def hafizSaeedKhanNonMuslimJihadistCandidates = countryNames(
+    game.getNonMuslims(India::Nil) filter (n => n.totalCells > 0)
+  )
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -2629,25 +2646,72 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(327, "Gaza Aid", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => (role == US && game.prestige < 12) ||
+                                  (role == Jihadist && game.funding < 9)
       ,
       (role: Role) => {
+        increasePrestige(1)
+        increaseFunding(1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(328, "Hafiz Saeed Khan", Unassociated, 1,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => 
+        (role == US && (hafizSaeedKhanMuslimUSCandidates.nonEmpty || hafizSaeedKhanNonMuslimUSCandidates.nonEmpty)) ||
+        (role == Jihadist && (hafizSaeedKhanMuslimJihadistCandidates.nonEmpty || hafizSaeedKhanNonMuslimJihadistCandidates.nonEmpty))
       ,
-      (role: Role) => {
+      (role: Role) => if (role == US) {
+        val candidates = hafizSaeedKhanMuslimUSCandidates ::: hafizSaeedKhanNonMuslimUSCandidates
+        val target = if (role == game.humanRole)
+          askCountry("Which country: ", candidates)
+        else if (hafizSaeedKhanMuslimUSCandidates.nonEmpty)
+          USBot.markerAlignGovTarget(hafizSaeedKhanMuslimUSCandidates).get
+        else
+          USBot.posturePriority(hafizSaeedKhanNonMuslimUSCandidates).get
+        
+        addEventTarget(target)
+        testCountry(target)
+        if (target == India)
+          setCountryPosture(India, Hard)
+        else
+          shiftAlignmentLeft(target)
+      }
+      else { // Jihadist
+        val candidates = hafizSaeedKhanMuslimJihadistCandidates ::: hafizSaeedKhanNonMuslimJihadistCandidates
+        val (target, action) = if (role == game.humanRole) {
+          val name = askCountry("Which country: ", candidates)
+          val choices = List(
+            choice(game.availablePlots contains Plot1, "plot", "Place a level 1 Plot"),
+            choice(game.cellsAvailable > 0,            "cell", "Place a Cell")
+          ).flatten
+          (name, askMenu("\nChoose one:", choices).head)
+        }
+        else if (game.availablePlots contains Plot1)
+          (JihadistBot.plotPriority(candidates).get, "plot")
+        else
+          (JihadistBot.recruitTravelToPriority(candidates).get, "cell")
+        
+        addEventTarget(target)
+        testCountry(target)
+        if (action == "plot")
+          addAvailablePlotToCountry(target, Plot1)
+        else
+          addSleeperCellsToCountry(target, 1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(329, "Hamza bin Laden", Unassociated, 1,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => (PersonalityCards exists game.cardRemoved) &&
+          ((role == US && game.prestige < 12) ||
+          (role == Jihadist && game.funding < 9))
       ,
-      (role: Role) => {
+      (role: Role) => if (role == US) {
+        increasePrestige(1)
+      }
+      else {
+        increaseFunding(2)
       }
     )),
     // ------------------------------------------------------------------------
