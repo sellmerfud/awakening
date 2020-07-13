@@ -3439,17 +3439,57 @@ object LabyrinthAwakening {
       log("No countries in civil war")
     else {
       val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
-      
-      for (m <- civilWars) {
-        // Add militia for any Advisors present
-        val newMilita = m.numAdvisors min game.militiaAvailable
-        if (newMilita > 0) {
-          log(s"Add $newMilita militia to ${m.name} due to presence of Advisors")
-          game = game.updateCountry(m.copy(militia = m.militia + newMilita))
+      val totalAdvisors = (civilWars map (_.numAdvisors)).sum
+      // Add militia for any Advisors present
+      if (civilWars exists (_.numAdvisors > 0)) {
+        log("\nAdvisors")
+        log(separator())
+        if (game.militiaAvailable == 0)
+          log("There are no available militia")
+        else if (game.militiaAvailable >= totalAdvisors) {
+          for (m <- civilWars; num = m.numAdvisors; if num > 0)
+            addMilitiaToCountry(m.name, num)          
+        }
+        else {
+          //  There are not enough available milita for all Advisors so
+          //  ask where to place them.
+          if (game.humanRole == US) {
+            var advisorMap: Map[String, Int] = (civilWars filter (_.numAdvisors > 0) map (m => (m.name, m.numAdvisors))).toMap 
+            def nextMilita(numLeft: Int): Unit = if (numLeft > 0) {
+              val unfulfilled = advisorMap.values.sum
+              val target      = askCountry("Place milita in which country: ", advisorMap.keys.toList.sorted)
+              val numAdvisors = advisorMap(target)
+              val maxNum      = numAdvisors min numLeft
+              val num         = askInt(s"Place how many militia in $target", 1, maxNum)
+              addMilitiaToCountry(target, num)
+              if (num == numAdvisors)
+                advisorMap -= target
+              else
+                advisorMap += (target -> (numAdvisors - num))
+              nextMilita(numLeft - num)
+              
+            }
+            println("\nThere are more Advisors markers than available milita")
+            nextMilita(game.militiaAvailable)
+            
+          }
+          else {
+            def nextMilita(numLeft: Int, candidates: List[String]): Unit = if (numLeft > 0) {
+              val target = USBot.deployToPriority(candidates).get
+              val m = game.getMuslim(target)
+              val num = m.numAdvisors min game.militiaAvailable
+              addMilitiaToCountry(target, num)
+              nextMilita(numLeft - num, candidates filterNot (_ == target))
+            }
+            nextMilita(game.militiaAvailable, countryNames(civilWars filter (_.numAdvisors > 0)))  
+          }
+          
         }
         
-        civilWarAttrition(m.name)
       }
+      
+      for (name <- civilWars map (_.name))
+        civilWarAttrition(name)
       
       // Check to see if the Caliphate Capital has been displaced because its country
       // was improved to Good governance.
@@ -7156,7 +7196,7 @@ object LabyrinthAwakening {
         val choices = (flip ::: List(
           "alignment", "governance", "active cells", "sleeper cells", "regime change",
           "cadre", "troops", "militia", "aid", "awakening", "reaction", "wmd cache",
-          "besieged regime", "civil war", "caliphate capital", "plots", "markers"
+          "besieged regime", "civil war", "caliphate capital", "plots", "markers", "advisors"
         )).sorted
         askOneOf(s"[$name attribute] (? for list): ", choices, allowNone = true, allowAbort = false) match {
           case None        =>
@@ -7178,6 +7218,7 @@ object LabyrinthAwakening {
               case "caliphate capital"  => adjustCaliphateCapital(name)
               case "plots"              => adJustCountryPlots(name)
               case "markers"            => adjustCountryMarkers(name)
+              case "advisors"           => adjustCountryAdvisors(name)
               case "wmd cache"          => adjustCountryWMDCache(name)
               case "flip to non-Muslim" => adjustToNonMuslim(name)
             }
@@ -7213,6 +7254,7 @@ object LabyrinthAwakening {
     }
     getNextResponse()
   }
+  
   
   def adjustPosture(name: String): Unit = {
     game.getCountry(name) match {
@@ -7661,6 +7703,8 @@ object LabyrinthAwakening {
     }
   }  
     
+  // Note: Advisors are not handle by this function because a country can contain
+  //       multiple Advisors markers.  Set adjustCountryAdvisors()
   def adjustCountryMarkers(name: String): Unit = {
     val country = game.getCountry(name)
     var inPlay = country.markers
@@ -7680,6 +7724,9 @@ object LabyrinthAwakening {
       println(s"Enter a marker name to move it between $name and out of play.")
       askOneOf("Marker: ", CountryMarkers, allowNone = true, allowAbort = false) match {
         case None =>
+        case Some(Advisors) =>
+          println("use 'adjust advisors' to adjust Advisors Markers")
+          getNextResponse()
         case Some(name) if inPlay contains name =>
           inPlay = inPlay filterNot(_ == name)
           getNextResponse()
@@ -7698,6 +7745,50 @@ object LabyrinthAwakening {
       }
       saveAdjustment(name, "Markers")
     }  
+  }
+  
+  def adjustCountryAdvisors(name: String): Unit = {
+    val numInOtherCountries = game.muslims.map(m => if (m.name == name) 0 else m.numAdvisors).sum
+    val m = game.getMuslim(name)
+    var inPlace = m.markers filter (_ == Advisors)
+    val origNumAdvisors = inPlace.size
+    var available = List.fill(3 - numInOtherCountries - inPlace.size)(Advisors)
+    
+    if (inPlace.isEmpty && available.isEmpty)
+      println("All 3 of the Advisors markers are in other countries")
+    else {
+      def getNextResponse(): Unit = {
+        println()
+        println(s"$name now contains ${amountOf(inPlace.size, "Advisors marker")}")
+        println(s"There are ${amountOf(available.size, "available Advisors marker")}")
+        val choices = List(
+          choice(available.nonEmpty, "place",  "Add an Advisors marker"),
+          choice(inPlace.nonEmpty,   "remove", "Remove an Advisors marker"),
+          choice(true,               "done",   "Finished")
+        ).flatten
+        askMenu("\nChoose one:", choices, allowAbort = false).head match {
+          case "place" =>
+            inPlace = Advisors :: inPlace
+            available = available.tail
+            getNextResponse()
+            
+          case "remove" =>
+            available = Advisors :: available
+            inPlace = inPlace.tail
+            getNextResponse()
+            
+          case _ =>
+        }
+      }
+      getNextResponse()
+      
+      if (inPlace.size != origNumAdvisors) {
+        val newMarkers = inPlace ::: (m.markers filterNot (_ == Advisors))
+        logAdjustment(name, "Markers", m.markers, newMarkers)
+        game = game.updateCountry(m.copy(markers = newMarkers))
+        saveAdjustment(name, "Markers")
+      }  
+    }
   }
   
   def adjustCountryWMDCache(name: String): Unit = {
