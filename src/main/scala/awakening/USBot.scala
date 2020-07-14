@@ -1207,6 +1207,7 @@ object USBot extends BotHelpers {
     val opsUsed = (game getMuslim target).governance
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
+    addOpsTarget(target)
     performWarOfIdeas(target, opsUsed)
     opsUsed
   }
@@ -1218,6 +1219,7 @@ object USBot extends BotHelpers {
     val opsUsed = (game getMuslim target).governance
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
+    addOpsTarget(target)
     performWarOfIdeas(target, opsUsed)
     opsUsed
   }
@@ -1228,6 +1230,7 @@ object USBot extends BotHelpers {
     val opsUsed = (game getNonMuslim target).governance
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
+    addOpsTarget(target)
     performWarOfIdeas(target, opsUsed)
     opsUsed
   }
@@ -1253,6 +1256,7 @@ object USBot extends BotHelpers {
     }
     if (withdraw) {
       log(s"$US performs a Withdraw operation")
+      addOpsTarget(from)
       performWithdraw(from, to, numTroops)
     }
     else {
@@ -1270,6 +1274,7 @@ object USBot extends BotHelpers {
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
     log(s"$US performs a Disrupt operation in $target")
+    addOpsTarget(target)
     performDisrupt(target)
     opsUsed
   }
@@ -1297,6 +1302,7 @@ object USBot extends BotHelpers {
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
     log(s"$US performs a Regime Change operation in $target")
+    addOpsTarget(target)
     performRegimeChange(source, target, 6) // Bot always uses exactly 6 troops
     opsUsed
   }

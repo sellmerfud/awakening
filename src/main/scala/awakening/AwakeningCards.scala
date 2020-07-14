@@ -1748,7 +1748,8 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(179, "Korean Crisis", Jihadist, 2,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, forTrigger: Boolean) => (game.troopsAvailable + game.troopsOnMap) > 0
+      (role: Role, forTrigger: Boolean) =>
+        (game.troopsAvailable + game.troopsOnMap) > 0 && globalEventNotInPlay(USNKSummit)
       ,
       (role: Role) => {
         // Take troops from available if possible, otherwise we must 

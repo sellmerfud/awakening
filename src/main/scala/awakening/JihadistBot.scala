@@ -961,6 +961,7 @@ object JihadistBot extends BotHelpers {
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
     
+    addOpsTarget(toName)
     for ((name, true) <- performTravels(attempts))
       usedCells(toName).addSleepers(1)
 
@@ -998,6 +999,8 @@ object JihadistBot extends BotHelpers {
             val sleepers    = numAttempts - actives - sadrValue(sadr)
             val attempts = List.fill(actives + sadrValue(sadr))(PlotAttempt(name, true)) :::
                            List.fill(sleepers)(PlotAttempt(name, false))
+            for (a <- attempts)
+              addOpsTarget(a.name)
             val numCompleted = performPlots(card.ops, attempts)
             // All sleepers used will have been flipped to active by performPlots()
             if (numCompleted <= actives)
@@ -1059,6 +1062,8 @@ object JihadistBot extends BotHelpers {
       yield(a + s + (if (sadr) 1 else 0))).sum
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
+    for (t <- targets)
+      addOpsTarget(t.name)
     for ((name, successes, sadr) <- performJihads(targets)) {
       usedCells(name).addActives(successes)
       if (sadr)
@@ -1101,6 +1106,8 @@ object JihadistBot extends BotHelpers {
     val opsUsed = (for (JihadTarget(_, a, s, _, _) <- targets) yield(a + s)).sum
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
+    for (t <- targets)
+      addOpsTarget(t.name)
     for ((name, successes, _) <- performJihads(targets))
       usedCells(name).addActives(successes)
     
@@ -1205,6 +1212,7 @@ object JihadistBot extends BotHelpers {
       else {
         if (completed >= cardOps)
           expendBotReserves(1)
+        addOpsTarget(UnitedStates)
         performPlots(3, PlotAttempt(UnitedStates, activeCells(us) > 0)::Nil)
         usedCells(UnitedStates).addActives(1)
         nextAttempt(completed + 1)
@@ -1303,6 +1311,7 @@ object JihadistBot extends BotHelpers {
             if (completed + plotsPerformed >= cardOps)
               expendBotReserves(1)              
             
+            addOpsTarget(target.name)
             performPlots(3, PlotAttempt(target.name, activeCells(target) > 0)::Nil)
             usedCells(target.name).addActives(1)
             nextAttempt(plotsPerformed + 1)

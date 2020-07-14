@@ -3761,7 +3761,6 @@ object LabyrinthAwakening {
         log()
         log(s"Plot attempt in $name")
         log(separator())
-        addOpsTarget(name)
         if (active)
           log("Using an already active cell")
         else
@@ -3817,7 +3816,6 @@ object LabyrinthAwakening {
         log()
         log(s"Conduct $jihad in $name, rolling ${diceString(numAttempts)}")
         log(separator())
-        addOpsTarget(name)
         if (major && m.sleeperCells > 0)
           flipAllSleepersCells(name)
         else if (!major && sleepers > 0)
@@ -5229,9 +5227,10 @@ object LabyrinthAwakening {
     
       checkAutomaticVictory() // Will Exit game if auto victory has been achieved
     
-      val extraUSCards    = if (lapsingEventInPlay(FullyResourcedCOIN)) 2 else 0
-      val endEbolaScare   = lapsingEventInPlay(EbolaScare)
-      val endKoreanCrisis = lapsingEventInPlay(KoreanCrisis)
+      val extraUSCards      = if (lapsingEventInPlay(FullyResourcedCOIN)) 2 else 0
+      val endEbolaScare     = lapsingEventInPlay(EbolaScare)
+      val endKoreanCrisis   = lapsingEventInPlay(KoreanCrisis)
+      val endUSBorderCrisis = lapsingEventInPlay(USBorderCrisis)
       val endSouthChinaSeasCrisis = globalEventInPlay(SouthChinaSeaCrisis) && 
                                     game.usPosture == game.getNonMuslim(China).posture
     
@@ -5288,6 +5287,10 @@ object LabyrinthAwakening {
       if (endKoreanCrisis) {
         log(s"\nKorean Crisis ends")
         moveOfMapTroopsToTrack(2)
+      }
+      if (endUSBorderCrisis) {
+        log(s"\nUS Border Crisis ends")
+        moveOfMapTroopsToTrack(1)
       }
       if (endSouthChinaSeasCrisis) {
         log(s"\nSouth China Seas Crisis ends")
@@ -6224,6 +6227,7 @@ object LabyrinthAwakening {
     log()
     log(s"$US attempts War of Ideas operation with ${opsString(ops)}")
     val target = askCountry("War of Ideas in which country: ", game.warOfIdeasTargets(ops))
+    addOpsTarget(target)
     performWarOfIdeas(target, ops)
   }
   
@@ -6283,6 +6287,7 @@ object LabyrinthAwakening {
       0
     if (numTroops > 0) {
       val dest = askCountry("Deploy troops to: ", to filterNot (_ == source))
+      addOpsTarget(dest)
       moveTroops(source, dest, numTroops)
     }
     // Troops markers that deploy are simply removed
@@ -6298,6 +6303,7 @@ object LabyrinthAwakening {
     val maxTroops = if (source == "track") game.troopsAvailable
                     else game.getCountry(source).maxDeployFrom
     val numTroops = askInt("How many troops: ", 6, maxTroops)
+    addOpsTarget(dest)
     performRegimeChange(source, dest, numTroops)
   }
   
@@ -6308,6 +6314,7 @@ object LabyrinthAwakening {
     val source = askCountry("Withdraw troops from which country: ", game.withdrawFromTargets)
     val dest   = askCountry("Deploy withdrawn troops to: ", (game.withdrawToTargets filter (_ != source)))
     val numTroops = askInt("How many troops: ", 1, game.getCountry(source).troops)
+    addOpsTarget(source)
     performWithdraw(source, dest, numTroops)
   }
 
@@ -6315,7 +6322,9 @@ object LabyrinthAwakening {
     log()
     log(s"$US performs a Disrupt operation")
     log(separator())
-    performDisrupt(askCountry("Disrupt in which country: ", game.disruptTargets(ops)))
+    val target = askCountry("Disrupt in which country: ", game.disruptTargets(ops))
+    addOpsTarget(target)
+    performDisrupt(target)
   }
   
   // Pick a random plot in the country.
@@ -6334,6 +6343,7 @@ object LabyrinthAwakening {
     log(s"$US performs an Alert operation")
     log(separator())
     val name = askCountry("Alert plot in which country: ", game.alertTargets)
+    addOpsTarget(name)
     performAlert(name, humanPickPlotToAlert(name))
   }
     
@@ -6692,6 +6702,8 @@ object LabyrinthAwakening {
       
       TravelAttempt(src.name, dest, active)
     }
+    for (a <- attempts)
+      addOpsTarget(a.to)
     performTravels(attempts.toList)
   }
   
@@ -6734,7 +6746,10 @@ object LabyrinthAwakening {
         target :: getJihadTargets(diceLeft - numRolls, candidates filterNot (_ == name))
       }
     }
-    performJihads(getJihadTargets(maxDice, candidates))
+    val targets = getJihadTargets(maxDice, candidates)
+    for (t <- targets)
+      addOpsTarget(t.name)
+    performJihads(targets)
   }
   
   // Can only Plots with number <= ops or WMD Plot
@@ -6782,6 +6797,8 @@ object LabyrinthAwakening {
         targetCountries += target.name -> target.copy(sleepers = target.sleepers - 1)
       PlotAttempt(target.name, active)
     }
+    for (a <- attempts)
+      addOpsTarget(a.name)
     performPlots(ops, attempts)
   }
 
