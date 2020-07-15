@@ -734,6 +734,19 @@ object JihadistBot extends BotHelpers {
     }
   }
   
+  // Returns "troop-cube", "militia-cube", or the name of a troop marker
+  def chooseTroopOrMilitiaToRemove(name: String): String = {
+    val c = game.getCountry(name)
+    if (c.troopsMarkers.nonEmpty)
+      c.troopsMarkers.sorted.reverse.head.name
+    else if (c.troops > 0)
+      "troop-cube"
+    else if (game.isMuslim(name) && game.getMuslim(name).militia > 0)
+      "militia-cube"
+    else
+      throw new IllegalStateException(s"JihadistBot.chooseTroopOrMilitiaToRemove($name) not units present")
+  }
+  
   // The Bot will declare the Calipahate if it results in  an auto win, 
   // or if there is at least one other adjacent country that qualifies to be part
   // of the Calipahte.

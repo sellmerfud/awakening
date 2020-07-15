@@ -1964,6 +1964,26 @@ object LabyrinthAwakening {
     }
   }
   
+  // Returns "troop-cube", "militia-cube", or the name of a troop marker
+  def askTroopOrMilitia(target: String): String = {
+    val c = game.getCountry(target)
+    val militia = if (game.isMuslim(target)) game.getMuslim(target).militia else 0
+
+    assert(c.totalTroops + militia > 0, s"askTroopOrMilitia($target) called but no units present")
+    
+    if (c.troops == 0 && c.troopsMarkers.isEmpty)
+      "militia-cube"
+    else if (militia == 0 && c.troopsMarkers.isEmpty)
+      "troop-cube"
+    else {
+      val choices = List(
+        choice(c.troops > 0, "troop-cube",   s"Troop cube (${c.troops} present)"),
+        choice(militia > 0,  "militia-cube", s"Militia cube (${militia} present)")
+      ).flatten ++ (c.troopsMarkers.sorted map (x => x.name -> x.name))
+      askMenu("\nChoose one:", choices).head
+    }
+  }
+  
   def askCardNumber(prompt: String, 
                     initial: Option[String] = None,
                     allowNone: Boolean = true,
@@ -3244,7 +3264,7 @@ object LabyrinthAwakening {
           case _ => // x < -2
             log()
             if (m.isAdversary) {
-              degradeGovernance(name, levels = 1, canShiftToIR = true, endOfTurn = true)
+              worsenGovernance(name, levels = 1, canShiftToIR = true, endOfTurn = true)
               if (game.getMuslim(name).isIslamistRule)
                 convergers = Converger(name, awakening = false) :: convergers
             }
@@ -3309,7 +3329,7 @@ object LabyrinthAwakening {
               val choices = List(
                 choice(troops > 0,  "troop",  "Troop cube"),
                 choice(militia > 0, "militia","Militia cube")
-              ).flatten ++ (markers map (m => m.name -> s"${m.name}  (absorbs ${amountOf(m.num, "loss", Some("losses"))})"))
+              ).flatten ++ (markers.sorted map (m => m.name -> s"${m.name}  (absorbs ${amountOf(m.num, "loss", Some("losses"))})"))
               println(s"$US must take ${amountOf(lossesRemaining, "more loss", Some("more losses"))}")
               askMenu("Which unit will take the next loss:", choices).head match {
                 case "troop"   => troopsLost  += 1; nextHit(lossesRemaining - 1, markers, troops - 1, militia)
@@ -3453,7 +3473,7 @@ object LabyrinthAwakening {
               setAlignment(m.name, newAlign)
             val steps = delta - shifts
             if (steps > 0) {
-              degradeGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = true)
+              worsenGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = true)
               if (game.getMuslim(m.name).isIslamistRule)
                 performConvergence(forCountry = m.name, awakening = false)
             }
@@ -3882,7 +3902,7 @@ object LabyrinthAwakening {
         
         // Remove 1 aid marker for each sucessful die roll
         removeAidMarker(name, successes min m.aidMarkers)
-        degradeGovernance(name, levels = successes, canShiftToIR = majorSuccess)
+        worsenGovernance(name, levels = successes, canShiftToIR = majorSuccess)
         // A major jihad failure rolling 3 dice in a country that was 
         // already at Poor governance before the operation begain will
         // add a besieged regime marker and shift alignment toward ally
@@ -4007,10 +4027,10 @@ object LabyrinthAwakening {
 
   // Degrade the governance of the given country and log the results.
   // Note: The caller is responsible for handling convergence!
-  def degradeGovernance(name: String, levels: Int, canShiftToIR: Boolean, endOfTurn: Boolean = false): Unit = {
+  def worsenGovernance(name: String, levels: Int, canShiftToIR: Boolean, endOfTurn: Boolean = false): Unit = {
     if (levels > 0) {
       val m = game.getMuslim(name)
-      assert(!m.isIslamistRule, s"degradeGovernance() called on Islamist Rule country - $name")
+      assert(!m.isIslamistRule, s"worsenGovernance() called on Islamist Rule country - $name")
       val maxGov = if (canShiftToIR) IslamistRule else Poor
       val newGov = (m.governance + levels) min maxGov
       val delta  = newGov - m.governance
@@ -4068,7 +4088,7 @@ object LabyrinthAwakening {
       if (govDelta > 0)
         improveGovernance(name, govDelta, canShiftToGood = true)
       else if (govDelta < 0)
-        degradeGovernance(name, -govDelta, canShiftToIR = true)
+        worsenGovernance(name, -govDelta, canShiftToIR = true)
     
       alignment foreach { align => setAlignment(name, align) }
     }
@@ -4349,7 +4369,7 @@ object LabyrinthAwakening {
     if (!orig.civilWar) {
       testCountry(name)
       if (orig.isGood)
-        degradeGovernance(name, levels = 1, canShiftToIR = true)
+        worsenGovernance(name, levels = 1, canShiftToIR = true)
       else if (orig.isIslamistRule)
         improveGovernance(name, 1, canShiftToGood = true)
       val m = game.getMuslim(name)
@@ -4993,7 +5013,7 @@ object LabyrinthAwakening {
             // rule 11.2.6    (WMD in Civil War)
             if (mapPlot.plot == PlotWMD && m.civilWar && (wmdsInCivilWars contains m.name)) {
               // If second WMD in the same civil war.  Shift immediately to Islamist Rule.
-              degradeGovernance(m.name, levels = 3, canShiftToIR = true) // 3 levels guarantees shift to IR
+              worsenGovernance(m.name, levels = 3, canShiftToIR = true) // 3 levels guarantees shift to IR
             }
             else {
               if (mapPlot.plot == PlotWMD && m.civilWar) {
@@ -5017,7 +5037,7 @@ object LabyrinthAwakening {
                 // Remove 1 aid marker for each sucessful die roll
                 removeAidMarker(name, successes min m.aidMarkers)
                 if (!m.isIslamistRule)
-                  degradeGovernance(name, levels = successes, canShiftToIR = false)
+                  worsenGovernance(name, levels = successes, canShiftToIR = false)
               }
             }
             

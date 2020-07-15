@@ -1284,7 +1284,7 @@ object LabyrinthCards {
         testCountry(Syria)
         setAlignment(Syria, Adversary)
         if (!(game getMuslim Syria).isIslamistRule)
-          degradeGovernance(Syria, 1, canShiftToIR = false)
+          worsenGovernance(Syria, 1, canShiftToIR = false)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2038,7 +2038,7 @@ object LabyrinthCards {
           JihadistBot.markerAlignGovTarget(candidates).get
         
         addEventTarget(name)
-        degradeGovernance(name, 1, canShiftToIR = false)
+        worsenGovernance(name, 1, canShiftToIR = false)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2291,7 +2291,7 @@ object LabyrinthCards {
           JihadistBot.markerAlignGovTarget(candidates).get
         
         addEventTarget(name)
-        degradeGovernance(name, 1, canShiftToIR = false)
+        worsenGovernance(name, 1, canShiftToIR = false)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2319,7 +2319,7 @@ object LabyrinthCards {
             JihadistBot.markerAlignGovTarget(candidates).get
           
           addEventTarget(name)
-          degradeGovernance(name, 1, canShiftToIR = false)
+          worsenGovernance(name, 1, canShiftToIR = false)
         }
       }
     )),

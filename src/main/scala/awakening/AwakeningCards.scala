@@ -3216,7 +3216,7 @@ object AwakeningCards {
           addAwakeningMarker(Syria)
         }
         else {  // Jihadist
-          degradeGovernance(Syria, 1, canShiftToIR = false)
+          worsenGovernance(Syria, 1, canShiftToIR = false)
           addReactionMarker(Syria)
         }
       }
@@ -3653,7 +3653,7 @@ object AwakeningCards {
         removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
         increaseFunding((actives + sleepers + 1) / 2)  // half of removed cells rounded up
         action match {
-          case Some("gov")   => degradeGovernance(name, 1, canShiftToIR = false)
+          case Some("gov")   => worsenGovernance(name, 1, canShiftToIR = false)
           case Some("align") => shiftAlignmentRight(name)
           case _             => log(s"$name is already Poor Adversary")
         }

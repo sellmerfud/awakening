@@ -90,7 +90,7 @@ object ForeverWarCards {
     game.muslims filter (m => m.canTakeMilitia && m.civilWar && m.totalCells > m.totalTroopsAndMilitia)
   )
   
-  def trumpTripAlignmentCandidates = countryNames(game.muslims filter (m => !m.isIslamistRule && !m.isAlly))
+  def trumpTripAlignmentCandidates = countryNames(game.muslims filter (m => !(m.isIslamistRule || m.isAlly || game.isCaliphateMember(m.name))))
   def trumpTripPostureCandidates   = countryNames(game.nonMuslims filter (n => n.canChangePosture && n.posture != game.usPosture))
   
   def airAmericaCaliphateCandidates = countryNames(
@@ -104,6 +104,10 @@ object ForeverWarCards {
     game.getMuslims(Egypt::Syria::Pakistan::Turkey::Nil) filter (m => !(m.isUntested || m.isIslamistRule || m.civilWar || m.isGood))
   )
   
+  def governmentOfNationalAccordCandidates = countryNames(
+    game.muslims filter (m => !(m.civilWar || game.isCaliphateMember(m.name)))
+  )
+
   def sfabCandidates = countryNames(
     game.muslims filter (m => m.civilWar && m.alignment != Adversary && m.totalTroops == 0)
   )
@@ -181,11 +185,11 @@ object ForeverWarCards {
   )
   
   def amnestyInternationUSCandidates = countryNames(
-    game.muslims filter (m => m.isAdversary && m.canTakeAwakeningOrReactionMarker)
+    game.muslims filter (m => m.isAdversary && m.canTakeAwakeningOrReactionMarker && !game.isCaliphateMember(m.name))
   )
   
   def amnestyInternationJihadistCandidates = countryNames(
-    game.muslims filter (m => m.isAlly && m.canTakeAwakeningOrReactionMarker)
+    game.muslims filter (m => m.isAlly && m.canTakeAwakeningOrReactionMarker && !game.isCaliphateMember(m.name))
   )
   
   def blasphemyUSCandidates = countryNames(
@@ -258,6 +262,20 @@ object ForeverWarCards {
     countryNames(game.muslims filter (m => m.civilWar && m.totalCells > 0 && m.militia > 0 && test(m)))
   }
   
+  def unPeaceEnvoyCandidates(role: Role) = {
+    // Can't use m.totalTroopsAndMilitia here because it is unit by unit regardless of
+    // unit size (some marker troops such as NATO represent two troops)
+    val usUnits = (m: MuslimCountry) => m.militia + m.troops + m.troopsMarkers.size
+    val basicTest = (m: MuslimCountry) => !game.isCaliphateMember(m.name) && m.civilWar &&
+                                           m.totalCells > 0 && usUnits(m) > 0
+    val botTest = role match {
+      case US if role == game.botRole => (m: MuslimCountry) => usUnits(m) > m.totalCells
+      case Jihadist if role == game.botRole => (m: MuslimCountry) => m.totalCells > usUnits(m)
+      case _ => (m: MuslimCountry) => true // Always true. Leave for human player to decide
+    }
+    
+    countryNames(game.muslims filter (m => basicTest(m) && botTest(m)))
+  }
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -1105,12 +1123,12 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(274, "Government of National Accord", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => (game hasMuslim (_.civilWar))
+      (_: Role, _: Boolean) => governmentOfNationalAccordCandidates.nonEmpty
       ,
       (role: Role) => {
         val numMilitia = game.militiaAvailable min 2
         val die = dieRoll
-        val candidates = countryNames(game.muslims filter (_.civilWar))        
+        val candidates = governmentOfNationalAccordCandidates    
         val target = if (role == game.humanRole)
           askCountry("Which Civil War country: ", candidates)
         else
@@ -2432,12 +2450,12 @@ object ForeverWarCards {
               choice(!m.isAdversary,       "shift",  "Shift alignment of Gulf States towards Adversary")
             ).flatten
             askMenu("\nChoose one:", choices).head match {
-              case "worsen" => degradeGovernance(GulfStates, 1, canShiftToIR = false)
+              case "worsen" => worsenGovernance(GulfStates, 1, canShiftToIR = false)
               case _        => shiftAlignmentRight(GulfStates)
             }
           }
           else if (m.isGood || m.isFair)
-            degradeGovernance(GulfStates, 1, canShiftToIR = false)
+            worsenGovernance(GulfStates, 1, canShiftToIR = false)
           else
             shiftAlignmentRight(GulfStates)
         }
@@ -3329,18 +3347,79 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(349, "Turkish Coup", Unassociated, 2,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      JihadistRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      (role: Role, _: Boolean) => {
+        val turkey = game.getMuslim(Turkey)
+        globalEventInPlay(GulenMovement) && !turkey.isUntested &&
+        ((role == US && !(turkey.isGood && turkey.isAlly)) ||
+         (role == Jihadist && !(turkey.isAdversary && turkey.isIslamistRule)))
+      }
       ,
       (role: Role) => {
+        val turkey = game.getMuslim(Turkey)
+        val choices = if (role == US)
+          List(
+            choice(!turkey.isGood, "improve", "Improve governance 1 level"),
+            choice(!turkey.isAlly, "left",    "Shift alignment towards Ally")
+          ).flatten
+        else
+          List(
+            choice(!turkey.isIslamistRule, "worsen", "Worsen governance 1 level"),
+            choice(!turkey.isAdversary,    "right",  "Shift alignment towards Adversary")
+          ).flatten
+        
+        val action = role match {
+          case _  if role == game.humanRole       => askMenu("\nChoose one:", choices).head
+          case US if !turkey.isGood               => "improve"
+          case US                                 => "left"
+          case Jihadist if !turkey.isIslamistRule => "worsen"
+          case Jihadist                           => "right"
+        }
+        
+        addEventTarget(Turkey)
+        action match {
+          case "improve" => improveGovernance(Turkey, 1, canShiftToGood = true)
+          case "worsen"  => worsenGovernance(Turkey, 1, canShiftToIR = true)
+          case "left"    => shiftAlignmentLeft(Turkey)
+          case _         => shiftAlignmentRight(Turkey)
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(350, "UN Peace Envoy", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => unPeaceEnvoyCandidates(role).nonEmpty
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Which country: ", unPeaceEnvoyCandidates(role))
+        else if (role == US)
+          USBot.disruptPriority(unPeaceEnvoyCandidates(role)).get
+        else
+          JihadistBot.troopsMilitiaTarget(unPeaceEnvoyCandidates(role)).get
+        
+        @tailrec def nextRemoval(): Unit = {
+          val m = game.getMuslim(target)
+          if (m.totalCells > 0 && m.totalTroopsAndMilitia > 0) {
+            val ((actives, sleepers, sadr), usUnit) = if (role == game.humanRole)
+              (askCells(target, 1, role == US), askTroopOrMilitia(target))
+            else if (role == US)
+              (USBot.chooseCellsToRemove(target, 1), USBot.chooseTroopOrMilitiaToRemove(target))
+            else
+              (JihadistBot.chooseCellsToRemove(target, 1), JihadistBot.chooseTroopOrMilitiaToRemove(target))
+            
+            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = false)
+            usUnit match {
+              case "militia-cube" => removeMilitiaFromCountry(target, 1)
+              case "troop-cube"   => moveTroops(target, "track", 1)
+              case marker         => removeEventMarkersFromCountry(target, marker)
+            }
+            nextRemoval()
+          }
+        }
+          
+        addEventTarget(target)
+        nextRemoval()
       }
     )),
     // ------------------------------------------------------------------------
