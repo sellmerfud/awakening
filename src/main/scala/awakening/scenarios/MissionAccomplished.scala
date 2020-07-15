@@ -74,7 +74,7 @@ object MissionAccomplished extends Scenario {
   override val additionalSetup: () => Unit = () => {
     // The Jihadist player rolls the posture of each Schengen country.
     for (name <- Schengen)
-      rollCountryPosture(name, false)
+      rollCountryPosture(name, 0, false)
     logWorldPosture()
   }
 }

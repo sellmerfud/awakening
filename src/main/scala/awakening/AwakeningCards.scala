@@ -2449,7 +2449,7 @@ object AwakeningCards {
             ).flatten
             val action = if (choices.isEmpty) None else askMenu("\nChoose one:", choices).headOption
             val from = if (action == Some("cells")) {
-              val sources = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
+              val sources = countryNames(game.countries filter (c => c.name != target && c.cells > 0))
               askCellsFromAnywhere(2, true, sources, sleeperFocus = false)
             }
             else
@@ -2465,12 +2465,12 @@ object AwakeningCards {
             JihadistBot.criticalMiddleShiftPossibilities(jiCandidates) match {
               case Nil =>
                 val target = JihadistBot.travelToTarget(jiCandidates).get
-                def nextFrom(countries: List[String], remaining: Int): List[CellsItem] =
+                def nextFrom(countries: List[String], remaining: Int, cellsAvailable: Int): List[CellsItem] =
                   if (remaining == 0)
                     Nil
-                  else if (game.cellsAvailable > 0) {
-                    val n = remaining min game.cellsAvailable
-                    CellsItem("track", 0, n)::nextFrom(countries, remaining - n)
+                  else if (cellsAvailable > 0) {
+                    val n = remaining min cellsAvailable
+                    CellsItem("track", 0, n)::nextFrom(countries, remaining - n, cellsAvailable - n)
                   }
                   else if (countries.isEmpty)
                     Nil
@@ -2481,13 +2481,13 @@ object AwakeningCards {
                         val n = remaining min c.totalCells
                         val a = n min c.activeCells
                         val s = n - a
-                        CellsItem(name, a, s)::nextFrom(countries filterNot (_ == name), remaining - n)
+                        CellsItem(name, a, s)::nextFrom(countries filterNot (_ == name), remaining - n, cellsAvailable)
                       case None => Nil
                     }
                   }
 
                 val fromCandidates = countryNames(game.countries filter (c => c.name != target && JihadistBot.hasCellForTravel(c)))
-                (target, Some("cells"), nextFrom(fromCandidates, 2))
+                (target, Some("cells"), nextFrom(fromCandidates, 2, game.cellsAvailable))
                 
               case xs  => (JihadistBot.markerAlignGovTarget(xs).get, Some("shiftRight"), Nil)
             }
@@ -2500,13 +2500,7 @@ object AwakeningCards {
           case Some("awakening")  => addAwakeningMarker(target)
           case Some("shiftLeft")  => shiftAlignmentLeft(target)
           case Some("shiftRight") => shiftAlignmentRight(target)
-          case _ => // place cells
-            from foreach {
-              case CellsItem("track", _, n) => addSleeperCellsToCountry(target, n)
-              case CellsItem(name, a, s)    =>
-                moveCellsBetweenCountries(name, target, a, true)
-                moveCellsBetweenCountries(name, target, s, false)
-            }
+          case _                  => moveCellsToTarget(target, from)
         }
         log()
         log("IMPORTANT!")
@@ -3063,17 +3057,12 @@ object AwakeningCards {
           for ((target, num) <- targets) {
             addEventTarget(target)
             testCountry(target)
-            val withCells = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
+            val withCells = countryNames(game.countries filter (c => c.name != target && c.cells > 0))
             println()
             println(s"Choose ${amountOf(num, "cell")} to place in $target")
             val sources = askCellsFromAnywhere(num, true, withCells, sleeperFocus = false) 
             println()
-            sources foreach {
-              case CellsItem("track", _ , n) => addSleeperCellsToCountry(target, n)
-              case CellsItem(name, a, s)     =>
-                moveCellsBetweenCountries(name, target, a, true)
-                moveCellsBetweenCountries(name, target, s, false)
-            }
+            moveCellsToTarget(target, sources)
             // Count how many were actually placed (based on availability)
             val totalPlaced = (sources map (_.total)).sum
             if (totalPlaced == 3 && canDeclareCaliphate(target) && askDeclareCaliphate(target))
@@ -3396,19 +3385,8 @@ object AwakeningCards {
     entry(new Card(223, "Iranian Elections", Unassociated, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
       (role: Role) => {
-        // See Event Instructions table
-        log("Flip Iran country mat to its Shia-Mix Muslim side")
-        log("Set Iran to Fair Adversary")
-        val iran = game.getNonMuslim(Iran)
-        game = game.updateCountry(DefaultMuslimIran.copy(
-          sleeperCells = iran.sleeperCells,
-          activeCells  = iran.activeCells,
-          hasCadre     = iran.hasCadre,
-          plots        = iran.plots,
-          markers      = iran.markers,
-          wmdCache     = iran.wmdCache
-        ))
         addEventTarget(Iran)
+        flipIranToShiaMixMuslim()
         if (role == US) {
           addAwakeningMarker(Iran, 2)
           addReactionMarker(Iran)

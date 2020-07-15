@@ -493,6 +493,21 @@ object LabyrinthAwakening {
   
   val PersionGulfExporterNames = SaudiArabia::GulfStates::Iraq::Iran::Nil
   
+  //  When Travel Ban is in effect, no travel to the US from these
+  //  countries.
+  def isTravelBanCountry(name: String) = {
+    val alwaysBanned = Set(Iran, Iraq, Libya, Somalia, Sudan, Syria, Yemen)
+    
+    if (alwaysBanned contains name)
+      true
+    else if (game isNonMuslim name)
+      false
+    else {
+      val m = game.getMuslim(name)
+      m.civilWar || m.inRegimeChange || m.isIslamistRule
+    }
+  }
+  
   def persianGulfExporters = {
     val names = if (isIranSpecialCase)
       PersionGulfExporterNames filterNot (_ == Iran)
@@ -614,12 +629,12 @@ object LabyrinthAwakening {
   ).sorted
   
   
-  
   val CountryMarkers = List(
     Sadr, CTR, MoroTalks, NEST, BenazirBhutto, Indo_PakistaniTalks, IraqiWMD, LibyanDeal,
     LibyanWMD, PatriotAct, AbuSayyaf, BhuttoShot, FATA, Advisors, UNSCR_1973, NATO, NATO2,
     TrainingCamps, OperationServal, TehranBeirutLandCorridor, BREXIT
   ).sorted
+  
   
   // Lapsing Event card numbers
   val Biometrics          = 2
@@ -843,7 +858,8 @@ object LabyrinthAwakening {
     def isOppositeUsPosture = !isUntested && posture != game.usPosture
     def canRemovePosture = !isUntested && !(iranSpecialCase || name == UnitedStates || name == Israel)
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) = 
-      ops >= governance && !(iranSpecialCase || name == UnitedStates || name == Israel)
+      ops >= governance && 
+      !(iranSpecialCase || name == UnitedStates || name == Israel || (isSchengen && lapsingEventInPlay(EUBolstersIranDeal)))
 
     def recruitNumber = if (name == UnitedKingdom && hasMarker(BREXIT))
       1
@@ -2129,6 +2145,17 @@ object LabyrinthAwakening {
       nextChoice(num, trackSrc ::: countrySrcs)
     }
   }
+  
+  def moveCellsToTarget(target: String, items: List[CellsItem]): Unit = {
+    items foreach {
+      case CellsItem("track", _ , n) =>
+        addSleeperCellsToCountry(target, n)
+        
+      case CellsItem(name, a, s)     =>
+        moveCellsBetweenCountries(name, target, a, true)
+        moveCellsBetweenCountries(name, target, s, false)
+    }
+  }
 
   //  cells: (activeCells, sleeperCells, Sadr)
   case class CellsToRemove(countryName: String, cells: (Int, Int, Boolean))
@@ -2315,13 +2342,18 @@ object LabyrinthAwakening {
     }
   }
   
-  def rollCountryPosture(name: String, logWorld: Boolean = true): Unit = {
+  def rollCountryPosture(name: String, drm: Int = 0, logWorld: Boolean = true): Unit = {
     assert(name != UnitedStates, "rollCountryPosture() called for United States.  Use RollUSPosture()")
     val n = game.getNonMuslim(name)
     val die = dieRoll
-    log(s"Roll posture of $name")
+    val modifiedDie = die + drm
+    log(s"\nRoll posture of $name")
     log(s"Die roll: $die")
-    val newPosture = if (die < 5) Soft else Hard
+    if (drm != 0) {
+      log(f"$drm%+d")
+      log(s"Modifed roll: $modifiedDie")
+    }
+    val newPosture = if (modifiedDie < 5) Soft else Hard
     if (n.posture == newPosture)
       log(s"The posture of $name remains $newPosture")
     else {
@@ -4139,6 +4171,21 @@ object LabyrinthAwakening {
     case _ => false
   }
   
+  def flipIranToShiaMixMuslim(): Unit = {
+    // See Event Instructions table
+    log("\nFlip Iran country mat to its Shia-Mix Muslim side")
+    log("Set Iran to Fair Adversary")
+    val iran = game.getNonMuslim(Iran)
+    game = game.updateCountry(DefaultMuslimIran.copy(
+      sleeperCells = iran.sleeperCells,
+      activeCells  = iran.activeCells,
+      hasCadre     = iran.hasCadre,
+      plots        = iran.plots,
+      markers      = iran.markers,
+      wmdCache     = iran.wmdCache
+    ))
+  }
+  
   //  Used to enforce the Tehran Beirut Corridor
   //  event. Card #319
   def tehranBeirutLandCorridorSatisfied = {
@@ -4168,6 +4215,9 @@ object LabyrinthAwakening {
     (game getCountry countryName).hasMarker(markerName)
   def countryEventNotInPlay(countryName: String, markerName: String) =
     !(countryEventInPlay(countryName, markerName))
+  def countryEventInPlayAnywhere(markerName: String) = 
+    game.countries exists (c => countryEventInPlay(c.name, markerName))
+    
   def globalEventInPlay(name: String)     = game.markers contains name
   def globalEventNotInPlay(name: String)  = !globalEventInPlay(name)
   def lapsingEventInPlay(cardNum: Int)    = game.cardsLapsing contains cardNum
@@ -4228,6 +4278,12 @@ object LabyrinthAwakening {
         }
       }
     }
+  }
+  
+  def removeCountryEventMarkerAnywhere(marker: String): Unit = {
+     game.countries filter (c => countryEventInPlay(c.name, marker)) foreach { c =>
+       removeEventMarkersFromCountry(c.name, marker)
+     }
   }
 
   // A country can have more than one Advisors counter
@@ -5242,15 +5298,7 @@ object LabyrinthAwakening {
           log("Lapsing Cards")
           log(separator())
         }
-        if (remove.nonEmpty)
-          wrap("Remove from the game: ", remove.sorted map cardNumAndName) foreach (log(_))
-        if (discard.nonEmpty)
-          wrap("Discard: ", discard.sorted map cardNumAndName) foreach (log(_))
-      
-        game = game.copy(
-          cardsLapsing = Nil,
-          cardsRemoved = remove ::: game.cardsRemoved
-        )
+        removeLapsingCards(game.cardsLapsing)
       }
       
       game.firstPlotCard foreach { num => 
@@ -5310,6 +5358,20 @@ object LabyrinthAwakening {
       game = game.copy(turn = game.turn + 1)
       logStartOfTurn()
     }
+  }
+  
+  def removeLapsingCards(targets: List[Int]): Unit = {
+    val lapsing = game.cardsLapsing filter targets.contains
+    val (remove, discard) = lapsing.partition(deck(_).remove != NoRemove)
+    if (remove.nonEmpty)
+      wrap("Remove lapsing cards from the game: ", remove.sorted map cardNumAndName) foreach (log(_))
+    if (discard.nonEmpty)
+      wrap("Discard lapsing cards: ", discard.sorted map cardNumAndName) foreach (log(_))
+
+    game = game.copy(
+      cardsLapsing = game.cardsLapsing filterNot (x => remove.contains(x) || discard.contains(x)),
+      cardsRemoved = remove ::: game.cardsRemoved
+    )
   }
   
   val scenarios = ListMap[String, Scenario](
@@ -6680,15 +6742,18 @@ object LabyrinthAwakening {
         
       val destCandidates = {
         val uk = game.getNonMuslim(UnitedKingdom)
-        val names = if (lapsingEventInPlay(Biometrics))
+        var names = if (lapsingEventInPlay(Biometrics))
           src.name :: getAdjacent(src.name)
         else
           countryNames(game.countries)
         
         if (Schengen.contains(src.name) && uk.hasMarker(BREXIT) && uk.isHard)
-          names filterNot (_ == UnitedKingdom)
-        else
-          names
+          names = names filterNot (_ == UnitedKingdom)
+        
+        if (isTravelBanCountry(src.name))
+          names = names filterNot(_ == UnitedStates)
+
+        names
       }
 
       val dest = askCountry(s"$ord Travel to which destination country: ", destCandidates.sorted)
@@ -7081,10 +7146,14 @@ object LabyrinthAwakening {
       askOneOf("Marker: ", GlobalMarkers, allowNone = true, allowAbort = false) match {
         case None =>
         case Some(name) if inPlay contains name =>
-          inPlay = inPlay filterNot(_ == name)
+          inPlay = inPlay filterNot (_ == name)
           getNextResponse()
         case Some(name) =>
           inPlay = name :: inPlay
+          if (name == TrumpTweetsON)
+            inPlay = inPlay filterNot (_ == TrumpTweetsOFF)
+          else if (name == TrumpTweetsOFF)
+            inPlay = inPlay filterNot (_ == TrumpTweetsON)
           getNextResponse()
       }
     }
