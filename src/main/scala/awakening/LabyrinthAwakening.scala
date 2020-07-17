@@ -103,6 +103,8 @@ object LabyrinthAwakening {
     val key = name.toLowerCase
   }
   
+  def oppositeRole(role: Role) = if (role == US) Jihadist else US
+  
   implicit val BotDifficultyOrdering = Ordering.by { x: BotDifficulty => x.order }
   
   // US
@@ -619,21 +621,31 @@ object LabyrinthAwakening {
   val TehranBeirutLandCorridor = "Tehran-Beirut Land Corridor"
   val BREXIT                   = "BREXIT"
 
-  val GlobalMarkers = List(
-    Abbas, AnbarAwakening, SaddamCaptured, Wiretapping, EnhancedMeasures, Renditions,
-    VieiraDeMelloSlain, AlAnbar, MaerskAlabama, Fracking, BloodyThursday,
-    Censorship, Pirates1, Pirates2, Sequestration, Smartphones, ThreeCupsOfTea, TradeEmbargoUS,
-    TradeEmbargoJihadist, LeakWiretapping, LeakEnhancedMeasures, LeakRenditions,
-    TrumpTweetsON, TrumpTweetsOFF, Euroscepticism, EarlyExit, QatariCrisis, SouthChinaSeaCrisis, USNKSummit,
-    GulenMovement, TravelBan, AlBaghdadi, PoliticalIslamismUS, PoliticalIslamismJihadist, USChinaTradeWar
-  ).sorted
+  //  Map Markers to their Card Associations.
+  //  This is needed by the "Bowling Green Massacre" event so
+  //  we can determine which role the marker is associated with for
+  //  the Bot decision
   
+  val GlobalMarkers: Map[String, CardAssociation] = Map(
+    Abbas -> US, AnbarAwakening -> US, SaddamCaptured -> US, Wiretapping -> US, EnhancedMeasures -> US,
+    Renditions -> US, VieiraDeMelloSlain -> Jihadist, AlAnbar -> Jihadist, MaerskAlabama -> US,
+    Fracking -> US, BloodyThursday -> Jihadist, Censorship -> Jihadist, Pirates1 -> Jihadist,
+    Pirates2 -> Jihadist, Sequestration -> Jihadist,  Smartphones -> US, ThreeCupsOfTea -> Jihadist,
+    TradeEmbargoUS -> US, TradeEmbargoJihadist -> Jihadist, LeakWiretapping -> Jihadist,
+    LeakEnhancedMeasures -> Jihadist, LeakRenditions -> Jihadist, TrumpTweetsON -> US,
+    TrumpTweetsOFF -> Unassociated, Euroscepticism -> US, EarlyExit -> Jihadist,
+    QatariCrisis -> Jihadist, SouthChinaSeaCrisis -> Jihadist, USNKSummit -> US,
+    GulenMovement -> Unassociated, TravelBan -> US, AlBaghdadi -> Jihadist, PoliticalIslamismUS -> US,
+    PoliticalIslamismJihadist -> Jihadist, USChinaTradeWar -> Unassociated    
+  )
   
-  val CountryMarkers = List(
-    Sadr, CTR, MoroTalks, NEST, BenazirBhutto, Indo_PakistaniTalks, IraqiWMD, LibyanDeal,
-    LibyanWMD, PatriotAct, AbuSayyaf, BhuttoShot, FATA, Advisors, UNSCR_1973, NATO, NATO2,
-    TrainingCamps, OperationServal, TehranBeirutLandCorridor, BREXIT
-  ).sorted
+  val CountryMarkers: Map[String, CardAssociation] = Map(
+    Sadr -> Jihadist, CTR -> US, MoroTalks -> US, NEST -> US, BenazirBhutto -> US,
+    Indo_PakistaniTalks -> US, IraqiWMD -> US, LibyanDeal -> US, LibyanWMD -> US, PatriotAct -> US,
+    AbuSayyaf -> Jihadist, BhuttoShot -> Jihadist, FATA -> Jihadist, Advisors -> US, UNSCR_1973 -> US,
+    NATO -> US, NATO2 -> US, TrainingCamps -> Jihadist, OperationServal -> US,
+    TehranBeirutLandCorridor -> Jihadist, BREXIT -> US
+  )
   
   
   // Lapsing Event card numbers
@@ -718,6 +730,21 @@ object LabyrinthAwakening {
       opponentRole == game.botRole && 
       eventConditions(opponentRole, true)
     }
+    
+    def markLapsingAfterExecutingEvent(role: Role) = (lapsing, role) match {
+      case (Lapsing, _)                => true
+      case (USLapsing, US)             => true
+      case (JihadistLapsing, Jihadist) => true
+      case _                           => false
+    }
+    
+    def removeAfterExecutingEvent(role: Role) = (remove, role) match {
+      case (Remove, _)                => true
+      case (USRemove, US)             => true
+      case (JihadistRemove, Jihadist) => true
+      case _                          => false
+    }
+    
   }
   
   // Sort by card number
@@ -2044,13 +2071,13 @@ object LabyrinthAwakening {
   // a list of keys to the chosen items.
   // Caller should println() a brief description of what is being chosen.
   // items is a list of (key -> display) for each item in the menu.
-  def askMenu(
+  def askMenu[T](
     prompt: String,
-    items: List[(String, String)], 
+    items: List[(T, String)], 
     numChoices: Int = 1,
     repeatsOK: Boolean = false,
-    allowAbort: Boolean = true): List[String] = {
-    def nextChoice(num: Int, itemsRemaining: ListMap[String, String]): List[String] = {
+    allowAbort: Boolean = true): List[T] = {
+    def nextChoice(num: Int, itemsRemaining: ListMap[T, String]): List[T] = {
       if (itemsRemaining.isEmpty || num > numChoices)
         Nil
       else if (itemsRemaining.size == 1)
@@ -2343,13 +2370,19 @@ object LabyrinthAwakening {
     log(s"Set the governance of $name to ${govToString(newGov)}")
   }
   
-  def rollUSPosture(): Unit = {
+  // The default drm when rolling US posture is +1
+  def rollUSPosture(drms: List[(Int, String)] = Nil): Unit = {
     val die = dieRoll
-    val newPosture = if (die + 1 > 4) Hard else Soft
+    val allDrms = (1, "Rolling US Posture") :: drms
+    val modifiedDie = die + (allDrms map (_._1)).sum
+    val newPosture = if (modifiedDie < 5) Soft else Hard
     log(s"Roll United States posture")
     log(s"Die roll: $die")
-    log("+1: Rolling US posture")
-    log(s"Modified roll: ${die + 1}")
+    for ((drm, desc) <- allDrms)
+      log(f"$drm%+d  $desc")
+    if (allDrms.nonEmpty)
+      log(s"Modifed roll: $modifiedDie")
+    
     setUSPosture(newPosture)
   }
   
@@ -2673,6 +2706,8 @@ object LabyrinthAwakening {
     log(s"$player plays $card")
     if (card.autoTrigger)
       log(s"  (The ${card.association} event will automatically trigger)")
+    else if (lapsingEventInPlay(FakeNews))
+      log("\n" + s"""The event is cancelled by "Fake News"""")
     else if ((card.association == player || card.association == Unassociated) && playable)
       log(s"  (The ${card.association} event is playable)")
     else if ((card.association == player || card.association == Unassociated) && !playable)
@@ -3923,22 +3958,9 @@ object LabyrinthAwakening {
     log(separator())
     card.executeEvent(role)
     
-    val remove = (card.remove, role) match {
-      case (Remove, _)                => true
-      case (USRemove, US)             => true
-      case (JihadistRemove, Jihadist) => true
-      case _                          => false
-    }
-    val lapsing = (card.lapsing, role) match {
-      case (Lapsing, _)                => true
-      case (USLapsing, US)             => true
-      case (JihadistLapsing, Jihadist) => true
-      case _                           => false
-    }
-    
-    if (lapsing)
+    if (card.markLapsingAfterExecutingEvent(role))
       markCardAsLapsing(card.number)
-    else if (remove)
+    else if (card.removeAfterExecutingEvent(role))
       removeCardFromGame(card.number)
   }
   
@@ -5311,9 +5333,7 @@ object LabyrinthAwakening {
                                     game.usPosture == game.getNonMuslim(China).posture
     
       if (game.cardsLapsing.nonEmpty) {
-        // some lapsing cards are removed at the end of the turn.
-        val (remove, discard) = game.cardsLapsing.partition (deck(_).remove != NoRemove)
-        if (remove.nonEmpty || discard.nonEmpty) {
+        if (game.cardsLapsing.nonEmpty) {
           log()
           log("Lapsing Cards")
           log(separator())
@@ -6126,8 +6146,11 @@ object LabyrinthAwakening {
       game = game.copy(plays = thisPlay :: game.plays)
       
       cachedEventPlayableAnswer = None
-      val playable = card.eventIsPlayable(US)  
+
+      val playable = lapsingEventNotInPlay(FakeNews) && card.eventIsPlayable(US)
       logCardPlay(US, card, playable)
+      if (lapsingEventInPlay(FakeNews))
+        removeLapsingCards(FakeNews::Nil)
       try {
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
@@ -6515,8 +6538,11 @@ object LabyrinthAwakening {
       cachedEventPlayableAnswer = None
       // If TheDoorOfItjihad lapsing card is in effect,
       // then Jihadist cannot play any events (except autoTrigger events)
-      val playable = lapsingEventNotInPlay(TheDoorOfItjihad) && card.eventIsPlayable(Jihadist)  
+      val playable = lapsingEventNotInPlay(FakeNews) && lapsingEventNotInPlay(TheDoorOfItjihad) && card.eventIsPlayable(Jihadist)  
       logCardPlay(Jihadist, card, playable)
+      if (lapsingEventInPlay(FakeNews))
+        removeLapsingCards(FakeNews::Nil)
+      
       try {
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
@@ -7147,8 +7173,9 @@ object LabyrinthAwakening {
   
     
   def adjustMarkers(): Unit = {
+    val AllMarkers = GlobalMarkers.keys.toList.sorted
     var inPlay = game.markers
-    def available = GlobalMarkers filterNot inPlay.contains
+    def available = AllMarkers filterNot inPlay.contains
     def showColums(xs: List[String]): Unit = {
       if (xs.isEmpty) println("none")
       else columnFormat(xs, 4) foreach println
@@ -7163,7 +7190,7 @@ object LabyrinthAwakening {
       showColums(available)
       println()
       println("Enter a marker name to move it between in play and out of play.")
-      askOneOf("Marker: ", GlobalMarkers, allowNone = true, allowAbort = false) match {
+      askOneOf("Marker: ", AllMarkers, allowNone = true, allowAbort = false) match {
         case None =>
         case Some(name) if inPlay contains name =>
           inPlay = inPlay filterNot (_ == name)
@@ -7840,7 +7867,8 @@ object LabyrinthAwakening {
   def adjustCountryMarkers(name: String): Unit = {
     val country = game.getCountry(name)
     var inPlay = country.markers
-    def available = CountryMarkers filterNot inPlay.contains
+    val AllMarkers = CountryMarkers.keys.toList.sorted
+    def available = AllMarkers filterNot inPlay.contains
     def showColums(xs: List[String]): Unit = {
       if (xs.isEmpty) println("none")
       else columnFormat(xs, 4) foreach println
@@ -7854,7 +7882,7 @@ object LabyrinthAwakening {
       showColums(available)
       println()
       println(s"Enter a marker name to move it between $name and out of play.")
-      askOneOf("Marker: ", CountryMarkers, allowNone = true, allowAbort = false) match {
+      askOneOf("Marker: ", AllMarkers, allowNone = true, allowAbort = false) match {
         case None =>
         case Some(Advisors) =>
           println("use 'adjust advisors' to adjust Advisors Markers")

@@ -276,6 +276,28 @@ object ForeverWarCards {
     
     countryNames(game.muslims filter (m => basicTest(m) && botTest(m)))
   }
+  
+  def bowlingGreenBotMarkers(role: Role): List[String] = {
+    val opponent = oppositeRole(role)
+    val global = game.markers filter (GlobalMarkers(_) == opponent)
+    val country = game.countries flatMap (_.markers) filter (CountryMarkers(_) == opponent)
+    (global ::: country).sorted.distinct
+  }
+  
+  def bowlingGreenBotLapsing(role: Role): List[Int] = game.cardsLapsing filter { num =>
+    val card = deck(num)
+    (role == US && card.association == Jihadist || card.lapsing == JihadistLapsing) ||
+    (role == Jihadist && card.association == US || card.lapsing == USLapsing)
+  }
+  
+  def quickWinBadIntelCandidates(role: Role) = {
+    val test = if (role == US)
+      (m: MuslimCountry) => (m.inRegimeChange)
+    else
+      (m: MuslimCountry) => (m.inRegimeChange && (m.canTakeAwakeningOrReactionMarker || !m.besiegedRegime))
+    countryNames(game.muslims filter test)
+  }
+  
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
@@ -3425,9 +3447,51 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(351, "Advanced Persistent Threat (APT)", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => cacheQuestion(askYorN(s"Do both players have at least 1 card in hand? (y/n) "))
       ,
       (role: Role) => {
+        val opponent = oppositeRole(role)
+        log()
+        if (role == game.humanRole)
+          log(s"Take the top card of the $opponent hand")
+        else
+          log(s"Take a random card from your ($opponent) hand")
+        val cardNum = askCardNumber(s"Card # of the card taken: ", allowNone = false).get
+        val card    = deck(cardNum)
+        val cardDisplay = s""""${card.name}""""
+        
+        
+        val action = if (role == game.humanRole) {
+          val choices = List(
+            choice(card.eventIsPlayable(role), "event",  s"Play the $cardDisplay event"),
+            choice(!card.autoTrigger,          "discard",s"Discard $cardDisplay with no effect"),
+            choice(true,                       "return", s"Return $cardDisplay to the $opponent hand"),
+            choice(true,                       "keep",   s"Keep $cardDisplay and give another card to the $opponent")
+          ).flatten
+          askMenu("\nChoose one:", choices).head
+        }
+        else { // Bot
+          if (card.autoTrigger || card.eventIsPlayable(role)) "event" else "discard"
+        }
+        
+        action match {
+          case "discard" => log(s"Place $cardDisplay in the discard pile")
+          case "return"  => log(s"Return $cardDisplay to the top of the $opponent hand")
+          case "keep"    => 
+            val giveNum = askCardNumber("Card # of a card from your hand: ", allowNone = false).get
+            val giveDisplay = s""""${deck(giveNum).name}""""
+            
+            log(s"Keep $cardDisplay and place $giveDisplay on top of the $opponent hand")
+          case _ => // Play the event
+            log(s"\n$role executes the $cardDisplay event")
+            log(separator())
+            card.executeEvent(role)
+            
+            if (card.markLapsingAfterExecutingEvent(role))
+              markCardAsLapsing(card.number)
+            else if (card.removeAfterExecutingEvent(role))
+              removeCardFromGame(card.number)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -3475,9 +3539,80 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(353, "Bowling Green Massacre", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => role == game.humanRole ||
+                                  bowlingGreenBotMarkers(role).nonEmpty ||
+                                  bowlingGreenBotLapsing(role).nonEmpty
       ,
-      (role: Role) => {
+      (role: Role) => if (role == game.humanRole) {
+        val markers: List[String] = game.markers ::: (game.countries flatMap (_.markers)).sorted.distinct
+        val lapsing: List[Int] = game.cardsLapsing
+        if (markers.nonEmpty || lapsing.nonEmpty) {
+          val choices = List(
+            choice(markers.nonEmpty, "marker",  "Remove an event marker"),
+            choice(lapsing.nonEmpty, "lapsing", "Remove a lapsing card")
+          ).flatten
+          
+          askMenu("\nChoose one:", choices).head match {
+            case "marker" =>
+              val marker = if (markers.size == 1)
+                markers.head
+              else
+                askOneOf("Remove which event marker: ", markers).get
+              if (GlobalMarkers contains marker)
+                removeGlobalEventMarker(marker)
+              else {
+                // The Advisors marker can exist more than once
+                val target = if (marker == Advisors) {
+                  val candidates = countryNames(game.countries filter (_.hasMarker(marker)))
+                  if (candidates.size == 1)
+                    candidates.head
+                  else
+                    askCountry(s"""Remove "$marker" from which country: """, candidates)
+                }
+                else
+                  (game.countries find (_.hasMarker(marker)) map (_.name)).get 
+
+                addEventTarget(target)
+                removeEventMarkersFromCountry(target, marker)
+              }
+                
+            case _ =>
+              val cardNum = if (lapsing.size == 1)
+                lapsing.head
+              else
+                askMenu[Int]("\nRemove which lapsing card: ", lapsing map (n => n -> deck(n).name)).head
+              removeLapsingCards(cardNum::Nil)
+          }
+        }
+        log(s"\nDraw a card and add it to your ($role) hand")
+      }
+      else { // Bot
+        val markers = bowlingGreenBotMarkers(role)
+        val lapsing = bowlingGreenBotLapsing(role)
+        if (markers.nonEmpty) {
+          val marker = shuffle(markers).head
+          if (GlobalMarkers contains marker)
+            removeGlobalEventMarker(marker)
+          else {
+            // The Advisors marker can exist more than once if so the JihadistBot
+            // must choose the country.
+            val target = if (marker == Advisors) {
+              val candidates = countryNames(game.countries filter (_.hasMarker(marker)))
+              JihadistBot.troopsMilitiaTarget(candidates).get
+            }
+            else
+              (game.countries find (_.hasMarker(marker)) map (_.name)).get 
+            
+            addEventTarget(target)
+            removeEventMarkersFromCountry(target, marker)
+          }
+        }
+        else {
+          val cardNum = shuffle(lapsing).head
+          removeLapsingCards(cardNum::Nil)
+        }
+        
+        log(s"\nPut the top card of the draw deck on top of the $role hand of cards")
       }
     )),
     // ------------------------------------------------------------------------
@@ -3486,20 +3621,36 @@ object ForeverWarCards {
       (role: Role, forTrigger: Boolean) => false  // Not directly playable, but will always auto trigger
       ,
       (role: Role) => {
+        val drm = game.getNonMuslim(Russia).posture match {
+          case PostureUntested => None
+          case Hard            => Some((1, "Russia Hard"))
+          case Soft            => Some((-1, "Russia Soft"))
+        }
+        rollUSPosture(drm.toList)
+        logWorldPosture()
+        if (game.gwotPenalty == 0)
+          increasePrestige(1)
+        else
+          decreasePrestige(1)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(355, "Fake News", Unassociated, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => trumpTweetsON
       ,
       (role: Role) => {
+        log()
+        log("The next non-Automatic event card played by either player")
+        log("will be cancelled.  It may be played for OPs only.")
+        log()
+        setTrumpTweetsOFF()
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(356, "OPEC Production Cut", Unassociated, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false  // Not playable in the Solo game
       ,
       (role: Role) => {
       }
@@ -3507,25 +3658,101 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(357, "Peace Dividend", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => false  // Not playable in the Solo game
       ,
       (role: Role) => {
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(358, "Political Islamism/Pan Arab Nationalism", Unassociated, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
-      ,
-      (role: Role) => {
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      (role: Role) => if (role == US) {
+        val sunniCandidates = countryNames(game.muslims filter (m => m.isSunni && m.totalCells > 0))
+        val shiaCandidates = countryNames(game.muslims filter (m => m.isShiaMix && m.totalCells > 0))
+        if (sunniCandidates.nonEmpty) {
+          val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
+            val t = askCountry("Remove cell from which Sunni country: ", sunniCandidates)
+            (t, askCells(t, 1, true))
+          }
+          else {
+            val t = USBot.disruptPriority(sunniCandidates).get
+            (t, USBot.chooseCellsToRemove(t, 1))
+            
+          }
+          
+          addEventTarget(target)
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        }
+        
+        if (shiaCandidates.nonEmpty) {
+          val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
+            val t = askCountry("Remove cell from which Shix-Mix country: ", shiaCandidates)
+            (t, askCells(t, 1, true))
+          }
+          else {
+            val t = USBot.disruptPriority(shiaCandidates).get
+            (t, USBot.chooseCellsToRemove(t, 1))
+            
+          }
+          
+          addEventTarget(target)
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        }
+        
+        println()
+        decreaseFunding(1)
+        addGlobalEventMarker(PoliticalIslamismUS)
+      }
+      else { // Jihadist
+        val sunniCandidates = countryNames(game.muslims filter (_.isSunni))
+        val shiaCandidates = countryNames(game.muslims filter (_.isShiaMix))
+        if (sunniCandidates.nonEmpty && game.cellsAvailable > 0) {
+          val target = if (role == game.humanRole)
+            askCountry("Plac a cell in which Sunni country: ", sunniCandidates)
+          else
+            JihadistBot.recruitTravelToPriority(sunniCandidates).get
+            
+          addEventTarget(target)
+          addSleeperCellsToCountry(target, 1)
+        }
+        
+        if (shiaCandidates.nonEmpty && game.cellsAvailable > 0) {
+          val target = if (role == game.humanRole)
+            askCountry("Plac a cell in which Shix-Mix country: ", shiaCandidates)
+          else
+            JihadistBot.recruitTravelToPriority(shiaCandidates).get
+            
+          addEventTarget(target)
+          addSleeperCellsToCountry(target, 1)
+        }
+        
+        println()
+        increaseFunding(1)
+        addGlobalEventMarker(PoliticalIslamismJihadist)
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(359, "Quick Win/Bad Intel", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false
+      (role: Role, _: Boolean) => quickWinBadIntelCandidates(role).nonEmpty
       ,
       (role: Role) => {
+        val target = if (role == game.humanRole)
+          askCountry("Which country: ", quickWinBadIntelCandidates(role))
+        else if (role == US)
+          USBot.markerAlignGovTarget(quickWinBadIntelCandidates(role)).get
+        else
+          JihadistBot.markerAlignGovTarget(quickWinBadIntelCandidates(role)).get
+        
+        addEventTarget(target)
+        if (role == US) {
+          addAidMarker(target)
+          addAwakeningMarker(target)
+        }
+        else {
+          addBesiegedRegimeMarker(target)
+          addReactionMarker(target)
+        }
       }
     )),
     // ------------------------------------------------------------------------
