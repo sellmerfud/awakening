@@ -3011,7 +3011,7 @@ object LabyrinthAwakening {
       case PLAY("0") =>
         val gs = SavedGame.load(turnFilePath(game.turn - 1))
         removePlayFiles()
-        Some(gs.copy(turn = gs.turn + 1))
+        Some(gs)
       case PLAY(n) => 
         val gs = SavedGame.load(playFilePath(n.toInt))
         removePlayFiles(n.toInt + 1)
@@ -3022,7 +3022,7 @@ object LabyrinthAwakening {
           val gs = SavedGame.load(turnFilePath(turn - 1))
           removePlayFiles()
           removeTurnFiles(turn)      
-          Some(gs.copy(turn = gs.turn + 1))
+          Some(gs)
         }
         catch {
           case AbortCardPlay =>
@@ -4232,9 +4232,7 @@ object LabyrinthAwakening {
   //  event. Card #319
   def tehranBeirutLandCorridorSatisfied = {
     val tehranBeirutCandidate = (name: String) => name match {
-      case Iran if isIranSpecialCase =>
-        !game.getNonMuslim(Iran).isUntested
-      
+      case Iran if isIranSpecialCase => true
       case _ =>
         val m = game.getMuslim(name)
         !(m.isUntested || m.isAlly || m.civilWar) 

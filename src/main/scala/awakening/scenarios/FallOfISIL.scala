@@ -54,7 +54,7 @@ object FallOfISIL extends Scenario {
     DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 2, 
                      activeCells = 3, markers = Advisors :: Nil), // cells active because part of caliphate
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 2, sleeperCells = 2),
+    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
     DefaultIran.copy(wmdCache = 2),
     DefaultBenelux.copy(postureValue = Hard))
   val markersInPlay = List.empty[String]

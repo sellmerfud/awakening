@@ -105,7 +105,7 @@ object ForeverWarCards {
   )
   
   def governmentOfNationalAccordCandidates = countryNames(
-    game.muslims filter (m => !(m.civilWar || game.isCaliphateMember(m.name)))
+    game.muslims filter (m => m.civilWar && !game.isCaliphateMember(m.name))
   )
 
   def sfabCandidates = countryNames(
@@ -822,7 +822,7 @@ object ForeverWarCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (_: Role, _: Boolean) => {
         val pakistan = game.getMuslim(Pakistan)
-        !pakistan.isIslamistRule && pakistan.totalCells == 0 && !game.isCaliphateMember(Pakistan)
+        !pakistan.isIslamistRule && !pakistan.isGood && pakistan.totalCells == 0 && !game.isCaliphateMember(Pakistan)
       }
       ,
       (role: Role) => {
@@ -925,7 +925,7 @@ object ForeverWarCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       (role: Role, _: Boolean) => {
         val prereq = !(game hasMuslim (m => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)))
-        val cardExists = cacheQuestion(askYorN("""Is there a "Trump Tweets" card or any card with prerequisite "Trump Tweets ON" in the discard pile? (y/n) """))
+        def cardExists = cacheQuestion(askYorN("""Is there a "Trump Tweets" card or any card with prerequisite "Trump Tweets ON" in the discard pile? (y/n) """))
         prereq && cardExists
       }
       ,
@@ -1760,8 +1760,13 @@ object ForeverWarCards {
       (_: Role, _: Boolean) => amaqNewsAgencyCandidates.nonEmpty
       ,
       (role: Role) => {
+        val numCadres = if (role == game.humanRole)
+          askInt("Place how many cadres", 1, 3, Some(3))
+        else
+          3
+        
         @tailrec def nextCadre(num: Int, candidates: List[String]): Unit =
-          if (num <= 3 && candidates.nonEmpty) {
+          if (num <= numCadres && candidates.nonEmpty) {
             val target = if (role == game.humanRole)
               askCountry(s"Place ${ordinal(num)} cadre is which country: ", candidates)
             else
@@ -2086,9 +2091,16 @@ object ForeverWarCards {
         log(s"GWOT penalty (-${game.gwotPenalty}) + prestige modifer (${game.prestigeModifier}) = $result")
         if (result >= 0)
           log("There is no effect")
-        else if (role == game.botRole) {
-          log(s"You ($US) must discard cards until the combined Operational value")
-          log(s"is at least $opPoints")
+        else {
+          println()
+          if (role == game.humanRole) {
+            log(s"Discard from the top of the $Jihadist Bot's hand until the combined")
+            log(s"Operational value is at least $opPoints")
+          }
+          else {
+            log(s"You ($US) must discard cards until the combined Operational value")
+            log(s"is at least $opPoints")
+          }
         
           def nextDiscard(num: Int, pointsDiscarded: Int): List[Int] = {
             if (pointsDiscarded >= opPoints)
@@ -2105,10 +2117,6 @@ object ForeverWarCards {
           for (n <- nextDiscard(1, 0); card = deck(n))
             if (card.eventWillTrigger(Jihadist))
               performCardEvent(card, Jihadist, triggered = true)
-        }
-        else {
-          log(s"Discard from the top of the $Jihadist Bot's hand until the combined")
-          log(s"Operational value is at least $opPoints")
         }
       }
     )),

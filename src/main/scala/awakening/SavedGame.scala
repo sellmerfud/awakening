@@ -61,7 +61,7 @@ object SavedGame {
   // The path should be the full path to the file to load.
   // Will set the game global variable
   def load(filepath: Pathname): GameState = {
-    try fromGameJson(filepath.readFile())
+    val gs = try fromGameJson(filepath.readFile())
     catch {
       case e: IOException =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
@@ -72,6 +72,12 @@ object SavedGame {
         println(s"Error reading saved game ($filepath)$suffix")
         sys.exit(1)
     }
+    // If there are no plays then this a save file for the 
+    // end of the turn.  In this case we increment the turn counter
+    if (gs.plays.isEmpty)
+      gs.copy(turn = gs.turn + 1)
+    else
+      gs
   }
     
   private def asString(x: Any): String = x.toString
