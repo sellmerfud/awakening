@@ -6093,7 +6093,7 @@ object LabyrinthAwakening {
   def attemptTriggeredEvent(opponentRole: Role, card: Card): Unit = {
     if (card.autoTrigger)
       performCardEvent(card, opponentRole, triggered = true)
-    else if (card.association == opponentRole) {
+    else if (lapsingEventNotInPlay(FakeNews) && card.association == opponentRole) {
       if (card.eventWillTrigger(opponentRole))
         opponentRole match {
           case Jihadist => JihadistBot.performTriggeredEvent(card)
@@ -6147,14 +6147,13 @@ object LabyrinthAwakening {
 
       val playable = lapsingEventNotInPlay(FakeNews) && card.eventIsPlayable(US)
       logCardPlay(US, card, playable)
-      if (lapsingEventInPlay(FakeNews))
-        removeLapsingCards(FakeNews::Nil)
       try {
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
         // If the JihadistBot is playing it will cancel the next one played by the US.
-        if (lapsingEventInPlay(Ferguson) &&
-            card.association == US &&
+        if (lapsingEventNotInPlay(FakeNews) &&
+            lapsingEventInPlay(Ferguson)    &&
+            card.association == US          &&
             (game.botRole == Jihadist ||
              askYorN("Do you wish to cancel the play of this US associated card? (y/n) "))) {
         
@@ -6166,6 +6165,10 @@ object LabyrinthAwakening {
             case US => humanUsCardPlay(card, playable)
             case _  => USBot.cardPlay(card, playable)
           }
+        
+        if (lapsingEventInPlay(FakeNews))
+          removeLapsingCards(FakeNews::Nil)
+          
         savePlay()  // Save the play so we can roll back
       }
       catch {
@@ -6247,7 +6250,7 @@ object LabyrinthAwakening {
     // If the choose to resovle the event first, do so before
     // prompting for the action because the ramifications of the event
     // may affect what actions are possible.
-    val actionOrder = if (card.autoTrigger || card.association == Jihadist) {
+    val actionOrder = if (card.autoTrigger || (card.association == Jihadist && !lapsingEventNotInPlay(FakeNews))) {
       getActionOrder(card :: Nil, opponent = Jihadist) match {
         case Nil =>
           throw AbortCardPlay 
@@ -6536,18 +6539,17 @@ object LabyrinthAwakening {
       cachedEventPlayableAnswer = None
       // If TheDoorOfItjihad lapsing card is in effect,
       // then Jihadist cannot play any events (except autoTrigger events)
+      val fakeNewsInEffect = lapsingEventInPlay(FakeNews)      
       val playable = lapsingEventNotInPlay(FakeNews) && lapsingEventNotInPlay(TheDoorOfItjihad) && card.eventIsPlayable(Jihadist)  
       logCardPlay(Jihadist, card, playable)
-      if (lapsingEventInPlay(FakeNews))
-        removeLapsingCards(FakeNews::Nil)
-      
       try {
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
         // If the JihadistBot is playing it will only cancel those played by the US.
-        if (lapsingEventInPlay(Ferguson) &&
-            card.association == US       &&
-            game.humanRole == Jihadist   &&
+        if (lapsingEventNotInPlay(FakeNews) &&
+            lapsingEventInPlay(Ferguson)    &&
+            card.association == US          &&
+            game.humanRole == Jihadist      &&
             askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
           log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect")
           removeCardFromLapsing(Ferguson)
@@ -6557,6 +6559,10 @@ object LabyrinthAwakening {
             case Jihadist => humanJihadistCardPlay(card, playable)
             case _        => JihadistBot.cardPlay(card, playable)
           }
+          
+        if (lapsingEventInPlay(FakeNews))
+          removeLapsingCards(FakeNews::Nil)
+          
         savePlay()  // Save the play so we can roll back
       }
       catch {
@@ -6621,7 +6627,11 @@ object LabyrinthAwakening {
     if (card.autoTrigger || card.association == US) {
       // Allow the user to use the first plot option to cancel the event.
       // The Ruthless US bot resolve does not allow this.
-      if (!game.usResolve(Ruthless) && card.association == US && game.plotPossible(1) && game.firstPlotCard.isEmpty)
+      if (lapsingEventNotInPlay(FakeNews) &&
+          !game.usResolve(Ruthless)       &&
+          card.association == US          &&
+          game.plotPossible(1)            &&
+          game.firstPlotCard.isEmpty)
         firstPlot = askYorN(s"\nDo you wish to use your First Plot option to cancel the $US event (y/n)? ")
 
       if (firstPlot) {
@@ -6631,7 +6641,7 @@ object LabyrinthAwakening {
         game = game.copy(firstPlotCard = Some(card.number))
         firstPlot = true
       }
-      else
+      else if (lapsingEventNotInPlay(FakeNews))
         getActionOrder(card :: Nil, opponent = US) match {
           case Nil =>
             throw AbortCardPlay 
@@ -6658,7 +6668,7 @@ object LabyrinthAwakening {
     // See if it will be triggered now.
     if (card.autoTrigger && !opponentEventResolved)
       attemptTriggeredEvent(US, card);
-    else if (card.association == US && !opponentEventResolved) {
+    else if (lapsingEventNotInPlay(FakeNews) && card.association == US && !opponentEventResolved) {
       if (firstPlot)
         log("\nFirst plot prevents the %s event \"%s\" from triggering".format(US, card.name))
       else
