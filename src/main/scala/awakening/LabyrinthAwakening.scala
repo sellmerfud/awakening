@@ -498,16 +498,20 @@ object LabyrinthAwakening {
   //  When Travel Ban is in effect, no travel to the US from these
   //  countries.
   def isTravelBanCountry(name: String) = {
-    val alwaysBanned = Set(Iran, Iraq, Libya, Somalia, Sudan, Syria, Yemen)
+    if (globalEventInPlay(TravelBan)) {
+      val alwaysBanned = Set(Iran, Iraq, Libya, Somalia, Sudan, Syria, Yemen)
     
-    if (alwaysBanned contains name)
-      true
-    else if (game isNonMuslim name)
-      false
-    else {
-      val m = game.getMuslim(name)
-      m.civilWar || m.inRegimeChange || m.isIslamistRule
+      if (alwaysBanned contains name)
+        true
+      else if (game isNonMuslim name)
+        false
+      else {
+        val m = game.getMuslim(name)
+        m.civilWar || m.inRegimeChange || m.isIslamistRule
+      }
     }
+    else
+      false
   }
   
   def persianGulfExporters = {
@@ -2207,8 +2211,8 @@ object LabyrinthAwakening {
         addSleeperCellsToCountry(target, n)
         
       case CellsItem(name, a, s)     =>
-        moveCellsBetweenCountries(name, target, a, true)
-        moveCellsBetweenCountries(name, target, s, false)
+        moveCellsBetweenCountries(name, target, a, true, forTravel = false)
+        moveCellsBetweenCountries(name, target, s, false, forTravel = false)
     }
   }
 
@@ -3798,7 +3802,7 @@ object LabyrinthAwakening {
             log("Travelling a sleeper cell within the same country has no further effect")
         }
         else
-          moveCellsBetweenCountries(from, to, 1, active)
+          moveCellsBetweenCountries(from, to, 1, active, forTravel = true)
       }
       else if (active)
         removeCellsFromCountry(from, 1, 0, false, addCadre = false)
@@ -4651,11 +4655,12 @@ object LabyrinthAwakening {
   }
   
   
-  def moveCellsBetweenCountries(fromName: String, toName: String, num: Int, active: Boolean): Unit = {
+  def moveCellsBetweenCountries(fromName: String, toName: String, num: Int, active: Boolean, forTravel: Boolean): Unit = {
     if (num > 0) {
-      val makeActive = game.isCaliphateMember(toName)
+      val makeActive = game.isCaliphateMember(toName) || (forTravel && toName == UnitedStates && globalEventInPlay(TravelBan))
       val fromType = if (active)     "active cell" else "sleeper cell"
-      val toType   = if (makeActive) "active" else "sleeper"
+      val toType1  = if (makeActive) "an active cell" else "a sleeper cell"
+      val toType   = if (makeActive) "active cells" else "sleeper cells"
       val (from, to) = (game.getCountry(fromName), game.getCountry(toName))
       if (active)
         assert(from.activeCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num active cells")
@@ -4664,13 +4669,13 @@ object LabyrinthAwakening {
     
       if (fromName == toName)
         num match {
-          case 1 => log(s"1 $fromType in $fromName travels in place and becomes a $toType cell")
-          case n => log(s"$n ${fromType}s in $fromName travel in place and become $toType cells")
+          case 1 => log(s"1 $fromType in $fromName travels in place and becomes $toType1")
+          case n => log(s"$n ${fromType}s in $fromName travel in place and become $toType")
         }
       else {
         num match {
-          case 1 => log(s"Move 1 $fromType from $fromName to $toName as a $toType cell")
-          case n => log(s"Move $n ${fromType}s from $fromName to $toName as $toType cells")
+          case 1 => log(s"Move 1 $fromType from $fromName to $toName as $toType1")
+          case n => log(s"Move $n ${fromType}s from $fromName to $toName as $toType")
         }
       }
     

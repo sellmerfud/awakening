@@ -1563,14 +1563,14 @@ object LabyrinthCards {
             val to = askCountry(s"Select ${ordinal(i)} destination country: ", Schengen)
             addEventTarget(to)
             testCountry(to)
-            moveCellsBetweenCountries(from, to, 1, true)
+            moveCellsBetweenCountries(from, to, 1, true, forTravel = true)
             i += 1
           }
           for (a <- 1 to sleepers) {
             val to = askCountry(s"Select ${ordinal(i)} destination country: ", Schengen)
             addEventTarget(to)
             testCountry(to)
-            moveCellsBetweenCountries(from, to, 1, false)
+            moveCellsBetweenCountries(from, to, 1, false, forTravel = true)
             i += 1
           }
         }
@@ -1585,7 +1585,7 @@ object LabyrinthCards {
             val (_, active) = (travellers find (_._1 == from)).get
             addEventTarget(to)
             testCountry(to)
-            moveCellsBetweenCountries(from, to, 1, active)
+            moveCellsBetweenCountries(from, to, 1, active, forTravel = true)
             JihadistBot.usedCells(to).addSleepers(1)
             nextTravel(num + 1)
           }
@@ -1685,14 +1685,14 @@ object LabyrinthCards {
             val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
             addEventTarget(to)
             testCountry(to)
-            moveCellsBetweenCountries(from, to, 1, true)
+            moveCellsBetweenCountries(from, to, 1, true, forTravel = true)
             i += 1
           }
           for (a <- 1 to sleepers) {
             val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
             addEventTarget(to)
             testCountry(to)
-            moveCellsBetweenCountries(from, to, 1, false)
+            moveCellsBetweenCountries(from, to, 1, false, forTravel = true)
             i += 1
           }
         }
@@ -1707,7 +1707,7 @@ object LabyrinthCards {
           if (num <= 2 && travellers.nonEmpty) {
             val from = JihadistBot.travelFromTarget(UnitedStates, travellers map (_._1)).get
             val (_, active) = (travellers find (_._1 == from)).get
-            moveCellsBetweenCountries(from, UnitedStates, 1, active)
+            moveCellsBetweenCountries(from, UnitedStates, 1, active, forTravel = true)
             nextTravel(num + 1)
           }
         }

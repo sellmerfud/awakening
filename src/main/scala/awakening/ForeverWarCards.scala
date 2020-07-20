@@ -2767,7 +2767,7 @@ object ForeverWarCards {
         }
         
         source foreach { name =>
-          moveCellsBetweenCountries(name, UnitedKingdom, 1, game.getCountry(name).activeCells > 0)
+          moveCellsBetweenCountries(name, UnitedKingdom, 1, game.getCountry(name).activeCells > 0, forTravel = false)
         }
       }  
     )),
