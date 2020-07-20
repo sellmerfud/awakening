@@ -2349,7 +2349,7 @@ object LabyrinthAwakening {
   
   // If the country is untested, test it and return true
   // otherwise return false.
-  def testCountry(name: String): Boolean = {
+  def testCountry(name: String, logScore: Boolean = true): Boolean = {
     val country = game.getCountry(name)
     if (country.isUntested) {
       country match {
@@ -2359,6 +2359,8 @@ object LabyrinthAwakening {
             addTestedOrImprovedToFairOrGood(name)
           game = game.updateCountry(m.copy(governance = newGov, alignment = Neutral))
           log(s"${m.name} tested: Set to ${govToString(newGov)} Neutral")
+          if (logScore)
+            logSummary(game.scoringSummary)
           
         case n: NonMuslimCountry =>
           val newPosture = if (dieRoll < 5) Soft else Hard
@@ -2634,7 +2636,7 @@ object LabyrinthAwakening {
         log("No convergence peformed because \"Arab Winter\" is in effect")
       else {
         val target = randomConvergenceTarget.name
-        testCountry(target)
+        testCountry(target, logScore = false)
         val m = game getMuslim target
         if (awakening) {
           game = game.updateCountry(m.copy(awakening = m.awakening + 1))
@@ -4055,6 +4057,7 @@ object LabyrinthAwakening {
         }
         if (newGov == Good || newGov == Fair)
           addTestedOrImprovedToFairOrGood(name)
+        logSummary(game.scoringSummary)
       }
     }
   }
@@ -4063,6 +4066,7 @@ object LabyrinthAwakening {
   // Note: The caller is responsible for handling convergence!
   def worsenGovernance(name: String, levels: Int, canShiftToIR: Boolean, endOfTurn: Boolean = false): Unit = {
     if (levels > 0) {
+      val wasCaliphateMember = game.isCaliphateMember(name)
       val m = game.getMuslim(name)
       assert(!m.isIslamistRule, s"worsenGovernance() called on Islamist Rule country - $name")
       val maxGov = if (canShiftToIR) IslamistRule else Poor
@@ -4092,6 +4096,8 @@ object LabyrinthAwakening {
           removeAllAdvisorsFromCountry(name) // Country becomes Adversary
           endRegimeChange(name, endOfTurn)
           endCivilWar(name, endOfTurn)
+          if (!wasCaliphateMember && game.isCaliphateMember(name))
+            log(s"Place a Caliphate Country marker in $name")
           flipCaliphateSleepers()
           if (!endOfTurn) 
             performConvergence(forCountry = name, awakening = false)
@@ -4104,6 +4110,7 @@ object LabyrinthAwakening {
           val degraded = m.copy(governance = newGov, reaction = (m.reaction - delta)  max 0)
           game = game.updateCountry(degraded)
         }        
+        logSummary(game.scoringSummary)
       }
     }
   }
@@ -4114,6 +4121,7 @@ object LabyrinthAwakening {
       val align = alignment getOrElse Neutral
       game = game.updateCountry(m.copy(governance = gov, alignment = align))
       log(s"Set $name to ${govToString(gov)} $align")
+      logSummary(game.scoringSummary)
     }
     else {
       // Use the improveGovernance/degradeGovernance functions to make sure
@@ -4194,6 +4202,7 @@ object LabyrinthAwakening {
       endCivilWar(name)
       game = game.updateCountry(game.getMuslim(name).copy(governance = GovernanceUntested))
       log(s"Remove the ${govToString(m.governance)} governance marker from $name")
+      logSummary(game.scoringSummary)
     }
     else {
       val n = game.getNonMuslim(name)
@@ -4205,6 +4214,7 @@ object LabyrinthAwakening {
       removeEventMarkersFromCountry(name, n.markers:_*)
       game = game.updateCountry(game.getNonMuslim(name).copy(postureValue = PostureUntested))
       log(s"Remove the ${n.posture} posture marker from $name")
+      logWorldPosture()
     }
   }
   
@@ -4397,6 +4407,7 @@ object LabyrinthAwakening {
 
   
   def startCivilWar(name: String): Unit = {
+    val wasCaliphateMember = game.isCaliphateMember(name)
     val orig = game getMuslim name
     if (!orig.civilWar) {
       testCountry(name)
@@ -4409,6 +4420,8 @@ object LabyrinthAwakening {
       log(s"Add civil war marker to $name")
       if (m.inRegimeChange)
         log(s"Remove regime change marker from $name")
+      if (!wasCaliphateMember && game.isCaliphateMember(name))
+        log(s"Place a Caliphate Country marker in $name")
       removeAwakeningMarker(name, m.awakening)
       addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
       removeReactionMarker(name, m.reaction)
