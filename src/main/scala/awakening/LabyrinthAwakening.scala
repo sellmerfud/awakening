@@ -684,11 +684,14 @@ object LabyrinthAwakening {
   // From page 4 of Forever War manual.
   val PersonalityCards = Set(110, 111, 112, 115, 116, 215, 219, 225, 237, 328, 329, 338, 352)
   
-  type CardEvent       = Role => Unit
-  type EventConditions = (Role, Boolean) => Boolean
-  type EventAlertsPlot = (String, Plot) => Boolean   // Country Name, Plot
+  type CardEvent            = Role => Unit
+  type EventConditions      = (Role, Boolean) => Boolean
+  type EventAlertsPlot      = (String, Plot) => Boolean   // Country Name, Plot
+  type EventRemovesLastCell = () => Boolean
   val AlwaysPlayable: EventConditions =  (_, _) => true
+  val NeverPlayable: EventConditions =  (_, _) => false
   val DoesNotAlertPlot: EventAlertsPlot = (_, _) => false
+  val CannotNotRemoveLastCell: EventRemovesLastCell = () => false
     
   sealed trait CardRemoval
   case object NoRemove       extends CardRemoval
@@ -714,6 +717,7 @@ object LabyrinthAwakening {
     val lapsing: CardLapsing,
     val autoTrigger: Boolean,
     val eventAlertsPlot: EventAlertsPlot,
+    val eventRemovesLastCell: EventRemovesLastCell,
     val eventConditions: EventConditions,
     val executeEvent: CardEvent) {
     
@@ -1278,6 +1282,8 @@ object LabyrinthAwakening {
     def totalCellCapacity   = 15 + extraCellCapacity
     def totalCellsInPlay    = 15 + extraCells.available + extraCells.onMap
     def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.cells }
+    // totalCellsOnMap includes Sadr
+    def totalCellsOnMap     = countries.foldLeft(0) { (a, c) => a + c.totalCells }
     def cellsOnTrack        = {
       // Don't allow it to go negative due to camp cells that are on the map
       // after the training camp has been removed.
@@ -1710,6 +1716,8 @@ object LabyrinthAwakening {
       cachedEventPlayableAnswer = Some(question)
     cachedEventPlayableAnswer.get
   }
+  
+  def cacheYesOrNo(prompt: String) = cacheQuestion(askYorN(prompt))
   
   // If num is 1 use the name as is
   // otherwise either use the plural if given or add an 's' to the name.
@@ -5828,7 +5836,7 @@ object LabyrinthAwakening {
       gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance")
     else if (game.numGoodOrFair >= 15)
       gameOver(US, s"${game.numGoodOrFair} Muslim countries have Fair or Good governance")
-    else if (game.cellsOnMap == 0)
+    else if (game.totalCellsOnMap == 0 && game.humanRole == Jihadist)
       gameOver(US, s"There are no cells on the map")
     else if (game.islamistResources >= 6 && game.botRole == Jihadist)
       gameOver(Jihadist, s"${game.islamistResources} resources controlled by countries with Islamist Rule governance")

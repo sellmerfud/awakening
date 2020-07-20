@@ -65,9 +65,11 @@ object ForeverWarCards {
   val patrioticArabDemocraciesCandidate = (m: MuslimCountry) => m.alignment != Adversary &&
                                                                 m.canTakeAwakeningOrReactionMarker &&
                                                                 !game.isCaliphateMember(m.name)
-  val saudiAirStrikesCandidate = (m: MuslimCountry) => 
-    m.totalCells > 0 && (m.name == SaudiArabia || 
-      (areAdjacent(m.name, SaudiArabia) && (m.civilWar || m.inRegimeChange || m.isIslamistRule)))
+  def saudiAirStrikesCandidates = countryNames(
+    game.muslims filter (m => m.totalCells > 0 && 
+        (m.name == SaudiArabia || 
+        (areAdjacent(m.name, SaudiArabia) && (m.civilWar || m.inRegimeChange || m.isIslamistRule))))
+  )
     
   // Countries with cells and with troops/advisors
   def specialForcesCandidates: List[String] =
@@ -298,13 +300,24 @@ object ForeverWarCards {
     countryNames(game.muslims filter test)
   }
   
+  def rangerRegimentCandidates = countryNames(
+     game.muslims filter (m => m.civilWar && m.totalCells > 0)
+  )
+  
+  def irgcCandidates(role: Role) = {
+    if (role == US)
+      countryNames(game.adjacentCountries(Iran) filter (_.totalCells > 0))
+    else
+      countryNames(game.adjacentMuslims(Iran) filter (_.militia > 0))
+  }
+
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
   
   val deckMap: Map[Int, Card] = Map(
     // ------------------------------------------------------------------------
     entry(new Card(241, "Abdel Fattah el-Sisi", US, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => globalEventNotInPlay(PoliticalIslamismJihadist) && (game hasMuslim abdelFattahCandidate)
       ,
       (role: Role) => {
@@ -323,15 +336,27 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(242, "Avenger", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => 
-        (role == game.humanRole && game.hasMuslim(_.totalCells > 0)) ||
-        (role == game.botRole && game.hasMuslim(m => m.totalCells - m.totalTroopsAndMilitia > 4)) ||
-        cacheQuestion(askYorN(s"Does the $Jihadist player have any cards in hand? (y/n) "))
+      () => {
+        // Can we remove the last cell on the board?
+        game.hasMuslim(m => m.totalCells == 2 && game.totalCellsOnMap == 2)
+      }
+      ,
+      (role: Role, _: Boolean) => if (role == game.humanRole)
+        game.hasMuslim(_.totalCells > 0)
+      else {
+        // If the last two cells on the map are in a Muslim country the the Bot will go for the win.
+        // Otherwise, the bot will only remove cells if there is a country where cells outnumber
+        // troops and miliia or if the Jihadist has not cards in hand.
+        game.hasMuslim(m => m.totalCells == 2 && game.totalCellsOnMap == 2) ||
+        game.hasMuslim(m => m.totalCells - m.totalTroopsAndMilitia > 4)     ||
+        cacheYesOrNo(s"Does the $Jihadist player have any cards in hand? (y/n) ") ||
+        game.hasMuslim(_.totalCells > 0)
+      }
       ,
       (role: Role) => {
         if (role == game.humanRole) {
           val candidates = countryNames(game.muslims filter (_.totalCells > 0))
-          val canDiscard = cacheQuestion(askYorN(s"Does the $Jihadist player have any cards in hand? (y/n) "))
+          val canDiscard = askYorN(s"Does the $Jihadist player have any cards in hand? (y/n) ")
           val choices = List(
             choice(candidates.nonEmpty, "remove", "Remove up to 2 cells in any one Muslim country"),
             choice(canDiscard,          "discard", s"Discard top card of the $Jihadist hand")
@@ -351,23 +376,32 @@ object ForeverWarCards {
         else {
           // Bot
           val candidates = countryNames(game.muslims.filter(m => m.totalCells - m.totalTroopsAndMilitia > 4))
-          if (candidates.nonEmpty)
-          {
-            val target = USBot.disruptPriority(candidates).get
-            val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
-            addEventTarget(target)
-            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          val target = game.muslims.find(m => m.totalCells == 2 && game.totalCellsOnMap == 2).map(_.name) orElse
+                       USBot.disruptPriority(candidates) orElse {
+                         if (cacheYesOrNo(s"Does the $Jihadist player have any cards in hand? (y/n) "))
+                           None
+                         else
+                           USBot.disruptPriority(countryNames(game.muslims filter (_.totalCells > 0)))
+                       }
+          
+          
+          target match {
+            case Some(name) => 
+              val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 2)
+              addEventTarget(name)
+              removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+            case None =>
+              println()
+              log(s"You ($Jihadist) must discard one random card")
           }
-          else
-            println()
-            log(s"You ($Jihadist) must discard one random card")
         }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(243, "Backlash", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      (role: Role, forTrigger: Boolean) => 
+        (game.funding > 1 || role != game.botRole) && (game hasMuslim backlashCandidate)
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter backlashCandidate)
@@ -404,7 +438,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(244, "Foreign Internal Defense", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.militiaAvailable > 0 && (game hasMuslim foreignInternalDefenseCandidate)
       ,
       (role: Role) => {
@@ -422,7 +456,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(245, "Green Movement 2.0", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         game.getCountry(Iran) match {
           case n: NonMuslimCountry => false
@@ -439,7 +473,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(246, "Holiday Surprise", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => 
         // Check countries here because Philippines can sometimes contain troops
         (game hasCountry (c => (c.totalTroops > 0 || c.numAdvisors > 0) && c.totalCells > 1)) ||
@@ -451,7 +485,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(247, "Nadia Murad", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         val iraq = game.getMuslim(Iraq)
         (iraq.civilWar || iraq.isIslamistRule || iraq.besiegedRegime || game.isCaliphateMember(Iraq)) &&
@@ -472,7 +506,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(248, "Patriotic Arab Democracies Movement", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game hasMuslim patrioticArabDemocraciesCandidate
       ,
       (role: Role) => {
@@ -490,16 +524,21 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(249, "Saudi Air Strikes", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => (game.getMuslim(SaudiArabia).isNeutral ||
-                               game.getMuslim(SaudiArabia).isAlly)    &&
-                               (game hasMuslim saudiAirStrikesCandidate)
+      () => {
+        // Can we remove the last cell on the board?
+        saudiAirStrikesCandidates exists { name =>
+          USBot.wouldRemoveLastCell(name, if (name == Yemen) 2 else 1)
+        }
+      }
+      ,
+      (_: Role, _: Boolean) => (game.getMuslim(SaudiArabia).isNeutral || game.getMuslim(SaudiArabia).isAlly) &&
+                               saudiAirStrikesCandidates.nonEmpty
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter saudiAirStrikesCandidate)
         val target = if (role == game.humanRole)
-          askCountry(s"Remove cell(s) from which country: ", candidates)
+          askCountry(s"Remove cell(s) from which country: ", saudiAirStrikesCandidates)
         else 
-          USBot.disruptPriority(candidates).get
+          USBot.disruptPriority(saudiAirStrikesCandidates).get
 
         val c = game.getMuslim(target)
         val num = if (c.name == Yemen) c.totalCells min 2 else 1
@@ -516,6 +555,11 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(250, "Special Forces", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        specialForcesCandidates exists (name => USBot.wouldRemoveLastCell(name, 1))
+      }
+      ,
       (_: Role, _: Boolean) => specialForcesCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -536,7 +580,8 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(251, "Trump Tweets", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      AlwaysPlayable,
       (role: Role) => {
         def logNotZero(value: Int, msg: String): Unit = if (value != 0) log(f"$value%+2d $msg")
           
@@ -606,19 +651,19 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(252, "Trump Tweets", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => deck(251).eventConditions(role, forTrigger),
       (role: Role) => deck(251).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(253, "Trump Tweets", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => deck(251).eventConditions(role, forTrigger),
       (role: Role) => deck(251).executeEvent(role)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(254, "US Embassy to Jerusalem", US, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => game.usPosture == Hard && trumpTweetsON &&
                                   (role == game.humanRole || game.prestigeLevel == Low)
       ,
@@ -630,7 +675,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(255, "Western Arms Sales", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => role == game.humanRole && (game hasMuslim (_.isAlly))
       ,
       (role: Role) => {
@@ -653,7 +698,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(256, "White Helmets", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => (game hasMuslim (m => m.militia > 0 && m.civilWar)) &&
                                (game.prestige < 12 || game.funding > 1)
       ,
@@ -677,7 +722,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(257, "Women's Rights Activism", US, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game hasMuslim (_.reaction > 0)
       ,
       (role: Role) => {
@@ -694,14 +739,18 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(258, "75th Ranger Regiment", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => game hasMuslim (m => m.civilWar && m.totalCells > 0)
+      () => {
+        // Can we remove the last cell on the board?
+        rangerRegimentCandidates exists (name => USBot.wouldRemoveLastCell(name, 2))
+      }
+      ,
+      (_: Role, _: Boolean) => rangerRegimentCandidates.nonEmpty
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter (m => m.civilWar && m.totalCells > 0))
         val target = if (role == game.humanRole)
-          askCountry("Remove cells from which Civil War country: ", candidates)
+          askCountry("Remove cells from which Civil War country: ", rangerRegimentCandidates)
         else
-          USBot.disruptPriority(candidates).get
+          USBot.disruptPriority(rangerRegimentCandidates).get
         
         val num = game.getMuslim(target).totalCells min 2
         val (actives, sleepers, sadr) = if (role == game.humanRole)
@@ -715,7 +764,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(259, "Arab NATO", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (game.getMuslim(SaudiArabia).governance == Good ||
                                    game.getMuslim(GulfStates).governance  == Good) &&
                                   (role == game.humanRole || (game.militiaAvailable > 0 && arabNatoCandidates.nonEmpty))
@@ -819,7 +868,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(260, "Imran Khan", US, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         val pakistan = game.getMuslim(Pakistan)
         !pakistan.isIslamistRule && !pakistan.isGood && pakistan.totalCells == 0 && !game.isCaliphateMember(Pakistan)
@@ -832,7 +881,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(261, "Intel Community", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => role == game.humanRole  // The bot treats this as unplayable
       ,
       (role: Role) => {
@@ -859,6 +908,11 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(262, "MOAB", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        moabCandidates exists (name => USBot.wouldRemoveLastCell(name, 1))
+      }
+      ,
       (_: Role, _: Boolean) => moabCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -879,7 +933,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(263, "Operation Tidal Wave II", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.caliphateDeclared && game.funding > 0
       ,
       (role: Role) => {
@@ -888,7 +942,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(264, "Personal Security Contractors", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => personalSecContractorsCandidates.nonEmpty && game.militiaAvailable > 0
       ,
       (role: Role) => {
@@ -905,7 +959,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(265, "Popular Mobilization Forces", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => popularMobilForcesCandidates.nonEmpty && game.militiaAvailable > 0
       ,
       (role: Role) => {
@@ -922,10 +976,10 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(266, "Presidential Reality Show", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val prereq = !(game hasMuslim (m => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)))
-        def cardExists = cacheQuestion(askYorN("""Is there a "Trump Tweets" card or any card with prerequisite "Trump Tweets ON" in the discard pile? (y/n) """))
+        def cardExists = cacheYesOrNo("""Is there a "Trump Tweets" card or any card with prerequisite "Trump Tweets ON" in the discard pile? (y/n) """)
         prereq && cardExists
       }
       ,
@@ -956,8 +1010,8 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(267, "Third Offset Strategy", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => cacheQuestion(askYorN(s"Does the $Jihadist player have more than one card in hand? (y/n) "))
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      (_: Role, _: Boolean) => cacheYesOrNo(s"Does the $Jihadist player have more than one card in hand? (y/n) ")
       ,
       (role: Role) => {
         if (role == game.humanRole)
@@ -968,7 +1022,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(268, "Trump Trip", US, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => trumpTripAlignmentCandidates.nonEmpty || trumpTripPostureCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1007,6 +1061,14 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(269, "Air America", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        val calNum    = (airAmericaCaliphateCandidates map (name => game.getCountry(name).totalCells)).sum min 4
+        val nonCalNum = (airAmericaNonCaliphateCandidates map (name => game.getCountry(name).totalCells)).sum min 3
+        
+        calNum == game.totalCellsOnMap || nonCalNum == game.totalCellsOnMap
+      }
+      ,
       (_: Role, _: Boolean) => airAmericaCaliphateCandidates.nonEmpty || airAmericaNonCaliphateCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1034,11 +1096,17 @@ object ForeverWarCards {
           // Bot will remove cells from caliphate countries only if it can remove
           // four cells (or there are no Civil War/Regime change countries)
           // Otherwise it will remove the max it can from Civil War/Regime change countries
-          val caliphateNum = airAmericaCaliphateCandidates.foldLeft(0) { (sum, name) => game.getMuslim(name).totalCells }
-          val (candidates, maxCells) = if (caliphateNum > 3 || airAmericaNonCaliphateCandidates.isEmpty)
-            (airAmericaCaliphateCandidates, 4)
+          val calNum    = (airAmericaCaliphateCandidates map (name => game.getCountry(name).totalCells)).sum min 4
+          val nonCalNum = (airAmericaNonCaliphateCandidates map (name => game.getCountry(name).totalCells)).sum min 3
+        
+          calNum == game.totalCellsOnMap || nonCalNum == game.totalCellsOnMap
+          
+          
+          
+          val (candidates, maxCells) = if (calNum == 4 || calNum == game.totalCellsOnMap || nonCalNum == 0)
+            (airAmericaCaliphateCandidates, calNum)
           else
-            (airAmericaNonCaliphateCandidates, 3)
+            (airAmericaNonCaliphateCandidates, nonCalNum)
           
           // We will select the cells one at a time, because
           // removal of a cell could change the Bots priorities
@@ -1060,7 +1128,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(270, "Deep State", US, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val candidates = deepStateCandidates
         if (role == game.humanRole)
@@ -1095,7 +1163,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(271, "Expanded ROE", US, 3,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => true
       ,
       (role: Role) => {
@@ -1106,7 +1174,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(272, "Fire and Fury", US, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => role == game.humanRole && // Unplayable by Bot
                                   game.troopsAvailable >= 6 &&
                                   game.usPosture == Hard &&
@@ -1135,7 +1203,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(273, "Fully Resourced COIN", US, 3,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.usPosture == Hard && (game hasMuslim (_.inRegimeChange))
       ,
       (role: Role) => {
@@ -1144,7 +1212,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(274, "Government of National Accord", US, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => governmentOfNationalAccordCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1182,6 +1250,12 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(275, "Operation Inherent Resolve", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        val numCells = (game.getMuslims(Iraq::Syria::Nil) map (_.totalCells)).sum min 3
+        numCells == game.totalCellsOnMap
+      }
+      ,
       (_: Role, _: Boolean) => (game.getMuslims(Iraq::Syria::Nil) exists (_.civilWar)) && globalEventNotInPlay(EarlyExit)
       ,
       (role: Role) => {
@@ -1216,11 +1290,6 @@ object ForeverWarCards {
         }
         else {
           // Bot
-          // Bot will remove cells from caliphate countries only if it can remove
-          // four cells (or there are no Civil War/Regime change countries)
-          // Otherwise it will remove the max it can from Civil War/Regime change countries
-          val caliphateNum = airAmericaCaliphateCandidates.foldLeft(0) { (sum, name) => game.getMuslim(name).totalCells }
-          
           // We will select the cells one at a time, because
           // removal of a cell could change the Bots priorities
           @tailrec def nextRemoval(numLeft: Int): Unit = {
@@ -1241,7 +1310,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(276, "Populism/Euroscepticism", US, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val numHard     = game.getNonMuslims(Schengen) count (_.posture == Hard)
         val numSoft     = game.getNonMuslims(Schengen) count (_.posture == Soft)
@@ -1299,7 +1368,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(277, "Regime Change Policy", US, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val basicRequirement = game.troopsAvailable >= 6 && game.islamistResources > game.goodResources
         if (role == game.humanRole)
@@ -1329,7 +1398,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(278, "Siege of Mosul", US, 3,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => (game hasMuslim (_.civilWar)) && (game.troopsOnMap + game.militiaOnMap) > game.cellsOnMap
       ,
       (role: Role) => {
@@ -1342,7 +1411,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(279, "SFABs", US, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => sfabCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1374,6 +1443,12 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(280, "Sunni-Shia Rift", US, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        val numCells = (game.getMuslims(sunniShiaRiftCandidates) map (_.totalCells)).sum min 3
+        numCells == game.totalCellsOnMap
+      }
+      ,
       (_: Role, _: Boolean) => !isIranSpecialCase && sunniShiaRiftCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1409,7 +1484,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(281, "Drone Swarms", Jihadist, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => (game hasMuslim (_.civilWar)) && (game.availablePlots contains Plot1)
       ,
       (role: Role) => {
@@ -1425,7 +1500,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(282, "Executive Order 13492", Jihadist, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => (game.usPosture == Hard && game.prestige > 1) ||
                                (game.usPosture == Soft && game.cellsAvailable > 0)
       ,
@@ -1445,7 +1520,8 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(283, "Lone Wolf", Jihadist, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      AlwaysPlayable,
       (role: Role) => {
         val testCountries = Canada::Scandinavia::India::Nil
         val untested = countryNames(game.getNonMuslims(testCountries) filter (_.isUntested))
@@ -1481,7 +1557,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(284, "Manchester Bombing", Jihadist, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) =>
         (game.getNonMuslim(UnitedKingdom).totalCells > 0) &&
         (role == game.humanRole || (game.funding < 9 && game.getNonMuslim(UnitedKingdom).posture == game.usPosture))
@@ -1495,7 +1571,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(285, "Mohamed Morsi Supporters", Jihadist, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => globalEventNotInPlay(PoliticalIslamismUS) && mohamedMorsiCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1511,7 +1587,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(286, "Palestinian Peace", Jihadist, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => palestinianPeaceCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1527,7 +1603,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => !game.getMuslim(Lebanon).isAlly &&
                                (isIranSpecialCase || game.getMuslim(Iran).isAdversary) &&
                                (sayyedHassanReactionCandidates.nonEmpty       ||
@@ -1590,7 +1666,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(288, "Soldiers of the Caliphate", Jihadist, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.caliphateDeclared
       ,
       (role: Role) => {
@@ -1670,7 +1746,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(289, "Strait of Hormuz", Jihadist, 1,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
          val basicReq = (isIranSpecialCase || game.getMuslim(Iran).isAdversary)
          if (role == game.humanRole)
@@ -1702,7 +1778,8 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(290, "Uyghur Nationalism", Jihadist, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      AlwaysPlayable,
       (role: Role) => {
         val die = dieRoll
         log(s"Die roll: $die")
@@ -1738,7 +1815,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(291, "Vehicle-ramming Attacks", Jihadist, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => lapsingEventNotInPlay(IslamicMaghreb) &&
                                globalEventNotInPlay(TravelBan)       &&
                                (game.availablePlots contains Plot1)  &&
@@ -1756,7 +1833,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(292, "Amaq News Agency", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => amaqNewsAgencyCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1783,7 +1860,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(293, "Attempted Coup", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => attemptedCoupCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1799,7 +1876,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(294, "Barcelona Bombs", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => (game.availablePlots contains Plot1)
       ,
       (role: Role) => {
@@ -1817,7 +1894,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(295, "Black Gold", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.caliphateDeclared && game.funding < 9
       ,
       (role: Role) => {
@@ -1828,7 +1905,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(296, "Botched Yemeni Raid", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.prestigeLevel == High || game.prestigeLevel == VeryHigh
       ,
       (role: Role) => {
@@ -1837,7 +1914,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(297, "Early Exit", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => !game.caliphateDeclared && trumpTweetsON && earlyExitCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -1856,7 +1933,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(298, "False Flag Attacks", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (game.availablePlots exists (_ != PlotWMD)) ||
         (role == game.humanRole && game.hasNonMuslim(_.canRemovePosture))     ||
         (role == game.botRole   && game.hasNonMuslim(n => n.canRemovePosture && n.isOppositeUsPosture))
@@ -1901,7 +1978,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(299, "Foreign Fighters Return", Jihadist, 2,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => !game.caliphateDeclared &&
                                game.cellsAvailable > 0 &&
                                ((game hasNonMuslim (n => n.isGood && n.name != UnitedStates)) ||
@@ -1937,7 +2014,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(300, "Going Underground", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val majorCandidates = game.majorJihadTargets(2) // 2 Ops only
         val minorCandidates = game.jihadTargets
@@ -1986,7 +2063,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(301, "Green on Blue", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => game.plotData.resolvedInGreenOnBlue &&
                                   (role == game.humanRole || game.gwotPenalty == 0)
       ,
@@ -2000,7 +2077,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(302, "Imperial Overstretch", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.troopCommitment != LowIntensity
       ,
       (role: Role) => {
@@ -2012,7 +2089,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(303, "Iranian Withdrawal", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         val iran = game.getCountry(Iran)
         game.usPosture == Hard && iran.wmdCache > 0 && iran.totalCells > 0
@@ -2053,7 +2130,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(304, "Loose Chemicals", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         val syria = game.getMuslim(Syria)
         syria.civilWar && syria.wmdCache > 0 && syria.totalCells > 0
@@ -2081,7 +2158,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(305, "Presidential Whistleblower", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => trumpTweetsON
       ,
       (role: Role) => {
@@ -2122,15 +2199,14 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(306, "Public Debate", Jihadist, 2,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (_: Role, _: Boolean) => false // Not playable in Solo game
-      ,
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      NeverPlayable,  // Not playable in Solo game
       (role: Role) => {
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(307, "Russian Subterfuge", Jihadist, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         val russia = game.getNonMuslim(Russia)
         russia.isUntested || russia.posture == oppositePosture(game.usPosture)
@@ -2145,7 +2221,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(308, "Battle of Marawi City", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.cellsAvailable > 0 || game.availablePlots.nonEmpty
       ,
       (role: Role) => {
@@ -2167,7 +2243,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(309, "Easter Bombings", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => (game.availablePlots contains Plot1) && easterBombingsCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -2188,7 +2264,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(310, "Forever War", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.troopsOnMap + game.militiaOnMap - game.cellsOnMap > 0
       ,
       (role: Role) => {
@@ -2200,7 +2276,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(311, "Gaza Border Protests", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         val numCells = game.getCountry(Israel).totalCells
         game.availablePlots exists (_.number <= numCells)
@@ -2253,7 +2329,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(312, "Hama Offensive", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => if (role == game.humanRole)
         game hasMuslim (_.civilWar)
       else {
@@ -2285,7 +2361,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(313, "Hayat Tahir al-Sham", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.getMuslim(Syria).civilWar &&
                                (game.cellsAvailable > 0 || game.adjacentCountriesWithCells(Syria).nonEmpty)
       ,
@@ -2333,7 +2409,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(314, "Jihadist African Safari", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.availablePlots.nonEmpty || game.cellsAvailable > 0
       ,
       (role: Role) => {
@@ -2408,7 +2484,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(315, "Khashoggi Crisis", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => role == game.humanRole ||
                                   game.prestige > 3      ||
                                   !game.getMuslim(SaudiArabia).isAdversary
@@ -2439,7 +2515,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(316, "Martyrdom Operation", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.availablePlots.nonEmpty && martyrdomCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -2466,7 +2542,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(317, "Qatari Crisis", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.hasMuslim(m => m.isShiaMix && m.civilWar)
       ,
       (role: Role) => {
@@ -2496,7 +2572,8 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(318, "South China Sea Crisis", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      AlwaysPlayable,
       (role: Role) => {
         // Take troops from available if possible, otherwise we must 
         // ask the user where to take them from.
@@ -2540,7 +2617,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => tehranBeirutLandCorridorSatisfied
       ,
       (role: Role) => {
@@ -2555,7 +2632,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => tribalLeadersCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -2591,7 +2668,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(321, "Ungoverned Spaces", Jihadist, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => game.cellsAvailable > 0 && ungovernedSpaceCandidates.nonEmpty
       ,
       (role: Role) => {
@@ -2613,7 +2690,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(322, "Amnesty International", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (role == US       && amnestyInternationUSCandidates.nonEmpty) ||
                                   (role == Jihadist && amnestyInternationJihadistCandidates.nonEmpty)
       ,
@@ -2640,7 +2717,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(323, "Blasphemy", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (role == US && blasphemyUSCandidates.nonEmpty) ||
                                   (role == Jihadist && blasphemyJihadistCandidates.nonEmpty)
       ,
@@ -2667,7 +2744,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(324, "BREXIT", Unassociated, 1,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => globalEventInPlay(Euroscepticism) ||
                                   (game hasNonMuslim (n => n.isSchengen && n.totalCells > 0)) ||
                                   (game.plotData.resolvedTargets exists Schengen.contains)
@@ -2696,7 +2773,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(325, "Dissent Channel", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (role == US && game.funding > 1) ||
                                   (role == Jihadist && game.prestige > 1)
       ,
@@ -2709,7 +2786,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(326, "Filibuster/Nuclear Option", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
          val basic = globalEventInPlay(TrumpTweetsON) || globalEventInPlay(TrumpTweetsOFF)
          if (role == game.humanRole)
@@ -2735,7 +2812,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(327, "Gaza Aid", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (role == US && game.prestige < 12) ||
                                   (role == Jihadist && game.funding < 9)
       ,
@@ -2746,7 +2823,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(328, "Hafiz Saeed Khan", Unassociated, 1,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => 
         (role == US && (hafizSaeedKhanMuslimUSCandidates.nonEmpty || hafizSaeedKhanNonMuslimUSCandidates.nonEmpty)) ||
         (role == Jihadist && (hafizSaeedKhanMuslimJihadistCandidates.nonEmpty || hafizSaeedKhanNonMuslimJihadistCandidates.nonEmpty))
@@ -2792,7 +2869,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(329, "Hamza bin Laden", Unassociated, 1,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (PersonalityCards exists game.cardRemoved) &&
           ((role == US && game.prestige < 12) ||
           (role == Jihadist && game.funding < 9))
@@ -2807,18 +2884,20 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(330, "IRGC", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => (isIranSpecialCase || !game.getMuslim(Iran).isAlly) &&
-                                  ((role == US       && game.adjacentCountries(Iran).exists(_.totalCells > 0)) ||
-                                   (role == Jihadist && game.adjacentMuslims(Iran).exists(_.militia > 0)))
+      () => {
+        // Can we remove the last cell on the board?
+        irgcCandidates(US) exists (name => USBot.wouldRemoveLastCell(name, 1))
+      }
+      ,
+      (role: Role, _: Boolean) => (isIranSpecialCase || !game.getMuslim(Iran).isAlly) && irgcCandidates(role).nonEmpty
       ,
       (role: Role) => if (role == US) {
-        val candidates = countryNames(game.adjacentCountries(Iran) filter (_.totalCells > 0))
         val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
-          val t = askCountry("Remove a cell from which country: ", candidates)
+          val t = askCountry("Remove a cell from which country: ", irgcCandidates(role))
           (t, askCells(t, 1, true))
         }
         else  {
-          val t = USBot.disruptPriority(candidates).get
+          val t = USBot.disruptPriority(irgcCandidates(role)).get
           (t, USBot.chooseCellsToRemove(t, 1))
           
         }
@@ -2826,11 +2905,10 @@ object ForeverWarCards {
         removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
       }
       else { // Jihadist
-        val candidates = countryNames(game.adjacentMuslims(Iran) filter (_.militia > 0))
         val target = if (role == game.humanRole)
-          askCountry("Remove a militia from which country: ", candidates)
+          askCountry("Remove a militia from which country: ", irgcCandidates(role))
         else
-          JihadistBot.troopsMilitiaTarget(candidates).get
+          JihadistBot.troopsMilitiaTarget(irgcCandidates(role)).get
         
         addEventTarget(target)
         removeMilitiaFromCountry(target, 1)
@@ -2838,15 +2916,14 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(331, "JASTA", Unassociated, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false  // Not playable in the Solo game
-      ,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      NeverPlayable,  // Not playable in the Solo game
       (role: Role) => {
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(332, "Khan Shaykhun Chemical Attack", Unassociated, 1,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => game.getMuslim(Syria).civilWar &&
                                   (role == US || game.getMuslim(Syria).militia > 0) 
       ,
@@ -2862,7 +2939,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(333, "MbS", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => game.getMuslim(SaudiArabia).canTakeAwakeningOrReactionMarker
       ,
       (role: Role) => {
@@ -2875,7 +2952,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(334, "Novichok Agent", Unassociated, 1,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => if (role == game.humanRole)
         !game.getNonMuslim(Russia).isUntested
       else
@@ -2892,7 +2969,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(335, "Rohingya Genocide", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val countries  = game.getNonMuslims(India::Thailand::Nil)
         val canPosture = if (role == US) countries exists (n => n.isUntested || n.posture != game.usPosture)
@@ -2944,7 +3021,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(336, "US/NK Summit", Unassociated, 1,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => 
         (game.worldPosture == game.usPosture || game.worldPosture == Even) && trumpTweetsON
       ,
@@ -2960,7 +3037,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(337, "US Border Crisis", Unassociated, 1,
-      NoRemove, USLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, USLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => trumpTweetsON
       ,
       (role: Role) => if (role == US) {
@@ -2994,6 +3071,12 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(338, "Abu Muhammad al-Shimali", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        val candidates = countryNames(game.countries filter (_.totalCells > 0))
+        candidates exists (name => USBot.wouldRemoveLastCell(name, 1))
+      }
+      ,
       (role: Role, _: Boolean) => (role == US && ((game.countries exists (_.totalCells > 0)) || game.prestige < 12)) ||
                                   (role == Jihadist && game.cellsAvailable > 0)
       ,
@@ -3036,7 +3119,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(339, "Erdogan Dance", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => if (role == game.humanRole)
         erdoganDanceCandidates.nonEmpty
       else if (role == US)
@@ -3069,7 +3152,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(340, "EU Bolsters Iran Deal", Unassociated, 2,
-      JihadistRemove, JihadistLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      JihadistRemove, JihadistLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (game.getCountry(Iran).wmdCache > 0) &&
                                   (role == game.humanRole || role == Jihadist || game.gwotPenalty > 0)
       ,
@@ -3090,7 +3173,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(341, "Gulen Movement", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (role == game.humanRole) ||
                                   globalEventNotInPlay(GulenMovement) ||
                                   (role == US && game.getMuslim(Turkey).canTakeAwakeningOrReactionMarker) ||
@@ -3116,7 +3199,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(342, "Gulmurod Khalimov", Unassociated, 2,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => game.caliphateDeclared && 
                                    ((role == US && (game.prestige < 12 || game.funding > 1)) ||
                                     role == Jihadist)
@@ -3177,6 +3260,12 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(343, "JCPOA", Unassociated, 2,
       JihadistRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        val iranCells = game.getCountry(Iran).totalCells
+        game.totalCellsOnMap == 1 && iranCells == 1
+      }
+      ,
       (role: Role, _: Boolean) => {
         val hasWMD = game.getCountry(Iran).wmdCache > 0
         val jihadOk = (isIranSpecialCase || game.getMuslim(Iran).isAdversary) && game.getCountry(Iran).totalCells > 0
@@ -3212,7 +3301,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(344, "Media Manipulation", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => mediaManipulationCandidates(role).nonEmpty
       ,
       (role: Role) => {
@@ -3232,6 +3321,11 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(345, "Operation Euphrates Shield", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        euphratesShieldCandidates(US) exists (name => USBot.wouldRemoveLastCell(name, 1))
+      }
+      ,
       (role: Role, _: Boolean) => euphratesShieldCandidates(role).nonEmpty
       ,
       (role: Role) => if (role == US) {
@@ -3277,13 +3371,19 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(346, "Pakistani Intelligence (ISI)", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        pakistaniIntelligenceCandidates(US) exists (name => USBot.wouldRemoveLastCell(name, 1))
+      }
+      ,
       (role: Role, _: Boolean) => pakistaniIntelligenceCandidates(role).nonEmpty
       ,
       (role: Role) => if (role == US) {
         val target = if (role == game.humanRole)
           askCountry("Which country: ", pakistaniIntelligenceCandidates(role))
         else
-          USBot.deployToPriority(pakistaniIntelligenceCandidates(role)).get
+          (pakistaniIntelligenceCandidates(role).find(name => USBot.wouldRemoveLastCell(name, 1)) orElse
+          USBot.deployToPriority(pakistaniIntelligenceCandidates(role))).get
         
         addEventTarget(target)
         testCountry(target)
@@ -3318,13 +3418,19 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(347, "Switching Jerseys", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        switchingJerseysCandidates(US) exists (name => USBot.wouldRemoveLastCell(name, 1))
+      }
+      ,      
       (role: Role, _: Boolean) => switchingJerseysCandidates(role).nonEmpty
       ,
       (role: Role) => if (role == US) {
         val target = if (role == game.humanRole)
           askCountry("Which country: ", switchingJerseysCandidates(role))
         else
-          USBot.deployToPriority(switchingJerseysCandidates(role)).get
+          (switchingJerseysCandidates(role).find(name => USBot.wouldRemoveLastCell(name, 1)) orElse
+          USBot.deployToPriority(switchingJerseysCandidates(role))).get
         
         val (actives, sleepers, sadr) = if (role == game.humanRole)
           askCells(target, 1, true)
@@ -3351,7 +3457,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(348, "Travel Ban", Unassociated, 2,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => trumpTweetsON &&
                                   (role == US && globalEventNotInPlay(TravelBan) ||
                                    role == Jihadist)
@@ -3377,7 +3483,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(349, "Turkish Coup", Unassociated, 2,
-      JihadistRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      JihadistRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val turkey = game.getMuslim(Turkey)
         globalEventInPlay(GulenMovement) && !turkey.isUntested &&
@@ -3418,6 +3524,11 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(350, "UN Peace Envoy", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        unPeaceEnvoyCandidates(US) exists (name => game.getCountry(name).totalCells == game.totalCellsOnMap)
+      }
+      ,      
       (role: Role, _: Boolean) => unPeaceEnvoyCandidates(role).nonEmpty
       ,
       (role: Role) => {
@@ -3454,8 +3565,8 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(351, "Advanced Persistent Threat (APT)", Unassociated, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => cacheQuestion(askYorN(s"Do both players have at least 1 card in hand? (y/n) "))
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      (role: Role, _: Boolean) => cacheYesOrNo(s"Do both players have at least 1 card in hand? (y/n) ")
       ,
       (role: Role) => {
         val opponent = oppositeRole(role)
@@ -3504,7 +3615,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(352, "al-Baghdadi", Unassociated, 3,
-      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         (role == US       && (game hasMuslim (m => m.civilWar && m.totalTroopsAndMilitia > m.totalCells))) ||
         (role == Jihadist && (globalEventNotInPlay(AlBaghdadi) || (game.cellsAvailable > 0 && game.hasMuslim (m => m.isPoor))))
@@ -3546,7 +3657,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(353, "Bowling Green Massacre", Unassociated, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => role == game.humanRole ||
                                   bowlingGreenBotMarkers(role).nonEmpty ||
                                   bowlingGreenBotLapsing(role).nonEmpty
@@ -3625,9 +3736,8 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(354, "Election Meddling", Unassociated, 3,
-      NoRemove, NoLapsing, AutoTrigger, DoesNotAlertPlot,
-      (role: Role, forTrigger: Boolean) => false  // Not directly playable, but will always auto trigger
-      ,
+      NoRemove, NoLapsing, AutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      NeverPlayable,  // Not directly playable, but will always auto trigger
       (role: Role) => {
         val drm = game.getNonMuslim(Russia).posture match {
           case PostureUntested => None
@@ -3644,7 +3754,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(355, "Fake News", Unassociated, 3,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => trumpTweetsON
       ,
       (role: Role) => {
@@ -3657,23 +3767,31 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(356, "OPEC Production Cut", Unassociated, 3,
-      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false  // Not playable in the Solo game
-      ,
+      NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      NeverPlayable,  // Not playable in the Solo game
       (role: Role) => {
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(357, "Peace Dividend", Unassociated, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      (role: Role, _: Boolean) => false  // Not playable in the Solo game
-      ,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
+      NeverPlayable,  // Not playable in the Solo game
       (role: Role) => {
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(358, "Political Islamism/Pan Arab Nationalism", Unassociated, 3,
-      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, AlwaysPlayable,
+      Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      () => {
+        // Can we remove the last cell on the board?
+        val sunniCandidates = game.muslims filter (m => m.isSunni && m.totalCells > 0)
+        val shiaCandidates  = game.muslims filter (m => m.isShiaMix && m.totalCells > 0)
+        val numSunni = (sunniCandidates map (_.totalCells)).sum
+        val numShia  = (shiaCandidates map (_.totalCells)).sum
+        numSunni == 1 && numShia == 1 && game.totalCellsOnMap == 2
+      }
+      ,      
+      AlwaysPlayable,
       (role: Role) => if (role == US) {
         val sunniCandidates = countryNames(game.muslims filter (m => m.isSunni && m.totalCells > 0))
         val shiaCandidates = countryNames(game.muslims filter (m => m.isShiaMix && m.totalCells > 0))
@@ -3741,7 +3859,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(359, "Quick Win/Bad Intel", Unassociated, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => quickWinBadIntelCandidates(role).nonEmpty
       ,
       (role: Role) => {
@@ -3765,7 +3883,7 @@ object ForeverWarCards {
     )),
     // ------------------------------------------------------------------------
     entry(new Card(360, "US China Trade War", Unassociated, 3,
-      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
+      NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => game.usPosture != game.getNonMuslim(China).posture && trumpTweetsON
       ,
       (role: Role) => {

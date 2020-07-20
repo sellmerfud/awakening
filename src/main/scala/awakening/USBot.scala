@@ -1092,63 +1092,91 @@ object USBot extends BotHelpers {
     performCardEvent(card, US, triggered = true)
   }
   
-  // Starting point for Jihadist bot card play.
-  def cardPlay(card: Card, playable: Boolean): Unit = {
-    val maxOps = maxOpsPlusReserves(card)
-    val plots = for (country <- game.countries; plot <- country.plots)
-      yield PlotInCountry(plot, country)
-      
-    // If there is at least one plot on the map then
-    // we consult the Alert Resolution Flowchart (ARF)
-    val consultPAR = plots.isEmpty || {
-      alertResolutionFlowchart(card, maxOps, playable, plots) match {
-        case AlertPlot       => 
-          val plot = priorityPlot(plots)
-          val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
-          alertPlot(card, plot)
-          if (game.usResolve(Competent) && otherPlotsInCountry.nonEmpty) {
-            log(s"$US Bot with Competent resolve alerts two plots in the same country")
-            val plot2 = priorityPlot(otherPlotsInCountry)
-            performAlert(plot2.country.name, plot2.onMap)
-          }
-          false
-          
-        case AlertTable      => !alertTable(card, plots)
-        case PARFlowchart    => true
-        case AddToUSReserves => addToReserves(US, card.ops); false
+  def disruptRemovesLastCell(card: Card): Boolean = {
+    val maxOps  = maxOpsPlusReserves(card)
+    game.disruptTargets(maxOps) exists { name =>
+      game.disruptLosses(name) match {
+        case Some(Left(numCells)) =>
+          //  If we would disrupt the last cells on the map and they are
+          //  not sleeper cells, then we weould remove last cell from the map
+          numCells == game.totalCellsOnMap && game.getCountry(name).sleeperCells == 0
+        
+        case _ => false  // Would only disrupt a cadre
       }
     }
+  }
+  
+  
+  def wouldRemoveLastCell(target: String, numToRemove: Int): Boolean = {
+    val totalCells = game.getCountry(target).totalCells
+    game.totalCellsOnMap <= numToRemove && totalCells == game.totalCellsOnMap
+  }
+  
+  
+  // Starting point for Jihadist bot card play.
+  def cardPlay(card: Card, playable: Boolean): Unit = {
+    if (disruptRemovesLastCell(card))  
+      disruptOperation(card)
+    else if (playable && card.eventRemovesLastCell())
+      performCardEvent(card, US)
+    else {
+      val maxOps = maxOpsPlusReserves(card)
+      val plots = for (country <- game.countries; plot <- country.plots)
+        yield PlotInCountry(plot, country)
     
-    // If the Alert Resolution Flowchart has indicated that we continue,
-    // the first see if Reassessment is possible.  If Reassessment is
-    // not performed, then finally we consult the PAR flowchart.
-    if (consultPAR && !reassessment(card)) {
-      // If the event is playable then the event is alwasy executed
-      if (playable) {
-        performCardEvent(card, US)
-        // If the card event is Unassociated add ops to the Bot's reserves.
-        if (card.association == Unassociated) 
-          addToReserves(US, card.ops)
+    
+      // If there is at least one plot on the map then
+      // we consult the Alert Resolution Flowchart (ARF)
+      val consultPAR = plots.isEmpty || {
+        alertResolutionFlowchart(card, maxOps, playable, plots) match {
+          case AlertPlot       => 
+            val plot = priorityPlot(plots)
+            val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
+            alertPlot(card, plot)
+            if (game.usResolve(Competent) && otherPlotsInCountry.nonEmpty) {
+              log(s"$US Bot with Competent resolve alerts two plots in the same country")
+              val plot2 = priorityPlot(otherPlotsInCountry)
+              performAlert(plot2.country.name, plot2.onMap)
+            }
+            false
+          
+          case AlertTable      => !alertTable(card, plots)
+          case PARFlowchart    => true
+          case AddToUSReserves => addToReserves(US, card.ops); false
+        }
       }
-      else {
-        // US Elections is the only auto trigger event.
-        // The Bot will execute the event first.
-        if (card.autoTrigger) {
+    
+      // If the Alert Resolution Flowchart has indicated that we continue,
+      // the first see if Reassessment is possible.  If Reassessment is
+      // not performed, then finally we consult the PAR flowchart.
+      if (consultPAR && !reassessment(card)) {
+        // If the event is playable then the event is alwasy executed
+        if (playable) {
           performCardEvent(card, US)
-          log()
+          // If the card event is Unassociated add ops to the Bot's reserves.
+          if (card.association == Unassociated) 
+            addToReserves(US, card.ops)
         }
+        else {
+          // US Elections is the only auto trigger event.
+          // The Bot will execute the event first.
+          if (card.autoTrigger) {
+            performCardEvent(card, US)
+            log()
+          }
     
-        val opsUsed = operationsFlowchart(maxOps) match {
-          case WoiMuslimHighestDRM  => woiMuslimHighestDRMOperation(card)
-          case WoiMuslimMinusOneDRM => woiMuslimDRMMinusOneOperation(card)
-          case WoiNonMuslim         => woiNonMuslimOperation(card)
-          case Deploy               => deployOperation(card)
-          case Disrupt              => disruptOperation(card)
-          case RegimeChange         => regimeChangeOperation(card)
-          case HomelandSecurity     => 0 // No operation performed
+          val opsUsed = operationsFlowchart(maxOps) match {
+            case WoiMuslimHighestDRM  => woiMuslimHighestDRMOperation(card)
+            case WoiMuslimMinusOneDRM => woiMuslimDRMMinusOneOperation(card)
+            case WoiNonMuslim         => woiNonMuslimOperation(card)
+            case Deploy               => deployOperation(card)
+            case Disrupt              => disruptOperation(card)
+            case RegimeChange         => regimeChangeOperation(card)
+            case HomelandSecurity     => 0 // No operation performed
+          }
+          homelandSecurity(card, opsUsed)
         }
-        homelandSecurity(card, opsUsed)
-      }
+      }      
     }
   }
   
