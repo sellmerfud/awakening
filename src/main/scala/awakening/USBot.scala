@@ -854,7 +854,9 @@ object USBot extends BotHelpers {
   
   def deployFromTarget(names: List[String]): Option[String] = {
     botLog("Find \"Deploy From\" target")
-    val track        = names find (_ == "track")
+    // Bot will always deploy exactly two troops from the track so it is of the table
+    // if there is only 1 cube left
+    val track        = names find (_ == "track" && game.troopsAvailable > 1)
     // The bot will not deploy markers so get rid of any countries without troops cubes
     val countryNames = names filterNot (_ == "track") filterNot (name => (game getCountry name).troops == 0)
     val target = selectCandidates(game getCountries countryNames, DeployFromFlowchart) match {
@@ -1290,7 +1292,7 @@ object USBot extends BotHelpers {
       expendBotReserves(opsUsed - card.ops)
 
     val (withdraw, numTroops) = from match {
-      case "track" => (false, 2)  // Always deploy exactly 2 troops from track
+      case "track" => (false, 2 min game.troopsAvailable)  // Always deploy exactly 2 troops from track
       case name    =>
         val withdraw = game.usPosture == Soft && (game isMuslim name) && (game getMuslim name).inRegimeChange
         (withdraw, (game getCountry name).maxDeployFrom)
