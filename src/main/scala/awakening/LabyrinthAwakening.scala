@@ -5012,6 +5012,10 @@ object LabyrinthAwakening {
       log(separator())
       log("An unblocked WMD plot was resolved in the United States")
       log("Game Over - Jihadist automatic victory!")
+      
+      saveTurn()
+      saveGameDescription("Game Over - Jihadist automatic victory!")
+      throw ExitGame
     }
     else {
       for (Unblocked(name, mapPlot) <- unblocked) {
