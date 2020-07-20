@@ -3834,7 +3834,7 @@ object ForeverWarCards {
         val shiaCandidates = countryNames(game.muslims filter (_.isShiaMix))
         if (sunniCandidates.nonEmpty && game.cellsAvailable > 0) {
           val target = if (role == game.humanRole)
-            askCountry("Plac a cell in which Sunni country: ", sunniCandidates)
+            askCountry("Place a cell in which Sunni country: ", sunniCandidates)
           else
             JihadistBot.recruitTravelToPriority(sunniCandidates).get
             
@@ -3844,7 +3844,7 @@ object ForeverWarCards {
         
         if (shiaCandidates.nonEmpty && game.cellsAvailable > 0) {
           val target = if (role == game.humanRole)
-            askCountry("Plac a cell in which Shix-Mix country: ", shiaCandidates)
+            askCountry("Place a cell in which Shix-Mix country: ", shiaCandidates)
           else
             JihadistBot.recruitTravelToPriority(shiaCandidates).get
             
