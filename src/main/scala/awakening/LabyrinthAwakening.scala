@@ -5277,7 +5277,9 @@ object LabyrinthAwakening {
         }
     }
     
-    
+    log()
+    log("The Awakening cards were added to the deck.")
+    log("The Awaening expansion rules are now in effect.")
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
     val (updatedPlots, syriaCache) = if (syria.isIslamistRule)
       (game.plotData.copy(availablePlots = PlotWMD :: PlotWMD :: game.availablePlots), 0)
@@ -5317,6 +5319,8 @@ object LabyrinthAwakening {
   // See rule 15.2.2.1 in the Forever War Rulebook
   def addForeverWarCards(): Unit = {
     game = game.copy(currentMode = ForeverWarMode)
+    log()
+    log("The Forever War cards were added to the deck.")
   }
   
   def endTurn(): Unit = {
