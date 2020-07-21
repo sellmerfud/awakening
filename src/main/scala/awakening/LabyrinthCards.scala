@@ -759,15 +759,17 @@ object LabyrinthCards {
       ,
       (role: Role) => if (role == game.humanRole) {
         humanDisrupt(3)
-        log(s"Take the top card of the $Jihadist Bot's hand")
         addGlobalEventMarker(EnhancedMeasures)
+        log(s"Take the top card of the $Jihadist Bot's hand")
+        checkIfAvengerDrawn(1)
       }
       else {
         val target  = USBot.disruptTarget(game disruptTargets 3).get
         log(s"$US performs a Disrupt operation in $target")
         performDisrupt(target)
-        log(s"$US (you) must put a random card from your hand on top card of the $Jihadist Bot's hand")
         addGlobalEventMarker(EnhancedMeasures)
+        log(s"$US (you) must put a random card from your hand on top card of the $Jihadist Bot's hand")
+        checkIfAvengerDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -970,16 +972,18 @@ object LabyrinthCards {
       (role: Role) => if (role == game.humanRole) {
         if (game.disruptTargets(3).nonEmpty)
           humanDisrupt(3)
-        log(s"Discard the top card of the $Jihadist Bot's hand")
         addGlobalEventMarker(Renditions)
+        log(s"Discard the top card of the $Jihadist Bot's hand")
+        checkIfAvengerDrawn(1)
       }
       else {
         val target  = USBot.disruptTarget(game disruptTargets 3) foreach { target =>
           log(s"$US performs a Disrupt operation in $target")
           performDisrupt(target)
         }
-        log(s"$US (you) must discard a random card from your hand")
         addGlobalEventMarker(Renditions)
+        log(s"$US (you) must discard a random card from your hand")
+        checkIfAvengerDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1137,6 +1141,7 @@ object LabyrinthCards {
           log(s"Discard the top card of the $US Bot's hand")
         else
           log(s"You ($US) must randomly discard one card")
+        checkIfAvengerDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1314,12 +1319,13 @@ object LabyrinthCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
       (role: Role) => {
+        increaseFunding(1)
+        decreasePrestige(1)
         if (role == game.humanRole)
           log(s"Discard the top card of the $US Bot's hand")
         else
           log(s"You ($US) must randomly discard one card")
-        increaseFunding(1)
-        decreasePrestige(1)
+        checkIfAvengerDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1886,6 +1892,7 @@ object LabyrinthCards {
           log(s"Discard the top card of the $US Bot's hand")
         else
           log(s"You ($US) must randomly discard one card")
+        checkIfAvengerDrawn(1)
         decreasePrestige(1)
         if (game.cellsAvailable > 0) {
           val candidates = countryNames(game.muslims filter (_.isShiaMix))
@@ -1954,6 +1961,7 @@ object LabyrinthCards {
         if (role == game.botRole) {
           log(s"You ($US) must randomly discard two cards")
           log("Playable Jihadist events on the discards are triggered")
+          checkIfAvengerDrawn(2)
           
           def nextDiscard(num: Int): List[Int] = {
             if (num > 2)
@@ -1971,8 +1979,10 @@ object LabyrinthCards {
             if (card.eventWillTrigger(Jihadist))
               performCardEvent(card, Jihadist, triggered = true)
         }
-        else
+        else {
           log(s"Discard the top two cards of the $Jihadist Bot's hand")
+          checkIfAvengerDrawn(2)
+        }
           
         setUSPosture(Soft)
       }
@@ -2155,6 +2165,7 @@ object LabyrinthCards {
       (role: Role) => {
         log(s"Take the top card of the ${game.botRole} Bot's hand and put a random card")
         log(s"from your hand on top of the ${game.botRole} Bot's hand")
+        checkIfAvengerDrawn(2)
         
         // Create a one Op card to satisfy the card play functions.
         val card = new Card(0, "n/a", Unassociated, 1, 

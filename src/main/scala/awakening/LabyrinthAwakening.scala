@@ -69,8 +69,8 @@ object LabyrinthAwakening {
   sealed trait GameMode {
     val orderValue: Int
   }
-  case object LabyrinthMode extends GameMode  { val orderValue = 1; override def toString() = "Labyrinth"   }
-  case object AwakeningMode extends GameMode  { val orderValue = 2; override def toString() = "Awakening"   }
+  case object LabyrinthMode  extends GameMode { val orderValue = 1; override def toString() = "Labyrinth"   }
+  case object AwakeningMode  extends GameMode { val orderValue = 2; override def toString() = "Awakening"   }
   case object ForeverWarMode extends GameMode { val orderValue = 3; override def toString() = "Forever War" }
   object GameMode {
     def apply(name: String): GameMode = name.toLowerCase match {
@@ -2072,6 +2072,26 @@ object LabyrinthAwakening {
     testResponse(initial)
   }
   
+  // The Avenger card has a Special clause that its event
+  // triggers whenever it is randomly drawn.
+  def checkIfAvengerDrawn(numberDrawn: Int): Unit = {
+    // No need to ask unless we are using the Forever War cards
+    if (numberDrawn > 0 && GameModeOrdering.gt(game.currentMode, AwakeningMode)) {
+      val card = deck(242)
+      val name = card.name
+      val prompt = if (numberDrawn == 1)
+        s"""Was #242 "$name" the card drawn? (y/n) """
+      else
+        s"""Was #242 "$name" one of the cards drawn? (y/n) """
+
+      if (askYorN(prompt)) {
+        log()
+        log(s"""The "$name" card was randomly drawn, so the event triggers""")
+        log(separator())
+        card.executeEvent(US)
+      }
+    }
+  }
   // Convenience method for createing choices for the askMenu() function.
   def choice(condition: Boolean, value: String, desc: String): Option[(String, String)] =
     if (condition) Some(value -> desc) else None

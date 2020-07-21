@@ -365,6 +365,7 @@ object ForeverWarCards {
             case "discard" => 
               println()
               log(s"Discard top card of the $Jihadist hand")
+              
             case _ =>
               val target = askCountry("Remove cells from which country: ", candidates)
               val num = game.getMuslim(target).totalCells min 2
@@ -1018,6 +1019,7 @@ object ForeverWarCards {
           log(s"Discard the top card of the $Jihadist hand.")
         else
           log(s"You ($Jihadist) must randomly discard one card.")
+        checkIfAvengerDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2085,6 +2087,7 @@ object ForeverWarCards {
           log(s"Discard the top card of the $US hand")
         else
           log(s"You ($US) discard a random card")
+        checkIfAvengerDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2217,6 +2220,7 @@ object ForeverWarCards {
           log(s"Discard the top card of the $US hand")
         else
           log(s"You ($US) must discard a random card")
+        checkIfAvengerDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3066,6 +3070,7 @@ object ForeverWarCards {
           log(s"Discard top card of the $US hand")
         else
           log(s"You ($US) must discard one random card")
+        checkIfAvengerDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3579,6 +3584,14 @@ object ForeverWarCards {
         val card    = deck(cardNum)
         val cardDisplay = s""""${card.name}""""
         
+        // Avenger card will trigger when randomly drawn.
+        if (cardNum == 242) {
+          log()
+          log(s"""The "Avenger" card was randomly drawn, so the event triggers""")
+          log(separator())
+          card.executeEvent(US)
+          
+        }
         
         val action = if (role == game.humanRole) {
           val choices = List(
