@@ -1636,6 +1636,14 @@ object LabyrinthAwakening {
       b.toList
     }
     
+    def removedCardsSummary: Seq[String] = {
+      val b = new ListBuffer[String]
+      b += "Cards removed from the game"
+      b += separator()
+      wrap("", game.cardsRemoved map (deck(_).numAndName)) foreach (l => b += l)
+      b.toList
+    }
+    
     def caliphateSummary: Seq[String] = {
       val b = new ListBuffer[String]
       b += "Caliphate"
@@ -6056,18 +6064,19 @@ object LabyrinthAwakening {
   
   def showCommand(param: Option[String]): Unit = {
     val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" ::
-                  "civil wars" :: countryNames(game.countries)
+                  "civil wars" :: "removed cards" :: countryNames(game.countries)
     val opts = if (game.useExpansionRules) options
                else options filterNot(o => o == "caliphate" || o == "civil wars")
                   
     askOneOf("Show: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
-      case "plays"      => printSummary(game.playSummary)
-      case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
-      case "scenario"   => printSummary(game.scenarioSummary)
-      case "caliphate"  => printSummary(game.caliphateSummary)
-      case "civil wars" => printSummary(game.civilWarSummary)
-      case "all"        => printGameState()
-      case name         => printSummary(game.countrySummary(name))
+      case "plays"         => printSummary(game.playSummary)
+      case "summary"       => printSummary(game.scoringSummary); printSummary(game.statusSummary)
+      case "scenario"      => printSummary(game.scenarioSummary)
+      case "caliphate"     => printSummary(game.caliphateSummary)
+      case "civil wars"    => printSummary(game.civilWarSummary)
+      case "removed cards" => printSummary(game.removedCardsSummary) 
+      case "all"           => printGameState()
+      case name            => printSummary(game.countrySummary(name))
     }
   }
   
@@ -6098,6 +6107,7 @@ object LabyrinthAwakening {
       printCountries("Iran Special Case", iranSpecial.toList)
     printSummary(game.scoringSummary)
     printSummary(game.statusSummary)
+    printSummary(game.removedCardsSummary)
     if (game.useExpansionRules) {
       printSummary(game.civilWarSummary)
       printSummary(game.caliphateSummary)
