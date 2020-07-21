@@ -1007,25 +1007,25 @@ object LabyrinthAwakening {
       totalDeployableTroops
         
     def jihadDRM = awakening - reaction
-    def jihadOK = !isIslamistRule && totalCells > 0 && (name != Pakistan || !hasMarker(BenazirBhutto))
+    def jihadOK = !isIslamistRule && totalCells > 0 && !(name == Pakistan && hasMarker(BenazirBhutto))
     def majorJihadOK(ops: Int) = 
-      (name != Pakistan || !hasMarker(BenazirBhutto)) &&
+      !(name == Pakistan && hasMarker(BenazirBhutto)) &&
       totalCells - totalTroopsAndMilitia >= 5 && (
         (isPoor && (ops  > 1 || besiegedRegime)) || 
         (isFair && (ops >= 3 || (ops == 2 && besiegedRegime)))
       )
   
-      def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
-      def removeMarkers(names: String*): MuslimCountry = {
-        var updatedMarkers = markers
-        for (name <- names)
-          updatedMarkers.indexOf(name) match {
-            case -1 =>
-            case x  => updatedMarkers = updatedMarkers.patch(x, Seq.empty, 1)
-          }
-            
-        this.copy(markers = updatedMarkers)
-      }
+    def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
+    def removeMarkers(names: String*): MuslimCountry = {
+      var updatedMarkers = markers
+      for (name <- names)
+        updatedMarkers.indexOf(name) match {
+          case -1 =>
+          case x  => updatedMarkers = updatedMarkers.patch(x, Seq.empty, 1)
+        }
+          
+      this.copy(markers = updatedMarkers)
+    }
   }
   
   val LabyrinthScenario  = 1

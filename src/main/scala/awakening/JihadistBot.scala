@@ -87,9 +87,16 @@ object JihadistBot extends BotHelpers {
   def unusedCellsOnMapForTravel = (game.countries map unusedCells).sum
   
   // Poor country with 1 to 4 more cells than Troops and Milita and Jihad success possible
+  // I added a couple of sanity checks that are not in the Bot Flowchart:
+  // - Do not consider Pakistan if Benazir Bhutto is in play
+  // - Do not consider countries where the US player has stacked
+  //   so many troops/militia that there are not enough cells in
+  //   the game to make a major jihid possible
   def poorMuslimNeedsCellsForMajorJihad(m: MuslimCountry): Boolean = 
     m.isPoor &&
+    !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
     jihadSuccessPossible(m, true) &&
+    game.totalCellCapacity - m.totalTroopsAndMilitia >= 5 &&
     (totalUnused(m) - m.totalTroopsAndMilitia) > 0 &&
     (totalUnused(m) - m.totalTroopsAndMilitia) < 5
   
