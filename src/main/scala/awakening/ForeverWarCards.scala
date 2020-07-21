@@ -3585,7 +3585,7 @@ object ForeverWarCards {
         val cardDisplay = s""""${card.name}""""
         
         // Avenger card will trigger when randomly drawn.
-        if (cardNum == 242) {
+        if (cardNum == AvengerCard) {
           log()
           log(s"""The "Avenger" card was randomly drawn, so the event triggers""")
           log(separator())

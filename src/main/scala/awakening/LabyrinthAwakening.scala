@@ -688,6 +688,8 @@ object LabyrinthAwakening {
   // From page 4 of Forever War manual.
   val PersonalityCards = Set(110, 111, 112, 115, 116, 215, 219, 225, 237, 328, 329, 338, 352)
   
+  val AvengerCard = 242
+  
   type CardEvent            = Role => Unit
   type EventConditions      = (Role, Boolean) => Boolean
   type EventAlertsPlot      = (String, Plot) => Boolean   // Country Name, Plot
@@ -2077,12 +2079,12 @@ object LabyrinthAwakening {
   def checkIfAvengerDrawn(numberDrawn: Int): Unit = {
     // No need to ask unless we are using the Forever War cards
     if (numberDrawn > 0 && GameModeOrdering.gt(game.currentMode, AwakeningMode)) {
-      val card = deck(242)
+      val card = deck(AvengerCard)
       val name = card.name
       val prompt = if (numberDrawn == 1)
-        s"""Was #242 "$name" the card drawn? (y/n) """
+        s"""Was #$AvengerCard "$name" the card drawn? (y/n) """
       else
-        s"""Was #242 "$name" one of the cards drawn? (y/n) """
+        s"""Was #$AvengerCard "$name" one of the cards drawn? (y/n) """
 
       if (askYorN(prompt)) {
         log()
