@@ -47,6 +47,7 @@ object MittsTurn extends Scenario {
   val usPosture      = Hard
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
+  val removedPlots   = Nil
   val countries = List(
     DefaultSyria.copy(isSunni = false, wmdCache = 2),
     DefaultAlgeriaTunisia.copy(governance = Poor, alignment = Neutral, awakening = 1),

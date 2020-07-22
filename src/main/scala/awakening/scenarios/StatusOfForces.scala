@@ -47,6 +47,7 @@ object StatusOfForces extends Scenario {
   val usPosture      = Soft
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
+  val removedPlots   = Nil
   val countries = List(
     DefaultIran.copy(wmdCache = 1),
     DefaultIraq.copy(governance = Poor, alignment = Neutral, militia = 1, sleeperCells = 2,

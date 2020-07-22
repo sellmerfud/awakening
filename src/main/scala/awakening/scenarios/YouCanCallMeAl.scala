@@ -47,6 +47,7 @@ object YouCanCallMeAl extends Scenario {
   val usPosture      = Soft
   val funding        = 9
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
+  val removedPlots   = Nil
   val countries = List(
     DefaultLibya.copy(governance = Poor, alignment = Adversary),
     DefaultSyria.copy(governance = Fair, alignment = Adversary),

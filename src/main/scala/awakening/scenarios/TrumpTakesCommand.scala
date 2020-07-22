@@ -48,6 +48,7 @@ object TrumpTakesCommand extends Scenario {
   val usPosture      = Hard
   val funding        = 4
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::PlotWMD::Nil
+  val removedPlots   = PlotWMD::Nil
   val countries = List(
     DefaultNigeria.copy(postureValue = Soft, sleeperCells = 1),
     DefaultAlgeriaTunisia.copy(governance = Good, alignment = Neutral),
@@ -55,7 +56,7 @@ object TrumpTakesCommand extends Scenario {
     DefaultLebanon.copy(governance = Poor, alignment = Adversary, sleeperCells = 1),
     DefaultSyria.copy(isSunni = false, governance = Fair, alignment = Neutral, civilWar = true,
                       militia = 2, sleeperCells = 1, wmdCache = 1, markers = Advisors :: Nil),
-    DefaultMuslimIran.copy(governance = IslamistRule, alignment = Adversary, sleeperCells = 3, wmdCache = 1),
+    DefaultMuslimIran.copy(governance = IslamistRule, alignment = Adversary, sleeperCells = 3, wmdCache = 0),
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 2, militia = 1, sleeperCells = 1, reaction = 1),
     DefaultPakistan.copy(militia = 2),

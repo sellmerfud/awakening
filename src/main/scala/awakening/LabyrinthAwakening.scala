@@ -1042,6 +1042,7 @@ object LabyrinthAwakening {
     val usPosture: String
     val funding: Int
     val availablePlots: List[Plot]     // 1, 2, 3, 4 == WMD
+    val removedPlots: List[Plot]
     val countries: List[Country]
     val markersInPlay: List[String]
     val cardsRemoved: List[Int]
@@ -1506,7 +1507,9 @@ object LabyrinthAwakening {
     def statusSummary: Seq[String] = {
       val activePlotCountries = countries filter (_.hasPlots)
       val b = new ListBuffer[String]
-      b += "Status"
+      b += s"Status"
+      b += separator()
+      b += s"Game Mode       : ${game.currentMode}"
       b += separator()
       b += f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}  (GWOT penalty $gwotPenalty)"
       b += f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d"
@@ -1706,7 +1709,7 @@ object LabyrinthAwakening {
       scenario.funding,
       countries,
       scenario.markersInPlay.sorted,
-      PlotData(availablePlots = scenario.availablePlots.sorted),
+      PlotData(availablePlots = scenario.availablePlots.sorted, removedPlots = scenario.removedPlots),
       cardsRemoved = scenario.cardsRemoved,
       offMapTroops = scenario.offMapTroops)
   }
@@ -5295,7 +5298,8 @@ object LabyrinthAwakening {
     
     log()
     log("The Awakening cards were added to the deck.")
-    log("The Awaening expansion rules are now in effect.")
+    log("The Awakening expansion rules are now in effect.")
+    log("The Bot will now use the Awakening priorites.")
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
     val (updatedPlots, syriaCache) = if (syria.isIslamistRule)
       (game.plotData.copy(availablePlots = PlotWMD :: PlotWMD :: game.availablePlots), 0)
@@ -5307,11 +5311,14 @@ object LabyrinthAwakening {
                 copy(plotData = updatedPlots, currentMode = AwakeningMode)
     log()
     if (syria.isIslamistRule) {
-      log("Syria is now Shia-Mix country")
-      log("Add the two WMD plots from the Syria cache to the available plots box")
+      log("Syria is now Shia-Mix country, place the Syria country mat on the board.")
+      log("Because Syria is under Islamist Rule, add the two WMD plots")
+      log("from the Syria cache to the available plots box.")
     }
-    else
-      log("Syria is now Shia-Mix country with 2 unavailable WMD plots")
+    else {
+      log("Syria is now Shia-Mix country, place the Syria country mat on the board.")
+      log("Place two unavailable WMD plots in Syria.")
+    }
     log("Iran now contains 1 unavailable WMD plot")
     
     //  Place an awakening marker in Ageria/Tunisa if possible
@@ -5337,6 +5344,7 @@ object LabyrinthAwakening {
     game = game.copy(currentMode = ForeverWarMode)
     log()
     log("The Forever War cards were added to the deck.")
+    log("The Bot will now use the Forever War priorites.")
   }
   
   def endTurn(): Unit = {
