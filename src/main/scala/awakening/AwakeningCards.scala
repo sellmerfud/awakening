@@ -1872,7 +1872,7 @@ object AwakeningCards {
         val num = 2 min (game.availablePlots count (_ == Plot1))
         addEventTarget(Israel)
         for (i <- 1 to num)
-          addAvailablePlotToCountry(Israel, Plot1)
+          addAvailablePlotToCountry(Israel, Plot1, visible = true)
         decreaseFunding(1)
       }
     )),
@@ -3009,7 +3009,7 @@ object AwakeningCards {
               addSleeperCellsToCountry(UnitedStates, 1)
             }
             else
-              addAvailablePlotToCountry(UnitedStates, Plot1)
+              addAvailablePlotToCountry(UnitedStates, Plot1, visible = true)
           }
         }
         else {  // US

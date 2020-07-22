@@ -2488,7 +2488,7 @@ object LabyrinthCards {
         }
         
         if (game.availablePlots contains Plot2)
-          addAvailablePlotToCountry(name, Plot2)
+          addAvailablePlotToCountry(name, Plot2, visible = true)
       }
     )),
     // ------------------------------------------------------------------------

@@ -2379,7 +2379,7 @@ object LabyrinthAwakening {
   
   // If the country is untested, test it and return true
   // otherwise return false.
-  def testCountry(name: String, logScore: Boolean = true): Boolean = {
+  def testCountry(name: String): Boolean = {
     val country = game.getCountry(name)
     if (country.isUntested) {
       country match {
@@ -2389,8 +2389,6 @@ object LabyrinthAwakening {
             addTestedOrImprovedToFairOrGood(name)
           game = game.updateCountry(m.copy(governance = newGov, alignment = Neutral))
           log(s"${m.name} tested: Set to ${govToString(newGov)} Neutral")
-          if (logScore)
-            logSummary(game.scoringSummary)
           
         case n: NonMuslimCountry =>
           val newPosture = if (dieRoll < 5) Soft else Hard
@@ -2666,7 +2664,7 @@ object LabyrinthAwakening {
         log("No convergence peformed because \"Arab Winter\" is in effect")
       else {
         val target = randomConvergenceTarget.name
-        testCountry(target, logScore = false)
+        testCountry(target)
         val m = game getMuslim target
         if (awakening) {
           game = game.updateCountry(m.copy(awakening = m.awakening + 1))
@@ -3736,6 +3734,9 @@ object LabyrinthAwakening {
       removeEventMarkersFromCountry(Iraq, "Iraqi WMD")
     if (dest == Libya)
       removeEventMarkersFromCountry(Libya, "Libyan WMD")
+    
+    logSummary(game.scoringSummary)
+    log()
   }
     
   // • Deploy any number troops out of the Regime Change country (regardless of cells present).
@@ -4087,7 +4088,12 @@ object LabyrinthAwakening {
         }
         if (newGov == Good || newGov == Fair)
           addTestedOrImprovedToFairOrGood(name)
-        logSummary(game.scoringSummary)
+        
+        if (newGov == Good) {
+          logSummary(game.scoringSummary)
+          log()
+          checkAutomaticVictory() // Will Exit game if auto victory has been achieved
+        }
       }
     }
   }
@@ -4131,6 +4137,9 @@ object LabyrinthAwakening {
           flipCaliphateSleepers()
           if (!endOfTurn) 
             performConvergence(forCountry = name, awakening = false)
+          checkAutomaticVictory() // Will Exit game if auto victory has been achieved
+          logSummary(game.scoringSummary)
+          log()
         }
         else {
           log(s"Degrade the governance of $name to ${govToString(newGov)}")
@@ -4140,7 +4149,6 @@ object LabyrinthAwakening {
           val degraded = m.copy(governance = newGov, reaction = (m.reaction - delta)  max 0)
           game = game.updateCountry(degraded)
         }        
-        logSummary(game.scoringSummary)
       }
     }
   }
@@ -4151,7 +4159,6 @@ object LabyrinthAwakening {
       val align = alignment getOrElse Neutral
       game = game.updateCountry(m.copy(governance = gov, alignment = align))
       log(s"Set $name to ${govToString(gov)} $align")
-      logSummary(game.scoringSummary)
     }
     else {
       // Use the improveGovernance/degradeGovernance functions to make sure
@@ -4232,7 +4239,6 @@ object LabyrinthAwakening {
       endCivilWar(name)
       game = game.updateCountry(game.getMuslim(name).copy(governance = GovernanceUntested))
       log(s"Remove the ${govToString(m.governance)} governance marker from $name")
-      logSummary(game.scoringSummary)
     }
     else {
       val n = game.getNonMuslim(name)
@@ -5969,13 +5975,14 @@ object LabyrinthAwakening {
       Command("add forever cards", """Add the Forever War cards to the draw deck and
                                 |begin using the Forever War expansion rules.""".stripMargin),
       Command("show",         """Display the current game state
-                                |  show all        - entire game state
-                                |  show plays      - cards played during the current turn
-                                |  show summary    - game summary including score
-                                |  show scenario   - scenario and difficulty level
-                                |  show caliphate  - countries making up the Caliphate
-                                |  show civil wars - countries in civil war
-                                |  show <country>  - state of a single country""".stripMargin),
+                                |  show all           - entire game state
+                                |  show plays         - cards played during the current turn
+                                |  show summary       - game summary including score
+                                |  show scenario      - scenario and difficulty level
+                                |  show removed cards - cards that have been removed from the game
+                                |  show caliphate     - countries making up the Caliphate
+                                |  show civil wars    - countries in civil war
+                                |  show <country>     - state of a single country""".stripMargin),
       Command("adjust",       """Adjust game settings  (Minimal rule checking is applied)
                                 |  adjust prestige      - US prestige level
                                 |  adjust posture       - US posture
@@ -6316,7 +6323,7 @@ object LabyrinthAwakening {
     // If the choose to resovle the event first, do so before
     // prompting for the action because the ramifications of the event
     // may affect what actions are possible.
-    val actionOrder = if (card.autoTrigger || (card.association == Jihadist && !lapsingEventNotInPlay(FakeNews))) {
+    val actionOrder = if (card.autoTrigger || (card.association == Jihadist && lapsingEventNotInPlay(FakeNews))) {
       getActionOrder(card :: Nil, opponent = Jihadist) match {
         case Nil =>
           throw AbortCardPlay 
@@ -6987,7 +6994,7 @@ object LabyrinthAwakening {
     performPlots(ops, attempts)
   }
 
-  def addAvailablePlotToCountry(name: String, plot: Plot): Unit = {
+  def addAvailablePlotToCountry(name: String, plot: Plot, visible: Boolean = false): Unit = {
     val index = game.availablePlots.indexOf(plot)
     assert(index >= 0, s"addAvailablePlotToCountry(): $plot is not available")
     val updatedPlots = game.plotData.copy(availablePlots = game.availablePlots.take(index) ::: game.availablePlots.drop(index + 1))
@@ -6996,7 +7003,8 @@ object LabyrinthAwakening {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(plot) :: m.plots))
       case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = PlotOnMap(plot) :: n.plots))
     }
-    if (game.humanRole == Jihadist || 
+    if (game.humanRole == Jihadist ||
+       visible ||
        (name == UnitedStates && (game getCountry UnitedStates).hasMarker(NEST)))
       log(s"Add $plot to $name")
     else

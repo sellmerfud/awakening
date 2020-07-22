@@ -1497,7 +1497,7 @@ object ForeverWarCards {
           JihadistBot.plotTarget(candidates).get
         
         addEventTarget(target)
-        addAvailablePlotToCountry(target, Plot1)
+        addAvailablePlotToCountry(target, Plot1, visible = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1688,7 +1688,7 @@ object ForeverWarCards {
               val target = randomSchengenCountry.name
               testCountry(target)
               addEventTarget(target)
-              addAvailablePlotToCountry(target, Plot1)
+              addAvailablePlotToCountry(target, Plot1, visible = true)
             }
             else
               log("There are no available level 1 plots.")
@@ -1808,7 +1808,7 @@ object ForeverWarCards {
             if (game.availablePlots contains Plot1) {
               testCountry(China)
               addEventTarget(China)
-              addAvailablePlotToCountry(China, Plot1)
+              addAvailablePlotToCountry(China, Plot1, visible = true)
             }
             else
               log("There are no available level 1 plots.")
@@ -1830,7 +1830,7 @@ object ForeverWarCards {
           JihadistBot.plotPriority(vehicleRammingCandidates).get
         
         addEventTarget(target)
-        addAvailablePlotToCountry(target, Plot1)
+        addAvailablePlotToCountry(target, Plot1, visible = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1891,7 +1891,7 @@ object ForeverWarCards {
         testCountry(Spain)
         addEventTarget(Spain)
         for (i <- 1 to numPlots)
-          addAvailablePlotToCountry(Spain, Plot1)
+          addAvailablePlotToCountry(Spain, Plot1, visible = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2010,6 +2010,7 @@ object ForeverWarCards {
           
           for (target <- List(goodTarget, fairTarget).flatten) {
             addEventTarget(target)
+            testCountry(target)
             addSleeperCellsToCountry(target, 1)
           }
       }
@@ -2263,7 +2264,7 @@ object ForeverWarCards {
         addEventTarget(target)
         testCountry(target)
         for (i <- 1 to numPlots)
-          addAvailablePlotToCountry(target, Plot1)
+          addAvailablePlotToCountry(target, Plot1, visible = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2866,7 +2867,7 @@ object ForeverWarCards {
         addEventTarget(target)
         testCountry(target)
         if (action == "plot")
-          addAvailablePlotToCountry(target, Plot1)
+          addAvailablePlotToCountry(target, Plot1, visible = true)
         else
           addSleeperCellsToCountry(target, 1)
       }
@@ -2948,6 +2949,7 @@ object ForeverWarCards {
       ,
       (role: Role) => {
         addEventTarget(SaudiArabia)
+        testCountry(SaudiArabia)
         if (role == US)
           addAwakeningMarker(SaudiArabia)
         else
@@ -3189,8 +3191,9 @@ object ForeverWarCards {
         addEventTarget(Turkey)
         testCountry(Turkey)
         
+        log()
         if (role == US)
-        addAwakeningMarker(Turkey)
+          addAwakeningMarker(Turkey)
         else if (game.cellsAvailable > 0) {
           // Jihadist
           val maxNum = 2 min game.cellsAvailable
@@ -3884,6 +3887,7 @@ object ForeverWarCards {
           JihadistBot.markerAlignGovTarget(quickWinBadIntelCandidates(role)).get
         
         addEventTarget(target)
+        testCountry(target)
         if (role == US) {
           addAidMarker(target)
           addAwakeningMarker(target)
