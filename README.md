@@ -87,8 +87,8 @@ When playing a campaign game and you come to the end of a particular deck of car
 you must enter the appropriate command to let the software know that this has occurred:
 
     add awakening - The game starts using the Awakeing expansion rules.
-                    The Bots uses the appropriate priorities for Awakening.
-    add forever   - The Bots uses the appropriate priorities for Forever War.
+                    The Bots use the appropriate priorities for Awakening.
+    add forever   - The Bots use the appropriate priorities for Forever War.
 
 
 ## License
