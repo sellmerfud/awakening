@@ -21,7 +21,7 @@ There are two scripts provided that will start the program.
 
 ## Downloading the package
 
-You can download the zip file with the latest release (version 3.7) [here][1]
+You can download the zip file with the latest release (version 4.0) [here][1]
 
 If you are upgrading to a newer version and the **major** version numbers of the two versions
 are the same, then any saved games in progress will be compatible.
@@ -30,16 +30,17 @@ Simply copy the *games* folder from the older *awakening-x.x* directory to the
 new *awakening-x.x* directory.
 
 
-[1]: https://www.dropbox.com/s/v3m4m1qar1kazt4/awakening-3.7.zip?dl=0
+[1]: https://www.dropbox.com/s/6by5kbug32flib9/awakening-4.0.zip?dl=0
 
 ## Using the program
 
 When you first run the program, it will prompt you to enter:
 
 1. The scenario that you wish to play
-2. The side you wish to play (US or Jihadist)
-3. The difficulty level
-4. A name for your game (so your progress can be saved)
+2. Whether you are playing a single scenario or a campaign game.
+3. The side you wish to play (US or Jihadist)
+4. The difficulty level
+5. A name for your game (so your progress can be saved)
 
 Your game is saved after each card play, plot resolution, etc.  You can use the 
 `show plays` command to see the cards that have been played during the current turn.
@@ -81,6 +82,14 @@ resloved.
 
 When all cards for a turn have been played, use the `end turn` command to perform the
 end of turn housekeeping.
+
+When playing a campaign game and you come to the end of a particular deck of cards
+you must enter the appropriate command to let the software know that this has occurred:
+
+    add awakening - The game starts using the Awakeing expansion rules.
+                    The Bots uses the appropriate priorities for Awakening.
+    add forever   - The Bots uses the appropriate priorities for Forever War.
+
 
 ## License
 
