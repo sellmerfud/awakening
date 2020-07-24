@@ -2102,6 +2102,8 @@ object LabyrinthAwakening {
         log(s"""The "$name" card was randomly drawn, so the event triggers""")
         log(separator())
         card.executeEvent(US)
+        log()
+        log(s"""Place the "$name" card in the discard pile.""")
       }
     }
   }
