@@ -1970,8 +1970,10 @@ object AwakeningCards {
         // Note: There is a slight chance that the Bot could execute this event,
         // and get a black die roll for only plots or only cells and there are
         // plot/cells available.
+        val isHard = (name: String) => game.getNonMuslim(name).isHard
+        
         val countries = List(UnitedStates, Canada, UnitedKingdom, Benelux, France)
-        val validSchengen = for (s <- Schengen; if game.getNonMuslim(s).isHard) yield s
+        val validSchengen = Schengen filter isHard
         println()
         val tanDie     = getDieRoll(role, "Enter tan die: ")
         val blackDie   = getDieRoll(role, "Enter black die: ")
@@ -1983,9 +1985,8 @@ object AwakeningCards {
           case 5 => (Plot1::Nil, 1)
           case _ => (Plot1::Nil, 0)
         }
-        def isHard(name: String) = game.getNonMuslim(name).isHard
         def getTarget(list: List[String]): Option[String] = {
-          list.drop(tanDie - 1) match {
+          list match {
             case Nil if validSchengen.nonEmpty => Some("Schengen")
             case Nil                           => None
             case x::xs if isHard(x)            => Some(x)
