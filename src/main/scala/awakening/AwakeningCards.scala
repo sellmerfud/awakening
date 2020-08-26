@@ -1313,7 +1313,10 @@ object AwakeningCards {
         if (lapsingEventInPlay(ArabWinter))
           log("Awakening markers cannot be placed because \"Arab Winter\" is in effect")
         else
-          adjacent foreach { m => addAwakeningMarker(m) }
+          adjacent foreach { m => 
+            testCountry(m)
+            addAwakeningMarker(m)
+          }
       }
     )),
     // ------------------------------------------------------------------------
