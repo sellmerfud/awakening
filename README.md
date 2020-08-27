@@ -3,9 +3,9 @@ This is a console application that implements the AI Bots for the board game
 *Labyrinth: The Awakening, 2010 - ?*, designed by Trevor Bender and published by GMT Games.
 The AI Bots were designed by Adam Zahm.
 
-This program supports the scenarios and event cards from the Awakening explansion as
-well as the original Labyrinth game. You must have a copy of the board game in order 
-to use this program.
+This program supports the scenarios and event cards from the original Labyrinth game as well
+as those for the Awakening explansion and the Forever War expansion.
+You must have a copy of the board game in order to use this program.
 
 You can play as either the US or the Jihadist player and the AI will take the opposing side.
 
