@@ -1117,8 +1117,16 @@ object USBot extends BotHelpers {
   
   // Starting point for Jihadist bot card play.
   def cardPlay(card: Card, playable: Boolean): Unit = {
-    if (disruptRemovesLastCell(card))  
+    if (disruptRemovesLastCell(card))  {
+      // US Elections is the only auto trigger event.
+      // The Bot will execute the event first.
+      if (card.autoTrigger) {
+        performCardEvent(card, US)
+        log()
+      }
+      
       disruptOperation(card)
+    }
     else if (playable && card.eventRemovesLastCell())
       performCardEvent(card, US)
     else {
@@ -1134,7 +1142,15 @@ object USBot extends BotHelpers {
           case AlertPlot       => 
             val plot = priorityPlot(plots)
             val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
+            
+            // US Elections is the only auto trigger event.
+            // The Bot will execute the event first.
+            if (card.autoTrigger) {
+              performCardEvent(card, US)
+              log()
+            }
             alertPlot(card, plot)
+            
             if (game.usResolve(Competent) && otherPlotsInCountry.nonEmpty) {
               log(s"$US Bot with Competent resolve alerts two plots in the same country")
               val plot2 = priorityPlot(otherPlotsInCountry)
