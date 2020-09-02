@@ -967,7 +967,7 @@ object ForeverWarCards {
         val target = if (role == game.humanRole)
           askCountry("Place militia in which country: ", popularMobilForcesCandidates)
         else
-          USBot.deployToPriority(personalSecContractorsCandidates).get
+          USBot.deployToPriority(popularMobilForcesCandidates).get
           
           val num = game.getMuslim(target).governance min game.militiaAvailable
           addEventTarget(target)
