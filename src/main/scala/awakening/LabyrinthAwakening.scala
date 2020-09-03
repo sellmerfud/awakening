@@ -965,10 +965,11 @@ object LabyrinthAwakening {
     def canExportOil = oilExporter && !hasMarker(TradeEmbargoJihadist)
     def resourceValue = {
       val corridorPlus = if (name == Iran && hasMarker(TehranBeirutLandCorridor)) 1 else 0
+      val opecCutMinus = if (canExportOil && game.cardLapsing(OPECProductionCut)) 1 else 0
       val spikePlus    = if (canExportOil) (game.oilPriceSpikes) else 0
       val hormuzPlus   = if (game.cardLapsing(StraitofHormuz) && isNonPersionGulflExporter(name)) 1 else 0
       val hormuzMinus  = if (game.cardLapsing(StraitofHormuz) && isPersionGulflExporter(name)) 1 else 0
-      resources + corridorPlus + spikePlus + hormuzPlus - hormuzMinus
+      resources + corridorPlus + spikePlus + hormuzPlus - hormuzMinus - opecCutMinus
     }
     
     def isShiaMix = !isSunni

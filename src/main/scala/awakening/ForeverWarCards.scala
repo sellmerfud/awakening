@@ -3784,8 +3784,33 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(356, "OPEC Production Cut", Unassociated, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      NeverPlayable,  // Not playable in the Solo game
+      (role: Role, _: Boolean) => role == game.humanRole  // Bot treats as unplayable
+      ,
       (role: Role) => {
+        val offLimits = Set(117, 118, 236, 357)
+        val boxChoice = (num : Int, plot: Boolean) => {
+          val box = if (plot) "First Plot box" else "Lapsing box"
+          (num -> s"${deck(num).numAndName} from the $box") 
+        }
+        val lapsingChoices = game.cardsLapsing map (boxChoice(_, false))
+        val plotChoices    = game.firstPlotCard.toList map (boxChoice(_, true))
+        val boxChoices = lapsingChoices ::: plotChoices filterNot { case (num, _) => offLimits(num) }
+      
+        log("""You cannot choose "OPEC Production Cut" or "Oil Price Spike"""")
+        if (boxChoices.isEmpty)
+          log("\nSelect a card from the discard pile and add it to your hand.")
+        else {
+          val choices = boxChoices :+ (-1, "A card from the discard pile")
+          askMenu("\nAdd which card to your hand:", choices).head match {
+            case -1 =>
+            case num if game.firstPlotCard == Some(num) =>
+              game = game.copy(firstPlotCard = None)
+            case num =>
+              val lapsing = game.cardsLapsing filterNot (_ == num)
+              game = game.copy(cardsLapsing = lapsing)
+          }
+        }      
+        log("\nThe Resource value of each Oil Exporter is reduced by 1 for the rest of the turn")
       }
     )),
     // ------------------------------------------------------------------------
@@ -3796,27 +3821,27 @@ object ForeverWarCards {
                                    (role == Jihadist && game.totalCellsOnMap <= 10)
                                   ),
       (role: Role) => {
-          val offLimits = Set(117, 118, 236, 356)
-          val boxChoice = (num : Int, plot: Boolean) => {
-            val box = if (plot) "First Plot box" else "Lapsing box"
-            (num -> s"${deck(num).numAndName} from the $box") 
-          }
-          val lapsingChoices = game.cardsLapsing map (boxChoice(_, false))
-          val plotChoices    = game.firstPlotCard.toList map (boxChoice(_, true))
-          val boxChoices = lapsingChoices ::: plotChoices filterNot { case (num, _) => offLimits(num) }
-          
-          log("""You cannot choose "OPEC Production Cut" or "Oil Price Spike"""")
-          if (boxChoices.isEmpty)
-            log("\nSelect a card from the discard pile and add it to your hand.")
-          else {
-            val choices = boxChoices :+ (-1, "A card from the discard pile")
-            askMenu("\nAdd which card to your hand:", choices).head match {
-              case -1 =>
-              case num if game.firstPlotCard == Some(num) =>
-                game = game.copy(firstPlotCard = None)
-              case num =>
-                val lapsing = game.cardsLapsing filterNot (_ == num)
-                game = game.copy(cardsLapsing = lapsing)
+        val offLimits = Set(117, 118, 236, 356)
+        val boxChoice = (num : Int, plot: Boolean) => {
+          val box = if (plot) "First Plot box" else "Lapsing box"
+          (num -> s"${deck(num).numAndName} from the $box") 
+        }
+        val lapsingChoices = game.cardsLapsing map (boxChoice(_, false))
+        val plotChoices    = game.firstPlotCard.toList map (boxChoice(_, true))
+        val boxChoices = lapsingChoices ::: plotChoices filterNot { case (num, _) => offLimits(num) }
+        
+        log("""You cannot choose "OPEC Production Cut" or "Oil Price Spike"""")
+        if (boxChoices.isEmpty)
+          log("\nSelect a card from the discard pile and add it to your hand.")
+        else {
+          val choices = boxChoices :+ (-1, "A card from the discard pile")
+          askMenu("\nAdd which card to your hand:", choices).head match {
+            case -1 =>
+            case num if game.firstPlotCard == Some(num) =>
+              game = game.copy(firstPlotCard = None)
+            case num =>
+              val lapsing = game.cardsLapsing filterNot (_ == num)
+              game = game.copy(cardsLapsing = lapsing)
           }
         }
       }
