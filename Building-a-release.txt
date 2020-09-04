@@ -12,4 +12,4 @@ Building a release
    cd to target; zip -r awakening-<ver>.zip awakening-<ver>
 7. Test that new package works
 8. Copy zip file to Dropbox/awakening
-9. Update the download link in the README.md file
+9. Update the version number and  download link in the README.md file
