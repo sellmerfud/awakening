@@ -715,7 +715,7 @@ object AwakeningCards {
             case (a, _, true)  => (1, 0, true)
             case (a, s, false) =>
               val sleepers = s min 2
-              val actives  = a min (2 - s)
+              val actives  = a min (2 - sleepers)
               (actives, sleepers, false)
           }
           println()
@@ -731,11 +731,10 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(137, "FMS", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      // Note: No militia allowed in Good countries!
-      (role: Role, forTrigger: Boolean) => game.militiaAvailable > 0 && (game hasMuslim (m => m.isAlly && !m.isGood))
+      (role: Role, forTrigger: Boolean) => game.militiaAvailable > 0 && (game hasMuslim (m => m.canTakeMilitia && m.isAlly))
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter (m => m.isAlly && !m.isGood))
+        val candidates = countryNames(game.muslims filter (m =>  m.canTakeMilitia && m.isAlly))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else 
