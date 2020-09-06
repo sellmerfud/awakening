@@ -316,6 +316,12 @@ object USBot extends BotHelpers {
     else
       nonMuslimTable(funding - 1)(prestige - 1)
     if (alertResult(plot)) {
+      // The Bot will execute the auto trigger event first.
+      if (card.autoTrigger) {
+        performCardEvent(card, US)
+        log()
+      }
+      
       alertPlot(card, plot)
       val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
       if (game.usResolve(Competent) && otherPlotsInCountry.nonEmpty) {
@@ -1118,8 +1124,7 @@ object USBot extends BotHelpers {
   // Starting point for Jihadist bot card play.
   def cardPlay(card: Card, playable: Boolean): Unit = {
     if (disruptRemovesLastCell(card))  {
-      // US Elections is the only auto trigger event.
-      // The Bot will execute the event first.
+      // The Bot will execute the auto trigger event first.
       if (card.autoTrigger) {
         performCardEvent(card, US)
         log()
@@ -1143,8 +1148,7 @@ object USBot extends BotHelpers {
             val plot = priorityPlot(plots)
             val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
             
-            // US Elections is the only auto trigger event.
-            // The Bot will execute the event first.
+            // The Bot will execute the auto trigger event first.
             if (card.autoTrigger) {
               performCardEvent(card, US)
               log()
@@ -1176,8 +1180,7 @@ object USBot extends BotHelpers {
             addToReserves(US, card.ops)
         }
         else {
-          // US Elections is the only auto trigger event.
-          // The Bot will execute the event first.
+          // The Bot will execute the auto trigger event first.
           if (card.autoTrigger) {
             performCardEvent(card, US)
             log()
@@ -1235,8 +1238,8 @@ object USBot extends BotHelpers {
           // Replace the head card play with a reassessment 
           game = game.copy(plays = PlayedReassement(card.number, card2.number) :: game.plays.tail)
           logCardPlay(US, card2, false)
-          // Check to see if either of the cards played has the autoTrigger
-          // US Elections event.  If so the event happens first.
+          // Check to see if either of the cards played has an auto trigger event.
+          // If so the event happens first.
           // Calculate the new Posture before any change caused by the Elections.
           val newPosture = if (game.usPosture == Hard) Soft else Hard
           if (card.autoTrigger)
