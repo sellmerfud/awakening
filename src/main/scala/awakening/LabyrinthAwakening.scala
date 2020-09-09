@@ -4426,7 +4426,7 @@ object LabyrinthAwakening {
     }
     
     if (delta > 0)
-      log(s"Place ${amountOf(delta, "extra cells")} to the right of the Ample Funding Box")      
+      log(s"Place ${amountOf(delta, "extra cell")} to the right of the Ample Funding Box")      
   }
   
   
