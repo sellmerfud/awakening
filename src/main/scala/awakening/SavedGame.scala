@@ -81,14 +81,28 @@ object SavedGame {
   }
     
   private def asString(x: Any): String = x.toString
+  private def asOptString(x: Any): Option[String] = x match {
+    case null => None
+    case s    => Some(s.toString)
+  }
+  
   private def asBoolean(x: Any): Boolean = x match {
     case b: Boolean => b
     case _          => throw new Exception(s"Not a valid Boolean value: $x")
   }  
   private def asInt(x: Any): Int = x match {
     case i: Int => i
-    case _      => throw new Exception(s"Not a valid Boolean value: $x")
+    case _      => throw new Exception(s"Not a valid Integer value: $x")
   }  
+  
+  private def asOptInt(x: Any): Option[Int] = x match {
+    case null   => None
+    case i: Int => Some(i)
+    case _      => throw new Exception(s"Not a valid Integer value: $x")
+    
+  }
+  
+  
   private def asMap(x: Any): Map[String, Any] = x match {
     case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
     case _      => throw new Exception(s"Not a valid Map value!")
@@ -267,6 +281,7 @@ object SavedGame {
   
   private def toGameJson(gameState: GameState): String = {
     val top = Map(
+      "version"             -> 1,  // Current Save File Version
       "scenarioName"        -> gameState.scenarioName,      
       "startingMode"        -> gameState.startingMode,
       "campaign"            -> gameState.campaign,
@@ -287,7 +302,7 @@ object SavedGame {
       "history"             -> gameState.history,
       "offMapTroops"        -> gameState.offMapTroops,
       "reserves"            -> reservesToMap(gameState.reserves),
-      "extraCellCapacity"   -> gameState.extraCellCapacity,
+      "extraCellEvent"      -> (gameState.extraCellEvent getOrElse null),
       "extraCells"          -> extraCellsToMap(gameState.extraCells),
       "plays"               -> (gameState.plays map playToMap),
       "firstPlotCard"       -> (gameState.firstPlotCard getOrElse null),
@@ -301,6 +316,15 @@ object SavedGame {
   
   private def fromGameJson(jsonValue: String): GameState = {
     val top = asMap(Json.parse(jsonValue))
+    val version = if (top.contains("version")) asInt(top("version")) else 0
+    version match {
+      case 0 => fromVersion0(top)
+      case 1 => fromVersion1(top)
+      case v => throw new IllegalArgumentException(s"Invalid save file version: $v")
+    }
+  }
+  
+  private def fromVersion1(top: Map[String, Any]): GameState = {
     GameState(
       asString(top("scenarioName")),
       GameMode(asString(top("startingMode"))),
@@ -322,7 +346,7 @@ object SavedGame {
       (asList(top("history")) map asString).toVector,
       asInt(top("offMapTroops")),
       reservesFromMap(asMap(top("reserves"))),
-      asInt(top("extraCellCapacity")),
+      asOptString(top("extraCellEvent")),
       extraCellsFromMap(asMap(top("extraCells"))),
       asList(top("plays")) map (p => playFromMap(asMap(p))),
       if (top("firstPlotCard") == null) None else Some(asInt(top("firstPlotCard"))),
@@ -331,6 +355,64 @@ object SavedGame {
       phaseTargetsFromMap(asMap(top("targetsThisPhase"))),
       phaseTargetsFromMap(asMap(top("targetsLastPhase")))
     )    
+  }
+  
+  //  Version zero stored the extraCellCapacity which is now calculated
+  //  But it did not store the extra cell event.
+  private def fromVersion0(top: Map[String, Any]): GameState = {
+    var game = GameState(
+      asString(top("scenarioName")),
+      GameMode(asString(top("startingMode"))),
+      asBoolean(top("campaign")),
+      asList(top("scenarioNotes")) map asString,
+      GameMode(asString(top("currentMode"))),
+      Role(asString(top("humanRole"))),
+      asBoolean(top("humanAutoRoll")),
+      asList(top("botDifficulties")) map (x => BotDifficulty(asString(x))),
+      asBoolean(top("sequestrationTroops")),
+      asBoolean(top("botLogging")),
+      asInt(top("turn")),
+      asInt(top("prestige")),
+      asString(top("usPosture")),
+      asInt(top("funding")),
+      asList(top("countries")) map (c => countryFromMap(asMap(c))),
+      asList(top("markers")) map asString,
+      plotDataFromMap(asMap(top("plotData"))),
+      (asList(top("history")) map asString).toVector,
+      asInt(top("offMapTroops")),
+      reservesFromMap(asMap(top("reserves"))),
+      None, // extraCellEvent
+      extraCellsFromMap(asMap(top("extraCells"))),
+      asList(top("plays")) map (p => playFromMap(asMap(p))),
+      asOptInt(top("firstPlotCard")),
+      asList(top("cardsLapsing")) map asInt,
+      asList(top("cardsRemoved")) map asInt,
+      phaseTargetsFromMap(asMap(top("targetsThisPhase"))),
+      phaseTargetsFromMap(asMap(top("targetsLastPhase")))
+    )
+    
+    //  Fixup the extraCellEvent if the extraCellCapacity is not zero
+    val extraCellCapacity = asInt(top("extraCellCapacity"))
+    if (extraCellCapacity != 0) {
+      val ExtraCells(savedExtraAvailable, savedExtraOnMap) = game.extraCells
+      val (eventName, capacity) = (game.trainingCamp) match {
+        case Some(name) => (TrainingCamps, if (game.isCaliphateMember(name)) 5 else 3)
+        case None       => (AlBaghdadi, if (game.caliphateDeclared) 5 else 3)
+      }
+      
+      game = game.copy(extraCellEvent = Some(eventName))
+      
+      if (capacity > savedExtraAvailable + savedExtraOnMap) {
+        val delta = capacity - (savedExtraAvailable + savedExtraOnMap)
+        game = game.copy(extraCells = game.extraCells.copy(available = savedExtraAvailable + delta))
+      }
+      else if (savedExtraAvailable > capacity) {
+        val delta = savedExtraAvailable - capacity  // We do NOT remove training camp cells from the map!
+        game = game.copy(extraCells = game.extraCells.copy(available = savedExtraAvailable - delta))
+      }
+    }
+    
+    game
   }
 }
 

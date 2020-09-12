@@ -2494,10 +2494,9 @@ object AwakeningCards {
           removeEventMarkersFromCountry(name, TrainingCamps)
         }
         addEventTarget(target)
-        addEventMarkersToCountry(target, TrainingCamps)
-
-        if (globalEventNotInPlay(AlBaghdadi))
-            placeExtraCells(if (game.isCaliphateMember(target)) 5 else 3)
+        
+        playExtraCellsEvent(TrainingCamps, target)
+                
         val cellsToAdd = game.cellsAvailable min 2
         addSleeperCellsToCountry(target, cellsToAdd)
       }

@@ -2356,7 +2356,7 @@ object ForeverWarCards {
         
         val caliphateCapital = game.getMuslim(target).caliphateCapital
         
-        civilWarAttrition(target, hamaOffensive = true)
+        civilWarAttrition(target, hamaOffensive = true, endOfTurn = false)
       
         // Check to see if the Caliphate Capital has been displaced
         // because its country was improved to Good governance.
@@ -3638,13 +3638,17 @@ object ForeverWarCards {
       }
       ,
       (role: Role) => if (role == US) {
+        val (priorExtraCellCapacity, priorEvent) = (game.extraCellCapacity, game.extraCellEvent)
+
         increasePrestige(2)
         decreaseFunding(1)
         removeGlobalEventMarker(AlBaghdadi)
-        //  If Training Camps is is in play then the extra cell capacity
-        //  is not changed.
-        if (game.trainingCamp.isEmpty)
-          game = game.copy(extraCellCapacity = 0)
+        //  This was the event that placed the extra cells then
+        //  clear the extraCellEvent
+        if (game.extraCellEvent == Some(AlBaghdadi))
+          game = game.copy(extraCellEvent = None)
+        
+        updateExtraCellCapacity(priorExtraCellCapacity, priorEvent)
       }
       else {  // role == Jihadist
         val candidates = countryNames(game.muslims filter (m => m.isPoor))
@@ -3664,11 +3668,8 @@ object ForeverWarCards {
                (role == game.botRole && JihadistBot.willDeclareCaliphate(target))))
             declareCaliphate(target)
         }
-        addGlobalEventMarker(AlBaghdadi)
-        //  If this is a campaign game and the TrainingCamps event is in play
-        //  then we do not alter the trainging camp capacity (should be rare)
-        if (game.trainingCamp.isEmpty) 
-          placeExtraCells(if (game.caliphateDeclared) 5 else 3)
+        
+        playExtraCellsEvent(AlBaghdadi)
       }
     )),
     // ------------------------------------------------------------------------
