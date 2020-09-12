@@ -1116,7 +1116,8 @@ object LabyrinthAwakening {
     cardsLapsing: List[Int] = Nil,         // Card numbers currently lapsing
     cardsRemoved: List[Int] = Nil,         // Card numbers removed from the game.
     targetsThisPhase: PhaseTargets = PhaseTargets(),
-    targetsLastPhase: PhaseTargets = PhaseTargets()
+    targetsLastPhase: PhaseTargets = PhaseTargets(),
+    exitAfterWin: Boolean = true
   ) {
     
     def useExpansionRules   = currentMode == AwakeningMode || currentMode == ForeverWarMode
@@ -1492,6 +1493,10 @@ object LabyrinthAwakening {
         b += separator()
         scenarioNotes foreach (line => b += line)
       }
+      b += ""
+      b += "Options:"
+      b += separator()
+      b += s"Exit game after victory: ${if (exitAfterWin) "yes" else "no"}"
       b.toList
     }
       
@@ -5143,9 +5148,11 @@ object LabyrinthAwakening {
       log("An unblocked WMD plot was resolved in the United States")
       log("Game Over - Jihadist automatic victory!")
       
-      saveTurn()
-      saveGameDescription("Game Over - Jihadist automatic victory!")
-      throw ExitGame
+      if (game.exitAfterWin) {
+        saveTurn()
+        saveGameDescription("Game Over - Jihadist automatic victory!")
+        throw ExitGame        
+      }
     }
     else {
       for (Unblocked(name, mapPlot) <- unblocked) {
@@ -5980,17 +5987,22 @@ object LabyrinthAwakening {
   // Check to see if any automatic victory condition has been met.
   // Note: The WMD resolved in United States condition is checked by resolvePlots()
   def checkAutomaticVictory(): Unit = {
-    def gameOver(victor: Role, reason: String): Nothing = {
-      val summary = s"Game Over - $victor automatic victory!"
+    def gameOver(victor: Role, reason: String): Unit = {
+      val summary = if (game.exitAfterWin)
+        s"Game Over - $victor automatic victory!"
+      else
+        s"Victory condition met - $victor automatic victory!"
       log()
       log(separator())
       log(summary)
       log(reason)
       
-      game = game.copy(plays = Nil)
-      saveTurn()
-      saveGameDescription(summary)
-      throw ExitGame
+      if (game.exitAfterWin) {
+        game = game.copy(plays = Nil)
+        saveTurn()
+        saveGameDescription(summary)
+        throw ExitGame
+      }
     }
     
     if (game.goodResources >= 12)
@@ -7150,10 +7162,12 @@ object LabyrinthAwakening {
   }
   
   def adjustSettings(param: Option[String]): Unit = {
-    val options = List("prestige", "funding", "difficulty", "lapsing cards",
-                       "removed cards", "first plot", "markers" , "reserves",
-                       "plots", "offmap troops", "posture", "auto roll",
-                       "bot logging", "resolved plot countries").sorted :::countryNames(game.countries).sorted
+    val options = List(
+      "prestige", "funding", "difficulty", "lapsing cards",
+      "removed cards", "first plot", "markers" , "reserves",
+      "plots", "offmap troops", "posture", "auto roll",
+      "bot logging", "resolved plot countries", "exit after win"
+    ).sorted :::countryNames(game.countries).sorted
     val choice = askOneOf("[Adjust] (? for list): ", options, param, allowNone = true,
                            abbr = CountryAbbreviations, allowAbort = false)
     choice foreach {
@@ -7187,15 +7201,16 @@ object LabyrinthAwakening {
         saveAdjustment("Human auto roll")
       
       case "resolved plot countries" => adjustPlotTargets()
-      case "difficulty"    => adjustDifficulty()
-      case "bot logging"   => adjustBotLogging()
-      case "lapsing cards" => adjustLapsingCards()
-      case "removed cards" => adjustRemovedCards()
-      case "first plot"    => adjustFirstPlot()
-      case "markers"       => adjustMarkers()
-      case "reserves"      => adjustReserves()
-      case "plots"         => adjustPlots()
-      case name            => adjustCountry(name)
+      case "difficulty"              => adjustDifficulty()
+      case "bot logging"             => adjustBotLogging()
+      case "lapsing cards"           => adjustLapsingCards()
+      case "removed cards"           => adjustRemovedCards()
+      case "first plot"              => adjustFirstPlot()
+      case "markers"                 => adjustMarkers()
+      case "reserves"                => adjustReserves()
+      case "plots"                   => adjustPlots()
+      case "exit after win"          => adjustExitAfterWin()
+      case name                      => adjustCountry(name)
     }
   }
   
@@ -7279,6 +7294,13 @@ object LabyrinthAwakening {
     logAdjustment("Bot logging", game.botLogging, newValue)
     game = game.copy(botLogging = newValue)
     saveAdjustment("Bot logging")
+  }
+  
+  def adjustExitAfterWin(): Unit = {
+    val newValue = !game.exitAfterWin
+    logAdjustment("Exit after win", game.exitAfterWin, newValue)
+    game = game.copy(exitAfterWin = newValue)
+    saveAdjustment("Exit after win")
   }
   
   def adjustLapsingCards(): Unit = {

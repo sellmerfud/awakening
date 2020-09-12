@@ -309,7 +309,8 @@ object SavedGame {
       "cardsLapsing"        -> gameState.cardsLapsing,
       "cardsRemoved"        -> gameState.cardsRemoved,
       "targetsThisPhase"    -> phaseTargetsToMap(gameState.targetsThisPhase),
-      "targetsLastPhase"    -> phaseTargetsToMap(gameState.targetsLastPhase)
+      "targetsLastPhase"    -> phaseTargetsToMap(gameState.targetsLastPhase),
+      "exitAfterWin"        -> game.exitAfterWin
     )
     Json.build(top)
   }
@@ -353,7 +354,8 @@ object SavedGame {
       asList(top("cardsLapsing")) map asInt,
       asList(top("cardsRemoved")) map asInt,
       phaseTargetsFromMap(asMap(top("targetsThisPhase"))),
-      phaseTargetsFromMap(asMap(top("targetsLastPhase")))
+      phaseTargetsFromMap(asMap(top("targetsLastPhase"))),
+      asBoolean(top("exitAfterWin"))
     )    
   }
   
@@ -388,7 +390,8 @@ object SavedGame {
       asList(top("cardsLapsing")) map asInt,
       asList(top("cardsRemoved")) map asInt,
       phaseTargetsFromMap(asMap(top("targetsThisPhase"))),
-      phaseTargetsFromMap(asMap(top("targetsLastPhase")))
+      phaseTargetsFromMap(asMap(top("targetsLastPhase"))),
+      true  // exitAfterWin
     )
     
     //  Fixup the extraCellEvent if the extraCellCapacity is not zero
