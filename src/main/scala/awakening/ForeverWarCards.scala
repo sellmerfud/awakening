@@ -1790,7 +1790,7 @@ object ForeverWarCards {
             if (game.getMuslim(CentralAsia).canTakeAwakeningOrReactionMarker) {
               testCountry(CentralAsia)
               addEventTarget(CentralAsia)
-              addReactionMarker(UnitedStates)
+              addReactionMarker(CentralAsia)
             }
             else
               log(s"$CentralAsia cannot take a reaction marker.")
