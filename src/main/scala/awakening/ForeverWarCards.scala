@@ -3651,6 +3651,7 @@ object ForeverWarCards {
         updateExtraCellCapacity(priorExtraCellCapacity, priorEvent)
       }
       else {  // role == Jihadist
+        playExtraCellsEvent(AlBaghdadi)
         val candidates = countryNames(game.muslims filter (m => m.isPoor))
         if (game.cellsAvailable > 0 && candidates.nonEmpty) {
           val target = if (role == game.humanRole)
@@ -3668,8 +3669,6 @@ object ForeverWarCards {
                (role == game.botRole && JihadistBot.willDeclareCaliphate(target))))
             declareCaliphate(target)
         }
-        
-        playExtraCellsEvent(AlBaghdadi)
       }
     )),
     // ------------------------------------------------------------------------
