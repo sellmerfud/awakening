@@ -3572,11 +3572,8 @@ object LabyrinthAwakening {
             if (shifts > 0)
               setAlignment(m.name, newAlign)
             val steps = delta - shifts
-            if (steps > 0) {
+            if (steps > 0)
               worsenGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = endOfTurn)
-              if (game.getMuslim(m.name).isIslamistRule)
-                performConvergence(forCountry = m.name, awakening = false)
-            }
           }
           else {
             // Shift toward Ally/Improve governance
@@ -3589,11 +3586,8 @@ object LabyrinthAwakening {
             if (shifts > 0)
               setAlignment(m.name, newAlign)
             val steps = -delta - shifts
-            if (steps > 0) {
+            if (steps > 0)
               improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = endOfTurn)
-              if (game.getMuslim(m.name).isGood)
-                performConvergence(forCountry = m.name, awakening = true)
-            }
           }
         }
       }
@@ -4098,10 +4092,9 @@ object LabyrinthAwakening {
                  militia = 0, besiegedRegime = false)
           game = game.updateCountry(improved)
           removeTrainingCamp_?(name)
-          endRegimeChange(name, endOfTurn)
-          endCivilWar(name, endOfTurn)
-          if (!endOfTurn)
-            performConvergence(forCountry = name, awakening = true)
+          endRegimeChange(name, noDisplacement = endOfTurn)
+          endCivilWar(name, noDisplacement = endOfTurn)
+          performConvergence(forCountry = name, awakening = true)
         }
         else {
           log(s"Improve the governance of $name to ${govToString(newGov)}")
@@ -4155,13 +4148,12 @@ object LabyrinthAwakening {
           game = game.updateCountry(degraded)
           moveWMDCacheToAvailable(name, m.wmdCache)
           removeAllAdvisorsFromCountry(name) // Country becomes Adversary
-          endRegimeChange(name, endOfTurn)
-          endCivilWar(name, endOfTurn)
+          endRegimeChange(name, noDisplacement = endOfTurn)
+          endCivilWar(name, noDisplacement = endOfTurn)
           if (!wasCaliphateMember && game.isCaliphateMember(name))
             log(s"Place a Caliphate Country marker in $name")
           flipCaliphateSleepers()
-          if (!endOfTurn) 
-            performConvergence(forCountry = name, awakening = false)
+          performConvergence(forCountry = name, awakening = false)
           checkAutomaticVictory() // Will Exit game if auto victory has been achieved
           logSummary(game.scoringSummary)
           log()
@@ -4563,7 +4555,7 @@ object LabyrinthAwakening {
     }
   }
     
-  def endCivilWar(name: String, endOfTurn: Boolean = false): Unit = {
+  def endCivilWar(name: String, noDisplacement: Boolean = false): Unit = {
     val m = game.getMuslim(name)
     val (priorExtraCellCapacity, priorEvent) = (game.extraCellCapacity, game.extraCellEvent)
     
@@ -4576,7 +4568,7 @@ object LabyrinthAwakening {
       if (m.caliphateCapital && !m.isIslamistRule && !m.inRegimeChange) {
         game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
         log(s"Remove the Caliphate Capital marker from $name")
-        if (!endOfTurn) {
+        if (noDisplacement == false) {
           // During end of turn we defer this until all countries have been adjusted
           displaceCaliphateCapital(m.name)
           updateExtraCellCapacity(priorExtraCellCapacity, priorEvent)
@@ -4585,7 +4577,7 @@ object LabyrinthAwakening {
     }
   }
   
-  def endRegimeChange(name: String, endOfTurn: Boolean = false): Unit = {
+  def endRegimeChange(name: String, noDisplacement: Boolean = false): Unit = {
     val m = game.getMuslim(name)
     val (priorExtraCellCapacity, priorEvent) = (game.extraCellCapacity, game.extraCellEvent)
 
@@ -4595,7 +4587,7 @@ object LabyrinthAwakening {
       if (m.caliphateCapital && !m.isIslamistRule && !m.civilWar) {
         game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
         log(s"Remove the Caliphate Capital marker from $name")
-        if (!endOfTurn) {
+        if (noDisplacement == false) {
           // During end of turn we defer this until all countries have been adjusted
           displaceCaliphateCapital(m.name)
           updateExtraCellCapacity(priorExtraCellCapacity, priorEvent)
