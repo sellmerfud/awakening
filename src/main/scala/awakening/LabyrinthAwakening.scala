@@ -977,6 +977,7 @@ object LabyrinthAwakening {
     
     // If a muslim country is untest, then it is valid a WoI target.
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) =
+      !isIslamistRule  &&
       (isUntested      || ops >= governance)  &&
       !(isAdversary    || (isGood && isAlly)) &&
       (!inRegimeChange || ignoreRegimeChange || (totalTroopsAndMilitia - totalCells) >= 5)
@@ -998,7 +999,7 @@ object LabyrinthAwakening {
     def canTakeAidMarker = !(isGood || isIslamistRule)
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
-    def canDeployTo(ops: Int) = isAlly && ops >= governance
+    def canDeployTo(ops: Int) = isAlly && !isIslamistRule && ops >= governance
     
     // To deploy troops out of a regime change country, we must leave behind
     // at least five more (troops + militia) than cells.  Those troops that are left
@@ -1420,7 +1421,7 @@ object LabyrinthAwakening {
         (m.hasCadre || m.cells > 0)
       val fataCheck = m.name != Pakistan || countryEventNotInPlay(Pakistan, FATA) || m.inRegimeChange
       val opsCheck  = ops >= (m.governance min Poor) // Treat IslamicRule same as Poor for ops value
-      hasTarget && fataCheck && opsCheck && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
+      !m.isIslamistRule && hasTarget && fataCheck && opsCheck && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
     })
     
     def disruptNonMuslimTargets(ops: Int): List[String] = countryNames(nonMuslims.filter { n =>
