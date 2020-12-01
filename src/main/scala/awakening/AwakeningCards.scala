@@ -227,8 +227,10 @@ object AwakeningCards {
      (game hasMuslim (_.totalCells > 0)))
   
   def servalCandidates = {
-    val names = List(Morocco, AlgeriaTunisia, Libya, Sudan, Somalia, Mali)
-    countryNames(game getMuslims names filter (_.isPoor))
+    countryNames(game getCountries(African) filter {
+      case m: MuslimCountry => m.resources < 3 && m.isPoor
+      case _ => false
+    })
   }
   
   def servalPlayable(role: Role, forTrigger: Boolean): Boolean = {
