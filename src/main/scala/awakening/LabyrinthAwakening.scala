@@ -3353,7 +3353,7 @@ object LabyrinthAwakening {
           case x if x > 2 =>
             log()
             if (m.isAlly) {
-              improveGovernance(name, 1, canShiftToGood = true, endOfTurn = true)
+              improveGovernance(name, 1, canShiftToGood = true, endOfTurn = true, convergenceOK = false)
               if (game.getMuslim(name).isGood)
                 convergers = Converger(name, awakening = true) :: convergers
             }
@@ -3364,7 +3364,7 @@ object LabyrinthAwakening {
           case _ => // x < -2
             log()
             if (m.isAdversary) {
-              worsenGovernance(name, levels = 1, canShiftToIR = true, endOfTurn = true)
+              worsenGovernance(name, levels = 1, canShiftToIR = true, endOfTurn = true, convergenceOK = false)
               if (game.getMuslim(name).isIslamistRule)
                 convergers = Converger(name, awakening = false) :: convergers
             }
@@ -4070,7 +4070,8 @@ object LabyrinthAwakening {
 
   // Note: The caller is responsible for handling convergence and the possible
   //       displacement of the caliphate captial.
-  def improveGovernance(name: String, levels: Int, canShiftToGood: Boolean, endOfTurn: Boolean = false): Unit = {
+  def improveGovernance(name: String, levels: Int, canShiftToGood: Boolean, endOfTurn: Boolean = false,
+                        convergenceOK: Boolean = true): Unit = {
     if (levels > 0) {
       val m = game.getMuslim(name)
       assert(!m.isGood, s"improveGovernance() called on Good country - $name")
@@ -4095,7 +4096,8 @@ object LabyrinthAwakening {
           removeTrainingCamp_?(name)
           endRegimeChange(name, noDisplacement = endOfTurn)
           endCivilWar(name, noDisplacement = endOfTurn)
-          performConvergence(forCountry = name, awakening = true)
+          if (convergenceOK)
+            performConvergence(forCountry = name, awakening = true)
         }
         else {
           log(s"Improve the governance of $name to ${govToString(newGov)}")
@@ -4119,7 +4121,8 @@ object LabyrinthAwakening {
 
   // Degrade the governance of the given country and log the results.
   // Note: The caller is responsible for handling convergence!
-  def worsenGovernance(name: String, levels: Int, canShiftToIR: Boolean, endOfTurn: Boolean = false): Unit = {
+  def worsenGovernance(name: String, levels: Int, canShiftToIR: Boolean, endOfTurn: Boolean = false,
+                       convergenceOK: Boolean = true): Unit = {
     if (levels > 0) {
       val wasCaliphateMember = game.isCaliphateMember(name)
       val m = game.getMuslim(name)
@@ -4154,7 +4157,8 @@ object LabyrinthAwakening {
           if (!wasCaliphateMember && game.isCaliphateMember(name))
             log(s"Place a Caliphate Country marker in $name")
           flipCaliphateSleepers()
-          performConvergence(forCountry = name, awakening = false)
+          if (convergenceOK)
+            performConvergence(forCountry = name, awakening = false)
           checkAutomaticVictory() // Will Exit game if auto victory has been achieved
           logSummary(game.scoringSummary)
           log()
