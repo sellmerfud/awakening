@@ -14,6 +14,11 @@ package VERSION:
     (cd target; zip -rq ${PKG}.zip $PKG)
     cp target/${PKG}.zip /Users/curt/Dropbox/awakening/
   else
-    echo $TARGET does not exist
+    echo target/$PKG does not exist
     exit 1
   fi
+
+@setvers VERSION:
+  ruby -p -i -e 'gsub(/(version\s*:=\s*)("\d+\.\d+")/, "\\1\"{{VERSION}}\"")' build.sbt
+  ruby -p -i -e 'gsub(/awakening_2.11-(\d+\.\d+)\.jar/, "awakening_2.11-{{VERSION}}.jar")' src/other/awakening src/other/awakening.cmd
+

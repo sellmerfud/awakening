@@ -1,15 +1,14 @@
 Building a release
 -----------------------------------
-1. Update the version number in the build.sbt file
-2. Edit source/other/awakening, src/other/awakening.cmd to
-   update the name of the awakening jar file to reflect the
-   new version number.
-3. Reload the sbt configuration.
-4. In sbt, use the `stage` command to build and stage the files to
+1. Run: just setvers <vers>
+   - Updates the version number in the build.sbt file
+   - Updates the version number in the files: source/other/awakening, src/other/awakening.cmd
+2. Reload the sbt configuration.
+3. In sbt, use the `stage` command to build and stage the files to
    target/awakening-<ver>
-5. Run just package <vers>
+4. Run: just package <vers>
    - Removes and .DS_Store files in the staged directories.
    - Creates zip file of target/awakening-<vers> folder
    - Copies zip file to ~/Dropbox/awakening
-6. Test that new package works
-7. Update the version number and  download link in the README.md file
+5. Test that new package works
+6. Update the version number and  download link in the README.md file
