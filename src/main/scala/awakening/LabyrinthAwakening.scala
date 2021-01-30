@@ -3504,6 +3504,14 @@ object LabyrinthAwakening {
   }
   
   //  Perform Civial War attrition in the named country
+  //
+  //  Note:
+  //  There is a special case here for Nigeria.
+  //  Whenever Nigeria is an Ally and contains no cells, it converts
+  //  to a Non-Muslim country.  If this happens, it will end the civil war.
+  //  We must check for this after removing cell AND after any shift to Ally
+  //  due to unfulfilled hits on the Jihadist.
+  
   def civilWarAttrition(name: String, hamaOffensive: Boolean, endOfTurn: Boolean): Unit = {
     assert(game.getMuslim(name).civilWar, s"civilWarAttrition() called on non-Civil War country: $name")
 
@@ -3552,43 +3560,54 @@ object LabyrinthAwakening {
         val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits, hamaOffensive)
         val unfulfilledUSHits    = jihadistCivilWarLosses(m, usHits)
       
-        val delta = unfulfilledJihadHits - unfulfilledUSHits
-        if (delta == 0) {
-          if (unfulfilledJihadHits != 0)
-            log(s"Both sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No futher effects.")
-        }
-        else {
-          if (unfulfilledJihadHits > 0)
-            log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
-          if (unfulfilledUSHits > 0)
-            log(s"${amountOf(unfulfilledUSHits, "unfulfilled US hit")} against the Jihadist")
-          if (delta > 0) {
-            val (shifts, newAlign) = (delta, m.alignment) match {
-              case (_, Adversary) => (0, Adversary)
-              case (1, Ally)      => (1, Neutral)
-              case (_, Neutral)   => (1, Adversary)
-              case _              => (2, Adversary)
-            }
-        
-            if (shifts > 0)
-              setAlignment(m.name, newAlign)
-            val steps = delta - shifts
-            if (steps > 0)
-              worsenGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = endOfTurn)
+        //  Make sure the country (ie. Nigeria) is still a Non Muslim country
+        if (game.isMuslim(name)) {
+          val delta = unfulfilledJihadHits - unfulfilledUSHits
+          if (delta == 0) {
+            if (unfulfilledJihadHits != 0)
+              log(s"Both sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No futher effects.")
           }
           else {
-            // Shift toward Ally/Improve governance
-            val (shifts, newAlign) = (-delta, m.alignment) match {
-              case (_, Ally)      => (0, Ally)
-              case (1, Adversary) => (1, Neutral)
-              case (_, Neutral)   => (1, Ally)
-              case _              => (2, Ally)
+            if (unfulfilledJihadHits > 0)
+              log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
+            if (unfulfilledUSHits > 0)
+              log(s"${amountOf(unfulfilledUSHits, "unfulfilled US hit")} against the Jihadist")
+            if (delta > 0) {
+              val (shifts, newAlign) = (delta, m.alignment) match {
+                case (_, Adversary) => (0, Adversary)
+                case (1, Ally)      => (1, Neutral)
+                case (_, Neutral)   => (1, Adversary)
+                case _              => (2, Adversary)
+              }
+        
+          
+              if (shifts > 0)
+                setAlignment(m.name, newAlign)
+              
+              val steps = delta - shifts
+              if (steps > 0)
+                worsenGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = endOfTurn)                
             }
-            if (shifts > 0)
-              setAlignment(m.name, newAlign)
-            val steps = -delta - shifts
-            if (steps > 0)
-              improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = endOfTurn)
+            else {
+              // Shift toward Ally/Improve governance
+              val (shifts, newAlign) = (-delta, m.alignment) match {
+                case (_, Ally)      => (0, Ally)
+                case (1, Adversary) => (1, Neutral)
+                case (_, Neutral)   => (1, Ally)
+                case _              => (2, Ally)
+              }
+              
+              if (shifts > 0)
+                setAlignment(m.name, newAlign)
+              
+              //  Make sure the country (ie. Nigeria) is still a Non Muslim country
+              //  It may have just shifted to Ally with no cells present!
+              if (game.isMuslim(name)) {
+                val steps = -delta - shifts
+                if (steps > 0)
+                  improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = endOfTurn)                
+              }
+            }
           }
         }
       }
