@@ -2273,10 +2273,11 @@ object ForeverWarCards {
       (_: Role, _: Boolean) => game.troopsOnMap + game.militiaOnMap - game.cellsOnMap > 0
       ,
       (role: Role) => {
+        val difference = game.troopsOnMap + game.militiaOnMap - game.cellsOnMap
         log(f"${game.troopsOnMap}%2d troops on map")
         log(f"${game.militiaOnMap}%2d militia on map")
         log(f"${game.cellsOnMap}%2d cells on map")
-        decreasePrestige(game.troopsOnMap + game.militiaOnMap - game.cellsOnMap)
+        decreasePrestige(difference min 3)
       }
     )),
     // ------------------------------------------------------------------------
