@@ -574,7 +574,7 @@ object JihadistBot extends BotHelpers {
     val desc = "Funding Moderate?"
     def yesPath = PrestigeOver1AndActiveCellWithTroopsDecision
     def noPath  = CellAvailableOrTravelDecision
-    def condition(ops: Int) = game.fundingLevel == Tight
+    def condition(ops: Int) = game.fundingLevel == Moderate
   }
   
   object PrestigeOver1AndActiveCellWithTroopsDecision extends OperationDecision {
