@@ -2996,11 +2996,11 @@ object AwakeningCards {
             addEventTarget(name)
             testCountry(name)
             val choices = List(
-              choice(game.cellsAvailable > 0,            "cell", "Place a cell"),
+              choice(game.cellsAvailable > 0,            "cell", "Place an active cell"),
               choice(game.availablePlots contains Plot1, "plot", "Place a Plot 1")
             ).flatten
             askMenu("\nChoose one:", choices).head match {
-              case "cell" => addSleeperCellsToCountry(name, 1)
+              case "cell" => addActiveCellsToCountry(name, 1)
               case "plot" => addAvailablePlotToCountry(name, Plot1)
             }
           }
@@ -3010,7 +3010,7 @@ object AwakeningCards {
                   ((game.availablePlots contains PlotWMD) ||
                     game.funding == 9 ||
                     !(game.availablePlots contains Plot1))) {
-              addSleeperCellsToCountry(UnitedStates, 1)
+              addActiveCellsToCountry(UnitedStates, 1)
             }
             else
               addAvailablePlotToCountry(UnitedStates, Plot1, visible = true)
