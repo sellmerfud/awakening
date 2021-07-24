@@ -656,10 +656,8 @@ object LabyrinthCards {
         else 
           USBot.multipleTargets(3, Schengen, USBot.woiNonMuslimPriority)
 
-        for (name <- schengens) {
-          val die = getDieRoll(role, s"Enter die roll for War of Ideas in $name: ")
+        for (name <- schengens)
           performWarOfIdeas(name, 3)
-        }
       }
     )),
     // ------------------------------------------------------------------------
