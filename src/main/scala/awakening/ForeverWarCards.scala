@@ -1016,7 +1016,7 @@ object ForeverWarCards {
       ,
       (role: Role) => {
         if (role == game.humanRole)
-          log(s"Discard the top card of the $Jihadist hand.")
+          log(s"Discard a random card from the $Jihadist hand.")
         else
           log(s"You ($Jihadist) must randomly discard one card.")
         checkIfAvengerDrawn(1)
