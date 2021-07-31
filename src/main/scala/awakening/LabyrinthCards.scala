@@ -1181,7 +1181,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(55, "Uyghur Jihad", Jihadist, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game.cellsAvailable > 0
+      (role: Role, forTrigger: Boolean) => game.cellsAvailable > 0 || (game getNonMuslim China).isUntested
       ,
       (role: Role) => {
         addEventTarget(China)
