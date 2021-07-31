@@ -3838,8 +3838,8 @@ object LabyrinthAwakening {
       game = game.copy(plotData = updatedPlots)
       log(s"$plot alerted in $countryName, remove it from the game.")
       if (game.useExpansionRules) {
-        log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot")
         game = game.adjustPrestige(1)
+        log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot")
       }
     }
     else if (game.useExpansionRules) {
