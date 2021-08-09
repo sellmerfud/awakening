@@ -2223,7 +2223,7 @@ object LabyrinthCards {
     entry(new Card(101, "Kosovo", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
-        role == game.humanRole || role == US || (game getNonMuslim Serbia).posture == game.usPosture
+        role == game.humanRole || role == US || !(game getNonMuslim Serbia).isOppositeUsPosture
       ,
       (role: Role) => {
         increasePrestige(1)
