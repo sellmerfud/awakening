@@ -3153,23 +3153,27 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(211, "Smartphones", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game hasMuslim smartPhonesCandidate
+      (role: Role, forTrigger: Boolean) => 
+        (lapsingEventNotInPlay(ArabWinter) && (game hasMuslim smartPhonesCandidate)) ||
+        globalEventNotInPlay(Smartphones)      
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter smartPhonesCandidate)
-        val name = if (role == game.humanRole)
-          askCountry("Select country: ", candidates)
-        else if (role == Jihadist)
-          JihadistBot.markerAlignGovTarget(candidates).get
-        else
-          USBot.markerAlignGovTarget(candidates).get
+        if (candidates.nonEmpty) {
+          val name = if (role == game.humanRole)
+            askCountry("Select country: ", candidates)
+          else if (role == Jihadist)
+            JihadistBot.markerAlignGovTarget(candidates).get
+          else
+            USBot.markerAlignGovTarget(candidates).get
 
-        addEventTarget(name)
-        testCountry(name)
-        if (role == Jihadist)
-          addReactionMarker(name)
-        else
-          addAwakeningMarker(name)
+          addEventTarget(name)
+          testCountry(name)
+          if (role == Jihadist)
+            addReactionMarker(name)
+          else
+            addAwakeningMarker(name)          
+        }
         removeGlobalEventMarker(Censorship)
         addGlobalEventMarker(Smartphones)
       }
