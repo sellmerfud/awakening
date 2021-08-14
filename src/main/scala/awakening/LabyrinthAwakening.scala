@@ -1948,6 +1948,12 @@ object LabyrinthAwakening {
     askPlots(game.availablePlots filter (p => ops >= p.opsToPlace), num)
   }
   
+  // Return true for Awakening Marker, false for Reaction Marker
+  def askPlaceAwakeningOrReactionMarker: Boolean = {
+    val choices = List(true -> "Place awakening marker", false -> "Place reaction marker")
+    askMenu("\nChoose one:", choices).head
+  }
+  
   // Returns (actives, sleepers)
   def askCellsNotSadr(countryName: String, numCells: Int, sleeperFocus: Boolean): (Int, Int) = {
     val c = game.getCountry(countryName)

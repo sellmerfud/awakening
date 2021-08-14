@@ -194,13 +194,18 @@ object ForeverWarCards {
     game.muslims filter (m => m.isAlly && m.canTakeAwakeningOrReactionMarker && !game.isCaliphateMember(m.name))
   )
   
-  def blasphemyUSCandidates = countryNames(
-    game.muslims filter (m => m.totalCells > 0 && !m.isAdversary && m.canTakeAwakeningOrReactionMarker)
-  )
-  
-  def blasphemyJihadistCandidates = countryNames(
-    game.muslims filter (m => m.totalCells > 0 && !m.isAlly && m.canTakeAwakeningOrReactionMarker)
-  )
+  def blasphemyCandidates(role: Role) = {
+    def isCandidate(m: MuslimCountry): Boolean = {
+      lazy val botCondition = role match {
+        case US       => !m.isAdversary
+        case Jihadist => !m.isAlly
+      }
+      
+      m.totalCells > 0 && m.canTakeAwakeningOrReactionMarker && (role == game.humanRole || botCondition)
+    }
+      
+    countryNames(game.muslims filter isCandidate)
+  }
   
   def hafizSaeedKhanMuslimUSCandidates = countryNames(
     game.getMuslims(Afghanistan::Pakistan::Nil) filter { m =>
@@ -2724,28 +2729,32 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(323, "Blasphemy", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, _: Boolean) => (role == US && blasphemyUSCandidates.nonEmpty) ||
-                                  (role == Jihadist && blasphemyJihadistCandidates.nonEmpty)
+      (role: Role, _: Boolean) => blasphemyCandidates(role).nonEmpty
       ,
-      (role: Role) => if (role == US) {
-        val target = if (role == game.humanRole)
-          askCountry("Place Awakening marker in which country: ", blasphemyUSCandidates)
-        else
-          USBot.markerAlignGovTarget(blasphemyUSCandidates).get
+      (role: Role) => {
+        def humanMarker(target: String): Boolean =
+          game.getMuslim(target).alignment match {
+            case Adversary => false
+            case Ally      => true
+            case _         => askPlaceAwakeningOrReactionMarker
+          }
         
+        val candidates = blasphemyCandidates(role)
+        var (target, placeAwakening) = role match {
+          case _ if role == game.humanRole => 
+            val target = askCountry("Place marker in which country: ", candidates)
+            val marker = humanMarker(target)
+            (target, marker)
+          case US       => (USBot.markerAlignGovTarget(candidates).get, true)
+          case Jihadist => (JihadistBot.markerAlignGovTarget(candidates).get, false)
+        }
+                
         addEventTarget(target)
-        testCountry(target)
-        addAwakeningMarker(target)
-      }
-      else { // Jihadist
-        val target = if (role == game.humanRole)
-          askCountry("Place Reaction marker in which country: ", blasphemyJihadistCandidates)
-        else
-          JihadistBot.markerAlignGovTarget(blasphemyJihadistCandidates).get
         
-        addEventTarget(target)
-        testCountry(target)
-        addReactionMarker(target)
+        if (placeAwakening) 
+          addAwakeningMarker(target)
+        else
+          addReactionMarker(target)
       }
     )),
     // ------------------------------------------------------------------------
