@@ -1956,33 +1956,42 @@ object LabyrinthCards {
         (game hasMuslim (m => m.inRegimeChange && m.totalCells > 0))
       ,
       (role: Role) => {
-        if (role == game.botRole) {
+        if (role == game.botRole)
           log(s"You ($US) must randomly discard two cards")
-          log("Playable Jihadist events on the discards are triggered")
-          checkIfAvengerDrawn(2)
+        else
+          log(s"Discard the top two cards of the $US Bot's hand")
           
-          def nextDiscard(num: Int): List[Int] = {
-            if (num > 2)
-              Nil
-            else {
-              val prompt = s"Card # of the ${ordinal(num)} discard (or blank if none) "
-              askCardNumber(prompt) match {
-                case None         => Nil
-                case Some(cardNo) =>  cardNo :: nextDiscard(num + 1)
-              }
+        log("Playable Jihadist events on the discarded cards are triggered")
+        checkIfAvengerDrawn(2)
+        
+        def nextDiscard(num: Int): List[Int] = {
+          if (num > 2)
+            Nil
+          else {
+            val prompt = s"Card # of the ${ordinal(num)} discard (or blank if none) "
+            askCardNumber(prompt) match {
+              case None         => Nil
+              case Some(cardNo) =>  cardNo :: nextDiscard(num + 1)
             }
           }
+        }
+            
+        for (n <- nextDiscard(1); card = deck(n)) {
+          if (card.association == Jihadist && card.eventConditions(Jihadist, true)) {
+            log()
+            log(s"""The "${card.name}" event is triggered.""")
+            performCardEvent(card, Jihadist, triggered = true)
+          }
+          else{
+            log()
+            log(s"""The "${card.name}" event does not trigger.""")
+          }
+        }
         
-          for (n <- nextDiscard(1); card = deck(n))
-            if (card.eventWillTrigger(Jihadist))
-              performCardEvent(card, Jihadist, triggered = true)
+        if (game.usPosture != Soft) {
+          log(s"\nThe Quagmire event affects the $US posture.")
+          setUSPosture(Soft)
         }
-        else {
-          log(s"Discard the top two cards of the $Jihadist Bot's hand")
-          checkIfAvengerDrawn(2)
-        }
-          
-        setUSPosture(Soft)
       }
     )),
     // ------------------------------------------------------------------------
