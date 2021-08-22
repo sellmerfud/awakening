@@ -5157,6 +5157,8 @@ object LabyrinthAwakening {
                                           (m.inRegimeChange || m.civilWar) &&
                                           (m.totalTroops > 0 || m.numAdvisors > 0))
     var wmdsInCivilWars = Set.empty[String]
+    var wmdInUS = unblocked exists (ub => ub.name == UnitedStates && ub.mapPlot.plot == PlotWMD)
+    
     log()
     log(separator(char='='))
     log("Resolve plots")
@@ -5164,17 +5166,15 @@ object LabyrinthAwakening {
       log(separator())
       log("There are no unblocked plots on the map")
     }
-    else if (unblocked exists (ub => ub.name == UnitedStates && ub.mapPlot.plot == PlotWMD)) {
+    else if (wmdInUS && game.exitAfterWin) {
       // If there is a WMD in the United States resolve it first as it will end the game.
       log(separator())
       log("An unblocked WMD plot was resolved in the United States")
       log("Game Over - Jihadist automatic victory!")
       
-      if (game.exitAfterWin) {
-        saveTurn()
-        saveGameDescription("Game Over - Jihadist automatic victory!")
-        throw ExitGame        
-      }
+      saveTurn()
+      saveGameDescription("Game Over - Jihadist automatic victory!")
+      throw ExitGame        
     }
     else {
       for (Unblocked(name, mapPlot) <- unblocked) {
@@ -5251,7 +5251,18 @@ object LabyrinthAwakening {
             }
             
           //------------------------------------------------------------------
-          case n: NonMuslimCountry =>          
+          case n: NonMuslimCountry =>
+          
+            if (name == UnitedStates) {
+              // Special case where the user has opted to continue playing after a Win
+              // we will treat this as any other plot resolved in the US.
+              log(separator())
+              log("An unblocked WMD plot was resolved in the United States")
+              log("This results in a Jihadist automatic victory!")
+              log("But since you have opted to continue playing after Victory has been achieved")
+              log("the plot will be treated as a normal WMD plot resolved in a NonMuslim country.\n")
+            }
+          
             // Funding
             if (n.iranSpecialCase) {
               game = game.adjustFunding(1)
