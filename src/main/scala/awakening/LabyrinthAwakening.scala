@@ -2385,8 +2385,10 @@ object LabyrinthAwakening {
   }
   
   def addOpsTarget(name: String): Unit = {
-    val targets = game.targetsThisPhase
-    game = game.copy(targetsThisPhase = targets.copy(ops = targets.ops + name))
+    if (name != "track") {
+      val targets = game.targetsThisPhase
+      game = game.copy(targetsThisPhase = targets.copy(ops = targets.ops + name))      
+    }
   }
   
   def addDisruptedTarget(name: String): Unit = {
