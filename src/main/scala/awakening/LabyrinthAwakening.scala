@@ -635,7 +635,7 @@ object LabyrinthAwakening {
     Renditions -> US, VieiraDeMelloSlain -> Jihadist, AlAnbar -> Jihadist, MaerskAlabama -> US,
     Fracking -> US, BloodyThursday -> Jihadist, Censorship -> Jihadist, Pirates1 -> Jihadist,
     Pirates2 -> Jihadist, Sequestration -> Jihadist,  Smartphones -> US, ThreeCupsOfTea -> Jihadist,
-    TradeEmbargoUS -> US, TradeEmbargoJihadist -> Jihadist, LeakWiretapping -> Jihadist,
+    LeakWiretapping -> Jihadist,
     LeakEnhancedMeasures -> Jihadist, LeakRenditions -> Jihadist, TrumpTweetsON -> US,
     TrumpTweetsOFF -> Unassociated, Euroscepticism -> US, EarlyExit -> Jihadist,
     QatariCrisis -> Jihadist, SouthChinaSeaCrisis -> Jihadist, USNKSummit -> US,
@@ -648,7 +648,8 @@ object LabyrinthAwakening {
     Indo_PakistaniTalks -> US, IraqiWMD -> US, LibyanDeal -> US, LibyanWMD -> US, PatriotAct -> US,
     AbuSayyaf -> Jihadist, BhuttoShot -> Jihadist, FATA -> Jihadist, Advisors -> US, UNSCR_1973 -> US,
     NATO -> US, NATO2 -> US, TrainingCamps -> Jihadist, OperationServal -> US,
-    TehranBeirutLandCorridor -> Jihadist, BREXIT -> US
+    TehranBeirutLandCorridor -> Jihadist, BREXIT -> US,
+    TradeEmbargoUS -> US, TradeEmbargoJihadist -> Jihadist
   )
   
   
