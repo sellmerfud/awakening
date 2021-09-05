@@ -5256,7 +5256,7 @@ object LabyrinthAwakening {
           //------------------------------------------------------------------
           case n: NonMuslimCountry =>
           
-            if (name == UnitedStates) {
+            if (name == UnitedStates && mapPlot.plot == PlotWMD) {
               // Special case where the user has opted to continue playing after a Win
               // we will treat this as any other plot resolved in the US.
               log(separator())
