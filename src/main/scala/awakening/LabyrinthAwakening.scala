@@ -4225,7 +4225,7 @@ object LabyrinthAwakening {
   
   def setAlignment(name: String, newAlign: String): Unit = {
     var m = game.getMuslim(name)
-    if (m.alignment != newAlign) {
+    if (m.isUntested || m.alignment != newAlign) {
       log(s"Set the alignment of $name to $newAlign")
       game = game.updateCountry(m.copy(alignment = newAlign))
       if (name == Iran && newAlign != Adversary && (game.getCountry(Iran).hasMarker(TradeEmbargoJihadist))) {
