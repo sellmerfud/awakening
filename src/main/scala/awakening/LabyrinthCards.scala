@@ -993,7 +993,7 @@ object LabyrinthCards {
       (role: Role) => {
         rollUSPosture()
         increasePrestige(3)
-        val candidates = countryNames(game.nonMuslims filter (n => n.isSchengen && n.canChangePosture))
+        val candidates = countryNames(game.nonMuslims filter (n => n.name != UnitedStates && n.canChangePosture))
         val (name, posture) = if (role == game.humanRole) {
           val target = askCountry("Select posture of which country: ", candidates)
           (target, askOneOf(s"New posture for $target (Soft or Hard): ", Seq(Soft, Hard)).get)
