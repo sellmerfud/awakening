@@ -930,8 +930,11 @@ object JihadistBot extends BotHelpers {
         Nil  // We've used all available Ops
       else {
         val canTravelFrom = (c: Country) => !alreadyTried(c.name) && hasCellForTravel(c)
-        val candidates = if (lapsingEventInPlay(Biometrics))
-          countryNames(game.adjacentCountries(toName) filter canTravelFrom)
+        val canTravelInPlace = !alreadyTried(toName) && game.getCountry(toName).activeCells > 0
+        val candidates = if (lapsingEventInPlay(Biometrics)) {
+          val toCountry = if (canTravelInPlace) List(game.getCountry(toName)) else Nil
+          countryNames((game.adjacentCountries(toName) filter canTravelFrom) ::: toCountry)
+        }
         else
           countryNames(game.countries filter canTravelFrom)
         travelFromTarget(toName, candidates) match {
