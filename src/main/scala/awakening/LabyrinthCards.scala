@@ -468,15 +468,7 @@ object LabyrinthCards {
       (role: Role) => {
         // See Event Instructions table
         log("US player does not inspect the Jihadist hand in the solo game.")
-        val cadres = countryNames(game.countries filter (_.hasCadre))
-        if (cadres.isEmpty)
-          log("No cadres on the map to remove")
-        else {
-          val target =askCountry("Select country with cadre: ", cadres)
-          addEventTarget(target)
-          removeCadreFromCountry(target)
-        }
-        
+
         // US player conducts a 1 Op operations.
         println()
         log("US player conducts an operation with 1 Op")
