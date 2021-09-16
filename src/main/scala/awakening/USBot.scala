@@ -94,6 +94,20 @@ object USBot extends BotHelpers {
       throw new IllegalStateException(s"USBot.chooseTroopOrMilitiaToRemove($name) not units present")
   }
   
+  // Bot considers wwithdraw as part of deploy decision
+  def botDeployTargets(ops: Int):  Option[(List[String], List[String])] = {
+    val withdrawFrom = game.withdrawFromTargets
+    val withdrawTo   = game.withdrawToTargets
+    if (game.usPosture == Soft && ops == 3 && withdrawFrom.nonEmpty && withdrawTo.nonEmpty) {
+      val newTargets = game.deployTargets(ops) map {
+        case (from, to) => ((from:::withdrawFrom).distinct, (to:::withdrawTo).distinct)
+      }
+      newTargets orElse Some(withdrawFrom -> withdrawTo)
+    }
+    else
+      game.deployTargets(ops)  // Normal deploy targets only
+  }
+  
   val onlyOneActiveCell = (c: Country) => c.activeCells == 1 && c.sleeperCells == 0
   val numPlotDice = (m: MuslimCountry) => (m.plots map { case PlotOnMap(plot, _) => plot.number }).sum
 
@@ -636,12 +650,12 @@ object USBot extends BotHelpers {
       m.disruptAffectsPrestige
     }
   }
-  
+    
   object DeployDecision extends OperationDecision {
     val desc = "Deploy Possible?"
     def yesPath = Deploy
     def noPath  = RegimeChangeDecision
-    def condition(ops: Int) = game.deployTargets(ops) match {
+    def condition(ops: Int) = botDeployTargets(ops) match {
       case Some((fromCandidates, toCandidates)) =>
         val from = deployFromTarget(fromCandidates)
         val to   = deployToTarget(toCandidates)
@@ -1299,23 +1313,33 @@ object USBot extends BotHelpers {
   
   def deployOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
-    val (fromCandidates, toCandidates) = game.deployTargets(maxOps).get
+    val (fromCandidates, toCandidates) = botDeployTargets(maxOps).get
     val from = deployFromTarget(fromCandidates).get
     val to   = deployToTarget(toCandidates).get
-    
-    val opsUsed = to match {
-      case "track" => 1
-      case name    => (game getCountry name).governance
+    val withdraw = {
+      maxOps >= 3 && 
+      game.usPosture == Soft &&
+      (game isMuslim from) &&
+      (game getMuslim from).inRegimeChange
     }
+    
+    val numTroops = from match {
+      case "track"          => 2 min game.troopsAvailable  // Always deploy exactly 2 troops from track
+      case name if withdraw => (game getCountry name).troops  // Withdraw all troop
+      case name             => (game getCountry name).maxDeployFrom
+    }
+    
+    val opsUsed = if (withdraw)
+      3
+    else
+      to match {
+        case "track" => 1
+        case name    => (game getCountry name).governance
+      }
+      
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
 
-    val (withdraw, numTroops) = from match {
-      case "track" => (false, 2 min game.troopsAvailable)  // Always deploy exactly 2 troops from track
-      case name    =>
-        val withdraw = game.usPosture == Soft && (game isMuslim name) && (game getMuslim name).inRegimeChange
-        (withdraw, (game getCountry name).maxDeployFrom)
-    }
     if (withdraw) {
       log(s"$US performs a Withdraw operation")
       addOpsTarget(from)
