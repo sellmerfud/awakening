@@ -2767,7 +2767,6 @@ object AwakeningCards {
             case xs =>
               val name = USBot.markerAlignGovTarget(xs).get
               addEventTarget(name)
-              testCountry(name)
               setCountryPosture(name, game.usPosture)
           }
         }
@@ -2779,7 +2778,6 @@ object AwakeningCards {
             case xs =>
               val name = JihadistBot.markerAlignGovTarget(xs).get
               addEventTarget(name)
-              testCountry(name)
               setCountryPosture(name, oppositePosture(game.usPosture))
           }
         }
