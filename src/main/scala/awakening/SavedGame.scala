@@ -180,7 +180,8 @@ object SavedGame {
     val params = asMap(data("params"))
     asString(data("playType")) match {
       case "PlayedCard"       => PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")))
-      case "PlayedReassessment" => PlayedReassement(asInt(params("card1")), asInt(params("card2")))
+      // Account for misspelling in earlier versions
+      case "PlayedReassessment" | "PlayedReassement" => PlayedReassement(asInt(params("card1")), asInt(params("card2")))
       case "AdditionalCard"   => AdditionalCard(Role(asString(params("role"))), asInt(params("cardNum")))
       case "PlotsResolved"    => PlotsResolved(asInt(params("num")))
       case "AdjustmentMade"   => AdjustmentMade(asString(params("desc")))
