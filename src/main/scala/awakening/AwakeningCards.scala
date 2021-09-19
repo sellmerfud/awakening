@@ -2469,7 +2469,10 @@ object AwakeningCards {
         addEventTarget(target)
         removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = false)
         plots foreach { p => addAvailablePlotToCountry(target, p) }
-        performJihads(JihadTarget(target, 2, 0, sadr = false, major = false)::Nil, ignoreFailures = true)
+        // It is possible that the country is no longer a Muslim country.
+        // For example: Target is Nigeria and we jsut removed the last cell (rule 11.3.3.3)
+        if (game isMuslim target)
+          performJihads(JihadTarget(target, 2, 0, sadr = false, major = false)::Nil, ignoreFailures = true)
       }
     )),
     // ------------------------------------------------------------------------
