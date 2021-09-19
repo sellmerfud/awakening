@@ -121,7 +121,7 @@ object FUtil {
       path.substring(0, pos) + ext
   }
 
-  /** Return the extension portion of the path's basname starting form the rightmost period.
+  /** Return the extension portion of the path's basename starting from the rightmost period.
   *
   *   If the base name does not contain a period, or if it ends with a period then
   *   an empty string is returned.
@@ -625,7 +625,7 @@ object FUtil {
     return s == NUL
   }
 
-  /** Returns the filenames found by expanding pattern which is an String or a Seq[String],
+  /** Returns the filenames found by expanding pattern which is a String or a Seq[String],
   *
   *   Note that this pattern is not a regexp (it‘s closer to a shell glob).
   *   Note that case sensitivity depends on your system.
@@ -694,7 +694,7 @@ object FUtil {
       //      For each match attempt to match with the next glob, and so on...
 
       // This filter is used by the glob_recursive method to get only the subdirectories in a
-      // given directory. Hidden directores (that start with a period : .svn, .git) are not
+      // given directory. Hidden directories (that start with a period : .svn, .git) are not
       // returned unless the FNM_DOTMATCH flag has been specified.
       object SubdirsOnly extends FilenameFilter {
         def accept(dir: File, name: String) = {
@@ -742,7 +742,7 @@ object FUtil {
         def list(dir: File, only_subdirs: Boolean): Seq[String] = Seq(name)
       }
 
-      // Return true if the pattern has special glob charcters
+      // Return true if the pattern has special glob characters
       def has_magic(pat: String): Boolean = {
         var escaped = false
         for (c <- pat) c match {
@@ -816,7 +816,7 @@ object FUtil {
 
       // Filter out empty sub patterns. This would result when two or more adjacent directory separators
       // were encountered ("foo//bar" == "foo/bar")
-      // Also remove redunant recursive patterns ("**/**/" == "**/")
+      // Also remove redundant recursive patterns ("**/**/" == "**/")
       val globs = fix_recursives(split_by_dirs(fixed_pattern, Seq()).reverse.filter(_ != "")).map { pat =>
         pat match {
           case ".." | "."          => Special(pat)
@@ -923,7 +923,7 @@ object FUtil {
     */
     def cleanPath: Pathname = {
       val EMPTY = List[String]()
-      // Consequtive slashes are removed by the #filenames method.
+      // Consecutive slashes are removed by the #filenames method.
       // `segs` is the cleaned path segments,
       // `count` is the number of leading `..` that must be accounted for.
       val (count, segs) = (filenames foldRight (0, EMPTY)) { case (seg, (count, segs)) =>
@@ -1006,7 +1006,7 @@ object FUtil {
       else
         throw new IllegalStateException(s"${toString()} is not a directory!")
 
-    /** Return the extension portion of the path's basname starting form the rightmost period.
+    /** Return the extension portion of the path's basename starting from the rightmost period.
     *
     *   If the base name does not contain a period, or if it ends with a period then
     *   an empty string is returned.
@@ -1029,9 +1029,9 @@ object FUtil {
     *   The test function will be called with each candidate Pathname. It must return
     *   one of:
     *      Pathname.INCLUDE -> The pathname will be included in the list
-    *      Pathname.EXCLUDE -> The pathname will be excluded from the list but it's children if any
+    *      Pathname.EXCLUDE -> The pathname will be excluded from the list but its children if any
     *                          will still be considered.
-    *      Pathname.PRUNE   -> The pathname will be exclued from the list and none of it's children
+    *      Pathname.PRUNE   -> The pathname will be excluded from the list and none of its children
     *                          will be considered.
     */
     import Pathname.{FindVerb, INCLUDE, EXCLUDE, PRUNE}
@@ -1155,7 +1155,7 @@ object FUtil {
       finally { try w.close() catch { case _: Throwable =>} }
     }
 
-    /** Returns the parent of the file/dir repesented by this Pathname */
+    /** Returns the parent of the file/dir represented by this Pathname */
     def parent: Pathname = if (path == ".") Pathname("..") else dirname
 
     /**  Read the contents of the file and return as an array of bytes.
@@ -1180,7 +1180,7 @@ object FUtil {
     /**  Returns a new Pathname represents the same path as the pathname except that
     *    it is relative to the given path name.
     *
-    *    If `this.isAbsolute` must equal `other.isAbsolute'.  In other words both paths
+    *    If `this.isAbsolute` must equal `other.isAbsolute`.  In other words both paths
     *    must be absolute OR both paths must be relative.
     *
     *    This method does not access the file system.
@@ -1249,8 +1249,8 @@ object FUtil {
     *
     *   IMPORTANT: BE VERY CAREFUL using this method !!!!
     *
-    *   return true if all directories/files were delete sucessfully.
-    *   If any deletes fail, the rest are still tried, but the the method will
+    *   return true if all directories/files were delete successfully.
+    *   If any deletes fail, the rest are still tried, but the method will
     *   return false to indicate that there was at least one failure.
     */
     def rmtree(): Boolean = {

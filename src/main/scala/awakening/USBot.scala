@@ -123,8 +123,8 @@ object USBot extends BotHelpers {
     override def toString() = desc
   }
   
-  // Boolean criteria filter used with Alert Prioities Table
-  // The input is fitered and if the results are empty, the original input
+  // Boolean criteria filter used with Alert Priorities Table
+  // The input is filtered and if the results are empty, the original input
   // is returned. Otherwise the filtered input is returned.
   class PlotCriteria(val desc: String, criteria: (PlotInCountry) => Boolean) extends PlotFilter {
     def filter(plots: List[PlotInCountry]) = (plots filter criteria) match {
@@ -133,7 +133,7 @@ object USBot extends BotHelpers {
     }
   }
   
-  // Highest integer score filter used with Alert Prioities Table.
+  // Highest integer score filter used with Alert Priorities Table.
   // Applies the given score function to each plot in the input list and
   // takes the highest value.
   // Then returns the list of plots whose score matches that highest value.
@@ -145,7 +145,7 @@ object USBot extends BotHelpers {
     }
   }
   
-  // Calculate the resutling funding if the plot were to be resolved.
+  // Calculate the resulting funding if the plot were to be resolved.
   def fundingResult(plot: PlotInCountry): Int = {
     val funding = game.funding
     plot.country match {
@@ -202,7 +202,7 @@ object USBot extends BotHelpers {
   // Process the list of PlotInCountry instances by each PlotFilter in the priorities list.
   // In this function each filter is processed in order until we have used all filters
   // in the list to narrow the choices to a single country.  If we go through all of
-  // the filters and we stil have more than one viable country, then we pick one at
+  // the filters and we still have more than one viable country, then we pick one at
   // random.
   def priorityPlot(plots: List[PlotInCountry]): PlotInCountry = {
     assert(plots.nonEmpty, "priorityPlot() called with empty list")
@@ -369,7 +369,7 @@ object USBot extends BotHelpers {
   
 
   // ------------------------------------------------------------------
-  // US Alert Resoulution Flowchart definitions.
+  // US Alert Resolution Flowchart definitions.
   
   trait AlertFlowchartNode
   
@@ -502,8 +502,8 @@ object USBot extends BotHelpers {
   val RegimeChangePriority = new CriteriaFilter("Regime Change",
                   muslimTest(_.inRegimeChange))
   
-  //  3. Caliphate Captial
-  val CaliphateCaptialPriority = new CriteriaFilter("Caliphate Captial",
+  //  3. Caliphate Capital
+  val CaliphateCaptialPriority = new CriteriaFilter("Caliphate Capital",
                   muslimTest(_.caliphateCapital))
 
   //  4. Pakistan Arsenal
@@ -629,7 +629,7 @@ object USBot extends BotHelpers {
   }
   
   object DisruptForPrestigeDecision extends OperationDecision {
-    val desc = "Disrupt for Pestige gain?"
+    val desc = "Disrupt for Prestige gain?"
     def yesPath = Disrupt
     def noPath  = USSoftDecision
     def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
@@ -1106,7 +1106,7 @@ object USBot extends BotHelpers {
       game.disruptLosses(name) match {
         case Some(Left(numCells)) =>
           //  If we would disrupt the last cells on the map and they are
-          //  not sleeper cells, then we weould remove last cell from the map
+          //  not sleeper cells, then we would remove last cell from the map
           numCells == game.totalCellsOnMap && game.getCountry(name).sleeperCells == 0
         
         case _ => false  // Would only disrupt a cadre
@@ -1172,7 +1172,7 @@ object USBot extends BotHelpers {
       // the first see if Reassessment is possible.  If Reassessment is
       // not performed, then finally we consult the PAR flowchart.
       if (consultPAR && !reassessment(card)) {
-        // If the event is playable then the event is alwasy executed
+        // If the event is playable then the event is always executed
         if (playable) {
           performCardEvent(card, US)
           // If the card event is Unassociated add ops to the Bot's reserves.
@@ -1411,7 +1411,7 @@ object USBot extends BotHelpers {
   // If this value is less than the number of Ops on the card, then we will 
   // perform homeland using the remainder of ops on the card plus reserves as needed.
   // This may result in more than 3 total Ops being used for the current card.
-  // But no single operation can be peformed using only resrvere ops.
+  // But no single operation can be performed using only reserve ops.
   // If the opUsed is greater than or equal to the number of Ops on the card,
   // then we do nothing.
   def homelandSecurity(card: Card, opsUsed: Int): Unit = {
