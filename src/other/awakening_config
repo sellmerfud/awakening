@@ -2,7 +2,7 @@
 # You can set up default parameters in this file
 # to avoid being prompted when you start a new game.
 #
-# Note that any values you specifiy on the command line will
+# Note that any values you specify on the command line will
 # override values in this file.
 
 # Name of the scenario to play
@@ -19,7 +19,7 @@ scenario =
 # The side that you wish to play:  US or Jihadist
 side =
 
-# Difficulty level.  Must be an number from 1 to 6.
+# Difficulty level.  Must be a number from 1 to 6.
 # For the Jihadist Bot:
 # 1 = Muddled
 # 2 = Muddled,Coherent
@@ -41,7 +41,7 @@ level =
 # will be used when playing against the Jihadist Bot.
 # Note that setting the 'ideology' parameter will override any
 # value you have set for the 'level' parameter
-# The value can be any combination of the of following 
+# The value can be any combination of the following
 # separated by commas:
 # Muddled,Coherent,Attractive,Potent,Infectious,Virulent 
 #
@@ -52,11 +52,10 @@ ideology =
 # will be used when playing against the US Bot.
 # Note that setting the 'us-resolve' parameter will override any
 # value you have set for the 'level' parameter.
-# The value can be any combination of the of following 
+# The value can be any combination of the following,
 # separated by commas:
 # Off Guard,Competent,Adept,Vigilant,Ruthless,NoMercy 
 us-resolve =
-
 
 # Set how the program handles dice rolled by the human player.
 # Can be set to one of: auto, human

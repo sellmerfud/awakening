@@ -210,7 +210,7 @@ object Json {
   }
 
 
-  // Parses a JSON String representation into its native Scala reprsentation.
+  // Parses a JSON String representation into its native Scala representation.
   def parse(s: String): Any = (new JsonParser).parse(s)
 }
 

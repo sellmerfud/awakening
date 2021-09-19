@@ -86,12 +86,12 @@ object JihadistBot extends BotHelpers {
   // Sadr cannot travel
   def unusedCellsOnMapForTravel = (game.countries map unusedCells).sum
   
-  // Poor country with 1 to 4 more cells than Troops and Milita and Jihad success possible
+  // Poor country with 1 to 4 more cells than Troops and Militia and Jihad success possible
   // I added a couple of sanity checks that are not in the Bot Flowchart:
   // - Do not consider Pakistan if Benazir Bhutto is in play
   // - Do not consider countries where the US player has stacked
   //   so many troops/militia that there are not enough cells in
-  //   the game to make a major jihid possible
+  //   the game to make a major jihad possible
   def poorMuslimNeedsCellsForMajorJihad(m: MuslimCountry): Boolean = 
     m.isPoor &&
     !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
@@ -152,7 +152,7 @@ object JihadistBot extends BotHelpers {
                   c => c.name == Pakistan && c.wmdCache > 0)
                   
   // 6. Philippines if would prestige - 1
-  val PhilippinesPriority = new CriteriaFilter("Phillipines", 
+  val PhilippinesPriority = new CriteriaFilter("Philippines",
                   muslimTest(m => m.name == Philippines &&
                                   m.totalTroops > 0 &&
                                   game.prestige > 1))
@@ -204,7 +204,7 @@ object JihadistBot extends BotHelpers {
   // 22. Russia
   val RussiaPriority = new CriteriaFilter("Russia", _.name == Russia)
   
-  // 23. No Disrupt pretige gain
+  // 23. No Disrupt prestige gain
   val NoDisruptPretigePriority = new CriteriaFilter("No Disrupt prestige gain",
                   muslimTest(_.totalTroopsThatAffectPrestige == 0, nonMuslim = true))
                   
@@ -230,13 +230,13 @@ object JihadistBot extends BotHelpers {
   val DisruptPrestigePriority = new CriteriaFilter("Disrupt prestige gain", 
                   muslimTest(m => m.disruptAffectsPrestige && game.prestige < 12))
                   
-  // 31. Cival War
+  // 31. Civil War
   val CivilWarPriority = new CriteriaFilter("Civil War", muslimTest(_.civilWar))
   
   // 32. Neutral
   val NeutralPriority = new CriteriaFilter("Neutral", muslimTest(_.isNeutral))
   
-  // 33. Besieged Regmime (Already defined at #7)
+  // 33. Besieged Regime (Already defined at #7)
   
   // 34. Adjacent Good Ally
   val AdjacentGoodAllyPriority = new CriteriaFilter("Adjacent Good Ally", 
@@ -277,7 +277,7 @@ object JihadistBot extends BotHelpers {
   
   val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
                   muslimTest(m => m.isPoor && activeCells(m) > 0))
-  val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells that troops/militia and JSP",
+  val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than troops/militia and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
@@ -486,7 +486,7 @@ object JihadistBot extends BotHelpers {
   }
   
   
-  // This is used for some events where we want to check the priorites only,
+  // This is used for some events where we want to check the priorities only,
   // and skip the flowchart.
   def travelFromPriorities(toCountry: String, names: List[String]): Option[String] = {
     val priorities = List(
@@ -497,7 +497,7 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, priorities) map (_.name)
   }
   
-  // Jihadisht Operations Flowchart definitions.
+  // Jihadist Operations Flowchart definitions.
   sealed trait Operation extends OpFlowchartNode
   case object RecruitOp    extends Operation
   case object TravelOp     extends Operation
@@ -553,7 +553,7 @@ object JihadistBot extends BotHelpers {
   }
   
   // This object incorporates two boxes on the Flowchart
-  // Finds a poor countries in need of cells for major jihad,
+  // Finds poor countries in need of cells for major jihad,
   // Finds the highest priority travel destination among them and checks
   // to see if there is a cell in an adjacent country.
   object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
@@ -754,9 +754,9 @@ object JihadistBot extends BotHelpers {
       throw new IllegalStateException(s"JihadistBot.chooseTroopOrMilitiaToRemove($name) not units present")
   }
   
-  // The Bot will declare the Calipahate if it results in  an auto win, 
+  // The Bot will declare the Caliphate if it results in an auto win,
   // or if there is at least one other adjacent country that qualifies to be part
-  // of the Calipahte.
+  // of the Caliphate.
   def willDeclareCaliphate(capital: String): Boolean = {
     canDeclareCaliphate(capital) &&
     (game.islamistResources == 5 || game.caliphateDaisyChain(capital).size > 1)
@@ -825,7 +825,7 @@ object JihadistBot extends BotHelpers {
   
   // Attempt to recruit as many times as possible up to 3
   // If we run out of card ops and there are still cells available, use reserves
-  // If we run out of cells and still have card ops (not reserves), the use the
+  // If we run out of cells and still have card ops (not reserves), then use the
   // excess card ops for radicalization.
   // Returns the number of Ops used.
   def recruitOperation(card: Card): Int = {
@@ -842,7 +842,7 @@ object JihadistBot extends BotHelpers {
   }
   
   def performRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
-    // We should always find a target for recuit operations.
+    // We should always find a target for recruit operations.
     val target = recruitTarget(game.recruitTargets(madrassas = madrassas)) getOrElse {
       throw new IllegalStateException("recruitOperation() should always find a target")
     }
@@ -894,7 +894,7 @@ object JihadistBot extends BotHelpers {
   // For each source country, make as many attempts as possible, before
   // moving on to the next source (as long as Ops are remaining)
   // - Only travel the last cell out of an Auto Recruit country if
-  //   there two or more other Auto Recruit countries with cells.
+  //   there are two or more other Auto Recruit countries with cells.
   // - Select active cells for travel before sleeper cells
   // - Never travel sleeper cells within the same country
   // Returns the number of Ops used.
@@ -917,7 +917,7 @@ object JihadistBot extends BotHelpers {
       countryNames(game.countries)
     
     val toName = travelToTarget(toCandidates) getOrElse {
-      throw new IllegalStateException("travelOperation() should always find \"travel to\" ttarget")
+      throw new IllegalStateException("travelOperation() should always find \"travel to\" target")
     }
     
     // Count sadr here, but below when finding cells to move.
@@ -1188,7 +1188,7 @@ object JihadistBot extends BotHelpers {
   // The opsUsed parameter is the number of Ops used to perform the card operation.
   // If this value is less than the number of Ops on the card, then we will 
   // perform radicalization until a maximum of 3 Ops total have been used using
-  // and availble reserves as necessary.
+  // any available reserves as necessary.
   // If the opUsed is greater than or equal to the number of Ops on the card,
   // then we do nothing.
   def radicalization(card: Card, opsUsed: Int): Unit = {
@@ -1253,7 +1253,7 @@ object JihadistBot extends BotHelpers {
   
   // Travel to Untested non-Muslim countries while the US is Hard to
   // try and increase the GWOT penalty.
-  // We give preference to cells in adacent countries to avoid die rolls
+  // We give preference to cells in adjacent countries to avoid die rolls
   // when necessary.
   // cardsOps   - The number of unused Ops remaining from the card
   // reserveOps - The number of unused Ops remaining from reserves
@@ -1485,7 +1485,7 @@ object JihadistBot extends BotHelpers {
         }
         else {
          travelFromTarget(UnitedStates, sources) match {
-           case None => completed   // No more source countrie
+           case None => completed   // No more source countries
            case Some(from) => 
              performTravels(createTravelAttempt(from)::Nil) match {
                case (_, true)::Nil => usedCells(UnitedStates).addSleepers(1)

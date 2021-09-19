@@ -11,4 +11,4 @@ Building a release
    - Creates zip file of target/awakening-<vers> folder
    - Copies zip file to ~/Dropbox/awakening
 5. Test that new package works
-6. Update the version number and  download link in the README.md file
+6. Update the version number and download link in the README.md file

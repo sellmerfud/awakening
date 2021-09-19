@@ -13,14 +13,14 @@ Linux.
 
 To run the program
 -----------------------------------------------------------------------
-1. Ensure that Java is installed on you system and that the java 
+1. Ensure that Java is installed on your system and that the java
    executable can be found on your PATH.
    
 2. Run the awakening script located in the same directory
    as this README file. (On Windows, use the awakening.cmd script)
 
-3. If all is well the game will prompt you for a scenario and you
-   will be off an running.
+3. If all is well, the game will prompt you for a scenario and you
+   will be off and running.
    
    
 More Details
@@ -35,11 +35,11 @@ More Details
    type 'Sau'
    
 3. Your game will automatically be saved after each card play.
-   When you resume a game in progress the game will load the most
+   When you resume a game in progress, the game will load the most
    recent save file.
    The games are saved in a 'games' subdirectory that is created
    in the same directory as this README file.  Each game will have
-   its own subdirectory within 'games'.  To delete a saved game
+   its own subdirectory within 'games'.  To delete a saved game,
    simply delete its corresponding subdirectory.
    
 4. There is a 'resolve plot' command, but you should rarely need to 
@@ -47,13 +47,13 @@ More Details
    automatically.
  
 5. Once all cards have been played by both sides, use the 'end turn'
-   command to do all of the end of turn stuff.  If there are 
+   command to do all the end of turn stuff.  If there are
    unresolved plots on the map, they will be resolved first.  
    
-6. You can use the 'rollback' command to rollback to the beginning
+6. You can use the 'rollback' command to roll back to the beginning
    of a previous card play, or the beginning of a previous turn.
    
-7. Look at the help for the 'show', 'history' commands.  The are
+7. Look at the help for the 'show' and 'history' commands.  They are
    very useful for making sure your board is in sync with the game.
    If you find any inconsistencies, you can use the 'adjust' command.
    

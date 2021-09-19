@@ -93,7 +93,7 @@ trait BotHelpers {
   //
   // Each filter is first used against the input and if the filter does not find any matching
   // candidates, the next filter is given a chance.
-  // As soon as a filter finds at least one matching country, then the procees stops and the
+  // As soon as a filter finds at least one matching country, then the process stops and the
   // results from that filter are returned.
   // If none of the filters finds at least one matching country we return Nil, 
   // which indicates that no valid candidates were found for the OpP flowchart.
@@ -119,11 +119,11 @@ trait BotHelpers {
   }
   
   
-  // Process the list of countries by each CountryFilter in the prorities list.
-  // The prorities list reprsents a single column in a Priorities Table.
+  // Process the list of countries by each CountryFilter in the priorities list.
+  // The priorities list represents a single column in a Priorities Table.
   // In this function each filter is processed in order until we have used all filters
   // in the list to narrow the choices to a single country.  If we go through all of
-  // the filters and we stil have more than one viable country, then we pick one at
+  // the filters and we still have more than one viable country, then we pick one at
   // random.
   // Note: The only time this function will return None, is if the original list of
   //       countries is empty.
@@ -142,7 +142,7 @@ trait BotHelpers {
         case (cs, f::fs) =>
           (f filter cs) match {
             case Nil =>
-              botLog(s"topPriority ($f) falied")
+              botLog(s"topPriority ($f) failed")
               nextPriority(cs, fs) // Filter entire list by next priority
             case rs  =>
               botLog(s"topPriority ($f) [${(rs map (_.name) mkString ", ")}]")

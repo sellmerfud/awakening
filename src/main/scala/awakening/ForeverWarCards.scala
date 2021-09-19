@@ -1079,7 +1079,7 @@ object ForeverWarCards {
       (_: Role, _: Boolean) => airAmericaCaliphateCandidates.nonEmpty || airAmericaNonCaliphateCandidates.nonEmpty
       ,
       (role: Role) => {
-        //  Allows US player to remove up to 4 cells from any calipate members
+        //  Allows US player to remove up to 4 cells from any caliphate members
         //  or up to 3 cells from any Civil War/Regime Change countries
         if (role == game.humanRole) {
           val choices = List(
@@ -1174,7 +1174,7 @@ object ForeverWarCards {
       (_: Role, _: Boolean) => true
       ,
       (role: Role) => {
-        log("During Attrition at the end of this turn, Add +1 to the")
+        log("During Attrition at the end of this turn, add +1 to the")
         log("number of cells to be removed for each hit secured by the US player.")
         decreasePrestige(1)
       }
@@ -1472,7 +1472,7 @@ object ForeverWarCards {
         else {
           // Bot
           // We will select the cells one at a time, because
-          // removal of a cell could change the Bots priorities
+          // removal of a cell could change the Bot's priorities
           @tailrec def nextRemoval(numLeft: Int): Unit = {
             val withCells = candidates filter (name => game.getMuslim(name).totalCells > 0)
             if (numLeft > 0 && withCells.nonEmpty) {
@@ -2174,7 +2174,7 @@ object ForeverWarCards {
         testCountry(Caucasus)
         val result = game.prestigeModifier - game.gwotPenalty
         val opPoints = -result
-        log(s"GWOT penalty (-${game.gwotPenalty}) + prestige modifer (${game.prestigeModifier}) = $result")
+        log(s"GWOT penalty (-${game.gwotPenalty}) + prestige modifier (${game.prestigeModifier}) = $result")
         if (result >= 0)
           log("There is no effect")
         else {
@@ -2637,7 +2637,7 @@ object ForeverWarCards {
         addEventMarkersToCountry(Iran, TehranBeirutLandCorridor)
         log()
         log("Iran is now a 3 Resource country and will remain so as long as")
-        log("neither Iran, Syria or Lebanon become Ally or Civil War")
+        log("neither Iran, Syria nor Lebanon become Ally or Civil War")
         log("and at least one of Iraq and Turkey are not Ally or Civil War")
       }
     )),
@@ -3889,7 +3889,7 @@ object ForeverWarCards {
         
         if (shiaCandidates.nonEmpty) {
           val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
-            val t = askCountry("Remove cell from which Shix-Mix country: ", shiaCandidates)
+            val t = askCountry("Remove cell from which Shia-Mix country: ", shiaCandidates)
             (t, askCells(t, 1, true))
           }
           else {
@@ -3921,7 +3921,7 @@ object ForeverWarCards {
         
         if (shiaCandidates.nonEmpty && game.cellsAvailable > 0) {
           val target = if (role == game.humanRole)
-            askCountry("Place a cell in which Shix-Mix country: ", shiaCandidates)
+            askCountry("Place a cell in which Shia-Mix country: ", shiaCandidates)
           else
             JihadistBot.recruitTravelToPriority(shiaCandidates).get
             

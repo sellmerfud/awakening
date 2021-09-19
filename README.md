@@ -51,13 +51,13 @@ The next time you run the program, it will ask if you want to resume a saved gam
 To enter a card play for the Jihadist side simply enter `j 121`.  This indicates that the
 Jihadist plays card #121.  For a US card play you would enter `u 200`.
 
-Use the `help` command to see all of the the available commands.  You can get further help for 
+Use the `help` command to see all the available commands.  You can get further help for 
 a specific command by typing its name after `help`. For example for help on the `show` 
-command type `help show`.
+command, type `help show`.
 
 The `show` command allows you to inspect the current state of the board.
 
-The `history` command allow you to review the current turn, previous turns or the 
+The `history` command allows you to review the current turn, previous turns or the 
 entire game log.
 
 The `rollback` command will let you restart the game from:
@@ -73,17 +73,17 @@ command is actually shorthand for `jihadist 121`.
 
 In fact this use of abbreviated prefixes works at every prompt in the game.  So if you are
 choosing the country where you want to conduct a Jihad, you can enter `sau` to indicate 
-`Saudi Arabia` or `uk` for `United Kingdom`.  If the prefix you type is not unqiue, the 
+`Saudi Arabia` or `uk` for `United Kingdom`.  If the prefix you type is not unique, the 
 program will display the valid choices.
 
 There is a `resolve plots` command, but you will rarely need to use it.  The program will
 detect when a new action phase has started and if there are unresolved plots, they will be
-resloved.
+resolved.
 
 When all cards for a turn have been played, use the `end turn` command to perform the
 end of turn housekeeping.
 
-When playing a campaign game and you come to the end of a particular deck of cards
+When playing a campaign game and you come to the end of a particular deck of cards,
 you must enter the appropriate command to let the software know that this has occurred:
 
     add awakening - The game starts using the Awakeing expansion rules.
