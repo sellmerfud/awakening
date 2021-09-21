@@ -308,7 +308,7 @@ object LabyrinthAwakening {
   val DefaultIran              = NonMuslimCountry(Iran, governance = Fair, iranSpecialCase = true)
   val DefaultNigeria           = NonMuslimCountry(Nigeria, governance = Poor, recruitOverride = 3)
   
-  val DefaultMuslimIran        = MuslimCountry(Iran, resources = 2, oilExporter = true,
+  val DefaultMuslimIran        = MuslimCountry(Iran, isSunni = false, resources = 2, oilExporter = true,
                                                 governance = Fair, alignment = Adversary)
   val DefaultMuslimNigeria     = MuslimCountry(Nigeria, isSunni = true, resources = 2, oilExporter = true,
                                                governance = Poor, alignment = Neutral)
