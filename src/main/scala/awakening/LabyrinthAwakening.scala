@@ -852,7 +852,10 @@ object LabyrinthAwakening {
     def markerTroopsThatAffectPrestige: Int =
       troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
     def totalTroops = troops + markerTroops
-    def totalDeployableTroops = troops + deployableMarkerTroops
+    def totalDeployableTroops = if (game.humanRole == US)
+      troops + deployableMarkerTroops
+    else
+      troops  // Bot never deploys marker troops
     def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
     def numAdvisors = countMarker(Advisors)
   
@@ -1003,11 +1006,12 @@ object LabyrinthAwakening {
     def canDeployTo(ops: Int) = isAlly && !isIslamistRule && ops >= governance
     
     // To deploy troops out of a regime change country, we must leave behind
-    // at least five more (troops + militia) than cells.  Those troops that are left
+    // at least five more troops than cells.  Those troops that are left
     // behind may include marker troops (eg NATO), but marker troops are NOT included
     // in those that can leave.
+    // `totalTroops` includes marker troops that cannot move
     def maxDeployFrom = if (inRegimeChange)
-      totalDeployableTroops min (totalTroops - totalCells - 5) max 0
+      totalDeployableTroops min ((totalTroops - (totalCells + 5)) max 0)
     else
       totalDeployableTroops
         
@@ -4632,7 +4636,7 @@ object LabyrinthAwakening {
   
   // Source/dest may be "track" or a muslim country.
   // The source cannot be the same as the dest or an exception is thrown.
-  // The must be enough troops available in the source or an exception is thrown
+  // There must be enough troops available in the source or an exception is thrown
   // It is OK to specify zero troops, in which case nothing happens.
   def moveTroops(source: String, dest: String, num: Int): Unit = {
     if (num > 0) {
