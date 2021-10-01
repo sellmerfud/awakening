@@ -758,7 +758,7 @@ object LabyrinthCards {
         log(s"$US performs a Disrupt operation in $target")
         performDisrupt(target)
         addGlobalEventMarker(EnhancedMeasures)
-        log(s"$US (you) must put a random card from your hand on top card of the $Jihadist Bot's hand")
+        log(s"$Jihadist (you) must put a random card from your hand on top card of the $US Bot's hand")
         checkIfAvengerDrawn(1)
       }
     )),
