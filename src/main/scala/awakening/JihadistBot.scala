@@ -116,14 +116,6 @@ object JihadistBot extends BotHelpers {
     }
   }
 
-  // The Bot will never travel sleeper cells within the same country.
-  // Also will not travel active cells with the same country if it is
-  // part of a caliphate (because they are always active anyway).
-  class WouldMoveOrTravelWithinToSleep(toCountry: String) extends CountryFilter {
-    val desc = s"Would move or make sleeper cell"
-    val isOK = (c: Country) => c.name != toCountry || (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
-    def filter(countries: List[Country]) = countries filter isOK
-  }
 
   // Jihadist Priorities Table entries
 
@@ -469,9 +461,11 @@ object JihadistBot extends BotHelpers {
   }
   
   def travelFromTarget(toCountry: String, names: List[String]): Option[String] = {
+    // The bot will never travel a SLEEPER cell within the same country
+    def wouldMoveOrTravelWithinToSleep(c: Country) = c.name != toCountry || (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
+    
     botLog("Find \"Travel From\" target")
     val flowchart = List(
-      new WouldMoveOrTravelWithinToSleep(toCountry),
       new AdjacentCountriesNode(toCountry),
       AutoRecruitFilter,
       FewestCellsFilter)
@@ -480,7 +474,7 @@ object JihadistBot extends BotHelpers {
                           PoorPriority, FairPriority, GoodPriority, NotUSPriority,
                           MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
                           DisruptPrestigePriority, LowestRECPriority)
-    val withCells  = game.getCountries(names) filter hasCellForTravel
+    val withCells  = game.getCountries(names) filter hasCellForTravel filter wouldMoveOrTravelWithinToSleep
     val candidates = selectCandidates(withCells, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
