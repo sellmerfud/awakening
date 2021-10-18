@@ -1497,9 +1497,7 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(163, "Status Quo", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) =>
-        (role == game.humanRole && (game hasMuslim statusQuoCandidate)) ||
-        (role == game.botRole && (game hasMuslim (m => !m.isAlly && statusQuoCandidate(m))))
+      (role: Role, forTrigger: Boolean) => game hasMuslim statusQuoCandidate
       ,  
       (role: Role) => {
         val candidates = countryNames(game.muslims filter statusQuoCandidate)
