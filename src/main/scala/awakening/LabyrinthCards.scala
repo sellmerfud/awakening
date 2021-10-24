@@ -1178,12 +1178,14 @@ object LabyrinthCards {
       (role: Role) => {
         addEventTarget(China)
         testCountry(China)
-        if ((game getNonMuslim China).isSoft)
-          addSleeperCellsToCountry(China, 1)
-        else {
-          addEventTarget(CentralAsia)
-          testCountry(CentralAsia)
-          addSleeperCellsToCountry(CentralAsia, 1)
+        if (game.cellsAvailable > 0) {
+          if ((game getNonMuslim China).isSoft) 
+            addSleeperCellsToCountry(China, 1)
+          else {
+            addEventTarget(CentralAsia)
+            testCountry(CentralAsia)
+            addSleeperCellsToCountry(CentralAsia, 1)
+          }          
         }
       }
     )),
