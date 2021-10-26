@@ -1023,14 +1023,14 @@ object USBot extends BotHelpers {
   // ------------------------------------------------------------------
   // Get target for the Status Quo event
   def statusQuoTarget(names: List[String]): Option[String] = {
-    val flowchart = List(
+    val priorities = List(
       new CriteriaFilter("Adversary Muslim", muslimTest(_.isAdversary)),
-      new CriteriaFilter("Neutral Muslim", muslimTest(_.isNeutral)))
-    val priorities = HighestResourcePriority::Nil
+      new CriteriaFilter("Neutral Muslim", muslimTest(_.isNeutral)),
+      HighestResourcePriority
+    )
       
     botLog("Find \"Status Quo\" target")
-    val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, priorities) map (_.name)
+    topPriority(game getMuslims names, priorities) map (_.name)
   }
   
   // ------------------------------------------------------------------
