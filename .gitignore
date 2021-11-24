@@ -2,3 +2,4 @@ target/
 games/
 test_config
 NOTES.txt
+.metals/
