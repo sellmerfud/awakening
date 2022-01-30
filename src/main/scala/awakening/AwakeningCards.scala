@@ -3990,7 +3990,12 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(235, "Qadhafi", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game hasMuslim (_.civilWar)
+      (role: Role, forTrigger: Boolean) => game hasMuslim { m =>
+        role match {
+          case Jihadist => m.civilWar && m.totalCells > m.totalTroopsAndMilitia
+          case US       => m.civilWar && m.totalTroopsAndMilitia > m.totalCells
+        }
+      }
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter (_.civilWar))
