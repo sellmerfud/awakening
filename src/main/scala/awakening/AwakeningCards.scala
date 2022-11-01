@@ -839,10 +839,10 @@ object AwakeningCards {
     entry(new Card(143, "Obama Doctrine", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
-        if (game.scenarioName == scenarios.MittsTurn.name) game.usPosture == Hard else game.usPosture == Soft
+        if (game.scenarioName == awakening.scenarios.MittsTurn.name) game.usPosture == Hard else game.usPosture == Soft
       ,
       (role: Role) => {
-        val numActions = if (game.scenarioName == scenarios.MittsTurn.name) 3 else 2
+        val numActions = if (game.scenarioName == awakening.scenarios.MittsTurn.name) 3 else 2
         if (role == game.humanRole) {
           val canAwakening = (game hasMuslim (_.canTakeAwakeningOrReactionMarker)) && lapsingEventNotInPlay(ArabWinter)
           val canAid       = game hasMuslim (_.canTakeAidMarker)
@@ -912,7 +912,7 @@ object AwakeningCards {
       }
     ) {
       // For "Mitt's Turn" scenario this card has 3 ops.
-      override def ops: Int = if (game.scenarioName == scenarios.MittsTurn.name) 3 else 2
+      override def ops: Int = if (game.scenarioName == awakening.scenarios.MittsTurn.name) 3 else 2
     }),
     // ------------------------------------------------------------------------
     entry(new Card(144, "Operation New Dawn", US, 2,

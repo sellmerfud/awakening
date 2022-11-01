@@ -20,5 +20,5 @@ package VERSION:
 
 @setvers VERSION:
   ruby -p -i -e 'gsub(/(version\s*:=\s*)("\d+\.\d+")/, "\\1\"{{VERSION}}\"")' build.sbt
-  ruby -p -i -e 'gsub(/awakening_2.11-(\d+\.\d+)\.jar/, "awakening_2.11-{{VERSION}}.jar")' src/other/awakening src/other/awakening.cmd
+  ruby -p -i -e 'gsub(/awakening_2.13-(\d+\.\d+)\.jar/, "awakening_2.13-{{VERSION}}.jar")' src/other/awakening src/other/awakening.cmd
 

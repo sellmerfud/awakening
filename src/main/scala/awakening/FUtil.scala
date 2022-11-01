@@ -414,7 +414,7 @@ object FUtil {
   }
 
   def diff(path1: String, path2: String): (Int, Seq[String], Seq[String]) = {
-    exec(diff_cmd.split("\\s+") ++ Seq(path1, path2))
+    exec(diff_cmd.split("\\s+").toIndexedSeq ++ Seq(path1, path2))
   }
 
   val FNM_NOESCAPE = 0x01
@@ -888,7 +888,7 @@ object FUtil {
         func(Pathname(FUtil.joinl(prefix :: (filenames take i))))
     }
 
-    def basename() = Pathname(FUtil.basename(path))
+    def basename = Pathname(FUtil.basename(path))
     def basename(ext: String) = Pathname(FUtil.basename(path, ext))
 
     /** Returns clean canonical pathname of this pathname with consecutive slashes and useless dots removed.

@@ -613,14 +613,14 @@ object ForeverWarCards {
         }
         
         //  Note: if scenario is HillaryWins then we add a +1 modifer to the die roll
-        val hillaryMod  = if (game.scenarioName == scenarios.HillaryWins.name) 1 else 0
+        val hillaryMod  = if (game.scenarioName == awakening.scenarios.HillaryWins.name) 1 else 0
         val prestigeMod = game.prestigeModifier
         val die = getDieRoll(role)
         val modRoll = die + hillaryMod + prestigeMod
         
         log(s"Die roll: $die")
         logNotZero(prestigeMod, "Prestige")
-        logNotZero(hillaryMod,  s"${scenarios.HillaryWins.name} scenario rule")
+        logNotZero(hillaryMod,  s"${awakening.scenarios.HillaryWins.name} scenario rule")
         if (modRoll != die)
           log(s"Modified roll: $modRoll")
         println()

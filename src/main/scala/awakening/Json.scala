@@ -82,12 +82,15 @@ private class EscapedStringParser extends JavaTokenParsers {
 
 // Stolen from the scala book and fixed by making string quotation explicit.
 private class JsonParser extends JavaTokenParsers {
+  sealed trait KeyValueSeparators
+  object Colon extends KeyValueSeparators
+  
   def obj: Parser[Map[String, Any]] = "{" ~> repsep(member, ",") <~ "}" ^^ (Map.empty ++ _)
 
   def arr: Parser[List[Any]] = "[" ~> repsep(value, ",") <~ "]"
 
-  def member: Parser[(String, Any)] = string ~ ":" ~ value ^^ {
-    case name ~ ":" ~ value => (name, value)
+  def member: Parser[(String, Any)] = string ~ (":" ^^^ Colon) ~ value ^^ {
+    case name ~ Colon ~ value => (name, value)
   }
 
   def number: Parser[Any] = floatingPointNumber ^^ {

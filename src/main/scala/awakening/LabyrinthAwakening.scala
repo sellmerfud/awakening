@@ -1627,7 +1627,7 @@ object LabyrinthAwakening {
           item(m.militia, "Militia", Some("Militia"))
           addItems()
             
-          items.clear
+          items.clear()
           item(m.aidMarkers, "Aid marker")
           item(m.awakening, "Awakening marker")
           item(m.reaction, "Reaction marker")
@@ -1637,7 +1637,7 @@ object LabyrinthAwakening {
             items += "No Besieged regime"
           addItems()
             
-          items.clear
+          items.clear()
           if (showAll || m.inRegimeChange)
             items += s"Regime Change (${m.regimeChange})"
           if (m.civilWar)
@@ -2735,7 +2735,7 @@ object LabyrinthAwakening {
           s.append(v)
         else {
           b += s.toString
-          s.clear
+          s.clear()
           s.append(margin).append(v)
         }
       }
@@ -2745,7 +2745,7 @@ object LabyrinthAwakening {
   }
   
   
-  def pause() {
+  def pause(): Unit = {
     import scala.util.Properties.isWin
     if (isWin)
       readLine("Press Enter to continue... ")
@@ -2833,7 +2833,7 @@ object LabyrinthAwakening {
         row += 1
     }
     
-    rows map { entries =>
+    rows.toIndexedSeq map { entries =>
       (entries.toList.zipWithIndex map { case (entry, col) => 
         padLeft(entry, colWidths(col))
       }).mkString("  ")
@@ -3219,7 +3219,7 @@ object LabyrinthAwakening {
     }
         
     for (fromM <- from.muslims) {
-      b.clear
+      b.clear()
       // Iran and Nigeria can be flipped to non-Muslim side.
       val toM = if (to isMuslim fromM.name) Some(to getMuslim fromM.name) else None
       val toN = if (to isNonMuslim fromM.name) Some(to getNonMuslim fromM.name) else None
@@ -3266,7 +3266,7 @@ object LabyrinthAwakening {
     }
     
     for (fromN <- from.nonMuslims) {
-      b.clear
+      b.clear()
       // Iran and Nigeria can be flipped to Muslim side.
       val toM = if (to isMuslim fromN.name) Some(to getMuslim fromN.name) else None
       val toN = if (to isNonMuslim fromN.name) Some(to getNonMuslim fromN.name) else None
@@ -5656,7 +5656,7 @@ object LabyrinthAwakening {
     try {
       gamesDir.mkpath()
       var configParams = loadParamsFile(UserParams())
-      var cmdLineParams = parseCommandLine(args, UserParams())
+      var cmdLineParams = parseCommandLine(args.toIndexedSeq, UserParams())
       // If the user gave an explicit file name we must assign the gama a name.
       // This is mostly used for loading someone else's file for testing.
       if (cmdLineParams.gameFile.nonEmpty) {
