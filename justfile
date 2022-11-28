@@ -3,6 +3,9 @@
 _default:
   @just --list
   
+@showvers:
+  grep '^\s*version' build.sbt
+	
 # Create zip file and copy it to dropbox
 package VERSION:
   #!/usr/bin/env bash
