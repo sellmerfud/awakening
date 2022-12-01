@@ -7,49 +7,96 @@
 # usage:
 # ./package.sh [<version>]
 
+shopt -s extglob
+
 usage() {
-  echo "usage: package.sh [version]" 1>&2
+  echo "usage: package.sh [<major.mingor>|next_major|next_minor]" 1>&2
+  echo "       where: major and minor are integers" 1>&2
   exit 1
 }
 
-BUILD_DIR=/Users/curt/dev/projects/awakening
+BUILD_DIR=/Users/curt/dev/projects/fitl
 
-# In order for sbt to work correctly we must be run from the top level fitl directory
-validate_cwd() {
-  [[ $(pwd) == "$BUILD_DIR" ]] && return
-  echo "This script must be run with the current working directory equal to $BUILD_DIR"
-  exit 1
+repo_dirty() {
+  test -n "$(git status --porcelain)"
 }
 
-validate_version() {
-  echo "$1" | egrep '\d+\.\d+' >/dev/null 2>&1 && return
-  echo "The version parameter must be in the form: major.minor"
-  echo "Where major and minor are integers"
-  exit 1
+getYorN() {
+  local prompt="$1"
+  local response
+  
+  while true; do
+    echo -en "\n$prompt (y/n) "
+    read response
+    case "$response" in
+      y*|Y*) return 0;;
+      n*|N*) return 1;;
+      *) echo "Invalid resopnse"
+    esac
+  done
 }
 
+case "$1" in
+  "") 
+    NEW_VERSION=current
+    ;;
+    
+  +([0-9]).+([0-9]))
+    NEW_VERSION="$1"
+    ;;
+  
+  next_minor)
+    NEW_VERSION=next_minor
+    ;;
+  
+  next_major)
+    NEW_VERSION=next_major
+    ;;
 
-validate_cwd
+  *)
+    usage
+    ;;
+esac
 
-test $# -gt 1 && usage
-
-
+## Set the current working directory to the directory where this script is running.
+## (The top level working directory of the git repository)
+## This is important because sbt' must be run from the top level directory
+cd $(dirname $0)
 
 CURRENT_VERSION=$(grep '^\s*version' build.sbt | tr '"' , | cut -d, -f2)
 
-if [[ $# -eq 1 ]]; then
-  NEW_VERSION=$1
-  validate_version $NEW_VERSION
-  if [[ $CURRENT_VERSION != $NEW_VERSION ]]; then
-    echo "Setting version to $NEW_VERSION"
+echo "Current version is $CURRENT_VERSION"
+if [[ $CURRENT_VERSION =~ ^([[:digit:]]+)\.([[:digit:]]+)$ ]]; then
+  MAJOR=${BASH_REMATCH[1]}
+  MINOR=${BASH_REMATCH[2]}
+  
+  case $NEW_VERSION in
+    current   ) NEW_VERSION=$CURRENT_VERSION ;;
+    next_major) NEW_VERSION=$(($MAJOR + 1)).0 ;;
+    next_minor) NEW_VERSION=$MAJOR.$(($MINOR + 1)) ;;
+    *         ) ;; # NEW_VERSION was explicitly given as the argument
+  esac
+else
+  echo "The current version does not have the correct format of <major.minor>"
+  exit 1
+fi
+
+if repo_dirty; then
+  echo -e "\nWorking directory is not clean."
+  git status --short
+  getYorN "Do you wish to continue anyway?" || exit 1
+fi
+
+if [[ $CURRENT_VERSION != $NEW_VERSION ]]; then
+  if getYorN "Set version to $NEW_VERSION and build package?"; then
     just setvers $NEW_VERSION
   else
-    echo "Current version is $NEW_VERSION"
+    exit 0
   fi
 else
-  NEW_VERSION=$CURRENT_VERSION
-  echo "Current version is $NEW_VERSION"
+  getYorN "Build package for version $NEW_VERSION?" || exit 0
 fi
+
 
 set -e
 # keep track of the last executed command
