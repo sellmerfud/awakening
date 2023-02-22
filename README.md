@@ -9,19 +9,9 @@ You must have a copy of the board game in order to use this program.
 
 You can play as either the US or the Jihadist player and the AI will take the opposing side.
 
-## Running the program
-
-This is a Scala program, so you will need to have the Java JVM installed and make sure that
-the `java` command is on your `PATH`
-
-There are two scripts provided that will start the program.
-
-* `awakening` -- As bash script used on Mac and Linux
-* `awakening.cmd` -- A Windows command file for use on Windoze
-
 ## Downloading the package
 
-You can download the zip file with the latest release (version 4.21) [here][1]
+You can use this link to download the latest release: [Version 4.21][1]
 
 If you are upgrading to a newer version and the **major** version numbers of the two versions
 are the same, then any saved games in progress will be compatible.
@@ -31,6 +21,16 @@ new *awakening-x.x* directory.
 
 
 [1]: https://www.dropbox.com/s/b4g5unuodz7lg09/awakening-4.21.zip?dl=0
+
+## Running the program
+
+This is a Scala program, so you will need to have the Java JVM installed and make sure that
+the `java` command is on your `PATH`
+
+There are two scripts provided that will start the program.
+
+* `awakening` -- As bash script used on Mac and Linux
+* `awakening.cmd` -- A Windows command file for use on Windoze
 
 ## Using the program
 
