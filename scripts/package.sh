@@ -92,11 +92,12 @@ commit_release() {
 # in about 4 hours.
 get_access_token() {
   local refresh_token="$(head -n1 ~/.dropbox/game_bots_refresh_token)"
+  local client_id="$(head -n1 ~/.dropbox/game_bots_client_id)"
 
   curl -s https://api.dropbox.com/oauth2/token \
       -d grant_type=refresh_token \
       -d refresh_token="$refresh_token" \
-      -d client_id=ztg2fnip9tk27mt | \
+      -d client_id="$client_id" | \
         jq .access_token | \
         sd '^"|"$' ''
 }
