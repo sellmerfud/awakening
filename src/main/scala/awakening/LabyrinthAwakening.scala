@@ -49,6 +49,10 @@ import scenarios._
 import FUtil.Pathname
 
 object LabyrinthAwakening {
+  
+  val SOFTWARE_VERSION = "4.21"
+  
+  
   def dieRoll = nextInt(6) + 1
   def humanDieRoll(prompt: String = "Enter die roll: ", allowAbort: Boolean = true) =
     if (game.humanAutoRoll)
@@ -5655,11 +5659,18 @@ object LabyrinthAwakening {
   def main(args: Array[String]): Unit = {
     try {
       gamesDir.mkpath()
-      var configParams = loadParamsFile(UserParams())
-      var cmdLineParams = parseCommandLine(args.toIndexedSeq, UserParams())
+      val versionSuffix  = if (SOFTWARE_VERSION.startsWith("0")) " - BETA" else ""
+      val versionDisplay = s"Labyrinth Awakening: Bot Software (version $SOFTWARE_VERSION$versionSuffix)"
+      var configParams   = loadParamsFile(UserParams())
+      var cmdLineParams  = parseCommandLine(args.toIndexedSeq, UserParams(), versionDisplay)
+
+      println()
+      println(versionDisplay)
+      
       // If the user gave an explicit file name we must assign the gama a name.
       // This is mostly used for loading someone else's file for testing.
       if (cmdLineParams.gameFile.nonEmpty) {
+        println()
         gameName = Some(askGameName("Enter a name for the game: "))
         game = SavedGame.load(Pathname(cmdLineParams.gameFile.get))
         printSummary(game.playSummary)
@@ -5776,7 +5787,7 @@ object LabyrinthAwakening {
     }
   }
 
-  def parseCommandLine(args: Seq[String], userParams: UserParams): UserParams = {
+  def parseCommandLine(args: Seq[String], userParams: UserParams, versionDisplay: String): UserParams = {
     import org.sellmerfud.optparse._
     def diffHelp(diffs: Seq[BotDifficulty]): Seq[String] = {
       val maxLen = (diffs map (_.name.length)).max
@@ -5852,6 +5863,12 @@ object LabyrinthAwakening {
         }
         reqd[String]("", "--file=path", "Path to a saved game file")
           { (v, c) => c.copy(gameFile = Some(v)) }
+        flag("-v", "--version", "Display program version and exit") { (c) =>
+          println(versionDisplay)
+          System.exit(0)
+          c // To keep compiler happy
+        }
+          
       }.parse(args, userParams)
     }
     catch { case e: OptionParserException => println(e.getMessage); sys.exit(1) }

@@ -282,7 +282,8 @@ object SavedGame {
   
   private def toGameJson(gameState: GameState): String = {
     val top = Map(
-      "version"             -> 1,  // Current Save File Version
+      "file-version"        -> 1,  // Current Save File Version
+      "software-version"    -> SOFTWARE_VERSION,
       "scenarioName"        -> gameState.scenarioName,      
       "startingMode"        -> gameState.startingMode,
       "campaign"            -> gameState.campaign,
@@ -318,8 +319,13 @@ object SavedGame {
   
   private def fromGameJson(jsonValue: String): GameState = {
     val top = asMap(Json.parse(jsonValue))
-    val version = if (top.contains("version")) asInt(top("version")) else 0
-    version match {
+    val file_version = if (top.contains("version"))
+      asInt(top("version"))
+    else if (top.contains("file-version"))
+      asInt(top("file-version"))
+    else
+      0
+    file_version match {
       case 0 => fromVersion0(top)
       case 1 => fromVersion1(top)
       case v => throw new IllegalArgumentException(s"Invalid save file version: $v")
