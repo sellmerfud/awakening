@@ -2,7 +2,7 @@
 
 # This script will set the product version by modifying the appropriate source files
 # Then use sbt to build and stage the files for the new version
-# And finally zip up the results and copy the zip file to our ~/Dropbox/awakening directory
+# And finally zip up the results and copy the zip file to Dropbox
 #
 # usage:
 # ./package.sh [<version>]
@@ -49,18 +49,16 @@ getYorN() {
 set_version() {
   local version=$1
   
-  set -euo pipefail
   ruby -p -i -e 'gsub(/(version\s*:=\s*)("\d+\.\d+")/, "\\1\"'$version'\"")' build.sbt
-  ruby -p -i -e 'gsub(/awakening_2.13-(\d+\.\d+)\.jar/, "awakening_2.13-'$version'.jar")' src/other/awakening src/other/awakening.cmd
+  ruby -p -i -e 'gsub(/'$jarfile_prefix'_2.13-(\d+\.\d+)\.jar/, "'$jarfile_prefix'_2.13-'$version'.jar")' src/other/$program_name src/other/$program_name.cmd
+  ruby -p -i -e 'gsub(/(val\s+SOFTWARE_VERSION\s*=\s*)("\d+\.\d+")/, "\\1\"'$version'\"")' ${main_class}
   printf "Version set to $version\n"
-  set +euo pipefail  
 }
 
 create_package() {
   local version=$1
 
-  set -euo pipefail
-  PKG=awakening-$version
+  PKG=$program_name-$version
   if [ -d target/$PKG ]; then
     find target/$PKG -name .DS_Store -exec rm {} \+
     rm -f target/${PKG}.zip
@@ -69,7 +67,6 @@ create_package() {
     printf "Target directory: 'target/$PKG' does not exist\n"
     exit 1
   fi
-  set +euo pipefail
 }
 
 # Add the files that we have modified to the git index,
@@ -77,12 +74,10 @@ create_package() {
 commit_release() {
   local version=$1
 
-  set -euo pipefail
   git add  --update .
   git ci   -m"Update version number to $version"
   git tag  -m"Release v$version" v$version
   git push --tags origin master
-  set +euo pipefail
 }
 
 
@@ -93,22 +88,38 @@ commit_release() {
 get_access_token() {
   local refresh_token="$(head -n1 ~/.dropbox/game_bots_refresh_token)"
   local client_id="$(head -n1 ~/.dropbox/game_bots_client_id)"
+  local response=/tmp/access_token_response.$$
+  local result=1
 
   curl -s https://api.dropbox.com/oauth2/token \
       -d grant_type=refresh_token \
       -d refresh_token="$refresh_token" \
-      -d client_id="$client_id" | \
-        jq .access_token | \
-        sd '^"|"$' ''
+      -d client_id="$client_id" > $response
+
+  if fgrep --quiet '"error":' $response; then
+    printf "Error getting access token\n" >&2
+    jq . $response >&2
+  else
+    jq .access_token $response | sd '^"|"$' ''
+    result=0
+  fi
+
+  rm -f $response
+  return $result
 }
-
-
 
 # Get the sharable url for the zip file and echo it to stdout
 get_zipfile_url() {
   local version="$1"
-  local dropbox_zip_file_path="/awakening/awakening-${version}.zip"
-  local access_token="$(get_access_token)"
+  local dropbox_zip_file_path="/$program_name/$program_name-${version}.zip"
+  local access_token=""
+  local response=/tmp/get_zipfile_url_response.$$
+  local result=1
+
+  # NOTE:  We cannot assign this in the local variable declaration
+  #        because we would lose the returned error code and would
+  #        get the success error code from the 'local' function.
+  access_token="$(get_access_token)"
   
   # If the url already exists then an error object is returned with the url buried
   # several layers down.  Otherwise it is in the field .url at top level.
@@ -116,31 +127,61 @@ get_zipfile_url() {
   curl -s -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
       --header "Authorization: Bearer $access_token" \
       --header "Content-Type: application/json" \
-      --data "{\"path\":\"${dropbox_zip_file_path}\"}" | \
-  jq 'if .url then .url else .error.shared_link_already_exists.metadata.url end' | \
-  sd '^"|"$' ''
+      --data "{\"path\":\"${dropbox_zip_file_path}\"}" > $response
+
+  if fgrep --quiet '"shared_link_already_exists":' $response; then
+    jq '.error.shared_link_already_exists.metadata.url' $response | sd '^"|"$' ''
+    result=0
+  elif fgrep --quiet '"error":' $response; then
+    printf "Error getting zipfile url\n" >&2
+    jq . $response >&2
+  else
+    jq '.url' $response | sd '^"|"$' ''
+    result=0
+  fi
+  
+  rm -f $response
+  return $result
 }
 
 upload_zipfile() {
   local version="$1"
-  local local_zip_file_path="target/awakening-${version}.zip"
-  local dropbox_zip_file_path="/awakening/awakening-${version}.zip"
-  local access_token="$(get_access_token)"
-  
+  local local_zip_file_path="target/$program_name-${version}.zip"
+  local dropbox_zip_file_path="/$program_name/$program_name-${version}.zip"
+  local access_token=""
+  local response=/tmp/upload_response.$$
+  local result=1
+
+  # NOTE:  We cannot assign this in the local variable declaration
+  #        because we would lose the returned error code and would
+  #        get the success error code from the 'local' function.
+  access_token="$(get_access_token)"
+
   curl -s -X POST https://content.dropboxapi.com/2/files/upload \
       --header "Authorization: Bearer $access_token" \
-      --header "Dropbox-API-Arg: {\"autorename\":false,\"mode\":\"add\",\"mute\":false,\"path\":\"${dropbox_zip_file_path}\",\"strict_conflict\":false}" \
+      --header "Dropbox-API-Arg: {\"autorename\":false,\"mode\":\"overwrite\",\"mute\":false,\"path\":\"${dropbox_zip_file_path}\",\"strict_conflict\":false}" \
       --header "Content-Type: application/octet-stream" \
-      --data-binary @"$local_zip_file_path" >/dev/null
-  
-  printf "$local_zip_file_path copied to Dropbox\n"
+      --data-binary @"$local_zip_file_path"  >$response
+
+  if fgrep --quiet '"error":' $response; then
+    printf "Error uploading zip file\n" >&2
+    jq . $response >&2
+  else
+    printf "$local_zip_file_path copied to Dropbox\n"
+    result=0
+  fi
+
+  rm -f $response
+  return $result
 }
 
 # Update the README.md file with the new
 # version number and dropbox url
 update_readme() {
   local version="$1"  
-  local zip_file_url="$(get_zipfile_url $version)"
+  local zip_file_url=""
+  
+  zip_file_url="$(get_zipfile_url $version)"
   
   ruby -p -i -e 'gsub(/\[Version\s*\d+\.\d+\]/, "[Version '$version']")' \
              -e 'gsub(/^\[1\]:.*$/, "[1]: '"$zip_file_url"'")' README.md
@@ -190,11 +231,41 @@ case "$1" in
     ;;
 esac
 
-
+  
 ## Set the current working directory to the parent directory of this script.
 ## (The top level working directory of the git repository)
 ## This is important because sbt' must be run from the top level directory
 cd $(dirname $0)/..
+
+ID_FILE="$(dirname $0)/local_package_vars.sh"
+[[ -f "$ID_FILE" ]] || {
+  printf "File not found: $ID_FILE\n"
+  exit 1
+}
+
+# Sets the program_name and main_class variables
+source $ID_FILE
+
+
+[[ -z ${program_name+x} ]] && {
+  printf "variable 'program_name' is not set in $ID_FILE\n"
+  exit 1
+}
+
+[[ -z ${main_class+x} ]] && {
+  printf "variable 'main_class' is not set in $ID_FILE\n"
+  exit 1
+}
+
+[[ -z ${jarfile_prefix+x} ]] && {
+  printf "variable 'jarfile_prefix' is not set in $ID_FILE\n"
+  exit 1
+}
+
+
+
+# Make sure the main_class includes the .scala extentsion
+main_class="${main_class%.scala}.scala"
 
 # Make sure we are on the master branch
 branch=$(git branch --show-current 2>/dev/null)
@@ -245,11 +316,12 @@ else
 fi
 
 
-set -e
+set -euo pipefail
+current_command=$BASH_COMMAND
 # keep track of the last executed command
 trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 # echo an error message before exiting
-trap 'echo "\"${last_command}\" command failed with exit code $?."' EXIT
+trap 'printf "\"${last_command}\" command failed with exit code $?.\n"' EXIT
 
 sbt stage
 create_package $NEW_VERSION
