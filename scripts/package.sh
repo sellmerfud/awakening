@@ -100,7 +100,7 @@ get_access_token() {
     printf "Error getting access token\n" >&2
     jq . $response >&2
   else
-    jq .access_token $response | sd '^"|"$' ''
+    jq --raw-output .access_token $response
     result=0
   fi
 
@@ -130,13 +130,13 @@ get_zipfile_url() {
       --data "{\"path\":\"${dropbox_zip_file_path}\"}" > $response
 
   if fgrep --quiet '"shared_link_already_exists":' $response; then
-    jq '.error.shared_link_already_exists.metadata.url' $response | sd '^"|"$' ''
+    jq --raw-output '.error.shared_link_already_exists.metadata.url' $response
     result=0
   elif fgrep --quiet '"error":' $response; then
     printf "Error getting zipfile url\n" >&2
     jq . $response >&2
   else
-    jq '.url' $response | sd '^"|"$' ''
+    jq --raw-output '.url' $response
     result=0
   fi
   
