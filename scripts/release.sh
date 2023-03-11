@@ -4,16 +4,15 @@
 # Then use sbt to build and stage the files for the new version
 # And finally zip up the results and copy the zip file to Dropbox
 #
-# usage:
-# ./package.sh [<version>]
 
 shopt -s extglob
 
 usage() {
   {
-    printf "usage: package.sh [--commit|--no_commit] [version]\n"
+    printf "usage: package.sh [--commit|--no_commit|-n] [version]\n"
     printf "  --commit    - Commit changes and push them to Github (Default)\n"
     printf "  --no-commit - Do not commit changes\n"
+    printf "  -n          - Do not commit changes (same as --no-commit)\n"
     printf "\n"
     printf "  version     - Can be one of:\n"
     printf "                next_minor: Bump the minor version number (Default)\n"
@@ -43,30 +42,14 @@ getYorN() {
 }
 
 
-# Update the version in all build.sbt, source files, and scripts
+# Update the version in build.sbt
 # Note we cannot update the README.md file until we have uploaded the
 # zip file to Dropbox so that we can get its download URL. (see the update_readme() function)
 set_version() {
   local version=$1
   
   ruby -p -i -e 'gsub(/(version\s*:=\s*)("\d+\.\d+")/, "\\1\"'$version'\"")' build.sbt
-  ruby -p -i -e 'gsub(/'$jarfile_prefix'_2.13-(\d+\.\d+)\.jar/, "'$jarfile_prefix'_2.13-'$version'.jar")' src/other/$program_name src/other/$program_name.cmd
-  ruby -p -i -e 'gsub(/(val\s+SOFTWARE_VERSION\s*=\s*)("\d+\.\d+")/, "\\1\"'$version'\"")' ${main_class}
   printf "Version set to $version\n"
-}
-
-create_package() {
-  local version=$1
-
-  PKG=$program_name-$version
-  if [ -d target/$PKG ]; then
-    find target/$PKG -name .DS_Store -exec rm {} \+
-    rm -f target/${PKG}.zip
-    (cd target; zip -rq ${PKG}.zip $PKG)
-  else
-    printf "Target directory: 'target/$PKG' does not exist\n"
-    exit 1
-  fi
 }
 
 # Add the files that we have modified to the git index,
@@ -111,10 +94,16 @@ get_access_token() {
 # Get the sharable url for the zip file and echo it to stdout
 get_zipfile_url() {
   local version="$1"
-  local dropbox_zip_file_path="/$program_name/$program_name-${version}.zip"
+  local local_zip_file_path="target/$program_name-${version}.zip"
+  local dropbox_zip_file_path="/$dropbox_folder/$program_name-${version}.zip"
   local access_token=""
   local response=/tmp/get_zipfile_url_response.$$
   local result=1
+
+  [[ -f $local_zip_file_path ]] || {
+    printf "zip file does not exist: $local_zip_file_path\n"
+    return 1
+  }
 
   # NOTE:  We cannot assign this in the local variable declaration
   #        because we would lose the returned error code and would
@@ -147,7 +136,7 @@ get_zipfile_url() {
 upload_zipfile() {
   local version="$1"
   local local_zip_file_path="target/$program_name-${version}.zip"
-  local dropbox_zip_file_path="/$program_name/$program_name-${version}.zip"
+  local dropbox_zip_file_path="/$dropbox_folder/$program_name-${version}.zip"
   local access_token=""
   local response=/tmp/upload_response.$$
   local result=1
@@ -237,35 +226,10 @@ esac
 ## This is important because sbt' must be run from the top level directory
 cd $(dirname $0)/..
 
-ID_FILE="$(dirname $0)/local_package_vars.sh"
-[[ -f "$ID_FILE" ]] || {
-  printf "File not found: $ID_FILE\n"
-  exit 1
-}
-
-# Sets the program_name and main_class variables
-source $ID_FILE
-
-
-[[ -z ${program_name+x} ]] && {
-  printf "variable 'program_name' is not set in $ID_FILE\n"
-  exit 1
-}
-
-[[ -z ${main_class+x} ]] && {
-  printf "variable 'main_class' is not set in $ID_FILE\n"
-  exit 1
-}
-
-[[ -z ${jarfile_prefix+x} ]] && {
-  printf "variable 'jarfile_prefix' is not set in $ID_FILE\n"
-  exit 1
-}
-
-
-
-# Make sure the main_class includes the .scala extentsion
-main_class="${main_class%.scala}.scala"
+# Program name and dropbox folder are used to
+# upload the zip file to dropbox
+program_name=awakening
+dropbox_folder=awakening
 
 # Make sure we are on the master branch
 branch=$(git branch --show-current 2>/dev/null)
@@ -274,7 +238,7 @@ if [[ $? -ne 0 ]]; then
   printf "\Cannot determine the current branch!\n"
   exit 1
 elif [[ $branch != "master" ]]; then
-  printf "Must be on 'master' branch to create the package.\n"
+  printf "Must be on 'master' branch to create the release.\n"
   printf "Current branch is '$branch'"
   exit 1
   
@@ -306,13 +270,13 @@ else
 fi
 
 if [[ $CURRENT_VERSION != $NEW_VERSION ]]; then
-  if getYorN "Set version to $NEW_VERSION and build package?"; then
+  if getYorN "Set version to $NEW_VERSION and create a release?"; then
     set_version $NEW_VERSION
   else
     exit 0
   fi
 else
-  getYorN "Build package for version $NEW_VERSION?" || exit 0
+  getYorN "Create a release for version $NEW_VERSION?" || exit 0
 fi
 
 
@@ -324,7 +288,6 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 trap 'printf "\"${last_command}\" command failed with exit code $?.\n"' EXIT
 
 sbt stage
-create_package $NEW_VERSION
 upload_zipfile $NEW_VERSION
 update_readme  $NEW_VERSION
 if [[ $DO_COMMIT == yes ]]; then

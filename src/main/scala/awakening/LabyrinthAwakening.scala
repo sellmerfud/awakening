@@ -38,7 +38,7 @@
 
 package awakening
 
-import java.io.IOException
+import java.io.{ IOException, BufferedReader, InputStreamReader }
 import scala.util.Random.{shuffle, nextInt}
 import scala.annotation.tailrec
 import scala.util.Properties.{lineSeparator, isWin}
@@ -50,9 +50,31 @@ import FUtil.Pathname
 
 object LabyrinthAwakening {
   
-  val SOFTWARE_VERSION = "4.21"
-  
-  
+  lazy val SOFTWARE_VERSION: String = {
+    def classLoader: ClassLoader =
+      Thread.currentThread.getContextClassLoader match {
+        case null => this.getClass.getClassLoader match {
+          case null => ClassLoader.getSystemClassLoader
+          case cl => cl
+        }
+        case cl => cl
+      }
+    
+    Option(classLoader.getResourceAsStream("version")) match {
+      case None           => "Missing"
+      case Some(resource) =>
+        try {
+          val reader = new BufferedReader(new InputStreamReader(resource))
+          val version = reader.readLine.trim
+          reader.close
+          version
+        }
+        catch {
+          case e: IOException => "Error"
+        }
+    }
+  }
+    
   def dieRoll = nextInt(6) + 1
   def humanDieRoll(prompt: String = "Enter die roll: ", allowAbort: Boolean = true) =
     if (game.humanAutoRoll)
