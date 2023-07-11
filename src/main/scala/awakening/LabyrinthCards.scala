@@ -1018,7 +1018,7 @@ object LabyrinthCards {
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
       (role: Role) => if (role == game.humanRole)
-        log(s"During US action phases, events on $Jihadist associated cards will not trigger")
+        log(s"On $Jihadist action phases this turn, non-$US events are not playable.")
       else {
         log(s"You ($Jihadist) must select cards to play randomly from your hand")
       }
