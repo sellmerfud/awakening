@@ -31,8 +31,8 @@ getYorN() {
   local response
   
   while true; do
-    printf "\n$prompt (y/n) "
-    read response
+    printf "\n%s (y/n) " "$prompt"
+    read -r response
     case "$response" in
       y*|Y*) return 0;;
       n*|N*) return 1;;
@@ -48,8 +48,8 @@ getYorN() {
 set_version() {
   local version=$1
   
-  ruby -p -i -e 'gsub(/(version\s*:=\s*)("\d+\.\d+")/, "\\1\"'$version'\"")' build.sbt
-  printf "Version set to $version\n"
+  ruby -p -i -e 'gsub(/(version\s*:=\s*)("\d+\.\d+")/, "\\1\"'"$version"'\"")' build.sbt
+  printf "Version set to %s\n" "$version"
 }
 
 # Add the files that we have modified to the git index,
@@ -59,7 +59,7 @@ commit_release() {
 
   git add  --update .
   git ci   -m"Update version number to $version"
-  git tag  -m"Release v$version" v$version
+  git tag  -m"Release v$version" "v$version"
   git push --tags origin master
 }
 
@@ -79,7 +79,7 @@ get_access_token() {
       -d refresh_token="$refresh_token" \
       -d client_id="$client_id" > $response
 
-  if fgrep --quiet '"error":' $response; then
+  if grep -F --quiet '"error":' $response; then
     printf "Error getting access token\n" >&2
     jq . $response >&2
   else
@@ -101,7 +101,7 @@ get_zipfile_url() {
   local result=1
 
   [[ -f $local_zip_file_path ]] || {
-    printf "zip file does not exist: $local_zip_file_path\n"
+    printf "zip file does not exist: %s\n" "$local_zip_file_path"
     return 1
   }
 
@@ -118,10 +118,10 @@ get_zipfile_url() {
       --header "Content-Type: application/json" \
       --data "{\"path\":\"${dropbox_zip_file_path}\"}" > $response
 
-  if fgrep --quiet '"shared_link_already_exists":' $response; then
+  if grep -F --quiet '"shared_link_already_exists":' $response; then
     jq --raw-output '.error.shared_link_already_exists.metadata.url' $response
     result=0
-  elif fgrep --quiet '"error":' $response; then
+  elif grep -F --quiet '"error":' $response; then
     printf "Error getting zipfile url\n" >&2
     jq . $response >&2
   else
@@ -150,17 +150,17 @@ upload_zipfile() {
       --header "Authorization: Bearer $access_token" \
       --header "Dropbox-API-Arg: {\"autorename\":false,\"mode\":\"overwrite\",\"mute\":false,\"path\":\"${dropbox_zip_file_path}\",\"strict_conflict\":false}" \
       --header "Content-Type: application/octet-stream" \
-      --data-binary @"$local_zip_file_path"  >$response
+      --data-binary @"$local_zip_file_path"  >"$response"
 
-  if fgrep --quiet '"error":' $response; then
+  if grep -F --quiet '"error":' "$response"; then
     printf "Error uploading zip file\n" >&2
-    jq . $response >&2
+    jq . "$response" >&2
   else
-    printf "$local_zip_file_path copied to Dropbox\n"
+    printf "%s copied to Dropbox\n" "$local_zip_file_path"
     result=0
   fi
 
-  rm -f $response
+  rm -f "$response"
   return $result
 }
 
@@ -170,9 +170,9 @@ update_readme() {
   local version="$1"  
   local zip_file_url=""
   
-  zip_file_url="$(get_zipfile_url $version)"
+  zip_file_url="$(get_zipfile_url "$version")"
   
-  ruby -p -i -e 'gsub(/\[Version\s*\d+\.\d+\]/, "[Version '$version']")' \
+  ruby -p -i -e 'gsub(/\[Version\s*\d+\.\d+\]/, "[Version '"$version"']")' \
              -e 'gsub(/^\[1\]:.*$/, "[1]: '"$zip_file_url"'")' README.md
   
 }
@@ -224,7 +224,7 @@ esac
 ## Set the current working directory to the parent directory of this script.
 ## (The top level working directory of the git repository)
 ## This is important because sbt' must be run from the top level directory
-cd $(dirname $0)/..
+cd "$(dirname "$0")"/..
 
 # Program name and dropbox folder are used to
 # upload the zip file to dropbox
@@ -239,7 +239,7 @@ if [[ $? -ne 0 ]]; then
   exit 1
 elif [[ $branch != "master" ]]; then
   printf "Must be on 'master' branch to create the release.\n"
-  printf "Current branch is '$branch'"
+  printf "Current branch is '%s'\n" "$branch"
   exit 1
   
 fi
@@ -253,15 +253,15 @@ fi
 
 CURRENT_VERSION=$(grep '^\s*version' build.sbt | tr '"' , | cut -d, -f2)
 
-printf "\nCurrent version is $CURRENT_VERSION\n"
+printf "\nCurrent version is %s\n" "$CURRENT_VERSION"
 if [[ $CURRENT_VERSION =~ ^([[:digit:]]+)\.([[:digit:]]+)$ ]]; then
   MAJOR=${BASH_REMATCH[1]}
   MINOR=${BASH_REMATCH[2]}
   
   case $NEW_VERSION in
     current   ) NEW_VERSION=$CURRENT_VERSION ;;
-    next_major) NEW_VERSION=$(($MAJOR + 1)).0 ;;
-    next_minor) NEW_VERSION=$MAJOR.$(($MINOR + 1)) ;;
+    next_major) NEW_VERSION=$((MAJOR + 1)).0 ;;
+    next_minor) NEW_VERSION=$MAJOR.$((MINOR + 1)) ;;
     *         ) ;; # NEW_VERSION was explicitly given as the argument
   esac
 else
@@ -269,9 +269,9 @@ else
   exit 1
 fi
 
-if [[ $CURRENT_VERSION != $NEW_VERSION ]]; then
+if [[ $CURRENT_VERSION != "$NEW_VERSION" ]]; then
   if getYorN "Set version to $NEW_VERSION and create a release?"; then
-    set_version $NEW_VERSION
+    set_version "$NEW_VERSION"
   else
     exit 0
   fi
@@ -288,13 +288,13 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 trap 'printf "\"${last_command}\" command failed with exit code $?.\n"' EXIT
 
 sbt stage
-upload_zipfile $NEW_VERSION
-update_readme  $NEW_VERSION
+upload_zipfile "$NEW_VERSION"
+update_readme  "$NEW_VERSION"
 if [[ $DO_COMMIT == yes ]]; then
-  commit_release $NEW_VERSION
-  printf "Version $NEW_VERSION successfully created and pushed to Github!"
+  commit_release "$NEW_VERSION"
+  printf "Version %s successfully created and pushed to Github!" "$NEW_VERSION"
 else
-  printf "Version $NEW_VERSION successfully created!"
+  printf "Version %s successfully created!" "$NEW_VERSION"
 fi
 
 trap - DEBUG EXIT
