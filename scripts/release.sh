@@ -269,6 +269,7 @@ else
   exit 1
 fi
 
+# Add a comment
 if [[ $CURRENT_VERSION != "$NEW_VERSION" ]]; then
   if getYorN "Set version to $NEW_VERSION and create a release?"; then
     set_version "$NEW_VERSION"
