@@ -107,7 +107,7 @@ object LabyrinthAwakening {
     }
   }
   
-  implicit val GameModeOrdering = Ordering.by { m: GameMode => m.orderValue }
+  implicit val GameModeOrdering: Ordering[GameMode] = Ordering.by { m: GameMode => m.orderValue }
   
   
   sealed trait CardAssociation
@@ -131,7 +131,7 @@ object LabyrinthAwakening {
   
   def oppositeRole(role: Role) = if (role == US) Jihadist else US
   
-  implicit val BotDifficultyOrdering = Ordering.by { x: BotDifficulty => x.order }
+  implicit val BotDifficultyOrdering: Ordering[BotDifficulty] = Ordering.by { x: BotDifficulty => x.order }
   
   // US
   val OffGuard  = BotDifficulty(1, "Off Guard", "Standard rules")
@@ -175,7 +175,7 @@ object LabyrinthAwakening {
   }
   
   // Order so that the most dangerous come first: WMD, 3, 2, 1
-  implicit val PlotOrdering = new Ordering[Plot] {
+  implicit val PlotOrdering: Ordering[Plot] = new Ordering[Plot] {
     def compare(x: Plot, y: Plot) = (x, y) match {
       case (PlotWMD, PlotWMD) =>  0
       case (PlotWMD, _)       => -1
@@ -209,7 +209,7 @@ object LabyrinthAwakening {
   case class PlotOnMap(plot: Plot, backlashed: Boolean = false) {
     override def toString() = if (backlashed) s"${plot.name} (backlashed)" else plot.name
   }
-  implicit val PlotOnMapOrdering = Ordering.by { x: PlotOnMap => x.plot }
+  implicit val PlotOnMapOrdering: Ordering[PlotOnMap] = Ordering.by { x: PlotOnMap => x.plot }
 
   val NoRegimeChange    = "None"
   val GreenRegimeChange = "Green"
@@ -583,7 +583,7 @@ object LabyrinthAwakening {
   // based on the following sort order.
   // - markers represent smaller numbers of troops come first
   // - markers that suffer prestige loss come first??
-  implicit val TroopsMarkerOrdering = new Ordering[TroopsMarker] {
+  implicit val TroopsMarkerOrdering: Ordering[TroopsMarker] = new Ordering[TroopsMarker] {
     def compare(x: TroopsMarker, y: TroopsMarker) = 
       if (x.num == y.num)
         y.prestigeLoss compare x.prestigeLoss // reversed
@@ -785,7 +785,7 @@ object LabyrinthAwakening {
   }
   
   // Sort by card number
-  implicit val CardOrdering = new Ordering[Card] {
+  implicit val CardOrdering: Ordering[Card] = new Ordering[Card] {
     def compare(x: Card, y: Card) = x.number compare y.number
   }
   
@@ -5833,8 +5833,8 @@ object LabyrinthAwakening {
             throw new InvalidArgumentException(s"Invalid US resolve value '$arg'")
         }
         banner = "awakening [options]"
-        separator("")
-        separator("Options:")
+        this.separator("")
+        this.separator("Options:")
         val saved = savedGames
         if (saved.isEmpty)
           reqd[String]("-g", "--game=name", "Resume a game in progress")
