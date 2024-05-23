@@ -58,7 +58,7 @@ commit_release() {
   local version=$1
 
   git add  --update .
-  git ci   -m"Update version number to $version"
+  git ci   -m"build: update version number to $version"
   git tag  -m"Release v$version" "v$version"
   git push --tags origin master
 }
