@@ -25,17 +25,8 @@ package loader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.LineNumberReader;
-import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.InetAddress;
 import java.security.Policy;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Iterator;
 
 // This is a boostrap loader for loading the main application.
 // To simplify loading the server this lightweight class
