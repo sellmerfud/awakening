@@ -6,4 +6,4 @@
 ## Set the current working directory to the directory where this script is running.
 ## This is important so that all of our relative path references work correctly.
 cd `dirname $0`
-java -cp "lib/loader.jar" loader.Loader "$@"
+java -cp "lib/loader.jar" "-Dloader.targetClass=awakening.LabyrinthAwakening" loader.Loader "$@"

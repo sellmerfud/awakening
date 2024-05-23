@@ -44,10 +44,6 @@ import java.util.Iterator;
 
 public class Loader {
 
-  // Class to load with main entry point.
-  private static final String APP_CLASS = "awakening.LabyrinthAwakening";
-  
-  
   public static void main(String[] args) {
     Loader instance = new Loader();
     System.exit(instance.run(args));
@@ -98,6 +94,9 @@ public class Loader {
   //  call 'lib' which contains the jar files needed to run the application.
   //  The script that invokes this Loader is responsible for doing that.
   private int startApplication(String[] args) {
+    String app_class = System.getProperty("loader.targetClass");
+    if (app_class == null) 
+      error("loader.targetClass property is not defined.");
       
     File libDir = new File("./lib");
     if (!libDir.isDirectory())
@@ -128,9 +127,9 @@ public class Loader {
     }
 
     Class<?> applicationClass = null;
-    try { applicationClass = cl.loadClass(APP_CLASS); }
+    try { applicationClass = cl.loadClass(app_class); }
     catch (ClassNotFoundException e) {
-      error("Unable to load " + APP_CLASS + ": " + e.getMessage());
+      error("Unable to load " + app_class + ": " + e.getMessage());
    }
         
     // We have successfully loaded the class, now use Reflection
@@ -145,7 +144,7 @@ public class Loader {
     }
     catch (Exception e) {
       e.printStackTrace();
-      error("Unable to invoke " + APP_CLASS + ".main(): " + e.getMessage());
+      error("Unable to invoke " + app_class + ".main(): " + e.getMessage());
       return 1;
     }
   }

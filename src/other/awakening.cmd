@@ -8,6 +8,6 @@ rem solo AI for Labyrinth: The Awakening
 rem Set the current working directory to the directory where this script is running.
 rem This is important so that all of our relative path references work correctly.
 pushd %~dp0
-java -cp lib\loader.jar loader.Loader %*
+java -cp lib\loader.jar -Dloader.targetClass=awakening.LabyrinthAwakening loader.Loader %*
 popd
 EndLocal
