@@ -52,117 +52,30 @@ set_version() {
   printf "Version set to %s\n" "$version"
 }
 
+zipfile_name() {
+  local version=$1
+  printf "%s" "$program_name-${version}.zip"
+}
+
 # Add the files that we have modified to the git index,
 # commit the release, and push it to Github
 commit_release() {
   local version=$1
+  local version_label="v$version"
+  local local_zip_file_path
+
+  local_zip_file_path="target/$(zipfile_name "$version")"
 
   git add  --update .
   git ci   -m"build: update version number to $version"
-  git tag  -m"Release v$version" "v$version"
+  git tag  -m"Release $version_label" "$version_label"
   git push --tags origin master
+  gh release create --generate-notes --title "Version $version" "$version_label"
+  # Upload the zip file to the release assests
+  gh release upload "$version_label" "$local_zip_file_path"
 }
 
 
-
-# Get a short term access token for the dropbox api using our refresh token.
-# We must do this because the access tokens are shot term and will expire
-# in about 4 hours.
-get_access_token() {
-  local refresh_token="$(head -n1 ~/.dropbox/game_bots_refresh_token)"
-  local client_id="$(head -n1 ~/.dropbox/game_bots_client_id)"
-  local response=/tmp/access_token_response.$$
-  local result=1
-
-  curl -s https://api.dropbox.com/oauth2/token \
-      -d grant_type=refresh_token \
-      -d refresh_token="$refresh_token" \
-      -d client_id="$client_id" > $response
-
-  if grep -F --quiet '"error":' $response; then
-    printf "Error getting access token\n" >&2
-    jq . $response >&2
-  else
-    jq --raw-output .access_token $response
-    result=0
-  fi
-
-  rm -f $response
-  return $result
-}
-
-# Get the sharable url for the zip file and echo it to stdout
-get_zipfile_url() {
-  local version="$1"
-  local local_zip_file_path="target/$program_name-${version}.zip"
-  local dropbox_zip_file_path="/$dropbox_folder/$program_name-${version}.zip"
-  local access_token=""
-  local response=/tmp/get_zipfile_url_response.$$
-  local result=1
-
-  [[ -f $local_zip_file_path ]] || {
-    printf "zip file does not exist: %s\n" "$local_zip_file_path"
-    return 1
-  }
-
-  # NOTE:  We cannot assign this in the local variable declaration
-  #        because we would lose the returned error code and would
-  #        get the success error code from the 'local' function.
-  access_token="$(get_access_token)"
-  
-  # If the url already exists then an error object is returned with the url buried
-  # several layers down.  Otherwise it is in the field .url at top level.
-
-  curl -s -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
-      --header "Authorization: Bearer $access_token" \
-      --header "Content-Type: application/json" \
-      --data "{\"path\":\"${dropbox_zip_file_path}\"}" > $response
-
-  if grep -F --quiet '"shared_link_already_exists":' $response; then
-    jq --raw-output '.error.shared_link_already_exists.metadata.url' $response
-    result=0
-  elif grep -F --quiet '"error":' $response; then
-    printf "Error getting zipfile url\n" >&2
-    jq . $response >&2
-  else
-    jq --raw-output '.url' $response
-    result=0
-  fi
-  
-  rm -f $response
-  return $result
-}
-
-upload_zipfile() {
-  local version="$1"
-  local local_zip_file_path="target/$program_name-${version}.zip"
-  local dropbox_zip_file_path="/$dropbox_folder/$program_name-${version}.zip"
-  local access_token=""
-  local response=/tmp/upload_response.$$
-  local result=1
-
-  # NOTE:  We cannot assign this in the local variable declaration
-  #        because we would lose the returned error code and would
-  #        get the success error code from the 'local' function.
-  access_token="$(get_access_token)"
-
-  curl -s -X POST https://content.dropboxapi.com/2/files/upload \
-      --header "Authorization: Bearer $access_token" \
-      --header "Dropbox-API-Arg: {\"autorename\":false,\"mode\":\"overwrite\",\"mute\":false,\"path\":\"${dropbox_zip_file_path}\",\"strict_conflict\":false}" \
-      --header "Content-Type: application/octet-stream" \
-      --data-binary @"$local_zip_file_path"  >"$response"
-
-  if grep -F --quiet '"error":' "$response"; then
-    printf "Error uploading zip file\n" >&2
-    jq . "$response" >&2
-  else
-    printf "%s copied to Dropbox\n" "$local_zip_file_path"
-    result=0
-  fi
-
-  rm -f "$response"
-  return $result
-}
 
 # Update the README.md file with the new
 # version number and dropbox url
@@ -170,11 +83,10 @@ update_readme() {
   local version="$1"  
   local zip_file_url=""
   
-  zip_file_url="$(get_zipfile_url "$version")"
+  zip_file_url="https://github.com/sellmerfud/${repo_name}/releases/download/v${version}/$(zipfile_name "$version")"
   
   ruby -p -i -e 'gsub(/\[Version\s*\d+\.\d+\]/, "[Version '"$version"']")' \
              -e 'gsub(/^\[1\]:.*$/, "[1]: '"$zip_file_url"'")' README.md
-  
 }
 
 # Start of main script
@@ -228,13 +140,13 @@ cd "$(dirname "$0")"/..
 
 # Program name and dropbox folder are used to
 # upload the zip file to dropbox
+repo_name=awakening
 program_name=awakening
-dropbox_folder=awakening
 
 # Make sure we are on the master branch
 branch=$(git branch --show-current 2>/dev/null)
 
-if [[ $? -ne 0 ]]; then
+if ! branch=$(git branch --show-current 2>/dev/null); then
   printf "\Cannot determine the current branch!\n"
   exit 1
 elif [[ $branch != "master" ]]; then
@@ -288,7 +200,6 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 trap 'printf "\"${last_command}\" command failed with exit code $?.\n"' EXIT
 
 sbt stage
-upload_zipfile "$NEW_VERSION"
 update_readme  "$NEW_VERSION"
 if [[ $DO_COMMIT == yes ]]; then
   commit_release "$NEW_VERSION"

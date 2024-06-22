@@ -1,6 +1,6 @@
 
-
-_default:
+[private]
+default:
   @just --list
   
 # Show current version number
@@ -8,5 +8,8 @@ _default:
   grep '^\s*version' build.sbt
 
 # Package up a new version
-release COMMIT="--commit" VERSION="next_minor":
+@release COMMIT="--commit" VERSION="next_minor":
   scripts/release.sh {{COMMIT}} {{VERSION}}
+
+
+
