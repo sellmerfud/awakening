@@ -96,28 +96,22 @@ update_readme() {
 
 # Commit changes by default
 DO_COMMIT=yes
+NEW_VERSION=""
 
-case "$1" in
-  --commit)
-    shift
-    ;;
-    
-  -n|--no-commit)
-    DO_COMMIT=no
-    shift
-    ;;
-    
-  -*)
-    usage
-    ;;
-esac
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --commit)
+      DO_COMMIT=yes
+      ;;
+      
+    -n|--no-commit)
+      DO_COMMIT=no
+      ;;
+      
+    -*)
+      usage
+      ;;
 
-# The deafault action if no paramter is given is to update the minor version number
-case "$1" in
-  "") 
-    NEW_VERSION=next_minor
-    ;;
-    
   +([0-9]).+([0-9]))
     NEW_VERSION="$1"
     ;;
@@ -133,8 +127,12 @@ case "$1" in
   *)
     usage
     ;;
-esac
+  esac
+  shift
+done
 
+# If not specified, default is next_minor
+NEW_VERSION=${NEW_VERSION:-next_minor}
   
 ## Set the current working directory to the parent directory of this script.
 ## (The top level working directory of the git repository)

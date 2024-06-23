@@ -1,15 +1,16 @@
 
 [private]
 default:
-  @just --list
+  @just --list --justfile {{justfile()}}
   
 # Show current version number
 @showvers:
   grep '^\s*version' build.sbt
 
 # Package up a new version
-@release COMMIT="--commit" VERSION="next_minor":
-  scripts/release.sh {{COMMIT}} {{VERSION}}
+@release *ARGS:
+  scripts/release.sh {{ARGS}}
+
 
 
 
