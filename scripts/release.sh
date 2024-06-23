@@ -70,9 +70,12 @@ commit_release() {
   git ci   -m"build: update version number to $version"
   git tag  -m"Release $version_label" "$version_label"
   git push --tags origin master
-  gh release create --generate-notes --title "Version $version" "$version_label"
-  # Upload the zip file to the release assests
-  gh release upload "$version_label" "$local_zip_file_path"
+    # Create the release and upload the zip file to the release assests
+  gh release create \
+    --generate-notes \
+    --title "Version $version" \
+    "$version_label" \
+    "$local_zip_file_path"
 }
 
 
