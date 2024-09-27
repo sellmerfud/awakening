@@ -6850,6 +6850,7 @@ object LabyrinthAwakening {
     val PlotAction   = "plot"
     val AddReserves  = "add to reserves"
     val UseReserves  = "expend reserves"
+    val RemoveCadre  = "remove cadre"
     var reservesUsed          = 0
     var opponentEventResolved = false
     var firstPlot             = false
@@ -6870,7 +6871,8 @@ object LabyrinthAwakening {
           choice(game.jihadPossible,                 Jihad),
           choice(game.plotPossible(opsAvailable),    PlotAction),
           choice(card.ops < 3 && inReserve < 2,      AddReserves),
-          choice(opsAvailable < 3 && inReserve > 0,  UseReserves)
+          choice(opsAvailable < 3 && inReserve > 0,  UseReserves),
+          choice(game.hasCountry(_.hasCadre),        RemoveCadre)
         ).flatten
   
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
@@ -6880,6 +6882,11 @@ object LabyrinthAwakening {
           reservesUsed = inReserve
           log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}")
           game = game.copy(reserves = game.reserves.copy(jihadist = 0))
+          getAction()
+        case Some(RemoveCadre) =>
+          val candidates = countryNames(game.countries.filter(_.hasCadre))
+          val target = askCountry("Remove a cadre from which country? ", candidates: List[String])
+          removeCadreFromCountry(target)
           getAction()
         case Some(action) => action
         case None         => getAction()
