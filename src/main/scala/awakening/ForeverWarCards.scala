@@ -2133,7 +2133,7 @@ object ForeverWarCards {
           else
               JihadistBot.chooseCellsToRemove(Iran, 1)
           
-          removeCellsFromCountry(Iran, actives, sleepers, sadr, addCadre = false)
+          removeCellsFromCountry(Iran, actives, sleepers, sadr, addCadre = true)
         }
       }
     )),
@@ -2161,7 +2161,7 @@ object ForeverWarCards {
           else
               JihadistBot.chooseCellsToRemove(Syria, 1)
           
-          removeCellsFromCountry(Syria, actives, sleepers, sadr, addCadre = false)
+          removeCellsFromCountry(Syria, actives, sleepers, sadr, addCadre = true)
         }
       }
     )),
@@ -2546,7 +2546,7 @@ object ForeverWarCards {
         }
         
         addEventTarget(target)
-        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = false)
+        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
         for (plot <- plots)
           addAvailablePlotToCountry(target, plot)
       }
@@ -3305,7 +3305,7 @@ object ForeverWarCards {
           else
             JihadistBot.chooseCellsToRemove(Iran, 1)
           
-          removeCellsFromCountry(Iran, actives, sleepers, sadr, addCadre = false)
+          removeCellsFromCountry(Iran, actives, sleepers, sadr, addCadre = true)
           
           if (game.getCountry(Iran).wmdCache > 0)
             moveWMDCacheToAvailable(Iran, 1)
@@ -3567,7 +3567,7 @@ object ForeverWarCards {
             else
               (JihadistBot.chooseCellsToRemove(target, 1), JihadistBot.chooseTroopOrMilitiaToRemove(target))
             
-            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = false)
+            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
             usUnit match {
               case "militia-cube" => removeMilitiaFromCountry(target, 1)
               case "troop-cube"   => moveTroops(target, "track", 1)

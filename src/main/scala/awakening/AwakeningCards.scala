@@ -2306,7 +2306,7 @@ object AwakeningCards {
         }
 
         addEventTarget(target)
-        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = false)
+        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
         for (plot <- plots)
           addAvailablePlotToCountry(target, plot)
       }
@@ -2465,7 +2465,7 @@ object AwakeningCards {
           (name, plots, JihadistBot.chooseCellsToRemove(name, 3))
         }
         addEventTarget(target)
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = false)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
         plots foreach { p => addAvailablePlotToCountry(target, p) }
         // It is possible that the country is no longer a Muslim country.
         // For example: Target is Nigeria and we jsut removed the last cell (rule 11.3.3.3)
@@ -3951,7 +3951,7 @@ object AwakeningCards {
         val m = game getMuslim name
         endCivilWar(name)  // This will remove the militia
         moveTroops(name, "track", m.troops)
-        removeCellsFromCountry(name, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = false)
+        removeCellsFromCountry(name, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = true)
         addAwakeningMarker(name, m.militia)
         addReactionMarker(name, m.totalCells)
         setAlignment(name, Neutral)

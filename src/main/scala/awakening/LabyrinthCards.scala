@@ -1925,7 +1925,7 @@ object LabyrinthCards {
         }
         
         addEventTarget(target)
-        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = false)
+        removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
         for (plot <- plots)
           addAvailablePlotToCountry(target, plot)
       }
