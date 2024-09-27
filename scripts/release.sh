@@ -67,7 +67,7 @@ commit_release() {
   local_zip_file_path="target/$(zipfile_name "$version")"
 
   git add  --update .
-  git ci   -m"build: update version number to $version"
+  git commit -m"build: update version number to $version"
   git tag  -m"Release $version_label" "$version_label"
   git push --tags origin master
     # Create the release and upload the zip file to the release assests
