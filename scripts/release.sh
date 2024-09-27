@@ -198,6 +198,7 @@ current_command=$BASH_COMMAND
 # keep track of the last executed command
 trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 # echo an error message before exiting
+# shellcheck disable=SC2154
 trap 'printf "\"${last_command}\" command failed with exit code $?.\n"' EXIT
 
 sbt stage
