@@ -2314,13 +2314,17 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(191, "Muslim Brotherhood", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => lapsingEventNotInPlay(ArabWinter)
+      (role: Role, forTrigger: Boolean) => 
+        lapsingEventNotInPlay(ArabWinter) &&
+        game.muslims.exists(_.canTakeAwakeningOrReactionMarker)
       ,
       (role: Role) => {
         val candidates = countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))
 
-        val other2 = if (role == game.humanRole)
+        val other2 = if (role == game.humanRole && candidates.size > 1)
           askCountries(2, candidates, allowDuplicates = true)
+        else if (role == game.humanRole)
+          List(candidates.head, candidates.head)
         else
           JihadistBot.multipleTargets(2, candidates, JihadistBot.markerAlignGovTarget)
 
