@@ -2762,7 +2762,7 @@ object ForeverWarCards {
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => globalEventInPlay(Euroscepticism) ||
                                   (game hasNonMuslim (n => n.isSchengen && n.totalCells > 0)) ||
-                                  (game.plotData.resolvedTargets exists Schengen.contains)
+                                  game.resolvedPlotTargets.exists(t => Schengen.contains(t.name))
       ,
       (role: Role) => if (role == US) {
         addEventTarget(UnitedKingdom)

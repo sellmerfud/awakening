@@ -9,7 +9,7 @@ shopt -s extglob
 
 usage() {
   {
-    printf "usage: package.sh [--commit|--no_commit|-n] [version]\n"
+    printf "usage: release.sh [--commit|--no_commit|-n] [version]\n"
     printf "  --commit    - Commit changes and push them to Github (Default)\n"
     printf "  --no-commit - Do not commit changes\n"
     printf "  -n          - Do not commit changes (same as --no-commit)\n"
