@@ -1214,7 +1214,11 @@ object LabyrinthAwakening {
     def resolvedPlotTargets = plotData.resolvedTargets
 
     // The methods assume a valid name and will throw an exception if an invalid name is used!
-    def getCountry(name: String)   = (countries find (_.name == name)).get
+    def getCountry(name: String) = {
+      if (currentMode == LabyrinthMode && (name == Nigeria || name == Mali))
+        throw new IllegalArgumentException(s"getCountry() '$name' is not available in Labyrinth mode")
+      (countries find (_.name == name)).get
+    }
     def getMuslim(name: String)    = (muslims find (_.name == name)).get
     def getNonMuslim(name: String) = (nonMuslims find (_.name == name)).get
 
@@ -5745,8 +5749,8 @@ object LabyrinthAwakening {
 
       // Reset history list of plays. They are not stored in turn files.
       game = game.copy(plays = Nil)
-      saveGameState()
       game = game.copy(turn = game.turn + 1)
+      saveGameState()
     }
   }
 
