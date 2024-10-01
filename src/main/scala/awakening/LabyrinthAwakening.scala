@@ -1139,7 +1139,8 @@ object LabyrinthAwakening {
     case object Red extends Color { val name: String = "Red"; val sequence: String = Console.RED; }
     case object Blue extends Color { val name: String = "Blue"; val sequence: String = Console.BLUE; }
     case object Cyan extends Color { val name: String = "Cyan"; val sequence: String = Console.CYAN; }
-    case object Magenta extends Color { val name: String = "Magenta"; val sequence: String = Console.MAGENTA; }
+    // case object Magenta extends Color { val name: String = "Magenta"; val sequence: String = Console.MAGENTA; }
+    case object Magenta extends Color { val name: String = "Magenta"; val sequence: String = "\u001B[95m"; }
     case object Yellow extends Color { val name: String = "Yellow"; val sequence: String = Console.YELLOW; }
     case object Green extends Color { val name: String = "Green"; val sequence: String = Console.GREEN; }
 
