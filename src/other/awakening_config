@@ -62,3 +62,11 @@ us-resolve =
 # If set to human, you will be prompted to enter the value
 # of each die roll during your turn.
 dice =
+
+# By default color is logged on non-Windows systems.
+# The Windows command console on older (Pre Windows 10) versions
+# of Windows does not support color, so color is disabled by default
+# on Windows systems.  If you are running a version of Windows that
+# supports color in the console, then you can set this value to yes.
+# Or if you want to disable color on your system then set it to no.
+color =

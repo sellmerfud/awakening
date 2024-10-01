@@ -1769,7 +1769,8 @@ object LabyrinthAwakening {
     campaign: Boolean,
     humanRole: Role,
     humanAutoRoll: Boolean,
-    botDifficulties: List[BotDifficulty]) = {
+    botDifficulties: List[BotDifficulty],
+    showColor: Boolean) = {
 
     var countries = if (scenario.startingMode == LabyrinthMode && !campaign)
       LabyrinthDefaultCountries
@@ -1798,12 +1799,13 @@ object LabyrinthAwakening {
       PlotData(availablePlots = scenario.availablePlots.sorted, removedPlots = scenario.removedPlots),
       false,  // sequestrationTroops: true if 3 troops off map due to Sequestration event
       cardsRemoved = scenario.cardsRemoved,
+      showColor = showColor,
       offMapTroops = scenario.offMapTroops)
   }
 
 
   // Global variables
-  var game = initialGameState(Awakening, false, US, true, Muddled :: Nil)
+  var game = initialGameState(Awakening, false, US, true, Muddled :: Nil, !scala.util.Properties.isWin)
 
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -5451,6 +5453,7 @@ object LabyrinthAwakening {
               ))
               log("Flip Nigeria over to its Muslim side", Color.Event)
               log("Nigeria is now a Poor Neutral Muslim country", Color.Event)
+              logWorldPosture()
             }
             else if (n.canChangePosture) {
               rollCountryPosture(n.name)
@@ -5885,7 +5888,8 @@ object LabyrinthAwakening {
 
             gameName = Some(askGameName("Enter a name for your new game: "))
 
-            game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties)
+            val showColor = cmdLineParams.showColor orElse configParams.showColor getOrElse !scala.util.Properties.isWin
+            game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties, showColor)
             logSummary(game.scenarioSummary)
             printSummary(game.scoringSummary)
             if (scenario.cardsRemoved.nonEmpty) {
@@ -5990,6 +5994,8 @@ object LabyrinthAwakening {
           val values = (v map { case USDiff(diff) => diff }).sorted.distinct
           c.copy(usResolve = values)
         }
+        bool("", "--color", "Show colored log messages")
+          { (v, c) => c.copy(showColor = Some(v)) }
         reqd[String]("", "--file=path", "Path to a saved game file")
           { (v, c) => c.copy(gameFile = Some(v)) }
         flag("-v", "--version", "Display program version and exit") { (c) =>
@@ -6036,6 +6042,7 @@ object LabyrinthAwakening {
     val autoDice: Option[Boolean] = None,
     val ideology: List[BotDifficulty] = Nil,
     val usResolve: List[BotDifficulty] = Nil,
+    val showColor: Option[Boolean] = None,
     val gameFile: Option[String] = None) {
 
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
@@ -6116,6 +6123,13 @@ object LabyrinthAwakening {
             params = params.copy(usResolve = (tokens.distinct map BotDifficulty.apply).sorted)
           else
             println(s"Ignoring invalid us-resolve value ($value) in awakening_config file")
+        }
+        propValue("color") foreach { value =>
+          value.toLowerCase match {
+            case "yes" => params = params.copy(showColor = Some(true))
+            case "no"  => params = params.copy(showColor = Some(false))
+            case _ => println(s"Ignoring invalid color value ($value) in awakening_config file")
+          }
         }
         params
       }
