@@ -3125,12 +3125,22 @@ object LabyrinthAwakening {
     val save_path   = gamesDir/gameName.get/getSaveName(save_number)
     val log_path    = gamesDir/gameName.get/getLogName(save_number)
     val segmentDesc = desc orElse game.plays.headOption.map(_.toString) getOrElse ""
+    val cardsPlayed = (game.plays map (_.numCards)).sum
+    val turnInfo = game.plays.headOption match {
+      case Some(_: PlayedReassement) =>
+        s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} card play)"
+      case Some(_: PlayedCard) =>
+          s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card play)"
+      case _ =>
+        s"(turn ${game.turn} - ${amountOf(cardsPlayed, "card")} played)"
+    }
     val gameDesc    = Seq(
       s"scenario: ${game.scenarioName}",
       s"playing: ${game.humanRole}",
-      s"last action: $segmentDesc"
+      s"last action: $segmentDesc",
+      turnInfo
     ).mkString(", ")
-    val segment = GameSegment(save_number, Seq(segmentDesc))
+    val segment = GameSegment(save_number, Seq(segmentDesc, turnInfo))
 
     // Make sure that the game directory exists
     save_path.dirname.mkpath()
