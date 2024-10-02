@@ -2974,7 +2974,7 @@ object LabyrinthAwakening {
 
 
   def logWorldPosture(): Unit = {
-    log(s"World Posture is ${game.worldPostureDisplay}  (GWOT penalty ${game.gwotPenalty})")
+    log(s"World Posture is ${game.worldPostureDisplay}  (GWOT penalty ${game.gwotPenalty})", Color.Info)
   }
 
 
