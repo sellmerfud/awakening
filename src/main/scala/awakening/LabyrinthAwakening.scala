@@ -2933,12 +2933,11 @@ object LabyrinthAwakening {
   // Return a sorted list of the names of the given countries
   def countryNames(candidates: List[Country]) = (candidates map (_.name)).sorted.distinct
 
-  // Get ordinal number.  Good for 1 to 20.
+  // Get ordinal number.
   def ordinal(i: Int): String = i match {
-    case 1 => "1st"
-    case 2 => "2nd"
-    case 3 => "3rd"
-    case x if x > 20 => throw new IllegalArgumentException("ordinal() only good for numbers <= 20")
+    case x if x != 11 && x % 10 == 1 => s"${x}st"
+    case x if x != 12 && x % 10 == 2 => s"${x}nd"
+    case x if x != 13 && x % 10 == 3 => s"${x}rd"
     case x => s"${x}th"
   }
 
