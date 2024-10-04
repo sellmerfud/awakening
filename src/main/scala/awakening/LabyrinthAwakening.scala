@@ -3222,7 +3222,7 @@ object LabyrinthAwakening {
   // Allows the user to roll back to the beginning of any turn.
   def rollback(input: Option[String]): Unit = {
     try {
-      val pages = game.history.drop(1).reverse.drop(1).sliding(25, 25).toList
+      val pages = game.history.drop(1).reverse.sliding(25, 25).toList
       val firstPage = 0
       val lastPage  = pages.size -1
       val PAGE_UP   = -1
