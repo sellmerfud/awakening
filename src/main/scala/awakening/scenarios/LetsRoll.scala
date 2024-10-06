@@ -43,6 +43,7 @@ import awakening.LabyrinthAwakening._
 object LetsRoll extends Scenario {
   val name           = "Let's Roll"
   val startingMode   = LabyrinthMode
+  val allowsCampaign = true
   val prestige       = 7
   val usPosture      = Hard
   val funding        = 9

@@ -43,6 +43,7 @@ import awakening.LabyrinthAwakening._
 object FallOfISIL extends Scenario {
   val name           = "Fall Of ISIL"
   val startingMode   = ForeverWarMode
+  val allowsCampaign = false
   val prestige       = 5
   val usPosture      = Hard
   val funding        = 6

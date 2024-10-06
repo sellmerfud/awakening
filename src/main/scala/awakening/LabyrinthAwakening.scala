@@ -1081,6 +1081,7 @@ object LabyrinthAwakening {
     val cardsRemoved: List[Int]
     val offMapTroops: Int
     val notes: Seq[String] = Seq.empty
+    val allowsCampaign: Boolean
 
     // Override this if the scenario requires any special setup such
     // as the Jihadist player choosing countries in which to place cells.
@@ -5792,7 +5793,8 @@ object LabyrinthAwakening {
     "IslamicStateOfIraq"  -> IslamicStateOfIraq,
     "FallOfISIL"          -> FallOfISIL,
     "TrumpTakesCommand"   -> TrumpTakesCommand,
-    "HillaryWins"         -> HillaryWins
+    "HillaryWins"         -> HillaryWins,
+    "Surge"               -> Surge,
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
 
@@ -5868,9 +5870,7 @@ object LabyrinthAwakening {
             val scenario = scenarios(scenarioName)
             //  campaign always false when starting with a scenario in the
             //  latest expansion
-            val campaign = if (scenario.startingMode == ForeverWarMode)
-              false
-            else {
+            val campaign = if (scenario.allowsCampaign) {
               cmdLineParams.campaign orElse configParams.campaign getOrElse {
                  val choices = List(
                    "single"   -> "Play single scenario",
@@ -5883,6 +5883,9 @@ object LabyrinthAwakening {
                  }
               }
             }
+            else
+              false
+              
             val humanRole = cmdLineParams.side orElse
                             configParams.side getOrElse {
               // ask which side the user wishes to play

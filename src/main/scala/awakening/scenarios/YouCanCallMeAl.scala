@@ -43,6 +43,7 @@ import awakening.LabyrinthAwakening._
 object YouCanCallMeAl extends Scenario {
   val name           = "You Can Call Me Al"
   val startingMode   = LabyrinthMode
+  val allowsCampaign = true
   val prestige       = 7
   val usPosture      = Soft
   val funding        = 9

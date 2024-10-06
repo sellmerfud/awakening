@@ -44,6 +44,7 @@ import awakening.LabyrinthAwakening._
 object HillaryWins extends Scenario {
   val name           = "Hillary Wins"
   val startingMode   = ForeverWarMode
+  val allowsCampaign = false
   val prestige       = 6
   val usPosture      = Soft
   val funding        = 4

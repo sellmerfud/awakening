@@ -44,6 +44,7 @@ import awakening.JihadistBot
 object Anaconda extends Scenario {
   val name           = "Anaconda"
   val startingMode   = LabyrinthMode
+  val allowsCampaign = true
   val prestige       = 8
   val usPosture      = Hard
   val funding        = 6

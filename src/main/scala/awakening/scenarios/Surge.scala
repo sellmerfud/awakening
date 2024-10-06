@@ -39,44 +39,74 @@
 package awakening.scenarios
 
 import awakening.LabyrinthAwakening._
-import awakening.JihadistBot
 
-object MissionAccomplished extends Scenario {
-  val name           = "Mission Accomplished"
-  val startingMode   = LabyrinthMode
-  val allowsCampaign = true
-  val prestige       = 3
+object Surge extends Scenario {
+  val name           = "Surge: The New Way Forward"
+  val startingMode   = AwakeningMode
+  val allowsCampaign = false
+  val prestige       = 4
   val usPosture      = Hard
-  val funding        = 5
+  val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
   val removedPlots   = Nil
   val countries = List(
-    DefaultLibya.copy(governance = Poor, alignment = Adversary),
-    DefaultSyria.copy(governance = Fair, alignment = Adversary, sleeperCells = 1),
-    DefaultIraq.copy(governance = Poor, alignment = Ally, sleeperCells = 3,
-                    troops = 6, regimeChange = TanRegimeChange),
-    DefaultIran.copy(sleeperCells = 1),
-    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, sleeperCells = 1),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultPakistan.copy(governance = Fair, alignment = Ally, sleeperCells = 1, 
-                         markers = List(FATA)),
-    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, sleeperCells = 1, 
-                            troops = 5, regimeChange = TanRegimeChange),
-    DefaultSomalia.copy(besiegedRegime = true),
-    DefaultCentralAsia.copy(governance = Fair, alignment = Neutral),
-    DefaultIndonesiaMalaysia.copy(governance = Fair, alignment = Neutral, sleeperCells = 1),
-    DefaultPhilippines.copy(postureValue = Soft, sleeperCells = 1, troops = 2,
-                             markers = List(AbuSayyaf)),
-    DefaultUnitedKingdom.copy(postureValue = Hard),
-    DefaultUnitedStates.copy(markers = List(PatriotAct, NEST)))
-  val markersInPlay = List(EnhancedMeasures, Renditions, Wiretapping)
-  val cardsRemoved = List(43, 109, 5, 57, 116, 37)
+    DefaultLibya.copy(
+      governance = Poor,
+      alignment = Adversary),
+    DefaultSyria.copy(
+      isSunni = false,
+      wmdCache = 2,
+      sleeperCells = 1),
+    DefaultIraq.copy(
+      governance = Poor, 
+      alignment = Ally,
+      troops = 5,
+      sleeperCells = 3,
+      regimeChange = TanRegimeChange),
+    DefaultIran.copy(
+      sleeperCells = 1),
+    DefaultSaudiArabia.copy(
+      governance = Poor,
+      alignment = Ally,
+      sleeperCells = 1),
+    DefaultGulfStates.copy(
+      governance = Fair,
+      alignment = Ally,
+      troops = 2),
+    DefaultPakistan.copy(
+      governance = Fair,
+      alignment = Ally,
+      sleeperCells = 1),
+    DefaultAfghanistan.copy(
+      governance = Poor,
+      alignment = Ally,
+      troops = 3,
+      sleeperCells = 2,
+      aidMarkers = 1,
+      regimeChange = TanRegimeChange),
+    DefaultSomalia.copy(
+      governance = Poor,
+      alignment = Neutral,
+      sleeperCells = 1,
+      besiegedRegime = true),
+    DefaultIndonesiaMalaysia.copy(
+      governance = Fair,
+      alignment = Neutral,
+      sleeperCells = 1),
+    DefaultUnitedKingdom.copy(
+      postureValue = Hard),
+    DefaultScandinavia.copy(
+      postureValue = Soft)
+  )
+  val markersInPlay = List.empty[String]
+  val cardsRemoved = List.empty[Int]
   val offMapTroops = 0
-  
-  override val additionalSetup: () => Unit = () => {
-    // The Jihadist player rolls the posture of each Schengen country.
-    for (name <- Schengen)
-      rollCountryPosture(name, logWorld = false)
-    logWorldPosture()
+
+  override
+  val additionalSetup = () => {
+    addEventMarkersToCountry(Iraq, Sadr)
+    addGlobalEventMarker(AlAnbar)
+    addEventMarkersToCountry(Pakistan, FATA)
+    addEventMarkersToCountry(Afghanistan, NATO)
   }
 }

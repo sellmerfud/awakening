@@ -44,6 +44,7 @@ import awakening.LabyrinthAwakening._
 object TrumpTakesCommand extends Scenario {
   val name           = "Trump Takes Command"
   val startingMode   = ForeverWarMode
+  val allowsCampaign = false
   val prestige       = 6
   val usPosture      = Hard
   val funding        = 4
