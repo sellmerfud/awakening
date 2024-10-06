@@ -3605,37 +3605,38 @@ object ForeverWarCards {
           card.executeEvent(US)
           
         }
-        
-        val action = if (role == game.humanRole) {
-          val choices = List(
-            choice(card.eventIsPlayable(role), "event",  s"Play the $cardDisplay event"),
-            choice(!card.autoTrigger,          "discard",s"Discard $cardDisplay with no effect"),
-            choice(true,                       "return", s"Return $cardDisplay to the $opponent hand"),
-            choice(true,                       "keep",   s"Keep $cardDisplay and give another card to the $opponent")
-          ).flatten
-          askMenu("\nChoose one:", choices).head
-        }
-        else { // Bot
-          if (card.autoTrigger || card.eventIsPlayable(role)) "event" else "discard"
-        }
-        
-        action match {
-          case "discard" => log(s"Place $cardDisplay in the discard pile")
-          case "return"  => log(s"Return $cardDisplay to the top of the $opponent hand")
-          case "keep"    => 
-            val giveNum = askCardNumber("Card # of a card from your hand: ", allowNone = false).get
-            val giveDisplay = s""""${deck(giveNum).name}""""
-            
-            log(s"Keep $cardDisplay and place $giveDisplay on top of the $opponent hand")
-          case _ => // Play the event
-            log(s"\n$role executes the $cardDisplay event")
-            log(separator())
-            card.executeEvent(role)
-            
-            if (card.markLapsingAfterExecutingEvent(role))
-              markCardAsLapsing(card.number)
-            else if (card.removeAfterExecutingEvent(role))
-              removeCardFromGame(card.number)
+        else {
+          val action = if (role == game.humanRole) {
+            val choices = List(
+              choice(card.eventIsPlayable(role), "event",  s"Play the $cardDisplay event"),
+              choice(!card.autoTrigger,          "discard",s"Discard $cardDisplay with no effect"),
+              choice(true,                       "return", s"Return $cardDisplay to the $opponent hand"),
+              choice(true,                       "keep",   s"Keep $cardDisplay and give another card to the $opponent")
+            ).flatten
+            askMenu("\nChoose one:", choices).head
+          }
+          else { // Bot
+            if (card.autoTrigger || card.eventIsPlayable(role)) "event" else "discard"
+          }
+          
+          action match {
+            case "discard" => log(s"Place $cardDisplay in the discard pile")
+            case "return"  => log(s"Return $cardDisplay to the top of the $opponent hand")
+            case "keep"    => 
+              val giveNum = askCardNumber("Card # of a card from your hand to give away: ", allowNone = false).get
+              val giveDisplay = s""""${deck(giveNum).name}""""
+              
+              log(s"Keep $cardDisplay and place $giveDisplay on top of the $opponent hand")
+            case _ => // Play the event
+              log(s"\n$role executes the $cardDisplay event")
+              log(separator())
+              card.executeEvent(role)
+              
+              if (card.markLapsingAfterExecutingEvent(role))
+                markCardAsLapsing(card.number)
+              else if (card.removeAfterExecutingEvent(role))
+                removeCardFromGame(card.number)
+          }
         }
       }
     )),
