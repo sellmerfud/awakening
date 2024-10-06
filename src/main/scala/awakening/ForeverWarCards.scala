@@ -3597,6 +3597,8 @@ object ForeverWarCards {
         val card    = deck(cardNum)
         val cardDisplay = s""""${card.name}""""
         
+        cachedEventPlayableAnswer = None
+
         // Avenger card will trigger when randomly drawn.
         if (cardNum == AvengerCard) {
           log()
