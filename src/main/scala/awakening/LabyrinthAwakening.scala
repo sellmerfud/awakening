@@ -5794,7 +5794,9 @@ object LabyrinthAwakening {
     "FallOfISIL"          -> FallOfISIL,
     "TrumpTakesCommand"   -> TrumpTakesCommand,
     "HillaryWins"         -> HillaryWins,
-    "Surge"               -> Surge,
+    // Commented out because the Surge scenario would require a lot of
+    // special case code to ignore Civil War, Militia, etc.
+    // "Surge"               -> Surge,
   )
   val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
 
