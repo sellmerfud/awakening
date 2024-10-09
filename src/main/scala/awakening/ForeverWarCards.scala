@@ -3651,17 +3651,11 @@ object ForeverWarCards {
       }
       ,
       (role: Role) => if (role == US) {
-        val (priorExtraCellCapacity, priorEvent) = (game.extraCellCapacity, game.extraCellEvent)
+        val priorExtraCellCapacity = game.extraCellCapacity
 
         increasePrestige(2)
         decreaseFunding(1)
-        removeGlobalEventMarker(AlBaghdadi)
-        //  This was the event that placed the extra cells then
-        //  clear the extraCellEvent
-        if (game.extraCellEvent == Some(AlBaghdadi))
-          game = game.copy(extraCellEvent = None)
-        
-        updateExtraCellCapacity(priorExtraCellCapacity, priorEvent)
+        removeGlobalEventMarker(AlBaghdadi)        
       }
       else {  // role == Jihadist
         playExtraCellsEvent(AlBaghdadi)
