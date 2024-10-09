@@ -3325,7 +3325,7 @@ object LabyrinthAwakening {
     show(from.militiaAvailable, to.militiaAvailable, s"Set available militia to ${to.militiaAvailable}")
     show(from.funding, to.funding, s"Set jihadist funding to ${to.funding} (${to.fundingLevel})")
     show(from.cellsOnTrack, to.cellsOnTrack, s"Set cells on the funding track to ${to.cellsOnTrack}")
-    show(from.extraCells.available, to.extraCells.available, s"Set cells in training camp to ${to.extraCells}")
+    show(from.extraCells.available, to.extraCells.available, s"Set cells in training camp to ${to.extraCells.available}")
     show(from.resolvedPlots.sorted, to.resolvedPlots.sorted,
           s"Set resolvedPlots plots to ${plotsDisplay(to.resolvedPlots)}")
     show(from.availablePlots.sorted, to.availablePlots.sorted,
