@@ -1884,7 +1884,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(294, "Barcelona Bombs", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => (game.availablePlots contains Plot1)
+      (_: Role, _: Boolean) => game.getCountry(Spain).isUntested || (game.availablePlots contains Plot1)
       ,
       (role: Role) => {
         val maxPlots = (game.availablePlots count (_ == Plot1)) min 2
