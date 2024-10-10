@@ -190,12 +190,6 @@ object SavedGame {
   private def reservesFromMap(data: Map[String, Any]): Reserves =
     Reserves(asInt(data("us")), asInt(data("jihadist")))
 
-  private def extraCellsToMap(data: ExtraCells): Map[String, Any] =
-    Map("available" -> data.available, "onMap" -> data.onMap)
-
-  private def extraCellsFromMap(data: Map[String, Any]): ExtraCells =
-    ExtraCells(asInt(data("available")), asInt(data("onMap")))
-
   private def phaseTargetsToMap(data: PhaseTargets): Map[String, Any] =
     Map(
       "ops"                          -> data.ops,
@@ -348,7 +342,6 @@ object SavedGame {
       "history"             -> gameState.history,
       "offMapTroops"        -> gameState.offMapTroops,
       "reserves"            -> reservesToMap(gameState.reserves),
-      "extraCells"          -> extraCellsToMap(gameState.extraCells),
       "plays"               -> (gameState.plays map playToMap),
       "firstPlotCard"       -> (gameState.firstPlotCard getOrElse null),
       "cardsLapsing"        -> gameState.cardsLapsing,
@@ -396,7 +389,6 @@ object SavedGame {
       asBoolean(data("sequestrationTroops")),
       asInt(data("offMapTroops")),
       reservesFromMap(asMap(data("reserves"))),
-      extraCellsFromMap(asMap(data("extraCells"))),
       asList(data("plays")) map (p => playFromMap(asMap(p))),
       if (data("firstPlotCard") == null) None else Some(asInt(data("firstPlotCard"))),
       asList(data("cardsLapsing")) map asInt,

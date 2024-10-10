@@ -1091,6 +1091,7 @@ object LabyrinthAwakening {
   // There is a limit of 22 construction arguments for case classes
   // To work around this in the GameState, we will combine a couple of parameters
   case class ExtraCells(available: Int, onMap: Int)
+  case class ExtraCellInfo(capacity:Int, available: Int, onMap: Int)
   case class Reserves(us: Int, jihadist: Int)
   // Keeps track of the which countries were the target of
   // -operations
@@ -1179,7 +1180,6 @@ object LabyrinthAwakening {
     sequestrationTroops: Boolean   = false,  // true if 3 troops off map due to Sequestration event
     offMapTroops: Int              = 0,
     reserves: Reserves             = Reserves(0, 0),
-    extraCells: ExtraCells         = ExtraCells(0, 0),
     plays: List[Play]              = Nil,               // Cards plays/plot resolutions during current turn (most recent first).
     firstPlotCard: Option[Int]     = None,     // Card number
     cardsLapsing: List[Int]        = Nil,         // Card numbers currently lapsing
@@ -1354,11 +1354,6 @@ object LabyrinthAwakening {
     // Extra cells are only usable when funding is at 9 or by event or civil war attrition.
     // If some of those cells are on the map and the training camp/al-Baghdadai is removed, those
     // extra cells remain on the map until eliminated.
-    // We use the extraCells field to keep track of the training camp status:
-    // available -- the number of training camp cells currently available to be placed.
-    //              when the marker is placed this will be set to 3 (or 5)
-    // onMap  -- the number of training camp cells on the map.
-    //           It is adjusted as cells are added to or removed from the map.
     // Training camp cells are always the last to be placed on the map and the first
     // to be removed.
 
@@ -1366,7 +1361,7 @@ object LabyrinthAwakening {
     def isTrainingCamp(name: String) = trainingCamp == Some(name)
     // def trainingCampCapacity= trainingCamp map (tc => if (isCaliphateMember(tc)) 5 else 3) getOrElse 0
     def extraCellCapacity   = {
-      if (globalEventInPlay(AlBaghdadi)) {
+      if (markers contains AlBaghdadi) {
         if (caliphateDeclared) 5 else 3
       }
       else if (trainingCamp.nonEmpty) {
@@ -1375,19 +1370,23 @@ object LabyrinthAwakening {
       else
         0
     }
+
     def totalCellCapacity   = 15 + extraCellCapacity
-    def totalCellsInPlay    = 15 + extraCells.available + extraCells.onMap
     def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.cells }
     // totalCellsOnMap includes Sadr
     def totalCellsOnMap     = countries.foldLeft(0) { (a, c) => a + c.totalCells }
-    def cellsOnTrack        = {
-      // Don't allow it to go negative due to camp cells that are on the map
-      // after the training camp has been removed.
-      (totalCellCapacity - cellsOnMap - extraCells.available) max 0
-    }
+
+    // If "extra" cells were place on the map, then subsequently the
+    // event granting the extra cells was cancelled, then there may be
+    // excess "extra" cell still in play.  These remain until removed
+    // and are alwasy the first to be removed.
+    def excessExtraCellsOnMap = (cellsOnMap - totalCellCapacity) max 0
 
     // Cells available regardless of funding. For use by events.
-    def cellsAvailable = cellsOnTrack + extraCells.available
+    // Includes any extra cells for (Training Camps/al-Baghdadi)
+    def cellsAvailable = (totalCellCapacity - cellsOnMap) max 0
+    def extraCellsAvailable = extraCellCapacity min cellsAvailable
+    def cellsOnTrack        = cellsAvailable - extraCellsAvailable
 
     // Number of cells available for recruit operations.
     def cellsToRecruit = {
@@ -1621,7 +1620,11 @@ object LabyrinthAwakening {
       }
       b += f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}"
       if (game.useExpansionRules) {
-        val albaghdadi = if (globalEventInPlay(AlBaghdadi)) Some(AlBaghdadi) else None
+        val albaghdadi = (globalEventInPlay(AlBaghdadi), game.caliphateDeclared) match {
+          case (true, true) => Some(s"$AlBaghdadi with Caliphate")
+          case (true, false) => Some(s"$AlBaghdadi without Caliphate")
+          case (false, _) => None
+        }
         val camp = game.trainingCamp.map(name => s"$TrainingCamps in $name")
         val events = albaghdadi.toList ::: camp.toList
         val eventDisplay = events match {
@@ -1630,7 +1633,8 @@ object LabyrinthAwakening {
         }
         b += separator()
         b += s"Extra cells$eventDisplay"
-        b += f"Available       : ${extraCells.available}%2d   | On map            : ${extraCells.onMap}%2d"
+        val extraOnMap = (cellsOnMap - 15) max 0
+        b += f"Available       : ${extraCellsAvailable}%2d   | On map            : ${extraOnMap}%2d"
         b += f"Capacity        : ${extraCellCapacity}%2d"
       }
       val ms = markers ::: (for (c <- countries; m <- c.markers) yield (s"$m (${c.name})"))
@@ -3331,13 +3335,13 @@ object LabyrinthAwakening {
     show(from.militiaAvailable, to.militiaAvailable, s"Set available militia to ${to.militiaAvailable}")
     show(from.funding, to.funding, s"Set jihadist funding to ${to.funding} (${to.fundingLevel})")
     show(from.cellsOnTrack, to.cellsOnTrack, s"Set cells on the funding track to ${to.cellsOnTrack}")
-    show(from.extraCells.available, to.extraCells.available, s"Set cells in training camp to ${to.extraCells.available}")
+    show(from.extraCellsAvailable, to.extraCellsAvailable, s"Set cells in training camp to ${to.extraCellsAvailable}")
     show(from.resolvedPlots.sorted, to.resolvedPlots.sorted,
           s"Set resolvedPlots plots to ${plotsDisplay(to.resolvedPlots)}")
     show(from.availablePlots.sorted, to.availablePlots.sorted,
           s"Set available plots to ${plotsDisplay(to.availablePlots, to.humanRole == Jihadist)}")
     show(from.markers.sorted,  to.markers.sorted,
-            s"  Set global event markers to: ${markersString(to.markers)}" )
+            s"Set global event markers to: ${markersString(to.markers)}" )
     (from.firstPlotCard, to.firstPlotCard) match {
       case (x, y) if x == y =>  // No change
       case (_, Some(c))     => b += s"Set ${cardNumAndName(c)} as the first plot card"
@@ -3358,9 +3362,9 @@ object LabyrinthAwakening {
     }
 
     def showChange(value: Any, desc: String) = value match {
-      case true =>  b += s"  Add $desc"
-      case false => b += s"  Remove $desc"
-      case x     => b += s"  Set $desc to $x"
+      case true =>  b += s"Add $desc"
+      case false => b += s"Remove $desc"
+      case x     => b += s"Set $desc to $x"
     }
     def showC[T](f: Country, optTo: Option[Country], value: (Country) => T, desc: String) = {
       optTo foreach { t =>
@@ -3407,18 +3411,18 @@ object LabyrinthAwakening {
         val fromVal = from.isCaliphateMember(fromM.name)
         val toVal   = to.isCaliphateMember(t.name)
         if (fromVal != toVal)
-          b += s"  ${if (toVal) "Add" else "Remove"} Caliphate member marker"
+          b += s"${if (toVal) "Add" else "Remove"} Caliphate member marker"
       }
       showC(fromM, toM orElse toN, _.wmdCache, "WMD cache")
       (toM orElse toN) foreach { t =>
         val newVal = t.plots.sorted
         if (fromM.plots.sorted != newVal)
-          b += s"  Set plots to ${mapPlotsDisplay(newVal, to.humanRole == Jihadist)}"
+          b += s"Set plots to ${mapPlotsDisplay(newVal, to.humanRole == Jihadist)}"
       }
       (toM orElse toN) foreach { t =>
         val newVal = t.markers.sorted
         if (fromM.markers.sorted != newVal)
-          b += s"  Set markers to ${markersString(newVal)}"
+          b += s"Set markers to ${markersString(newVal)}"
       }
 
       if (b.nonEmpty) {
@@ -3445,13 +3449,13 @@ object LabyrinthAwakening {
         if (fromN.plots.sorted != newVal) {
           val visible = to.humanRole == Jihadist ||
                       (t.name == UnitedStates && t.hasMarker(NEST))
-          b += s"  Set plots to ${mapPlotsDisplay(newVal, visible)}"
+          b += s"Set plots to ${mapPlotsDisplay(newVal, visible)}"
         }
       }
       (toN orElse toM) foreach { t =>
         val newVal = t.markers.sorted
         if (fromN.markers.sorted != newVal)
-          b += s"  Set markers to ${markersString(newVal)}"
+          b += s"Set markers to ${markersString(newVal)}"
       }
       if (b.nonEmpty) {
         showHeader()
@@ -3499,7 +3503,7 @@ object LabyrinthAwakening {
     else {
       // Remember any Caliphate capital in case it is displaced.
       val caliphateCapital = candidates find (_.caliphateCapital) map (_.name)
-      val priorExtraCellCapacity = game.extraCellCapacity
+      val priorGameState = game
       // Work with names, because the underlying state of the countries will
       // undergo multiple changes, thus we will need to get the current copy of
       // the country from the game each time we use it.
@@ -3561,7 +3565,7 @@ object LabyrinthAwakening {
       caliphateCapital foreach { capitalName =>
         if (game.getMuslim(capitalName).caliphateCapital == false) {
           displaceCaliphateCapital(capitalName)
-          updateExtraCellCapacity(priorExtraCellCapacity)
+          logExtraCellCapacityChange(priorGameState)
         }
       }
     }
@@ -3799,7 +3803,7 @@ object LabyrinthAwakening {
       log("No countries in civil war")
     else {
       val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
-      val priorExtraCellCapacity = game.extraCellCapacity
+      val priorGameState = game
       val totalAdvisors = (civilWars map (_.numAdvisors)).sum
       // Add militia for any Advisors present
       if (civilWars exists (_.numAdvisors > 0)) {
@@ -3857,7 +3861,7 @@ object LabyrinthAwakening {
       caliphateCapital foreach { capitalName =>
         if (game.getMuslim(capitalName).caliphateCapital == false) {
           displaceCaliphateCapital(capitalName)
-          updateExtraCellCapacity(priorExtraCellCapacity)
+          logExtraCellCapacityChange(priorGameState)
         }
       }
     }
@@ -4548,11 +4552,10 @@ object LabyrinthAwakening {
 
   def removeGlobalEventMarker(marker: String): Unit = {
     if (globalEventInPlay(marker)) {
-      val priorExtraCellCapacity = game.extraCellCapacity
+      val priorGameState = game
       game = game.removeMarker(marker)
       log(s"""Remove "$marker" marker from the Events In Play box""", Color.MapMarker)
-      if (marker == AlBaghdadi)
-        updateExtraCellCapacity(priorExtraCellCapacity)
+      logExtraCellCapacityChange(priorGameState)
     }
   }
 
@@ -4627,7 +4630,7 @@ object LabyrinthAwakening {
   // if the when the other event (Training Camp/al-Baghdadi) is still in play.
   def playExtraCellsEvent(event: String, targetCountry: String = ""): Unit = {
 
-    val priorExtraCellCapacity = game.extraCellCapacity
+    val priorGameState = game
     //  Place the appropriate event marker on the board
     event match {
       case TrainingCamps =>
@@ -4641,25 +4644,17 @@ object LabyrinthAwakening {
         throw new IllegalArgumentException("placeExtraCells() invalid event")
     }
 
-    updateExtraCellCapacity(priorExtraCellCapacity)
+    logExtraCellCapacityChange(priorGameState)
   }
 
   // This is called whenever something happens that can change
   // the capacity for extra cells.
   //    Caliphate declared/displaced
   //    Training Camps and AlBaghdadi events no longer in play
-  //
-  // Check to see if the current training camp capacity is different from
-  // the prior capacity that is given as a parameter.
-  // If so update the game.extraCells and log the changes.
-  // The capacity can be 0, 3, or 5
-
-  def updateExtraCellCapacity(priorCapacity: Int): Unit = {
-    val capacity = game.extraCellCapacity
-    val extra = game.extraCells
-    if (capacity != priorCapacity) {
-      val alBaghdadi = globalEventInPlay(AlBaghdadi)
-      val msg = capacity match {
+  def logExtraCellCapacityChange(priorGameState: GameState): Unit = {
+    if (game.extraCellCapacity != priorGameState.extraCellCapacity) {
+      val alBaghdadi = (game.markers contains AlBaghdadi)
+      val msg = game.extraCellCapacity match {
         case 0                => s"There is no longer an event in play that grants extra cells"
         case 5 if alBaghdadi  => s"$AlBaghdadi is in play and a Caliphate has been declared"
         case 5                => s"$TrainingCamps is in a Caliphate country"
@@ -4669,12 +4664,9 @@ object LabyrinthAwakening {
       }
 
       log(msg, Color.Info)
-      log(s"The extra cells area now has a capacity of ${amountOf(capacity, "cell")}", Color.Info)
+      log(s"The extra cells area now has a capacity of ${amountOf(game.extraCellCapacity, "cell")}", Color.Info)
 
-      val newNumAvail = (capacity - extra.onMap) max 0
-      game = game.copy(extraCells = game.extraCells.copy(available = newNumAvail))
-      val delta = newNumAvail - extra.available
-
+      val delta = game.extraCellsAvailable - priorGameState.extraCellsAvailable
       if (delta > 0)
         log(s"Add ${amountOf(delta, "out of play cell")} to the right of the Ample Funding Box", Color.MapPieces)
       else if (delta < 0)
@@ -4690,11 +4682,11 @@ object LabyrinthAwakening {
     if (game.isTrainingCamp(name)) {
       val m = game.getMuslim(name)
       if (m.isGood || (m.totalCells == 0 && !m.hasCadre)) {
-        val priorExtraCellCapacity = game.extraCellCapacity
+        val priorGameState = game
         removeEventMarkersFromCountry(name, TrainingCamps)
 
         if (!endOfTurn)
-          updateExtraCellCapacity(priorExtraCellCapacity)
+          logExtraCellCapacityChange(priorGameState)
       }
     }
   }
@@ -4730,7 +4722,7 @@ object LabyrinthAwakening {
 
   def endCivilWar(name: String, noDisplacement: Boolean = false): Unit = {
     val m = game.getMuslim(name)
-    val priorExtraCellCapacity = game.extraCellCapacity
+    val priorGameState = game
 
     if (m.civilWar) {
       game = game.updateCountry(m.copy(civilWar = false))
@@ -4744,7 +4736,7 @@ object LabyrinthAwakening {
         if (noDisplacement == false) {
           // During end of turn we defer this until all countries have been adjusted
           displaceCaliphateCapital(m.name)
-          updateExtraCellCapacity(priorExtraCellCapacity)
+          logExtraCellCapacityChange(priorGameState)
         }
       }
     }
@@ -4752,7 +4744,7 @@ object LabyrinthAwakening {
 
   def endRegimeChange(name: String, noDisplacement: Boolean = false): Unit = {
     val m = game.getMuslim(name)
-    val priorExtraCellCapacity = game.extraCellCapacity
+    val priorGameState = game
 
     if (m.inRegimeChange) {
       game = game.updateCountry(m.copy(regimeChange = NoRegimeChange))
@@ -4763,7 +4755,7 @@ object LabyrinthAwakening {
         if (noDisplacement == false) {
           // During end of turn we defer this until all countries have been adjusted
           displaceCaliphateCapital(m.name)
-          updateExtraCellCapacity(priorExtraCellCapacity)
+          logExtraCellCapacityChange(priorGameState)
         }
       }
     }
@@ -4890,19 +4882,16 @@ object LabyrinthAwakening {
 
       assert(available >= num, s"not enough available cells have: $available, need $num")
 
-      val extra = game.extraCells
       val fromTrack = num min game.cellsOnTrack  // Take as many as possible from the track first
       val fromCamp  = num - fromTrack            // Any left over come from the camp
 
-      // The number on the track is calculated, so it does not need to be set here.
-      val newExtraCells = ExtraCells(extra.available - fromCamp, extra.onMap + fromCamp)
       val updated = game.getCountry(name) match {
         case m: MuslimCountry    if isActive => m.copy(activeCells  = m.activeCells  + num)
         case m: MuslimCountry                => m.copy(sleeperCells = m.sleeperCells + num)
         case n: NonMuslimCountry if isActive => n.copy(activeCells  = n.activeCells  + num)
         case n: NonMuslimCountry             => n.copy(sleeperCells = n.sleeperCells + num)
       }
-      game = game.copy(extraCells = newExtraCells).updateCountry(updated)
+      game = game.updateCountry(updated)
 
       if (hasCadre)
         removeCadreFromCountry(name)
@@ -4933,22 +4922,18 @@ object LabyrinthAwakening {
 
       val cadreAdded = addCadre && c.hasCadre == false && c.cells == (actives + sleepers) && (sadr || !c.hasMarker(Sadr))
       for ((num, active) <- List((actives, true), (sleepers, false)); if num > 0) {
-        val cellType = if (active) "active cell" else "sleeper cell"
-        val extra = game.extraCells
-        val extraCellsRemoved = num min extra.onMap
-        val roomInExtra       = (game.extraCellCapacity - extra.available) max 0
-        val toExtra           = num min roomInExtra
-        val toOutOfPlay       = extraCellsRemoved - toExtra
-        val toTrack           = num - extraCellsRemoved  // The remainder to the track
-        // The number on the track is calculated, so it does not need to be set here.
-        val newExtraCells = ExtraCells(extra.available + toExtra, extra.onMap - extraCellsRemoved)
+        val cellType    = if (active) "active cell" else "sleeper cell"
+        val toOutOfPlay = num min game.excessExtraCellsOnMap
+        val toExtra     = (num - toOutOfPlay) min (game.extraCellCapacity - game.extraCellsAvailable)
+        val toTrack     = (num - toOutOfPlay - toExtra)
+        
         val updated = game.getCountry(name) match {
           case m: MuslimCountry    if active => m.copy(activeCells  = m.activeCells  - num)
           case m: MuslimCountry              => m.copy(sleeperCells = m.sleeperCells - num)
           case n: NonMuslimCountry if active => n.copy(activeCells  = n.activeCells  - num)
           case n: NonMuslimCountry           => n.copy(sleeperCells = n.sleeperCells - num)
         }
-        game = game.copy(extraCells = newExtraCells).updateCountry(updated)
+        game = game.updateCountry(updated)
 
         if (toOutOfPlay > 0)
            log("%sRemove %s from %s to out of play".format(logPrefix, amountOf(toOutOfPlay, cellType), name), Color.MapPieces)
@@ -7591,7 +7576,7 @@ object LabyrinthAwakening {
   def adjustMarkers(): Unit = {
     val AllMarkers = GlobalMarkers.keys.toList.sorted
     var inPlay = game.markers
-    val priorExtraCellCapacity = game.extraCellCapacity
+    val priorGameState = game
     def available = AllMarkers filterNot inPlay.contains
     def showColums(xs: List[String]): Unit = {
       if (xs.isEmpty) println("none")
@@ -7628,7 +7613,7 @@ object LabyrinthAwakening {
       game = game.copy(markers = inPlay)
       saveAdjustment("Global Markers")
 
-      updateExtraCellCapacity(priorExtraCellCapacity)
+      logExtraCellCapacityChange(priorGameState)
     }
   }
 
@@ -8167,7 +8152,7 @@ object LabyrinthAwakening {
   }
 
   def adjustCaliphateCapital(name: String): Unit = {
-    val priorExtraCellCapacity = game.extraCellCapacity
+    val priorGameState = game
     game.getCountry(name) match {
       case _: NonMuslimCountry => throw new IllegalArgumentException(s"Non-Muslim cannot be the Caliphate capital: $name")
       case m: MuslimCountry if !m.caliphateCandidate =>
@@ -8186,9 +8171,9 @@ object LabyrinthAwakening {
             logAdjustment(previousCapitalName, "Caliphate Capital", true, false)
             logAdjustment(name, "Caliphate Capital", false, true)
             game = game.updateCountries(previousCapital.copy(caliphateCapital = false)::m.copy(caliphateCapital = true)::Nil)
-            saveAdjustment(name, "Caliphate Capital")
         }
-        updateExtraCellCapacity(priorExtraCellCapacity)
+        saveAdjustment(name, "Caliphate Capital")
+        logExtraCellCapacityChange(priorGameState)
     }
   }
 
@@ -8290,7 +8275,7 @@ object LabyrinthAwakening {
   //       multiple Advisors markers.  Set adjustCountryAdvisors()
   def adjustCountryMarkers(name: String): Unit = {
     val country = game.getCountry(name)
-    val priorExtraCellCapacity = game.extraCellCapacity
+    val priorGameState = game
     var inPlay = country.markers
     val AllMarkers = CountryMarkers.keys.toList.sorted
     def available = AllMarkers filterNot inPlay.contains
@@ -8330,7 +8315,7 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry => game = game.updateCountry(n.copy(markers = inPlay))
       }
 
-      updateExtraCellCapacity(priorExtraCellCapacity)
+      logExtraCellCapacityChange(priorGameState)
       saveAdjustment(name, "Markers")
     }
   }
