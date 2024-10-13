@@ -3699,7 +3699,7 @@ object ForeverWarCards {
               val marker = if (markers.size == 1)
                 markers.head
               else
-                askOneOf("Remove which event marker: ", markers).get
+                askMenu("\nRemove which event marker:", markers.map(m => m -> m)).head
               if (GlobalMarkers contains marker)
                 removeGlobalEventMarker(marker)
               else {
