@@ -873,7 +873,7 @@ object JihadistBot extends BotHelpers {
   // other auto-recruit countries with cells.
   def hasCellForTravel(c: Country): Boolean = {
     if (c.autoRecruit) {
-      val numAutoRecruit = game.muslims count (m => m.autoRecruit && totalUnused(m) > 0)
+      val numAutoRecruit = game.muslims count (m => m.autoRecruit && m.totalCells > 0)
       if (numAutoRecruit > 2)
         unusedCells(c) > 0
       else
@@ -915,13 +915,21 @@ object JihadistBot extends BotHelpers {
     }
     
     // Count sadr here, but below when finding cells to move.
-    def numAutoRecruit = game.muslims count (m => m.autoRecruit && totalUnused(m) > 0)
+    def numAutoRecruit = game.muslims count (m => m.autoRecruit && m.totalCells > 0)
+
+    def numAutoRecruitWithCells(travelAttempts: List[TravelAttempt]) = {
+      game.muslims.count { m =>
+        val usedCells = travelAttempts.count(x => x.from == m.name)
+        val numCells = m.totalCells - usedCells
+        (m.autoRecruit && numCells > 0)
+      }
+    }
     val maxTravel = maxOpsPlusReserves(card)
     
-    def nextTravelFrom(completed: Int, alreadyTried: Set[String]): List[TravelAttempt] = {
-      val remaining = maxTravel - completed
+    def nextTravelFrom(alreadyTried: Set[String], attempts: List[TravelAttempt]): List[TravelAttempt] = {
+      val remaining = maxTravel - attempts.size
       if (remaining == 0)
-        Nil  // We've used all available Ops
+        attempts  // We've used all available Ops
       else {
         val canTravelFrom = (c: Country) => !alreadyTried(c.name) && hasCellForTravel(c)
         val canTravelInPlace = !alreadyTried(toName) && game.getCountry(toName).activeCells > 0
@@ -932,21 +940,21 @@ object JihadistBot extends BotHelpers {
         else
           countryNames(game.countries filter canTravelFrom)
         travelFromTarget(toName, candidates) match {
-          case None => Nil   // No more viable countries to travel from
+          case None => attempts  // No more viable countries to travel from
           case Some(fromName) =>
             val from = game.getCountry(fromName)
             // Limit numAttempts to only active cells within same country
             // and to not allow last cell out of auto recruit (if only 1 other auto recruit with cells)
             val numAttempts = if (fromName == toName)
               activeCells(from) min remaining
-            else if (from.autoRecruit && numAutoRecruit < 3)
+            else if (from.autoRecruit && numAutoRecruitWithCells(attempts) < 3)
               (unusedCells(from) - 1) max 0 min remaining
             else
               unusedCells(from) min remaining
           
             if (numAttempts == 0) {
               botLog(s"No cells in $fromName are allowed to travel")
-              nextTravelFrom(completed, alreadyTried + fromName) // Find the next from target
+              nextTravelFrom(alreadyTried + fromName, attempts) // Find the next from target
             }
             else {
               // Determine how many actives/sleepers will attempt travel
@@ -958,11 +966,11 @@ object JihadistBot extends BotHelpers {
                 val sleepers = numAttempts - actives
                 (actives, sleepers)
               }
-              val attempts = List.fill(actives)(TravelAttempt(fromName, toName, true)) ::: 
-                             List.fill(sleepers)(TravelAttempt(fromName, toName, false))
+              val newAttempts = List.fill(actives)(TravelAttempt(fromName, toName, true)) ::: 
+                                List.fill(sleepers)(TravelAttempt(fromName, toName, false))
               
               // Find the next country to travel from...
-              attempts ::: nextTravelFrom(completed + numAttempts, alreadyTried + fromName)
+              nextTravelFrom(alreadyTried + fromName, attempts ::: newAttempts)
             }  
         }
       }
@@ -980,7 +988,7 @@ object JihadistBot extends BotHelpers {
       Set.empty[String]
 
     
-    val attempts = nextTravelFrom(0, noUK ++ banned)
+    val attempts = nextTravelFrom(noUK ++ banned, Nil)
     val opsUsed = attempts.size
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
