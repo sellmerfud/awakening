@@ -1764,7 +1764,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(82, "Jihadist Videos", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game.cellsAvailable > 0 // Ignores funding
+      (role: Role, forTrigger: Boolean) => game.humanRole == Jihadist || game.cellsAvailable > 0 // Ignores funding
       ,
       (role: Role) => {
         var targets = if (role == game.humanRole)
