@@ -1697,8 +1697,10 @@ object LabyrinthAwakening {
         case m: MuslimCountry =>
           val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
           val res = amountOf(m.resourceValue, "resource")
-          val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) ", Oil exporter" else ""
-          b += s"$name -- $gov, $res$oil"
+          val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) List("Oil exporter") else Nil
+          val autoRecruit = if (m.autoRecruit) List("Auto-Recruit") else Nil
+          val desc = (gov :: res :: oil ::: autoRecruit).mkString(", ")
+          b += s"$name -- $desc"
           item(m.activeCells, "Active cell")
           item(m.sleeperCells, "Sleeper cell")
           if (m.hasCadre)
