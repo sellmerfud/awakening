@@ -3783,7 +3783,7 @@ object ForeverWarCards {
       (role: Role) => {
         log()
         log("The next non-Automatic event card played by either player")
-        log("will be cancelled.  It may be played for OPs only.")
+        log("will be cancelled.  These cards may be played for OPs.")
         log()
         setTrumpTweetsOFF()
       }
