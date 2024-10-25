@@ -264,7 +264,13 @@ object JihadistBot extends BotHelpers {
   
   val PoorMuslimFilter  = new CriteriaFilter("Poor Muslim", muslimTest(_.isPoor))
   val FairMuslimFilter  = new CriteriaFilter("Fair Muslim", muslimTest(_.isFair))
-  val GoodMuslimFilter  = new CriteriaFilter("Fair Muslim", muslimTest(_.isGood))
+  val GoodMuslimFilter  = new CriteriaFilter("Good Muslim", muslimTest(_.isGood))
+
+  // To try to make the Bot AI smarter, we don't prioritise Good Muslim countries
+  // unless the is cell in an adjacent country so that the travel will succeed 
+  // without a die roll
+  val GoodMuslimWithAdjacentCellsFilter =
+    new CriteriaFilter("Good Muslim w/ adjacent cells", muslimTest(m => m.isGood && m.hasAdjacent(hasCellForTravel)))
   val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
   
   val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
@@ -389,7 +395,7 @@ object JihadistBot extends BotHelpers {
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
     
   val TravelToFlowchart = List(
-    PoorNeedCellsforMajorJihad, GoodMuslimFilter,
+    PoorNeedCellsforMajorJihad, GoodMuslimWithAdjacentCellsFilter,
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
   
   val LabyrinthRecruitAndTravelToPriorities = List(

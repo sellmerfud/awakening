@@ -895,6 +895,9 @@ object LabyrinthAwakening {
     def recruitSucceeds(die: Int): Boolean
     def canTakeMilitia: Boolean
     def disruptAffectsPrestige: Boolean
+
+    def hasAdjacent(test: Country => Boolean): Boolean =
+      game.getCountries(getAdjacent(name)).exists(test)
   }
 
   case class NonMuslimCountry(
@@ -1185,7 +1188,7 @@ object LabyrinthAwakening {
     targetsThisPhase: PhaseTargets = PhaseTargets(),
     targetsLastPhase: PhaseTargets = PhaseTargets(),
     exitAfterWin: Boolean          = true,
-    botLogging: Boolean = false,
+    botLogging: Boolean            = false,
     history: Vector[GameSegment]   = Vector.empty,
     description: String            = "",
     showColor: Boolean             = !scala.util.Properties.isWin, // Default true except on Windows
