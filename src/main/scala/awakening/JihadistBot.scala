@@ -497,6 +497,13 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, priorities) map (_.name)
   }
   
+  // To try and make the Bot AI a bit smarter, we don't
+  // allow the Bot to recruit into an Islamist Rule country if it
+  // already contains 10 or more cells.
+  def botRecruitPossible: Boolean =
+    game.recruitPossible &&
+    game.getCountries(game.recruitTargets(madrassas = false)).exists(c => !c.isIslamistRule || c.totalCells < 10)
+
   // Jihadist Operations Flowchart definitions.
   sealed trait Operation extends OpFlowchartNode
   case object RecruitOp    extends Operation
@@ -528,14 +535,14 @@ object JihadistBot extends BotHelpers {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = PlotOp
-    def condition(ops: Int) = game.recruitPossible
+    def condition(ops: Int) = botRecruitPossible
   }
   
   object CellAvailableOrTravelDecision extends OperationDecision {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = TravelOp
-    def condition(ops: Int) = game.recruitPossible
+    def condition(ops: Int) = botRecruitPossible
   }
   
   object CellInGoodFairWhereJSP extends OperationDecision {
@@ -590,7 +597,7 @@ object JihadistBot extends BotHelpers {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = CellInNonMuslim
-    def condition(ops: Int) = game.recruitPossible
+    def condition(ops: Int) = botRecruitPossible
   }
   
   object CellInNonMuslim extends OperationDecision {
@@ -1183,9 +1190,9 @@ object JihadistBot extends BotHelpers {
                               game.availablePlots.nonEmpty &&
                               (game hasNonMuslim (n => n.isSoft && totalUnused(n) > 0))
     // I'm allowing recruit in IR countries, not sure if that is the intent?
-    val canRecruitAtMuslimCadre = game.recruitPossible && (game hasMuslim (_.hasCadre))
+    val canRecruitAtMuslimCadre = botRecruitPossible && (game hasMuslim (_.hasCadre))
     val canAddToReserves = !requiresReserves && game.reserves.jihadist < 2
-    val canRecruit = game.recruitPossible && !requiresReserves
+    val canRecruit = botRecruitPossible && !requiresReserves
     val canTravelToUS = !requiresReserves && unusedCellsOnMapForTravel > 0
     
     if      (canPlotWMDInUs)               Some(PlotWMDInUS)
