@@ -807,7 +807,7 @@ object AwakeningCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => 
         globalEventNotInPlay(ThreeCupsOfTea) &&  // If not blocked and can have at least one effect
-        (game.funding > 1 || game.prestige < 12 || game.getMuslim(Pakistan).canTakeAwakeningOrReactionMarker)
+        (forTrigger || game.funding > 1 || game.prestige < 12 || game.getMuslim(Pakistan).canTakeAwakeningOrReactionMarker)
       ,
       (role: Role) => {
         println()
@@ -1570,13 +1570,20 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) => {
         game.getMuslim(Yemen).isPoor &&
         (game.isNonMuslim(Iran) || !game.getMuslim(Iran).isAlly) &&
-        !(game.getMuslim(Yemen).civilWar && game.cellsAvailable == 0)
+        (role == game.humanRole || !(game.getMuslim(Yemen).civilWar && game.cellsAvailable == 0))
       }
       ,
       (role: Role) => {
         addEventTarget(Yemen)
-        addSleeperCellsToCountry(Yemen, 2 min game.cellsAvailable)
-        startCivilWar(Yemen)
+        if (game.cellsAvailable > 0)
+          addSleeperCellsToCountry(Yemen, 2 min game.cellsAvailable)
+        else
+          log(s"There are no cells available to place in $Yemen")
+
+        if (game.getMuslim(Yemen).civilWar)
+          log(s"$Yemen is already at Civil War")
+        else
+          startCivilWar(Yemen)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2432,6 +2439,7 @@ object AwakeningCards {
     entry(new Card(194, "Snowden", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
+        forTrigger                                           ||
         game.prestige > 1                                    ||
         game.usPosture != game.getNonMuslim(Russia).posture  ||
         game.usPosture != game.getNonMuslim(Germany).posture
@@ -2515,18 +2523,23 @@ object AwakeningCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => {
         val candidates = Set(219, 215, 216, 225, 237)
-        game.cardsRemoved exists (n => candidates contains n)
+        forTrigger || game.cardsRemoved.exists(n => candidates contains n)
       },
       (role: Role) => {
         // See Event Instructions table
-        if (role == game.humanRole)
-          log("Draw one of the indicated cards from the removed cards pile.")
+        val candidates = Set(219, 215, 216, 225, 237)
+        if (game.cardsRemoved.exists(n => candidates contains n)) {
+          if (role == game.humanRole)
+            log("Draw one of the indicated cards from the removed cards pile.")
+          else
+            log(s"The $Jihadist Bot draws the candidate card nearest the top of the removed cards pile...")
+  
+          val prompt = s"Enter # of the card retrieved from out of play: "
+          val cardNum = askCardNumber(prompt, None, allowNone = false, only3Ops = false, removedLapsingOK = true).get
+          game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
+        }
         else
-          log(s"The $Jihadist Bot draws the candidate card nearest the top of the removed cards pile...")
-
-        val prompt = s"Enter # of the card retrieved from out of play: "
-        val cardNum = askCardNumber(prompt, None, allowNone = false, only3Ops = false, removedLapsingOK = true).get
-        game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
+          log("None of the listed cards is in the discard pile.")
         decreasePrestige(1)
       }
     )),

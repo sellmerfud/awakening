@@ -1075,21 +1075,30 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(49, "Al-Ittihad al-Islami", Jihadist, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game.cellsAvailable > 0
+      (role: Role, forTrigger: Boolean) => forTrigger || game.cellsAvailable > 0
       ,
       (role: Role) => {
-        addEventTarget(Somalia)
-        testCountry(Somalia)
-        addSleeperCellsToCountry(Somalia, 1)
+        if (game.cellsAvailable > 0) {
+          addEventTarget(Somalia)
+          testCountry(Somalia)
+          addSleeperCellsToCountry(Somalia, 1)
+        }
+        else {
+          addEventTarget(Somalia)
+          log(s"There are no cells available to place in $Somalia.")
+        }
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(50, "Ansar al-Islam", Jihadist, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
-        game.cellsAvailable > 0 && !((game getMuslim Iraq).isUntested || (game getMuslim Iraq).isGood)
+        !((game getMuslim Iraq).isUntested || (game getMuslim Iraq).isGood) &&
+        (forTrigger || game.cellsAvailable > 0)
       ,
       (role: Role) => {
+        // If no cells available, the event was trigger simply so the 
+        // card can be removed.
         val candidates = List(Iraq, Iran)
         val name = if (role == game.humanRole)
           askCountry("Place cell in which country: ", candidates)
@@ -1097,8 +1106,12 @@ object LabyrinthCards {
           JihadistBot.recruitTravelToPriority(candidates).get
         
         addEventTarget(name)
-        testCountry(name)
-        addSleeperCellsToCountry(name, 1)
+        if (game.cellsAvailable > 0) {
+          testCountry(name)
+          addSleeperCellsToCountry(name, 1)
+        }
+        else
+          log(s"There are no cells available to place in $name.")
       }
     )),
     // ------------------------------------------------------------------------
@@ -1173,7 +1186,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(55, "Uyghur Jihad", Jihadist, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game.cellsAvailable > 0 || (game getNonMuslim China).isUntested
+      (role: Role, forTrigger: Boolean) => forTrigger || game.cellsAvailable > 0 || (game getNonMuslim China).isUntested
       ,
       (role: Role) => {
         addEventTarget(China)
@@ -1186,6 +1199,11 @@ object LabyrinthCards {
             testCountry(CentralAsia)
             addSleeperCellsToCountry(CentralAsia, 1)
           }          
+        }
+        else {
+          val target = if ((game getNonMuslim China).isSoft) China else CentralAsia
+
+          log(s"There are no cells available to place in $target.")
         }
       }
     )),
@@ -1209,6 +1227,8 @@ object LabyrinthCards {
         testCountry(Philippines)
         if (game.cellsAvailable > 0)
           addSleeperCellsToCountry(Philippines, 1)
+        else
+          log(s"There are no cells available to place in $Philippines")
         addEventMarkersToCountry(Philippines, AbuSayyaf)
       }
     )),
@@ -1222,6 +1242,8 @@ object LabyrinthCards {
         testCountry(Iraq)
         if (game.cellsAvailable > 0)
           addSleeperCellsToCountry(Iraq, 1)
+        else
+          log(s"There are no cells available to place in $Iraq")
         addGlobalEventMarker(AlAnbar)
       }
     )),
@@ -1400,11 +1422,13 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(67, "Islamic Jihad Union", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game.cellsAvailable > 0
+      (role: Role, forTrigger: Boolean) => forTrigger || game.cellsAvailable > 0
       ,
       (role: Role) => {
         val candidates = List(CentralAsia, Afghanistan)
-        val targets = if (game.cellsAvailable > 1)
+        val targets = if (game.cellsAvailable == 0)
+          Nil
+        else if (game.cellsAvailable > 1)
           candidates
         else if (role == game.botRole)
           JihadistBot.recruitTravelToPriority(candidates).toList
@@ -1412,8 +1436,11 @@ object LabyrinthCards {
           println("There is only one cell available to be placed")
           askCountry("Select country for cell: ", candidates)::Nil
         }
+
+        addEventTarget(CentralAsia)
+        addEventTarget(Afghanistan)
+
         for (name <- targets) {
-          addEventTarget(name)
           testCountry(name)
           addSleeperCellsToCountry(name, 1)
         }
@@ -2184,20 +2211,29 @@ object LabyrinthCards {
     entry(new Card(98, "Gaza Withdrawal", Unassociated, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
+        role == game.humanRole ||
         (role == US && game.funding > 1) ||
         (role == Jihadist && game.cellsAvailable > 0)
       ,
-      (role: Role) => if (role == US)
-        decreaseFunding(1)
+      (role: Role) => if (role == US) {
+        if (game.funding > 0)
+          decreaseFunding(1)
+        else
+          log("Funding cannot be decreased, it is already a zero.")
+      }
       else {
         addEventTarget(Israel)
-        addSleeperCellsToCountry(Israel, 1)
+        if (game.cellsAvailable > 0)
+          addSleeperCellsToCountry(Israel, 1)
+        else
+          log(s"There are no cells available to place in $Israel")
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(99, "HAMAS Elected", Unassociated, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => role == game.humanRole ||
+      (role: Role, forTrigger: Boolean) =>
+        role == game.humanRole ||
         (role != US && (game.prestige > 1 || cacheYesOrNo(s"Do you ($US) have a card in hand? (y/n) ")))
       ,      
       (role: Role) => {

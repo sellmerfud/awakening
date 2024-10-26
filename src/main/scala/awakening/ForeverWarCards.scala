@@ -318,7 +318,6 @@ object ForeverWarCards {
 
   // Convenience method for adding a card to the deck.
   private def entry(card: Card) = (card.number -> card)
-  
   val deckMap: Map[Int, Card] = Map(
     // ------------------------------------------------------------------------
     entry(new Card(241, "Abdel Fattah el-Sisi", US, 1,
@@ -670,8 +669,8 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(254, "US Embassy to Jerusalem", US, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, _: Boolean) => game.usPosture == Hard && trumpTweetsON &&
-                                  (role == game.humanRole || game.prestigeLevel == Low)
+      (role: Role, forTrigger: Boolean) => game.usPosture == Hard && trumpTweetsON &&
+                                  (forTrigger || role == game.humanRole || game.prestigeLevel == Low)
       ,
       (role: Role) => {
         rollPrestige()
@@ -1456,7 +1455,7 @@ object ForeverWarCards {
         numCells == game.totalCellsOnMap
       }
       ,
-      (_: Role, _: Boolean) => !isIranSpecialCase && sunniShiaRiftCandidates.nonEmpty
+      (_: Role, forTrigger: Boolean) => !isIranSpecialCase && (sunniShiaRiftCandidates.nonEmpty || forTrigger)
       ,
       (role: Role) => {
         val candidates = sunniShiaRiftCandidates
@@ -1508,8 +1507,10 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(282, "Executive Order 13492", Jihadist, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => (game.usPosture == Hard && game.prestige > 1) ||
-                               (game.usPosture == Soft && game.cellsAvailable > 0)
+      (_: Role, forTrigger: Boolean) => 
+        forTrigger ||
+        (game.usPosture == Hard && game.prestige > 1) ||
+        (game.usPosture == Soft && game.cellsAvailable > 0)
       ,
       (role: Role) => {
         if (game.usPosture == Hard)
@@ -1521,7 +1522,10 @@ object ForeverWarCards {
             JihadistBot.recruitTravelToPriority(countryNames(game.countries)).get
           
           testCountry(target)
-          addSleeperCellsToCountry(target, 1)
+          if (game.cellsAvailable > 0)
+            addSleeperCellsToCountry(target, 1)
+          else
+            log(s"There are no cells available to place in $target")
         }
       }
     )),
@@ -1884,7 +1888,10 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(294, "Barcelona Bombs", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => game.getCountry(Spain).isUntested || (game.availablePlots contains Plot1)
+      (_: Role, forTrigger: Boolean) => 
+        forTrigger ||
+        game.getCountry(Spain).isUntested ||
+        (game.availablePlots contains Plot1)
       ,
       (role: Role) => {
         val maxPlots = (game.availablePlots count (_ == Plot1)) min 2
@@ -1986,38 +1993,45 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(299, "Foreign Fighters Return", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => !game.caliphateDeclared &&
-                               game.cellsAvailable > 0 &&
-                               ((game hasNonMuslim (n => n.isGood && n.name != UnitedStates)) ||
-                                (game hasNonMuslim (_.isFair)))
+      (_: Role, forTrigger: Boolean) =>
+        !game.caliphateDeclared &&
+        forTrigger || (
+          game.cellsAvailable > 0 &&
+          ((game hasNonMuslim (n => n.isGood && n.name != UnitedStates)) ||
+           (game hasNonMuslim (_.isFair)))
+        )                    
       ,
       (role: Role) => {
         val goodCandidates = countryNames(game.nonMuslims filter (n => n.isGood && n.name != UnitedStates))
         val fairCandidates = countryNames(game.nonMuslims filter (_.isFair))
         
-          val goodTarget: Option[String] = if (goodCandidates.nonEmpty) {
-            if (role == game.humanRole)
-              Some(askCountry("Place a cell in which Good non-Muslim country: ", goodCandidates))
-            else
-              JihadistBot.recruitTravelToPriority(goodCandidates)
-          }
+        val goodTarget: Option[String] = if (goodCandidates.nonEmpty) {
+          if (role == game.humanRole)
+            Some(askCountry("Place a cell in which Good non-Muslim country: ", goodCandidates))
           else
-            None
-          
-          val fairTarget: Option[String] = if (fairCandidates.nonEmpty && (goodTarget.isEmpty || game.cellsAvailable > 1)) {
-            if (role == game.humanRole)
-              Some(askCountry("Place a cell in which Fair non-Muslim country: ", fairCandidates))
-            else
-              JihadistBot.recruitTravelToPriority(fairCandidates)
-          }
+            JihadistBot.recruitTravelToPriority(goodCandidates)
+        }
+        else
+          None
+        
+        val fairTarget: Option[String] = if (fairCandidates.nonEmpty) {
+          if (role == game.humanRole)
+            Some(askCountry("Place a cell in which Fair non-Muslim country: ", fairCandidates))
           else
-            None
-          
-          for (target <- List(goodTarget, fairTarget).flatten) {
-            addEventTarget(target)
+            JihadistBot.recruitTravelToPriority(fairCandidates)
+        }
+        else
+          None
+        
+        for (target <- List(goodTarget, fairTarget).flatten) {
+          addEventTarget(target)
+          if (game.cellsAvailable > 0) {
             testCountry(target)
             addSleeperCellsToCountry(target, 1)
           }
+          else
+            log(s"There are no cells available to place in $target")
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -2232,7 +2246,10 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(308, "Battle of Marawi City", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => game.cellsAvailable > 0 || game.availablePlots.nonEmpty
+      (_: Role, forTrigger: Boolean) =>
+        forTrigger ||
+        game.cellsAvailable > 0 ||
+        game.availablePlots.nonEmpty
       ,
       (role: Role) => {
         addEventTarget(Philippines)
@@ -2248,28 +2265,34 @@ object ForeverWarCards {
         testCountry(Philippines)
         if (game.cellsAvailable > 0)
           addActiveCellsToCountry(Philippines, 1)
+        else
+          log(s"There are no cells available to place in $Philippines")
         plot foreach (addAvailablePlotToCountry(Philippines, _))
       }
     )),
     // ------------------------------------------------------------------------
     entry(new Card(309, "Easter Bombings", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => (game.availablePlots contains Plot1) && easterBombingsCandidates.nonEmpty
+      (_: Role, forTrigger: Boolean) =>
+        forTrigger ||
+        (game.availablePlots contains Plot1) && easterBombingsCandidates.nonEmpty
       ,
       (role: Role) => {
-        val maxPlots = (game.availablePlots count (_ == Plot1))
-        val (target, numPlots) = if (role == game.humanRole) {
-            val t = askCountry("Place plot(s) in which country: ", easterBombingsCandidates)
-            val n = askInt(s"Place how many Level 1 Plots in $t", 1, maxPlots, Some(maxPlots))
-            (t, n)
+        if ((game.availablePlots contains Plot1) && easterBombingsCandidates.nonEmpty) {
+          val maxPlots = (game.availablePlots count (_ == Plot1))
+          val (target, numPlots) = if (role == game.humanRole) {
+              val t = askCountry("Place plot(s) in which country: ", easterBombingsCandidates)
+              val n = askInt(s"Place how many Level 1 Plots in $t", 1, maxPlots, Some(maxPlots))
+              (t, n)
+          }
+          else
+            (JihadistBot.plotPriority(easterBombingsCandidates).get, maxPlots)
+          
+          addEventTarget(target)
+          testCountry(target)
+          for (i <- 1 to numPlots)
+            addAvailablePlotToCountry(target, Plot1, visible = true)
         }
-        else
-          (JihadistBot.plotPriority(easterBombingsCandidates).get, maxPlots)
-        
-        addEventTarget(target)
-        testCountry(target)
-        for (i <- 1 to numPlots)
-          addAvailablePlotToCountry(target, Plot1, visible = true)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2373,16 +2396,18 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(313, "Hayat Tahir al-Sham", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => game.getMuslim(Syria).civilWar &&
-                               (game.cellsAvailable > 0 || game.adjacentCountriesWithCells(Syria).nonEmpty)
+      (_: Role, forTrigger: Boolean) =>
+        game.getMuslim(Syria).civilWar &&
+        (forTrigger || (game.cellsAvailable > 0 || game.adjacentCountriesWithCells(Syria).nonEmpty))
       ,
       (role: Role) => {
         val trackCells   = 3 min game.cellsAvailable
         val adjWithCells = game.adjacentCountriesWithCells(Syria)
         val maxAdjCells  = (adjWithCells map (_.cells)).sum
-        val mapCells     = (3 - trackCells) min maxAdjCells
+        val mapCells     = ((3 - trackCells) min maxAdjCells) max 0
         
         addEventTarget(Syria)
+
         addSleeperCellsToCountry(Syria, trackCells)
         // If there were not enough cells on the track
         // then we must make up the difference from adjacent
@@ -2421,7 +2446,10 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(314, "Jihadist African Safari", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => game.availablePlots.nonEmpty || game.cellsAvailable > 0
+      (_: Role, forTrigger: Boolean) =>
+        forTrigger ||
+        game.availablePlots.nonEmpty ||
+        game.cellsAvailable > 0
       ,
       (role: Role) => {
         case class Action(name: String, item: Either[Unit, Plot])
@@ -2644,7 +2672,9 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => tribalLeadersCandidates.nonEmpty
+      (_: Role, forTrigger: Boolean) =>
+        forTrigger ||
+        tribalLeadersCandidates.nonEmpty
       ,
       (role: Role) => {
         if (role == game.humanRole) {
