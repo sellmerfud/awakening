@@ -122,27 +122,16 @@ object SavedGame {
   }
 
   private def asString(x: Any): String = x.toString
-  private def asOptString(x: Any): Option[String] = x match {
-    case null => None
-    case s    => Some(s.toString)
-  }
 
   private def asBoolean(x: Any): Boolean = x match {
     case b: Boolean => b
     case _          => throw new Exception(s"Not a valid Boolean value: $x")
   }
+
   private def asInt(x: Any): Int = x match {
     case i: Int => i
     case _      => throw new Exception(s"Not a valid Integer value: $x")
   }
-
-  private def asOptInt(x: Any): Option[Int] = x match {
-    case null   => None
-    case i: Int => Some(i)
-    case _      => throw new Exception(s"Not a valid Integer value: $x")
-
-  }
-
 
   private def asMap(x: Any): Map[String, Any] = x match {
     case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
@@ -397,6 +386,7 @@ object SavedGame {
       phaseTargetsFromMap(asMap(data("targetsLastPhase"))),
       asBoolean(data("exitAfterWin")),
       asBoolean(data("botLogging")),
+      data.get("botEnhancements").map(asBoolean).getOrElse(false),
       (asList(data("history")) map (s => gameSegmentFromMap(asMap(s)))).toVector,
       asString(data("description")),
       asBoolean(data.get("showColor") getOrElse true)

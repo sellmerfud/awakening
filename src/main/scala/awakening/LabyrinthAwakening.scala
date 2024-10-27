@@ -1189,6 +1189,7 @@ object LabyrinthAwakening {
     targetsLastPhase: PhaseTargets = PhaseTargets(),
     exitAfterWin: Boolean          = true,
     botLogging: Boolean            = false,
+    botEnhancements: Boolean       = false, // Use enhancements to official Awakening bot algorithms
     history: Vector[GameSegment]   = Vector.empty,
     description: String            = "",
     showColor: Boolean             = !scala.util.Properties.isWin, // Default true except on Windows
@@ -7431,7 +7432,7 @@ object LabyrinthAwakening {
       "prestige", "funding", "difficulty", "lapsing cards",
       "removed cards", "first plot", "markers" , "reserves",
       "plots", "offmap troops", "posture", "auto roll",
-      "bot logging", "color", "resolved plot countries", "exit after win"
+      "bot logging", "bot enhancements", "color", "resolved plot countries", "exit after win"
     ).sorted :::countryNames(game.countries).sorted
     val choice = askOneOf("[Adjust] (? for list): ", options, param, allowNone = true,
                            abbr = CountryAbbreviations, allowAbort = false)
@@ -7468,6 +7469,7 @@ object LabyrinthAwakening {
       case "resolved plot countries" => adjustPlotTargets()
       case "difficulty"              => adjustDifficulty()
       case "bot logging"             => adjustBotLogging()
+      case "bot enhancements"        => adjustBotEnhancements()
       case "color"                   => adjustShowColor()
       case "lapsing cards"           => adjustLapsingCards()
       case "removed cards"           => adjustRemovedCards()
@@ -7568,6 +7570,13 @@ object LabyrinthAwakening {
     logAdjustment("Bot logging", game.botLogging, newValue)
     game = game.copy(botLogging = newValue)
     saveAdjustment("Bot logging")
+  }
+
+  def adjustBotEnhancements(): Unit = {
+    val newValue = !game.botEnhancements
+    logAdjustment("Bot enhancements", game.botEnhancements, newValue)
+    game = game.copy(botEnhancements = newValue)
+    saveAdjustment("Bot enhancements")
   }
 
   def adjustExitAfterWin(): Unit = {

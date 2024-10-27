@@ -394,9 +394,12 @@ object JihadistBot extends BotHelpers {
     PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
     FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
     
-  val TravelToFlowchart = List(
-    PoorNeedCellsforMajorJihad, GoodMuslimWithAdjacentCellsFilter,
-    FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
+  def TravelToFlowchart = if (game.botEnhancements)
+    List(PoorNeedCellsforMajorJihad, GoodMuslimWithAdjacentCellsFilter,
+         FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
+  else
+    List(PoorNeedCellsforMajorJihad, GoodMuslimFilter,
+         FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
   
   val LabyrinthRecruitAndTravelToPriorities = List(
     NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
@@ -502,7 +505,8 @@ object JihadistBot extends BotHelpers {
   // already contains 10 or more cells.
   def botRecruitPossible: Boolean =
     game.recruitPossible &&
-    game.getCountries(game.recruitTargets(madrassas = false)).exists(c => !c.isIslamistRule || c.totalCells < 10)
+    (!game.botEnhancements ||
+    game.getCountries(game.recruitTargets(madrassas = false)).exists(c => !c.isIslamistRule || c.totalCells < 10))
 
   // Jihadist Operations Flowchart definitions.
   sealed trait Operation extends OpFlowchartNode
