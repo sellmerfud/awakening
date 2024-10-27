@@ -1629,13 +1629,15 @@ object AwakeningCards {
           (t, action)
         }
         
-        addEventTarget(target)
-        testCountry(target)
         val num = if (game.isMuslim(target) && (game.getMuslim(target).civilWar || game.isCaliphateMember(target))) 2 else 1
         if (action == "funding")
           increaseFunding(num)
-        else
+          else {
+          addEventTarget(target)
+          testCountry(target)
           addSleeperCellsToCountry(target, num min game.cellsAvailable)
+        }
+        addEventTarget(Serbia)
         rollCountryPosture(Serbia)
         log("Travel to/within Schengen countries requires a roll for the rest of this turn")
       }
