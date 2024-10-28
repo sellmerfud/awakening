@@ -267,7 +267,7 @@ object JihadistBot extends BotHelpers {
   val GoodMuslimFilter  = new CriteriaFilter("Good Muslim", muslimTest(_.isGood))
 
   // To try to make the Bot AI smarter, we don't prioritise Good Muslim countries
-  // unless the is cell in an adjacent country so that the travel will succeed 
+  // unless there is a cell in an adjacent country so that the travel will succeed 
   // without a die roll
   val GoodMuslimWithAdjacentCellsFilter =
     new CriteriaFilter("Good Muslim w/ adjacent cells", muslimTest(m => m.isGood && m.hasAdjacent(hasCellForTravel)))
@@ -285,6 +285,12 @@ object JihadistBot extends BotHelpers {
                   muslimScore(m => if (m.isIslamistRule) 50 else jihadDRM(m, false), nonMuslimScore = 100))
   val FairMuslimBestJihadDRM = new LowestScoreNode("Fair Muslim w/ best Jihad DRM",
                   muslimTest(_.isFair),
+                  muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
+  // To try to make the Bot AI smarter, we don't prioritise Fair Muslim countries
+  // where Jihad is possible unless there is a cell in an adjacent country so that
+  // the travel will succeed  without a die roll
+  val FairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode("Fair Muslim w/ best Jihad DRM w/ Adjacent cells",
+                  muslimTest(m => m.isFair && m.hasAdjacent(hasCellForTravel)),
                   muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
   val PoorMuslimBestJihadDRM = new LowestScoreNode("Poor Muslim w/ best Jihad DRM",
                   muslimTest(_.isPoor),
@@ -396,7 +402,7 @@ object JihadistBot extends BotHelpers {
     
   def TravelToFlowchart = if (game.botEnhancements)
     List(PoorNeedCellsforMajorJihad, GoodMuslimWithAdjacentCellsFilter,
-         FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
+         FairMuslimBestJihadDRMWithAdjacentCells, NonMuslimFilter, PoorMuslimBestJihadDRM)
   else
     List(PoorNeedCellsforMajorJihad, GoodMuslimFilter,
          FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
@@ -502,11 +508,11 @@ object JihadistBot extends BotHelpers {
   
   // To try and make the Bot AI a bit smarter, we don't
   // allow the Bot to recruit into an Islamist Rule country if it
-  // already contains 10 or more cells.
+  // already contains 7 or more cells.
   def botRecruitPossible: Boolean =
     game.recruitPossible &&
     (!game.botEnhancements ||
-    game.getCountries(game.recruitTargets(madrassas = false)).exists(c => !c.isIslamistRule || c.totalCells < 10))
+    game.getCountries(game.recruitTargets(madrassas = false)).exists(c => !c.isIslamistRule || c.totalCells < 7))
 
   // Jihadist Operations Flowchart definitions.
   sealed trait Operation extends OpFlowchartNode

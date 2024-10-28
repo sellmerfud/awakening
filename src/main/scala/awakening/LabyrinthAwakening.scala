@@ -4185,15 +4185,23 @@ object LabyrinthAwakening {
         log(if (success) "Success" else "Failure")
 
         if (success) {
+          // For enhanced bot AI, when there are no available WMD plots, we
+          // sort the plots so that the hightest number plots are selected first.
+          // Otherwise the plots are selected at ransdom.
+          def preparedAvailablePlots = if (game.botEnhancements && !game.availablePlots.exists(_ == PlotWMD))
+            game.availablePlots.sorted
+          else
+            shuffle(game.availablePlots)
+
           // Ask the user which plot to place.  The Bot takes a random plot regardless of ops spent.
           val plots = if (game.humanRole == Jihadist)
             askAvailablePlots(1, ops)
           else if (game.jihadistIdeology(Attractive)) {
             log(s"$Jihadist Bot with Attractive Ideology places two plots")
-            shuffle(game.availablePlots) take 2
+            preparedAvailablePlots take 2
           }
           else
-            shuffle(game.availablePlots) take 1
+            preparedAvailablePlots take 1
 
           for (plot <- plots)
             addAvailablePlotToCountry(name, plot)
