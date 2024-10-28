@@ -1604,10 +1604,10 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(169, "Islamic Maghreb", Jihadist, 1,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => if (role == game.botRole)
+      (role: Role, forTrigger: Boolean) => 
+        forTrigger ||
+        role == game.humanRole ||
         (game hasCountry islamicMaghrebCandidate) && (game.funding < 8 || game.cellsAvailable > 0)
-      else  
-        (game hasCountry islamicMaghrebCandidate) && (game.funding < 9 || game.cellsAvailable > 0)
       ,  
       (role: Role) => {
         val (target, action) = if (role == game.humanRole) {
