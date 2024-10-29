@@ -5871,8 +5871,14 @@ object LabyrinthAwakening {
             val humanRole = cmdLineParams.side orElse
                             configParams.side getOrElse {
               // ask which side the user wishes to play
-              val sidePrompt = "Which side do you wish to play? (US or Jihadist) "
-              Role(askOneOf(sidePrompt, "US"::"Jihadist"::Nil, allowAbort = false).get)
+              val choices = List(
+                "US"       -> "Play as US",
+                "Jihadist" -> "Play as Jihadist",
+                "quit"     -> "Quit")
+              askMenu("\nChoose one:", choices, allowAbort = false).head match {
+                case "quit"   => throw ExitGame
+                case side     => Role(side)
+              }
             }
             val difficulties = if (humanRole == US)
               cmdLineParams.jihadistBotDifficulties orElse
@@ -5898,7 +5904,8 @@ object LabyrinthAwakening {
             }
             log()
             scenario.additionalSetup()
-            saveGameState(Some("Beginning of game"))  // Save the initial game state as turn-0
+            game = game.copy(turn = 1)
+            saveGameState(Some("Beginning of game"))
 
             val usCards = USCardDraw(game.troopCommitment)
             val jihadistCards = JihadistCardDraw(game.fundingLevel)
@@ -5907,7 +5914,6 @@ object LabyrinthAwakening {
             log(separator())
             log(s"$US player will draw $usCards cards", Color.Info)
             log(s"Jihadist player will draw $jihadistCards cards", Color.Info)
-            game = game.copy(turn = game.turn + 1)
         }
       }
 
@@ -6323,7 +6329,7 @@ object LabyrinthAwakening {
       Command("help",         """List available commands"""),
       Command("quit",         """Quit the game.  All plays for the current turn will be saved.""")
     ) filter {
-      case Command("rollback", _)            => mostRecentSaveNumber(gameName.get).getOrElse(0) > 1
+      case Command("rollback", _)            => mostRecentSaveNumber(gameName.get).getOrElse(0) > 0
       case Command("remove cadre", _)        => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
       case Command("add awakening cards", _) => game.currentMode == LabyrinthMode && game.campaign
       case Command("add forever cards", _)   => game.currentMode == AwakeningMode && game.campaign
