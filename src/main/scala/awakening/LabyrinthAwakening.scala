@@ -1189,7 +1189,7 @@ object LabyrinthAwakening {
     targetsLastPhase: PhaseTargets = PhaseTargets(),
     exitAfterWin: Boolean          = true,
     botLogging: Boolean            = false,
-    botEnhancements: Boolean       = false, // Use enhancements to official Awakening bot algorithms
+    botEnhancements: Boolean       = true, // Use enhancements to official Awakening bot algorithms
     history: Vector[GameSegment]   = Vector.empty,
     description: String            = "",
     showColor: Boolean             = !scala.util.Properties.isWin, // Default true except on Windows
