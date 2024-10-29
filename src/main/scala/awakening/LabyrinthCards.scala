@@ -2070,8 +2070,9 @@ object LabyrinthCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
         globalEventNotInPlay(SaddamCaptured) &&
-        (game getMuslim Iraq).isPoor &&
-        (game getMuslim Iraq).isAdversary
+        (game.getMuslim(Iraq)).isPoor &&
+        (game.getMuslim(Iraq)).isAdversary &&
+        game.funding < 9
       ,
       (role: Role) => {
         log("Set funding to 9")
