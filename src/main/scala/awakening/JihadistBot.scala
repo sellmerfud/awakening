@@ -396,13 +396,13 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, plotPriorities) map (_.name)
   }
   
-  val RecruitFlowchart = List(
-    PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
-    FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
+  def RecruitFlowchart = 
+    List(PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
+         FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
     
   def TravelToFlowchart = if (game.botEnhancements)
     List(PoorNeedCellsforMajorJihad, GoodMuslimWithAdjacentCellsFilter,
-         FairMuslimBestJihadDRMWithAdjacentCells, NonMuslimFilter, PoorMuslimBestJihadDRM)
+         FairMuslimBestJihadDRMWithAdjacentCells, PoorMuslimBestJihadDRM, NonMuslimFilter)
   else
     List(PoorNeedCellsforMajorJihad, GoodMuslimFilter,
          FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
