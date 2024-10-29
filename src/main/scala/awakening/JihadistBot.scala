@@ -506,13 +506,18 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, priorities) map (_.name)
   }
   
+  
+  def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
+    val maxCellsInIR = if (game.botEnhancements) 7 else 1000  // ie.  no limit if botEnancement not in use
+    game.getCountries(game.recruitTargets(madrassas = false)).
+    filter(c => ((c.isMuslim && c.hasCadre) || !muslimWithCadreOnly) && (!c.isIslamistRule || c.totalCells < maxCellsInIR))
+    .map(_.name)
+  }
+  
   // To try and make the Bot AI a bit smarter, we don't
   // allow the Bot to recruit into an Islamist Rule country if it
   // already contains 7 or more cells.
-  def botRecruitPossible: Boolean =
-    game.recruitPossible &&
-    (!game.botEnhancements ||
-    game.getCountries(game.recruitTargets(madrassas = false)).exists(c => !c.isIslamistRule || c.totalCells < 7))
+  def botRecruitPossible(muslimWithCadreOnly: Boolean): Boolean = game.recruitPossible && botRecruitTargets(muslimWithCadreOnly).nonEmpty
 
   // Jihadist Operations Flowchart definitions.
   sealed trait Operation extends OpFlowchartNode
@@ -545,14 +550,14 @@ object JihadistBot extends BotHelpers {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = PlotOp
-    def condition(ops: Int) = botRecruitPossible
+    def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
   }
   
   object CellAvailableOrTravelDecision extends OperationDecision {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = TravelOp
-    def condition(ops: Int) = botRecruitPossible
+    def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
   }
   
   object CellInGoodFairWhereJSP extends OperationDecision {
@@ -607,7 +612,7 @@ object JihadistBot extends BotHelpers {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
     def noPath  = CellInNonMuslim
-    def condition(ops: Int) = botRecruitPossible
+    def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
   }
   
   object CellInNonMuslim extends OperationDecision {
@@ -866,7 +871,7 @@ object JihadistBot extends BotHelpers {
   
   def performRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
     // We should always find a target for recruit operations.
-    val target = recruitTarget(game.recruitTargets(madrassas = madrassas)) getOrElse {
+    val target = recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)) getOrElse {
       throw new IllegalStateException("recruitOperation() should always find a target")
     }
     val c = game.getCountry(target)
@@ -1200,9 +1205,9 @@ object JihadistBot extends BotHelpers {
                               game.availablePlots.nonEmpty &&
                               (game hasNonMuslim (n => n.isSoft && totalUnused(n) > 0))
     // I'm allowing recruit in IR countries, not sure if that is the intent?
-    val canRecruitAtMuslimCadre = botRecruitPossible && (game hasMuslim (_.hasCadre))
+    val canRecruitAtMuslimCadre = botRecruitPossible(muslimWithCadreOnly = true)
     val canAddToReserves = !requiresReserves && game.reserves.jihadist < 2
-    val canRecruit = botRecruitPossible && !requiresReserves
+    val canRecruit = botRecruitPossible(muslimWithCadreOnly = false) && !requiresReserves
     val canTravelToUS = !requiresReserves && unusedCellsOnMapForTravel > 0
     
     if      (canPlotWMDInUs)               Some(PlotWMDInUS)
@@ -1394,7 +1399,7 @@ object JihadistBot extends BotHelpers {
     log()
     log(s"Radicalization: Recruit in a Muslim country with a cadre")
     val maxOps     = cardOps + reserveOps
-    val candidates = game.muslims filter (m => m.hasCadre) sortBy (m => jihadDRM(m, m.isPoor))
+    val candidates = game.getMuslims(botRecruitTargets(muslimWithCadreOnly = true)).sortBy(m => jihadDRM(m, m.isPoor))
     val target     = recruitTarget(candidates map (_.name)).get
     addOpsTarget(target)
     val m = game getMuslim target
@@ -1450,7 +1455,7 @@ object JihadistBot extends BotHelpers {
   def radRecruit(cardOps: Int): Int = {
     log()
     log(s"Radicalization: Recruit")
-    val target      = recruitTarget(game.recruitTargets(madrassas = false)).get
+    val target = recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
     addOpsTarget(target)
     val m = game getMuslim target
     def nextAttempt(completed: Int): Int = {
