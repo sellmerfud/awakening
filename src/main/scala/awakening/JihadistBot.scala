@@ -1003,7 +1003,7 @@ object JihadistBot extends BotHelpers {
   // Returns the number of Ops used.
   def plotOperation(card: Card): Int = {
     val maxCells = (game.plotTargets map game.getCountry map unusedCells).sum
-    val maxAttempts = card.ops min maxCells
+    val maxAttempts = maxOpsPlusReserves(card) min maxCells
     log()
     log(s"$Jihadist performs a Plot operation")
     log(separator())
