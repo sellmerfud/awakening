@@ -1601,21 +1601,22 @@ object LabyrinthCards {
         }
       }
       else {
-        def nextTravel(num: Int): Unit = {
+        def nextTravel(destinations: List[String]): Unit = {
           val canTravelFrom = (c: Country) => JihadistBot.hasCellForTravel(c)
           val travellers = game.countries filter canTravelFrom map (c => (c.name, JihadistBot.activeCells(c) > 0))
-          if (num <= 2 && travellers.nonEmpty) {
-            val to   = JihadistBot.posturePriority(Schengen).get
+          if (destinations.size < 2 && travellers.nonEmpty) {
+            val canidates = Schengen.filterNot(destinations.contains)
+            val to   = JihadistBot.posturePriority(canidates).get
             val from = JihadistBot.travelFromTarget(to, travellers map (_._1) filterNot (_ == to)).get
             val (_, active) = (travellers find (_._1 == from)).get
             addEventTarget(to)
             testCountry(to)
             moveCellsBetweenCountries(from, to, 1, active, forTravel = true)
             JihadistBot.usedCells(to).addSleepers(1)
-            nextTravel(num + 1)
+            nextTravel(to :: destinations)
           }
         }
-        nextTravel(1)
+        nextTravel(Nil)
       }
     )),
     // ------------------------------------------------------------------------
