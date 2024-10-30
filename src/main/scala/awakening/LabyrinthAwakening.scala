@@ -1576,6 +1576,7 @@ object LabyrinthAwakening {
       b += "Options:"
       b += separator()
       b += s"Exit game after victory: ${if (exitAfterWin) "yes" else "no"}"
+      b += s"Use Bot enhancments: ${if (botEnhancements) "yes" else "no"}"
       b.toList
     }
 
@@ -1789,6 +1790,7 @@ object LabyrinthAwakening {
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
+    exitAfterWin: Boolean,
     showColor: Boolean) = {
 
     var countries = if (scenario.startingMode == LabyrinthMode && !campaign)
@@ -1819,12 +1821,13 @@ object LabyrinthAwakening {
       false,  // sequestrationTroops: true if 3 troops off map due to Sequestration event
       cardsRemoved = scenario.cardsRemoved,
       showColor = showColor,
-      offMapTroops = scenario.offMapTroops)
+      offMapTroops = scenario.offMapTroops,
+      exitAfterWin = exitAfterWin)
   }
 
 
   // Global variables
-  var game = initialGameState(Awakening, false, US, true, Muddled :: Nil, !scala.util.Properties.isWin)
+  var game = initialGameState(Awakening, false, US, true, Muddled :: Nil, false, !scala.util.Properties.isWin)
 
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -5951,10 +5954,13 @@ object LabyrinthAwakening {
                                 configParams.autoDice getOrElse
                                 !askYorN("Do you wish to roll your own dice (y/n)? ")
 
+            val exitAfterWin = cmdLineParams.exitAfterWin orElse
+                               configParams.exitAfterWin getOrElse askExitAfterWin()
+
             gameName = Some(askGameName("Enter a name for your new game: "))
 
             val showColor = cmdLineParams.showColor orElse configParams.showColor getOrElse !scala.util.Properties.isWin
-            game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties, showColor)
+            game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties, exitAfterWin, showColor)
             logSummary(game.scenarioSummary)
             printSummary(game.scoringSummary)
             if (scenario.cardsRemoved.nonEmpty) {
@@ -6059,6 +6065,8 @@ object LabyrinthAwakening {
           val values = (v map { case USDiff(diff) => diff }).sorted.distinct
           c.copy(usResolve = values)
         }
+        bool("", "--exit-after-win", "Exit the program when one side achieves victory")
+          { (v, c) => c.copy(exitAfterWin = Some(v)) }
         bool("", "--color", "Show colored log messages")
           { (v, c) => c.copy(showColor = Some(v)) }
         reqd[String]("", "--file=path", "Path to a saved game file")
@@ -6108,6 +6116,7 @@ object LabyrinthAwakening {
     val ideology: List[BotDifficulty] = Nil,
     val usResolve: List[BotDifficulty] = Nil,
     val showColor: Option[Boolean] = None,
+    val exitAfterWin: Option[Boolean] = None,
     val gameFile: Option[String] = None) {
 
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
@@ -6162,12 +6171,14 @@ object LabyrinthAwakening {
             case _ => println(s"Ignoring invalid side name ($value) in awakening_config file")
           }
         }
+        
         propValue("level") foreach { value =>
           if (List("1","2","3","4","5","6") contains value)
             params = params.copy(level = Some(value.toInt))
           else
             println(s"Ignoring invalid level ($value) in awakening_config file")
         }
+
         propValue("dice") foreach { value =>
           value.toLowerCase match {
             case "auto"  => params = params.copy(autoDice = Some(true))
@@ -6175,6 +6186,7 @@ object LabyrinthAwakening {
             case _ => println(s"Ignoring invalid dice value ($value) in awakening_config file")
           }
         }
+        
         propValue("ideology") foreach { value =>
           val tokens = value.split(",").toList map (_.trim) filterNot (_ == "")
           if (tokens forall isValidIdeology)
@@ -6182,6 +6194,7 @@ object LabyrinthAwakening {
           else
             println(s"Ignoring invalid ideology value ($value) in awakening_config file")
         }
+
         propValue("us-resolve") foreach { value =>
           val tokens = value.split(",").toList map (_.trim) filterNot (_ == "")
           if (tokens forall isValidUsResolve)
@@ -6189,6 +6202,15 @@ object LabyrinthAwakening {
           else
             println(s"Ignoring invalid us-resolve value ($value) in awakening_config file")
         }
+
+        propValue("exit-after-win") foreach { value =>
+          value.toLowerCase match {
+            case "yes" => params = params.copy(exitAfterWin = Some(true))
+            case "no"  => params = params.copy(exitAfterWin = Some(false))
+            case _ => println(s"Ignoring invalid exit-after-win value ($value) in awakening_config file")
+          }
+        }
+
         propValue("color") foreach { value =>
           value.toLowerCase match {
             case "yes" => params = params.copy(showColor = Some(true))
@@ -6241,6 +6263,15 @@ object LabyrinthAwakening {
       }
 
     levels take askMenu("\nChoose a difficulty level:", nextChoice(1, None, levels), allowAbort = false).head.toInt
+  }
+
+  def askExitAfterWin() = {
+    val choices = List(
+      true  -> "The program should terminate.",
+      false -> "The program should continue so I can explore the game further."
+    )
+
+    askMenu("\nWhat would happen when one side achieves victory:", choices).head
   }
 
   def isValidIdeology(name: String) =
