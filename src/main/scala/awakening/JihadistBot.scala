@@ -277,6 +277,8 @@ object JihadistBot extends BotHelpers {
                   muslimTest(m => m.isPoor && activeCells(m) > 0))
   val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than troops/militia and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
+  val PoorCadreOrNeedCellsforMajorJihad = new CriteriaFilter("Poor, Cadre OR 1-4 more cells than troops/militia and JSP",
+                  muslimTest(m => m.hasCadre || poorMuslimNeedsCellsForMajorJihad(m)))
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
   // then they would be selected over Islamist Rule countries.                            
@@ -396,7 +398,10 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, plotPriorities) map (_.name)
   }
   
-  def RecruitFlowchart = 
+  def RecruitFlowchart = if (game.botEnhancements)
+    List(PoorCadreOrNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
+         FairMuslimBestJihadDRM, PoorMuslimBestJihadDRM)        
+  else
     List(PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
          FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
     
@@ -508,10 +513,18 @@ object JihadistBot extends BotHelpers {
   
   
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
-    val maxCellsInIR = if (game.botEnhancements) 7 else 1000  // ie.  no limit if botEnancement not in use
-    game.getCountries(game.recruitTargets(madrassas = false)).
-    filter(c => ((c.isMuslim && c.hasCadre) || !muslimWithCadreOnly) && (!c.isIslamistRule || c.totalCells < maxCellsInIR))
-    .map(_.name)
+    val criteria = if (game.botEnhancements)
+      (c: Country) =>
+        c.isMuslim  &&                                      // Only recruit in Muslim countries
+        (c.isPoor || c.isIslamistRule || c.autoRecruit) &&  // Only recruit in Good/Fair if auto-recruit
+        (!c.isIslamistRule || c.totalCells < 7) &&          // Only recruit in IR if less than 7 cells present
+        (!muslimWithCadreOnly || c.hasCadre)                // Special radicalization test
+    else
+       (c: Country) => (!muslimWithCadreOnly || c.hasCadre) // Special radicalization test
+
+    game.getCountries(game.recruitTargets(madrassas = false))
+      .filter(criteria)
+      .map(_.name)      
   }
   
   // To try and make the Bot AI a bit smarter, we don't
