@@ -1980,7 +1980,7 @@ object ForeverWarCards {
           // Bot
           if (plots.nonEmpty) {
             addEventTarget(UnitedStates)
-            addAvailablePlotToCountry(UnitedStates, shuffle(plots).head)
+            addAvailablePlotToCountry(UnitedStates, JihadistBot.preparePlots(plots).head)
           }
           else {
             val candidates = countryNames(game.nonMuslims filter (n => n.canRemovePosture && n.isOppositeUsPosture))
@@ -2277,7 +2277,7 @@ object ForeverWarCards {
         else if (role == game.humanRole)
           Some(askPlots(game.availablePlots, 1).head)
         else
-          Some(shuffle(game.availablePlots).head)
+          Some(JihadistBot.preparePlots(game.availablePlots).head)
 
         println()
         testCountry(Philippines)
@@ -2371,7 +2371,7 @@ object ForeverWarCards {
               }
           }
             
-          nextPlot(maxPlots, 0, shuffle(game.availablePlots))
+          nextPlot(maxPlots, 0, game.availablePlots.sorted)
         }
         
         println()
@@ -2503,9 +2503,9 @@ object ForeverWarCards {
           // Bot
           val plotsFirst = game.funding < 9
           val plotsToPlace = if (plotsFirst)
-            shuffle(game.availablePlots) take 3
+            JihadistBot.preparePlots(game.availablePlots) take 3
           else
-            shuffle(game.availablePlots) take ((3 - game.cellsAvailable) max 0)
+            JihadistBot.preparePlots(game.availablePlots) take ((3 - game.cellsAvailable) max 0)
           
           val numCells = (3 - plotsToPlace.size) min game.cellsAvailable
 
@@ -2588,7 +2588,7 @@ object ForeverWarCards {
           val cell = if (c.activeCells > 0) (1, 0, false)
                      else if (c.hasSadr)    (0, 0, true)
                      else                   (0, 1, false)
-          (target, cell, shuffle(game.availablePlots) take 2)
+          (target, cell, JihadistBot.preparePlots(game.availablePlots) take 2)
         }
         
         addEventTarget(target)

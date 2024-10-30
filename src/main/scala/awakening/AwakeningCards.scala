@@ -2315,7 +2315,7 @@ object AwakeningCards {
           val cell = if (c.activeCells > 0) (1, 0, false)
                      else if (c.hasSadr)    (0, 0, true)
                      else                   (0, 1, false)
-          (target, cell, shuffle(game.availablePlots) take 2)
+          (target, cell, JihadistBot.preparePlots(game.availablePlots) take 2)
         }
 
         addEventTarget(target)

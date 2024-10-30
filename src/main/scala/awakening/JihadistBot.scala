@@ -350,6 +350,15 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)) map (_.name)    
   }
 
+  // Prepare plots for selection.
+  // Normal rule simply randomizes the plots.
+  // Enhanced rules will sort the plots with the highest plot numbers first, unless
+  // there are WMD plots in the mix, in which case the plots are ramdomized.
+  def preparePlots(plots: List[Plot]) = if (game.botEnhancements && !plots.exists(_ == PlotWMD))
+    plots.sorted
+  else
+    shuffle(plots)
+
   val TightPlotFlowchart = List(
     PoorNonMuslimFilter, FairNonMuslimFilter, GoodNonMuslimFilter)
     

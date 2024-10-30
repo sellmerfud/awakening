@@ -1962,7 +1962,7 @@ object LabyrinthCards {
           val cell = if (c.activeCells > 0) (1, 0, false)
                      else if (c.hasSadr)    (0, 0, true)
                       else                  (0, 1, false)
-          (target, cell, shuffle(game.availablePlots) take 2)
+          (target, cell, JihadistBot.preparePlots(game.availablePlots) take 2)
         }
         
         addEventTarget(target)
@@ -2660,7 +2660,7 @@ object LabyrinthCards {
         }
         else {
           val name = JihadistBot.plotPriority(hambaliCandidates).get
-          (name, shuffle(game.availablePlots).head)
+          (name, JihadistBot.preparePlots(game.availablePlots).head)
         }
         
         addEventTarget(name)
@@ -2692,10 +2692,10 @@ object LabyrinthCards {
           (name, askAvailablePlots(1, ops = 3).head)
         }
         else if (ksmJihadistCandidates contains UnitedStates)
-          (UnitedStates, shuffle(game.availablePlots).head)
+          (UnitedStates, JihadistBot.preparePlots(game.availablePlots).head)
         else {
           val name = JihadistBot.plotPriority(ksmJihadistCandidates).get
-          (name, shuffle(game.availablePlots).head)
+          (name, JihadistBot.preparePlots(game.availablePlots).head)
         }
           
         addEventTarget(name)
