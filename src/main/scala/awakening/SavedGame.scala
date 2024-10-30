@@ -339,6 +339,7 @@ object SavedGame {
       "targetsLastPhase"    -> phaseTargetsToMap(gameState.targetsLastPhase),
       "exitAfterWin"        -> game.exitAfterWin,
       "botLogging"          -> gameState.botLogging,
+      "botEnhancements"     -> gameState.botEnhancements,
       "history"             -> (gameState.history map gameSegmentToMap),
       "description"         -> gameState.description,
       "showColor"           -> gameState.showColor
