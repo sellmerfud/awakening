@@ -502,6 +502,11 @@ object JihadistBot extends BotHelpers {
   }
   
   def travelFromTarget(toCountry: String, names: List[String]): Option[String] = {
+
+    val isGoodFairMuslimTarget = game.getCountry(toCountry) match {
+      case m: MuslimCountry => (m.isGood || m.isFair) && m.awakening - m.reaction < 1
+      case _ => false
+    }
     // The bot will never travel a SLEEPER cell within the same country
     def wouldMoveOrTravelWithinToSleep(c: Country) = c.name != toCountry || (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
     
@@ -515,7 +520,17 @@ object JihadistBot extends BotHelpers {
                           PoorPriority, FairPriority, GoodPriority, NotUSPriority,
                           MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
                           DisruptPrestigePriority, LowestRECPriority)
-    val withCells  = game.getCountries(names) filter hasCellForTravel filter wouldMoveOrTravelWithinToSleep
+
+    // Enhanced Bot will only travel from adjacent if target is
+    // a Muslim Good/Fair country
+    val withCells  = if (game.botEnhancements && isGoodFairMuslimTarget)
+      game.getCountries(getAdjacent(toCountry))
+        .filter(hasCellForTravel)
+        .filter(wouldMoveOrTravelWithinToSleep)
+    else
+      game.getCountries(names)
+        .filter(hasCellForTravel)
+        .filter(wouldMoveOrTravelWithinToSleep)
     val candidates = selectCandidates(withCells, flowchart)
     topPriority(candidates, priorities) map (_.name)
   }
