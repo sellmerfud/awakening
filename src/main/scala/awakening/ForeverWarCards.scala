@@ -369,7 +369,7 @@ object ForeverWarCards {
             case "discard" => 
               println()
               log(s"Discard top card of the $Jihadist hand")
-              
+              askCardsDiscarded(1)
             case _ =>
               val target = askCountry("Remove cells from which country: ", candidates)
               val num = game.getMuslim(target).totalCells min 2
@@ -398,6 +398,7 @@ object ForeverWarCards {
             case None =>
               println()
               log(s"You ($Jihadist) must discard one random card")
+              askCardsDiscarded(1)
           }
         }
       }
@@ -1023,7 +1024,7 @@ object ForeverWarCards {
           log(s"Discard a random card from the $Jihadist hand.")
         else
           log(s"You ($Jihadist) must randomly discard one card.")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2051,8 +2052,8 @@ object ForeverWarCards {
           val majorCandidates = game.majorJihadTargets(2) // 2 Ops only
           val minorCandidates = game.jihadTargets
           val choices = List(
-            choice(majorCandidates.nonEmpty, "major",   s"Major Jihad (${orList(majorCandidates)})"),
-            choice(minorCandidates.nonEmpty, "discard", s"Minor Jihad (${orList(minorCandidates)})")
+            choice(majorCandidates.nonEmpty, "major", s"Major Jihad (${orList(majorCandidates)})"),
+            choice(minorCandidates.nonEmpty, "minor", s"Minor Jihad (${orList(minorCandidates)})")
           ).flatten
           askMenu("\nExecute which type of Jihad:", choices).head match {
             case "major" => (askCountry("Major Jihad in which country: ", majorCandidates), true)
@@ -2107,7 +2108,7 @@ object ForeverWarCards {
           log(s"Discard the top card of the $US hand")
         else
           log(s"You ($US) discard a random card")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2214,9 +2215,23 @@ object ForeverWarCards {
             }
           }
           
-          for (n <- nextDiscard(1, 0); card = deck(n))
-            if (card.eventWillTrigger(Jihadist))
+          for (n <- nextDiscard(1, 0); card = deck(n)) {
+            if (n == AvengerCard)
+                avengerCardDrawn(discarded = false)
+            else if (card.autoTrigger)
+              autoTriggerCardDiscarded(n)
+            else if (game.botRole == Jihadist && card.eventWillTrigger(Jihadist)) {
+              log()
+              log(s"""The "${card.name}" event is triggered.""")
               performCardEvent(card, Jihadist, triggered = true)
+            }
+            else{
+              log()
+              log(s"""The "${card.name}" event does not trigger.""")
+              if (n == CriticalMiddle)
+                criticalMiddleReminder()
+            }
+          }
         }
       }
     )),
@@ -2240,7 +2255,7 @@ object ForeverWarCards {
           log(s"Discard the top card of the $US hand")
         else
           log(s"You ($US) must discard a random card")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3104,6 +3119,7 @@ object ForeverWarCards {
           
         log()
         log(s"$US player draws 1 card")
+        askCardsDrawn(1)
       }
       else { // Jihadist
         setTrumpTweetsOFF()
@@ -3112,7 +3128,7 @@ object ForeverWarCards {
           log(s"Discard top card of the $US hand")
         else
           log(s"You ($US) must discard one random card")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3635,7 +3651,6 @@ object ForeverWarCards {
           log(s"""The "Avenger" card was randomly drawn, so the event triggers""")
           log(separator())
           card.executeEvent(US)
-          
         }
         else {
           val action = if (role == game.humanRole) {
@@ -3652,13 +3667,15 @@ object ForeverWarCards {
           }
           
           action match {
-            case "discard" => log(s"Place $cardDisplay in the discard pile")
-            case "return"  => log(s"Return $cardDisplay to the top of the $opponent hand")
+            case "discard" =>
+              log(s"Place $cardDisplay in the discard pile")
+              processDiscardedCard(cardNum)
+            case "return"  =>
+              log(s"Return $cardDisplay to the top of the $opponent hand")
             case "keep"    => 
-              val giveNum = askCardNumber("Card # of a card from your hand to give away: ", allowNone = false).get
-              val giveDisplay = s""""${deck(giveNum).name}""""
+              log(s"Keep $cardDisplay and place another card from your hand the $opponent hand")
+              askCardsDrawn(1)
               
-              log(s"Keep $cardDisplay and place $giveDisplay on top of the $opponent hand")
             case _ => // Play the event
               log(s"\n$role executes the $cardDisplay event")
               log(separator())
@@ -3757,6 +3774,7 @@ object ForeverWarCards {
           }
         }
         log(s"\nDraw a card and add it to your ($role) hand")
+        askCardsDrawn(1)
       }
       else { // Bot
         val markers = bowlingGreenBotMarkers(role)
@@ -3785,6 +3803,7 @@ object ForeverWarCards {
         }
         
         log(s"\nPut the top card of the draw deck on top of the $role hand of cards")
+        askCardsDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3834,17 +3853,24 @@ object ForeverWarCards {
         val boxChoices = lapsingChoices ::: plotChoices filterNot { case (num, _) => offLimits(num) }
       
         log("""You cannot choose "OPEC Production Cut" or "Oil Price Spike"""")
-        if (boxChoices.isEmpty)
+        if (boxChoices.isEmpty) {
           log("\nSelect a card from the discard pile and add it to your hand.")
+          askCardsDrawn(1)
+        }
         else {
           val choices = boxChoices :+ (-1, "A card from the discard pile")
           askMenu("\nAdd which card to your hand:", choices).head match {
             case -1 =>
+              askCardsDrawn(1)
             case num if game.firstPlotCard == Some(num) =>
               game = game.copy(firstPlotCard = None)
+              if (num == AvengerCard)
+                avengerCardDrawn(discarded = false)
             case num =>
               val lapsing = game.cardsLapsing filterNot (_ == num)
               game = game.copy(cardsLapsing = lapsing)
+              if (num == AvengerCard)
+                avengerCardDrawn(discarded = false)
           }
         }      
         log("\nThe Resource value of each Oil Exporter is reduced by 1 for the rest of the turn")
@@ -3868,17 +3894,24 @@ object ForeverWarCards {
         val boxChoices = lapsingChoices ::: plotChoices filterNot { case (num, _) => offLimits(num) }
         
         log("""You cannot choose "OPEC Production Cut" or "Oil Price Spike"""")
-        if (boxChoices.isEmpty)
+        if (boxChoices.isEmpty) {
           log("\nSelect a card from the discard pile and add it to your hand.")
+          askCardsDrawn(1)
+        }
         else {
           val choices = boxChoices :+ (-1, "A card from the discard pile")
           askMenu("\nAdd which card to your hand:", choices).head match {
             case -1 =>
+              askCardsDrawn(1)
             case num if game.firstPlotCard == Some(num) =>
               game = game.copy(firstPlotCard = None)
+              if (num == AvengerCard)
+                avengerCardDrawn(discarded = false)
             case num =>
               val lapsing = game.cardsLapsing filterNot (_ == num)
               game = game.copy(cardsLapsing = lapsing)
+              if (num == AvengerCard)
+                avengerCardDrawn(discarded = false)
           }
         }
       }

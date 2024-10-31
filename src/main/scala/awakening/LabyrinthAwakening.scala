@@ -715,8 +715,6 @@ object LabyrinthAwakening {
   // From page 4 of Forever War manual.
   val PersonalityCards = Set(110, 111, 112, 115, 116, 215, 219, 225, 237, 328, 329, 338, 352)
 
-  val AvengerCard = 242
-
   type CardEvent            = Role => Unit
   type EventConditions      = (Role, Boolean) => Boolean
   type EventAlertsPlot      = (String, Plot) => Boolean   // Country Name, Plot
@@ -2197,28 +2195,84 @@ object LabyrinthAwakening {
     testResponse(initial)
   }
 
-  // The Avenger card has a Special clause that its event
-  // triggers whenever it is randomly drawn.
-  def checkIfAvengerDrawn(numberDrawn: Int): Unit = {
-    // No need to ask unless we are using the Forever War cards
-    if (numberDrawn > 0 && GameModeOrdering.gt(game.currentMode, AwakeningMode)) {
-      val card = deck(AvengerCard)
-      val name = card.name
-      val prompt = if (numberDrawn == 1)
-        s"""Was #$AvengerCard "$name" the card drawn? (y/n) """
-      else
-        s"""Was #$AvengerCard "$name" one of the cards drawn? (y/n) """
+  val CriticalMiddle   = 200
+  val AvengerCard      = 242
 
-      if (askYorN(prompt)) {
-        log()
-        log(s"""The "$name" card was randomly drawn, so the event triggers""")
-        log(separator())
-        card.executeEvent(US)
-        log()
-        log(s"""Place the "$name" card in the discard pile.""")
+  // Returns true if the card was discarded (eg. Avenger)
+  def askCardsDrawn(numDrawn: Int): Unit = {
+    for (num <- (1 to numDrawn)) {
+      val prompt = if (numDrawn == 1)
+        "\nWhat is the card# of the card that was drawn: (blank if none) "
+      else
+        s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: (blank if none) "
+      askCardNumber(prompt, allowNone = false) match {
+        case None =>
+          return
+        case Some(cardNum) =>
+          if (cardNum == AvengerCard)
+            avengerCardDrawn(discarded = false)
       }
     }
   }
+
+  def processDiscardedCard(cardNum: Int): Unit = {
+    val card = deck(cardNum)
+    if (cardNum == AvengerCard)
+      avengerCardDrawn(discarded = true)
+    else if (cardNum == CriticalMiddle)
+      criticalMiddleReminder()
+    else if (card.autoTrigger)
+      autoTriggerCardDiscarded(cardNum)
+  }
+
+  def askCardsDiscarded(numberDiscarded: Int): Unit = {
+    for (num <- (1 to numberDiscarded)) {
+      val prompt = if (numberDiscarded == 1)
+        "\nWhat is the card# of the card that was discarded: (blank if none) "
+      else
+        s"\nWhat is the card# of the ${ordinal(num)} card that was discarded: (blank if none) "
+      askCardNumber(prompt) match {
+        case None =>
+          return
+        case Some(cardNum) =>
+          processDiscardedCard(cardNum)
+      }
+    }
+  }
+
+  // The Avenger card has a Special clause that its event
+  // triggers whenever it is randomly drawn or discared.
+  def avengerCardDrawn(discarded: Boolean): Unit = {
+    val card = deck(AvengerCard)
+    val name = card.name
+    val action = if (discarded) "discarded" else "randomly drawn"
+    
+    log()
+    log(s"""The "$name" card was $action, so the event triggers""", Color.Event)
+    log(separator())
+    card.executeEvent(US)
+    log()
+    log(s"""Place the "$name" card in the discard pile.""")
+  }
+
+  // When discared, auto trigger events are carried out
+  def autoTriggerCardDiscarded(cardNum: Int): Unit = {
+    val card = deck(cardNum)
+    val name = card.name
+    log()
+    log(s"""The "$name" card was discared, so the event triggers""", Color.Event)
+    log(separator())
+    card.executeEvent(US)  // Role does not matter
+  }
+
+  // The Critical Middle card is always placed in the approximate middle of the
+  // deck instead of being discarded.
+  def criticalMiddleReminder(): Unit = {
+    log()
+    log("IMPORTANT!", Color.Event)
+    log("Place the \"Critical Middle\" card in the approximate middle of the draw pile", Color.Event)
+  }
+
   // Convenience method for creating choices for the askMenu() function.
   def choice[T](condition: Boolean, value: T, desc: String): Option[(T, String)] =
     if (condition) Some(value -> desc) else None
@@ -6552,6 +6606,8 @@ object LabyrinthAwakening {
             case _  => USBot.cardPlay(card, playable)
           }
 
+        if (cardNumber == CriticalMiddle)
+          criticalMiddleReminder()
         saveGameState()
       }
       catch {
@@ -6944,6 +7000,8 @@ object LabyrinthAwakening {
             case _        => JihadistBot.cardPlay(card, playable)
           }
 
+        if (cardNumber == CriticalMiddle)
+          criticalMiddleReminder()
         saveGameState()
       }
       catch {

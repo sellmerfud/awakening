@@ -429,7 +429,7 @@ object AwakeningCards {
           askMenu("\nChoose one:", choices).head match {
             case "discard" =>
               log("Discard the top card in the Jihadist hand")
-              checkIfAvengerDrawn(1)
+              askCardsDiscarded(1)
               
             case _ =>
               val target = askCountry("Remove 2 cells in which country? ", reaperCandidates)
@@ -453,7 +453,7 @@ object AwakeningCards {
             if (nonIRWith5Cells.isEmpty && cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand (y/n)? ")) {
               println()
               log(s"You ($Jihadist) must discard one random card")
-              checkIfAvengerDrawn(1)
+              askCardsDiscarded(1)
             }
             else {
               val target = if (nonIRWith5Cells.nonEmpty)
@@ -645,7 +645,7 @@ object AwakeningCards {
           askMenu("\nChoose one:", choices).head match {
             case "draw" =>
               log("Draw the top card in the Jihadist Bot's hand")
-              checkIfAvengerDrawn(1)
+              askCardsDrawn(1)
               
             case _ =>
               val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
@@ -681,7 +681,7 @@ object AwakeningCards {
           }
           else {
             log(s"You ($Jihadist) must place one random card on top of the $US hand")
-            checkIfAvengerDrawn(1)
+            askCardsDrawn(1)
           }
         }
       }
@@ -1191,6 +1191,7 @@ object AwakeningCards {
         addGlobalEventMarker(Fracking)
         rollPrestige()
         log("US player draws a card")
+        askCardsDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1598,7 +1599,7 @@ object AwakeningCards {
           log(s"You ($US) must randomly discard one card")
         else
           log(s"Discard the top card of the $US hand")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2069,7 +2070,7 @@ object AwakeningCards {
           log("US Bot will draw \"Obama Doctrine\", or \"Congress Acts\", or")
           log("randomly among the US associated cards with the highest Ops")
         }
-        checkIfAvengerDrawn(1)
+        askCardsDrawn(1)
 
         for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries) {
           if (name != "track")
@@ -2161,6 +2162,7 @@ object AwakeningCards {
           log()
           log("Jihadist player may return Boko Haram to hand by")
           log("discarding a non-US associated 3 Ops card")
+          askCardsDiscarded(1)
         }
         else {
           // See Event Instructions table
@@ -2361,7 +2363,6 @@ object AwakeningCards {
         if (role == game.botRole) {
           log(s"You ($US) must randomly discard two cards")
           log("Playable Jihadist events on the discards are triggered")
-          checkIfAvengerDrawn(2)
 
           def nextDiscard(num: Int): List[Int] = {
             if (num > 2)
@@ -2376,15 +2377,31 @@ object AwakeningCards {
           }
 
           for (n <- nextDiscard(1); card = deck(n))
-            if (card.eventWillTrigger(Jihadist))
+            if (n == AvengerCard)
+                avengerCardDrawn(discarded = false)
+            else if (card.autoTrigger)
+              autoTriggerCardDiscarded(n)
+            else if (card.eventWillTrigger(Jihadist)) {
+              log()
+              log(s"""The "${card.name}" event is triggered.""")
               performCardEvent(card, Jihadist, triggered = true)
+            }
+            else {
+              log()
+              log(s"""The "${card.name}" event does not trigger.""")
+              if (n == CriticalMiddle)
+                criticalMiddleReminder()
+            }
         }
         else {
           log(s"Discard the top two cards of the $Jihadist Bot's hand")
-          checkIfAvengerDrawn(2)
+          askCardsDiscarded(2)
         }
 
-        setUSPosture(Soft)
+        if (game.usPosture != Soft) {
+          log(s"\nThe Quagmire event affects the $US posture.", Color.Event)
+          setUSPosture(Soft)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -2594,7 +2611,7 @@ object AwakeningCards {
           log(s"Discard the top card of the $US hand")
         else
           log(s"You ($US) must discard one random card")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
         
         log("If US Elections is played later this turn, US Posture switches automatically")
       }
@@ -2684,9 +2701,6 @@ object AwakeningCards {
           case Some("shiftRight") => shiftAlignmentRight(target)
           case _                  => moveCellsToTarget(target, from)
         }
-        log()
-        log("IMPORTANT!")
-        log("Place the \"Critical Middle\" card in the approximate middle of the draw pile")
       }
     )),
     // ------------------------------------------------------------------------
@@ -2834,7 +2848,7 @@ object AwakeningCards {
             log(s"Discard the top card of the $US hand")
           else
             log(s"You ($US) must discard one random card")
-          checkIfAvengerDrawn(1)
+          askCardsDiscarded(1)
         }
         else {
           val withTroops = countryNames(game.muslims filter (_.troops > 0))
@@ -4050,6 +4064,7 @@ object AwakeningCards {
           log(s"$US Bot draws highest Ops US associated card (at random) from the discard pile ")
         else
           log(s"$Jihadist Bot draws highest Ops Jihadist associated card (at random) from the discard pile ")
+        askCardsDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------

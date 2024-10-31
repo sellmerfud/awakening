@@ -523,6 +523,7 @@ object LabyrinthCards {
           addEventTarget(name)
           performAlert(name, plot)
           log(s"$US draws one card and adds it to their hand")
+          askCardsDrawn(1)
           val postureName = askCountry("Select posture of which country: ", postureCandidates)
           val newPosture = askOneOf(s"New posture for $postureName (Soft or Hard): ", Seq(Soft, Hard)).get
           addEventTarget(postureName)
@@ -695,8 +696,10 @@ object LabyrinthCards {
             performAlert(name, plot)
         }
         
-        if (role == game.humanRole)
+        if (role == game.humanRole) {
           log(s"$US draws one card and adds it to their hand")
+          askCardsDrawn(1)
+        }
         else
           log(s"Add one card to the top of the $US Bot hand")
         addGlobalEventMarker(Wiretapping)
@@ -716,6 +719,7 @@ object LabyrinthCards {
         val name = askCountry("Select adversary country: ", candidates)
         val ops = (game getMuslim name).resourceValue
         log(s"You must discard card with Ops value: $ops")
+        askCardsDiscarded(1)
         addEventTarget(name)
         setAlignment(name, Neutral)
         addAidMarker(name)
@@ -751,7 +755,7 @@ object LabyrinthCards {
         humanDisrupt(3)
         addGlobalEventMarker(EnhancedMeasures)
         log(s"Take the top card of the $Jihadist Bot's hand")
-        checkIfAvengerDrawn(1)
+        askCardsDrawn(1)
       }
       else {
         val target  = USBot.disruptTarget(game disruptTargets 3).get
@@ -759,7 +763,7 @@ object LabyrinthCards {
         performDisrupt(target)
         addGlobalEventMarker(EnhancedMeasures)
         log(s"$Jihadist (you) must put a random card from your hand on top card of the $US Bot's hand")
-        checkIfAvengerDrawn(1)
+        askCardsDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -964,7 +968,7 @@ object LabyrinthCards {
           humanDisrupt(3)
         addGlobalEventMarker(Renditions)
         log(s"Discard the top card of the $Jihadist Bot's hand")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
       else {
         val target  = USBot.disruptTarget(game disruptTargets 3) foreach { target =>
@@ -973,7 +977,7 @@ object LabyrinthCards {
         }
         addGlobalEventMarker(Renditions)
         log(s"$US (you) must discard a random card from your hand")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1144,7 +1148,7 @@ object LabyrinthCards {
           log(s"Discard the top card of the $US Bot's hand")
         else
           log(s"You ($US) must randomly discard one card")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1254,6 +1258,7 @@ object LabyrinthCards {
       ,
       (role: Role) => {
         log(s"You ($US) must discard your highest-value US associated card (if any)")
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1285,8 +1290,10 @@ object LabyrinthCards {
           addEventTarget(name)
           addSleeperCellsToCountry(name, 1)
         }
-        if (role == game.humanRole)
-          log(s"You ($Jihadist) may draw a card")
+        if (role == game.humanRole) {
+          log(s"Draw a card and add it to your hand")
+          askCardsDrawn(1)
+        }
         else
           log(s"Add a card to the top of the $Jihadist Bot's hand")
       }
@@ -1339,7 +1346,7 @@ object LabyrinthCards {
           log(s"Discard the top card of the $US Bot's hand")
         else
           log(s"You ($US) must randomly discard one card")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -1644,8 +1651,10 @@ object LabyrinthCards {
       (role: Role, forTrigger: Boolean) => game hasMuslim (m => m.inRegimeChange && m.totalCells > 0)
       ,
       (role: Role) => {
-        if (role == game.humanRole)
-          log(s"You ($Jihadist) may draw two cards")
+        if (role == game.humanRole) {
+          log("Draw two cards and add them to your hand")
+          askCardsDrawn(2)
+        }
         else
           log(s"Draw 2 cards and place them on top of the $Jihadist Bot's hand")
         decreasePrestige(2)
@@ -1912,7 +1921,7 @@ object LabyrinthCards {
           log(s"Discard the top card of the $US Bot's hand")
         else
           log(s"You ($US) must randomly discard one card")
-        checkIfAvengerDrawn(1)
+        askCardsDiscarded(1)
         decreasePrestige(1)
         if (game.cellsAvailable > 0) {
           val candidates = countryNames(game.muslims filter (_.isShiaMix))
@@ -1977,41 +1986,50 @@ object LabyrinthCards {
         (game.prestigeLevel == Medium || game.prestigeLevel == Low) &&
         (game hasMuslim (m => m.inRegimeChange && m.totalCells > 0))
       ,
-      (role: Role) => {
-        if (role == game.botRole)
+      (role: Role) => {          
+        if (role == game.botRole) {
           log(s"You ($US) must randomly discard two cards")
-        else
-          log(s"Discard the top two cards of the $US Bot's hand")
-          
-        log("Playable Jihadist events on the discarded cards are triggered")
-        checkIfAvengerDrawn(2)
-        
-        def nextDiscard(num: Int): List[Int] = {
-          if (num > 2)
-            Nil
-          else {
-            val prompt = s"Card # of the ${ordinal(num)} discard (or blank if none) "
-            askCardNumber(prompt) match {
-              case None         => Nil
-              case Some(cardNo) =>  cardNo :: nextDiscard(num + 1)
+          log("Playable Jihadist events on the discards are triggered")
+
+          def nextDiscard(num: Int): List[Int] = {
+            if (num > 2)
+              Nil
+            else {
+              val prompt = s"Card # of the ${ordinal(num)} discard (or blank if none) "
+              askCardNumber(prompt) match {
+                case None =>
+                  Nil
+                case Some(cardNo) =>
+                  cardNo :: nextDiscard(num + 1)
+              }
+            }
+          }
+              
+          for (n <- nextDiscard(1); card = deck(n)) {
+            if (n == AvengerCard)
+                avengerCardDrawn(discarded = false)
+            else if (card.autoTrigger)
+              autoTriggerCardDiscarded(n)
+            else if (card.eventWillTrigger(Jihadist)) {
+              log()
+              log(s"""The "${card.name}" event is triggered.""")
+              performCardEvent(card, Jihadist, triggered = true)
+            }
+            else{
+              log()
+              log(s"""The "${card.name}" event does not trigger.""")
+              if (n == CriticalMiddle)
+                criticalMiddleReminder()
             }
           }
         }
-            
-        for (n <- nextDiscard(1); card = deck(n)) {
-          if (card.association == Jihadist && card.eventConditions(Jihadist, true)) {
-            log()
-            log(s"""The "${card.name}" event is triggered.""")
-            performCardEvent(card, Jihadist, triggered = true)
-          }
-          else{
-            log()
-            log(s"""The "${card.name}" event does not trigger.""")
-          }
+        else {
+          log(s"Discard the top two cards of the $Jihadist Bot's hand")
+          askCardsDiscarded(2)
         }
         
         if (game.usPosture != Soft) {
-          log(s"\nThe Quagmire event affects the $US posture.")
+          log(s"\nThe Quagmire event affects the $US posture.", Color.Event)
           setUSPosture(Soft)
         }
       }
@@ -2193,9 +2211,13 @@ object LabyrinthCards {
       (role: Role, forTrigger: Boolean) => cacheYesOrNo("Do both players have at least one card in hand? (y/n) ")
       ,
       (role: Role) => {
-        log(s"Take the top card of the ${game.botRole} Bot's hand and put a random card")
-        log(s"from your hand on top of the ${game.botRole} Bot's hand")
-        checkIfAvengerDrawn(2)
+        log(s"\nTake the top card of the ${game.botRole} Bot's hand.")
+        askCardsDrawn(1)
+
+
+        log("\nPut a random card from your hand (not including the one you just took)")
+        log(s"on top card of the ${game.botRole} Bot's hand.")
+        askCardsDrawn(1)
         
         // Create a one Op card to satisfy the card play functions.
         val card = new Card(0, "n/a", Unassociated, 1, 
@@ -2236,6 +2258,7 @@ object LabyrinthCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
         role == game.humanRole ||
+        forTrigger ||
         (role != US && (game.prestige > 1 || cacheYesOrNo(s"Do you ($US) have a card in hand? (y/n) ")))
       ,      
       (role: Role) => {
@@ -2243,6 +2266,7 @@ object LabyrinthCards {
           log(s"You ($US) must select and discard one card if you have any")
         else
           log(s"Discard the top card of the $US Bot's hand")
+        askCardsDiscarded(1)
         decreasePrestige(1)
         decreaseFunding(1)
       }
@@ -2493,9 +2517,10 @@ object LabyrinthCards {
         removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
         rollPrestige()
         if (role == game.humanRole)
-          log(s"You ($role) may draw a card")
+          log(s"draw a card and add it to your hand")
         else
           log(s"Draw a card and place it on top of the $role Bot's hand")
+        askCardsDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -2622,6 +2647,7 @@ object LabyrinthCards {
         addEventTarget(name)
         removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
         log(s"$US player draw 2 cards")
+        askCardsDrawn(2)
       }
       else {  // Jihadist
         val (name, plot) = if (role == game.humanRole) {
@@ -2654,6 +2680,7 @@ object LabyrinthCards {
             performAlert(name, plot)
         }
         log("The US player draws 2 cards")
+        askCardsDrawn(2)
       }
       else {  // Jihadist
         val (name, plot) = if (role == game.humanRole) {
@@ -2683,6 +2710,7 @@ object LabyrinthCards {
           log(s"$US Bot draws highest Ops US associated card (at random) from the discard pile ")
         else
           log(s"$Jihadist Bot draws highest Ops Jihadist associated card (at random) from the discard pile ")
+        askCardsDrawn(1)
       }
     )),
     // ------------------------------------------------------------------------
