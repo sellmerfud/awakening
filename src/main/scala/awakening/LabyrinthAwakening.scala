@@ -5126,8 +5126,11 @@ object LabyrinthAwakening {
     if (c.hasCadre) {
       log(s"Remove cadre marker from $name.", Color.MapPieces)
       c match {
-        case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
-        case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+        case m: MuslimCountry    =>
+          game = game.updateCountry(m.copy(hasCadre = false))
+          removeTrainingCamp_?(name)
+        case n: NonMuslimCountry =>
+          game = game.updateCountry(n.copy(hasCadre = false))
       }
     }
   }
