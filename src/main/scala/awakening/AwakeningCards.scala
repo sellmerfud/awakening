@@ -1590,9 +1590,9 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(168, "IEDs", Jihadist, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game hasMuslim (m =>
-        (m.inRegimeChange || m.civilWar) && m.totalCells > 0 && m.totalTroops > 0
-      )
+      (role: Role, forTrigger: Boolean) =>
+        game.hasMuslim(m => (m.inRegimeChange || m.civilWar) && m.totalCells > 0 && m.totalTroops > 0 ) &&
+        cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
       ,  
       (role: Role) => {
         if (game.humanRole == US)

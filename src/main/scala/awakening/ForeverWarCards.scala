@@ -2101,7 +2101,9 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(302, "Imperial Overstretch", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => game.troopCommitment != LowIntensity
+      (_: Role, _: Boolean) => 
+        game.troopCommitment != LowIntensity &&
+        cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
       ,
       (role: Role) => {
         if (role == game.humanRole)
@@ -2247,7 +2249,8 @@ object ForeverWarCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         val russia = game.getNonMuslim(Russia)
-        russia.isUntested || russia.posture == oppositePosture(game.usPosture)
+        (russia.isUntested || russia.posture == oppositePosture(game.usPosture)) &&
+        cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
       }
       ,
       (role: Role) => {
@@ -3102,7 +3105,9 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(337, "US Border Crisis", Unassociated, 1,
       NoRemove, USLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, _: Boolean) => trumpTweetsON
+      (role: Role, _: Boolean) =>
+        trumpTweetsON &&
+        (role == Jihadist || cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) "))
       ,
       (role: Role) => if (role == US) {
         setTrumpTweetsOFF()

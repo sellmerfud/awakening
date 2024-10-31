@@ -1141,7 +1141,9 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(52, "IEDs", Jihadist, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game hasMuslim (m => m.inRegimeChange && m.totalCells > 0)
+      (role: Role, forTrigger: Boolean) =>
+        game.hasMuslim(m => m.inRegimeChange && m.totalCells > 0) &&
+        cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
       ,
       (role: Role) => {
         if (role == game.humanRole)
@@ -1254,7 +1256,9 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(59, "Amerithrax", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => role == game.botRole // human player cannot play against US Bot!
+      (role: Role, forTrigger: Boolean) =>
+          role == game.botRole  && // human player cannot play against US Bot!
+          cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
       ,
       (role: Role) => {
         log(s"You ($US) must discard your highest-value US associated card (if any)")
