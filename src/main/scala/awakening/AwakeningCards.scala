@@ -1535,7 +1535,7 @@ object AwakeningCards {
     entry(new Card(165, "Coup", Jihadist, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
-        (role == game.humanRole && (game hasMuslim coupCandidate)) ||
+        ((role == game.humanRole || forTrigger) && (game hasMuslim coupCandidate)) ||
         (role == game.botRole && (game hasMuslim (m => !m.isIslamistRule && coupCandidate(m))))
       ,
       (role: Role) => {
@@ -1545,7 +1545,7 @@ object AwakeningCards {
         }
         else {
           val candidates = countryNames(game.muslims filter (m => !m.isIslamistRule && coupCandidate(m)))
-          JihadistBot.goodPriority(candidates).get
+          JihadistBot.goodThenFairThenPoorPriority(candidates).get
         }
         
         val m = game.getMuslim(target)
@@ -1942,7 +1942,9 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(180, "Mosul Central Bank", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game hasMuslim (m => m.civilWar && m.totalCells > 0)
+      (role: Role, forTrigger: Boolean) =>
+         game.hasMuslim(m => m.civilWar && m.totalCells > 0) &&
+         (forTrigger || game.funding < 9)
       ,
       (role: Role) => increaseFunding(2)
     )),
@@ -3327,7 +3329,12 @@ object AwakeningCards {
     entry(new Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
-        game hasMuslim (m => m.oilExporter && (m.isIslamistRule || m.inRegimeChange || m.civilWar))
+        game.hasMuslim (m => m.oilExporter && (m.isIslamistRule || m.inRegimeChange || m.civilWar)) &&
+        (
+          role == game.humanRole ||
+          (role == US && (game.prestige < 12 || game.funding > 1)) ||
+          (role == Jihadist && game.funding < 9)
+        )
       ,
       (role: Role) => if (role == US) {
         increasePrestige(2)

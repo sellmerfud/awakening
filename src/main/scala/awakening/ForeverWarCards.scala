@@ -2931,8 +2931,11 @@ object ForeverWarCards {
     entry(new Card(329, "Hamza bin Laden", Unassociated, 1,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => (PersonalityCards exists game.cardRemoved) &&
-          ((role == US && game.prestige < 12) ||
-          (role == Jihadist && game.funding < 9))
+          (
+            role == game.humanRole ||
+            (role == US && game.prestige < 12) ||
+            (role == Jihadist && game.funding < 9)
+          )
       ,
       (role: Role) => if (role == US) {
         increasePrestige(1)
@@ -3551,8 +3554,11 @@ object ForeverWarCards {
       (role: Role, _: Boolean) => {
         val turkey = game.getMuslim(Turkey)
         globalEventInPlay(GulenMovement) && !turkey.isUntested &&
-        ((role == US && !(turkey.isGood && turkey.isAlly)) ||
-         (role == Jihadist && !(turkey.isAdversary && turkey.isIslamistRule)))
+        (
+          role == game.humanRole ||
+          (role == US && !(turkey.isGood && turkey.isAlly)) ||
+          (role == Jihadist && !(turkey.isAdversary && turkey.isIslamistRule))
+        )
       }
       ,
       (role: Role) => {

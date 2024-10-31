@@ -626,6 +626,12 @@ object JihadistBot extends BotHelpers {
     botLog("Find \"Good Priority\" target")
     topPriority(game getCountries names, priorities) map (_.name)
   }
+
+  def goodThenFairThenPoorPriority(names: List[String]): Option[String] = {
+    val priorities = GoodPriority::FairPriority::PoorPriority::Nil
+    botLog("Find \"Good/Fair/Poor Priority\" target")
+    topPriority(game getCountries names, priorities) map (_.name)
+  }
   
   // ------------------------------------------------------------------
   // Get target for the Status Quo event
