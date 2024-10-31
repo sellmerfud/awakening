@@ -812,6 +812,44 @@ object JihadistBot extends BotHelpers {
     (game.islamistResources == 5 || game.caliphateDaisyChain(capital).size > 1)
   }
   
+  // Enhance bot rule:
+  // The Jihadist Bot will voluntarily remove cadres
+  // to make it harder for the US player to disrupt for
+  // prestige or to execute the Wiretapping Event.
+  // Cadres are removed:
+  // - In Muslim countries at Good/Fair that are NOT auto-recruit countries.
+  // - In Philippines (to prevent disrupt if Abu Sayyaf marker is or becomes present).
+  // - US, UK, Canada (unless Wiretapping has been blocked by Leak)
+  // Note: Abu Sayyaf and Wiretapping are only available in Labyrinth games / campaigns.
+
+  def voluntaryCadreRemoval(): Unit = {
+    val isCandidate = (c: Country) => {
+      c match {
+        case m: MuslimCountry =>
+          m.hasCadre && !m.autoRecruit && (m.isGood || m.isFair)
+
+        case n: NonMuslimCountry if n.hasCadre && game.startingMode == LabyrinthMode =>
+          n.name match {
+            case Philippines => true
+            case UnitedStates|UnitedKingdom|Canada if globalEventNotInPlay(LeakWiretapping) => true
+            case _ => false
+          }
+
+        case _ =>
+          false
+      }
+    }
+
+    game.countries.filter(isCandidate) match {
+      case Nil =>
+      case candidates =>
+        log(s"\nThe $Jihadist Bot chooses to voluntarily remove ${amountOf(candidates.size, "cadre")}", Color.Info)
+        for (country <- game.countries)
+          removeCadreFromCountry(country.name)
+    }
+  }
+  
+
   def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.jihadist) min 3
   
   // Decrement the Bots reserves and log that they were used.
