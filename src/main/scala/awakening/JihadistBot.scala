@@ -836,15 +836,19 @@ object JihadistBot extends BotHelpers {
 
   def voluntaryCadreRemoval(): Unit = {
     val isCandidate = (c: Country) => {
+      val WireTapping = Set(UnitedStates, UnitedKingdom, Canada)
       c match {
         case m: MuslimCountry =>
           m.hasCadre && !m.autoRecruit && (m.isGood || m.isFair)
 
         case n: NonMuslimCountry if n.hasCadre && game.startingMode == LabyrinthMode =>
           n.name match {
-            case Philippines => true
-            case UnitedStates|UnitedKingdom|Canada if globalEventNotInPlay(LeakWiretapping) => true
-            case _ => false
+            case Philippines =>
+              true
+            case name if WireTapping(name) && globalEventNotInPlay(LeakWiretapping) =>
+              true
+            case _ => 
+              false
           }
 
         case _ =>
@@ -856,7 +860,7 @@ object JihadistBot extends BotHelpers {
       case Nil =>
       case candidates =>
         log(s"\nThe $Jihadist Bot chooses to voluntarily remove ${amountOf(candidates.size, "cadre")}", Color.Info)
-        for (country <- game.countries)
+        for (country <- candidates)
           removeCadreFromCountry(country.name)
     }
   }
