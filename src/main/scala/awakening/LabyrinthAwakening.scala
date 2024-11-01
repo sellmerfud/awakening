@@ -1153,6 +1153,7 @@ object LabyrinthAwakening {
     val FlipPieces: Option[Color] = Some(Cyan)
     val Event: Option[Color] = Some(Red)
     val Info: Option[Color] = Some(Yellow)
+    val Debug: Option[Color] = Some(Green)
   }
 
   case class LogEntry(text: String, color: Option[Color])
@@ -8013,7 +8014,7 @@ object LabyrinthAwakening {
             var updated = m
             logAdjustment(name, "Governance", govToString(updated.governance), govToString(newGov))
             updated = updated.copy(governance = newGov)
-            if (updated.alignment != Adversary) {
+            if (updated.governance == IslamistRule && updated.alignment != Adversary) {
               logAdjustment(name, "Alignment", updated.alignment, Adversary)
               updated = updated.copy(alignment = Adversary)
             }

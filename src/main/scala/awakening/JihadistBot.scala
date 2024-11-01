@@ -100,6 +100,10 @@ object JihadistBot extends BotHelpers {
     (totalUnused(m) - m.totalTroopsAndMilitia) > 0 &&
     (totalUnused(m) - m.totalTroopsAndMilitia) < 5
   
+  def poorMuslimWithCadreAnNotTroopsOrMilitia(m: MuslimCountry): Boolean =
+    m.isPoor &&
+    m.hasCadre  &&
+    m.totalTroopsAndMilitia == 0
 
   // Pick all candidates that are not the same as the target unless there
   // is only the target to choose from.
@@ -275,19 +279,20 @@ object JihadistBot extends BotHelpers {
   
   val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
                   muslimTest(m => m.isPoor && activeCells(m) > 0))
-  val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than troops/militia and JSP",
+  val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
-  val EnhRecruitPoorCadreOrNeedCellsforMajorJihad = new CriteriaFilter("Poor, Cadre OR 1-4 more cells than troops/militia and JSP",
+  val EnhRecruitPoorCadreOrNeedCellsforMajorJihad = new CriteriaFilter("Poor Muslim, (1-4 more cells than TandM or cadre and no TandM) and (awakening - reaction < 2) and JSP",
                   muslimTest(m =>
-                    (m.hasCadre || poorMuslimNeedsCellsForMajorJihad(m)) &&
+                    (poorMuslimNeedsCellsForMajorJihad(m) || poorMuslimWithCadreAnNotTroopsOrMilitia(m)) &&
                     m.awakening - m.reaction < 2
                   ))
 
-  val EnhTravelPoorCadreOrNeedCellsforMajorJihad = new CriteriaFilter("Poor, Cadre OR 1-4 more cells than troops/militia and JSP",
+  val EnhTravelPoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and (awakening - reaction < 2) and JSP",
                   muslimTest(m =>
                     poorMuslimNeedsCellsForMajorJihad(m) &&
                     m.awakening - m.reaction < 2
                   ))
+
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
   // then they would be selected over Islamist Rule countries.                            
@@ -300,10 +305,10 @@ object JihadistBot extends BotHelpers {
   // To try to make the Bot AI smarter, we don't prioritise Fair Muslim countries
   // where Jihad is possible unless there is a cell in an adjacent country so that
   // the travel will succeed  without a die roll
-  val EnhTravelFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode("Fair Muslim w/ best Jihad DRM w/ Adjacent cells",
+  val EnhTravelFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode("Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM w/ Adjacent cells",
                   muslimTest(m => m.isFair && m.hasAdjacent(hasCellForTravel) && m.awakening - m.reaction < 1),
                   muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
-  val EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode("Fair Muslim w/ best Jihad DRM",
+  val EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode("Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM",
                   muslimTest(m => m.isFair && m.awakening - m.reaction < 1),
                   muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
   val PoorMuslimBestJihadDRM = new LowestScoreNode("Poor Muslim w/ best Jihad DRM",
@@ -423,11 +428,11 @@ object JihadistBot extends BotHelpers {
     List(EnhRecruitPoorCadreOrNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
          EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells, PoorMuslimBestJihadDRM)        
   else
-    List(EnhTravelPoorCadreOrNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
+    List(PoorNeedCellsforMajorJihad, AutoRecruitBestJihadDRM, GoodMuslimFilter,
          FairMuslimBestJihadDRM, NonMuslimFilter, PoorMuslimBestJihadDRM)        
     
   def TravelToFlowchart = if (game.botEnhancements)
-    List(PoorNeedCellsforMajorJihad, GoodMuslimWithAdjacentCellsFilter,
+    List(EnhTravelPoorNeedCellsforMajorJihad, GoodMuslimWithAdjacentCellsFilter,
          EnhTravelFairMuslimBestJihadDRMWithAdjacentCells, PoorMuslimBestJihadDRM, NonMuslimFilter)
   else
     List(PoorNeedCellsforMajorJihad, GoodMuslimFilter,
@@ -524,7 +529,8 @@ object JihadistBot extends BotHelpers {
     // Enhanced Bot will only travel from adjacent if target is
     // a Muslim Good/Fair country
     val withCells  = if (game.botEnhancements && isGoodFairMuslimTarget)
-      game.getCountries(getAdjacent(toCountry))
+      game.getCountries(names)
+        .filter(c => areAdjacent(c.name, toCountry))
         .filter(hasCellForTravel)
         .filter(wouldMoveOrTravelWithinToSleep)
     else
@@ -1042,7 +1048,7 @@ object JihadistBot extends BotHelpers {
     // Count sadr here, but below when finding cells to move.
     def numAutoRecruit = game.muslims count (m => m.autoRecruit && m.totalCells > 0)
 
-    def numAutoRecruitWithCells(travelAttempts: List[TravelAttempt]) = {
+    def numAutoRecruitCountriesWithCells(travelAttempts: List[TravelAttempt]) = {
       game.muslims.count { m =>
         val usedCells = travelAttempts.count(x => x.from == m.name)
         val numCells = m.totalCells - usedCells
@@ -1064,18 +1070,20 @@ object JihadistBot extends BotHelpers {
         }
         else
           countryNames(game.countries filter canTravelFrom)
+
         travelFromTarget(toName, candidates) match {
           case None => attempts  // No more viable countries to travel from
           case Some(fromName) =>
             val from = game.getCountry(fromName)
             // Limit numAttempts to only active cells within same country
             // and to not allow last cell out of auto recruit (if only 1 other auto recruit with cells)
+            val prevAttempts = attempts.count(_.from == fromName)
             val numAttempts = if (fromName == toName)
               activeCells(from) min remaining
-            else if (from.autoRecruit && numAutoRecruitWithCells(attempts) < 3)
-              (unusedCells(from) - 1) max 0 min remaining
+            else if (from.autoRecruit && numAutoRecruitCountriesWithCells(attempts) < 3)
+              (unusedCells(from) - prevAttempts - 1) max 0 min remaining
             else
-              unusedCells(from) min remaining
+              (unusedCells(from) - prevAttempts) max 0 min remaining
           
             if (numAttempts == 0) {
               botLog(s"No cells in $fromName are allowed to travel")
