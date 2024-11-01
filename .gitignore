@@ -1,6 +1,7 @@
 target/
 games/
 NOTES.txt
+test_config
 project/project/
 project/metals.sbt
 .metals/
