@@ -975,7 +975,7 @@ object JihadistBot extends BotHelpers {
         true
       }
       else {
-        val die     = dieRoll
+        val die     = getDieRoll(s"Enter die roll for recruit in $target: ")
         val success = c.recruitSucceeds(die)
         val result  = if (success) "succeeds" else "fails"
         log(s"${ordinal(i)} Recruit $result in $target with a roll of $die")
@@ -1511,7 +1511,7 @@ object JihadistBot extends BotHelpers {
           usedCells(target).addSleepers(1)
         }
         else {
-          val die = dieRoll
+          val die = getDieRoll(s"Enter die roll for recruit in $target: ")
           val success = m.recruitSucceeds(die)
           val result  = if (success) "succeeds" else "fails"
           log(s"Recruit $result in $target with a roll of $die")
@@ -1564,7 +1564,7 @@ object JihadistBot extends BotHelpers {
           usedCells(target).addSleepers(1)
         }
         else {
-          val die = dieRoll
+          val die = getDieRoll(s"Enter die roll for recruit in $target: ")
           val success = m.recruitSucceeds(die)
           val result  = if (success) "succeeds" else "fails"
           log(s"Recruit $result in $target with a roll of $die")

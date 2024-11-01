@@ -615,7 +615,7 @@ object ForeverWarCards {
         //  Note: if scenario is HillaryWins then we add a +1 modifer to the die roll
         val hillaryMod  = if (game.scenarioName == awakening.scenarios.HillaryWins.name) 1 else 0
         val prestigeMod = game.prestigeModifier
-        val die = getDieRoll(role)
+        val die = getDieRoll("Enter event die roll: ", Some(role))
         val modRoll = die + hillaryMod + prestigeMod
         
         log(s"Die roll: $die")
@@ -1224,7 +1224,7 @@ object ForeverWarCards {
       ,
       (role: Role) => {
         val numMilitia = game.militiaAvailable min 2
-        val die = dieRoll
+        lazy val die = getDieRoll(s"Enter event die roll: ")
         val candidates = governmentOfNationalAccordCandidates    
         val target = if (role == game.humanRole)
           askCountry("Which Civil War country: ", candidates)
@@ -1682,7 +1682,7 @@ object ForeverWarCards {
       (_: Role, _: Boolean) => game.caliphateDeclared
       ,
       (role: Role) => {
-        val die = dieRoll
+        val die = getDieRoll(s"Enter event die roll: ")
         log(s"Die roll: $die")
         die match {
           case 1 =>
@@ -1793,7 +1793,7 @@ object ForeverWarCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
       (role: Role) => {
-        val die = dieRoll
+        val die = getDieRoll(s"Enter event die roll: ")
         log(s"Die roll: $die")
         die match {
           case 1 | 2 =>
@@ -1913,7 +1913,7 @@ object ForeverWarCards {
       (_: Role, _: Boolean) => game.caliphateDeclared && game.funding < 9
       ,
       (role: Role) => {
-        val die = dieRoll
+        val die = getDieRoll(s"Enter event die roll: ")
         log(s"Die roll: $die")
         increaseFunding((die + 1) / 2)
       }
@@ -2091,7 +2091,7 @@ object ForeverWarCards {
                                   (role == game.humanRole || game.gwotPenalty == 0)
       ,
       (role: Role) => {
-        val die = dieRoll
+        val die = getDieRoll(s"Enter event die roll: ")
         increaseFunding(1)
         log(s"Die roll: $die")
         val newPosture = if (die < 4) oppositePosture(game.usPosture) else game.usPosture
@@ -2121,10 +2121,8 @@ object ForeverWarCards {
         game.usPosture == Hard && iran.wmdCache > 0 && iran.totalCells > 0
       },
       (role: Role) => {
-        val die = dieRoll
-        
-        addEventTarget(Iran)
-        
+        val die = getDieRoll(s"Enter event die roll: ")
+        addEventTarget(Iran)        
         log(s"Die roll: $die")
         if (die < 4) {
           moveWMDCacheToAvailable(Iran, 1)
@@ -2162,10 +2160,8 @@ object ForeverWarCards {
         syria.civilWar && syria.wmdCache > 0 && syria.totalCells > 0
       },
       (role: Role) => {
-        val die = dieRoll
-        
-        addEventTarget(Syria)
-        
+        val die = getDieRoll(s"Enter event die roll: ")
+        addEventTarget(Syria)        
         log(s"Die roll: $die")
         if (die < 4) {
           moveWMDCacheToAvailable(Syria, 1)
@@ -2660,7 +2656,7 @@ object ForeverWarCards {
         else
           JihadistBot.posturePriority(postureCandidates).get
         
-        val die = dieRoll
+        val die = getDieRoll(s"Enter event die roll: ")
         val modifiedDie = (die + game.prestigeModifier) max 1 min 6
         val newPosture = if (modifiedDie < 5) Soft else Hard
         log(s"Die roll: $die")
@@ -3350,7 +3346,7 @@ object ForeverWarCards {
         removeCachedWMD(Iran, 1)
       }
       else { // Jihadist
-        val die = dieRoll
+        val die = getDieRoll(s"Enter event die roll: ")
         addEventTarget(Iran)
         log(s"Die roll: $die")
         if (die < 4) {

@@ -76,16 +76,11 @@ object LabyrinthAwakening {
   }
 
   def dieRoll = nextInt(6) + 1
-  def humanDieRoll(prompt: String = "Enter die roll: ", allowAbort: Boolean = true) =
-    if (game.humanAutoRoll)
-      dieRoll
-    else
-      (askOneOf(prompt, 1 to 6, allowAbort = allowAbort) map (_.toInt)).get
 
-  // If the given role is human, then prompt if necessary, otherwise produce the roll automatically
-  def getDieRoll(role: Role, prompt: String = "Enter die roll: ", allowAbort: Boolean = true): Int = {
-    if (role == game.humanRole)
-      humanDieRoll(prompt, allowAbort)
+  // Prompt for a die roll value if so configured or just generate a random roll otherwise.
+  def getDieRoll(prompt: String = "Enter die roll: ", role: Option[Role] = None, allowAbort: Boolean = true): Int = {
+    if (game.manualDieRolls || (game.humanAutoRoll == false && role == Some(game.humanRole)))
+      askOneOf(prompt, 1 to 6, allowAbort = allowAbort).map(_.toInt).get
     else
       dieRoll
   }
@@ -1191,6 +1186,7 @@ object LabyrinthAwakening {
     exitAfterWin: Boolean          = true,
     botLogging: Boolean            = false,
     botEnhancements: Boolean       = true, // Use enhancements to official Awakening bot algorithms
+    manualDieRolls: Boolean        = false,  // Overrides humanAutoRoll
     history: Vector[GameSegment]   = Vector.empty,
     description: String            = "",
     showColor: Boolean             = !scala.util.Properties.isWin, // Default true except on Windows
@@ -1577,7 +1573,11 @@ object LabyrinthAwakening {
       b += "Options:"
       b += separator()
       b += s"Exit game after victory: ${if (exitAfterWin) "yes" else "no"}"
-      b += s"Use Bot enhancments: ${if (botEnhancements) "yes" else "no"}"
+      b += s"Use Bot enhancments    : ${if (botEnhancements) "yes" else "no"}"
+      if (manualDieRolls)
+        b += s"Manual die rolls       : ${if (manualDieRolls) "yes" else "no"}"
+      else
+        b += s"Human auto roll        : ${if (humanAutoRoll) "yes" else "no"}"
       b.toList
     }
 
@@ -2520,38 +2520,49 @@ object LabyrinthAwakening {
     Vector(Somalia,        Yemen,       Pakistan))
 
   def randomMuslimCountry: MuslimCountry = {
-    val row = dieRoll - 1        // tan die
-    val col = (dieRoll - 1) / 2  // black die
-    if (row == 0 && col == 2)
-      secondaryRandomMuslimCountry
-    else
-      game.getMuslim(randomMuslimTable(row)(col))
+    // Secondary, Muslim table
+    // Iran and Nigeria may not yet have become Muslim countries.
+    // If they are selected and non Muslim, then we simply roll again.
+    def secondaryRandomMuslimCountry: MuslimCountry = {
+      val iranIsMuslim    = game.isMuslim(Iran)
+      val nigeriaIsMuslim = game.isMuslim(Nigeria)
+      @tailrec def rollOnTable: MuslimCountry = {
+        dieRoll match {
+          case 1 | 2                    => game.getMuslim(CentralAsia)
+          case 3 if iranIsMuslim        => game.getMuslim(Iran)
+          case 4                        => game.getMuslim(Mali)
+          case 5 | 6 if nigeriaIsMuslim => game.getMuslim(Nigeria)
+          case _                        => rollOnTable
+        }
+      }
+      rollOnTable
+    }
+
+    if (game.manualDieRolls) {
+      val candidates = countryNames(game.countries.filter(_.isMuslim))
+      game.getMuslim(askOneOf("Select \"Random\" country: ", candidates, allowAbort = false).get)
+    }
+    else {
+      val row = dieRoll - 1        // tan die
+      val col = (dieRoll - 1) / 2  // black die
+      if (row == 0 && col == 2)
+        secondaryRandomMuslimCountry
+      else
+        game.getMuslim(randomMuslimTable(row)(col))
+    }
   }
 
-  // Secondary, Muslim table
-  // Iran and Nigeria may not yet have become Muslim countries.
-  // If they are selected and non Muslim, then we simply roll again.
-  def secondaryRandomMuslimCountry: MuslimCountry = {
-    val iranIsMuslim    = game.isMuslim(Iran)
-    val nigeriaIsMuslim = game.isMuslim(Nigeria)
-    @tailrec def rollOnTable: MuslimCountry = {
-      dieRoll match {
-        case 1 | 2                    => game.getMuslim(CentralAsia)
-        case 3 if iranIsMuslim        => game.getMuslim(Iran)
-        case 4                        => game.getMuslim(Mali)
-        case 5 | 6 if nigeriaIsMuslim => game.getMuslim(Nigeria)
-        case _                        => rollOnTable
-      }
-    }
-    rollOnTable
-  }
 
   def randomShiaMixList: List[MuslimCountry] = {
     val xs = List(Syria, SaudiArabia, Turkey, Iraq, GulfStates, Yemen, Pakistan, Lebanon, Afghanistan)
     (if (game.isMuslim(Iran)) Iran :: xs else xs) map game.getMuslim
   }
 
-  def randomShiaMixCountry: MuslimCountry = {
+  def randomShiaMixCountry: MuslimCountry = if (game.manualDieRolls) {
+    val candidates = countryNames(randomShiaMixList)
+    game.getMuslim(askOneOf("Select \"Random Shia Mix\" country: ", candidates, allowAbort = false).get)
+  }
+  else {
     val muslimKey = List(dieRoll, dieRoll, dieRoll).sum match {
       case 3 | 4 | 5 | 6                 => Syria
       case 7 if game.isMuslim(Iran)      => Iran
@@ -2609,14 +2620,22 @@ object LabyrinthAwakening {
     if (country.isUntested) {
       country match {
         case m: MuslimCountry    =>
-          val newGov = if (dieRoll < 5) Poor else Fair
+          val die = getDieRoll(s"Enter test die roll for $name: ")
+          val newGov = if (die < 5)
+            Poor
+          else
+            Fair
           if (newGov == Fair)
             addTestedOrImprovedToFairOrGood(name)
           game = game.updateCountry(m.copy(governance = newGov, alignment = Neutral))
           log(s"${m.name} tested: Set to ${govToString(newGov)} Neutral", Color.MapPieces)
 
         case n: NonMuslimCountry =>
-          val newPosture = if (dieRoll < 5) Soft else Hard
+          val die = getDieRoll(s"Enter test die roll for $name: ")
+          val newPosture = if (die < 5)
+            Soft
+          else
+            Hard
           game = game.updateCountry(n.copy(postureValue = newPosture))
           log(s"${n.name} tested: Set posture to $newPosture", Color.MapPieces)
           logWorldPosture()
@@ -2630,7 +2649,7 @@ object LabyrinthAwakening {
   // This is used by some events.
   def rollGovernance(name: String): Unit = {
     val m = game getMuslim name
-    val die = dieRoll
+    val die = getDieRoll(s"Enter governance die roll for $name: ")
     log(s"Governance die roll: $die")
     val newGov = if (die < 5) Poor else Fair
     game = game.updateCountry(m.copy(governance = newGov))
@@ -2639,10 +2658,13 @@ object LabyrinthAwakening {
 
   // The default drm when rolling US posture is +1
   def rollUSPosture(drms: List[(Int, String)] = Nil): Unit = {
-    val die = dieRoll
+    val die = getDieRoll("Enter US posture die roll: ")
     val allDrms = (1, "Rolling US Posture") :: drms
     val modifiedDie = die + (allDrms map (_._1)).sum
-    val newPosture = if (modifiedDie < 5) Soft else Hard
+    val newPosture = if (modifiedDie < 5)
+      Soft
+    else
+      Hard
     log(s"Roll United States posture")
     log(s"Die roll: $die")
     for ((drm, desc) <- allDrms)
@@ -2665,7 +2687,7 @@ object LabyrinthAwakening {
   def rollCountryPosture(name: String, drm: Int = 0, logWorld: Boolean = true): Unit = {
     assert(name != UnitedStates, "rollCountryPosture() called for United States.  Use RollUSPosture()")
     val n = game.getNonMuslim(name)
-    val die = dieRoll
+    val die = getDieRoll(s"Enter posture die roll for $name: ")
     val modifiedDie = die + drm
     log(s"\nRoll posture of $name")
     log(s"Die roll: $die")
@@ -3776,8 +3798,8 @@ object LabyrinthAwakening {
     val m = game.getMuslim(name)
     // If Siege of Mosul in play then cells are halved and (troops + militia)
     // are doubled
-    val jihadDie = dieRoll
-    val usDie    = dieRoll
+    val jihadDie = getDieRoll(s"Enter Jihadist attrition die roll for $name: ")
+    val usDie = getDieRoll(s"Enter US attrition die roll for $name: ")
     val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
     val totalTroopsAndMilitia = if (siegeOfMosul) m.totalTroopsAndMilitia * 2 else m.totalTroopsAndMilitia
     val jihadHits = totalCells            / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
@@ -3947,7 +3969,7 @@ object LabyrinthAwakening {
         else {
           log(s"$US performs War of Ideas in $name")
           log(separator())
-          val die = getDieRoll(US)
+          val die = getDieRoll(s"Enter WoI die roll for $name: ", Some(US))
           log(s"Die roll: $die")
           val modRoll = modifyWoiRoll(die, tested, ignoreGwotPenalty)
           if (modRoll <= 4) {
@@ -3971,7 +3993,7 @@ object LabyrinthAwakening {
         log()
         log(s"$US performs War of Ideas in $name")
         log(separator())
-        val die = getDieRoll(US)
+        val die = getDieRoll(s"Enter WoI die roll for $name: ", Some(US))
         val newPosture = if (die > 4) Hard else Soft
         game = game.updateCountry(n.copy(postureValue = newPosture))
         log(s"Die roll: $die")
@@ -3997,7 +4019,7 @@ object LabyrinthAwakening {
     log()
     moveTroops(source, dest, numTroops)
     val m = game.getMuslim(dest)
-    val die = getDieRoll(US, "Enter governance die roll: ")
+    val die = getDieRoll(s"Enter governance die roll for $dest: ", Some(US))
     log(s"Governance die roll: $die")
     val newGov = if (die < 5) Poor else Fair
     addOpsTarget(dest)
@@ -4143,7 +4165,7 @@ object LabyrinthAwakening {
           handleResult(true, from, to, active)
         }
         else {
-          val die = getDieRoll(Jihadist, prompt = s"Enter die roll: ")
+          val die = getDieRoll("Enter travel die roll: ", Some(Jihadist))
           log(s"Die roll: $die")
           val modRoll = if (game.isTrainingCamp(from)) {
             log(s"-1 Travelling from Training Camps")
@@ -4183,7 +4205,7 @@ object LabyrinthAwakening {
           log("Using an already active cell")
         else
           flipSleeperCells(name, 1)
-        val die = getDieRoll(Jihadist, prompt = s"Enter die roll: ")
+        val die = getDieRoll("Enter plot die roll: ", Some(Jihadist))
         log(s"Die roll: $die")
         val success = die <= game.getCountry(name).governance
         log(if (success) "Success" else "Failure")
@@ -4241,7 +4263,7 @@ object LabyrinthAwakening {
         def nextAttempt(num: Int): Int = num match {
           case n if n <= numAttempts =>
             val ord = if (numAttempts == 1) "" else s"${ordinal(num)} "
-            val die = getDieRoll(Jihadist, prompt = s"Enter ${ord}die roll: ")
+            val die = getDieRoll(s"Enter ${ord}Jihad die roll: ", Some(Jihadist))
             log(s"${ord}Die roll: $die")
             val modRoll = modifyJihadRoll(die, m, major)
             val result  = modRoll <= m.governance
@@ -4324,8 +4346,11 @@ object LabyrinthAwakening {
   //   After regime change, withdraw, unblocked plot in the US, or by event.
   def rollPrestige(): Unit = {
     log("Roll Prestige...")
-    val dirDie      = dieRoll
-    val shiftDice   = List(dieRoll, dieRoll)
+    val dirDie = getDieRoll(s"Enter die roll for prestige change direction: ")
+    val shiftDice   = List(
+      getDieRoll(s"Enter 1st die roll for prestige change value: "),
+      getDieRoll(s"Enter 2nd die roll for prestige change value: ")
+    )
     val shiftAmount = if (dirDie + (if (game.gwotPenalty > 0) -1 else 0) < 5)
        -shiftDice.min
     else
@@ -5444,7 +5469,7 @@ object LabyrinthAwakening {
                 // place the plot with one card, then do Major Jihad with the second
                 def isSuccess(die: Int) = m.isIslamistRule || die <= m.governance
                 // roll plot dice
-                val dice = List.fill(mapPlot.plot.number)(dieRoll)
+                val dice = List.fill(mapPlot.plot.number)(getDieRoll(s"Enter die roll plot placement: "))                
                 val successes = dice count isSuccess
                 val diceStr = dice map (d => s"$d (${if (isSuccess(d)) "success" else "failure"})")
                 log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
@@ -7191,7 +7216,7 @@ object LabyrinthAwakening {
           else if (m.inRegimeChange)
             log(s"$US Bot with Vigilant prevents auto recruit in Regime Change country", Color.Event)
         }
-        val die     = humanDieRoll(s"Die roll for $ord Recruit in $dest: ")
+        val die     = getDieRoll(s"Enter $ord recruit die roll in $dest: ", Some(Jihadist))
         val success = c.recruitSucceeds(die)
         val result  = if (success) "succeeds" else "fails"
         log(s"$ord Recruit $result in $dest with a roll of $die")
@@ -7467,7 +7492,8 @@ object LabyrinthAwakening {
       "prestige", "funding", "difficulty", "lapsing cards",
       "removed cards", "first plot", "markers" , "reserves",
       "plots", "offmap troops", "posture", "auto roll",
-      "bot logging", "bot enhancements", "color", "resolved plot countries", "exit after win"
+      "bot logging", "bot enhancements", "manual die rolls", "color",
+      "resolved plot countries", "exit after win"
     ).sorted :::countryNames(game.countries).sorted
     val choice = askOneOf("[Adjust] (? for list): ", options, param, allowNone = true,
                            abbr = CountryAbbreviations, allowAbort = false)
@@ -7505,6 +7531,7 @@ object LabyrinthAwakening {
       case "difficulty"              => adjustDifficulty()
       case "bot logging"             => adjustBotLogging()
       case "bot enhancements"        => adjustBotEnhancements()
+      case "manual die rolls"        => adjustBotManualDieRolls()
       case "color"                   => adjustShowColor()
       case "lapsing cards"           => adjustLapsingCards()
       case "removed cards"           => adjustRemovedCards()
@@ -7612,6 +7639,13 @@ object LabyrinthAwakening {
     logAdjustment("Bot enhancements", game.botEnhancements, newValue)
     game = game.copy(botEnhancements = newValue)
     saveAdjustment("Bot enhancements")
+  }
+
+  def adjustBotManualDieRolls(): Unit = {
+    val newValue = !game.manualDieRolls
+    logAdjustment("Manual die rolls", game.manualDieRolls, newValue)
+    game = game.copy(manualDieRolls = newValue)
+    saveAdjustment("Manual die rolls")
   }
 
   def adjustExitAfterWin(): Unit = {

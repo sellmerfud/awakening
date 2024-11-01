@@ -233,8 +233,11 @@ object USBot extends BotHelpers {
     topPriority(plots, AlertPriorities)
   }
   
-  def roll(plot: Plot, m: MuslimCountry)    = dieRoll - m.aidMarkers <= plot.number  
-  def roll(plot: Plot, n: NonMuslimCountry) = dieRoll <= plot.number  
+  def roll(plot: Plot, m: MuslimCountry) =
+    getDieRoll(s"Enter Alert Plot die roll for ${m.name}: ") - m.aidMarkers <= plot.number  
+
+  def roll(plot: Plot, n: NonMuslimCountry) =
+    getDieRoll(s"Enter Alert Plot die roll for ${n.name}: ") <= plot.number  
   
   // ------------------------------------------------------------------
   // US Alert Table

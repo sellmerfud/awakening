@@ -614,18 +614,28 @@ object AwakeningCards {
         }
         
         if (randomShiaMixList exists (_.canTakeAwakeningOrReactionMarker)) {
-          def doRandomShiaMix: Unit = {
-            val shiaMix = randomShiaMixCountry
-            if (shiaMix.canTakeAwakeningOrReactionMarker) {
-              println()
-              addEventTarget(shiaMix.name)
-              testCountry(shiaMix.name)
-              addAwakeningMarker(shiaMix.name)
-            }
-            else
-              doRandomShiaMix
+          if (game.manualDieRolls) {
+            val candidates = countryNames(randomShiaMixList.filter(_.canTakeAwakeningOrReactionMarker))
+            val shiaMix = askOneOf("Select \"Random Shia Mix\" country to receive Awakening marker: ", candidates, allowAbort = true).get
+            println()
+            addEventTarget(shiaMix)
+            testCountry(shiaMix)
+            addAwakeningMarker(shiaMix)
           }
-          doRandomShiaMix
+          else {
+            def doRandomShiaMix: Unit = {
+              val shiaMix = randomShiaMixCountry
+              if (shiaMix.canTakeAwakeningOrReactionMarker) {
+                println()
+                addEventTarget(shiaMix.name)
+                testCountry(shiaMix.name)
+                addAwakeningMarker(shiaMix.name)
+              }
+              else
+                doRandomShiaMix
+            }
+            doRandomShiaMix
+          }
         }
       }
     )),
@@ -780,7 +790,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
       (role: Role) => {
-        val die = getDieRoll(role)
+        val die = getDieRoll("Enter event die roll: ", Some(role))
         log(s"Die roll: $die")
         println()
         decreaseFunding((die + 1) / 2)  // Half rounded up
@@ -1958,7 +1968,7 @@ object AwakeningCards {
       ,
       (role: Role) => {
         addEventTarget(Iran)
-        val die = getDieRoll(role)
+        val die = getDieRoll("Enter event die roll: ", Some(role))
         val success = die < 4
         log(s"Die roll: $die")
         if (success) {
@@ -1991,8 +2001,8 @@ object AwakeningCards {
         val countries = List(UnitedStates, Canada, UnitedKingdom, Benelux, France)
         val validSchengen = Schengen filter isHard
         println()
-        val tanDie     = getDieRoll(role, "Enter tan die: ")
-        val blackDie   = getDieRoll(role, "Enter black die: ")
+        val tanDie     = getDieRoll("Enter tan die: ", Some(role))
+        val blackDie   = getDieRoll("Enter black die: ", Some(role))
         val (plots, activeCells) = blackDie match {
           case 1 => (Plot1::Plot2::Nil, 0)
           case 2 => (Plot3::Nil, 2)
@@ -2279,7 +2289,7 @@ object AwakeningCards {
               addSleeperCellsToCountry(target, cells)
             }
             else {
-              val die = getDieRoll(role)
+              val die = getDieRoll(s"Enter recruit die roll for $target: ", Some(role))
               log(s"Die roll: $die")
               if (c.recruitSucceeds(die)) {
                 log(s"Recruit in $target succeeds with a die roll of $die")
@@ -3677,7 +3687,7 @@ object AwakeningCards {
               askMenu("\nChoose one:", choices).head match {
                 case "posture"  => setUSPosture(oppositePosture(game.worldPosture))
                 case "prestige" =>
-                  val die = getDieRoll(role)
+                  val die = getDieRoll("Enter prestige die roll: ", Some(role))
                   log(s"Die roll: $die")
                   decreasePrestige((die + 1)/ 2)
               }
@@ -3687,7 +3697,7 @@ object AwakeningCards {
             if (game.usPosture == Hard && game.worldPosture == Hard)
               setUSPosture(Soft)
             else {
-              val die = getDieRoll(role)
+              val die = getDieRoll("Enter prestige die roll: ")
               log(s"Die roll: $die")
               decreasePrestige((die + 1)/ 2)
             }

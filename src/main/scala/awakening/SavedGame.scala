@@ -340,6 +340,7 @@ object SavedGame {
       "exitAfterWin"        -> game.exitAfterWin,
       "botLogging"          -> gameState.botLogging,
       "botEnhancements"     -> gameState.botEnhancements,
+      "manualDieRolls"      -> gameState.manualDieRolls,
       "history"             -> (gameState.history map gameSegmentToMap),
       "description"         -> gameState.description,
       "showColor"           -> gameState.showColor
@@ -388,6 +389,7 @@ object SavedGame {
       asBoolean(data("exitAfterWin")),
       asBoolean(data("botLogging")),
       data.get("botEnhancements").map(asBoolean).getOrElse(false),
+      data.get("manualDieRolls").map(asBoolean).getOrElse(false),
       (asList(data("history")) map (s => gameSegmentFromMap(asMap(s)))).toVector,
       asString(data("description")),
       asBoolean(data.get("showColor") getOrElse true)

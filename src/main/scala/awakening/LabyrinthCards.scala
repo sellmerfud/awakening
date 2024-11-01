@@ -391,7 +391,7 @@ object LabyrinthCards {
         else
           USBot.markerAlignGovTarget(candidates).get
         addEventTarget(name)
-        val die = getDieRoll(role)
+        val die = getDieRoll("Enter event die roll: ", Some(role))
         val success = die > 3
         log(s"Die roll: $die")
         if (success) {
@@ -667,7 +667,7 @@ object LabyrinthCards {
         else 
           USBot.markerAlignGovTarget(candidates).get
         
-        val die = getDieRoll(role, "Enter War of Ideas die roll: ")
+        val die = getDieRoll("Enter War of Ideas die roll: ", Some(role))
         addEventTarget(target)
         addAidMarker(target)
         performWarOfIdeas(target, die, ignoreGwotPenalty = true)
@@ -1056,7 +1056,7 @@ object LabyrinthCards {
         def nextRecruit(completed: Int): Unit = 
           if (completed < card.ops && game.cellsToRecruit > 0) {
             val ord = ordinal(completed + 1)
-            val die     = getDieRoll(role, s"Die roll for $ord recruit: ")
+            val die     = getDieRoll(s"Enter $ord recruit die roll: ", Some(role))
             val success = die < 3
             val result  = if (success) "succeeds" else "fails"
             log(s"$ord recruit $result with a roll of $die")
@@ -1395,7 +1395,7 @@ object LabyrinthCards {
         }
         
         addEventTarget(name)
-        val die = getDieRoll(role)
+        val die = getDieRoll("Enter event die roll: ", Some(role))
         val success = if (name == CentralAsia && game.getMuslim(name).isIslamistRule)
           true
         else {
@@ -1476,7 +1476,7 @@ object LabyrinthCards {
       ,      
       (role: Role) => {
         addEventTarget(CentralAsia)
-        val die = getDieRoll(role)
+        val die = getDieRoll("Enter event die roll: ", Some(role))
         val success = if (game.getMuslim(CentralAsia).isIslamistRule)
           true
         else {
@@ -1531,7 +1531,7 @@ object LabyrinthCards {
       ,      
       (role: Role) => {
         addEventTarget(Russia)
-        val die = getDieRoll(role)
+        val die = getDieRoll("Enter event die roll: ", Some(role))
         val success = die <= (game getCountry Russia).governance
         log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
         if (success) {
@@ -1840,7 +1840,7 @@ object LabyrinthCards {
               addSleeperCellsToCountry(target, cells)
             }
             else {
-              val die = getDieRoll(role)
+              val die = getDieRoll("Enter event die roll: ", Some(role))
               log(s"Die roll: $die")
               if (c.recruitSucceeds(die)) {
                 log(s"Recruit in $target succeeds with a die roll of $die")
