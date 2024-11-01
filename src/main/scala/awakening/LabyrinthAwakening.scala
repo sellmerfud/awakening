@@ -1362,7 +1362,7 @@ object LabyrinthAwakening {
 
     def trainingCamp        = muslims find (_.hasMarker(TrainingCamps)) map (_.name)
     def isTrainingCamp(name: String) = trainingCamp == Some(name)
-    // def trainingCampCapacity= trainingCamp map (tc => if (isCaliphateMember(tc)) 5 else 3) getOrElse 0
+
     def extraCellCapacity   = {
       if (markers contains AlBaghdadi) {
         if (caliphateDeclared) 5 else 3
