@@ -2217,6 +2217,7 @@ object LabyrinthAwakening {
         case None =>
           return
         case Some(cardNum) =>
+          log(s"${deck(cardNum)} is drawn", Color.Event)
           if (cardNum == AvengerCard)
             avengerCardDrawn(discarded = false)
       }
@@ -2243,6 +2244,7 @@ object LabyrinthAwakening {
         case None =>
           return
         case Some(cardNum) =>
+          log(s"${deck(cardNum)} is discarded", Color.Event)
           processDiscardedCard(cardNum)
       }
     }

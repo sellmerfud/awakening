@@ -1995,40 +1995,37 @@ object LabyrinthCards {
           log(s"You ($US) must randomly discard two cards")
           log("Playable Jihadist events on the discards are triggered")
 
-          def nextDiscard(num: Int): List[Int] = {
-            if (num > 2)
-              Nil
-            else {
-              val prompt = s"Card # of the ${ordinal(num)} discard (or blank if none) "
+          def nextDiscard(num: Int): Unit = {
+            if (num <= 2) {
+              val prompt = s"\nCard # of the ${ordinal(num)} discard (or blank if none) "
               askCardNumber(prompt) match {
-                case None =>
-                  Nil
-                case Some(cardNo) =>
-                  cardNo :: nextDiscard(num + 1)
+                case Some(cardNum) =>
+                  val card = deck(cardNum)
+                  log(s"$card is discarded", Color.Event)
+                  if (cardNum == AvengerCard)
+                      avengerCardDrawn(discarded = false)
+                  else if (card.autoTrigger)
+                    autoTriggerCardDiscarded(cardNum)
+                  else if (card.eventWillTrigger(Jihadist)) {
+                    log(s"""The "${card.name}" event is triggered.""")
+                    performCardEvent(card, Jihadist, triggered = true)
+                  }
+                  else {
+                    log(s"""The "${card.name}" event does not trigger.""")
+                    if (cardNum == CriticalMiddle)
+                      criticalMiddleReminder()
+                  }
+                  nextDiscard(num + 1)
+                case None => 
               }
             }
           }
-              
-          for (n <- nextDiscard(1); card = deck(n)) {
-            if (n == AvengerCard)
-                avengerCardDrawn(discarded = false)
-            else if (card.autoTrigger)
-              autoTriggerCardDiscarded(n)
-            else if (card.eventWillTrigger(Jihadist)) {
-              log()
-              log(s"""The "${card.name}" event is triggered.""")
-              performCardEvent(card, Jihadist, triggered = true)
-            }
-            else{
-              log()
-              log(s"""The "${card.name}" event does not trigger.""")
-              if (n == CriticalMiddle)
-                criticalMiddleReminder()
-            }
-          }
+
+          nextDiscard(1)
         }
         else {
-          log(s"Discard the top two cards of the $Jihadist Bot's hand")
+          log(s"Discard the top two cards of the $Jihadist Bot's hand.")
+          log(s"$Jihadist associated events will not be triggered.")
           askCardsDiscarded(2)
         }
         
