@@ -274,7 +274,7 @@ object JihadistBot extends BotHelpers {
   val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
   
   val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
-                  muslimTest(m => m.isPoor && activeCells(m) > 0))
+                  muslimTest(m => m.isPoor && m.troops > 0 && activeCells(m) > 0))
   val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
   val EnhRecruitPoorCadreOrNeedCellsforMajorJihad = new CriteriaFilter("Poor Muslim, (1-4 more cells than TandM or cadre and no TandM) and (awakening - reaction < 2) and JSP",

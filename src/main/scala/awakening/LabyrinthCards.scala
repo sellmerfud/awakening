@@ -54,8 +54,7 @@ object LabyrinthCards {
     !game.isCaliphateMember(m.name)
   val massTurnoutCandidate = (m: MuslimCountry) => 
     m.inRegimeChange && !game.isCaliphateMember(m.name)
-  val martyrdomCandidate = (c: Country) => c.totalCells > 0 && 
-    !(game.isMuslim(c.name) && game.getMuslim(c.name).isIslamistRule)
+  val martyrdomCandidate = (c: Country) => c.totalCells > 0 && !game.getCountry(c.name).isIslamistRule
   val regionalAlQaedaCandidate = (m: MuslimCountry) => m.name != Iran && m.isUntested
     
   def specialForcesCandidates: List[String] = {
