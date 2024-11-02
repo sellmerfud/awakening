@@ -1204,8 +1204,13 @@ object LabyrinthAwakening {
     def cardLapsing(num: Int) = cardsLapsing contains num
 
     def isFirstPlot(num: Int) = firstPlotCard == Some(num)
-    def muslims    = countries filter (_.isInstanceOf[MuslimCountry]) map (_.asInstanceOf[MuslimCountry])
-    def nonMuslims = countries filter (_.isInstanceOf[NonMuslimCountry]) map (_.asInstanceOf[NonMuslimCountry])
+    def muslims: List[MuslimCountry] = countries.collect {
+      case m: MuslimCountry => m
+    }
+
+    def nonMuslims: List[NonMuslimCountry] = countries.collect {
+      case n: NonMuslimCountry => n
+    }
 
     def availablePlots      = plotData.availablePlots
     def resolvedPlots       = plotData.resolvedPlots
@@ -1220,6 +1225,7 @@ object LabyrinthAwakening {
     }
     def getMuslim(name: String)    = (muslims find (_.name == name)).get
     def getNonMuslim(name: String) = (nonMuslims find (_.name == name)).get
+
 
     def getCountries(names: List[String]):  List[Country]          = names map getCountry
     def getMuslims(names: List[String]):    List[MuslimCountry]    = names map getMuslim

@@ -115,17 +115,15 @@ object LabyrinthCards {
       (role == game.humanRole || !(leb.isAdversary || leb.isIslamistRule))
   }
   
-  def iranCandidates(role: Role): List[String] = {
+  def botIranCandidates(role: Role): List[String] = {
     val iran = if ((game getCountry Iran).totalCells > 0) List(Iran) else Nil
-    val usHumanTest = (m: MuslimCountry) => m.isShiaMix && (m.isUntested || m.totalCells > 0) 
     val usBotTest   = (m: MuslimCountry) => m.isShiaMix && m.totalCells > 0 // Bot only cares if cell can be removed
     val jihadTest   = (m: MuslimCountry) =>
       m.isShiaMix && (m.isUntested || m.isGood || m.isFair || (m.isPoor && m.aidMarkers > 0))
     
     role match {
-      case US if role == game.humanRole => iran ::: countryNames(game.muslims filter usHumanTest)
-      case US                           => iran ::: countryNames(game.muslims filter usBotTest)
-      case Jihadist                     => countryNames(game.muslims filter jihadTest)
+      case US       => iran ::: countryNames(game.muslims filter usBotTest)
+      case Jihadist => countryNames(game.muslims filter jihadTest)
     }    
   }
   
@@ -2344,39 +2342,49 @@ object LabyrinthCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => {
         // Can we remove the last cell on the board?
-        iranCandidates(US) exists (name => USBot.wouldRemoveLastCell(name, 1))
+        botIranCandidates(US) exists (name => USBot.wouldRemoveLastCell(name, 1))
       }
       ,      
-      (role: Role, forTrigger: Boolean) => iranCandidates(role).nonEmpty
+      (role: Role, forTrigger: Boolean) =>
+        role == game.humanRole || botIranCandidates(role).nonEmpty
       ,
       (role: Role) => if (role == US) {
         if (role == game.humanRole) {
-          val candidates = iranCandidates(role)
-          val prompt = if (candidates contains Iran)
-            "Select a Shia-Mix country or Iran: "
-          else
-            "Select a Shia-Mix country: "
-          val name = askCountry(prompt, candidates)
-          addEventTarget(name)
-          testCountry(name)
-          if ((game getCountry name).totalCells > 0) {
-            val (active, sleeper, sadr) = askCells(name, 1, sleeperFocus = true)
-            removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+          val iranHasCell = game.getCountry(Iran).totalCells > 0
+          val shiaMixCandidates = countryNames(game.muslims.filter(_.isShiaMix))
+          val target = askCountry("Select a Shia-Mix country: ", shiaMixCandidates)
+          val targetHasCell = game.getCountry(target).totalCells > 0
+          addEventTarget(target)
+          testCountry(target)
+          val removeCellFrom = (iranHasCell, targetHasCell) match {
+            case (true, false) => Iran
+            case (false, true) => target
+            case (false, false) => ""
+            case _ =>
+              val choices = List(target -> target, Iran -> Iran)
+              askMenu("\nRemove cell from:", choices).head
+          }
+
+          if (removeCellFrom != "") {
+            val (active, sleeper, sadr) = askCells(removeCellFrom, 1, sleeperFocus = true)
+            removeCellsFromCountry(removeCellFrom, active, sleeper, sadr, addCadre = true)
           }
         }
         else {
           // Candidates for the Bot always contain at least 1 cell!
-          val name = USBot.disruptPriority(iranCandidates(role)).get
+          val name = USBot.disruptPriority(botIranCandidates(role)).get
           val (active, sleeper, sadr) = USBot.chooseCellsToRemove(name, 1)
           addEventTarget(name)
+          testCountry(name)
           removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
         }
       }
       else {  // Jihadist
+        val shiaMixCandidates = countryNames(game.muslims.filter(_.isShiaMix))
         val name = if (role == game.humanRole)
-          askCountry("Select a Shix-Mix country: ", iranCandidates(role))
+          askCountry("Select a Shix-Mix country: ", shiaMixCandidates)
         else
-          JihadistBot.iranTarget(iranCandidates(role)).get
+          JihadistBot.iranTarget(botIranCandidates(role)).get
         
         addEventTarget(name)
         testCountry(name)
