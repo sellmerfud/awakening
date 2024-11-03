@@ -555,7 +555,7 @@ object JihadistBot extends BotHelpers {
       (c: Country) => c match {
         case m: MuslimCountry =>                              // Only recruit in Muslim countries
           (m.isPoor || m.autoRecruit) &&                      // Only recruit in Good/Fair if auto-recruit
-          (m.totalCells > 0 || (m.hasCadre && m.totalTroopsAndMilitia == 0)) // Do not recruit using Cadre if TandM preset
+          (m.totalCells > 0 || (m.hasCadre && m.totalTroopsAndMilitia == 0)) && // Do not recruit using Cadre if TandM preset
           (!m.isIslamistRule || m.totalCells < 7) &&          // Only recruit in IR if less than 7 cells present
           (!muslimWithCadreOnly || m.hasCadre)                // Special radicalization test
         case n: NonMuslimCountry => false
