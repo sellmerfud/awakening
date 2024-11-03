@@ -2050,7 +2050,7 @@ object AwakeningCards {
         val target = getTarget(countries drop (tanDie - 1)) map {
           case "Schengen" if role == game.humanRole =>
             askCountry("Choose a Hard Schengen country: ", validSchengen)
-          case "Schengen" => JihadistBot.plotTarget(validSchengen).get
+          case "Schengen" => JihadistBot.plotPriority(validSchengen).get
           case name => name
         }
 
@@ -2339,7 +2339,7 @@ object AwakeningCards {
         }
         else {
           // See Event Instructions table
-          val target = JihadistBot.plotTarget(candidates).get
+          val target = JihadistBot.plotPriority(candidates).get
           val c = game getCountry target
           val cell = if (c.activeCells > 0) (1, 0, false)
                      else if (c.hasSadr)    (0, 0, true)

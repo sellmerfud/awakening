@@ -1953,7 +1953,7 @@ object LabyrinthCards {
         }
         else {
           // See Event Instructions table
-          val target = JihadistBot.plotTarget(candidates).get
+          val target = JihadistBot.plotPriority(candidates).get
           addEventTarget(target)
           val c = game getCountry target
           val cell = if (c.activeCells > 0) (1, 0, false)

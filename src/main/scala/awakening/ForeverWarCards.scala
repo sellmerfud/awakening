@@ -1499,7 +1499,7 @@ object ForeverWarCards {
         val target = if (role == game.humanRole)
           askCountry("Place plot in which country: ", candidates)
         else
-          JihadistBot.plotTarget(candidates).get
+          JihadistBot.plotPriority(candidates).get
         
         addEventTarget(target)
         addAvailablePlotToCountry(target, Plot1, visible = true)
@@ -2579,7 +2579,7 @@ object ForeverWarCards {
         }
         else {
           // See Event Instructions table
-          val target = JihadistBot.plotTarget(martyrdomCandidates).get
+          val target = JihadistBot.plotPriority(martyrdomCandidates).get
           val c = game getCountry target
           val cell = if (c.activeCells > 0) (1, 0, false)
                      else if (c.hasSadr)    (0, 0, true)
