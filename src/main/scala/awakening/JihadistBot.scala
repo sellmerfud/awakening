@@ -552,11 +552,14 @@ object JihadistBot extends BotHelpers {
   
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
     val criteria = if (game.botEnhancements)
-      (c: Country) =>
-        c.isMuslim  &&                                      // Only recruit in Muslim countries
-        (c.isPoor || c.isIslamistRule || c.autoRecruit) &&  // Only recruit in Good/Fair if auto-recruit
-        (!c.isIslamistRule || c.totalCells < 7) &&          // Only recruit in IR if less than 7 cells present
-        (!muslimWithCadreOnly || c.hasCadre)                // Special radicalization test
+      (c: Country) => c match {
+        case m: MuslimCountry =>                              // Only recruit in Muslim countries
+          (m.isPoor || m.autoRecruit) &&                      // Only recruit in Good/Fair if auto-recruit
+          (m.totalCells > 0 || (m.hasCadre && m.totalTroopsAndMilitia == 0)) // Do not recruit using Cadre if TandM preset
+          (!m.isIslamistRule || m.totalCells < 7) &&          // Only recruit in IR if less than 7 cells present
+          (!muslimWithCadreOnly || m.hasCadre)                // Special radicalization test
+        case n: NonMuslimCountry => false
+      }
     else
        (c: Country) => (!muslimWithCadreOnly || c.hasCadre) // Special radicalization test
 
