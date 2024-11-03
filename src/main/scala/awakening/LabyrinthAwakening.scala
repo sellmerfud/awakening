@@ -1478,9 +1478,10 @@ object LabyrinthAwakening {
     // Some(Either(cells, ())) or None
     def disruptLosses(name: String): Option[Either[Int, Unit]] = {
       val c = getCountry(name)
-      val alAnbar = globalEventInPlay(AlAnbar)
+      // AlAnbar in Iraq/Syria affects max 1 cell and no cadre
+      val alAnbar = globalEventInPlay(AlAnbar) && (c.name == Iraq || c.name == Syria)
       val numLosses = c match {
-        case m: MuslimCountry if alAnbar && (m.name == Iraq || m.name == Syria) => 1
+        case _ if alAnbar  => 1
         case m: MuslimCountry =>
           if ((m.totalTroopsAndMilitia) > 1 && (m.totalTroops > 0 || m.hasMarker(Advisors))) 2 else 1
         case n: NonMuslimCountry =>
@@ -1489,7 +1490,7 @@ object LabyrinthAwakening {
       }
       if (c.cells > 0)
         Some(Left(numLosses min c.cells))
-      else if (c.hasCadre)
+      else if (c.hasCadre && !alAnbar)
         Some(Right(()))
       else
         None
@@ -4073,9 +4074,13 @@ object LabyrinthAwakening {
   }
 
   def performDisrupt(target: String): Unit = {
+    val AlAnbarTargets = Set(Iraq, Syria)
     val bumpPrestige = game.getCountry(target).disruptAffectsPrestige
     addOpsTarget(target)
     addDisruptedTarget(target)
+    if (globalEventInPlay(AlAnbar) && AlAnbarTargets(target))
+      log(s"Disrupt removes only 1 cell [$AlAnbar]", Color.Event)
+
     game.disruptLosses(target) match {
       case Some(Left(numCells)) =>
         val (actives, sleepers) = if (game.humanRole == US)
