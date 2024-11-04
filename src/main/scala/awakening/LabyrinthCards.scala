@@ -1693,8 +1693,10 @@ object LabyrinthCards {
       (role: Role) => {
         if (role == game.humanRole)
           log(s"The $US Bot does NOT dicard any cards")
-        else
+        else {
           log(s"You ($US) must discard any of Iran, Hizballah, or Jaysh al-Mahdi")
+          askCardsDiscarded(1)
+        }
         setUSPosture(Hard)
         rollPrestige()
       }
