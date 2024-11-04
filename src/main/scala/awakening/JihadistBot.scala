@@ -659,7 +659,10 @@ object JihadistBot extends BotHelpers {
   object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
     val desc = "Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible?"
     def yesPath = TravelOp
-    def noPath  = FundingModerateDecision
+    def noPath  = if (game.botEnhancements)
+      PrestigeOver3AndActiveCellWithTroopsDecision
+    else
+      FundingModerateDecision
     def condition(ops: Int) = {
       val candidates = if (game.botEnhancements)
         countryNames(game.getMuslims(game.jihadTargets) filter poorMuslimNeedsCellsForMajorJihad)
@@ -674,7 +677,10 @@ object JihadistBot extends BotHelpers {
   
   object FundingModerateDecision extends OperationDecision {
     val desc = "Funding Moderate?"
-    def yesPath = PrestigeOver1AndActiveCellWithTroopsDecision
+    def yesPath = if (game.botEnhancements)
+      CellAvailableOrCellInNonMuslimDecision
+    else
+      PrestigeOver1AndActiveCellWithTroopsDecision
     def noPath  = CellAvailableOrTravelDecision
     def condition(ops: Int) = game.fundingLevel == Moderate
   }
@@ -685,6 +691,16 @@ object JihadistBot extends BotHelpers {
     def noPath  = CellAvailableOrCellInNonMuslimDecision
     def condition(ops: Int) = 
       game.prestige > 1 &&
+      (game hasMuslim (m => activeCells(m) > 0 && m.totalTroopsThatAffectPrestige > 0))
+  }
+
+  // This is used by botEnhacements 
+  object PrestigeOver3AndActiveCellWithTroopsDecision extends OperationDecision {
+    val desc = "Prestige > 3 and Active cell with Troops?"
+    def yesPath = PlotOp
+    def noPath  = FundingModerateDecision
+    def condition(ops: Int) = 
+      game.prestige > 3 &&
       (game hasMuslim (m => activeCells(m) > 0 && m.totalTroopsThatAffectPrestige > 0))
   }
   

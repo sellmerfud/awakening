@@ -70,7 +70,6 @@ trait BotHelpers {
     !benazirBhuttoPreventsJihad(m) &&
     game.totalCellCapacity - m.totalTroopsAndMilitia >= 5 &&  // Are then enough cells in play to overcome TandM
     (1 + jihadDRM(m, major = true)) <= m.governance
-
   }
   else {
     !benazirBhuttoPreventsJihad(m) &&
