@@ -995,9 +995,7 @@ object JihadistBot extends BotHelpers {
   // excess card ops for radicalization.
   // Returns the number of Ops used.
   def recruitOperation(card: Card): Int = {
-    if (botRecruitPossible(muslimWithCadreOnly = false))
-      0
-    else {
+    if (botRecruitPossible(muslimWithCadreOnly = false)) {
       val recruitOps = game.cellsToRecruit min maxOpsPlusReserves(card)
       log()
       log(s"$Jihadist performs a Recruit operation")
@@ -1009,6 +1007,8 @@ object JihadistBot extends BotHelpers {
         performRecruit(recruitOps)
       recruitOps
     }
+    else
+      0
   }
   
   def performRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
@@ -1397,7 +1397,9 @@ object JihadistBot extends BotHelpers {
       val maxReserves = (3 - card.ops) min game.reserves.jihadist
       val maxRadOps   = unusedOps + maxReserves
       log()
-      log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(maxReserves,"available reserve")})")
+      log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")}")
+      if (maxReserves > 0)
+        log(s"(Can add up to ${amountOf(maxReserves,"reserve")})")
       log(separator())
     
       // Returns the number of actions executed
