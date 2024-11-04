@@ -1397,7 +1397,7 @@ object JihadistBot extends BotHelpers {
       val maxReserves = (3 - card.ops) min game.reserves.jihadist
       val maxRadOps   = unusedOps + maxReserves
       log()
-      log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(maxReserves,"reserve")})")
+      log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")} (${amountOf(maxReserves,"available reserve")})")
       log(separator())
     
       // Returns the number of actions executed
