@@ -6993,21 +6993,29 @@ object LabyrinthAwakening {
   // Card #138, "Intel Community" allows a player to play an additional card
   // in the same action phase.  We do not include the additional card in the count.
   //
-  // It is possible that we skipped the plot resolution phase (because there were no
-  // plots on the map).  We detect that when going straight form a player phase
+  // It is possible that we skipped the plot resolution phase
+  // (because there were no plots on the map, so the user did not use the resolve plots command)
+  // We detect that when going straight form a player phase
   // to another player phase, unless it is from Jihadist to US.
   // The second return value indicates whether the plot resolution was skipped.
   def newActionPhase(role: Role): (Boolean, Boolean) = {
-    val cardPlays = (game.plays filterNot(_.isInstanceOf[AdjustmentMade])
-                                takeWhile (_.isInstanceOf[CardPlay])
-                                map (_.asInstanceOf[CardPlay]))
-    val currentRolePlays = cardPlays takeWhile (_.role == role)
+    val cardPlays = game.plays
+      .filterNot(_.isInstanceOf[AdjustmentMade])
+      .takeWhile(_.isInstanceOf[CardPlay])
+      .map(_.asInstanceOf[CardPlay])
+    val currentRolePlays = cardPlays.takeWhile(_.role == role)
 
     // Skip any additional card plays in the count
-    val newPhase = (currentRolePlays filterNot (_.isInstanceOf[AdditionalCard]) map (_.numCards)).sum % 2 == 0
-    val skippedPlots = newPhase && cardPlays.nonEmpty &&
-                       (cardPlays.head.role == role ||  // Always if same player is taking two actions in a row
-                        role == Jihadist)               // If Jihadist is playing directly after US
+    val currentRollCardsPlayed = currentRolePlays
+      .filterNot(_.isInstanceOf[AdditionalCard])
+      .map(_.numCards)
+      .sum
+    val newPhase = currentRollCardsPlayed % 2 == 0
+    val skippedPlots =
+      newPhase &&
+      cardPlays.nonEmpty &&                             // Not first card play of the phase
+      (cardPlays.head.role == role || role == Jihadist) // Always if same player is taking two actions in a row OR
+                                                        // If Jihadist is playing directly after US
     (newPhase, skippedPlots)
   }
 
