@@ -161,11 +161,11 @@ object ForeverWarCards {
   )
   
   def goingUnderGroundBotMajorCandidates = countryNames(
-    game.getMuslims(game.majorJihadTargets(2)) filter (m => m.isPoor && JihadistBot.jihadSuccessPossible(m, true))
+    game.getMuslims(game.majorJihadTargets(2)) filter (m => m.isPoor && JihadistBot.majorJihadSuccessPossible(m))
   )
   
   def goingUnderGroundBotMinorCandidates = countryNames(
-    game.getMuslims(game.jihadTargets) filter (m => (m.isFair || m.isGood) && JihadistBot.jihadSuccessPossible(m, false))
+    game.getMuslims(game.jihadTargets) filter (m => (m.isFair || m.isGood) && JihadistBot.minorJihadSuccessPossible(m))
   )
   
   def easterBombingsCandidates = countryNames(

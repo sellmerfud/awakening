@@ -619,7 +619,7 @@ object USBot extends BotHelpers {
     def noPath  = IR3AndRegimeChangeDecision
     def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
       m.totalCells - m.totalTroopsAndMilitia >= 2 &&
-      jihadSuccessPossible(m, false) 
+      minorJihadSuccessPossible(m) 
     }
   }
   
@@ -742,7 +742,7 @@ object USBot extends BotHelpers {
   
   val DisruptFlowchart = List(
     new CriteriaFilter("Muslim at least 2 more cells than TandM and JSP", 
-      muslimTest(m => m.totalCells - m.totalTroopsAndMilitia >= 2 && jihadSuccessPossible(m, false))),
+      muslimTest(m => m.totalCells - m.totalTroopsAndMilitia >= 2 && minorJihadSuccessPossible(m))),
     new CriteriaFilter("For Prestige gain", muslimTest(_.disruptAffectsPrestige)),
     new CriteriaFilter("To place cadre", onlyOneActiveCell)    
   )

@@ -57,9 +57,25 @@ trait BotHelpers {
       m.awakening - m.reaction
 
 
+  def benazirBhuttoPreventsJihad(m: MuslimCountry) =
+    m.name == Pakistan && m.hasMarker(BenazirBhutto)
+
   // Return true if a die roll of 1 will succeed in the given country
-  def jihadSuccessPossible(m: MuslimCountry, major: Boolean) =
-    (1 + jihadDRM(m, major)) <= m.governance
+  def minorJihadSuccessPossible(m: MuslimCountry) =
+    !benazirBhuttoPreventsJihad(m) &&
+    (1 + jihadDRM(m, major = false)) <= m.governance
+
+  // Return true if a die roll of 1 will succeed in the given country
+  def majorJihadSuccessPossible(m: MuslimCountry) = if (game.botEnhancements) {
+    !benazirBhuttoPreventsJihad(m) &&
+    game.totalCellCapacity - m.totalTroopsAndMilitia >= 5 &&  // Are then enough cells in play to overcome TandM
+    (1 + jihadDRM(m, major = true)) <= m.governance
+
+  }
+  else {
+    !benazirBhuttoPreventsJihad(m) &&
+    (1 + jihadDRM(m, major = true)) <= m.governance
+  }
   
   // trait representing nodes in the 
   // - Jihadist EvO Flowchart
