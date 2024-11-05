@@ -1330,13 +1330,29 @@ object JihadistBot extends BotHelpers {
   
   
   sealed trait RadicalizationAction
-  case object PlotWMDInUS               extends RadicalizationAction
-  case object TravelToUntestedNonMuslim extends RadicalizationAction
-  case object PlotInSoftMuslim          extends RadicalizationAction
-  case object RecruitAtMuslimCadre      extends RadicalizationAction
-  case object AddToReserves             extends RadicalizationAction
-  case object Recruit                   extends RadicalizationAction
-  case object TravelToUS                extends RadicalizationAction
+  case object PlotWMDInUS                     extends RadicalizationAction
+  case object TravelToUntestedNonMuslim       extends RadicalizationAction
+  case object PlotInSoftMuslim                extends RadicalizationAction
+  case object TravelToPoorMuslimWhereMajorJSP extends RadicalizationAction
+  case object RecruitAtMuslimCadre            extends RadicalizationAction
+  case object AddToReserves                   extends RadicalizationAction
+  case object Recruit                         extends RadicalizationAction
+  case object TravelToUS                      extends RadicalizationAction
+
+  // For botEnhancements if there are not Poor Muslim with 1-4 more cells than TandM
+  // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
+  // then attempt to travel cells there.
+  // There must be 
+  def radTravelToPoorMuslimCandidates(): List[String] = {
+    val condition = (m: MuslimCountry) =>
+      poorMuslimWhereMajorJihadPossible(m) &&
+      !poorMuslimNeedsCellsForMajorJihad(m) &&
+      travelFromTarget(m.name, countryNames(game.countries.filterNot(_.name == m.name))).nonEmpty
+      
+    game.muslims
+      .filter(condition)
+      .map(_.name)
+  }
 
   // The requiresReserves parameter indicates, that all of the Ops on the played
   // card have been used, and any further actions will require the use of reserves.
@@ -1357,9 +1373,10 @@ object JihadistBot extends BotHelpers {
     val canAddToReserves = !requiresReserves && game.reserves.jihadist < 2
     val canRecruit = botRecruitPossible(muslimWithCadreOnly = false) && !requiresReserves
     val canTravelToUS = !requiresReserves && unusedCellsOnMapForTravel > 0
-    val canTraveToPoorMuslim =
-      !game.muslims.exists(poorMuslimNeedsCellsForMajorJihad) &&
-      game.muslims.exists(poorMuslimWhereMajorJihadPossible)
+    // For botEnhancements if there are not Poor Muslim with 1-4 more cells than TandM
+    // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
+    // then attempt to travel cells there.
+    val canTraveToPoorMuslim = radTravelToPoorMuslimCandidates().nonEmpty
 
     if (canPlotWMDInUs)
       Some(PlotWMDInUS)
@@ -1368,7 +1385,7 @@ object JihadistBot extends BotHelpers {
     else if (!game.botEnhancements && canPlotInSoftMuslim)
       Some(PlotInSoftMuslim)
     else if (game.botEnhancements && canTraveToPoorMuslim)
-      Some(PlotInSoftMuslim)
+      Some(TravelToPoorMuslimWhereMajorJSP)
     else if (canRecruitAtMuslimCadre)
       Some(RecruitAtMuslimCadre)
     else if (canAddToReserves)
@@ -1408,14 +1425,15 @@ object JihadistBot extends BotHelpers {
           val cardOps    = (unusedOps - completed) max 0   // Ops remaining from the card
           val reserveOps = maxRadOps - cardOps - completed // Ops remaining from reserves
           val ops = getRadicalizationAction(cardOps == 0) match {
-            case Some(PlotWMDInUS)               => radPlotWMDInUs(cardOps, reserveOps)
-            case Some(TravelToUntestedNonMuslim) => radTravelToUntestedNonMuslim(cardOps, reserveOps)
-            case Some(PlotInSoftMuslim)          => radPlotInSoftMuslim(cardOps, reserveOps)
-            case Some(RecruitAtMuslimCadre)      => radRecruitAtMuslimCadre(cardOps, reserveOps)
-            case Some(AddToReserves)             => radAddToReserves(cardOps)
-            case Some(Recruit)                   => radRecruit(cardOps)
-            case Some(TravelToUS)                => radTravelToUS(cardOps)
-            case None => -1  // Finished with radicalization
+            case Some(PlotWMDInUS)                     => radPlotWMDInUs(cardOps, reserveOps)
+            case Some(TravelToUntestedNonMuslim)       => radTravelToUntestedNonMuslim(cardOps, reserveOps)
+            case Some(PlotInSoftMuslim)                => radPlotInSoftMuslim(cardOps, reserveOps)
+            case Some(TravelToPoorMuslimWhereMajorJSP) => radTravelToPoorMuslimWhereMajorJSP(cardOps, reserveOps)
+            case Some(RecruitAtMuslimCadre)            => radRecruitAtMuslimCadre(cardOps, reserveOps)
+            case Some(AddToReserves)                   => radAddToReserves(cardOps)
+            case Some(Recruit)                         => radRecruit(cardOps)
+            case Some(TravelToUS)                      => radTravelToUS(cardOps)
+            case None                                  => -1  // Finished with radicalization
           }
           if (ops > 0)  
             nextAction(completed + ops)
@@ -1551,6 +1569,35 @@ object JihadistBot extends BotHelpers {
       }
     }
     nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && totalUnused(n) > 0))
+  }
+  
+  // Used only when botEnahnced in effect.
+  def radTravelToPoorMuslimWhereMajorJSP(cardOps: Int, reserveOps: Int): Int = {
+
+    log()
+    log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
+    log("                and there are not 1-4 more cells that Troops and Militia")
+    
+    def nextTravel(completed: Int): Int = {
+      val candidates = radTravelToPoorMuslimCandidates()
+      if (completed == cardOps || candidates.isEmpty)
+        completed
+      else {
+        // We  have vetted the candidates to ensure that there is a cell that can make
+        // the trip in radTravelToPoorMuslimCandidates() so we can safely call #get 
+        // for the Option return with both target and source
+        val target = majorJihadTarget(candidates).get
+        val source = travelFromTarget(target, countryNames(game.countries.filterNot(_.name == target))).get
+        val attempt = TravelAttempt(source, target, activeCells(game.getCountry(source)) > 0)
+        performTravels(attempt::Nil) match {
+          case (_, true)::Nil => usedCells(target).addSleepers(1)
+          case _ =>
+        }
+        nextTravel(completed + 1)
+      }
+    }
+
+    nextTravel(0)
   }
   
   // Recruit in the Muslim county with a cadre that has the best
