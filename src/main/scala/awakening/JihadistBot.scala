@@ -282,6 +282,10 @@ object JihadistBot extends BotHelpers {
     new CriteriaFilter("Good Muslim w/ adjacent cells", muslimTest(m => m.isGood && m.hasAdjacent(hasCellForTravel)))
   val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
   
+  // Used with botEnhancements
+  val PoorTroopsCellsFilter = new CriteriaFilter("Poor with troops and cells",
+                  muslimTest(m => m.isPoor && m.troops > 0 && unusedCells(m) > 0))
+
   val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
                   muslimTest(m => m.isPoor && m.troops > 0 && activeCells(m) > 0))
   val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and JSP",
@@ -384,9 +388,10 @@ object JihadistBot extends BotHelpers {
   val TightPlotFlowchart = List(
     PoorNonMuslimFilter, FairNonMuslimFilter, GoodNonMuslimFilter)
     
-  val OtherPlotFlowchart = List(
-    PoorTroopsActiveCellsFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter,
-    PoorMuslimFilter)
+  val OtherPlotFlowchart = if (game.botEnhancements)
+    List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter, PoorMuslimFilter, NonMuslimFilter)
+  else
+    List(PoorTroopsActiveCellsFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter, PoorMuslimFilter)
   
   val LabyrinthPlotPriorities = List(
     USPriority, WithPrestigeTroopsPriority, PakistanPriority, PhilippinesPriority,
@@ -696,12 +701,12 @@ object JihadistBot extends BotHelpers {
 
   // This is used by botEnhacements 
   object PrestigeOver3AndActiveCellWithTroopsDecision extends OperationDecision {
-    val desc = "Prestige > 3 and Active cell with Troops?"
+    val desc = "Prestige > 3 and cell(s) with Troops?"
     def yesPath = PlotOp
     def noPath  = FundingModerateDecision
     def condition(ops: Int) = 
       game.prestige > 3 &&
-      (game hasMuslim (m => activeCells(m) > 0 && m.totalTroopsThatAffectPrestige > 0))
+      (game hasMuslim (m => unusedCells(m) > 0 && m.totalTroopsThatAffectPrestige > 0))
   }
   
   object CellAvailableOrCellInNonMuslimDecision extends OperationDecision {
@@ -718,7 +723,7 @@ object JihadistBot extends BotHelpers {
     def condition(ops: Int) = game hasNonMuslim (totalUnused(_) > 0)
   }
   
-  // Follow the operations flowchart to pick which operation will be performed.
+  // Follow the operations flowchart (EvO) to pick which operation will be performed.
   def operationsFlowchart(ops: Int): Operation = {
     @tailrec def evaluateNode(node: OpFlowchartNode): Operation = node match {
       case operation: Operation        => operation
@@ -1571,7 +1576,7 @@ object JihadistBot extends BotHelpers {
     nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && totalUnused(n) > 0))
   }
   
-  // Used only when botEnahnced in effect.
+  // Used only when botEnhancements in effect.
   def radTravelToPoorMuslimWhereMajorJSP(cardOps: Int, reserveOps: Int): Int = {
 
     log()
@@ -1599,7 +1604,7 @@ object JihadistBot extends BotHelpers {
 
     nextTravel(0)
   }
-  
+
   // Recruit in the Muslim county with a cadre that has the best
   // Jihad DRM.
   // cardsOps   - The number of unused Ops remaining from the card
