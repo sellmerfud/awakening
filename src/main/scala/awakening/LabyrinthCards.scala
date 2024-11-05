@@ -613,6 +613,7 @@ object LabyrinthCards {
       (role: Role, forTrigger: Boolean) => (game getMuslim Iraq).totalTroops > 0
       ,
       (role: Role) => {
+        addEventTarget(Iraq)
         addAidMarker(Iraq)
         increasePrestige(1)
         addGlobalEventMarker(SaddamCaptured)
