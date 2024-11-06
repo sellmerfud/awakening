@@ -6444,15 +6444,13 @@ object LabyrinthAwakening {
                                 |  adjust auto roll     - Auto roll for human operations
                                 |  adjust <country>     - Country specific settings""".stripMargin),
       Command("history",      """Display game history
-                                |  history       - Shows the log from the beginning of the current turn
-                                |  history -1    - Shows the log from the beginning of the previous turn
-                                |  history -n    - Shows the log from the beginning of the turn n turns ago
-                                |  history 1     - Shows the log for the first turn
-                                |  history n     - Shows the log for the nth turn
-                                |  history 1..3  - Shows the log for the first through third turns
-                                |  history 5..   - Shows the log from the fifth turn through the end
-                                |  history ..5   - Shows the log from the beginning through the fifth turn
-                                |  history all   - Shows the entire log
+                                |  history        - Shows the log starting from the most recent save point (Same as history -1)
+                                |  history -1     - Shows the log starting from the most recent save point
+                                |  history -n     - Shows the log starting from the nth most recent save point
+                                |  history n      - Shows the log starting from the nth save point
+                                |  history n num  - Shows num log entries starting from the nth save point
+                                |  history -n num - Shows num log entries starting from the nth most recent save point
+                                |  history all    - Shows the entire log
                                 |  Any of the above commands may be followed by >filename
                                 |  to save the history in a file instead of echoing it to the console""".stripMargin),
       Command("rollback",     """Roll back card plays in the current turn or
