@@ -1583,9 +1583,11 @@ object JihadistBot extends BotHelpers {
     log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
     log("                and there are not 1-4 more cells that Troops and Militia")
     
+    val maxOps = cardOps + reserveOps
+
     def nextTravel(completed: Int): Int = {
       val candidates = radTravelToPoorMuslimCandidates()
-      if (completed == cardOps || candidates.isEmpty)
+      if (completed == maxOps || candidates.isEmpty)
         completed
       else {
         // We  have vetted the candidates to ensure that there is a cell that can make
