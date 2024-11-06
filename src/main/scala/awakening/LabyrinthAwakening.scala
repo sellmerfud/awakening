@@ -5850,14 +5850,14 @@ object LabyrinthAwakening {
     val lapsing = game.cardsLapsing filter targets.contains
     val (remove, discard) = lapsing.partition(deck(_).remove != NoRemove)
     if (remove.nonEmpty) {
-      val cards = if (remove.size == 1) "card" else "card"
+      val cards = if (remove.size == 1) "card" else "cards"
       wrap(s"Remove lapsing $cards from the game: ", remove.sorted map cardNumAndName) foreach { line =>
         log(line, Color.Event)
       }
 
     }
     if (discard.nonEmpty) {
-      val cards = if (discard.size == 1) "card" else "card"
+      val cards = if (discard.size == 1) "card" else "cards"
       wrap(s"Discard lapsing $cards: ", discard.sorted map cardNumAndName) foreach { line =>
         log(line, Color.Event)
       }
