@@ -865,7 +865,7 @@ object AwakeningCards {
             choice(condition = true,   "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
           ).flatten 
 
-          askMenu(s"Do any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
+          askMenu(s"\nDo any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "awakening" =>

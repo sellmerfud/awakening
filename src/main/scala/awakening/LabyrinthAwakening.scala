@@ -2316,21 +2316,25 @@ object LabyrinthAwakening {
       else if (itemsRemaining.size == 1)
         itemsRemaining.keys.head :: Nil
       else {
-        println(separator())
         val indexMap = (itemsRemaining.keys.zipWithIndex map (_.swap)).toMap
+        val choicePrompt = if (numChoices > 1)
+          s"${ordinal(num)} Selection: "
+        else
+          "Selection: "
+        if (items.size > 1 &&  prompt != "") {
+          println(prompt)
+          println(separator())
+        }
         for ((key, i) <- itemsRemaining.keysIterator.zipWithIndex)
           println(s"${i+1}) ${itemsRemaining(key)}")
-        val prompt = if (numChoices > 1) s"${ordinal(num)} Selection: "
-        else "Selection: "
-        val choice = askOneOf(prompt, 1 to itemsRemaining.size, allowAbort = allowAbort).get.toInt
+        println(separator())
+        val choice = askOneOf(choicePrompt, 1 to itemsRemaining.size, allowAbort = allowAbort).get.toInt
         val index  = choice - 1
         val key    = indexMap(index)
         val remain = if (repeatsOK) itemsRemaining else itemsRemaining - key
         indexMap(index) :: nextChoice(num + 1, remain)
       }
     }
-    if (items.size > 1 &&  prompt != "")
-      println(prompt)
     nextChoice(1, ListMap(items:_*))
   }
 
