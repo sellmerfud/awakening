@@ -1628,7 +1628,7 @@ object JihadistBot extends BotHelpers {
       else {
         if (completed >= cardOps)
           expendBotReserves(1)
-        log(s"$Jihadist attempts to recruit a cell into $target")
+        log(s"\n$Jihadist attempts to recruit a cell into $target")
         if (m.autoRecruit) {
           log(s"Recruit is automatically successful in $target")
           addSleeperCellsToCountry(target, 1)

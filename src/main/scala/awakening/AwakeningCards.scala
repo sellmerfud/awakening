@@ -1863,7 +1863,7 @@ object AwakeningCards {
       (role: Role) => {
         val candidates = countryNames(game.muslims filter (_.awakening > 0))
         if (candidates.isEmpty)
-          log(s"There are no reaction markers on the map")
+          log(s"There are no awakening markers on the map")
         else {
           val target = if (role == game.humanRole) 
             askCountry("Select country: ", candidates)
