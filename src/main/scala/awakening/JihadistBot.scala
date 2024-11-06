@@ -578,12 +578,13 @@ object JihadistBot extends BotHelpers {
   
   
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
+    val irCountryWith7Cells = game.muslims.exists(m => m.isIslamistRule && m.totalCells > 6)
     val criteria = if (game.botEnhancements)
       (c: Country) => c match {
         case m: MuslimCountry =>                              // Only recruit in Muslim countries
           (m.isPoor || m.autoRecruit) &&                      // Only recruit in Good/Fair if auto-recruit
           (m.totalCells > 0 || (m.hasCadre && m.totalTroopsAndMilitia == 0)) && // Do not recruit using Cadre if TandM preset
-          (!m.isIslamistRule || m.totalCells < 7) &&          // Only recruit in IR if less than 7 cells present
+          !(m.isIslamistRule && irCountryWith7Cells) &&     // Only recruit in IR if no IR country has  7+ cells
           (!muslimWithCadreOnly || m.hasCadre)                // Special radicalization test
         case n: NonMuslimCountry => false
       }
@@ -1350,8 +1351,9 @@ object JihadistBot extends BotHelpers {
   // There must be 
   def radTravelToPoorMuslimCandidates(): List[String] = {
     val condition = (m: MuslimCountry) =>
-      poorMuslimWhereMajorJihadPossible(m) &&
       !poorMuslimNeedsCellsForMajorJihad(m) &&
+      poorMuslimWhereMajorJihadPossible(m)  &&
+      m.totalTroopsAndMilitia == 0          &&
       travelFromTarget(m.name, countryNames(game.countries.filterNot(_.name == m.name))).nonEmpty
       
     game.muslims
@@ -1378,9 +1380,9 @@ object JihadistBot extends BotHelpers {
     val canAddToReserves = !requiresReserves && game.reserves.jihadist < 2
     val canRecruit = botRecruitPossible(muslimWithCadreOnly = false) && !requiresReserves
     val canTravelToUS = !requiresReserves && unusedCellsOnMapForTravel > 0
-    // For botEnhancements if there are not Poor Muslim with 1-4 more cells than TandM
+    // For botEnhancements if there are no Poor Muslim with 1-4 more cells than TandM
     // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
-    // then attempt to travel cells there.
+    // and no TandM, then attempt to travel cells there.
     val canTraveToPoorMuslim = radTravelToPoorMuslimCandidates().nonEmpty
 
     if (canPlotWMDInUs)
