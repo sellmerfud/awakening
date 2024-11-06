@@ -1645,8 +1645,8 @@ object LabyrinthAwakening {
         b += separator()
         b += s"Extra cells$eventDisplay"
         val extraOnMap = (cellsOnMap - 15) max 0
-        b += f"Available       : ${extraCellsAvailable}%2d   | On map            : ${extraOnMap}%2d"
-        b += f"Capacity        : ${extraCellCapacity}%2d"
+        b += f"Available       : ${extraCellsAvailable}%2d   | Capacity          : ${extraCellCapacity}%2d"
+        b += f"On map          : ${extraOnMap}%2d"
       }
       val ms = markers ::: (for (c <- countries; m <- c.markers) yield (s"$m (${c.name})"))
       b += separator()
