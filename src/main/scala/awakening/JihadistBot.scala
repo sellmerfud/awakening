@@ -1345,20 +1345,24 @@ object JihadistBot extends BotHelpers {
   case object Recruit                         extends RadicalizationAction
   case object TravelToUS                      extends RadicalizationAction
 
-  // For botEnhancements if there are not Poor Muslim with 1-4 more cells than TandM
+  // For botEnhancements if there are nos Poor Muslim with 1-4 more cells than TandM
   // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
   // then attempt to travel cells there.
-  // There must be 
   def radTravelToPoorMuslimCandidates(): List[String] = {
     val condition = (m: MuslimCountry) =>
-      !poorMuslimNeedsCellsForMajorJihad(m) &&
       poorMuslimWhereMajorJihadPossible(m)  &&
       m.totalTroopsAndMilitia == 0          &&
       travelFromTarget(m.name, countryNames(game.countries.filterNot(_.name == m.name))).nonEmpty
-      
-    game.muslims
-      .filter(condition)
-      .map(_.name)
+
+    // If any Poor Muslims with 1-4 more cells than TandM where
+    // Major Jihad is possible, then don't travel to those without
+    // any cells.
+    if (game.muslims.exists(poorMuslimNeedsCellsForMajorJihad))
+      Nil
+    else
+      game.muslims
+        .filter(condition)
+        .map(_.name)
   }
 
   // The requiresReserves parameter indicates, that all of the Ops on the played
@@ -1583,7 +1587,7 @@ object JihadistBot extends BotHelpers {
 
     log()
     log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
-    log("                and there are not 1-4 more cells that Troops and Militia")
+    log("                and there are no Troops or Militia present")
     
     val maxOps = cardOps + reserveOps
 
