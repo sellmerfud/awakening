@@ -2041,43 +2041,43 @@ object LabyrinthCards {
       (role: Role, forTrigger: Boolean) => game.cellsAvailable > 0 && (game.muslims count regionalAlQaedaCandidate) >= 2
       ,
       (role: Role) => {
-        val candidates = countryNames(game.muslims filter regionalAlQaedaCandidate)
-        val maxPer = if (game.numIslamistRule > 0) 2 else 1
+        val unmarkedMuslims = countryNames(game.muslims filter regionalAlQaedaCandidate)
+        val maxPerTarget = if (game.numIslamistRule > 0) 2 else 1
+        val maxTargets   = if (game.cellsAvailable > 1) 2 else 1
         case class Target(name: String, cells: Int)
         val targets = if (role == game.humanRole) {
-          if (game.cellsAvailable == 1) {
-            val name = askCountry("Select country: ", candidates)
-            Target(name, 1)::Nil
-          }
-          else if (maxPer == 2 && game.cellsAvailable < 4) {
-            println(s"There are only ${game.cellsAvailable} available cells")
-            val name1 = askCountry("Select 1st unmarked country: ", candidates)
-            val num1  = askInt(s"Place how many cells in $name1", 1, 2)
-            val remain = game.cellsAvailable - num1
-            if (remain == 0)
-              Target(name1, num1)::Nil
+          def nextTarget(available: Int, candidates: List[String], existingTargets: Vector[Target]): Vector[Target] = {
+            if (available == 0 || existingTargets.size == maxTargets)
+              existingTargets
             else {
-              val name2 = askCountry("Select 2nd unmarked country: ", candidates filterNot (_ == name1))
-              Target(name1, num1):: Target(name2, remain)::Nil
+              val num = existingTargets.size + 1
+              val name = askCountry(s"\nSelect ${ordinal(num)} unmarked Muslim country: ", candidates)
+              val numCells = if (existingTargets.isEmpty && maxTargets > 1 && available < maxPerTarget * maxTargets) {
+                displayLine(s"\nThere are ${amountOf(available, "available cell")}", Color.Info)
+                askInt(s"Place how many cells in $name", 1, 2)
+              }
+              else
+                maxPerTarget min available
+
+              nextTarget(available - numCells, candidates.filterNot(_ == name), existingTargets :+ Target(name, numCells))
             }
           }
-          else {
-            val name1 = askCountry("Select 1st unmarked country: ", candidates)
-            val name2 = askCountry("Select 2nd unmarked country: ", candidates filterNot (_ == name1))
-            Target(name1, maxPer):: Target(name2, maxPer)::Nil
-          }
+          nextTarget(game.cellsAvailable, unmarkedMuslims, Vector.empty)
         }
-        else {
-          def nextTarget(available: Int, targets: List[String]): List[Target] = targets match {
-            case Nil => Nil
-            case t::ts => 
-              val n = maxPer min available
-              Target(t, n) :: nextTarget(available - n, ts)
+        else { // Bot
+          def nextTarget(available: Int, candidates: List[String], existingTargets: Vector[Target]): Vector[Target] = {
+            if (available == 0 || existingTargets.size == maxTargets)
+              existingTargets
+            else {
+              var name = JihadistBot.recruitTravelToPriority(candidates).get
+              val numCells = maxPerTarget min available
+
+              nextTarget(available - numCells, candidates.filterNot(_ == name), existingTargets :+ Target(name, numCells))
+            }
           }
-          var names = JihadistBot.multipleTargets(2, candidates, JihadistBot.recruitTravelToPriority)
-          nextTarget(game.cellsAvailable, names)  
+          nextTarget(game.cellsAvailable, unmarkedMuslims, Vector.empty)
         }
-        
+
         for (Target(name, num) <- targets) {
           addEventTarget(name)
           testCountry(name)
