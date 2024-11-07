@@ -803,8 +803,8 @@ object JihadistBot extends BotHelpers {
   
   def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
     val flowchart = List(
-      new CriteriaFilter("Ally",    muslimTest(m => m.isAlly)),
-      new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
+      new CriteriaFilter("Not Adversary", muslimTest(m => !m.isAdversary)),
+    )
     botLog("Find \"Critical Middle\" target")
     countryNames(selectCandidates(game getCountries names, flowchart)) 
   }
