@@ -127,7 +127,7 @@ public class Loader {
     // get refrences to the main() method and call it with the command line
     // arguments.
     try {
-      Class<?>[] appMainTypes = new Class[]  { args.getClass() };
+      Class<?>[] appMainTypes = new Class[]  { String[].class };
       Object[] params         = new Object[] { args };
       Method appMain          = applicationClass.getDeclaredMethod("main", appMainTypes);
       appMain.invoke(null, params);
