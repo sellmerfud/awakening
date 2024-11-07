@@ -61,19 +61,24 @@ trait BotHelpers {
     m.name == Pakistan && m.hasMarker(BenazirBhutto)
 
   // Return true if a die roll of 1 will succeed in the given country
-  def minorJihadSuccessPossible(m: MuslimCountry) =
+  def minorJihadSuccessPossible(m: MuslimCountry) = if (game.botEnhancements) {
     !benazirBhuttoPreventsJihad(m) &&
-    (1 + jihadDRM(m, major = false)) <= m.governance
+    (2 + jihadDRM(m, major = false)) <= m.governance  // At least 1/3 chance
+  }
+  else {
+    !benazirBhuttoPreventsJihad(m) &&
+    (1 + jihadDRM(m, major = false)) <= m.governance  // At least 1/6 chance
+  }
 
   // Return true if a die roll of 1 will succeed in the given country
   def majorJihadSuccessPossible(m: MuslimCountry) = if (game.botEnhancements) {
     !benazirBhuttoPreventsJihad(m) &&
     game.totalCellCapacity - m.totalTroopsAndMilitia >= 5 &&  // Are then enough cells in play to overcome TandM
-    (1 + jihadDRM(m, major = true)) <= m.governance
+    (2 + jihadDRM(m, major = true)) <= m.governance  // At least 1/3 chance
   }
   else {
     !benazirBhuttoPreventsJihad(m) &&
-    (1 + jihadDRM(m, major = true)) <= m.governance
+    (1 + jihadDRM(m, major = true)) <= m.governance  // At least 1/6 chance
   }
   
   // trait representing nodes in the 
