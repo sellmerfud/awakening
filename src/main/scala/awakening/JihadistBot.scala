@@ -887,10 +887,12 @@ object JihadistBot extends BotHelpers {
   // The Bot will declare the Caliphate if it results in an auto win,
   // or if there is at least one other adjacent country that qualifies to be part
   // of the Caliphate.
-  def willDeclareCaliphate(capital: String): Boolean = {
+  // For botEnhancements, the adjacency requirement is not used.
+  def willDeclareCaliphate(capital: String): Boolean = if (game.botEnhancements)
+    canDeclareCaliphate(capital)
+  else
     canDeclareCaliphate(capital) &&
     (game.islamistResources == 5 || game.caliphateDaisyChain(capital).size > 1)
-  }
   
   // Enhance bot rule:
   // The Jihadist Bot will voluntarily remove cadres
