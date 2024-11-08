@@ -4178,7 +4178,14 @@ object LabyrinthAwakening {
         testCountry(to)
         addOpsTarget(to)
         val success = if (travelIsAutomatic(from, to)) {
-          log(s"Travel from $from to $to succeeds automatically")
+          val qatari = if (globalEventInPlay(QatariCrisis) &&
+                           qatariCrisisAdjacencyMap.contains(from) &&
+                           qatariCrisisAdjacencyMap.contains(to))
+             s" [$QatariCrisis]"
+          else
+            ""
+
+          log(s"Travel from $from to $to succeeds automatically$qatari")
           handleResult(true, from, to, active)
         }
         else {
