@@ -60,10 +60,18 @@ trait BotHelpers {
   def benazirBhuttoPreventsJihad(m: MuslimCountry) =
     m.name == Pakistan && m.hasMarker(BenazirBhutto)
 
+  def enhBotJihadAllowed(m: MuslimCountry, major: Boolean): Boolean = {
+    val drm = jihadDRM(m, major)
+    m.governance match {
+      case Good|Fair => drm <= 0
+      case Poor      => drm <= 1
+      case _         => false
+    }
+  }
   // Return true if a die roll of 1 will succeed in the given country
   def minorJihadSuccessPossible(m: MuslimCountry) = if (game.botEnhancements) {
     !benazirBhuttoPreventsJihad(m) &&
-    (2 + jihadDRM(m, major = false)) <= m.governance  // At least 1/3 chance
+    enhBotJihadAllowed(m, false)
   }
   else {
     !benazirBhuttoPreventsJihad(m) &&
@@ -74,7 +82,7 @@ trait BotHelpers {
   def majorJihadSuccessPossible(m: MuslimCountry) = if (game.botEnhancements) {
     !benazirBhuttoPreventsJihad(m) &&
     game.totalCellCapacity - m.totalTroopsAndMilitia >= 5 &&  // Are then enough cells in play to overcome TandM
-    (2 + jihadDRM(m, major = true)) <= m.governance  // At least 1/3 chance
+    enhBotJihadAllowed(m, true)
   }
   else {
     !benazirBhuttoPreventsJihad(m) &&
