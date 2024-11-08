@@ -464,7 +464,7 @@ object LabyrinthAwakening {
     // We must filter against countries in the game, so we don't try
     // to access Mali, Nigeria during a Labyrinth scenario!
     val adjFilter = (adjName: String) => {
-      (game hasCountry(_.name == adjName)) &&
+      game.hasCountry(_.name == adjName) &&
       (patriotAct == false ||
         ((name, adjName) match {
           case (UnitedStates, other) => other == Canada
@@ -475,11 +475,11 @@ object LabyrinthAwakening {
     }
     //  If QatariCrisis in play then SaudiArabia, GulfStates, Yemen, Iran are all
     //  considered adjacent
-    val names = if (globalEventInPlay(QatariCrisis) && (qatariCrisisAdjacencyMap contains name))
+    val names = if (globalEventInPlay(QatariCrisis) && qatariCrisisAdjacencyMap.contains(name))
       qatariCrisisAdjacencyMap(name)
     else
       adjacencyMap(name)
-    names filter adjFilter
+    names.filter(adjFilter)
   }
   def areAdjacent(name1: String, name2: String) = getAdjacent(name1) contains name2
 
@@ -7287,12 +7287,14 @@ object LabyrinthAwakening {
   }
 
   def travelIsAutomatic(src: String, dest: String): Boolean = {
-    if (lapsingEventInPlay(IslamicMaghreb) && (Schengen contains dest))
+    if (lapsingEventInPlay(IslamicMaghreb) && Schengen.contains(dest))
       false
+    else if (game.getCountry(dest).isIslamistRule || src == dest)
+      true
     else if (lapsingEventInPlay(Biometrics))
-      src == dest || ((areAdjacent(src, dest) && !(game getCountry dest).isGood))
+      (areAdjacent(src, dest) && !game.getCountry(dest).isGood)
     else
-      src == dest || areAdjacent(src, dest) || (game getCountry dest).isIslamistRule
+      areAdjacent(src, dest)
   }
 
   def humanTravel(ops: Int): Unit = {
