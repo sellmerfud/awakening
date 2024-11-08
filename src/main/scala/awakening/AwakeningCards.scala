@@ -315,7 +315,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => (game.muslims map (_.numAdvisors)).sum < 3 && (game hasMuslim advisorsCandidate)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter advisorsCandidate)
         val target = if (role == game.humanRole)
           askCountry(s"Place Advisors in which country: ", candidates)
@@ -333,7 +333,7 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) =>
         (game.funding > 1 || role != game.botRole) && (game hasMuslim backlashCandidate)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter backlashCandidate)
         if (role == game.humanRole) {
           val target = askCountry(s"Backlash in which country: ", candidates)
@@ -371,7 +371,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim humanitarianAidCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter humanitarianAidCandidate)
         val target = if (role == game.humanRole)
           askCountry(s"Humanitarian Aid in which country: ", candidates)
@@ -388,7 +388,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => globalEventNotInPlay(BloodyThursday) && lapsingEventNotInPlay(ArabWinter)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         println()
         addEventTarget(GulfStates)
         testCountry(GulfStates)
@@ -400,7 +400,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => (game hasMuslim peshmergaCandidate) && game.militiaAvailable > 0
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter peshmergaCandidate)
         val target = if (role == game.humanRole)
           askCountry(s"Select country: ", candidates)
@@ -423,7 +423,7 @@ object AwakeningCards {
       (role: Role, _: Boolean) => reaperCandidates.nonEmpty ||
         (role == game.humanRole || cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand (y/n)? "))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (role == game.humanRole) {
           val choices = List(
             choice(reaperCandidates.nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),
@@ -477,14 +477,14 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => deck(126).eventRemovesLastCell(),
       (role: Role, forTrigger: Boolean) => deck(126).eventConditions(role, forTrigger),
-      (role: Role) => deck(126).executeEvent(role)
+      (role: Role, forTrigger: Boolean) => deck(126).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(128, "Reaper", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => deck(126).eventRemovesLastCell(),
       (role: Role, forTrigger: Boolean) => deck(126).eventConditions(role, forTrigger),
-      (role: Role) => deck(126).executeEvent(role)
+      (role: Role, forTrigger: Boolean) => deck(126).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(129, "Special Forces", US, 1,
@@ -496,7 +496,7 @@ object AwakeningCards {
       ,
       (role : Role, forTrigger: Boolean) => specialForcesCandidates.nonEmpty
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val target = if (role == game.humanRole)
           askCountry("Remove cell in which country: ", specialForcesCandidates)
         else
@@ -517,14 +517,14 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => deck(129).eventRemovesLastCell(),
       (role: Role, forTrigger: Boolean) => deck(129).eventConditions(role, forTrigger),
-      (role: Role) => deck(129).executeEvent(role)
+      (role: Role, forTrigger: Boolean) => deck(129).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(131, "Arab Spring Fallout", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => lapsingEventNotInPlay(ArabWinter) && (game hasMuslim arabSpringFalloutCandidate)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter arabSpringFalloutCandidate)
         val targets = if (candidates.size <= 2)
           candidates
@@ -555,7 +555,7 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) => ((game hasMuslim (_.civilWar)) && game.militiaAvailable > 0) ||
                                             battleOfSirteWithCells.nonEmpty
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (_.civilWar))
         val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val target = askCountry("Select civil war country: ", candidates)
@@ -588,7 +588,7 @@ object AwakeningCards {
        (!libya.civilWar || game.militiaAvailable > 0 || italy.posture != Hard)
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         println()
         testCountry(Libya)
         addEventTarget(Libya)
@@ -602,7 +602,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => lapsingEventNotInPlay(ArabWinter)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val sunnis = countryNames(game.muslims filter (m=> m.isSunni && m.canTakeAwakeningOrReactionMarker))
         if (sunnis.nonEmpty) {  // This should never happen, but let's be defensive
           val sunniTarget = if (role == game.humanRole)
@@ -649,7 +649,7 @@ object AwakeningCards {
         (role == game.humanRole || (game.availablePlots contains PlotWMD) ||
         cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand (y/n)? "))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (role == game.humanRole) {
           val choices = List(
             "reveal" -> "Reveal all WMD plots and remove one",
@@ -715,7 +715,7 @@ object AwakeningCards {
       }
       ,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = factionalInfightingCandidates
         if (candidates.nonEmpty) {
           val target = if (role == game.humanRole)
@@ -750,7 +750,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game.militiaAvailable > 0 && (game hasMuslim (m => m.canTakeMilitia && m.isAlly))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (m =>  m.canTakeMilitia && m.isAlly))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
@@ -767,7 +767,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => role == game.humanRole  // The bot treats this as unplayable
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         log("US player does not inspect the Jihadist hand in the solo game.")
         val cadres = countryNames(game.countries filter (_.hasCadre))
@@ -792,7 +792,7 @@ object AwakeningCards {
     entry(new Card(139, "Int'l Banking Regime", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val die = getDieRoll("Enter event die roll: ", Some(role))
         log(s"Die roll: $die")
         println()
@@ -803,7 +803,7 @@ object AwakeningCards {
     entry(new Card(140, "Maersk Alabama", US, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (game.reserves.us < 2) {
           game = game.copy(reserves = game.reserves.copy(us = game.reserves.us + 1))
           log(s"Add 1 Ops value to US reserves")
@@ -822,7 +822,7 @@ object AwakeningCards {
         globalEventNotInPlay(ThreeCupsOfTea) &&  // If not blocked and can have at least one effect
         (forTrigger || game.funding > 1 || game.prestige < 12 || game.getMuslim(Pakistan).canTakeAwakeningOrReactionMarker)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         println()
         increasePrestige(1)
         decreaseFunding(1)
@@ -836,7 +836,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim (m => (m.civilWar || m.inRegimeChange) && game.militiaAvailable > 0)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (m => m.civilWar || m.inRegimeChange))
         val target = if (role == game.humanRole)
           askCountry("Place militia in which country: ", candidates)
@@ -854,7 +854,7 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) =>
         if (game.scenarioName == awakening.scenarios.MittsTurn.name) game.usPosture == Hard else game.usPosture == Soft
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val numActions = if (game.scenarioName == awakening.scenarios.MittsTurn.name) 3 else 2
         if (role == game.humanRole) {
           val canAwakening = (game hasMuslim (_.canTakeAwakeningOrReactionMarker)) && lapsingEventNotInPlay(ArabWinter)
@@ -932,7 +932,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game.militiaAvailable > 0 && (game hasMuslim opNewDawnCandidate)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter opNewDawnCandidate)
         val target = if (role == game.humanRole)
           askCountry("Replace troops in which country: ", candidates)
@@ -959,7 +959,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim (_.civilWar)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (_.civilWar))
         val target = if (role == game.humanRole)
           askCountry("Place militia and aid in which country: ", candidates)
@@ -977,7 +977,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim (m => m.besiegedRegime || m.canTakeAwakeningOrReactionMarker)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // Get candidates in this priority order:
         // 1. Muslims with besieged regime markers that can take an awakening marker
         // 2. Muslims with besieged regime markers (cannot take awakening because of Civil War)
@@ -1005,7 +1005,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim strikeEagleCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter strikeEagleCandidate)
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
@@ -1026,7 +1026,7 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) => lapsingEventNotInPlay(ArabWinter) &&
            ((game getMuslim Egypt).canTakeAwakeningOrReactionMarker || (game hasMuslim tahrirCandidate))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter tahrirCandidate)
 
         addEventTarget(Egypt)
@@ -1051,7 +1051,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim unNationBuildingCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter unNationBuildingCandidate)
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
@@ -1073,7 +1073,7 @@ object AwakeningCards {
       ,
       (role: Role, forTrigger: Boolean) => unscr1973Candidates.nonEmpty
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidatesWithCells = unscr1973Candidates filter (name => game.getMuslim(name).totalCells > 0)
         val canRemoveLastCell = candidatesWithCells match {
           case name::Nil => game.totalCellsOnMap == 1
@@ -1119,7 +1119,7 @@ object AwakeningCards {
         !syria.isUntested && syria.wmdCache > 0
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addEventTarget(Syria)
         val syria = game.getMuslim(Syria)
         removeCachedWMD(Syria, if (syria.isAlly) syria.wmdCache else 1)
@@ -1138,7 +1138,7 @@ object AwakeningCards {
             (game hasMuslim (m => m.civilWar && m.totalCells > m.totalTroopsAndMilitia))
         }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         returnSequestrationTroopsToAvailable("Congress Acts releases the off map Sequestration troops")
 
         if (role == game.humanRole) {
@@ -1165,7 +1165,7 @@ object AwakeningCards {
                                            lapsingEventNotInPlay(ArabWinter) &&
                                            faceBookCandidates.nonEmpty
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = faceBookCandidates
         val targets = if (candidates.size < 4)
           candidates
@@ -1194,13 +1194,13 @@ object AwakeningCards {
     entry(new Card(154, "Facebook", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => deck(153).eventConditions(role, forTrigger),
-      (role: Role) => deck(153).executeEvent(role)
+      (role: Role, forTrigger: Boolean) => deck(153).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(155, "Fracking", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addGlobalEventMarker(Fracking)
         rollPrestige()
         log("US player draws a card")
@@ -1219,7 +1219,7 @@ object AwakeningCards {
         ((gulfUnionCandidates map game.getMuslim) exists (m => m.totalCells > m.totalTroopsAndMilitia))
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val maxMilitia = 4 min game.militiaAvailable
         if (role == game.humanRole) {
           // Card allow placing militia or repositioning militia in the Gulf Union countries.
@@ -1307,7 +1307,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game.usPosture == Hard && (game hasMuslim (_.civilWar))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (_.civilWar))
         val (target, adjacent) = if (role == game.humanRole) {
           val t = askCountry("Select country: ", candidates)
@@ -1341,7 +1341,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim massTurnoutCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter massTurnoutCandidate)
         val target = if (role == game.humanRole)
           askCountry("Select regime change country: ", candidates)
@@ -1357,7 +1357,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game.gwotPenalty == 0 && (game hasMuslim (m => m.inRegimeChange || m.civilWar))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
         val target = if (role == game.humanRole)
           askCountry("Select country for NATO: ", candidates)
@@ -1383,7 +1383,7 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) =>
         role == game.humanRole || cacheYesOrNo("Is one of the indicated cards in the discard pile (y/n)? ")
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val cards = List("Ayman al-Zawahiri", "Abu Bakr al-Baghdadi", "Abu Sayyaf (ISIL)",
                          "Jihadi John", "Osama bin Ladin")
         log("US player takes one of the following cards from the discard pile:")
@@ -1403,7 +1403,7 @@ object AwakeningCards {
                                            (game hasCountry (_.hasPlots)) ||
                                            game.sleeperCellsOnMap >= 5
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val actions = List(
           if (game.sleeperCellsOnMap > 0) Some("activate") else None,
           if (game.alertTargets.nonEmpty) Some("alert") else None
@@ -1489,7 +1489,7 @@ object AwakeningCards {
       ,
       (role: Role, forTrigger: Boolean) => scafCandidates.nonEmpty
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val withCells = scafCandidates filter (game.getCountry(_).totalCells > 0)
         val canRemoveLastCell = withCells.size == 1 && game.getCountry(withCells.head).totalCells == game.totalCellsOnMap
         val target = if (role == game.humanRole)
@@ -1513,7 +1513,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim statusQuoCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter statusQuoCandidate)
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
@@ -1530,7 +1530,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => globalEventNotInPlay(BloodyThursday) || (game hasMuslim (_.awakening > 0))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addGlobalEventMarker(BloodyThursday)
         val candidates = countryNames(game.muslims filter (_.awakening > 0))
         if (candidates.nonEmpty) {
@@ -1551,7 +1551,7 @@ object AwakeningCards {
         ((role == game.humanRole || forTrigger) && (game hasMuslim coupCandidate)) ||
         (role == game.botRole && (game hasMuslim (m => !m.isIslamistRule && coupCandidate(m))))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val target = if (role == game.humanRole) {
           val candidates = countryNames(game.muslims filter coupCandidate)
           askCountry("Select country: ", candidates)
@@ -1572,7 +1572,7 @@ object AwakeningCards {
     entry(new Card(166, "Ferguson", Jihadist, 1,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         log("Jihadist player may block 1 US associated event played later this turn.")
         if (role == game.botRole)
           log("The Jihadist Bot will cancel the NEXT US associated event played by the US")
@@ -1587,7 +1587,7 @@ object AwakeningCards {
         (role == game.humanRole || !(game.getMuslim(Yemen).civilWar && game.cellsAvailable == 0))
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addEventTarget(Yemen)
         if (game.cellsAvailable > 0)
           addSleeperCellsToCountry(Yemen, 2 min game.cellsAvailable)
@@ -1607,7 +1607,7 @@ object AwakeningCards {
         game.hasMuslim(m => (m.inRegimeChange || m.civilWar) && m.totalCells > 0 && m.totalTroops > 0 ) &&
         cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (game.humanRole == US)
           log(s"You ($US) must randomly discard one card")
         else
@@ -1623,7 +1623,7 @@ object AwakeningCards {
         role == game.humanRole ||
         (game hasCountry islamicMaghrebCandidate) && (game.funding < 8 || game.cellsAvailable > 0)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         def isBetter(country: Country) =
           country.isMuslim &&
           (game.getMuslim(country.name).civilWar || game.isCaliphateMember(country.name))
@@ -1680,7 +1680,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim theftOfStateCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter theftOfStateCandidate)
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
@@ -1696,7 +1696,7 @@ object AwakeningCards {
     entry(new Card(171, "Abu Ghraib Jail Break", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addEventTarget(Iraq)
         testCountry(Iraq)
         addActiveCellsToCountry(Iraq, 1 min game.cellsAvailable)
@@ -1708,7 +1708,7 @@ object AwakeningCards {
     entry(new Card(172, "Al-Shabaab", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (role == game.humanRole) {
           val candidates = (Somalia :: getAdjacent(Somalia)).sorted
           val reactionCandidates = candidates filter game.isMuslim filter { name =>
@@ -1819,7 +1819,7 @@ object AwakeningCards {
     entry(new Card(173, "Arab Winter", Jihadist, 2,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (_.awakening > 0))
         if (candidates.isEmpty)
           log(s"There are no reaction markers on the map")
@@ -1851,7 +1851,7 @@ object AwakeningCards {
         (role == game.humanRole || game.gwotPenalty == 0 || forTrigger)
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         rollUSPosture()
         increaseFunding(1)
@@ -1863,7 +1863,7 @@ object AwakeningCards {
     entry(new Card(175, "Censorship", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (_.awakening > 0))
         if (candidates.isEmpty)
           log(s"There are no awakening markers on the map")
@@ -1890,7 +1890,7 @@ object AwakeningCards {
       else
         game hasMuslim changeOfStateCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = if (role == game.botRole)
           countryNames(game.muslims filter botChangeOfStateCandidate)
         else
@@ -1913,7 +1913,7 @@ object AwakeningCards {
         (game.availablePlots contains Plot1) &&
         (role == game.humanRole || game.funding < 9) // Bot unplayable if funding == 9
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         val num = 2 min (game.availablePlots count (_ == Plot1))
         addEventTarget(Israel)
@@ -1927,7 +1927,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim ghostSoldiersCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter ghostSoldiersCandidate)
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
@@ -1945,7 +1945,7 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) =>
         (game.troopsAvailable + game.troopsOnMap) > 0 && globalEventNotInPlay(USNKSummit)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // Take troops from available if possible, otherwise we must
         // ask the user where to take them from.
         val numToRemove  = 2 min (game.troopsAvailable + game.troopsOnMap)
@@ -1978,7 +1978,7 @@ object AwakeningCards {
          game.hasMuslim(m => m.civilWar && m.totalCells > 0) &&
          (forTrigger || game.funding < 9)
       ,
-      (role: Role) => increaseFunding(2)
+      (role: Role, forTrigger: Boolean) => increaseFunding(2)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(181, "NPT Safeguards Ignored", Jihadist, 2,
@@ -1988,7 +1988,7 @@ object AwakeningCards {
         game.getCountry(Iran).totalCells > 0 &&
         countryEventNotInPlay(Iran, TradeEmbargoUS)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addEventTarget(Iran)
         val die = getDieRoll("Enter event die roll: ", Some(role))
         val success = die < 4
@@ -2014,7 +2014,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => parisAttacksPossible
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // Note: There is a slight chance that the Bot could execute this event,
         // and get a black die roll for only plots or only cells and there are
         // plot/cells available.
@@ -2073,14 +2073,14 @@ object AwakeningCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => globalEventNotInPlay(MaerskAlabama) && pirates2ConditionsInEffect
       ,
-      (role: Role) => addGlobalEventMarker(Pirates2)
+      (role: Role, forTrigger: Boolean) => addGlobalEventMarker(Pirates2)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(184, "Sequestration", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game.usPosture == Soft
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         import JihadistBot.troopsToTakeOffMap
         // Take troops from available if possible, otherwise we must
         // ask the user where to take them from.
@@ -2120,7 +2120,7 @@ object AwakeningCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasCountry (_.totalTroops > 0)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // The only non-muslim country that may contain troops is the Philippines
         // if (abu Sayyaf is in effect)
         val candidates = countryNames(game.countries filter (_.totalTroops > 0))
@@ -2160,7 +2160,7 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) =>
         (game.availablePlots exists (p => p == Plot2 || p == Plot3)) || game.cellsAvailable > 0
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addEventTarget(Nigeria)
         testCountry(Nigeria)
         if (role == game.humanRole) {
@@ -2227,7 +2227,7 @@ object AwakeningCards {
         (game.cellsAvailable > 0 || (candidates exists (m => m.aidMarkers > 0 || !m.besiegedRegime)))
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = if (game.cellsAvailable > 0)
           countryNames(game.muslims filter (m => m.inRegimeChange || m.civilWar))
         else
@@ -2258,7 +2258,7 @@ object AwakeningCards {
     entry(new Card(188, "ISIL", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         def canCivilWar(m: MuslimCountry) =
           !m.civilWar       &&
           !m.isIslamistRule &&
@@ -2278,7 +2278,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game.humanRole == Jihadist || game.cellsAvailable > 0 // Ignores funding
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         var targets = if (role == game.humanRole)
           askCountries(3, countryNames(game.countries filter (_.totalCells == 0)))
         else {
@@ -2333,7 +2333,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game.availablePlots.nonEmpty && (game hasCountry martyrdomCandidate)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.countries filter martyrdomCandidate)
         val (target, (active, sleeper, sadr), plots) = if (role == game.humanRole) {
           val target = askCountry("Select country: ", candidates)
@@ -2363,7 +2363,7 @@ object AwakeningCards {
         lapsingEventNotInPlay(ArabWinter) &&
         game.muslims.exists(_.canTakeAwakeningOrReactionMarker)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))
 
         val other2 = if (role == game.humanRole && candidates.size > 1)
@@ -2393,7 +2393,7 @@ object AwakeningCards {
         (game.prestigeLevel == Medium || game.prestigeLevel == Low) &&
         (game hasMuslim (m => m.inRegimeChange && m.totalCells > 0))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (role == game.botRole) {
           log(s"You ($US) must randomly discard two cards")
           log("Playable Jihadist events on the discards are triggered")
@@ -2443,7 +2443,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game.cellsAvailable > 0 && (game.muslims count regionalAlQaedaCandidate) >= 2
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val unmarkedMuslims = countryNames(game.muslims filter regionalAlQaedaCandidate)
         val maxPerTarget = if (game.numIslamistRule > 0) 2 else 1
         val maxTargets   = if (game.cellsAvailable > 1) 2 else 1
@@ -2497,7 +2497,7 @@ object AwakeningCards {
         game.usPosture != game.getNonMuslim(Russia).posture  ||
         game.usPosture != game.getNonMuslim(Germany).posture
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         decreasePrestige(2)
         addEventTarget(Russia)
         addEventTarget(Germany)
@@ -2515,7 +2515,7 @@ object AwakeningCards {
         JihadistBot.talibanResurgentTarget(candidates).nonEmpty
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         val candidates = countryNames(game.muslims filter talibanResurgentCandidate)
         val (target, plots, (actives, sleepers, sadr)) = if (role == game.humanRole) {
@@ -2548,7 +2548,7 @@ object AwakeningCards {
           game hasMuslim (m => !(m.isUntested || m.isGood) && !m.autoRecruit)
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val target = if (role == game.humanRole) {
           val candidates = countryNames(game.muslims filter (m => !(m.isUntested || m.isGood)))
           askCountry("Place Training Camps in which country: ", candidates)
@@ -2578,7 +2578,7 @@ object AwakeningCards {
         val candidates = Set(219, 215, 216, 225, 237)
         forTrigger || game.cardsRemoved.exists(n => candidates contains n)
       },
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         val candidates = Set(219, 215, 216, 225, 237)
         if (game.cardsRemoved.exists(n => candidates contains n)) {
@@ -2601,7 +2601,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim usAtrocitiesCandidate
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val alignCandidates = countryNames(game.muslims filter usAtrocitiesCandidate)
         val postureCandidates = countryNames(game.nonMuslims filter (n => n.isUntested && !n.isSchengen))
         var (alignTarget, postureTarget) = if (role == game.humanRole) {
@@ -2639,7 +2639,7 @@ object AwakeningCards {
     entry(new Card(199, "US Consulate Attacked", Jihadist, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         decreasePrestige(2)
         if (role == game.humanRole)
           log(s"Discard the top card of the $US hand")
@@ -2658,7 +2658,7 @@ object AwakeningCards {
         case Jihadist => game hasMuslim criticalMiddleJihadistCandidate
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         val usCandidates = countryNames(game.muslims filter criticalMiddleUSCandidate)
         val jiCandidates = countryNames(game.muslims filter criticalMiddleJihadistCandidate)
@@ -2742,7 +2742,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => crossBorderSupportPlayable(role, forTrigger)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         val cellsOK   = game.cellsAvailable > 0
         val militiaOK = game.militiaAvailable > 0 && (game.getCountries(African) exists (_.canTakeMilitia))
@@ -2794,7 +2794,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => cyberWarfarePlayable(role, forTrigger)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val COUNTRIES = List(China, Russia, India)
         val opRes = if (role == US) game.reserves.jihadist else game.reserves.us
         val cadres = game hasCountry (_.hasCadre)
@@ -2858,7 +2858,7 @@ object AwakeningCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => (game getMuslim Yemen).canTakeAwakeningOrReactionMarker
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addEventTarget(Yemen)
         testCountry(Yemen)
         if (role == US)
@@ -2875,7 +2875,7 @@ object AwakeningCards {
         role == US ||
         cacheYesOrNo(s"Does the $US player have any cards in hand (y/n) ?")
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         if (role == Jihadist) {
           if (role == game.humanRole)
@@ -2915,7 +2915,7 @@ object AwakeningCards {
         (role == US && (mm exists (m => m.reaction > 0 || m.totalCells > 0)))
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         if (role == game.humanRole) {
           val name = askCountry("Select country: ", erdoganEffectCandidates)
@@ -3015,7 +3015,7 @@ object AwakeningCards {
         (role == Jihadist && (game hasMuslim (_.awakening > 0))) ||
         (role == US       && (game hasMuslim (_.reaction > 0)))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (role == Jihadist) {
            val candidates = countryNames(game.muslims filter (_.awakening > 0))
            val name = if (role == game.humanRole)
@@ -3055,7 +3055,7 @@ object AwakeningCards {
         (role == Jihadist && (game.cellsAvailable > 0 || (game.availablePlots contains Plot1))) ||
         (role == US && copycatUSCandidates(role).nonEmpty)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         if (role == Jihadist) {
           if (role == game.humanRole) {
@@ -3136,7 +3136,7 @@ object AwakeningCards {
         (role == Jihadist && game.troopCommitment == Overstretch) ||
         (role == US       && game.troopCommitment == LowIntensity)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         if (game.troopCommitment == Overstretch) {
           increaseFunding(1)
@@ -3164,7 +3164,7 @@ object AwakeningCards {
       ,
       (role: Role, forTrigger: Boolean) => qudsForcePlayable(role, forTrigger)
       ,
-      (role: Role) => if (role == Jihadist) { // See Event Instructions table
+      (role: Role, forTrigger: Boolean) => if (role == Jihadist) { // See Event Instructions table
         val candidates = countryNames(game.muslims filter (_.militia > 0))
         val name = if (role == game.humanRole)
           askCountry("Select country with militia: ", candidates)
@@ -3199,7 +3199,7 @@ object AwakeningCards {
         (role == Jihadist && (game hasMuslim (_.awakening > 0))) ||
         (role == US       && (game hasMuslim (_.reaction > 0)))
       ,
-      (role: Role) => if (role == Jihadist) {
+      (role: Role, forTrigger: Boolean) => if (role == Jihadist) {
         val candidates = countryNames(game.muslims filter (_.awakening > 0))
         val name = if (role == game.humanRole)
           askCountry("Remove awakening marker from which country: ", candidates)
@@ -3225,7 +3225,7 @@ object AwakeningCards {
         (lapsingEventNotInPlay(ArabWinter) && (game hasMuslim smartPhonesCandidate)) ||
         globalEventNotInPlay(Smartphones)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter smartPhonesCandidate)
         if (candidates.nonEmpty) {
           val name = if (role == game.humanRole)
@@ -3250,13 +3250,13 @@ object AwakeningCards {
     entry(new Card(212, "Smartphones", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => deck(211).eventConditions(role, forTrigger),
-      (role: Role) => deck(211).executeEvent(role)
+      (role: Role, forTrigger: Boolean) => deck(211).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(213, "Smartphones", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => deck(211).eventConditions(role, forTrigger),
-      (role: Role) => deck(211).executeEvent(role)
+      (role: Role, forTrigger: Boolean) => deck(211).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(214, "3 Cups of Tea", Unassociated, 2,
@@ -3265,7 +3265,7 @@ object AwakeningCards {
         (game hasMuslim (m => m.isUntested)) ||
         (role == Jihadist && globalEventNotInPlay(ThreeCupsOfTea))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (m => m.isUntested))
         if (candidates.nonEmpty) {
           val name = if (role == game.humanRole)
@@ -3295,7 +3295,7 @@ object AwakeningCards {
         (role == US && game.caliphateDeclared) ||
         (role == Jihadist && game.cellsAvailable > 0)
       ,
-      (role: Role) => if (role == US) {
+      (role: Role, forTrigger: Boolean) => if (role == US) {
         increasePrestige(3)
       }
       else {
@@ -3368,7 +3368,7 @@ object AwakeningCards {
           (role == Jihadist && game.funding < 9)
         )
       ,
-      (role: Role) => if (role == US) {
+      (role: Role, forTrigger: Boolean) => if (role == US) {
         increasePrestige(2)
         decreaseFunding(1)
       }
@@ -3386,7 +3386,7 @@ object AwakeningCards {
         cacheYesOrNo("Is at least one of these cards in the discard pile (y/n)? ")
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         if (role == game.botRole)
           log(s"$role takes the candidate card nearest the bottom of the discard pile")
@@ -3403,7 +3403,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => alNusraFrontCandidates(role).nonEmpty
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         val target = if (role == game.humanRole)
           askCountry("Select country: ", alNusraFrontCandidates(role))
@@ -3432,7 +3432,7 @@ object AwakeningCards {
         (role == US && (game.funding > 1 || game.prestige < 12)) ||
         (role == Jihadist && game.prestige > 1 && (game hasMuslim (_.reaction > 0)))
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (role == US) {
           // Values adjusted if the #237 Osama Bin Laden card has been rmoved
           val num = if (game.cardRemoved(237)) 2 else 1
@@ -3459,7 +3459,7 @@ object AwakeningCards {
         )
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val syria = game getMuslim Syria
         addEventTarget(Syria)
         testCountry(Syria)
@@ -3496,7 +3496,7 @@ object AwakeningCards {
           false
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = flyPaperCandidates
         // Can possibly declare Caliphate, by either player
         // See Event Instructions table
@@ -3631,13 +3631,13 @@ object AwakeningCards {
         (role == Jihadist && game.usPosture == Hard) ||
         (role == US && game.usPosture == Soft && (game.islamistResources > 1 || !(game.gwot == (Soft, 2) || game.gwot == (Soft, 3))))
       , // See Event Instructions table
-      (role: Role) => setUSPosture(if (role == US) Hard else Soft)
+      (role: Role, forTrigger: Boolean) => setUSPosture(if (role == US) Hard else Soft)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(223, "Iranian Elections", Unassociated, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addEventTarget(Iran)
         flipIranToShiaMixMuslim()
         if (role == US) {
@@ -3667,7 +3667,7 @@ object AwakeningCards {
            (role == Jihadist && (game.usPosture == Hard && game.worldPosture == Hard) || game.prestige > 1))
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         if (role == US) {
           val nonSchengen = countryNames(game.nonMuslims filter (n => n.canChangePosture && !(Schengen contains n.name)))
@@ -3736,7 +3736,7 @@ object AwakeningCards {
         (role == Jihadist &&
          (game.funding < 9 || (game.getNonMuslims(Schengen) exists (n => n.isUntested || n.posture == game.usPosture))))
       ,
-      (role: Role) => if (role == US) {
+      (role: Role, forTrigger: Boolean) => if (role == US) {
         increasePrestige(if (game.caliphateDeclared) 2 else 1)
       }
       else {
@@ -3756,7 +3756,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => servalPlayable(role, forTrigger)
       ,
-      (role: Role) => if (role == US) {  // See Event Instructions table
+      (role: Role, forTrigger: Boolean) => if (role == US) {  // See Event Instructions table
         val name = if (role == game.humanRole)
           askCountry("Select country for Serval marker: ", servalCandidates)
         else
@@ -3795,7 +3795,7 @@ object AwakeningCards {
           (role == Jihadist && (game hasMuslim (_.reaction > 0)))
         )
       ,
-      (role: Role) => if (role == US) {
+      (role: Role, forTrigger: Boolean) => if (role == US) {
         val candidates = countryNames(game.muslims filter (_.awakening > 0))
         val (name, adjacent) = if (role == game.humanRole) {
           val name = askCountry("Select country with awakening marker: ", candidates)
@@ -3856,20 +3856,20 @@ object AwakeningCards {
     entry(new Card(228, "Popular Support", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => deck(227).eventConditions(role, forTrigger),
-      (role: Role) => deck(227).executeEvent(role)
+      (role: Role, forTrigger: Boolean) => deck(227).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(229, "Prisoner Exchange", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       NeverPlayable,   // Not playable in the solo game
-      (role: Role) => ()      // See Event Instructions table
+      (role: Role, forTrigger: Boolean) => ()      // See Event Instructions table
     )),
     // ------------------------------------------------------------------------
     entry(new Card(230, "Sellout", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => selloutCandidates(role).nonEmpty // USBot treats as unplayable
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val (name, (actives, sleepers, sadr), action) = if (role == game.humanRole) {
           val name = askCountry("Select country: ", selloutCandidates(role))
           val m = game getMuslim name
@@ -3929,7 +3929,7 @@ object AwakeningCards {
       ,
       (role: Role, forTrigger: Boolean) => siegeOfKobanigradCandidates(role).nonEmpty
       ,
-      (role: Role) => if (role == US) {
+      (role: Role, forTrigger: Boolean) => if (role == US) {
         val (name, (actives, sleepers, sadr)) = if (role == game.humanRole) {
           val name = askCountry("Select country: ", siegeOfKobanigradCandidates(role))
           val cells = askCells(name, 3 min (game getMuslim name).totalCells, sleeperFocus = true)
@@ -3957,7 +3957,7 @@ object AwakeningCards {
     entry(new Card(232, "Trade Embargo", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
-      (role: Role) => if (role == US) {
+      (role: Role, forTrigger: Boolean) => if (role == US) {
         val iran = game getCountry Iran
         if (iran.wmdCache > 0) {
           log("Remove the Iranian WMD from the game")
@@ -4006,7 +4006,7 @@ object AwakeningCards {
       ,
       (role: Role, forTrigger: Boolean) => unCeasfireCandidates(role).nonEmpty
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         val name = if (role == game.humanRole)
           askCountry("Select country: ", unCeasfireCandidates(role))
@@ -4042,7 +4042,7 @@ object AwakeningCards {
         )
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         addEventTarget(Syria)
         startCivilWar(Syria)
         val (cells, militia) = if (role == game.humanRole) {
@@ -4069,7 +4069,7 @@ object AwakeningCards {
         }
       }
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (_.civilWar))
         val name = if (role == game.humanRole)
           askCountry("Select country in Civil War: ", candidates)
@@ -4094,7 +4094,7 @@ object AwakeningCards {
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => oilPriceSpikePlayable(role, forTrigger)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         removeGlobalEventMarker(Fracking) // Cancels effects of "Fracking" marker
         if (role == game.humanRole)
@@ -4117,7 +4117,7 @@ object AwakeningCards {
          (game.funding > 1 || game.prestige < 12) &&
          !(game.getMuslim(Pakistan).isIslamistRule && game.getMuslim(Afghanistan).isIslamistRule))
       ,
-      (role: Role) => if (role == US) {
+      (role: Role, forTrigger: Boolean) => if (role == US) {
         decreaseFunding(2)
         increasePrestige(3)
       }
@@ -4129,7 +4129,7 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => game hasMuslim (m => m.isPoor && m.awakening > 0 && m.reaction > 0)
       ,
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
         val candidates = countryNames(game.muslims filter (m => m.isPoor && m.awakening > 0 && m.reaction > 0))
         val name = if (role == game.humanRole)
@@ -4147,13 +4147,13 @@ object AwakeningCards {
     entry(new Card(239, "Truce", Unassociated, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       NeverPlayable,   // Not playable in the solo game
-      (role: Role) => ()      // See Event Instructions table
+      (role: Role, forTrigger: Boolean) => ()      // See Event Instructions table
     )),
     // ------------------------------------------------------------------------
     entry(new Card(240, "US Election", Unassociated, 3,
       NoRemove, NoLapsing, AutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       NeverPlayable,  // Not directly playable, but will always auto trigger
-      (role: Role) => {
+      (role: Role, forTrigger: Boolean) => {
         if (lapsingEventInPlay(USConsulateAttacked)) {
           log("US Consulate Attacked event is lapsing")
           setUSPosture(oppositePosture(game.usPosture))

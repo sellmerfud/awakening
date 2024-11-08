@@ -710,7 +710,7 @@ object LabyrinthAwakening {
   // From page 4 of Forever War manual.
   val PersonalityCards = Set(110, 111, 112, 115, 116, 215, 219, 225, 237, 328, 329, 338, 352)
 
-  type CardEvent            = Role => Unit
+  type CardEvent            = (Role, Boolean) => Unit
   type EventConditions      = (Role, Boolean) => Boolean
   type EventAlertsPlot      = (String, Plot) => Boolean   // Country Name, Plot
   type EventRemovesLastCell = () => Boolean
@@ -2267,7 +2267,7 @@ object LabyrinthAwakening {
     log()
     log(s"""The "$name" card was $action, so the event triggers""", Color.Event)
     log(separator())
-    card.executeEvent(US)
+    card.executeEvent(US, true)
     log()
     log(s"""Place the "$name" card in the discard pile.""")
   }
@@ -2279,7 +2279,7 @@ object LabyrinthAwakening {
     log()
     log(s"""The "$name" card was discared, so the event triggers""", Color.Event)
     log(separator())
-    card.executeEvent(US)  // Role does not matter
+    card.executeEvent(US, true)  // Role does not matter
   }
 
   // The Critical Middle card is always placed in the approximate middle of the
@@ -4333,7 +4333,7 @@ object LabyrinthAwakening {
       else
         log("\n%s executes the \"%s\" event".format(role, card.name))
       log(separator())
-      card.executeEvent(role)
+      card.executeEvent(role, triggered)
   
       if (card.markLapsingAfterExecutingEvent(role))
         markCardAsLapsing(card.number)
