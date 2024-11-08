@@ -286,9 +286,14 @@ object ForeverWarCards {
   
   def bowlingGreenBotMarkers(role: Role): List[String] = {
     val opponent = oppositeRole(role)
-    val global = game.markers filter (GlobalMarkers(_) == opponent)
-    val country = game.countries flatMap (_.markers) filter (CountryMarkers(_) == opponent)
-    (global ::: country).sorted.distinct
+    val globalMarkers = game.markers
+      .filter(GlobalMarkers(_) == opponent)
+    val countryMarkers =
+      game.countries
+      .filterNot(c => game.isCaliphateMember(c.name))
+      .flatMap(_.markers)
+      .filter(CountryMarkers(_) == opponent)
+    (globalMarkers ::: countryMarkers).sorted.distinct
   }
   
   def bowlingGreenBotLapsing(role: Role): List[Int] = game.cardsLapsing filter { num =>

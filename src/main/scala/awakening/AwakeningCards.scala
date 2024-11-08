@@ -69,7 +69,10 @@ object AwakeningCards {
   val backlashCandidate = (m: MuslimCountry) =>
     (m.plots exists (p => !p.backlashed)) && !game.isCaliphateMember(m.name)
   val unNationBuildingCandidate = (m: MuslimCountry) =>
-    (m.inRegimeChange || m.civilWar) && !m.isAdversary && !(m.isGood && m.isAlly)
+    (m.inRegimeChange || m.civilWar) &&
+    !m.isAdversary &&
+    !(m.isGood && m.isAlly) &&
+    !game.isCaliphateMember(m.name)
 
   val massTurnoutCandidate = (m: MuslimCountry) =>
     m.inRegimeChange && m.awakening > 0 && !game.isCaliphateMember(m.name)
