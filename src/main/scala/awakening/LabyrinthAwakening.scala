@@ -4288,7 +4288,7 @@ object LabyrinthAwakening {
           case n if n <= numAttempts =>
             val ord = if (numAttempts == 1) "" else s"${ordinal(num)} "
             val die = getDieRoll(s"Enter ${ord}Jihad die roll: ", Some(Jihadist))
-            log(s"${ord}Die roll: $die")
+            log(s"\n${ord}Die roll: $die")
             val modRoll = modifyJihadRoll(die, m, major)
             val result  = modRoll <= m.governance
             log(if (result) "Success" else "Failure")
@@ -4303,6 +4303,7 @@ object LabyrinthAwakening {
           (m.isPoor && (successes  > 1 || (successes == 1 && m.besiegedRegime))) ||
           (m.isFair && (successes == 3 || (successes == 2 && m.besiegedRegime)))
         )
+        log()
         if (major)
           log(s"Major Jihad ${if (majorSuccess) "succeeds" else "fails"}")
         // Remove one active cell for each failure
