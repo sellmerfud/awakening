@@ -4181,8 +4181,10 @@ object LabyrinthAwakening {
         addOpsTarget(to)
         val success = if (travelIsAutomatic(from, to)) {
           val qatari = if (globalEventInPlay(QatariCrisis) &&
+                           !game.getCountry(to).isIslamistRule && // Would be automatic anyway
                            qatariCrisisAdjacencyMap.contains(from) &&
                            qatariCrisisAdjacencyMap.contains(to))
+
              s" [$QatariCrisis]"
           else
             ""
