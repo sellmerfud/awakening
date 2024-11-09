@@ -4080,6 +4080,7 @@ object LabyrinthAwakening {
   def performDisrupt(target: String): Unit = {
     val AlAnbarTargets = Set(Iraq, Syria)
     val bumpPrestige = game.getCountry(target).disruptAffectsPrestige
+    testCountry(target)  // It is possible that the country was reverted to untested by an event.
     addOpsTarget(target)
     addDisruptedTarget(target)
     if (globalEventInPlay(AlAnbar) && AlAnbarTargets(target))
@@ -4107,9 +4108,10 @@ object LabyrinthAwakening {
   }
 
   def performAlert(countryName: String, plotOnMap: PlotOnMap): Unit = {
+    addOpsTarget(countryName)
+    testCountry(countryName)  // It is possible that the country was reverted to untested by an event.
     val c = game.getCountry(countryName)
     assert(c.plots contains plotOnMap, s"performAlert(): $countryName does not contain $plotOnMap")
-    addOpsTarget(countryName)
 
     val plot = plotOnMap.plot
     val prestigeDelta = if (plot == PlotWMD) 1 else 0
@@ -4225,6 +4227,7 @@ object LabyrinthAwakening {
         log()
         log(s"Plot attempt in $name")
         log(separator())
+        testCountry(name)  // It is possible that the country was reverted to untested by an event.
         if (active)
           log("Using an already active cell")
         else
@@ -4280,6 +4283,7 @@ object LabyrinthAwakening {
         log()
         log(s"Conduct $jihad in $name, rolling ${diceString(numAttempts)}")
         log(separator())
+        testCountry(name)  // It is possible that the country was reverted to untested by an event.
         if (major && m.sleeperCells > 0)
           flipAllSleepersCells(name)
         else if (!major && sleepers > 0)
@@ -7233,8 +7237,10 @@ object LabyrinthAwakening {
       (ord, dest)
     }
 
-    val results = for ((ord, dest) <- targets; c = game.getCountry(dest)) yield {
+    val results = for ((ord, dest) <- targets) yield {
+      testCountry(dest)  // It is possible that the country was reverted to untested by an event.
       addOpsTarget(dest)
+      val c = game.getCountry(dest)
       if (c.autoRecruit) {
         log(s"$ord Recruit automatically succeeds in $dest")
         (dest, true)
