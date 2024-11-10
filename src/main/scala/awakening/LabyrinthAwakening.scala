@@ -5796,7 +5796,7 @@ object LabyrinthAwakening {
         log()
         log("Lapsing Cards")
         log(separator())
-        removeLapsingCards(game.cardsLapsing, restoreOffMapTroops = false)
+        removeLapsingCards(game.cardsLapsing, endOfTurn = true)
       }
 
       game.firstPlotCard foreach { num =>
@@ -5899,7 +5899,7 @@ object LabyrinthAwakening {
   //  When called by the end of turn code, this should be false because the timing of the
   //  removal affects the US card draw and so the troop restoration must be deferred until
   // after the card draw.
-  def removeLapsingCards(targets: List[Int], restoreOffMapTroops: Boolean = true): Unit = {
+  def removeLapsingCards(targets: List[Int], endOfTurn: Boolean = false): Unit = {
     val lapsing = game.cardsLapsing filter targets.contains
     val (remove, discard) = lapsing.partition(deck(_).remove != NoRemove)
     if (remove.nonEmpty) {
@@ -5915,9 +5915,17 @@ object LabyrinthAwakening {
       }
     }
 
-    if (restoreOffMapTroops)
+    if (!endOfTurn)
       for (card <- targets)
-        returnOffMapTroopsForLapsingCard(card)
+        card match {
+          case TheDoorOfItjihad =>
+            if (game.humanRole == Jihadist)
+              log(s"\nThe $Jihadist player no longer plays cards at random.", Color.Event)
+              else
+              log(s"\nThe $Jihadist Bot may again play Non-US associated events.", Color.Event)
+          case _  =>
+            returnOffMapTroopsForLapsingCard(card)
+        }
 
     game = game.copy(
       cardsLapsing = game.cardsLapsing filterNot (x => remove.contains(x) || discard.contains(x)),
