@@ -1050,22 +1050,46 @@ object JihadistBot extends BotHelpers {
     usedCells(target).addSleepers(numCells)
   }
   
-  // Test the country to see if it has an unused cells that 
-  // can travel.
-  // If the country is an auto-recruit country, then it must
-  // have more than one cell, unless there are at least two 
-  // other auto-recruit countries with cells.
-  def hasCellForTravel(c: Country): Boolean = {
-    if (c.autoRecruit) {
-      val numAutoRecruit = game.muslims count (m => m.autoRecruit && m.totalCells > 0)
-      if (numAutoRecruit > 2)
-        unusedCells(c) > 0
-      else
-        unusedCells(c) > 1
+  // Returns the maximum number of cells that the Bot
+  // will allow to leave the country for "travel"
+  //
+  // Normally, all unused cells are available for travel
+  // with the following exceptions:
+  // - If the country is an auto-recruit country
+  //   will not allow the last cell to travel unless there
+  //   are two or more other auto-recruit countries.
+  // - If the country contains the "Training Camps" marker
+  //   will not allow the last cell to travel.
+  // - Nigeria, If Nigeria is Muslim and is an Ally then
+  //   will not allow the last cell to travel (as this would
+  //   cause Nigeria to revert to non-Muslim)
+
+  def numCellsForTravel(c: Country): Int = {
+    val isNigeriaMuslimAlly = c match {
+      case m: MuslimCountry => m.name == Nigeria && m.isAlly
+      case _ => false
     }
-    else
-      unusedCells(c) > 0
+
+    // If moving all unused cells would leave at least once
+    // cell behind, then no need to test the restrictions.
+    if (c.totalCells > unusedCells(c))
+      unusedCells(c)
+    else {
+      val totalAutoRecruit = game.muslims count (m => m.autoRecruit && m.totalCells > 0)
+      val preserveOne =
+        (c.autoRecruit && totalAutoRecruit < 3) ||
+        c.hasMarker(TrainingCamps) ||
+        isNigeriaMuslimAlly
+
+      if (preserveOne)
+        (unusedCells(c) - 1) max 0
+      else
+        unusedCells(c)
+    }
   }
+
+  // Test the country to see if it has any unused cells that can travel.
+  def hasCellForTravel(c: Country) = numCellsForTravel(c) > 0
   
   // First select the target to country.
   // Then select one or more countries from which cells may travel.
@@ -1110,14 +1134,13 @@ object JihadistBot extends BotHelpers {
             case Some(fromName) =>
               val from = game.getCountry(fromName)
               // Limit numAttempts to only active cells within same country
-              // and to not allow last cell out of auto recruit (if only 1 other auto recruit with cells)
+              // numCellsForTravel() checks for auto-recruit limit as well as
+              // Training Camps and Nigeria limit for Enhanced Bot
               val prevAttempts = attempts.count(_.from == fromName)
               val numAttempts = if (fromName == toName)
                 activeCells(from) min remaining
-              else if (from.autoRecruit && numAutoRecruitCountriesWithCells(attempts) < 3)
-                (unusedCells(from) - prevAttempts - 1) max 0 min remaining
               else
-                (unusedCells(from) - prevAttempts) max 0 min remaining
+                (numCellsForTravel(from) - prevAttempts) max 0 min remaining
             
               if (numAttempts == 0) {
                 botLog(s"No cells in $fromName are allowed to travel")
@@ -1347,7 +1370,7 @@ object JihadistBot extends BotHelpers {
   case object Recruit                         extends RadicalizationAction
   case object TravelToUS                      extends RadicalizationAction
 
-  // For botEnhancements if there are nos Poor Muslim with 1-4 more cells than TandM
+  // For botEnhancements if there are no Poor Muslim with 1-4 more cells than TandM
   // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
   // then attempt to travel cells there.
   def radTravelToPoorMuslimCandidates(): List[String] = {
