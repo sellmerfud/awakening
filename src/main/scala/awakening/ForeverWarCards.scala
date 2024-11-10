@@ -252,14 +252,11 @@ object ForeverWarCards {
     countryNames(game.muslims filter (m => m.civilWar && m.totalCells > 0 && m.militia > 0 && alignTest(m)))    
   }
   
-  def euphratesShieldCandidates(role: Role) = {
-    val roleTest =  if (role == US)
-      (m: MuslimCountry) => true // Can always place aid
-    else
-      (m: MuslimCountry) => m.militia > 0 || !m.besiegedRegime
-    countryNames(game.muslims filter (m => m.civilWar && areAdjacent(m.name, Turkey) && roleTest(m)))
-  }
+  def euphratesShieldCandidates = countryNames(game.muslims
+    .filter(m => m.civilWar && areAdjacent(m.name, Turkey))
+  )
   
+
   def pakistaniIntelligenceCandidates(role: Role) = {
     val pakistan = game.getMuslim(Pakistan)
     val muslims = pakistan :: game.adjacentMuslims(Pakistan)
@@ -2643,26 +2640,23 @@ object ForeverWarCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       AlwaysPlayable,
       (role: Role, forTrigger: Boolean) => {
-        // Take troops from available if possible, otherwise we must 
-        // ask the user where to take them from.
-        val numToRemove  = 2 min (game.troopsAvailable + game.troopsOnMap)
-        val numFromTrack = numToRemove min game.troopsAvailable
-        val numFromMap   = numToRemove - numFromTrack
-        
-        val countries = if (numFromMap == 0)
-          Nil
-        else if (role == game.humanRole) {
-          val targets = game.countries filter (_.troops > 0) map (c => MapItem(c.name, c.troops))
-          println(s"Select ${amountOf(numFromMap, "troop")} from the map to remove")
-          askMapItems(targets.sortBy(_.country), numFromMap, "troop")
+        val items = if (role == game.humanRole)
+          selectTroopsToPutOffMap(2)
+        else {
+          val numFromTrack = 2 min game.troopsAvailable
+          val numFromMap   = 2 - numFromTrack
+          val botItems = new ListBuffer[MapItem]
+          if (numFromTrack > 0)
+            botItems += MapItem("track", numFromTrack)
+          if (numFromMap > 0)
+            botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
+          botItems.toList
         }
-        else
-          JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
         
-        for (MapItem(name, num) <- MapItem("track", numFromTrack) :: countries; if num > 0) {
+        for (MapItem(name, num) <- items) {
           if (name != "track")
             addEventTarget(name)
-          takeTroopsOffMap(name, num)
+          putTroopsInOffMapBox(name, num)
         }
         
         val postureCandidates = List(Thailand, Philippines)
@@ -3123,18 +3117,17 @@ object ForeverWarCards {
       (role: Role, forTrigger: Boolean) => if (role == US) {
         setTrumpTweetsOFF()
         
-        if (game.troopsAvailable > 0)
-          takeTroopsOffMap("track", 1)
-        else {
-          val candidates = countryNames(game.countries filter (_.troops > 0))
-          val target = if (role == game.humanRole)
-            askCountry("Remove troop from which country: ", candidates)
-          else
-            USBot.deployFromTarget(candidates).get
-          
-          addEventTarget(target)
-          takeTroopsOffMap(target, 1)
-        }
+        val withTroops = countryNames(game.countries filter (_.troops > 0))
+        val source = if (game.troopsAvailable > 0)
+          "track"
+        else if (role == game.humanRole)
+          selectTroopsToPutOffMap(1).head.country
+        else 
+          USBot.ebolaScareTarget(withTroops).get
+
+        if (source != "track")
+          addEventTarget(source)
+        putTroopsInOffMapBox(source, 1)
           
         log()
         log(s"$US player draws 1 card")
@@ -3406,19 +3399,33 @@ object ForeverWarCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => {
         // Can we remove the last cell on the board?
-        euphratesShieldCandidates(US) exists (name => USBot.wouldRemoveLastCell(name, 1))
+        euphratesShieldCandidates exists (name => USBot.wouldRemoveLastCell(name, 1))
       }
       ,
-      (role: Role, _: Boolean) => euphratesShieldCandidates(role).nonEmpty
+      (role: Role, forTrigger: Boolean) =>  {
+        val candidates = euphratesShieldCandidates
+        val playable = (m: MuslimCountry) => role match {
+          case US =>
+            true  // Can always place aid
+          case Jihadist if game.humanRole == Jihadist =>
+            true
+          case Jihadist if game.botEnhancements && !forTrigger =>
+            m.militia > 0 || (!m.besiegedRegime && JihadistBot.hasCellForTravel(m))
+          case Jihadist =>
+            m.militia > 0 || m.totalCells > 0 || !m.besiegedRegime
+        }
+        game.getMuslims(candidates).exists(playable)
+      }
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {
-        val withCells = euphratesShieldCandidates(role) filter (name => game.getMuslim(name).totalCells > 0)
+        val candidates = euphratesShieldCandidates
+        val withCells = candidates.filter(name => game.getMuslim(name).totalCells > 0)
         val target = if (role == game.humanRole)
-          askCountry("Which country: ", euphratesShieldCandidates(role))
+          askCountry("Which country: ", candidates)
         else if (withCells.nonEmpty)
           USBot.disruptPriority(withCells).get
         else
-          USBot.markerAlignGovTarget(euphratesShieldCandidates(role)).get
+          USBot.markerAlignGovTarget(candidates).get
         
         addEventTarget(target)
         testCountry(target)
@@ -3430,13 +3437,17 @@ object ForeverWarCards {
             USBot.chooseCellsToRemove(target, 1)
           removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
         }
+        else if (game.getMuslim(target).militia > 0)
+          removeMilitiaFromCountry(target, 1)
+
         addAidMarker(target)
       }
       else { // Jihadist
-        val withMilitia = euphratesShieldCandidates(role) filter (name => game.getMuslim(name).militia > 0)
-        val notBesieged = euphratesShieldCandidates(role) filter (name => !game.getMuslim(name).besiegedRegime)
+        val candidates = euphratesShieldCandidates
+        val withMilitia = candidates.filter(name => game.getMuslim(name).militia > 0)
+        val notBesieged = candidates.filter(name => !game.getMuslim(name).besiegedRegime)
         val target = if (role == game.humanRole)
-          askCountry("Which country: ", euphratesShieldCandidates(role))
+          askCountry("Which country: ", candidates)
         else if (withMilitia.nonEmpty)
           JihadistBot.troopsMilitiaTarget(withMilitia).get
         else
@@ -3447,7 +3458,14 @@ object ForeverWarCards {
         
         if (game.getMuslim(target).militia > 0)
           removeMilitiaFromCountry(target, 1)
-        
+        else if (game.getMuslim(target).totalCells > 0) {
+          val (actives, sleepers, sadr) = if (role == game.humanRole)
+            askCells(target, 1, true)
+          else
+            USBot.chooseCellsToRemove(target, 1)
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        }
+
         addBesiegedRegimeMarker(target)
       }
     )),

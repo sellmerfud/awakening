@@ -2220,7 +2220,7 @@ object LabyrinthAwakening {
         "\nWhat is the card# of the card that was drawn: (blank if none) "
       else
         s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: (blank if none) "
-      askCardNumber(prompt, allowNone = false) match {
+      askCardNumber(prompt) match {
         case None =>
           return
         case Some(cardNum) =>
@@ -2263,7 +2263,7 @@ object LabyrinthAwakening {
     val card = deck(AvengerCard)
     val name = card.name
     val action = if (discarded) "discarded" else "randomly drawn"
-    
+
     log()
     log(s"""The "$name" card was $action, so the event triggers""", Color.Event)
     log(separator())
@@ -4348,7 +4348,7 @@ object LabyrinthAwakening {
         log("\n%s executes the \"%s\" event".format(role, card.name))
       log(separator())
       card.executeEvent(role, triggered)
-  
+
       if (card.markLapsingAfterExecutingEvent(role))
         markCardAsLapsing(card.number)
       else if (card.removeAfterExecutingEvent(role))
@@ -4364,13 +4364,6 @@ object LabyrinthAwakening {
   def markCardAsLapsing(cardNumber: Int): Unit = {
     log("Mark the \"%s\" card as lapsing".format(deck(cardNumber).name), Color.Event)
     game = game.copy(cardsLapsing = cardNumber :: game.cardsLapsing)
-  }
-
-  def removeCardFromLapsing(cardNumber: Int): Unit = {
-    if (game.cardLapsing(cardNumber)) {
-      log("The \"%s\" card is no longer lapsing".format(deck(cardNumber).name), Color.Event)
-      game = game.copy(cardsLapsing = game.cardsLapsing filterNot (_ == cardNumber))
-    }
   }
 
   // Prestige roll used
@@ -4684,6 +4677,23 @@ object LabyrinthAwakening {
     if (globalEventInPlay(marker)) {
       val priorGameState = game
       game = game.removeMarker(marker)
+
+      // Handle any board state changes caused by the
+      // marker removal
+      marker match {
+        // Move troops from out of play to track when
+        // South China Seas Crisis marker is removed.
+        case SouthChinaSeaCrisis =>
+          log(s"\nSouth China Seas Crisis ends", Color.Event)
+          moveOfMapTroopsToTrack(2)
+
+        case Sequestration =>
+          log("Sequestration ends", Color.Event)
+          moveOfMapTroopsToTrack(3)
+          game = game.copy(sequestrationTroops = false)
+
+        case _ =>
+      }
       log(s"""Remove "$marker" marker from the Events In Play box""", Color.MapMarker)
       logExtraCellCapacityChange(priorGameState)
     }
@@ -4936,7 +4946,7 @@ object LabyrinthAwakening {
     removeAllTroopsMarkers(name)
   }
 
-  def takeTroopsOffMap(source: String, num: Int): Unit = {
+  def putTroopsInOffMapBox(source: String, num: Int): Unit = {
     if (num > 0) {
       val startingCommitment = game.troopCommitment
       def disp(name: String) = if (name == "track") "the troops track" else name
@@ -4945,10 +4955,10 @@ object LabyrinthAwakening {
       // Note: No need to "remove" them from the track as the number on the track is
       // calculated based on those on the map and in the off map box.
       if (source == "track")
-        assert(game.troopsAvailable >= num, "takeTroopsOffMap(): Not enough troops available on track")
+        assert(game.troopsAvailable >= num, "putTroopsInOffMapBox(): Not enough troops available on track")
       else {
         val m = game.getMuslim(source)
-        assert(m.troops >= num, s"takeTroopsOffMap(): Not enough troops available in $source")
+        assert(m.troops >= num, s"putTroopsInOffMapBox(): Not enough troops available in $source")
         game  = game.updateCountry(m.copy(troops = m.troops - num))
       }
       game = game.copy(offMapTroops = game.offMapTroops + num)
@@ -4963,7 +4973,6 @@ object LabyrinthAwakening {
       assert(game.offMapTroops >= num, "moveOfMapTroopsToTrack() num too high")
       val startingCommitment = game.troopCommitment
 
-      def disp(name: String) = if (name == "track") "the troops track" else name
       log(s"Move ${amountOf(num, "troop")} from the off-map box to the troops track", Color.MapPieces)
       // Note: No need to "add" them from the track as the number on the track is
       // calculated based on those on the map and in the off-map box.
@@ -5056,7 +5065,7 @@ object LabyrinthAwakening {
         val toOutOfPlay = num min game.excessExtraCellsOnMap
         val toExtra     = (num - toOutOfPlay) min (game.extraCellCapacity - game.extraCellsAvailable)
         val toTrack     = (num - toOutOfPlay - toExtra)
-        
+
         val updated = game.getCountry(name) match {
           case m: MuslimCountry    if active => m.copy(activeCells  = m.activeCells  - num)
           case m: MuslimCountry              => m.copy(sleeperCells = m.sleeperCells - num)
@@ -5477,7 +5486,8 @@ object LabyrinthAwakening {
             }
             // Sequestration
             if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
-              returnSequestrationTroopsToAvailable("\nResolved WMD plot releases the off-map Sequestration troops")
+              log("\nWMD plot resolved while Sequestration in effect", Color.Event)
+              removeGlobalEventMarker(Sequestration)
             }
 
             // rule 11.2.6    (WMD in Civil War)
@@ -5500,7 +5510,7 @@ object LabyrinthAwakening {
                 // place the plot with one card, then do Major Jihad with the second
                 def isSuccess(die: Int) = m.isIslamistRule || die <= m.governance
                 // roll plot dice
-                val dice = List.fill(mapPlot.plot.number)(getDieRoll(s"Enter die roll plot placement: "))                
+                val dice = List.fill(mapPlot.plot.number)(getDieRoll(s"Enter die roll plot placement: "))
                 val successes = dice count isSuccess
                 val diceStr = dice map (d => s"$d (${if (isSuccess(d)) "success" else "failure"})")
                 log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
@@ -5588,7 +5598,8 @@ object LabyrinthAwakening {
 
             // Sequestration
             if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
-              returnSequestrationTroopsToAvailable("\nResolved WMD plot releases the off map Sequestration troops")
+              log("\nWMD plot resolved while Sequestration in effect", Color.Event)
+              removeGlobalEventMarker(Sequestration)
             }
             // Prestige
             if (name == UnitedStates)
@@ -5651,17 +5662,6 @@ object LabyrinthAwakening {
   // Pirates from the awakening expansion
   def pirates2ConditionsInEffect: Boolean = List(Somalia, Yemen) map game.getMuslim exists { m =>
     (m.isPoor && m.isAdversary) || m.isIslamistRule
-  }
-
-    // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
-    // then return the troops to available.
-  def returnSequestrationTroopsToAvailable(msg: String): Unit = {
-    if (game.sequestrationTroops) {
-      log(msg)
-      moveOfMapTroopsToTrack(3)
-      game = game.copy(sequestrationTroops = false)
-      removeGlobalEventMarker(Sequestration)
-    }
   }
 
   // This is used when playing a campaign scenario.
@@ -5788,19 +5788,15 @@ object LabyrinthAwakening {
       checkAutomaticVictory() // Will Exit game if auto victory has been achieved
 
       val extraUSCards      = if (lapsingEventInPlay(FullyResourcedCOIN)) 2 else 0
-      val endEbolaScare     = lapsingEventInPlay(EbolaScare)
-      val endKoreanCrisis   = lapsingEventInPlay(KoreanCrisis)
-      val endUSBorderCrisis = lapsingEventInPlay(USBorderCrisis)
       val endSouthChinaSeasCrisis = globalEventInPlay(SouthChinaSeaCrisis) &&
                                     game.usPosture == game.getNonMuslim(China).posture
+      val lapsingCards = game.cardsLapsing
 
       if (game.cardsLapsing.nonEmpty) {
-        if (game.cardsLapsing.nonEmpty) {
-          log()
-          log("Lapsing Cards")
-          log(separator())
-        }
-        removeLapsingCards(game.cardsLapsing)
+        log()
+        log("Lapsing Cards")
+        log(separator())
+        removeLapsingCards(game.cardsLapsing, restoreOffMapTroops = false)
       }
 
       game.firstPlotCard foreach { num =>
@@ -5822,31 +5818,24 @@ object LabyrinthAwakening {
 
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
-
       val threeResIR = (game.muslims find (m => m.resourceValue >= 3 && m.isIslamistRule))
       (game.sequestrationTroops, threeResIR) match {
         case (true, Some(m)) =>
-          returnSequestrationTroopsToAvailable(s"\nA 3 Resource Muslim country at Islamist Rule (${m.name})\nreleases the off map Sequestration troops")
+          log(s"\nThere 3 Resource Muslim country at Islamist Rule (${m.name})", Color.Event)
+          removeGlobalEventMarker(Sequestration)
         case _ =>
       }
 
-      if (endEbolaScare) {
-        log(s"\nEbola Scare ends", Color.Event)
-        moveOfMapTroopsToTrack(1)
-      }
-      if (endKoreanCrisis) {
-        log(s"\nKorean Crisis ends", Color.Event)
-        moveOfMapTroopsToTrack(2)
-      }
-      if (endUSBorderCrisis) {
-        log(s"\nUS Border Crisis ends", Color.Event)
-        moveOfMapTroopsToTrack(1)
-      }
       if (endSouthChinaSeasCrisis) {
-        log(s"\nSouth China Seas Crisis ends", Color.Event)
-        moveOfMapTroopsToTrack(2)
+        log("\nChina and the US have the same Posture", Color.Event)
         removeGlobalEventMarker(SouthChinaSeaCrisis)
       }
+
+      // For each lapsing card that was removed that affects
+      // off map troops, the troops now must be returned to the
+      // troops track.
+      for (card <- lapsingCards)
+        returnOffMapTroopsForLapsingCard(card)
 
       for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
         game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
@@ -5859,8 +5848,58 @@ object LabyrinthAwakening {
       saveGameState()
     }
   }
+  
+  // Take troops from available if possible, otherwise we must
+  // ask the user where to take them from.
+  def selectTroopsToPutOffMap(numToRemove: Int): List[MapItem] = {
+    val numFromTrack = numToRemove min game.troopsAvailable
+    val numFromMap   = numToRemove - numFromTrack
+    val items = new ListBuffer[MapItem]()
 
-  def removeLapsingCards(targets: List[Int]): Unit = {
+    if (numFromTrack > 0)
+      items += MapItem("track", numFromTrack)
+
+    if (numFromMap > 0) {
+      val candidates = game.countries
+        .filter(_.troops > 0)
+        .map(c => MapItem(c.name, c.troops))
+        .sortBy(_.country)
+
+      if (numFromTrack == 0)
+        println("\nThere are no troops on the troop track to remove to out of play")
+      else
+        println(s"\n${amountOf(numFromTrack, "troop")} will be removed from the troops track to out of play")
+        
+      println(s"\nSelect ${amountOf(numFromMap, "troop")} from the map to remove to the out of play box")
+      items ++= askMapItems(candidates, numFromMap, "troop")
+    }
+
+    items.toList
+  }
+
+
+  def returnOffMapTroopsForLapsingCard(lapsingCard: Int): Unit = {
+    lapsingCard match {
+      case EbolaScare =>
+        log(s"\nEbola Scare ends", Color.Event)
+        moveOfMapTroopsToTrack(1)
+      case KoreanCrisis =>
+        log(s"\nKorean Crisis ends", Color.Event)
+        moveOfMapTroopsToTrack(2)
+      case USBorderCrisis =>
+        log(s"\nUS Border Crisis ends", Color.Event)
+        moveOfMapTroopsToTrack(1)
+      case _ =>
+    }
+  }
+
+  //  If a Lapsing card that removed troops to the off map box is removed by an event
+  //  (eg. 353 Bowling Green Massacre) then the troops should  be moved back to the
+  //  troops track.
+  //  When called by the end of turn code, this should be false because the timing of the
+  //  removal affects the US card draw and so the troop restoration must be deferred until
+  // after the card draw.
+  def removeLapsingCards(targets: List[Int], restoreOffMapTroops: Boolean = true): Unit = {
     val lapsing = game.cardsLapsing filter targets.contains
     val (remove, discard) = lapsing.partition(deck(_).remove != NoRemove)
     if (remove.nonEmpty) {
@@ -5868,7 +5907,6 @@ object LabyrinthAwakening {
       wrap(s"Remove lapsing $cards from the game: ", remove.sorted map cardNumAndName) foreach { line =>
         log(line, Color.Event)
       }
-
     }
     if (discard.nonEmpty) {
       val cards = if (discard.size == 1) "card" else "cards"
@@ -5876,6 +5914,10 @@ object LabyrinthAwakening {
         log(line, Color.Event)
       }
     }
+
+    if (restoreOffMapTroops)
+      for (card <- targets)
+        returnOffMapTroopsForLapsingCard(card)
 
     game = game.copy(
       cardsLapsing = game.cardsLapsing filterNot (x => remove.contains(x) || discard.contains(x)),
@@ -5988,7 +6030,7 @@ object LabyrinthAwakening {
             }
             else
               false
-              
+
             val humanRole = cmdLineParams.side orElse
                             configParams.side getOrElse {
               // ask which side the user wishes to play
@@ -6228,7 +6270,7 @@ object LabyrinthAwakening {
             case _ => println(s"Ignoring invalid side name ($value) in awakening_config file")
           }
         }
-        
+
         propValue("level") foreach { value =>
           if (List("1","2","3","4","5","6") contains value)
             params = params.copy(level = Some(value.toInt))
@@ -6243,7 +6285,7 @@ object LabyrinthAwakening {
             case _ => println(s"Ignoring invalid dice value ($value) in awakening_config file")
           }
         }
-        
+
         propValue("ideology") foreach { value =>
           val tokens = value.split(",").toList map (_.trim) filterNot (_ == "")
           if (tokens forall isValidIdeology)
@@ -6691,7 +6733,7 @@ object LabyrinthAwakening {
              askYorN("Do you wish to cancel the play of this US associated card? (y/n) "))) {
 
           log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
-          removeCardFromLapsing(Ferguson)
+          removeLapsingCards(Ferguson::Nil)
         }
         else
           game.humanRole match {
@@ -7093,7 +7135,7 @@ object LabyrinthAwakening {
             game.humanRole == Jihadist      &&
             askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
           log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
-          removeCardFromLapsing(Ferguson)
+          removeLapsingCards(Ferguson::Nil)
         }
         else
           game.humanRole match {
@@ -7697,6 +7739,16 @@ object LabyrinthAwakening {
   }
 
   def adjustLapsingCards(): Unit = {
+    case class OopTroops(cardNum: Int, numTroops: Int)
+    val OutOfPlayTroops = List(OopTroops(KoreanCrisis, 2), OopTroops(EbolaScare, 1), OopTroops(USBorderCrisis, 1))
+    def countOopTrrops(lapsingCards: List[Int]): Int =
+      lapsingCards.foldLeft(0) { (sum, cardNum) =>
+        sum + OutOfPlayTroops
+          .find(_.cardNum == cardNum)
+          .map(_.numTroops)
+          .getOrElse(0)
+      }
+
     var lapsing = game.cardsLapsing
     @tailrec def getNextResponse(): Unit = {
       val notLapsing = LapsingCards filterNot lapsing.contains
@@ -7709,9 +7761,11 @@ object LabyrinthAwakening {
       askOneOf("Card #: ", LapsingCards, allowNone = true, allowAbort = false).map(_.toInt) match {
         case None =>
         case Some(num) if lapsing contains num =>
+          // Remove the card from the lapsing list
           lapsing = lapsing filterNot(_ == num)
           getNextResponse()
         case Some(num) =>
+          // Add the card to the lapsing list
           lapsing = num :: lapsing
           getNextResponse()
       }
@@ -7719,6 +7773,17 @@ object LabyrinthAwakening {
     getNextResponse()
     if (lapsing.toSet != game.cardsLapsing.toSet) {
       logAdjustment("Lapsing Events", cardNumsAndNames(game.cardsLapsing), cardNumsAndNames(lapsing))
+      // Check to see if we need to move troops to/from the out of play box
+      val oldOop = countOopTrrops(game.cardsLapsing)
+      val newOop = countOopTrrops(lapsing)
+      if (oldOop > newOop)
+        moveOfMapTroopsToTrack(oldOop - newOop)
+      else if (newOop > oldOop) {
+        val items = selectTroopsToPutOffMap(newOop - oldOop)
+        for (MapItem(name, num) <- items)
+          putTroopsInOffMapBox(name, num)
+      }
+
       game = game.copy(cardsLapsing = lapsing)
       saveAdjustment("Lapsing Events")
     }
@@ -7769,6 +7834,16 @@ object LabyrinthAwakening {
 
 
   def adjustMarkers(): Unit = {
+    case class OopTroops(marker: String, numTroops: Int)
+    val OutOfPlayTroops = List(OopTroops(Sequestration, 3), OopTroops(SouthChinaSeaCrisis, 2))
+    def countOopTrrops(inplayMarkers: List[String]): Int =
+      inplayMarkers.foldLeft(0) { (sum, marker) =>
+        sum + OutOfPlayTroops
+          .find(_.marker == marker)
+          .map(_.numTroops)
+          .getOrElse(0)
+      }
+
     val AllMarkers = GlobalMarkers.keys.toList.sorted
     var inPlay = game.markers
     val priorGameState = game
@@ -7805,6 +7880,17 @@ object LabyrinthAwakening {
     inPlay = inPlay.sorted
     if (inPlay != game.markers) {
       logAdjustment("Global Markers", game.markers, inPlay)
+      // Check to see if we need to move troops to/from the out of play box
+      val oldOop = countOopTrrops(game.markers)
+      val newOop = countOopTrrops(inPlay)
+      if (oldOop > newOop)
+        moveOfMapTroopsToTrack(oldOop - newOop)
+      else if (newOop > oldOop) {
+        val items = selectTroopsToPutOffMap(newOop - oldOop)
+        for (MapItem(name, num) <- items)
+          putTroopsInOffMapBox(name, num)
+      }
+
       game = game.copy(markers = inPlay)
       saveAdjustment("Global Markers")
 
