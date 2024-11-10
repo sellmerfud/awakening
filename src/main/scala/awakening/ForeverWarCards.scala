@@ -3849,7 +3849,10 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(355, "Fake News", Unassociated, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, _: Boolean) => trumpTweetsON
+      // Enhanced Jihad Bot will not play this event.
+      (role: Role, forTrigger: Boolean) =>
+        trumpTweetsON &&
+        (forTrigger || role == game.humanRole || !game.botEnhancements)
       ,
       (role: Role, forTrigger: Boolean) => {
         log()
