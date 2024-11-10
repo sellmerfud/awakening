@@ -290,6 +290,11 @@ object ForeverWarCards {
     countryNames(game.muslims filter (m => basicTest(m) && botTest(m)))
   }
   
+  def bowlingGreenEventInPlay: Boolean =
+    game.markers.nonEmpty ||
+    game.countries.exists(_.markers.nonEmpty) ||
+    game.cardsLapsing.nonEmpty
+
   def bowlingGreenBotMarkers(role: Role): List[String] = {
     val opponent = oppositeRole(role)
     val globalMarkers = game.markers
@@ -3768,9 +3773,9 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(353, "Bowling Green Massacre", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, _: Boolean) => role == game.humanRole ||
-                                  bowlingGreenBotMarkers(role).nonEmpty ||
-                                  bowlingGreenBotLapsing(role).nonEmpty
+      (role: Role, _: Boolean) =>
+        (role == game.humanRole && bowlingGreenEventInPlay) ||
+        (role == game.botRole && (bowlingGreenBotMarkers(role).nonEmpty || bowlingGreenBotLapsing(role).nonEmpty))
       ,
       (role: Role, forTrigger: Boolean) => if (role == game.humanRole) {
         val markers: List[String] = game.markers ::: (game.countries flatMap (_.markers)).sorted.distinct
