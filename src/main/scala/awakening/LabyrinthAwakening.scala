@@ -2068,26 +2068,20 @@ object LabyrinthAwakening {
     else if (sleeperCells == 0) (maxCells, 0)
     else {
       val (a, s) = (amountOf(activeCells, "active cell"), amountOf(sleeperCells, "sleeper cell"))
-      println(s"$countryName has $a and $s")
+      println(s"\n$countryName has $a and $s")
 
-      if (maxCells == 1) {
-        val prompt = if (sleeperFocus) "Which cell (sleeper or active)? "
-        else "Which cell (active or sleeper)? "
-        askOneOf(prompt, List("active", "sleeper")) match {
-          case Some("active") => (1, 0)
-          case _              => (0, 1)
-        }
-      }
+      if (maxCells == 1)
+        askMenu("\nWhich cell:", List((1, 0) -> "Active", (0, 1) -> "Sleeper")).head
       else {
         if (sleeperFocus) {
           val smax     = maxCells min sleeperCells
-          val prompt   = "How many sleeper cells? "
+          val prompt   = "\nHow many sleeper cells? "
           val sleepers = askInt(prompt, 1, smax, Some(smax))
           (maxCells - sleepers , sleepers)
         }
         else {
           val amax    = maxCells min activeCells
-          val prompt  = "How many active cells? "
+          val prompt  = "\nHow many active cells? "
           val actives = askInt(prompt, 1, amax, Some(amax))
           (actives, maxCells - actives)
         }
@@ -2111,28 +2105,22 @@ object LabyrinthAwakening {
         (activeCells, sleeperCells, true)  // Remove the lot
       else {
         val (a, s) = (amountOf(activeCells, "active cell"), amountOf(sleeperCells, "sleeper cell"))
-        println(s"$countryName has $a and $s and Sadr is present")
-        val sadr = askYorN("Do you want to select Sadr? (y/n) ")
+        println(s"\n$countryName has $a and $s and Sadr is present")
+        val sadr = askYorN("\nDo you want to select Sadr? (y/n) ")
         if (maxCells == 1 && sadr)
           (0, 0, true)
-        else if (maxCells == 1) {
-          val prompt = if (sleeperFocus) "Which cell (sleeper or active)? "
-                       else "Which cell (active or sleeper)? "
-          askOneOf(prompt, List("active", "sleeper")) match {
-            case Some("active") => (1, 0, false)
-            case _              => (0, 1, false)
-          }
-        }
+        else if (maxCells == 1)
+          askMenu("\nWhich cell:", List((1, 0, false) -> "Active", (0, 1, false) -> "Sleeper")).head
         else {
           if (sleeperFocus) {
             val smax     = maxCells min sleeperCells
-            val prompt   = "How many sleeper cells? "
+            val prompt   = "\nHow many sleeper cells? "
             val sleepers = askInt(prompt, 1, smax, Some(smax))
             (maxCells - sleepers , sleepers, sadr)
           }
           else {
             val amax    = maxCells min activeCells
-            val prompt  = "How many active cells? "
+            val prompt  = "\nHow many active cells? "
             val actives = askInt(prompt, 1, amax, Some(amax))
             (actives, maxCells - actives, sadr)
           }
