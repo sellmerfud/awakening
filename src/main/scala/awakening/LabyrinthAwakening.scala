@@ -1892,9 +1892,13 @@ object LabyrinthAwakening {
 
   // Find a match for the given string in the list of options.
   // Any unique prefix of the given options will succeed.
-  def matchOne(s: String, options: Seq[String], abbreviations: Map[String, String] = Map.empty): Option[String] = {
+  def matchOne(
+    input: String,
+    options: Seq[String],
+    abbreviations: Map[String, String] = Map.empty,
+    allowAbort: Boolean = false): Option[String] = {
     // Filter out any abbreviations that do not have a match with one of the options.
-    val abbr = abbreviations filter { case (_, name) => options contains name }
+    val abbr = abbreviations.filter { case (_, name) => options contains name }
     // When showing the list of options to the user, we want to group
     // all abbreviations with the word that they represent.
     val displayList = {
@@ -1906,32 +1910,52 @@ object LabyrinthAwakening {
         case o => o
       }
     }
-    if (s == "?") {
+    if (input == "?") {
       println(s"Enter one of:\n${orList(displayList)}")
       None
     }
     else {
+      val lowerInput = input.toLowerCase
+      val allOptions = (options ++ abbr.keys).distinct
+      val paired = allOptions.map(name => name -> name.toLowerCase)
+      val normalized = allOptions.map(_.toLowerCase)
       val normalizedAbbreviations = for ((a, v) <- abbr) yield (a.toLowerCase, v)
-      val normalized = (options ++ abbr.keys) map (_.toLowerCase)
-      (normalized.distinct filter (_ startsWith s.toLowerCase)) match {
+      val matches = paired.filter{ case (_, lower) => lower.startsWith(lowerInput) }
+      // val matches = normalized.distinct.filter(_ startsWith input.toLowerCase)
+      matches match {
         case Seq() =>
-          println(s"'$s' is not valid. Must be one of:\n${orList(displayList)}")
+          println(s"'$input' is not valid. Must be one of:\n${orList(displayList)}")
           None
-        case Seq(v)  =>
-          normalizedAbbreviations.get(v) match {
-            case Some(opt) => Some(opt)
-            case None      => Some(options(normalized.indexOf(v)))
+        case Seq((value, _))  =>
+          abbr.get(value) match {
+            case Some(abbrValue) => Some(abbrValue)
+            case None            => Some(value)
           }
 
-        case many if many exists (_ == s) =>
-          normalizedAbbreviations.get(s) match {
-            case Some(opt) => Some(opt)
-            case None      => Some(options(normalized.indexOf(s)))
+        case many if many.exists(v => v._2 == lowerInput) =>
+          // We got more than one match, but one of the matches is
+          // an exact match (which happens to be a prefix of another entry)
+          normalizedAbbreviations.get(lowerInput) match {
+            case Some(abbrValue) => Some(abbrValue)
+            case None            => Some(options(normalized.indexOf(lowerInput)))
           }
 
         case ambiguous =>
-          println(s"'$s' is ambiguous. (${orList(ambiguous)})")
-          None
+          val choices = ambiguous.toList
+            .map { case (value, _) =>
+              abbr.get(value) match {
+                case Some(v) => v
+                case None    => value
+              }
+            }
+            .sorted
+            .distinct
+            .map(x => Some(x) -> x)
+          val prompt = s"\n'$input' is ambiguous.  Choose one:"
+          askMenu(prompt, choices :+ (None -> "None of the above"), allowAbort = allowAbort).head
+
+          // println(s"'$input' is ambiguous. (${orList(ambiguous)})")
+          // None
       }
     }
   }
@@ -6016,7 +6040,7 @@ object LabyrinthAwakening {
       // This is mostly used for loading someone else's file for testing.
       if (cmdLineParams.gameFile.nonEmpty) {
         println()
-        gameName = Some(askGameName("Enter a name for the game: "))
+        gameName = Some(askGameName("\nEnter a name for the game: "))
         game = SavedGame.load(Pathname(cmdLineParams.gameFile.get))
         printSummary(game.playSummary)
       }
@@ -6105,7 +6129,7 @@ object LabyrinthAwakening {
             val exitAfterWin = cmdLineParams.exitAfterWin orElse
                                configParams.exitAfterWin getOrElse askExitAfterWin()
 
-            gameName = Some(askGameName("Enter a name for your new game: "))
+            gameName = Some(askGameName("\nEnter a name for your new game: "))
 
             val showColor = cmdLineParams.showColor orElse configParams.showColor getOrElse !scala.util.Properties.isWin
             game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties, exitAfterWin, showColor)
