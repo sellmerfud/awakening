@@ -377,9 +377,12 @@ object USBot extends BotHelpers {
         case (posture, 3) if posture == game.usPosture => prestige += 1
         case _ =>
       }
-      if (game hasMuslim (_.isIslamistRule))                          prestige -= 1
-      if (globalEventInPlay(Pirates1) || globalEventInPlay(Pirates2)) funding += 1
-      if (globalEventInPlay(Fracking))                                funding -= 1
+      if (game hasMuslim (_.isIslamistRule))
+        prestige -= 1
+      if (globalEventInPlay(Pirates1) || globalEventInPlay(Pirates2))
+        funding += 1
+      if (globalEventInPlay(Fracking))
+        funding -= 1
     }
     (funding, prestige)
   }
@@ -492,7 +495,11 @@ object USBot extends BotHelpers {
   
   // ------------------------------------------------------------------
   // Follow the operations flowchart to pick which operation will be performed.
-  def alertResolutionFlowchart(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]): AlertAction = {
+  def alertResolutionFlowchart(
+    card: Card,
+    ops: Int,
+    playableEvent: Boolean,
+    plots: List[PlotInCountry]): AlertAction = {
     assert(plots.nonEmpty, "alertResolutionFlowchart() called with empty plots list")
     @tailrec def evaluateNode(node: AlertFlowchartNode): AlertAction = node match {
       case action:   AlertAction   => action
@@ -1249,7 +1256,10 @@ object USBot extends BotHelpers {
         askYorN(s"Does the $US Bot have another card in hand (y/n)? ")
 
       reassess && {
-        val cardNum = askCardNumber("Enter the next card in the US hand. Card # ", initial = None, allowNone = false).get
+        val cardNum = askCardNumber(
+          "Enter the next card in the US hand. Card # ",
+          initial = None,
+          allowNone = false).get
         val card2 = deck(cardNum)
         if (card2.ops >= opsNeeded) {
           // Replace the head card play with a reassessment 
@@ -1371,7 +1381,9 @@ object USBot extends BotHelpers {
   def regimeChangeOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     assert(maxOps >= 3, "regimeChangeOperation() called with less than 3 Ops available")
-    assert(game.regimeChangePossible(maxOps), s"regimeChangeOperation() called but regimeChangePossible($maxOps) == false")
+    assert(
+      game.regimeChangePossible(maxOps),
+      s"regimeChangeOperation() called but regimeChangePossible($maxOps) == false")
     val opsUsed = 3
     // Returns (target, source)
     def getTarget(candidates: List[String]): (String, String) = {
@@ -1409,10 +1421,13 @@ object USBot extends BotHelpers {
   // maxOps  is the tota number of Ops available including reserves.
   // The DisruptMuslimToRemoveCadre, WoiNonMuslimOpposite, WoiNonMuslimUntested actions cannot use reserves.
   def getHomelandSecurityAction(cardOps: Int, maxOps: Int): Option[HomelandSecurityAction] = {
-    val canDisruptUS = (game getNonMuslim UnitedStates).cells > 0 ||
-                       (game getNonMuslim UnitedStates).hasCadre
-    val canWoiSoftNonMuslim = game.usPosture == Hard && game.worldPosture == Soft &&
-                              (game.warOfIdeasNonMuslimTargets(maxOps) map game.getNonMuslim filter (_.isSoft)).nonEmpty
+    val canDisruptUS =
+      (game getNonMuslim UnitedStates).cells > 0 ||
+      (game getNonMuslim UnitedStates).hasCadre
+    val canWoiSoftNonMuslim =
+      game.usPosture == Hard &&
+      game.worldPosture == Soft &&
+      (game.warOfIdeasNonMuslimTargets(maxOps).map(game.getNonMuslim).filter(_.isSoft)).nonEmpty
     
     val canDisruptNonMuslim = game.disruptNonMuslimTargets(maxOps).nonEmpty
     // The following can only use cardOps (no reserves)
@@ -1443,11 +1458,12 @@ object USBot extends BotHelpers {
   // then we do nothing.
   def homelandSecurity(card: Card, opsUsed: Int): Unit = {
     if (opsUsed < card.ops) {
-      val unusedOps = card.ops - opsUsed
-      val maxRadOps = unusedOps + game.reserves.us
-      
+      val unusedOps  = card.ops - opsUsed
+      val maxRadOps  = unusedOps + game.reserves.us
+      val unusedDisp = amountOf(unusedOps, "unused Op")
+      val resDisp    = amountOf(game.reserves.us,"reserve")
       log()
-      log(s"$US performs Homeland Security with ${amountOf(unusedOps, "unused Op")} (${amountOf(game.reserves.us,"reserve")})")
+      log(s"$US performs Homeland Security with ${unusedDisp} (${resDisp})")
       log(separator())
       
       def nextAction(completed: Int): Unit = {

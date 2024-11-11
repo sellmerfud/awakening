@@ -56,15 +56,20 @@ object ForeverWarCards {
   val backlashCandidate = (m: MuslimCountry) =>
     (m.plots exists (!_.backlashed)) && !game.isCaliphateMember(m.name)
 
-  val foreignInternalDefenseCandidate = (m: MuslimCountry) => m.alignment != Adversary && m.totalCells > 0 && m.canTakeMilitia
+  val foreignInternalDefenseCandidate = (m: MuslimCountry) =>
+    m.alignment != Adversary &&
+    m.totalCells > 0 &&
+    m.canTakeMilitia
   
-  val nadiaMuradCandidate = (m: MuslimCountry) => (m.name == Iraq || areAdjacent(m.name, Iraq)) && 
-                                                  m.canTakeAwakeningOrReactionMarker            &&
-                                                  !game.isCaliphateMember(m.name)
+  val nadiaMuradCandidate = (m: MuslimCountry) =>
+    (m.name == Iraq || areAdjacent(m.name, Iraq)) && 
+    m.canTakeAwakeningOrReactionMarker &&
+    !game.isCaliphateMember(m.name)
                                                   
-  val patrioticArabDemocraciesCandidate = (m: MuslimCountry) => m.alignment != Adversary &&
-                                                                m.canTakeAwakeningOrReactionMarker &&
-                                                                !game.isCaliphateMember(m.name)
+  val patrioticArabDemocraciesCandidate = (m: MuslimCountry) =>
+    m.alignment != Adversary &&
+    m.canTakeAwakeningOrReactionMarker &&
+    !game.isCaliphateMember(m.name)
   def saudiAirStrikesCandidates = countryNames(
     game.muslims filter (m => m.totalCells > 0 && 
         (m.name == SaudiArabia || 
@@ -92,63 +97,68 @@ object ForeverWarCards {
     game.muslims filter (m => m.canTakeMilitia && m.civilWar && m.totalCells > m.totalTroopsAndMilitia)
   )
   
-  def trumpTripAlignmentCandidates = countryNames(game.muslims filter (m => !(m.isIslamistRule || m.isAlly || game.isCaliphateMember(m.name))))
-  def trumpTripPostureCandidates   = countryNames(game.nonMuslims filter (n => n.canChangePosture && n.posture != game.usPosture))
+  def trumpTripAlignmentCandidates = countryNames(
+    game.muslims.filter(m => !(m.isIslamistRule || m.isAlly || game.isCaliphateMember(m.name)))
+  )
+  def trumpTripPostureCandidates = countryNames(
+    game.nonMuslims.filter(n => n.canChangePosture && n.posture != game.usPosture)
+  )
   
   def airAmericaCaliphateCandidates = countryNames(
-    game.muslims filter (m => m.totalCells > 0 && game.isCaliphateMember(m.name))
+    game.muslims.filter(m => m.totalCells > 0 && game.isCaliphateMember(m.name))
   )
   def airAmericaNonCaliphateCandidates = countryNames(
-    game.muslims filter (m => m.totalCells > 0 && (m.civilWar || m.inRegimeChange))
+    game.muslims.filter(m => m.totalCells > 0 && (m.civilWar || m.inRegimeChange))
   )
   
   def deepStateCandidates = countryNames(
-    game.getMuslims(Egypt::Syria::Pakistan::Turkey::Nil) filter (m => !(m.isUntested || m.isIslamistRule || m.civilWar || m.isGood))
+    game.getMuslims(Egypt::Syria::Pakistan::Turkey::Nil)
+      .filter(m => !(m.isUntested || m.isIslamistRule || m.civilWar || m.isGood))
   )
   
   def governmentOfNationalAccordCandidates = countryNames(
-    game.muslims filter (m => m.civilWar && !game.isCaliphateMember(m.name))
+    game.muslims.filter(m => m.civilWar && !game.isCaliphateMember(m.name))
   )
 
   def sfabCandidates = countryNames(
-    game.muslims filter (m => m.civilWar && m.alignment != Adversary && m.totalTroops == 0)
+    game.muslims.filter(m => m.civilWar && m.alignment != Adversary && m.totalTroops == 0)
   )
   
   //  Candidates are any Muslim country will cells that is adjacents
   //  to another Muslim country of the opposite type (Sunni/Shia Mix)
   def sunniShiaRiftCandidates = {
-    val adjOther = (m: MuslimCountry) => (m.isSunni && game.adjacentToShiaMix(m.name)) ||
-                                         (m.isShiaMix && game.adjacentToSunni(m.name))
-    countryNames(game.muslims filter (m => m.totalCells > 0 && adjOther(m)))
+    val adjOther = (m: MuslimCountry) =>
+      (m.isSunni && game.adjacentToShiaMix(m.name)) ||
+      (m.isShiaMix && game.adjacentToSunni(m.name))
+    countryNames(game.muslims.filter(m => m.totalCells > 0 && adjOther(m)))
   }
   
   def mohamedMorsiCandidates = countryNames(
-    game.muslims filter (m => (m.name == Egypt || m.militia > 0) && m.canTakeAwakeningOrReactionMarker)
+    game.muslims.filter(m => (m.name == Egypt || m.militia > 0) && m.canTakeAwakeningOrReactionMarker)
   )
   
   def palestinianPeaceCandidates = countryNames(
-    game.adjacentMuslims(Israel) filter (_.canTakeAwakeningOrReactionMarker)
+    game.adjacentMuslims(Israel).filter(_.canTakeAwakeningOrReactionMarker)
   )
   
    def sayyedHassanReactionCandidates = countryNames(
-     game.muslims filter (m => m.canTakeAwakeningOrReactionMarker && distance(Lebanon, m.name) <= 2)
+     game.muslims.filter(m => m.canTakeAwakeningOrReactionMarker && distance(Lebanon, m.name) <= 2)
    )
    
    def sayyedHassanBesiegedRegimeCandidates = countryNames(
-     game.muslims filter (m => (m.canTakeBesiegedRegimeMarker) && distance(Lebanon, m.name) <= 2)
+     game.muslims.filter(m => (m.canTakeBesiegedRegimeMarker) && distance(Lebanon, m.name) <= 2)
    )
    
    def sayyedHassanCellCandidates = countryNames(
-     game.countries filter (c => distance(Lebanon, c.name) <= 2)
+     game.countries.filter(c => distance(Lebanon, c.name) <= 2)
    )
   
   def vehicleRammingCandidates = countryNames(
-    game.getNonMuslims(Schengen) filter (_.isHard)
-    
+    game.getNonMuslims(Schengen).filter(_.isHard)
   )
   
-  def amaqNewsAgencyCandidates =  countryNames(
-    game.countries filter (c => c.totalCells == 0 && c.hasCadre == false)
+  def amaqNewsAgencyCandidates = countryNames(
+    game.countries.filter(c => c.totalCells == 0 && c.hasCadre == false)
   )
   
   val attemptedCoupCondition = (m: MuslimCountry) =>
@@ -157,7 +167,8 @@ object ForeverWarCards {
     ((m.isAlly && m.isPoor) || (game.adjacentToCivilWar(m.name) && !m.isGood))
 
   val enhancedBotAttemptedCoupCondition = (m: MuslimCountry) =>
-    attemptedCoupCondition(m) && !m.isIslamistRule
+    attemptedCoupCondition(m) &&
+    !m.isIslamistRule
 
   def attemptedCoupCandidates(role: Role, forTrigger: Boolean) =
     if (role == game.humanRole || forTrigger || !game.botEnhancements)
@@ -338,7 +349,9 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(241, "Abdel Fattah el-Sisi", US, 1,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => globalEventNotInPlay(PoliticalIslamismJihadist) && (game hasMuslim abdelFattahCandidate)
+      (_: Role, _: Boolean) =>
+        globalEventNotInPlay(PoliticalIslamismJihadist) &&
+        game.hasMuslim(abdelFattahCandidate)
       ,
       (role: Role, forTrigger: Boolean) => {
         val egypt = if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker) List(Egypt) else Nil
@@ -398,12 +411,12 @@ object ForeverWarCards {
           // Bot
           val candidates = countryNames(game.muslims.filter(m => m.totalCells - m.totalTroopsAndMilitia > 4))
           val target = game.muslims.find(m => m.totalCells == 2 && game.totalCellsOnMap == 2).map(_.name) orElse
-                       USBot.disruptPriority(candidates) orElse {
-                         if (cacheYesOrNo(s"Does the $Jihadist player have any cards in hand? (y/n) "))
-                           None
-                         else
-                           USBot.disruptPriority(countryNames(game.muslims filter (_.totalCells > 0)))
-                       }
+            USBot.disruptPriority(candidates) orElse {
+              if (cacheYesOrNo(s"Does the $Jihadist player have any cards in hand? (y/n) "))
+                None
+              else
+                USBot.disruptPriority(countryNames(game.muslims filter (_.totalCells > 0)))
+            }
           
           
           target match {
@@ -461,10 +474,12 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(244, "Foreign Internal Defense", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => game.militiaAvailable > 0 && (game hasMuslim foreignInternalDefenseCandidate)
+      (_: Role, _: Boolean) =>
+        game.militiaAvailable > 0 &&
+        game.hasMuslim(foreignInternalDefenseCandidate)
       ,
       (role: Role, forTrigger: Boolean) => {
-        val candidates = countryNames(game.muslims filter foreignInternalDefenseCandidate)
+        val candidates = countryNames(game.muslims.filter(foreignInternalDefenseCandidate))
         val target = if (role == game.humanRole)
           askCountry(s"Select country: ", candidates)
         else 
@@ -481,8 +496,10 @@ object ForeverWarCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         game.getCountry(Iran) match {
-          case n: NonMuslimCountry => false
-          case m: MuslimCountry    => !(m.isIslamistRule || game.isCaliphateMember(Iran)) && m.canTakeAwakeningOrReactionMarker
+          case n: NonMuslimCountry =>
+            false
+          case m: MuslimCountry =>
+            !(m.isIslamistRule || game.isCaliphateMember(Iran)) && m.canTakeAwakeningOrReactionMarker
         }
       }
       ,
@@ -553,8 +570,9 @@ object ForeverWarCards {
         }
       }
       ,
-      (_: Role, _: Boolean) => (game.getMuslim(SaudiArabia).isNeutral || game.getMuslim(SaudiArabia).isAlly) &&
-                               saudiAirStrikesCandidates.nonEmpty
+      (_: Role, _: Boolean) =>
+        (game.getMuslim(SaudiArabia).isNeutral || game.getMuslim(SaudiArabia).isAlly) &&
+        saudiAirStrikesCandidates.nonEmpty
       ,
       (role: Role, forTrigger: Boolean) => {
         val target = if (role == game.humanRole)
@@ -787,9 +805,9 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(259, "Arab NATO", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, _: Boolean) => (game.getMuslim(SaudiArabia).governance == Good ||
-                                   game.getMuslim(GulfStates).governance  == Good) &&
-                                  (role == game.humanRole || (game.militiaAvailable > 0 && arabNatoCandidates.nonEmpty))
+      (role: Role, _: Boolean) =>
+        (game.getMuslim(SaudiArabia).governance == Good || game.getMuslim(GulfStates).governance == Good) &&
+        (role == game.humanRole || (game.militiaAvailable > 0 && arabNatoCandidates.nonEmpty))
       ,
       (role: Role, forTrigger: Boolean) => {
         if (role == game.humanRole) {
@@ -893,7 +911,10 @@ object ForeverWarCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (_: Role, _: Boolean) => {
         val pakistan = game.getMuslim(Pakistan)
-        !pakistan.isIslamistRule && !pakistan.isGood && pakistan.totalCells == 0 && !game.isCaliphateMember(Pakistan)
+        !pakistan.isIslamistRule &&
+        !pakistan.isGood &&
+        pakistan.totalCells == 0 &&
+        !game.isCaliphateMember(Pakistan)
       }
       ,
       (role: Role, forTrigger: Boolean) => {
@@ -1001,7 +1022,9 @@ object ForeverWarCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val prereq = !(game hasMuslim (m => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)))
-        def cardExists = cacheYesOrNo("""Is there a "Trump Tweets" card or any card with prerequisite "Trump Tweets ON" in the discard pile? (y/n) """)
+        val prompt = """Is there a "Trump Tweets" card or any card with prerequisite "Trump Tweets ON" """ +
+                     """in the discard pile? (y/n) """
+        def cardExists = cacheYesOrNo(prompt)
         prereq && cardExists
       }
       ,
@@ -1062,7 +1085,10 @@ object ForeverWarCards {
           "posture"
         
         val target = if (role == game.humanRole)
-          askCountry("\nWhich country: ", if (action == "align") trumpTripAlignmentCandidates else trumpTripPostureCandidates)
+          askCountry(
+            "\nWhich country: ",
+            if (action == "align") trumpTripAlignmentCandidates else trumpTripPostureCandidates
+          )
         else if (action == "align")
             USBot.markerAlignGovTarget(trumpTripAlignmentCandidates).get
         else
@@ -1099,8 +1125,14 @@ object ForeverWarCards {
         //  or up to 3 cells from any Civil War/Regime Change countries
         if (role == game.humanRole) {
           val choices = List(
-            choice(airAmericaNonCaliphateCandidates.nonEmpty, "non-cal", "Remove up to 3 cells in Civil War/Regime Change countries"),
-            choice(airAmericaCaliphateCandidates.nonEmpty,    "cal",     "Remove up to 4 cells in Caliphate countries")
+            choice(
+              airAmericaNonCaliphateCandidates.nonEmpty,
+              "non-cal",
+              "Remove up to 3 cells in Civil War/Regime Change countries"),
+            choice(
+              airAmericaCaliphateCandidates.nonEmpty,
+              "cal",
+              "Remove up to 4 cells in Caliphate countries")
           ).flatten
 
           val (candidates, maxCells) = askMenu("\nChoose one:", choices).head match {
@@ -1119,8 +1151,8 @@ object ForeverWarCards {
           // Bot will remove cells from caliphate countries only if it can remove
           // four cells (or there are no Civil War/Regime change countries)
           // Otherwise it will remove the max it can from Civil War/Regime change countries
-          val calNum    = (airAmericaCaliphateCandidates map (name => game.getCountry(name).totalCells)).sum min 4
-          val nonCalNum = (airAmericaNonCaliphateCandidates map (name => game.getCountry(name).totalCells)).sum min 3
+          val calNum    = airAmericaCaliphateCandidates.map(name => game.getCountry(name).totalCells).sum min 4
+          val nonCalNum = airAmericaNonCaliphateCandidates.map(name => game.getCountry(name).totalCells).sum min 3
         
           calNum == game.totalCellsOnMap || nonCalNum == game.totalCellsOnMap
           
@@ -1279,7 +1311,9 @@ object ForeverWarCards {
         numCells == game.totalCellsOnMap
       }
       ,
-      (_: Role, _: Boolean) => (game.getMuslims(Iraq::Syria::Nil) exists (_.civilWar)) && globalEventNotInPlay(EarlyExit)
+      (_: Role, _: Boolean) =>
+        game.getMuslims(Iraq::Syria::Nil).exists(_.civilWar) &&
+        globalEventNotInPlay(EarlyExit)
       ,
       (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.getMuslims(Iraq::Syria::Nil) filter (_.civilWar))
@@ -1373,8 +1407,8 @@ object ForeverWarCards {
           setTrumpTweetsOFF()
         }
         
-        val numHard        = game.getNonMuslims(Schengen) count (_.posture == Hard)
-        val numSoft        = game.getNonMuslims(Schengen) count (_.posture == Soft)
+        val numHard = game.getNonMuslims(Schengen).count(_.posture == Hard)
+        val numSoft = game.getNonMuslims(Schengen).count(_.posture == Soft)
         val prestigeAdjust = ((numHard - numSoft) min 3) max -3
         println()
         log(s"${amountOf(numHard, "Hard Schengen")} and ${amountOf(numSoft, "Soft Schengen")}")
@@ -1657,7 +1691,9 @@ object ForeverWarCards {
               addReactionMarker(target)
               
             case "besieged" =>
-              val target = askCountry("Place besieged regime marker in which country: ", sayyedHassanBesiegedRegimeCandidates)
+              val target = askCountry(
+                "Place besieged regime marker in which country: ",
+                sayyedHassanBesiegedRegimeCandidates)
               addEventTarget(target)
               testCountry(target)
               addBesiegedRegimeMarker(target)
@@ -2000,7 +2036,7 @@ object ForeverWarCards {
             addAvailablePlotToCountry(UnitedStates, JihadistBot.preparePlots(plots).head)
           }
           else {
-            val candidates = countryNames(game.nonMuslims filter (n => n.canRemovePosture && n.isOppositeUsPosture))
+            val candidates = countryNames(game.nonMuslims.filter(n => n.canRemovePosture && n.isOppositeUsPosture))
             val target = JihadistBot.posturePriority(candidates).get
             addEventTarget(target)
             setCountryPosture(target, PostureUntested)
@@ -2487,7 +2523,11 @@ object ForeverWarCards {
         
         
         val actions = if (role == game.humanRole) {
-          def nextAction(actionNum: Int, cellsRemaining: Int, plots: List[Plot], candidates: List[String]): List[Action] = {
+          def nextAction(
+            actionNum: Int,
+            cellsRemaining: Int,
+            plots: List[Plot],
+            candidates: List[String]): List[Action] = {
             if (actionNum > 3 || (cellsRemaining == 0 && plots.isEmpty))
               Nil
             else {
@@ -2499,14 +2539,22 @@ object ForeverWarCards {
               askMenu(s"${ordinal(actionNum)} action:", choices).head match {
                 case "cell" =>
                   val target = askCountry("Place a Cell in which country: ", candidates)
-                  Action(target, Left(())) :: nextAction(actionNum+1, cellsRemaining-1, plots, candidates filterNot (_ == target))
+                  Action(target, Left(())) :: nextAction(
+                                                actionNum + 1,
+                                                cellsRemaining - 1,
+                                                plots,
+                                                candidates.filterNot(_ == target))
                   
                 case _ =>
                   val target = askCountry("Place a Plot in which country: ", candidates)
                   val plot   = askPlots(plots, 1).head
                   val index  = plots.indexOf(plot)
                   val others = plots.take(index) ::: plots.drop(index + 1)
-                  Action(target, Right(plot)) :: nextAction(actionNum+1, cellsRemaining, others, candidates filterNot (_ == target))
+                  Action(target, Right(plot)) :: nextAction(
+                                                   actionNum + 1,
+                                                   cellsRemaining,
+                                                   others,
+                                                   candidates.filterNot(_ == target))
               }
             }
           }
@@ -2742,7 +2790,8 @@ object ForeverWarCards {
       ,
       (role: Role, forTrigger: Boolean) => {
         val (target, num) = if (role == game.humanRole)
-          (askCountry("Which country: ", ungovernedSpaceCandidates), askInt("Place how many cells", 1, game.cellsAvailable min 3))
+          (askCountry("Which country: ", ungovernedSpaceCandidates),
+           askInt("Place how many cells", 1, game.cellsAvailable min 3))
         else
           (JihadistBot.recruitTravelToPriority(ungovernedSpaceCandidates).get, game.cellsAvailable min 3)
         
@@ -2898,8 +2947,12 @@ object ForeverWarCards {
     entry(new Card(328, "Hafiz Saeed Khan", Unassociated, 1,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => 
-        (role == US && (hafizSaeedKhanMuslimUSCandidates.nonEmpty || hafizSaeedKhanNonMuslimUSCandidates.nonEmpty)) ||
-        (role == Jihadist && (hafizSaeedKhanMuslimJihadistCandidates.nonEmpty || hafizSaeedKhanNonMuslimJihadistCandidates.nonEmpty))
+        (role == US && 
+          (hafizSaeedKhanMuslimUSCandidates.nonEmpty || hafizSaeedKhanNonMuslimUSCandidates.nonEmpty)
+        ) ||
+        (role == Jihadist &&
+          (hafizSaeedKhanMuslimJihadistCandidates.nonEmpty || hafizSaeedKhanNonMuslimJihadistCandidates.nonEmpty)
+        )
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {
         val candidates = hafizSaeedKhanMuslimUSCandidates ::: hafizSaeedKhanNonMuslimUSCandidates
@@ -2965,7 +3018,9 @@ object ForeverWarCards {
         irgcCandidates(US) exists (name => USBot.wouldRemoveLastCell(name, 1))
       }
       ,
-      (role: Role, _: Boolean) => (isIranSpecialCase || !game.getMuslim(Iran).isAlly) && irgcCandidates(role).nonEmpty
+      (role: Role, _: Boolean) =>
+        (isIranSpecialCase || !game.getMuslim(Iran).isAlly) &&
+        irgcCandidates(role).nonEmpty
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {
         val (target, (actives, sleepers, sadr)) = if (role == game.humanRole) {
@@ -3049,8 +3104,10 @@ object ForeverWarCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
         val countries  = game.getNonMuslims(India::Thailand::Nil)
-        val canPosture = if (role == US) countries exists (n => n.isUntested || n.posture != game.usPosture)
-                         else            countries exists (n => n.isUntested || n.posture == game.usPosture)
+        val canPosture = if (role == US)
+          countries exists (n => n.isUntested || n.posture != game.usPosture)
+        else
+          countries exists (n => n.isUntested || n.posture == game.usPosture)
         (role == game.humanRole) ||
         (role == Jihadist && game.cellsAvailable > 0) ||
         canPosture
@@ -3157,8 +3214,9 @@ object ForeverWarCards {
         candidates exists (name => USBot.wouldRemoveLastCell(name, 1))
       }
       ,
-      (role: Role, _: Boolean) => (role == US && ((game.countries exists (_.totalCells > 0)) || game.prestige < 12)) ||
-                                  (role == Jihadist && game.cellsAvailable > 0)
+      (role: Role, _: Boolean) =>
+        (role == US && ((game.countries exists (_.totalCells > 0)) || game.prestige < 12)) ||
+        (role == Jihadist && game.cellsAvailable > 0)
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {
         val candidates = countryNames(game.countries filter (_.totalCells > 0))
@@ -3203,9 +3261,11 @@ object ForeverWarCards {
       (role: Role, _: Boolean) => if (role == game.humanRole)
         erdoganDanceCandidates.nonEmpty
       else if (role == US)
-        (erdoganDanceMuslims exists (!_.isAlly)) || (erdoganDanceNonMuslims exists (_.posture != game.usPosture))
+        erdoganDanceMuslims.exists (!_.isAlly) ||
+        erdoganDanceNonMuslims.exists(_.posture != game.usPosture)
       else
-        (erdoganDanceMuslims exists (!_.isAdversary)) || (erdoganDanceNonMuslims exists (n => n.isUntested || n.posture == game.usPosture))
+        erdoganDanceMuslims.exists(!_.isAdversary) ||
+        erdoganDanceNonMuslims.exists(n => n.isUntested || n.posture == game.usPosture)
       ,
       (role: Role, forTrigger: Boolean) => {
         val target = if (role == game.humanRole)
@@ -3217,7 +3277,9 @@ object ForeverWarCards {
         else if (role == Jihadist && erdoganDanceMuslims.nonEmpty)
           JihadistBot.markerAlignGovTarget(countryNames(erdoganDanceMuslims filter (!_.isAdversary))).get
         else
-          JihadistBot.posturePriority(countryNames(erdoganDanceNonMuslims filter (n => n.isUntested || n.posture == game.usPosture))).get
+          JihadistBot.posturePriority(
+            countryNames(erdoganDanceNonMuslims filter (n => n.isUntested || n.posture == game.usPosture))
+          ).get
         
         addEventTarget(target)
         testCountry(target)
@@ -3738,8 +3800,12 @@ object ForeverWarCards {
     entry(new Card(352, "al-Baghdadi", Unassociated, 3,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, _: Boolean) => {
-        (role == US       && (game hasMuslim (m => m.civilWar && m.totalTroopsAndMilitia > m.totalCells))) ||
-        (role == Jihadist && (globalEventNotInPlay(AlBaghdadi) || (game.cellsAvailable > 0 && game.hasMuslim (m => m.isPoor))))
+        (role == US &&
+          (game hasMuslim (m => m.civilWar && m.totalTroopsAndMilitia > m.totalCells))
+        ) ||
+        (role == Jihadist &&
+          (globalEventNotInPlay(AlBaghdadi) || (game.cellsAvailable > 0 && game.hasMuslim (m => m.isPoor)))
+        )
       }
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {

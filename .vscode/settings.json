@@ -1,5 +1,8 @@
 {
   "files.watcherExclude": {
     "**/target": true
-  }
+  },
+  "editor.rulers": [
+    120,
+  ]
 }

@@ -279,7 +279,9 @@ object JihadistBot extends BotHelpers {
   // unless there is a cell in an adjacent country so that the travel will succeed 
   // without a die roll
   val GoodMuslimWithAdjacentCellsFilter =
-    new CriteriaFilter("Good Muslim w/ adjacent cells", muslimTest(m => m.isGood && m.hasAdjacent(hasCellForTravel)))
+    new CriteriaFilter(
+      "Good Muslim w/ adjacent cells",
+      muslimTest(m => m.isGood && m.hasAdjacent(hasCellForTravel)))
   val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
   
   // Used with botEnhancements
@@ -290,15 +292,19 @@ object JihadistBot extends BotHelpers {
                   muslimTest(m => m.isPoor && m.troops > 0 && activeCells(m) > 0))
   val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
-  val EnhRecruitPoorCadreOrNeedCellsforMajorJihad = new CriteriaFilter("Poor Muslim, (1-4 more cells than TandM or cadre and no TandM) and (awakening - reaction < 2) and JSP",
-                  muslimTest(m =>
-                    (poorMuslimNeedsCellsForMajorJihad(m) || poorMuslimWithCadreAnNotTroopsOrMilitia(m))
-                  ))
+  val EnhRecruitPoorCadreOrNeedCellsforMajorJihad =
+    new CriteriaFilter(
+      "Poor Muslim, (1-4 more cells than TandM or cadre and no TandM) and (awakening - reaction < 2) and JSP",
+      muslimTest(m =>
+        (poorMuslimNeedsCellsForMajorJihad(m) || poorMuslimWithCadreAnNotTroopsOrMilitia(m))
+      ))
 
-  val EnhTravelPoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and (awakening - reaction < 2) and JSP",
-                  muslimTest(m =>
-                    poorMuslimNeedsCellsForMajorJihad(m)
-                  ))
+  val EnhTravelPoorNeedCellsforMajorJihad =
+    new CriteriaFilter(
+      "Poor, 1-4 more cells than TandM and (awakening - reaction < 2) and JSP",
+      muslimTest(m =>
+        poorMuslimNeedsCellsForMajorJihad(m)
+      ))
 
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
@@ -312,18 +318,22 @@ object JihadistBot extends BotHelpers {
   // To try to make the Bot AI smarter, we don't prioritise Fair Muslim countries
   // where Jihad is possible unless there is a cell in an adjacent country so that
   // the travel will succeed  without a die roll
-  val EnhTravelFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode("Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM w/ Adjacent cells",
-                  muslimTest(m => m.isFair && m.hasAdjacent(hasCellForTravel) && m.awakening - m.reaction < 1),
-                  muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
-  val EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode("Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM",
-                  muslimTest(m => m.isFair && m.awakening - m.reaction < 1),
-                  muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
-  val PoorMuslimWhereMajorJSPBestJihadDRM = new LowestScoreNode("Poor Muslim w/ best Jihad DRM",
-                  muslimTest(m => m.isPoor && majorJihadSuccessPossible(m)),
-                  muslimScore(m => jihadDRM(m, true), nonMuslimScore = 100))
-  val PoorMuslimBestJihadDRM = new LowestScoreNode("Poor Muslim w/ best Jihad DRM",
-                  muslimTest(_.isPoor),
-                  muslimScore(m => jihadDRM(m, true), nonMuslimScore = 100))
+  val EnhTravelFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode(
+    "Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM w/ Adjacent cells",
+    muslimTest(m => m.isFair && m.hasAdjacent(hasCellForTravel) && m.awakening - m.reaction < 1),
+    muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
+  val EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode(
+    "Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM",
+    muslimTest(m => m.isFair && m.awakening - m.reaction < 1),
+    muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
+  val PoorMuslimWhereMajorJSPBestJihadDRM = new LowestScoreNode(
+    "Poor Muslim w/ best Jihad DRM",
+    muslimTest(m => m.isPoor && majorJihadSuccessPossible(m)),
+    muslimScore(m => jihadDRM(m, true), nonMuslimScore = 100))
+  val PoorMuslimBestJihadDRM = new LowestScoreNode(
+    "Poor Muslim w/ best Jihad DRM",
+    muslimTest(_.isPoor),
+    muslimScore(m => jihadDRM(m, true), nonMuslimScore = 100))
   val FewestCellsFilter = new LowestScoreNode("Fewest cells", _ => true, _.totalCells)
   
   // jihad == None        - Do not include jihad drm priority
@@ -502,9 +512,15 @@ object JihadistBot extends BotHelpers {
     val withAdvisors = (game getCountries names) filter (_.numAdvisors > 0)
     
     if (withAdvisors.nonEmpty)
-      topPriority(withAdvisors, List(new HighestScorePriority("Most Advisors", (_.numAdvisors)))) map (_.name)
+      topPriority(
+        withAdvisors,
+        List(new HighestScorePriority("Most Advisors", (_.numAdvisors)))
+      ).map(_.name)
     else
-      topPriority(game getCountries names, List(new LowestScorePriority("Fewest Troops", (_.totalTroops)))) map (_.name)
+      topPriority(
+        game.getCountries(names),
+        List(new LowestScorePriority("Fewest Troops", (_.totalTroops)))
+      ).map(_.name)
   }
   
   
@@ -536,7 +552,9 @@ object JihadistBot extends BotHelpers {
       case _ => false
     }
     // The bot will never travel a SLEEPER cell within the same country
-    def wouldMoveOrTravelWithinToSleep(c: Country) = c.name != toCountry || (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
+    def wouldMoveOrTravelWithinToSleep(c: Country) =
+      c.name != toCountry ||
+      (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
     
     botLog("Find \"Travel From\" target")
     val flowchart = List(
