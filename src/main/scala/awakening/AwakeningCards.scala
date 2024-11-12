@@ -1916,13 +1916,13 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(176, "Change of State", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => if (role == game.botRole)
-        game hasMuslim botChangeOfStateCandidate
+      (role: Role, forTrigger: Boolean) => if (role == game.botRole && !forTrigger)
+        game.hasMuslim(botChangeOfStateCandidate)
       else
-        game hasMuslim changeOfStateCandidate
+        game.hasMuslim(changeOfStateCandidate)
       ,
       (role: Role, forTrigger: Boolean) => {
-        val candidates = if (role == game.botRole)
+        val candidates = if (role == game.botRole && !forTrigger)
           countryNames(game.muslims filter botChangeOfStateCandidate)
         else
           countryNames(game.muslims filter changeOfStateCandidate)
