@@ -1132,16 +1132,16 @@ object ForeverWarCards {
             choice(
               airAmericaCaliphateCandidates.nonEmpty,
               "cal",
-              "Remove up to 4 cells in Caliphate countries")
+              "Remove 4 cells total in Caliphate countries")
           ).flatten
 
-          val (candidates, maxCells) = askMenu("\nChoose one:", choices).head match {
-            case "non-cal" => (airAmericaNonCaliphateCandidates, 3)
-            case _         => (airAmericaCaliphateCandidates, 4)
+          val (candidates, maxCells, upto) = askMenu("\nChoose one:", choices).head match {
+            case "non-cal" => (airAmericaNonCaliphateCandidates, 3, true)
+            case _         => (airAmericaCaliphateCandidates, 4, false)
           }
           
           println()
-          val removed = askToRemoveCells(maxCells, candidates, sleeperFocus = true)
+          val removed = askToRemoveCells(maxCells, upto, candidates, sleeperFocus = true)
           for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
             addEventTarget(name)
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
@@ -1338,7 +1338,7 @@ object ForeverWarCards {
           if (removeCandidates.isEmpty)
             log("There are no cells in Iraq or Syria.")
           else {
-            val removed = askToRemoveCells(3, removeCandidates, sleeperFocus = true)
+            val removed = askToRemoveCells(3, true, removeCandidates, sleeperFocus = true)
             for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
               addEventTarget(name)
               removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
@@ -1513,7 +1513,7 @@ object ForeverWarCards {
         val maxCells = (candidates map game.getMuslim map (_.totalCells)).sum min 3
         if (role == game.humanRole) {
           println()
-          val removed = askToRemoveCells(maxCells, candidates, sleeperFocus = true)
+          val removed = askToRemoveCells(maxCells, true, candidates, sleeperFocus = true)
           for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
             addEventTarget(name)
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)

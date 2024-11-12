@@ -2497,45 +2497,64 @@ object LabyrinthAwakening {
   //  cells: (activeCells, sleeperCells, Sadr)
   case class CellsToRemove(countryName: String, cells: (Int, Int, Boolean))
 
-  def askToRemoveCells(maxCells: Int, countryNames: List[String], sleeperFocus: Boolean): List[CellsToRemove] = {
+  def askToRemoveCells(maxCells: Int, upto: Boolean, countryNames: List[String], sleeperFocus: Boolean): Vector[CellsToRemove] = {
 
-    @tailrec def askNext(numLeft: Int, countries: List[String], removed: List[CellsToRemove]): List[CellsToRemove] = {
-      if (numLeft == 0 || countries.isEmpty)
-        removed.reverse
+    @tailrec def askNext(numToRemove: Int, choices: List[(String, String)], removed: Vector[CellsToRemove]): Vector[CellsToRemove] = {
+      val totalRemaining = choices.foldLeft(0) { 
+        case (total, (name, _)) => total + game.getCountry(name).totalCells
+      }
+
+      if (numToRemove == 0 || choices.isEmpty)
+        removed
+      else if (!upto && totalRemaining <= numToRemove) {
+        val remainder = for {
+          (name, _) <- choices.toVector
+          c = game.getCountry(name)
+        } yield
+          CellsToRemove(name, (c.activeCells, c.sleeperCells, c.hasSadr))
+        
+        removed :++ remainder
+      }
       else {
-        val name = askCountry("Remove cells from which country: ", countries)
-        val maxNum = game.getMuslim(name).totalCells min numLeft
-        val num  = if (countries.size == 1)
-          maxNum
-        else
-          askInt(s"Remove how many cells from $name", 1, maxNum)
+
+        val name = askMenu("\nRemove cells from which country:", choices).head
+        val c    = game.getCountry(name)
+        val others = totalRemaining - c.totalCells
+        val minNum = if (upto) 0 else (numToRemove - others) max 0 min c.totalCells
+        val maxNum = c.totalCells min numToRemove
+        displayLine(s"CWS totalRemaining=${totalRemaining}, others=${others}, min=${minNum}, max=${maxNum}")
+        val num = askInt(s"\nRemove how many cells from $name", minNum, maxNum)
         val (actives, sleepers, sadr) = askCells(name, num, sleeperFocus)
         askNext(
-          numLeft - num,
-          countries filterNot (_ == name),
-          CellsToRemove(name, (actives, sleepers, sadr)) :: removed)
+          numToRemove - num,
+          choices.filterNot(_._1 == name),
+          removed :+ CellsToRemove(name, (actives, sleepers, sadr))
+        )
       }
     }
+  
+    val countries = game.getCountries(countryNames) 
+      .filter(_.totalCells > 0)
+      .sortBy(_.name)
 
-    if (countryNames.isEmpty)
-      Nil
-    else {
-      println("Cells in target countries")
-      println(separator())
-      for (name <- countryNames) {
-        val b = new ListBuffer[String]
-        val m = game.getMuslim(name)
-        if (m.sleeperCells > 0)
-          b += amountOf(m.sleeperCells, "sleeper")
-        if (m.activeCells > 0)
-          b += amountOf(m.activeCells, "active")
-        if (m.hasSadr)
-          b += "Sadr"
+    val totalCells = countries
+      .foldLeft(0) { (total, country) => total + country.totalCells }
 
-        println(s"  $name ${b.toList.mkString("(", ", ", ")")}")
-      }
-      askNext(maxCells, countryNames, List.empty)
+    val choices = for {
+      name <- countryNames
+      c = game.getCountry(name)
+      if c.totalCells > 0
+    } yield {
+      val b = new ListBuffer[String]
+      if (c.sleeperCells > 0)
+        b += amountOf(c.sleeperCells, "sleeper")
+      if (c.activeCells > 0)
+        b += amountOf(c.activeCells, "active")
+      if (c.hasSadr)
+        b += "Sadr"
+      name -> s"$name ${b.toList.mkString("(", ", ", ")")}"
     }
+    askNext(maxCells min totalCells, choices, Vector.empty)
   }
 
   // Use the random Muslim table.
