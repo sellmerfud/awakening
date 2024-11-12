@@ -2522,7 +2522,6 @@ object LabyrinthAwakening {
         val others = totalRemaining - c.totalCells
         val minNum = if (upto) 0 else (numToRemove - others) max 0 min c.totalCells
         val maxNum = c.totalCells min numToRemove
-        displayLine(s"CWS totalRemaining=${totalRemaining}, others=${others}, min=${minNum}, max=${maxNum}")
         val num = askInt(s"\nRemove how many cells from $name", minNum, maxNum)
         val (actives, sleepers, sadr) = askCells(name, num, sleeperFocus)
         askNext(
@@ -4329,13 +4328,23 @@ object LabyrinthAwakening {
         assert(!(major && m.isGood), s"Cannot perform $jihad in country with Good governance")
         val numAttempts = actives + sleepers + (if (sadr) 1 else 0)
         log()
-        log(s"Conduct $jihad in $name, rolling ${diceString(numAttempts)}")
+        log(s"Conduct $jihad in $name")
         log(separator())
         testCountry(name)  // It is possible that the country was reverted to untested by an event.
-        if (major && m.sleeperCells > 0)
-          flipAllSleepersCells(name)
-        else if (!major && sleepers > 0)
-          flipSleeperCells(name, sleepers)
+        if (major) {
+          log(s"Rolling ${diceString(numAttempts)}")
+          if (m.sleeperCells > 0)
+            flipAllSleepersCells(name)
+        } 
+        else {
+          val disp = new ListBuffer[String]
+          if (actives > 0)  disp += amountOf(actives, "active cell")
+          if (sleepers > 0) disp += amountOf(sleepers, "sleeper cell")
+          if (sadr)         disp += "Sadr"
+          log(s"Rolling ${diceString(numAttempts)}, using ${disp.mkString(", ")}")
+          if (sleepers > 0)
+            flipSleeperCells(name, sleepers)
+        }
         def nextAttempt(num: Int): Int = num match {
           case n if n <= numAttempts =>
             val ord = if (numAttempts == 1) "" else s"${ordinal(num)} "
@@ -7555,6 +7564,36 @@ object LabyrinthAwakening {
     performTravels(attempts.toList)
   }
 
+      // All of the jihad cells must be declared before rolling any dice.
+  def getHumanJihadTargets(diceLeft: Int, candidates: List[String]): List[JihadTarget] = {
+    if (diceLeft == 0 || candidates.isEmpty)
+      Nil
+    else {
+      println(s"You have ${diceString(diceLeft)} remaining")
+      val name = askCountry(s"Jihad in which country: ", candidates)
+      val m    = game.getMuslim(name)
+      val majorJihad = if (m.majorJihadOK(diceLeft))
+        askYorN(s"Conduct Major Jihad in $name (y/n)? ")
+      else
+        false
+      val numRolls = if (majorJihad) {
+        val minRolls = if (m.besiegedRegime) 1 else 2
+        val maxRolls = diceLeft  // We know there are at least 5 cells present
+        askInt(s"Roll how many dice in $name?", minRolls, maxRolls, Some(maxRolls))
+      }
+      else {
+        val maxRolls = diceLeft min m.totalCells
+        askInt(s"Roll how many dice in $name?", 1, maxRolls, Some(maxRolls))
+      }
+      val (actives, sleepers, sadr) = if (majorJihad) (numRolls, 0, m.hasSadr)
+      else if (m.totalCells == numRolls) (m.activeCells, m.sleeperCells, m.hasSadr)
+      else if (m.activeCells == 0 && !m.hasSadr)  (0, numRolls, false)
+      else if (m.sleeperCells == 0 && !m.hasSadr) (numRolls, 0, false)
+      else askCells(name, numRolls, sleeperFocus = false)
+      val target = JihadTarget(name, actives, sleepers, sadr, majorJihad)
+      target :: getHumanJihadTargets(diceLeft - numRolls, candidates filterNot (_ == name))
+    }
+  }
   // When ever a country is targeted and is a candidate for Major Jihad
   // ask the user if they want to do Major Jihad.
   def humanJihad(ops: Int): Unit = {
@@ -7563,38 +7602,10 @@ object LabyrinthAwakening {
     log(s"$Jihadist performs a Jihad operation with ${opsString(ops)}")
     log(separator())
     val jihadCountries = game.muslims filter (_.jihadOK)
-    val maxDice = ops min (jihadCountries map (_.totalCells)).sum
+    val maxDice = ops min jihadCountries.map (_.totalCells).sum
     var candidates = countryNames(jihadCountries)
-    // All of the jihad cells must be declared before rolling any dice.
-   def getJihadTargets(diceLeft: Int, candidates: List[String]): List[JihadTarget] = {
-      if (diceLeft == 0 || candidates.isEmpty)
-        Nil
-      else {
-        if (diceLeft < maxDice)
-          println(s"You have ${diceString(diceLeft)} remaining")
-        val name = askCountry(s"Jihad in which country: ", candidates)
-        val m    = game.getMuslim(name)
-        val majorJihad = if (m.majorJihadOK(diceLeft)) askYorN(s"Conduct Major Jihad in $name (y/n)? ")
-        else false
-        val numRolls = if (majorJihad) {
-          val minRolls = if (m.besiegedRegime) 1 else 2
-          val maxRolls = diceLeft  // We know there are at least 5 cells present
-          askInt(s"Roll how many dice in $name?", minRolls, maxRolls, Some(maxRolls))
-        }
-        else {
-          val maxRolls = diceLeft min m.totalCells
-          askInt(s"Roll how many dice in $name?", 1, maxRolls, Some(maxRolls))
-        }
-        val (actives, sleepers, sadr) = if (majorJihad) (numRolls, 0, m.hasSadr)
-        else if (m.totalCells == numRolls) (m.activeCells, m.sleeperCells, m.hasSadr)
-        else if (m.activeCells == 0 && !m.hasSadr)  (0, numRolls, false)
-        else if (m.sleeperCells == 0 && !m.hasSadr) (numRolls, 0, false)
-        else askCells(name, numRolls, sleeperFocus = false)
-        val target = JihadTarget(name, actives, sleepers, sadr, majorJihad)
-        target :: getJihadTargets(diceLeft - numRolls, candidates filterNot (_ == name))
-      }
-    }
-    val targets = getJihadTargets(maxDice, candidates)
+
+    val targets = getHumanJihadTargets(maxDice, candidates)
     for (t <- targets)
       addOpsTarget(t.name)
     performJihads(targets)

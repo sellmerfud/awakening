@@ -2101,39 +2101,57 @@ object ForeverWarCards {
       }
       ,
       (role: Role, forTrigger: Boolean) => {
-        val (target, major) = if (role == game.humanRole) {
-          val majorCandidates = game.majorJihadTargets(2) // 2 Ops only
-          val minorCandidates = game.jihadTargets
-          val choices = List(
-            choice(majorCandidates.nonEmpty, "major", s"Major Jihad (${orList(majorCandidates)})"),
-            choice(minorCandidates.nonEmpty, "minor", s"Minor Jihad (${orList(minorCandidates)})")
-          ).flatten
-          askMenu("\nExecute which type of Jihad:", choices).head match {
-            case "major" => (askCountry("Major Jihad in which country: ", majorCandidates), true)
-            case _       => (askCountry("Minor Jihad in which country: ", minorCandidates), false)
+        val targets = if (role == game.humanRole) {
+          val jihadCountries = game.muslims filter (_.jihadOK)
+          val maxDice = 2 min jihadCountries.map (_.totalCells).sum
+          var candidates = countryNames(jihadCountries)
+
+          getHumanJihadTargets(maxDice, candidates)
+        }
+        else {  // Bot
+          if (goingUnderGroundBotMajorCandidates.nonEmpty) {
+            val name = JihadistBot.majorJihadTarget(goingUnderGroundBotMajorCandidates).get
+            List(JihadTarget(name, 2, 0, false, true))
+          }
+          else {
+            def nextTarget(opsLeft: Int, candidates: List[String], targets: Vector[JihadTarget]): Vector[JihadTarget] = {
+              if (opsLeft == 0 || candidates.isEmpty)
+                targets
+              else {
+                val name = JihadistBot.minorJihadTarget(candidates).get
+                val country = game.getCountry(name)
+                val active = opsLeft min country.activeCells
+                val sleeper = ((opsLeft - active) max 0) min country.sleeperCells
+                val target = JihadTarget(name, active, sleeper, false, false)
+                val remainingCandidates = candidates.filterNot(_ == name)
+                nextTarget(opsLeft - active - sleeper, remainingCandidates, targets :+ target)
+              }
+            }
+
+            nextTarget(2, goingUnderGroundBotMinorCandidates, Vector.empty).toList
           }
         }
-        else if (goingUnderGroundBotMajorCandidates.nonEmpty)
-          (JihadistBot.majorJihadTarget(goingUnderGroundBotMajorCandidates).get, true)
-        else
-          (JihadistBot.minorJihadTarget(goingUnderGroundBotMinorCandidates).get, false)
-        
-        
-        val numCells = game.getMuslim(target).totalCells min 2
-        val (actives, sleepers, sadr) = if (role == game.humanRole)
-          askCells(target, numCells, sleeperFocus = false)
-        else
-            JihadistBot.chooseCellsToRemove(target, numCells)
-        addEventTarget(target)
-        val jihadTarget       = JihadTarget(target, actives, sleepers, sadr, major)
-        val (_, successes, _) = performJihads(jihadTarget::Nil).head
-        
-        // Remaining cells that participated become sleepers
-        val successCells = successes - (if (sadr) 1 else 0)  // Sadr does not flip
-        
-        if (successCells > 0 && !game.isCaliphateMember(target)) {
+
+        for (t <- targets)
+          addEventTarget(t.name)
+
+        val results = performJihads(targets.toList)
+        val makeSleepers = results.exists { 
+          case (name, successes, false) => !game.isCaliphateMember(name) && successes > 0
+          case (name, successes, true)  => !game.isCaliphateMember(name) && successes > 1
+          case _ => false
+        }
+          
+        if (makeSleepers) {
           log("\nSuccessful participating cells become sleeper cells.")
-          hideActiveCells(target, successCells)
+          log(separator())
+          for ((name, successes, sadr) <- results) {
+            // Remaining cells that participated become sleepers
+            val successCells = successes - (if (sadr) 1 else 0)  // Sadr does not flip
+            
+            if (successCells > 0 && !game.isCaliphateMember(name))
+              hideActiveCells(name, successCells)
+          }
         }
       }
     )),
