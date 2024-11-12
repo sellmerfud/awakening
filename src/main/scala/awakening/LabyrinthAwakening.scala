@@ -6592,19 +6592,30 @@ object LabyrinthAwakening {
                  |  show <country>     - state of a single country""".stripMargin),
       Command("adjust",
               """|Adjust game settings  (Minimal rule checking is applied)
-                 |  adjust prestige      - US prestige level
-                 |  adjust posture       - US posture
-                 |  adjust funding       - Jihadist funding level
-                 |  adjust difficulty    - Jihadist ideology/US resolve
-                 |  adjust lapsing cards - Current lapsing cards
-                 |  adjust removed cards - Cards removed from the game
-                 |  adjust first plot    - Current first plot card
-                 |  adjust markers       - Current global event markers
-                 |  adjust reserves      - US and/or Jihadist reserves
-                 |  adjust plots         - Available/resolved plots
-                 |  adjust offmap troops - Number of troops in off map box
-                 |  adjust auto roll     - Auto roll for human operations
-                 |  adjust <country>     - Country specific settings""".stripMargin),
+                 |  adjust prestige         - US prestige level
+                 |  adjust posture          - US posture
+                 |  adjust funding          - Jihadist funding level
+                 |  adjust offmap troops    - Adjust the number of troops in the offmap box
+                 |  adjust difficulty       - Jihadist ideology/US resolve
+                 |  adjust lapsing cards    - Current lapsing cards
+                 |  adjust removed cards    - Cards removed from the game
+                 |  adjust first plot       - Current first plot card
+                 |  adjust markers          - Current global event markers
+                 |  adjust reserves         - US and/or Jihadist reserves
+                 |  adjust plots            - Available/resolved plots
+                 |  adjust resolved plot countries - countries where a plot was resolved
+                 |                                   in the last resolve plots phase
+                 |  adjust offmap troops    - Number of troops in off map box
+                 |  adjust color            - Toggle use of color in log ouput
+                 |                            (Does not work on Windows 10.0 or older)
+                 |  adjust exit after win   - Toggle whether the game will exit as soon
+                 |                            as one side has achieved victory
+                 |  adjust auto roll        - Auto roll for human operations
+                 |  adjust bot logging      - Toggle Bot debug logging on/off
+                 |  adjust bot enhancements - Toggle Bot enhancements on/off
+                 |                            (currently only implemented for Jihadist Bot)
+                 |  adjust manual die rolls - Toggle manual die rolls (for testing)
+                 |  adjust <country>        - Country specific settings""".stripMargin),
       Command("history",
               """|Display game history
                  |  history        - Shows the log starting from the most recent save point (Same as history -1)
