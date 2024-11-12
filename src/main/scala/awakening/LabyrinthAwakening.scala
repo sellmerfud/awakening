@@ -6016,8 +6016,31 @@ object LabyrinthAwakening {
     // special case code to ignore Civil War, Militia, etc.
     // "Surge"               -> Surge,
   )
-  val scenarioChoices = scenarios.toList map { case (key, scenario) => key -> scenario.name }
 
+  def askScenarioName() = {
+    val gameChoices = List(
+      Some(LabyrinthMode)  -> "Labyrinth: The War on Terror, 2001 - ?",
+      Some(AwakeningMode)  -> "Labyrinth The Awakening, 2010 - ?",
+      Some(ForeverWarMode) -> "Labyrinth The Forever War, 2015 - ?",
+      None                 -> "Quit"
+    )
+
+    val gameMode = askMenu("\nPlay a scenario from which game:", gameChoices, allowAbort = false).head match {
+      case Some(mode) => mode
+      case None   => throw ExitGame
+    }
+
+    val scenarioChoices = scenarios.toList
+      .filter(_._2.startingMode == gameMode)
+      .map { case (key, scenario) => key -> scenario.name }
+
+    val choices = scenarioChoices :+ ("quit" -> "Quit")
+
+    askMenu("\nChoose a scenario:", choices, allowAbort = false).head match {
+        case "quit"   => throw ExitGame
+        case scenario => scenario
+      }
+  }
   // Case sensitive
   def isValidScenario(name: String) = scenarios contains name
 
@@ -6077,16 +6100,11 @@ object LabyrinthAwakening {
             printSummary(game.playSummary)
 
           case None => // Start a new game
-            println()
-            val scenarioName = cmdLineParams.scenarioName orElse
-                               configParams.scenarioName getOrElse {
-              // prompt for scenario
-              val choices = scenarioChoices :+ ("quit" -> "Quit")
-              askMenu("Choose a scenario:", choices, allowAbort = false).head match {
-                case "quit"   => throw ExitGame
-                case scenario => scenario
-              }
-            }
+            val scenarioName =
+              cmdLineParams.scenarioName orElse
+              configParams.scenarioName getOrElse
+              askScenarioName()
+
             val scenario = scenarios(scenarioName)
             //  campaign always false when starting with a scenario in the
             //  latest expansion
@@ -6126,7 +6144,7 @@ object LabyrinthAwakening {
               configParams.usBotDifficulties getOrElse askDifficulties(US)
             val humanAutoRoll = cmdLineParams.autoDice orElse
                                 configParams.autoDice getOrElse
-                                !askYorN("Do you wish to roll your own dice (y/n)? ")
+                                !askYorN("\nDo you wish to roll your own dice (y/n)? ")
 
             val exitAfterWin = cmdLineParams.exitAfterWin orElse
                                configParams.exitAfterWin getOrElse askExitAfterWin()
