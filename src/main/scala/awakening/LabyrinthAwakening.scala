@@ -2942,15 +2942,17 @@ object LabyrinthAwakening {
         log("No convergence performed because \"Arab Winter\" is in effect", Color.Info)
       else {
         val target = randomConvergenceTarget.name
-        testCountry(target)
         val m = game getMuslim target
+        log(s"\nConvergence for ${forCountry} takes place in ${target}")
+        log(separator())
+        testCountry(target)
         if (awakening) {
           game = game.updateCountry(m.copy(awakening = m.awakening + 1))
-          log(s"Convergence for ${forCountry}: Add 1 awakening marker to ${target}", Color.MapPieces)
+          log(s"Add 1 awakening marker to ${target}", Color.MapPieces)
         }
         else {
           game = game.updateCountry(m.copy(reaction = m.reaction + 1))
-          log(s"Convergence for ${forCountry}: Add 1 reaction marker to ${target}", Color.MapPieces)
+          log(s"Add 1 reaction marker to ${target}", Color.MapPieces)
         }
       }
     }

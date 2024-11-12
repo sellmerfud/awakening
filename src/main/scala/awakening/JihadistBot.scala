@@ -598,9 +598,10 @@ object JihadistBot extends BotHelpers {
       case _ => false
     }
     // The bot will never travel a SLEEPER cell within the same country
+    // The Enhanced Bot never travels cells within the same country.
     def wouldMoveOrTravelWithinToSleep(c: Country) =
-      c.name != toCountry ||
-      (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
+      !game.botEnhancements &&
+      (c.name != toCountry || (activeCells(c) > 0 && !game.isCaliphateMember(c.name)))
 
     botLog("Find \"Travel From\" target")
     val flowchart = List(
@@ -948,12 +949,17 @@ object JihadistBot extends BotHelpers {
       throw new IllegalStateException(s"JihadistBot.chooseTroopOrMilitiaToRemove($name) not units present")
   }
 
+  // Enhanced Bot
+  // The Bot will declare the Caliphate if results in an auto win or
+  // if country is not at Fair governance.
+  //
+  // Normal Bot
   // The Bot will declare the Caliphate if it results in an auto win,
   // or if there is at least one other adjacent country that qualifies to be part
   // of the Caliphate.
-  // For botEnhancements, the adjacency requirement is not used.
   def willDeclareCaliphate(capital: String): Boolean = if (game.botEnhancements)
-    canDeclareCaliphate(capital)
+    canDeclareCaliphate(capital) &&
+    (game.islamistResources == 5 || !game.getCountry(capital).isFair)
   else
     canDeclareCaliphate(capital) &&
     (game.islamistResources == 5 || game.caliphateDaisyChain(capital).size > 1)
