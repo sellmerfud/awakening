@@ -600,8 +600,8 @@ object JihadistBot extends BotHelpers {
     // The bot will never travel a SLEEPER cell within the same country
     // The Enhanced Bot never travels cells within the same country.
     def wouldMoveOrTravelWithinToSleep(c: Country) =
-      !game.botEnhancements &&
-      (c.name != toCountry || (activeCells(c) > 0 && !game.isCaliphateMember(c.name)))
+      c.name != toCountry ||
+      (!game.botEnhancements && activeCells(c) > 0 && !game.isCaliphateMember(c.name))
 
     botLog("Find \"Travel From\" target")
     val flowchart = List(
