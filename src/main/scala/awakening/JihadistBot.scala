@@ -415,15 +415,6 @@ object JihadistBot extends BotHelpers {
   else
     shuffle(plots)
 
-  val TightPlotFlowchart = List(
-    PoorNonMuslimFilter, FairNonMuslimFilter, GoodNonMuslimFilter)
-
-  val OtherPlotFlowchart = if (game.botEnhancements)
-    List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter, PoorMuslimFilter, NonMuslimFilter)
-  else
-    List(PoorTroopsActiveCellsFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter, PoorMuslimFilter)
-
-
   def plotPriorities: List[CountryFilter] =
     game.currentMode match {
       case LabyrinthMode if game.botEnhancements =>
@@ -469,11 +460,24 @@ object JihadistBot extends BotHelpers {
              LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
     }
 
-  def plotTarget(names: List[String]): Option[String] = {
-    val flowchart = if (game.fundingLevel == Tight)
-      TightPlotFlowchart ::: OtherPlotFlowchart
-    else
-      OtherPlotFlowchart
+  def plotTarget(names: List[String], prestigeFocus: Boolean): Option[String] = {
+    val flowchart = if (game.botEnhancements) {
+      // The enhanced Bot does not care about the funding tight decision
+      // And if the focus is on hammering US prestige then the final two priorities
+      // for Poor Muslim and Non-Muslim are ignored
+      if (prestigeFocus)
+        List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter)
+      else
+        List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter, PoorMuslimFilter, NonMuslimFilter)
+    }
+    else {        
+      if (game.fundingLevel == Tight)
+        List(PoorNonMuslimFilter, FairNonMuslimFilter, GoodNonMuslimFilter,
+             PoorTroopsActiveCellsFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter, PoorMuslimFilter)
+      else
+        List(PoorTroopsActiveCellsFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter, PoorMuslimFilter)
+    }
+
     botLog("Find \"Plot\" target")
     val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, plotPriorities) map (_.name)
@@ -669,12 +673,13 @@ object JihadistBot extends BotHelpers {
     botRecruitTargets(muslimWithCadreOnly).nonEmpty
 
   // Jihadist Operations Flowchart definitions.
-  sealed trait Operation extends OpFlowchartNode
-  case object RecruitOp    extends Operation
-  case object TravelOp     extends Operation
-  case object PlotOp       extends Operation
-  case object MinorJihadOp extends Operation
-  case object MajorJihadOp extends Operation
+  sealed trait Operation     extends OpFlowchartNode
+  case object RecruitOp      extends Operation
+  case object TravelOp       extends Operation
+  case object PlotOpFunding  extends Operation // plot with focus on raising funding
+  case object PlotOpPrestige extends Operation // plot with focus on hammering US prestige
+  case object MinorJihadOp   extends Operation
+  case object MajorJihadOp   extends Operation
 
   // This is the starting point of the Operations Flowchart
   object MajorJihadDecision extends OperationDecision {
@@ -698,7 +703,7 @@ object JihadistBot extends BotHelpers {
   object CellAvailableOrPlotDecision extends OperationDecision {
     val desc = "Cells Available?"
     def yesPath = RecruitOp
-    def noPath  = PlotOp
+    def noPath  = PlotOpFunding
     def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
   }
 
@@ -758,7 +763,7 @@ object JihadistBot extends BotHelpers {
 
   object PrestigeOver1AndActiveCellWithTroopsDecision extends OperationDecision {
     val desc = "Prestige > 1 and Active cell with Troops?"
-    def yesPath = PlotOp
+    def yesPath = PlotOpPrestige
     def noPath  = CellAvailableOrCellInNonMuslimDecision
     def condition(ops: Int) =
       game.prestige > 1 &&
@@ -768,7 +773,7 @@ object JihadistBot extends BotHelpers {
   // This is used by botEnhacements
   object PrestigeOver3AndActiveCellWithTroopsDecision extends OperationDecision {
     val desc = "Prestige > 3 and cell(s) with Troops?"
-    def yesPath = PlotOp
+    def yesPath = PlotOpPrestige
     def noPath  = FundingModerateDecision
     def condition(ops: Int) =
       game.prestige > 3 &&
@@ -784,7 +789,7 @@ object JihadistBot extends BotHelpers {
 
   object CellInNonMuslim extends OperationDecision {
     val desc = "Cell in non-Muslim?"
-    def yesPath = PlotOp
+    def yesPath = PlotOpFunding
     def noPath  = TravelOp
     def condition(ops: Int) = game hasNonMuslim (totalUnused(_) > 0)
   }
@@ -1091,11 +1096,12 @@ object JihadistBot extends BotHelpers {
       }
       else {
         val opsUsed = operationsFlowchart(maxOpsPlusReserves(card)) match {
-          case RecruitOp    => recruitOperation(card)
-          case TravelOp     => travelOperation(card)
-          case PlotOp       => plotOperation(card)
-          case MinorJihadOp => minorJihadOperation(card)
-          case MajorJihadOp => majorJihadOperation(card)
+          case RecruitOp      => recruitOperation(card)
+          case TravelOp       => travelOperation(card)
+          case PlotOpFunding  => plotOperation(card, prestigeFocus = false)
+          case PlotOpPrestige => plotOperation(card, prestigeFocus = true)
+          case MinorJihadOp   => minorJihadOperation(card)
+          case MajorJihadOp   => majorJihadOperation(card)
         }
         radicalization(card, opsUsed)
       }
@@ -1319,7 +1325,7 @@ object JihadistBot extends BotHelpers {
   }
 
   // Returns the number of Ops used.
-  def plotOperation(card: Card): Int = {
+  def plotOperation(card: Card, prestigeFocus: Boolean): Int = {
     val maxCells = (game.plotTargets map game.getCountry map unusedCells).sum
     val maxAttempts = maxOpsPlusReserves(card) min maxCells
     log()
@@ -1339,7 +1345,7 @@ object JihadistBot extends BotHelpers {
                                         !(game getMuslim c.name).isIslamistRule
                                       )
         val candidates = countryNames(game.countries filter canPlot)
-        plotTarget(candidates) match {
+        plotTarget(candidates, prestigeFocus) match {
           case None => completed
           case Some(name) =>
             val c = game getCountry name
