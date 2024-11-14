@@ -1452,7 +1452,7 @@ object JihadistBot extends BotHelpers {
 
   // For botEnhancements if there are no Poor Muslim with 1-4 more cells than TandM
   // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
-  // then attempt to travel cells there.
+  // and there are not troops/militia preent, then attempt to travel cells there.
   def radTravelToPoorMuslimCandidates(): List[String] = {
     val condition = (m: MuslimCountry) =>
       poorMuslimWhereMajorJihadPossible(m)  &&
@@ -1532,7 +1532,7 @@ object JihadistBot extends BotHelpers {
       log()
       log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")}")
       if (maxReserves > 0)
-        log(s"(Can add up to ${amountOf(maxReserves,"reserve")})")
+        log(s"(Can add up to ${amountOf(maxReserves,"Op")} from reserve)")
       log(separator())
 
       // Returns the number of actions executed
@@ -1688,34 +1688,30 @@ object JihadistBot extends BotHelpers {
   }
 
   // Used only when botEnhancements in effect.
+  // If there are no Countries where Major JSP and 1-4 more cells that TandM,
+  // but there are countries where Major JSP and NOT 1-4 more cells than TandM,
+  // travel 1 cell to the highest priority of those.
   def radTravelToPoorMuslimWhereMajorJSP(cardOps: Int, reserveOps: Int): Int = {
-
-    log()
-    log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
-    log("                and there are no Troops or Militia present")
-
-    val maxOps = cardOps + reserveOps
-
-    def nextTravel(completed: Int): Int = {
-      val candidates = radTravelToPoorMuslimCandidates()
-      if (completed == maxOps || candidates.isEmpty)
-        completed
-      else {
+    val candidates = radTravelToPoorMuslimCandidates()
+    // This should always succeed because it has been vetted, but check
+    // just to be safe.
+    if (candidates.nonEmpty) {
         // We  have vetted the candidates to ensure that there is a cell that can make
         // the trip in radTravelToPoorMuslimCandidates() so we can safely call #get
         // for the Option return with both target and source
         val target = majorJihadTarget(candidates).get
         val source = travelFromTarget(target, countryNames(game.countries.filterNot(_.name == target))).get
         val attempt = TravelAttempt(source, target, activeCells(game.getCountry(source)) > 0)
-        performTravels(attempt::Nil) match {
-          case (_, true)::Nil => usedCells(target).addSleepers(1)
-          case _ =>
-        }
-        nextTravel(completed + 1)
-      }
+        log()
+        log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
+        log("                and there are no Troops or Militia present")
+        val (_, success) = performTravels(attempt::Nil)
+        if (success)
+          usedCells(target).addSleepers(1)
+        1  // Used one OP
     }
-
-    nextTravel(0)
+    else
+      0  // Used zero ops
   }
 
   // Recruit in the Muslim county with a cadre that has the best
