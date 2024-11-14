@@ -157,9 +157,13 @@ object ForeverWarCards {
     game.getNonMuslims(Schengen).filter(_.isHard)
   )
   
-  def amaqNewsAgencyCandidates = countryNames(
-    game.countries.filter(c => c.totalCells == 0 && c.hasCadre == false)
-  )
+  def botAmaqNewsAgencyCandidates = {
+    val test = if (game.botEnhancements)
+      (c: Country) => !c.hasCadre && c.totalCells == 0 && !JihadistBot.isCadreRemovalCandidate(c)
+    else
+      (c: Country) => !c.hasCadre && c.totalCells == 0
+    countryNames(game.countries.filter(test))
+  }
   
   val attemptedCoupCondition = (m: MuslimCountry) =>
     m.totalCells >= 2 &&
@@ -1898,7 +1902,10 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(292, "Amaq News Agency", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => amaqNewsAgencyCandidates.nonEmpty
+      (role: Role, forTrigger: Boolean) =>
+        role == game.humanRole ||
+        forTrigger ||
+        botAmaqNewsAgencyCandidates.nonEmpty
       ,
       (role: Role, forTrigger: Boolean) => {
         val numCadres = if (role == game.humanRole)
@@ -1918,8 +1925,27 @@ object ForeverWarCards {
             addCadreToCountry(target)
             nextCadre(num + 1, candidates filterNot (_ == target))
           }
-        
-        nextCadre(1, amaqNewsAgencyCandidates)
+
+        val botCriteria = List(
+          new JihadistBot.CriteriaFilter("No Cadre present", _.hasCadre == false),
+          new JihadistBot.CriteriaFilter("No cells present", _.totalCells == 0)
+        )
+        val candidates = (role == game.botRole, botAmaqNewsAgencyCandidates) match {
+          case (false, _) =>
+            // All countries in play for Human
+            countryNames(game.countries)
+
+          case (true, Nil) => countryNames(game.countries)
+          // When Bot was triggered and no prefereable countries
+          // exist, then select from all countries
+            countryNames(JihadistBot.selectCandidates(game.countries, botCriteria))
+
+          case (true, botCandidates) =>
+            // Use preferred Bot countries
+            botCandidates
+        }
+          
+        nextCadre(1, candidates)
       }
     )),
     // ------------------------------------------------------------------------

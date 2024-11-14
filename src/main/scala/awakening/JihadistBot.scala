@@ -974,6 +974,31 @@ object JihadistBot extends BotHelpers {
     canDeclareCaliphate(capital) &&
     (game.islamistResources == 5 || game.caliphateDaisyChain(capital).size > 1)
 
+  // Note: this does not test for presence of a cadre, because
+  // some events want do know where to NOT place a cadre that will
+  // then be removed.
+  val isCadreRemovalCandidate = (country: Country) => {
+      val WireTapping = Set(UnitedStates, UnitedKingdom, Canada)
+      country match {
+        case m: MuslimCountry =>
+          (m.isGood || m.isFair) && !m.autoRecruit
+
+        case n: NonMuslimCountry if game.startingMode == LabyrinthMode =>
+          n.name match {
+            case Philippines =>
+              true
+            case name if WireTapping(name) && globalEventNotInPlay(LeakWiretapping) =>
+              true
+            case _ =>
+              false
+          }
+
+        case _ =>
+          false
+      }
+
+  }
+
   // Enhance bot rule:
   // The Jihadist Bot will voluntarily remove cadres
   // to make it harder for the US player to disrupt for
@@ -1006,7 +1031,7 @@ object JihadistBot extends BotHelpers {
       }
     }
 
-    game.countries.filter(isCandidate) match {
+    game.countries.filter(c=> c.hasCadre && isCadreRemovalCandidate(c)) match {
       case Nil =>
       case candidates =>
         log(s"\nThe $Jihadist Bot chooses to voluntarily remove ${amountOf(candidates.size, "cadre")}", Color.Info)
@@ -1705,7 +1730,7 @@ object JihadistBot extends BotHelpers {
         log()
         log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
         log("                and there are no Troops or Militia present")
-        val (_, success) = performTravels(attempt::Nil)
+        val (_, success) = performTravels(attempt::Nil).head
         if (success)
           usedCells(target).addSleepers(1)
         1  // Used one OP
