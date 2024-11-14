@@ -1727,19 +1727,41 @@ object JihadistBot extends BotHelpers {
     // This should always succeed because it has been vetted, but check
     // just to be safe.
     if (candidates.nonEmpty) {
-        // We  have vetted the candidates to ensure that there is a cell that can make
-        // the trip in radTravelToPoorMuslimCandidates() so we can safely call #get
-        // for the Option return with both target and source
+        val maxOps = cardOps + reserveOps
         val target = majorJihadTarget(candidates).get
-        val source = travelFromTarget(target, countryNames(game.countries.filterNot(_.name == target))).get
-        val attempt = TravelAttempt(source, target, activeCells(game.getCountry(source)) > 0)
+
+        // Returns (numAttempts, success)
+        def nextAttempt(numAttempts: Int): (Int, Boolean) = {
+          if (numAttempts == maxOps)
+            (numAttempts, false)  // No more Ops
+          else {
+            travelFromTarget(target, countryNames(game.countries.filterNot(_.name == target))) match {
+              case None => (numAttempts, false)  // No more cells
+              case Some(source) =>
+                val attempt = TravelAttempt(source, target, activeCells(game.getCountry(source)) > 0)
+                val (_, success) = performTravels(attempt::Nil).head
+                if (success)
+                  (numAttempts + 1, true)  // Success
+                else
+                  nextAttempt(numAttempts + 1)  // Try again
+            }
+          }
+        }
+
         log()
         log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
         log("                and there are no Troops or Militia present")
-        val (_, success) = performTravels(attempt::Nil).head
+
+        // Make travel attempts until one of the following:
+        // - We run out of Ops
+        // - We get a successfull attempt
+        // - We run out of cells to make the attempt
+        val (numAttempts, success) = nextAttempt(0)
+        expendBotReserves(numAttempts - cardOps)
         if (success)
           usedCells(target).addSleepers(1)
-        1  // Used one OP
+
+        numAttempts
     }
     else
       0  // Used zero ops
