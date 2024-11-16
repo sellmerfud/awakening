@@ -470,7 +470,7 @@ object JihadistBot extends BotHelpers {
       else
         List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter, PoorMuslimFilter, NonMuslimFilter)
     }
-    else {        
+    else {
       if (game.fundingLevel == Tight)
         List(PoorNonMuslimFilter, FairNonMuslimFilter, GoodNonMuslimFilter,
              PoorTroopsActiveCellsFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter, PoorMuslimFilter)
@@ -844,7 +844,7 @@ object JihadistBot extends BotHelpers {
            HighestResourcePriority,
            // Ths No Troops is on the event card but does not make sense to me
            // since the troop would be removed when the country becomes unmarked?
-           new CriteriaFilter("No Troops", muslimTest(m => m.totalTroops == 0))) 
+           new CriteriaFilter("No Troops", muslimTest(m => m.totalTroops == 0)))
 
     botLog("Find \"Change of State\" target")
     val candidates = game.getCountries(names)
@@ -1103,7 +1103,9 @@ object JihadistBot extends BotHelpers {
           case MinorJihadOp   => minorJihadOperation(card)
           case MajorJihadOp   => majorJihadOperation(card)
         }
-        radicalization(card, opsUsed)
+
+        if (opsUsed < card.ops)
+          radicalization(card, opsUsed)
       }
     }
   }
@@ -1471,15 +1473,431 @@ object JihadistBot extends BotHelpers {
   }
 
 
-  sealed trait RadicalizationAction
-  case object PlotWMDInUS                     extends RadicalizationAction
-  case object TravelToUntestedNonMuslim       extends RadicalizationAction
-  case object PlotInSoftMuslim                extends RadicalizationAction
-  case object TravelToPoorMuslimWhereMajorJSP extends RadicalizationAction
-  case object RecruitAtMuslimCadre            extends RadicalizationAction
-  case object AddToReserves                   extends RadicalizationAction
-  case object Recruit                         extends RadicalizationAction
-  case object TravelToUS                      extends RadicalizationAction
+  sealed trait RadicalizationAction {
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean
+    def perform(cardOps: Int, reserveOps: Int): Int  // Returns number of Ops used
+  }
+
+  // -----------------------------------------------------------
+  // Radicalization Action -  Plot WMD In US
+  case object PlotWMDInUS extends RadicalizationAction {
+    override
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+      game.availablePlots.contains(PlotWMD) &&
+      totalUnused(game getCountry UnitedStates) > 0
+    }
+
+    // Plot as many time as possible in the US as long as there are
+    // unused cells there.
+    // cardsOps   - The number of unused Ops remaining from the card
+    // reserveOps - The number of unused Ops remaining from reserves
+    // Returns the number of ops used
+    override
+    def perform(cardOps: Int, reserveOps: Int): Int = {
+      log()
+      log(s"Radicalization: Plot in the United States")
+      val maxOps = cardOps + reserveOps
+      def nextAttempt(completed: Int): Int = {
+        val us = game getCountry UnitedStates
+        if (completed == maxOps || totalUnused(us) == 0 || game.availablePlots.isEmpty)
+        completed
+        else {
+          if (completed >= cardOps)
+            expendBotReserves(1)
+            addOpsTarget(UnitedStates)
+            performPlots(3, PlotAttempt(UnitedStates, activeCells(us) > 0)::Nil)
+            usedCells(UnitedStates).addActives(1)
+            nextAttempt(completed + 1)
+          }
+        }
+        nextAttempt(0)
+      }
+    }
+
+    // -----------------------------------------------------------
+    // Radicalization Action -  Travel to untested Muslim country
+    case object TravelToUntestedNonMuslim extends RadicalizationAction {
+      override
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+      game.usPosture == Hard        &&
+      game.gwotPenalty == 0         &&
+      unusedCellsOnMapForTravel > 0 &&
+      game.hasNonMuslim(_.isUntested)
+    }
+
+    // Travel to Untested non-Muslim countries while the US is Hard to
+    // try and increase the GWOT penalty.
+    // We give preference to cells in adjacent countries to avoid die rolls
+    // when necessary.
+    // cardsOps   - The number of unused Ops remaining from the card
+    // reserveOps - The number of unused Ops remaining from reserves
+    // Returns the number of ops used
+    override
+    def perform(cardOps: Int, reserveOps: Int): Int = {
+      log()
+      log(s"Radicalization: Travel to Untested non-Muslim countries")
+      val maxOps = cardOps + reserveOps
+      def createTravelAttempt(from: String, to: String): TravelAttempt = {
+        TravelAttempt(from, to, activeCells(game getCountry from) > 0)
+      }
+      // Create the next highest priority travel attempt.  Max of one per destination.
+      def nextTravel(completed: Int, destinations: List[String]): Int = {
+        val sources = countryNames(game.countries filter hasCellForTravel)
+        if (completed == maxOps || destinations.isEmpty || sources.isEmpty)
+          completed
+        else {
+          // First we try to do adjacent travel so that it will automatically succeed.
+          val adjSources = sources filter (s => destinations exists (d => areAdjacent(s, d)))
+          if (adjSources.nonEmpty) {
+            // Now pick just the destinations that are adjacent to one of the sources
+            val adjDests = destinations filter (d => adjSources exists (s => areAdjacent(s, d)))
+            val to = recruitTravelToPriority(adjDests).get
+            // Don't allow travel within the same country
+            travelFromTarget(to, adjSources filterNot (_ == to)) match {
+              case None => nextTravel(completed, destinations filterNot (_ == to))
+              case Some(from) =>
+                if (completed >= cardOps)
+                  expendBotReserves(1)
+                performTravels(createTravelAttempt(from, to)::Nil) match {
+                  case (_, true)::Nil => usedCells(to).addSleepers(1)
+                  case _ =>
+                }
+                nextTravel(completed + 1, destinations filterNot (_ == to))
+            }
+          }
+          else if (lapsingEventInPlay(Biometrics)) // Non adjacent travel is not allowd
+            completed
+          else {
+          val to = recruitTravelToPriority(destinations).get
+          // Don't allow travel within the same country
+          travelFromTarget(to, sources filterNot (_ == to)) match {
+            case None => nextTravel(completed, destinations filterNot (_ == to))
+            case Some(from) =>
+                if (completed >= cardOps)
+                expendBotReserves(1)
+                performTravels(createTravelAttempt(from, to)::Nil) match {
+                  case (_, true)::Nil => usedCells(to).addSleepers(1)
+                  case _ =>
+                }
+                nextTravel(completed + 1, destinations filterNot (_ == to))
+          }
+          }
+        }
+      }
+      nextTravel(0, countryNames(game.nonMuslims filter (_.isUntested)))
+    }
+  }
+
+  // -----------------------------------------------------------
+  // Radicalization Action -  Plot in Soft Muslim
+  case object PlotInSoftMuslim extends RadicalizationAction {
+    override
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+      !game.botEnhancements &&
+      game.usPosture == Soft &&
+      game.gwotPenalty == 0  &&
+      game.availablePlots.nonEmpty &&
+      game.hasNonMuslim(n => n.isSoft && totalUnused(n) > 0)
+    }
+
+    // Plot in Soft non-Muslim countries while the US posture is Soft to
+    // try and increase the GWOT penalty.
+    // cardsOps   - The number of unused Ops remaining from the card
+    // reserveOps - The number of unused Ops remaining from reserves
+    // Returns the number of ops used
+    override
+    def perform(cardOps: Int, reserveOps: Int): Int = {
+      log()
+      log(s"Radicalization: Plot in Soft non-Muslim countries")
+      val maxOps = cardOps + reserveOps
+      def nextPlotTarget(completed: Int, candidates: List[NonMuslimCountry]): Int = {
+        if (completed == maxOps || candidates.isEmpty || game.availablePlots.isEmpty)
+          completed
+        else {
+          // Give preference to countries with the worst governance
+          // as they will have the highest chance of a successful plot.
+          // Within those we use the plot priorities to select the best one.
+          val softs = {
+            val ss = candidates sortBy (n => -n.governance) // sort so worst comes first
+            ss takeWhile (_.governance == ss.head.governance)
+          }
+          val target = topPriority(softs, plotPriorities).get
+
+          def nextAttempt(plotsPerformed: Int): Int = {
+            if (completed + plotsPerformed == maxOps || totalUnused(target) == 0 || game.availablePlots.isEmpty)
+              plotsPerformed
+            else {
+              if (completed + plotsPerformed >= cardOps)
+                expendBotReserves(1)
+
+              addOpsTarget(target.name)
+              performPlots(3, PlotAttempt(target.name, activeCells(target) > 0)::Nil)
+              usedCells(target.name).addActives(1)
+              nextAttempt(plotsPerformed + 1)
+            }
+          }
+          val numPlots = nextAttempt(0)
+          nextPlotTarget(completed + numPlots, candidates filterNot (_.name == target.name))
+        }
+      }
+      nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && totalUnused(n) > 0))
+    }
+  }
+
+  // -----------------------------------------------------------
+  // Radicalization Action -  Plot in Soft Muslim
+  //
+  // For botEnhancements only, if there are no Poor Muslim with 1-4 more cells than TandM
+  // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
+  // and no TandM, then attempt to travel cells there.
+  case object TravelToPoorMuslimWhereMajorJSP extends RadicalizationAction {
+    override
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+      game.botEnhancements &&
+      radTravelToPoorMuslimCandidates().nonEmpty
+    }
+
+    // Used only when botEnhancements in effect.
+    // If there are no Countries where Major JSP and 1-4 more cells that TandM,
+    // but there are countries where Major JSP and NOT 1-4 more cells than TandM,
+    // travel 1 cell to the highest priority of those.
+    override
+    def perform(cardOps: Int, reserveOps: Int): Int = {
+      val candidates = radTravelToPoorMuslimCandidates()
+      // This should always succeed because it has been vetted, but check
+      // just to be safe.
+      if (candidates.nonEmpty) {
+          val maxOps = cardOps + reserveOps
+          val target = majorJihadTarget(candidates).get
+
+          // Returns (numAttempts, success)
+          def nextAttempt(numAttempts: Int): (Int, Boolean) = {
+            if (numAttempts == maxOps)
+              (numAttempts, false)  // No more Ops
+            else {
+              travelFromTarget(target, countryNames(game.countries.filterNot(_.name == target))) match {
+                case None => (numAttempts, false)  // No more cells
+                case Some(source) =>
+                  val attempt = TravelAttempt(source, target, activeCells(game.getCountry(source)) > 0)
+                  val (_, success) = performTravels(attempt::Nil).head
+                  if (success)
+                    (numAttempts + 1, true)  // Success
+                  else
+                    nextAttempt(numAttempts + 1)  // Try again
+              }
+            }
+          }
+
+          log()
+          log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
+          log("                and there are no Troops or Militia present")
+
+          // Make travel attempts until one of the following:
+          // - We run out of Ops
+          // - We get a successfull attempt
+          // - We run out of cells to make the attempt
+          val (numAttempts, success) = nextAttempt(0)
+          expendBotReserves(numAttempts - cardOps)
+          if (success)
+            usedCells(target).addSleepers(1)
+
+          numAttempts
+      }
+      else
+        0
+    }
+  }
+
+
+  // -----------------------------------------------------------
+  // Radicalization Action -  Recruit at Muslim country with Cadre
+  case object RecruitAtMuslimCadre extends RadicalizationAction {
+    override
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+      // I'm allowing recruit in IR countries, not sure if that is the intent?
+      botRecruitPossible(muslimWithCadreOnly = true)
+    }
+
+    // Recruit in the Muslim county with a cadre that has the best
+    // Jihad DRM.
+    // cardsOps   - The number of unused Ops remaining from the card
+    // reserveOps - The number of unused Ops remaining from reserves
+    // Returns the number of ops used
+    override
+    def perform(cardOps: Int, reserveOps: Int): Int = {
+      log()
+      log(s"Radicalization: Recruit in a Muslim country with a cadre")
+      val maxOps     = cardOps + reserveOps
+      val candidates = game.getMuslims(botRecruitTargets(muslimWithCadreOnly = true)).sortBy(m => jihadDRM(m, m.isPoor))
+      val target     = recruitTarget(candidates map (_.name)).get
+      addOpsTarget(target)
+      val m = game getMuslim target
+      def nextAttempt(completed: Int): Int = {
+        if (completed == maxOps || game.cellsToRecruit == 0)
+          completed
+        else {
+          if (completed >= cardOps)
+            expendBotReserves(1)
+          log(s"\n$Jihadist attempts to recruit a cell into $target")
+          if (m.autoRecruit) {
+            log(s"Recruit is automatically successful in $target")
+            addSleeperCellsToCountry(target, 1)
+            usedCells(target).addSleepers(1)
+          }
+          else {
+            val die = getDieRoll(s"Enter die roll for recruit in $target: ")
+            val success = m.recruitSucceeds(die)
+            val result  = if (success) "succeeds" else "fails"
+            log(s"Recruit $result in $target with a roll of $die")
+            if (success) {
+              val numCells = if (game.jihadistIdeology(Potent)) {
+                log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+                2 min game.cellsToRecruit
+              }
+              else
+                1
+
+              addSleeperCellsToCountry(target, numCells)
+              usedCells(target).addSleepers(numCells)
+            }
+          }
+          nextAttempt(completed + 1)
+        }
+      }
+      nextAttempt(0)
+    }
+  }
+
+
+  // -----------------------------------------------------------
+  // Radicalization Action -  Add surplus card Ops to reserves
+  case object AddToReserves extends RadicalizationAction {
+    override
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+      !onlyReserveOpsRemain &&
+      game.reserves.jihadist < 2
+    }
+
+    // cardsOps - The number of unused Ops remaining from the card
+    // Add any remaining card ops to reserves until reserves are full.
+    // Returns the number of ops added
+    override
+    def perform(cardOps: Int, reserveOps: Int): Int = {
+      log()
+      log(s"Radicalization: Add to reserves")
+      val opsAdded = cardOps min (2 - game.reserves.jihadist)
+      addToReserves(Jihadist, opsAdded)
+      opsAdded
+    }
+  }
+
+  // -----------------------------------------------------------
+  // Radicalization Action -  Recruit cells (cannot use reserve Ops)
+  case object Recruit extends RadicalizationAction {
+    override
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+      !onlyReserveOpsRemain &&
+      botRecruitPossible(muslimWithCadreOnly = false)
+    }
+
+    // Perform a recruit operation.  Do not use any reserves.
+    // cardsOps - The number of unused Ops remaining from the card
+    // Returns the number of ops used
+    override
+    def perform(cardOps: Int, reserveOps: Int): Int = {
+      log()
+      log(s"Radicalization: Recruit")
+      val target = recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
+      addOpsTarget(target)
+      val m = game getMuslim target
+      def nextAttempt(completed: Int): Int = {
+        if (completed == cardOps || game.cellsToRecruit == 0)
+          completed
+        else {
+          log(s"$Jihadist attempts to recruit a cell into $target")
+          if (m.autoRecruit) {
+            log(s"Recruit is automatically successful in $target")
+            addSleeperCellsToCountry(target, 1)
+            usedCells(target).addSleepers(1)
+          }
+          else {
+            val die = getDieRoll(s"Enter die roll for recruit in $target: ")
+            val success = m.recruitSucceeds(die)
+            val result  = if (success) "succeeds" else "fails"
+            log(s"Recruit $result in $target with a roll of $die")
+            if (success) {
+              val numCells = if (game.jihadistIdeology(Potent)) {
+                log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+                2 min game.cellsToRecruit
+              }
+              else
+                1
+              addSleeperCellsToCountry(target, numCells)
+              usedCells(target).addSleepers(numCells)
+            }
+          }
+          nextAttempt(completed + 1)
+        }
+      }
+      nextAttempt(0)
+    }
+  }
+
+  // -----------------------------------------------------------
+  // Radicalization Action -  Travel cells to the US (cannot use reserve Ops)
+  case object TravelToUS extends RadicalizationAction {
+    override
+    def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+      !onlyReserveOpsRemain &&
+      unusedCellsOnMapForTravel > 0
+    }
+
+    // Travel to the US. (From adjacent if possible). Do not use reserves.
+    // Perform a recruit operation.  Do not use any reserves.
+    // Returns the number of ops used
+    override
+    def perform(cardOps: Int, reserveOps: Int): Int = {
+      log()
+      log(s"Radicalization: Travel to the United States")
+
+      def createTravelAttempt(from: String): TravelAttempt = {
+        TravelAttempt(from, UnitedStates, activeCells(game getCountry from) > 0)
+      }
+
+      def nextTravel(completed: Int): Int = {
+        val sources = countryNames(game.countries filter (c => c.name != UnitedStates && hasCellForTravel(c)))
+        if (completed == cardOps || sources.isEmpty)
+          completed
+        else {
+          // First we try to do adjacent travel so that it will automatically succeed.
+          val adjSources = sources filter (s => areAdjacent(s, UnitedStates))
+          if (adjSources.nonEmpty) {
+            travelFromTarget(UnitedStates, adjSources) match {
+              case None => completed  // No more source countries
+              case Some(from) =>
+                performTravels(createTravelAttempt(from)::Nil) match {
+                  case (_, true)::Nil => usedCells(UnitedStates).addSleepers(1)
+                  case _ =>
+                }
+                nextTravel(completed + 1)
+            }
+          }
+          else {
+          travelFromTarget(UnitedStates, sources) match {
+            case None => completed   // No more source countries
+            case Some(from) =>
+              performTravels(createTravelAttempt(from)::Nil) match {
+                case (_, true)::Nil => usedCells(UnitedStates).addSleepers(1)
+                case _ =>
+              }
+              nextTravel(completed + 1)
+          }
+          }
+        }
+      }
+      nextTravel(0)
+    }
+  }
 
   // For botEnhancements if there are no Poor Muslim with 1-4 more cells than TandM
   // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
@@ -1501,50 +1919,6 @@ object JihadistBot extends BotHelpers {
         .map(_.name)
   }
 
-  // The requiresReserves parameter indicates, that all of the Ops on the played
-  // card have been used, and any further actions will require the use of reserves.
-  // The AddToReserves, Recruit, and TravelToUS action cannot use reserves.
-  def getRadicalizationAction(requiresReserves: Boolean): Option[RadicalizationAction] = {
-    val canPlotWMDInUs = (game.availablePlots contains PlotWMD) &&
-                         totalUnused(game getCountry UnitedStates) > 0
-    val canTravelToUntestedNonMuslim = game.usPosture == Hard        &&
-                                       game.gwotPenalty == 0         &&
-                                       unusedCellsOnMapForTravel > 0 &&
-                                       (game hasNonMuslim (_.isUntested))
-    val canPlotInSoftMuslim = game.usPosture == Soft &&
-                              game.gwotPenalty == 0  &&
-                              game.availablePlots.nonEmpty &&
-                              (game hasNonMuslim (n => n.isSoft && totalUnused(n) > 0))
-    // I'm allowing recruit in IR countries, not sure if that is the intent?
-    val canRecruitAtMuslimCadre = botRecruitPossible(muslimWithCadreOnly = true)
-    val canAddToReserves = !requiresReserves && game.reserves.jihadist < 2
-    val canRecruit = botRecruitPossible(muslimWithCadreOnly = false) && !requiresReserves
-    val canTravelToUS = !requiresReserves && unusedCellsOnMapForTravel > 0
-    // For botEnhancements if there are no Poor Muslim with 1-4 more cells than TandM
-    // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
-    // and no TandM, then attempt to travel cells there.
-    val canTraveToPoorMuslim = radTravelToPoorMuslimCandidates().nonEmpty
-
-    if (canPlotWMDInUs)
-      Some(PlotWMDInUS)
-    else if (canTravelToUntestedNonMuslim)
-      Some(TravelToUntestedNonMuslim)
-    else if (!game.botEnhancements && canPlotInSoftMuslim)
-      Some(PlotInSoftMuslim)
-    else if (game.botEnhancements && canTraveToPoorMuslim)
-      Some(TravelToPoorMuslimWhereMajorJSP)
-    else if (canRecruitAtMuslimCadre)
-      Some(RecruitAtMuslimCadre)
-    else if (canAddToReserves)
-      Some(AddToReserves)
-    else if (canRecruit)
-      Some(Recruit)
-    else if (canTravelToUS)
-      Some(TravelToUS)
-    else
-      None
-  }
-
   // Perform radicalization
   // The opsUsed parameter is the number of Ops used to perform the card operation.
   // If this value is less than the number of Ops on the card, then we will
@@ -1553,365 +1927,48 @@ object JihadistBot extends BotHelpers {
   // If the opUsed is greater than or equal to the number of Ops on the card,
   // then we do nothing.
   def radicalization(card: Card, opsUsed: Int): Unit = {
-    if (opsUsed < card.ops) {
-      // A maximum of 3 ops can be used on a given card.  This is limited by the
-      // number of available reserves.
-      // Determine how ops we can use for radicalization.
-      val unusedOps   = card.ops - opsUsed
-      val maxReserves = (3 - card.ops) min game.reserves.jihadist
-      val maxRadOps   = unusedOps + maxReserves
-      log()
-      log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")}")
-      if (maxReserves > 0)
-        log(s"(Can add up to ${amountOf(maxReserves,"Op")} from reserve)")
-      log(separator())
+    // A maximum of 3 ops can be used on a given card.  This is limited by the
+    // number of available reserves.
+    // Determine how ops we can use for radicalization.
+    val unusedOps   = card.ops - opsUsed
+    val maxReserves = (3 - card.ops) min game.reserves.jihadist
+    val maxRadOps   = unusedOps + maxReserves
 
-      // Returns the number of actions executed
-      def nextAction(completed: Int): Unit = {
-        if (completed < maxRadOps) {
-          val cardOps    = (unusedOps - completed) max 0   // Ops remaining from the card
-          val reserveOps = maxRadOps - cardOps - completed // Ops remaining from reserves
-          val ops = getRadicalizationAction(cardOps == 0) match {
-            case Some(PlotWMDInUS)                     => radPlotWMDInUs(cardOps, reserveOps)
-            case Some(TravelToUntestedNonMuslim)       => radTravelToUntestedNonMuslim(cardOps, reserveOps)
-            case Some(PlotInSoftMuslim)                => radPlotInSoftMuslim(cardOps, reserveOps)
-            case Some(TravelToPoorMuslimWhereMajorJSP) => radTravelToPoorMuslimWhereMajorJSP(cardOps, reserveOps)
-            case Some(RecruitAtMuslimCadre)            => radRecruitAtMuslimCadre(cardOps, reserveOps)
-            case Some(AddToReserves)                   => radAddToReserves(cardOps)
-            case Some(Recruit)                         => radRecruit(cardOps)
-            case Some(TravelToUS)                      => radTravelToUS(cardOps)
-            case None                                  => -1  // Finished with radicalization
-          }
-          if (ops > 0)
-            nextAction(completed + ops)
-        }
-      }
-      nextAction(0)
-    }
-  }
+    val actionsToConsider = List(
+      PlotWMDInUS,
+      TravelToUntestedNonMuslim,
+      PlotInSoftMuslim,
+      TravelToPoorMuslimWhereMajorJSP,  // Enhanced Bot only
+      RecruitAtMuslimCadre,
+      AddToReserves,
+      Recruit,
+      TravelToUS
+    )
 
-  // Plot as many time as possible in the US as long as there are
-  // unused cells there.
-  // cardsOps   - The number of unused Ops remaining from the card
-  // reserveOps - The number of unused Ops remaining from reserves
-  // Returns the number of ops used
-  def radPlotWMDInUs(cardOps: Int, reserveOps: Int): Int = {
-    log()
-    log(s"Radicalization: Plot in the United States")
-    val maxOps = cardOps + reserveOps
-    def nextAttempt(completed: Int): Int = {
-      val us = game getCountry UnitedStates
-      if (completed == maxOps || totalUnused(us) == 0 || game.availablePlots.isEmpty)
-        completed
-      else {
-        if (completed >= cardOps)
-          expendBotReserves(1)
-        addOpsTarget(UnitedStates)
-        performPlots(3, PlotAttempt(UnitedStates, activeCells(us) > 0)::Nil)
-        usedCells(UnitedStates).addActives(1)
-        nextAttempt(completed + 1)
+
+    // Returns the number of actions executed
+    def nextAction(actions: List[RadicalizationAction], completed: Int): Unit = {
+      if (actions.nonEmpty && completed < maxRadOps) {
+        val cardOps    = (unusedOps - completed) max 0   // Ops remaining from the card
+        val reserveOps = maxRadOps - cardOps - completed // Ops remaining from reserves
+        val onlyReserveOpsRemain = cardOps == 0
+        val action = actions.head
+
+        val opsUsedByAction = if (action.criteriaMet(onlyReserveOpsRemain))
+          action.perform(cardOps, reserveOps)
+        else
+          0
+
+        nextAction(actions.tail, completed + opsUsedByAction)
       }
     }
-    nextAttempt(0)
-  }
 
-  // Travel to Untested non-Muslim countries while the US is Hard to
-  // try and increase the GWOT penalty.
-  // We give preference to cells in adjacent countries to avoid die rolls
-  // when necessary.
-  // cardsOps   - The number of unused Ops remaining from the card
-  // reserveOps - The number of unused Ops remaining from reserves
-  // Returns the number of ops used
-  def radTravelToUntestedNonMuslim(cardOps: Int, reserveOps: Int): Int = {
     log()
-    log(s"Radicalization: Travel to Untested non-Muslim countries")
-    val maxOps = cardOps + reserveOps
-    def createTravelAttempt(from: String, to: String): TravelAttempt = {
-      TravelAttempt(from, to, activeCells(game getCountry from) > 0)
-    }
-    // Create the next highest priority travel attempt.  Max of one per destination.
-    def nextTravel(completed: Int, destinations: List[String]): Int = {
-      val sources = countryNames(game.countries filter hasCellForTravel)
-      if (completed == maxOps || destinations.isEmpty || sources.isEmpty)
-        completed
-      else {
-        // First we try to do adjacent travel so that it will automatically succeed.
-        val adjSources = sources filter (s => destinations exists (d => areAdjacent(s, d)))
-        if (adjSources.nonEmpty) {
-          // Now pick just the destinations that are adjacent to one of the sources
-          val adjDests = destinations filter (d => adjSources exists (s => areAdjacent(s, d)))
-          val to = recruitTravelToPriority(adjDests).get
-          // Don't allow travel within the same country
-          travelFromTarget(to, adjSources filterNot (_ == to)) match {
-            case None => nextTravel(completed, destinations filterNot (_ == to))
-            case Some(from) =>
-              if (completed >= cardOps)
-                expendBotReserves(1)
-              performTravels(createTravelAttempt(from, to)::Nil) match {
-                case (_, true)::Nil => usedCells(to).addSleepers(1)
-                case _ =>
-              }
-              nextTravel(completed + 1, destinations filterNot (_ == to))
-          }
-        }
-        else if (lapsingEventInPlay(Biometrics)) // Non adjacent travel is not allowd
-          completed
-        else {
-         val to = recruitTravelToPriority(destinations).get
-         // Don't allow travel within the same country
-         travelFromTarget(to, sources filterNot (_ == to)) match {
-           case None => nextTravel(completed, destinations filterNot (_ == to))
-           case Some(from) =>
-              if (completed >= cardOps)
-               expendBotReserves(1)
-              performTravels(createTravelAttempt(from, to)::Nil) match {
-                case (_, true)::Nil => usedCells(to).addSleepers(1)
-                case _ =>
-              }
-              nextTravel(completed + 1, destinations filterNot (_ == to))
-         }
-        }
-      }
-    }
-    nextTravel(0, countryNames(game.nonMuslims filter (_.isUntested)))
+    log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")}")
+    log(s"(Can add up to ${amountOf(maxReserves,"Op")} from reserve)")
+    log(separator())
+    nextAction(actionsToConsider, 0)
   }
-
-  // Plot in Soft non-Muslim countries while the US posture is Soft to
-  // try and increase the GWOT penalty.
-  // cardsOps   - The number of unused Ops remaining from the card
-  // reserveOps - The number of unused Ops remaining from reserves
-  // Returns the number of ops used
-  def radPlotInSoftMuslim(cardOps: Int, reserveOps: Int): Int = {
-    log()
-    log(s"Radicalization: Plot in Soft non-Muslim countries")
-    val maxOps = cardOps + reserveOps
-    def nextPlotTarget(completed: Int, candidates: List[NonMuslimCountry]): Int = {
-      if (completed == maxOps || candidates.isEmpty || game.availablePlots.isEmpty)
-        completed
-      else {
-        // Give preference to countries with the worst governance
-        // as they will have the highest chance of a successful plot.
-        // Within those we use the plot priorities to select the best one.
-        val softs = {
-          val ss = candidates sortBy (n => -n.governance) // sort so worst comes first
-          ss takeWhile (_.governance == ss.head.governance)
-        }
-        val target = topPriority(softs, plotPriorities).get
-
-        def nextAttempt(plotsPerformed: Int): Int = {
-          if (completed + plotsPerformed == maxOps || totalUnused(target) == 0 || game.availablePlots.isEmpty)
-            plotsPerformed
-          else {
-            if (completed + plotsPerformed >= cardOps)
-              expendBotReserves(1)
-
-            addOpsTarget(target.name)
-            performPlots(3, PlotAttempt(target.name, activeCells(target) > 0)::Nil)
-            usedCells(target.name).addActives(1)
-            nextAttempt(plotsPerformed + 1)
-          }
-        }
-        val numPlots = nextAttempt(0)
-        nextPlotTarget(completed + numPlots, candidates filterNot (_.name == target.name))
-      }
-    }
-    nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && totalUnused(n) > 0))
-  }
-
-  // Used only when botEnhancements in effect.
-  // If there are no Countries where Major JSP and 1-4 more cells that TandM,
-  // but there are countries where Major JSP and NOT 1-4 more cells than TandM,
-  // travel 1 cell to the highest priority of those.
-  def radTravelToPoorMuslimWhereMajorJSP(cardOps: Int, reserveOps: Int): Int = {
-    val candidates = radTravelToPoorMuslimCandidates()
-    // This should always succeed because it has been vetted, but check
-    // just to be safe.
-    if (candidates.nonEmpty) {
-        val maxOps = cardOps + reserveOps
-        val target = majorJihadTarget(candidates).get
-
-        // Returns (numAttempts, success)
-        def nextAttempt(numAttempts: Int): (Int, Boolean) = {
-          if (numAttempts == maxOps)
-            (numAttempts, false)  // No more Ops
-          else {
-            travelFromTarget(target, countryNames(game.countries.filterNot(_.name == target))) match {
-              case None => (numAttempts, false)  // No more cells
-              case Some(source) =>
-                val attempt = TravelAttempt(source, target, activeCells(game.getCountry(source)) > 0)
-                val (_, success) = performTravels(attempt::Nil).head
-                if (success)
-                  (numAttempts + 1, true)  // Success
-                else
-                  nextAttempt(numAttempts + 1)  // Try again
-            }
-          }
-        }
-
-        log()
-        log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
-        log("                and there are no Troops or Militia present")
-
-        // Make travel attempts until one of the following:
-        // - We run out of Ops
-        // - We get a successfull attempt
-        // - We run out of cells to make the attempt
-        val (numAttempts, success) = nextAttempt(0)
-        expendBotReserves(numAttempts - cardOps)
-        if (success)
-          usedCells(target).addSleepers(1)
-
-        numAttempts
-    }
-    else
-      0  // Used zero ops
-  }
-
-  // Recruit in the Muslim county with a cadre that has the best
-  // Jihad DRM.
-  // cardsOps   - The number of unused Ops remaining from the card
-  // reserveOps - The number of unused Ops remaining from reserves
-  // Returns the number of ops used
-  def radRecruitAtMuslimCadre(cardOps: Int, reserveOps: Int): Int = {
-    log()
-    log(s"Radicalization: Recruit in a Muslim country with a cadre")
-    val maxOps     = cardOps + reserveOps
-    val candidates = game.getMuslims(botRecruitTargets(muslimWithCadreOnly = true)).sortBy(m => jihadDRM(m, m.isPoor))
-    val target     = recruitTarget(candidates map (_.name)).get
-    addOpsTarget(target)
-    val m = game getMuslim target
-    def nextAttempt(completed: Int): Int = {
-      if (completed == maxOps || game.cellsToRecruit == 0)
-        completed
-      else {
-        if (completed >= cardOps)
-          expendBotReserves(1)
-        log(s"\n$Jihadist attempts to recruit a cell into $target")
-        if (m.autoRecruit) {
-          log(s"Recruit is automatically successful in $target")
-          addSleeperCellsToCountry(target, 1)
-          usedCells(target).addSleepers(1)
-        }
-        else {
-          val die = getDieRoll(s"Enter die roll for recruit in $target: ")
-          val success = m.recruitSucceeds(die)
-          val result  = if (success) "succeeds" else "fails"
-          log(s"Recruit $result in $target with a roll of $die")
-          if (success) {
-            val numCells = if (game.jihadistIdeology(Potent)) {
-              log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
-              2 min game.cellsToRecruit
-            }
-            else
-              1
-
-            addSleeperCellsToCountry(target, numCells)
-            usedCells(target).addSleepers(numCells)
-          }
-        }
-        nextAttempt(completed + 1)
-      }
-    }
-    nextAttempt(0)
-  }
-
-  // cardsOps - The number of unused Ops remaining from the card
-  // Add any remaining card ops to reserves until reserves are full.
-  // Returns the number of ops added
-  def radAddToReserves(cardOps: Int): Int = {
-    log()
-    log(s"Radicalization: Add to reserves")
-    val opsAdded = cardOps min (2 - game.reserves.jihadist)
-    addToReserves(Jihadist, opsAdded)
-    opsAdded
-  }
-
-  // Perform a recruit operation.  Do not use any reserves.
-  // cardsOps - The number of unused Ops remaining from the card
-  // Returns the number of ops used
-  def radRecruit(cardOps: Int): Int = {
-    log()
-    log(s"Radicalization: Recruit")
-    val target = recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
-    addOpsTarget(target)
-    val m = game getMuslim target
-    def nextAttempt(completed: Int): Int = {
-      if (completed == cardOps || game.cellsToRecruit == 0)
-        completed
-      else {
-        log(s"$Jihadist attempts to recruit a cell into $target")
-        if (m.autoRecruit) {
-          log(s"Recruit is automatically successful in $target")
-          addSleeperCellsToCountry(target, 1)
-          usedCells(target).addSleepers(1)
-        }
-        else {
-          val die = getDieRoll(s"Enter die roll for recruit in $target: ")
-          val success = m.recruitSucceeds(die)
-          val result  = if (success) "succeeds" else "fails"
-          log(s"Recruit $result in $target with a roll of $die")
-          if (success) {
-            val numCells = if (game.jihadistIdeology(Potent)) {
-              log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
-              2 min game.cellsToRecruit
-            }
-            else
-              1
-            addSleeperCellsToCountry(target, numCells)
-            usedCells(target).addSleepers(numCells)
-          }
-        }
-        nextAttempt(completed + 1)
-      }
-    }
-    nextAttempt(0)
-  }
-
-  // Travel to the US. (From adjacent if possible). Do not use reserves.
-  // Perform a recruit operation.  Do not use any reserves.
-  // Returns the number of ops used
-  def radTravelToUS(cardOps: Int): Int = {
-    log()
-    log(s"Radicalization: Travel to the United States")
-
-    def createTravelAttempt(from: String): TravelAttempt = {
-      TravelAttempt(from, UnitedStates, activeCells(game getCountry from) > 0)
-    }
-
-    def nextTravel(completed: Int): Int = {
-      val sources = countryNames(game.countries filter (c => c.name != UnitedStates && hasCellForTravel(c)))
-      if (completed == cardOps || sources.isEmpty)
-        completed
-      else {
-        // First we try to do adjacent travel so that it will automatically succeed.
-        val adjSources = sources filter (s => areAdjacent(s, UnitedStates))
-        if (adjSources.nonEmpty) {
-          travelFromTarget(UnitedStates, adjSources) match {
-            case None => completed  // No more source countries
-            case Some(from) =>
-              performTravels(createTravelAttempt(from)::Nil) match {
-                case (_, true)::Nil => usedCells(UnitedStates).addSleepers(1)
-                case _ =>
-              }
-              nextTravel(completed + 1)
-          }
-        }
-        else {
-         travelFromTarget(UnitedStates, sources) match {
-           case None => completed   // No more source countries
-           case Some(from) =>
-             performTravels(createTravelAttempt(from)::Nil) match {
-               case (_, true)::Nil => usedCells(UnitedStates).addSleepers(1)
-               case _ =>
-             }
-             nextTravel(completed + 1)
-         }
-        }
-      }
-    }
-    nextTravel(0)
-  }
-
 
   // Selects troops that are on the map to take off of the map.
   // This does not take troops from the track.  The caller should
