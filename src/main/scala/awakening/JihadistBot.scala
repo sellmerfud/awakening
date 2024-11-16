@@ -281,7 +281,7 @@ object JihadistBot extends BotHelpers {
   val GoodMuslimWithAdjacentCellsFilter =
     new CriteriaFilter(
       "Good Muslim w/ adjacent cells",
-      muslimTest(m => m.isGood && m.hasAdjacent(hasCellForTravel)))
+      muslimTest(m => m.isGood && m.hasAdjacent(hasCellForTravel) && m.awakening - m.reaction < 1))
   val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
 
   // Used with botEnhancements
@@ -386,23 +386,23 @@ object JihadistBot extends BotHelpers {
 
   // Bot will not try minor Jihad in Poor countries
   def minorJihadTarget(names: List[String]): Option[String] = {
-    botLog("Find \"Minor Jihad\" target")
+    botLog("Find \"Minor Jihad\" target", Color.Debug)
     topPriority(game getMuslims names, jihadMarkerAlignGovPriorities(Some(false))) map (_.name)
   }
 
   // Bot will only try major Jihad in Poor countries
   def majorJihadTarget(names: List[String]): Option[String] = {
-    botLog("Find \"Major Jihad\" target")
+    botLog("Find \"Major Jihad\" target", Color.Debug)
     topPriority(game getMuslims names, jihadMarkerAlignGovPriorities(Some(true))) map (_.name)
   }
 
   def markerAlignGovTarget(names: List[String]): Option[String] = {
-    botLog("Find \"Marker/Align/Gov\" target")
+    botLog("Find \"Marker/Align/Gov\" target", Color.Debug)
     topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)) map (_.name)
   }
 
   def troopsMilitiaTarget(names: List[String]): Option[String] = {
-    botLog("Find \"Troops/Militia\" target")
+    botLog("Find \"Troops/Militia\" target", Color.Debug)
     topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)) map (_.name)
   }
 
@@ -478,7 +478,7 @@ object JihadistBot extends BotHelpers {
         List(PoorTroopsActiveCellsFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter, PoorMuslimFilter)
     }
 
-    botLog("Find \"Plot\" target")
+    botLog("Find \"Plot\" target", Color.Debug)
     val candidates = selectCandidates(game getCountries names, flowchart)
     topPriority(candidates, plotPriorities) map (_.name)
   }
@@ -583,31 +583,107 @@ object JihadistBot extends BotHelpers {
 
 
   def recruitTarget(names: List[String]): Option[String] = {
-    botLog("Find \"Recruit\" target")
+    botLog("Find \"Recruit\" target", Color.Debug)
     val candidates = selectCandidates(game getCountries names, RecruitFlowchart)
     topPriority(candidates, recruitAndTravelToPriorities) map (_.name)
   }
 
 
   def travelToTarget(names: List[String]): Option[String] = {
-    botLog("Find \"Travel To\" target")
+    botLog("Find \"Travel To\" target", Color.Debug)
     val candidates = selectCandidates(game getCountries names, TravelToFlowchart)
     topPriority(candidates, recruitAndTravelToPriorities) map (_.name)
   }
 
-  def travelFromTarget(toCountry: String, names: List[String]): Option[String] = {
+  def travelFromTarget(toCountry: String, names: List[String]): Option[String] = if (game.botEnhancements) {
+    // Enhanced Bot rules
+    // The
+    // First only adjacent cells are considered
+    // if adjacent: Auto-recruit country (priorities within those: Training camps-->IR-->CW-->RC-->poor-->most cells--->lowest resource level), THEN
+    //
+    // if adjacent: Muslim (priorities within those: poor—>fair-->good-->worst Reaction-Awakening—>lowest resource level—>most cells), THEN
+    //
+    // if adjacent: non-Muslim (priorities within those: most cells -->good non-Schengen-->lowest governance), THEN
 
-    val isGoodFairMuslimTarget = game.getCountry(toCountry) match {
-      case m: MuslimCountry => (m.isGood || m.isFair) && m.awakening - m.reaction < 1
+    // If the target destination is GOOD/FAIR, then only allow travel from
+    // adjacent coutnries
+    val fromAdjacentOnly = game.getCountry(toCountry) match {
+      case m: MuslimCountry => (m.isGood || m.isFair)
       case _ => false
     }
+
+    val withCells  =
+      game.getCountries(names)
+        .filter(_.name != toCountry)   // Never travel within same country
+        .filter(c => !fromAdjacentOnly || areAdjacent(c.name, toCountry))
+        .filter(hasCellForTravel)
+
+    type FromTest = (Country => Boolean, String)
+    type TravelFromCriteria = (FromTest, List[CountryFilter])
+
+    val adjacentAutoRecruit = ((c: Country) => c.autoRecruit && areAdjacent(c.name, toCountry), "Adjacent Auto-Recruit")
+    val adjacentMuslim      = ((c: Country) => c.isMuslim && areAdjacent(c.name, toCountry), "Adjacent Muslim")
+    val adjacentNonMuslim   = ((c: Country) => c.isNonMuslim && areAdjacent(c.name, toCountry), "Adjacent Non-Muslim")
+    val autoRecruit         = ((c: Country) => c.autoRecruit, "Auto-Recruit")
+    val muslim              = ((c: Country) => c.isMuslim, "Muslim")
+    val nonMuslim           = ((c: Country) => c.isNonMuslim, "Non-Muslim")
+
+    val autoRecruitPriorities = List(
+      new CriteriaFilter("Training Camps", c => game.isTrainingCamp(c.name)),
+      new CriteriaFilter("Islamist Rule", _.isIslamistRule),
+      new CriteriaFilter("Civil War", muslimTest(_.civilWar)),
+      new CriteriaFilter("Regime Change", muslimTest(_.inRegimeChange)),
+      new CriteriaFilter("Poor", _.isPoor),
+      new HighestScorePriority("Most cells", _.totalCells),
+      new LowestScorePriority("Lowest Resource Value", muslimScore(_.resources, nonMuslimScore = 100)),
+    )
+    val muslimPriorities = List(
+      new CriteriaFilter("Poor", _.isPoor),
+      new CriteriaFilter("Fair", _.isPoor),
+      new CriteriaFilter("Good", _.isPoor),
+      new LowestScorePriority("Worst JRM", muslimScore(c => c.reaction - c.awakening)),
+      new LowestScorePriority("Lowest Resource Value", muslimScore(_.resources, nonMuslimScore = 100)),
+      new HighestScorePriority("Most cells", _.totalCells),
+    )
+    val nonMuslimPriorities = List(
+      new HighestScorePriority("Most cells", _.totalCells),
+      new CriteriaFilter("Good Non-Schengen", nonMuslimTest(c => c.isGood && !c.isSchengen)),
+      new LowestScorePriority("Lowest Governance Value", _.governance),
+    )
+
+    val TravelFromOptions: List[TravelFromCriteria] = List(
+      (adjacentAutoRecruit, autoRecruitPriorities),
+      (adjacentMuslim, muslimPriorities),
+      (adjacentNonMuslim, nonMuslimPriorities),
+      (autoRecruit, autoRecruitPriorities),
+      (muslim, muslimPriorities),
+      (nonMuslim, nonMuslimPriorities),
+    )
+
+    @tailrec
+    def nextCategory(criteriaOptions: List[TravelFromCriteria]): Option[String] = criteriaOptions match {
+      case Nil => None
+      case ((criteria, desc), priorities) :: others =>
+        val candidates = withCells.filter(criteria)
+        botLog(s"Travel From $desc: ${candidates.map(_.name).mkString("[", ", ", "]")}")
+        if (candidates.nonEmpty)
+          topPriority(candidates, priorities) map (_.name)
+        else
+          nextCategory(others)
+    }
+
+    botLog("Find \"Travel From\" target", Color.Debug)
+    nextCategory(TravelFromOptions)
+  }
+  else {
+    // Regular (non-enhanced) rules
     // The bot will never travel a SLEEPER cell within the same country
     // The Enhanced Bot never travels cells within the same country.
     def wouldMoveOrTravelWithinToSleep(c: Country) =
       c.name != toCountry ||
-      (!game.botEnhancements && activeCells(c) > 0 && !game.isCaliphateMember(c.name))
+      (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
 
-    botLog("Find \"Travel From\" target")
+    botLog("Find \"Travel From\" target", Color.Debug)
     val flowchart = List(
       new AdjacentCountriesNode(toCountry),
       AutoRecruitFilter,
@@ -620,12 +696,7 @@ object JihadistBot extends BotHelpers {
 
     // Enhanced Bot will only travel from adjacent if target is
     // a Muslim Good/Fair country
-    val withCells  = if (game.botEnhancements && isGoodFairMuslimTarget)
-      game.getCountries(names)
-        .filter(c => areAdjacent(c.name, toCountry))
-        .filter(hasCellForTravel)
-        .filter(wouldMoveOrTravelWithinToSleep)
-    else
+    val withCells  =
       game.getCountries(names)
         .filter(hasCellForTravel)
         .filter(wouldMoveOrTravelWithinToSleep)
@@ -799,7 +870,7 @@ object JihadistBot extends BotHelpers {
     @tailrec def evaluateNode(node: OpFlowchartNode): Operation = node match {
       case operation: Operation        => operation
       case decision: OperationDecision =>
-        botLog(s"EvO Flowchart: $node")
+        botLog(s"EvO Flowchart: $node", Color.Debug)
         if (decision.condition(ops))
           evaluateNode(decision.yesPath)
         else
@@ -823,13 +894,13 @@ object JihadistBot extends BotHelpers {
   // ------------------------------------------------------------------
   def goodPriority(names: List[String]): Option[String] = {
     val priorities = GoodPriority::Nil
-    botLog("Find \"Good Priority\" target")
+    botLog("Find \"Good Priority\" target", Color.Debug)
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
   def goodThenFairThenPoorPriority(names: List[String]): Option[String] = {
     val priorities = GoodPriority::FairPriority::PoorPriority::Nil
-    botLog("Find \"Good/Fair/Poor Priority\" target")
+    botLog("Find \"Good/Fair/Poor Priority\" target", Color.Debug)
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
@@ -846,7 +917,7 @@ object JihadistBot extends BotHelpers {
            // since the troop would be removed when the country becomes unmarked?
            new CriteriaFilter("No Troops", muslimTest(m => m.totalTroops == 0)))
 
-    botLog("Find \"Change of State\" target")
+    botLog("Find \"Change of State\" target", Color.Debug)
     val candidates = game.getCountries(names)
     val favorableCandidates = selectCandidates(candidates, flowchart)
     // If the event was triggered by US play then there the flowchart may
@@ -866,7 +937,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Poor with Troops and US Prestige > 1",
            muslimTest(m => m.isPoor && game.prestige > 1)))
 
-    botLog("Find \"Taliban Resurgent\" target")
+    botLog("Find \"Taliban Resurgent\" target", Color.Debug)
     val candidates = countryNames(selectCandidates(game getCountries names, flowchart))
     minorJihadTarget(candidates)
   }
@@ -876,7 +947,7 @@ object JihadistBot extends BotHelpers {
       GoodPriority,
       FairPriority,
       new CriteriaFilter("Untested Muslim", muslimTest(_.isUntested)))
-      botLog("Find \"Iran\" target")
+      botLog("Find \"Iran\" target", Color.Debug)
       topPriority(game getMuslims names, priorities) map (_.name)
   }
 
@@ -885,7 +956,7 @@ object JihadistBot extends BotHelpers {
     val flowchart = List(
       new CriteriaFilter("Not Adversary", muslimTest(m => !m.isAdversary)),
     )
-    botLog("Find \"Critical Middle\" target")
+    botLog("Find \"Critical Middle\" target", Color.Debug)
     countryNames(selectCandidates(game getCountries names, flowchart))
   }
 
@@ -895,7 +966,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Ally",    muslimTest(m => m.isAlly)),
       new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
 
-    botLog("Find \"UN Ceasefire\" target")
+    botLog("Find \"UN Ceasefire\" target", Color.Debug)
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
@@ -904,7 +975,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Cells > TandM", muslimTest(m => m.totalCells > m.totalTroopsAndMilitia)),
       HighestResourcePriority)
 
-    botLog("Find \"Qadhafi\" target")
+    botLog("Find \"Qadhafi\" target", Color.Debug)
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
@@ -913,7 +984,7 @@ object JihadistBot extends BotHelpers {
       new HighestScorePriority("Highest awakening - reaction", muslimScore(m => m.awakening - m.reaction)),
       HighestResourcePriority)
 
-    botLog("Find \"Revolution\" target")
+    botLog("Find \"Revolution\" target", Color.Debug)
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
@@ -922,7 +993,7 @@ object JihadistBot extends BotHelpers {
       new HighestScorePriority("Largest Cells - TandM", muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)),
       HighestResourcePriority)
 
-    botLog("Find \"Hama Offensive\" target")
+    botLog("Find \"Hama Offensive\" target", Color.Debug)
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
@@ -933,7 +1004,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("With troops", muslimTest(m => m.totalTroops > 0)),
       new HighestScorePriority("Largest Cells - TandM", muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)))
 
-    botLog("Best \"Hayat Tahir\" adjacent with cells")
+    botLog("Best \"Hayat Tahir\" adjacent with cells", Color.Debug)
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
