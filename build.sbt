@@ -5,7 +5,9 @@ import java.nio.file.attribute.PosixFilePermissions
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
   version      := "5.6-florian",
-  scalaVersion := "2.13.14"
+  scalaVersion := "2.13.14",
+  javacOptions        ++= Seq("-source", "8", "-target",  "8"),
+  scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
 )
 
 lazy val stage       = taskKey[Unit]("Create distribution zip file")
@@ -16,7 +18,6 @@ lazy val awakening = (project in file("."))
     commonSettings,
     name        := "awakening",
     description := "A scala implementation of the solo AI for Labyrinth The Awakening",
-    scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
       "org.sellmerfud"         %% "optparse"       % "2.2",
