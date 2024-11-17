@@ -2960,18 +2960,13 @@ object LabyrinthAwakening {
         log("No convergence performed because \"Arab Winter\" is in effect", Color.Info)
       else {
         val target = randomConvergenceTarget.name
-        val m = game getMuslim target
         log(s"\nConvergence for ${forCountry} takes place in ${target}")
         log(separator())
         testCountry(target)
-        if (awakening) {
-          game = game.updateCountry(m.copy(awakening = m.awakening + 1))
-          log(s"Add 1 awakening marker to ${target}", Color.MapPieces)
-        }
-        else {
-          game = game.updateCountry(m.copy(reaction = m.reaction + 1))
-          log(s"Add 1 reaction marker to ${target}", Color.MapPieces)
-        }
+        if (awakening)
+          addAwakeningMarker(target)
+        else
+          addReactionMarker(target)
       }
     }
   }
@@ -3664,15 +3659,9 @@ object LabyrinthAwakening {
       var convergers = List.empty[Converger]
       for (name <- names; m = game.getMuslim(name)) {
         (m.awakening - m.reaction) match {
-          case 0 =>  // Nothing happens
-          case 2 =>
-            game = game.updateCountry(m.copy(awakening = m.awakening + 1))
-            log()
-            log(s"Add an awakening marker to ${name}", Color.MapPieces)
-          case -2 =>
-            game = game.updateCountry(m.copy(reaction = m.reaction + 1))
-            log()
-            log(s"Add a reaction marker to ${name}", Color.MapPieces)
+          case 0  =>  // Nothing happens
+          case 2  => addAwakeningMarker(name)
+          case -2 => addReactionMarker(name)
           case x if x > 2 =>
             log()
             if (m.isAlly) {
@@ -3681,7 +3670,7 @@ object LabyrinthAwakening {
                 convergers = Converger(name, awakening = true) :: convergers
             }
             else
-              shiftAlignmentLeft(m.name)
+              shiftAlignmentLeft(name)
 
 
           case _ => // x < -2
@@ -3692,7 +3681,7 @@ object LabyrinthAwakening {
                 convergers = Converger(name, awakening = false) :: convergers
             }
             else
-              shiftAlignmentRight(m.name)
+              shiftAlignmentRight(name)
         }
       }
 
