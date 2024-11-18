@@ -424,7 +424,7 @@ object LabyrinthCards {
       ,
       (role: Role, forTrigger: Boolean) => {
         val posture = if (role == game.humanRole)
-          askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+          askSimpleMenu(s"New posture of $Benelux: ", List(Soft, Hard))
         else
           game.usPosture
         addEventTarget(Benelux)
@@ -522,7 +522,7 @@ object LabyrinthCards {
           log(s"$US draws one card and adds it to their hand")
           askCardsDrawn(1)
           val postureName = askCountry("Select posture of which country: ", postureCandidates)
-          val newPosture = askOneOf(s"New posture for $postureName (Soft or Hard): ", Seq(Soft, Hard)).get
+          val newPosture = askSimpleMenu(s"New posture of $postureName: ", List(Soft, Hard))
           addEventTarget(postureName)
           setCountryPosture(postureName, newPosture)
         }
@@ -784,7 +784,7 @@ object LabyrinthCards {
         if (!(game getMuslim Turkey).isGood)
           improveGovernance(Turkey, 1, canShiftToGood = true)
         val newPosture = if (role == game.humanRole)
-          askOneOf("New posture for France (Soft or Hard): ", Seq(Soft, Hard)).get
+          askSimpleMenu("New posture of France: ", List(Soft, Hard))
         else
           game.usPosture
         addEventTarget(France)
@@ -807,7 +807,7 @@ object LabyrinthCards {
         addEventTarget(Pakistan)
         setAlignment(Pakistan, Ally)
         val newPosture = if (role == game.humanRole)
-          askOneOf("New posture for India (Soft or Hard): ", Seq(Soft, Hard)).get
+          askSimpleMenu("New posture of India: ", List(Soft, Hard))
         else
           game.usPosture
         addEventTarget(India)
@@ -856,7 +856,7 @@ object LabyrinthCards {
         val schengens = if (role == game.humanRole) {
           println("Select 2 Shegen countries' posture")
           askCountries(2, Schengen) map { name =>
-            (name, askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get)
+            (name, askSimpleMenu(s"New posture of $name: ", List(Soft, Hard)))
           }
         }
         else
@@ -997,7 +997,7 @@ object LabyrinthCards {
         val candidates = countryNames(game.nonMuslims.filter(n => n.name != UnitedStates && n.canChangePosture))
         val (name, posture) = if (role == game.humanRole) {
           val target = askCountry("Select posture of which country: ", candidates)
-          (target, askOneOf(s"New posture for $target (Soft or Hard): ", Seq(Soft, Hard)).get)
+          (target, askSimpleMenu(s"New posture of $target: ", List(Soft, Hard)))
         }
         else
           (USBot.posturePriority(candidates).get, game.usPosture)
@@ -1329,7 +1329,7 @@ object LabyrinthCards {
             choice(canShift,   CentralAsia, "Shift Central Asia 1 box toward Adversary"),
             choice(canPosture, Caucasus,    "Set Caucasus to opposite posture of the US")
           ).flatten
-          askMenu("\nChoose one:", choices).head
+          askMenu("Choose one:", choices).head
         }
         else if (canShift) 
           CentralAsia
@@ -1893,7 +1893,7 @@ object LabyrinthCards {
         val marker = if (markers.size == 1)
           markers.head
         else if (role == game.humanRole)
-          askOneOf(s"Block which marker (${orList(markers)})? ", markers).get
+          askSimpleMenu(s"Block which marker:", markers)
         else
           shuffle(markers).head
         log()
@@ -2196,7 +2196,7 @@ object LabyrinthCards {
       ,                       
       (role: Role, forTrigger: Boolean) => {
         val posture = if (game.humanRole == US)
-          askOneOf(s"New posture for Scandinavia (Soft or Hard): ", Seq(Soft, Hard)).get
+          askSimpleMenu(s"New posture of Scandinavia: ", List(Soft, Hard))
         else
           game.usPosture
         
@@ -2381,7 +2381,7 @@ object LabyrinthCards {
             case (false, false) => ""
             case _ =>
               val choices = List(target -> target, Iran -> Iran)
-              askMenu("\nRemove cell from:", choices).head
+              askMenu("Remove cell from:", choices).head
           }
 
           if (removeCellFrom != "") {

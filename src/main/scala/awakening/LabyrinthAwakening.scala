@@ -1951,7 +1951,7 @@ object LabyrinthAwakening {
             .sorted
             .distinct
             .map(x => Some(x) -> x)
-          val prompt = s"\n'$input' is ambiguous.  Choose one:"
+          val prompt = s"'$input' is ambiguous.  Choose one:"
           askMenu(prompt, choices :+ (None -> "None of the above"), allowAbort = allowAbort).head
 
           // println(s"'$input' is ambiguous. (${orList(ambiguous)})")
@@ -2031,10 +2031,15 @@ object LabyrinthAwakening {
   def askCountry(prompt: String, candidates: List[String], allowAbort: Boolean = true): String = {
     assert(candidates.nonEmpty, s"askCountry(): list of candidates cannot be empty")
     // If only one candidate then don't bother to ask
-    candidates match {
-      case x :: Nil => println(s"$prompt $x"); x
-      case xs       => askOneOf(prompt, xs, allowAbort = allowAbort, abbr = CountryAbbreviations).get
+    if (candidates.size == 1) {
+      println(s"$prompt ${candidates.head}")
+      candidates.head
     }
+    else if (candidates.size < 10) {
+      askSimpleMenu(prompt, candidates, allowAbort = allowAbort)
+    }
+    else 
+      askOneOf(prompt, candidates, allowAbort = allowAbort, abbr = CountryAbbreviations).get
   }
 
   // Ask the user to select multiple countries from the given candidates.
@@ -2077,7 +2082,7 @@ object LabyrinthAwakening {
   // Return true for Awakening Marker, false for Reaction Marker
   def askPlaceAwakeningOrReactionMarker: Boolean = {
     val choices = List(true -> "Place awakening marker", false -> "Place reaction marker")
-    askMenu("\nChoose one:", choices).head
+    askMenu("Choose one:", choices).head
   }
 
   // Returns (actives, sleepers)
@@ -2095,7 +2100,7 @@ object LabyrinthAwakening {
       println(s"\n$countryName has $a and $s")
 
       if (maxCells == 1)
-        askMenu("\nWhich cell:", List((1, 0) -> "Active", (0, 1) -> "Sleeper")).head
+        askMenu("Which cell:", List((1, 0) -> "Active", (0, 1) -> "Sleeper")).head
       else {
         if (sleeperFocus) {
           val smax     = maxCells min sleeperCells
@@ -2134,7 +2139,7 @@ object LabyrinthAwakening {
         if (maxCells == 1 && sadr)
           (0, 0, true)
         else if (maxCells == 1)
-          askMenu("\nWhich cell:", List((1, 0, false) -> "Active", (0, 1, false) -> "Sleeper")).head
+          askMenu("Which cell:", List((1, 0, false) -> "Active", (0, 1, false) -> "Sleeper")).head
         else {
           if (sleeperFocus) {
             val smax     = maxCells min sleeperCells
@@ -2169,7 +2174,7 @@ object LabyrinthAwakening {
         choice(c.troops > 0, "troop-cube",   s"Troop cube (${c.troops} present)"),
         choice(militia > 0,  "militia-cube", s"Militia cube (${militia} present)")
       ).flatten ++ (c.troopsMarkers.sorted map (x => x.name -> x.name))
-      askMenu("\nChoose one:", choices).head
+      askMenu("Choose one:", choices).head
     }
   }
 
@@ -2315,6 +2320,14 @@ object LabyrinthAwakening {
   // Allow the user to choose 1 or more choices and return
   // a list of keys to the chosen items.
   // Caller should println() a brief description of what is being chosen.
+  // items is a list of items.
+  def askSimpleMenu[T](prompt: String, items: List[T], allowAbort: Boolean = true): T =
+    askMenu(prompt, items.map(x => x -> x.toString), allowAbort = allowAbort).head
+
+  // Present a numbered menu of choices
+  // Allow the user to choose 1 or more choices and return
+  // a list of keys to the chosen items.
+  // Caller should println() a brief description of what is being chosen.
   // items is a list of (key -> display) for each item in the menu.
   def askMenu[T](
     prompt: String,
@@ -2334,6 +2347,7 @@ object LabyrinthAwakening {
         else
           "Selection: "
         if (items.size > 1 &&  prompt != "") {
+          println()
           println(prompt)
           println(separator())
         }
@@ -2369,6 +2383,7 @@ object LabyrinthAwakening {
         itemsRemaining.keys.head :: Nil
       else {
         val width = itemsRemaining.size.toString.size
+        println()
         println(menuPrompt)
         println(separator(char = '='))
         val indexMap = (itemsRemaining.keys.zipWithIndex map (_.swap)).toMap
@@ -2517,7 +2532,7 @@ object LabyrinthAwakening {
       }
       else {
 
-        val name = askMenu("\nRemove cells from which country:", choices).head
+        val name = askMenu("Remove cells from which country:", choices).head
         val c    = game.getCountry(name)
         val others = totalRemaining - c.totalCells
         val minNum = if (upto) 0 else (numToRemove - others) max 0 min c.totalCells
@@ -2585,8 +2600,8 @@ object LabyrinthAwakening {
     }
 
     if (game.manualDieRolls) {
-      val candidates = countryNames(game.countries.filter(_.isMuslim))
-      game.getMuslim(askOneOf("Select \"Random\" country: ", candidates, allowAbort = false).get)
+      val candidates = countryNames(game.muslims)
+      game.getMuslim(askCountry("Select \"Random\" country: ", candidates, allowAbort = false))
     }
     else {
       val row = dieRoll - 1        // tan die
@@ -2606,7 +2621,7 @@ object LabyrinthAwakening {
 
   def randomShiaMixCountry: MuslimCountry = if (game.manualDieRolls) {
     val candidates = countryNames(randomShiaMixList)
-    game.getMuslim(askOneOf("Select \"Random Shia Mix\" country: ", candidates, allowAbort = false).get)
+    game.getMuslim(askCountry("Select \"Random Shia Mix\" country: ", candidates, allowAbort = false))
   }
   else {
     val muslimKey = List(dieRoll, dieRoll, dieRoll).sum match {
@@ -3391,7 +3406,7 @@ object LabyrinthAwakening {
         println("\nRollback to the beginning of a previous save point.")
         println("The save points are displayed with the most recent first.")
 
-        askMenuWithWrap(saveChoices:::otherChoices, "\nChoose a save point:").head match {
+        askMenuWithWrap(saveChoices:::otherChoices, "Choose a save point:").head match {
           case CANCEL      =>
           case PAGE_UP     => showPage(pageNum - 1)
           case PAGE_DOWN   => showPage(pageNum + 1)
@@ -6053,7 +6068,7 @@ object LabyrinthAwakening {
       None                 -> "Quit"
     )
 
-    val gameMode = askMenu("\nPlay a scenario from which game:", gameChoices, allowAbort = false).head match {
+    val gameMode = askMenu("Play a scenario from which game:", gameChoices, allowAbort = false).head match {
       case Some(mode) => mode
       case None   => throw ExitGame
     }
@@ -6064,7 +6079,7 @@ object LabyrinthAwakening {
 
     val choices = scenarioChoices :+ ("quit" -> "Quit")
 
-    askMenu("\nChoose a scenario:", choices, allowAbort = false).head match {
+    askMenu("Choose a scenario:", choices, allowAbort = false).head match {
         case "quit"   => throw ExitGame
         case scenario => scenario
       }
@@ -6142,7 +6157,7 @@ object LabyrinthAwakening {
                    "single"   -> "Play single scenario",
                    "campaign" -> "Play a campaign game",
                    "quit"     -> "Quit")
-                 askMenu("\nChoose one:", choices, allowAbort = false).head match {
+                 askMenu("Choose one:", choices, allowAbort = false).head match {
                    case "quit"   => throw ExitGame
                    case "single" => false
                    case _        => true
@@ -6159,7 +6174,7 @@ object LabyrinthAwakening {
                 "US"       -> "Play as US",
                 "Jihadist" -> "Play as Jihadist",
                 "quit"     -> "Quit")
-              askMenu("\nChoose one:", choices, allowAbort = false).head match {
+              askMenu("Choose one:", choices, allowAbort = false).head match {
                 case "quit"   => throw ExitGame
                 case side     => Role(side)
               }
@@ -6316,7 +6331,7 @@ object LabyrinthAwakening {
         name -> s"Resume '$name'$suffix"
       }
       val choices = ("--new-game--" -> "Start a new game") :: gameChoices ::: List("--quit-game--" -> "Quit")
-      askMenu("\nWhich game would you like to play:", choices, allowAbort = false).head match {
+      askMenu("Which game would you like to play:", choices, allowAbort = false).head match {
         case "--new-game--"  => None
         case "--quit-game--" => throw ExitGame
         case name            => Some(name)
@@ -6482,7 +6497,7 @@ object LabyrinthAwakening {
           (num.toString -> s"${fmt.format(name)}: $pname plus $desc") :: nextChoice(num+1, Some(d), rest)
       }
 
-    levels take askMenu("\nChoose a difficulty level:", nextChoice(1, None, levels), allowAbort = false).head.toInt
+    levels take askMenu("Choose a difficulty level:", nextChoice(1, None, levels), allowAbort = false).head.toInt
   }
 
   def askExitAfterWin() = {
@@ -6491,7 +6506,7 @@ object LabyrinthAwakening {
       false -> "The program should continue so I can explore the game further."
     )
 
-    askMenu("\nWhat would happen when one side achieves victory:", choices).head
+    askMenu("What would happen when one side achieves victory:", choices).head
   }
 
   def isValidIdeology(name: String) =
@@ -6782,9 +6797,9 @@ object LabyrinthAwakening {
           "operations" -> "Operations",
           "event"      -> s"Event: ${c.name}")
         val prompt = if (c.association == opponent)
-          s"\n$opponent associated event, which should happen first?"
+          s"$opponent associated event, which should happen first?"
         else
-          s"\nThe event will trigger, which should happen first?"
+          s"The event will trigger, which should happen first?"
         askMenu(prompt, choices).head  match {
           case "event" => List(TriggeredEvent(c), Ops)
           case _       => List(Ops, TriggeredEvent(c))
@@ -6795,7 +6810,7 @@ object LabyrinthAwakening {
           "operations" -> "Operations",
           "1st event"  -> s"Event: ${c1.name}",
           "2nd event"  -> s"Event: ${c2.name}")
-        val first  = askMenu("\nWhich should happen first?", choices).head
+        val first  = askMenu("Which should happen first?", choices).head
         val second = askMenu("Which should happen second?", choices filterNot (_._1 == first)).head
         val third  = (choices map (_._1) filterNot (k => k == first || k == second)).head
         List(first, second, third) map {
@@ -6938,7 +6953,7 @@ object LabyrinthAwakening {
 
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
 
-      askMenu(s"\n$US action: ", actions).head match {
+      askMenu(s"$US action: ", actions).head match {
         case UseReserves =>
           reservesUsed = inReserve
           log(s"$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
@@ -7039,7 +7054,7 @@ object LabyrinthAwakening {
       choice(game.disruptTargets(ops).nonEmpty, Disrupt, Disrupt),
       choice(game.alertPossible(ops),           Alert, Alert)
     ).flatten
-    askMenu(s"\n$US action:", actions).head match {
+    askMenu(s"$US action:", actions).head match {
       case WarOfIdeas => humanWarOfIdeas(ops)
       case Deploy     => humanDeploy(ops)
       case RegimeChg  => humanRegimeChange()
@@ -7339,7 +7354,7 @@ object LabyrinthAwakening {
       ).flatten
 
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
-      askMenu(s"\n$Jihadist action: ", actions).head match {
+      askMenu(s"$Jihadist action: ", actions).head match {
         case UseReserves =>
           reservesUsed = inReserve
           log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
@@ -8063,7 +8078,7 @@ object LabyrinthAwakening {
         println("none")
       else
         println(targetNames.toList.sorted.mkString(", "))
-      askMenu("\nChoose one: ", choices, allowAbort = false).head  match {
+      askMenu("Choose one: ", choices, allowAbort = false).head  match {
         case "done" =>
         case "add"  =>
           val name = askCountry("Select country to add: ", nonTargets.sorted, allowAbort = false)
@@ -8125,7 +8140,7 @@ object LabyrinthAwakening {
         "wmd"  -> "Add new WMD Plot to the available box",
         "none" -> "Do not add a new plot to the available box"
       )
-      askMenu("\nChoose one: ", choices, allowAbort = false).head  match {
+      askMenu("Choose one: ", choices, allowAbort = false).head  match {
         case "1"   => available = available :+ Plot1
         case "2"   => available = available :+ Plot2
         case "3"   => available = available :+ Plot3
@@ -8147,7 +8162,7 @@ object LabyrinthAwakening {
       ).flatten
 
       showAll()
-      askMenu("\nChoose one: ", choices, allowAbort = false).head match {
+      askMenu("Choose one: ", choices, allowAbort = false).head match {
         case "done" =>
         case "new"  => addNewPlot(); nextAction()
         case spec   => doMove(spec); nextAction()
@@ -8674,7 +8689,7 @@ object LabyrinthAwakening {
       ).flatten
 
       showAll()
-      askMenu("\nChoose one: ", choices, allowAbort = false).head  match {
+      askMenu("Choose one: ", choices, allowAbort = false).head  match {
         case "done" =>
         case spec   => doMove(spec); nextAction()
       }
@@ -8780,7 +8795,7 @@ object LabyrinthAwakening {
           choice(inPlace.nonEmpty,   "remove", "Remove an Advisors marker"),
           choice(true,               "done",   "Finished")
         ).flatten
-        askMenu("\nChoose one:", choices, allowAbort = false).head match {
+        askMenu("Choose one:", choices, allowAbort = false).head match {
           case "place" =>
             inPlace = Advisors :: inPlace
             available = available.tail

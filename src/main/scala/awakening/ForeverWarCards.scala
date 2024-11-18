@@ -398,7 +398,7 @@ object ForeverWarCards {
             choice(candidates.nonEmpty, "remove", "Remove up to 2 cells in any one Muslim country"),
             choice(canDiscard,          "discard", s"Discard top card of the $Jihadist hand")
           ).flatten
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "discard" => 
               println()
               log(s"Discard top card of the $Jihadist hand")
@@ -752,7 +752,7 @@ object ForeverWarCards {
             choice(game.prestige < 12, "prestige", "+1 Prestige"),
             choice(game.funding > 1,   "funding", "-1 Funding")
           ).flatten
-          askMenu("\nChoose one:", choices).head
+          askMenu("Choose one:", choices).head
         }
         else {
           // Bot
@@ -828,7 +828,7 @@ object ForeverWarCards {
             choice(reposMilitia > 1,                                         "repos", "Reposition militia")
           ).flatten
 
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "place" =>
               val numMilita  = game.militiaAvailable min 2
               val candidates = arabNatoCandidates
@@ -1081,7 +1081,7 @@ object ForeverWarCards {
             choice(trumpTripAlignmentCandidates.nonEmpty, "align",   "Shift alignment of 1 country"),
             choice(trumpTripPostureCandidates.nonEmpty,   "posture", "Set posture of 1 country")
           ).flatten
-          askMenu("\nChoose one:", choices).head
+          askMenu("Choose one:", choices).head
         }
         else if (trumpTripAlignmentCandidates.nonEmpty)  // Bot
           "align"
@@ -1139,7 +1139,7 @@ object ForeverWarCards {
               "Remove 4 cells total in Caliphate countries")
           ).flatten
 
-          val (candidates, maxCells, upto) = askMenu("\nChoose one:", choices).head match {
+          val (candidates, maxCells, upto) = askMenu("Choose one:", choices).head match {
             case "non-cal" => (airAmericaNonCaliphateCandidates, 3, true)
             case _         => (airAmericaCaliphateCandidates, 4, false)
           }
@@ -1687,7 +1687,7 @@ object ForeverWarCards {
             choice(cellOK,    "cell",     "Place a cell")
           ).flatten
 
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "reaction" =>
               val target = askCountry("Place reaction marker in which country: ", sayyedHassanReactionCandidates)
               addEventTarget(target)
@@ -1773,7 +1773,7 @@ object ForeverWarCards {
               JihadistBot.posturePriority(candidates).get
             
             val posture = if (role == game.humanRole)
-              askOneOf(s"New posture for $target (Soft or Hard): ", Seq(Soft, Hard)).get
+              askSimpleMenu(s"New posture of $target: ", List(Soft, Hard))
             else
               oppositePosture(game.usPosture)
             
@@ -2042,7 +2042,7 @@ object ForeverWarCards {
             choice(postureCandidates.nonEmpty, "posture", "Remove posture marker from non-Muslim country")
           ).flatten
 
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "plot" =>
               val target = askCountry("Place plot in which country: ", countryNames(game.countries))
               val plot  = askPlots(plots, 1).head
@@ -2659,7 +2659,7 @@ object ForeverWarCards {
             "shift"    -> "Shift alignment of Saudi Arabia toward Adversary",
             "prestige" -> "Decrease prestige by 2"
           )
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "shift" => shiftAlignmentRight(SaudiArabia)
             case _       => decreasePrestige(2)
           }
@@ -2717,7 +2717,7 @@ object ForeverWarCards {
               choice(m.isGood || m.isFair, "worsen", "Worsen governance of Gulf States"),
               choice(!m.isAdversary,       "shift",  "Shift alignment of Gulf States towards Adversary")
             ).flatten
-            askMenu("\nChoose one:", choices).head match {
+            askMenu("Choose one:", choices).head match {
               case "worsen" => worsenGovernance(GulfStates, 1, canShiftToIR = false)
               case _        => shiftAlignmentRight(GulfStates)
             }
@@ -2966,7 +2966,7 @@ object ForeverWarCards {
       (role: Role, forTrigger: Boolean) => {
         val action = if (role == game.humanRole) {
           val choices = List("on" -> "Set Trump Tweets ON", "off" -> "Set Trump Tweets OFF")
-          askMenu("\nChoose one: ", choices).head
+          askMenu("Choose one: ", choices).head
         }
         else if (role == US) "on" else "off"
         
@@ -3022,7 +3022,7 @@ object ForeverWarCards {
             choice(game.availablePlots contains Plot1, "plot", "Place a level 1 Plot"),
             choice(game.cellsAvailable > 0,            "cell", "Place a Cell")
           ).flatten
-          (name, askMenu("\nChoose one:", choices).head)
+          (name, askMenu("Choose one:", choices).head)
         }
         else if (game.availablePlots contains Plot1)
           (JihadistBot.plotPriority(candidates).get, "plot")
@@ -3165,13 +3165,13 @@ object ForeverWarCards {
             choice(true,                    "posture", "Set posture of India or Thailand"),
             choice(game.cellsAvailable > 0, "cell",    "Place a Cell in India or Thailand")
           ).flatten
-          val action = askMenu("\nChoose one:", choices).head
+          val action = askMenu("Choose one:", choices).head
           val target = askCountry("Which country: ", names)
           
           addEventTarget(target)
           testCountry(target)
           if (action == "posture") {
-            val posture = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+            val posture = askSimpleMenu(s"New posture of $target: ", List(Soft, Hard))
             setCountryPosture(target, posture)
           }
           else
@@ -3720,7 +3720,7 @@ object ForeverWarCards {
           ).flatten
         
         val action = role match {
-          case _  if role == game.humanRole       => askMenu("\nChoose one:", choices).head
+          case _  if role == game.humanRole       => askMenu("Choose one:", choices).head
           case US if !turkey.isGood               => "improve"
           case US                                 => "left"
           case Jihadist if !turkey.isIslamistRule => "worsen"
@@ -3811,7 +3811,7 @@ object ForeverWarCards {
               choice(true,                       "return", s"Return $cardDisplay to the $opponent hand"),
               choice(true,                       "keep",   s"Keep $cardDisplay and give another card to the $opponent")
             ).flatten
-            askMenu("\nChoose one:", choices).head
+            askMenu("Choose one:", choices).head
           }
           else { // Bot
             if (card.autoTrigger || card.eventIsPlayable(role)) "event" else "discard"
@@ -3896,12 +3896,12 @@ object ForeverWarCards {
             choice(lapsing.nonEmpty, "lapsing", "Remove a lapsing card")
           ).flatten
           
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "marker" =>
               val marker = if (markers.size == 1)
                 markers.head
               else
-                askMenu("\nRemove which event marker:", markers.map(m => m -> m)).head
+                askMenu("Remove which event marker:", markers.map(m => m -> m)).head
               if (GlobalMarkers contains marker)
                 removeGlobalEventMarker(marker)
               else {
@@ -4017,7 +4017,7 @@ object ForeverWarCards {
         }
         else {
           val choices = boxChoices :+ (-1, "A card from the discard pile")
-          askMenu("\nAdd which card to your hand:", choices).head match {
+          askMenu("Add which card to your hand:", choices).head match {
             case -1 =>
               askCardsDrawn(1)
             case num if game.firstPlotCard == Some(num) =>
@@ -4058,7 +4058,7 @@ object ForeverWarCards {
         }
         else {
           val choices = boxChoices :+ (-1, "A card from the discard pile")
-          askMenu("\nAdd which card to your hand:", choices).head match {
+          askMenu("Add which card to your hand:", choices).head match {
             case -1 =>
               askCardsDrawn(1)
             case num if game.firstPlotCard == Some(num) =>

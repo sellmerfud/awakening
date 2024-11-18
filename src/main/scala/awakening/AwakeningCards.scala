@@ -444,7 +444,7 @@ object AwakeningCards {
             choice(reaperCandidates.nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),
             choice(condition = true,          "discard", "Randomly discard 1 card from the Jihadist hand")
           ).flatten
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "discard" =>
               log("Discard the top card in the Jihadist hand")
               askCardsDiscarded(1)
@@ -637,10 +637,10 @@ object AwakeningCards {
         if (randomShiaMixList exists (_.canTakeAwakeningOrReactionMarker)) {
           if (game.manualDieRolls) {
             val candidates = countryNames(randomShiaMixList.filter(_.canTakeAwakeningOrReactionMarker))
-            val shiaMix = askOneOf(
+            val shiaMix = askCountry(
               "Select \"Random Shia Mix\" country to receive Awakening marker: ",
               candidates,
-              allowAbort = true).get
+              allowAbort = true)
             println()
             addEventTarget(shiaMix)
             testCountry(shiaMix)
@@ -676,7 +676,7 @@ object AwakeningCards {
             "reveal" -> "Reveal all WMD plots and remove one",
             "draw"  -> "Randomly draw 1 card from the Jihadist hand")
 
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "draw" =>
               log("Draw the top card in the Jihadist Bot's hand")
               askCardsDrawn(1)
@@ -895,7 +895,7 @@ object AwakeningCards {
             choice(condition = true,   "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
           ).flatten
 
-          askMenu(s"\nDo any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
+          askMenu(s"Do any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "awakening" =>
@@ -914,7 +914,7 @@ object AwakeningCards {
               case "funding"  => decreaseFunding(1)
               case "posture" =>
                 val target  = askCountry("Select posture of which Schengen country: ", Schengen)
-                val posture = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+                val posture = askSimpleMenu("\nSelect new posture:", List(Soft, Hard))
                 addEventTarget(target)
                 setCountryPosture(target, posture)
               case _ =>
@@ -1263,7 +1263,7 @@ object AwakeningCards {
           val placeCandidates = gulfUnionCandidates.toList.sorted
           val action = if (actions.size == 1) actions.head
           else
-            askMenu("\nChoose one:", choices).head
+            askMenu("Choose one:", choices).head
 
           action match {
             case "place" =>
@@ -1451,7 +1451,7 @@ object AwakeningCards {
             val action = if (actions.size == 1)
               actions.head
             else
-              askMenu("\nChoose one:", choices).head
+              askMenu("Choose one:", choices).head
 
 
             if (action == "activate") {
@@ -1676,7 +1676,7 @@ object AwakeningCards {
             val choices = List(
               "cells"   -> s"Place ${amountOf(num(target), "cell")} in $target",
               "funding" -> "Increase funding")
-            askMenu("\nChoose one:", choices).head
+            askMenu("Choose one:", choices).head
           }
           (target, action)
         }
@@ -1767,7 +1767,7 @@ object AwakeningCards {
             choice(canBesiege, "besiege",  "Place a besieged regime marker"),
             choice(condition = true, "draw",     "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
           ).flatten
-          askMenu("\nDo any 2 of the following:", choices, 2, repeatsOK = false) foreach { action =>
+          askMenu("Do any 2 of the following:", choices, 2, repeatsOK = false) foreach { action =>
             println()
             action match {
               case "reaction" =>
@@ -2205,24 +2205,18 @@ object AwakeningCards {
             choice(haveCells, "cells", "Place up to 3 cells in Nigeria")
           ).flatten
 
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "plot" =>
-              val options = Seq(Plot2, Plot3) filter game.availablePlots.contains map {
-                case Plot2 => "2"
-                case Plot3 => "3"
-              }
-              val plotNum = if (options.size == 1)
+              val options = List(Plot2, Plot3) filter game.availablePlots.contains
+              val plot = if (options.size == 1)
                 options.head
               else
-                askOneOf("What level plot? (2 or 3) ", options).get
-              plotNum match {
-                case "2" => addAvailablePlotToCountry(Nigeria, Plot2)
-                case "3" => addAvailablePlotToCountry(Nigeria, Plot3)
-              }
+                askSimpleMenu("Place which plot:", options)
+              addAvailablePlotToCountry(Nigeria, plot)
 
             case "cells" =>
               val maxCells = 3 min game.cellsAvailable
-              val num = askInt("Place how many cells", 1, maxCells, Some(maxCells))
+              val num = askInt("\nPlace how many cells", 1, maxCells, Some(maxCells))
               addSleeperCellsToCountry(Nigeria, num)
               if (num == 3 && canDeclareCaliphate(Nigeria) && askDeclareCaliphate(Nigeria))
                 declareCaliphate(Nigeria)
@@ -2660,7 +2654,7 @@ object AwakeningCards {
             None
           else {
             val name = askCountry(s"Select posture of which country: ", postureCandidates)
-            val pos = askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get
+            val pos = askSimpleMenu(s"\nNew posture for $name: ",  List(Soft, Hard))
 
             Some(name, pos)
           }
@@ -2720,7 +2714,7 @@ object AwakeningCards {
               choice(m.canTakeAwakeningOrReactionMarker, "awakening", "Place an awakening marker"),
               choice(!m.isAlly,                          "shiftLeft", "Shift alignment towards Ally")
             ).flatten
-            val action = if (choices.isEmpty) None else askMenu("\nChoose one:", choices).headOption
+            val action = if (choices.isEmpty) None else askMenu("Choose one:", choices).headOption
             (target, action, Nil)
 
           case (Jihadist, true) =>
@@ -2730,7 +2724,7 @@ object AwakeningCards {
               choice(game.cellsAvailable > 0, "cells",      "Place cells"),
               choice(!m.isAdversary,          "shiftRight", "Shift alignment towards Adversary")
             ).flatten
-            val action = if (choices.isEmpty) None else askMenu("\nChoose one:", choices).headOption
+            val action = if (choices.isEmpty) None else askMenu("Choose one:", choices).headOption
             val from = if (action == Some("cells")) {
               val sources = countryNames(game.countries filter (c => c.name != target && c.cells > 0))
               askCellsFromAnywhere(2, trackOK = true, sources, sleeperFocus = false)
@@ -2804,7 +2798,7 @@ object AwakeningCards {
             choice(cellsOK,   "cells",   "Place cells")
           ).flatten
 
-          val action = askMenu("\nChoose one:", choices).head
+          val action = askMenu("Choose one:", choices).head
           val candidates = if (action == "militia")
             countryNames(game.getCountries(African) filter (_.canTakeMilitia))
           else
@@ -2861,13 +2855,13 @@ object AwakeningCards {
             choice(cadres,    "remove",   "Remove a cadre")
           ).flatten
 
-          askMenu("\nChoose one:", choices).head match {
+          askMenu("Choose one:", choices).head match {
             case "reserves" =>
               clearReserves(if (role == US) Jihadist else US)
               addToReserves(role, opRes)
             case "posture"  =>
               val name    = askCountry("Set the posture of which country? ", COUNTRIES)
-              val posture = askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get
+              val posture = askSimpleMenu(s"New posture for $name: ", List(Soft, Hard))
               addEventTarget(name)
               setCountryPosture(name, posture)
             case "place"    =>
@@ -3015,7 +3009,7 @@ object AwakeningCards {
           else {
             addEventTarget(name)
             testCountry(name)
-            askMenu("\nChoose one:", choices).head match {
+            askMenu("Choose one:", choices).head match {
               case "+aid" => addAidMarker(name)
               case "-aid" => removeAidMarker(name)
               case "+bsg" => addBesiegedRegimeMarker(name)
@@ -3031,7 +3025,7 @@ object AwakeningCards {
                 val (actives, sleepers, sadr) = askCells(name, 2, role == US)
                 removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
               case "+pos" =>
-                val posture = askOneOf(s"New posture for $name (Soft or Hard): ", Seq(Soft, Hard)).get
+                val posture = askSimpleMenu(s"New posture for $name: ", List(Soft, Hard))
                 setCountryPosture(name, posture)
               case "-pos" => setCountryPosture(name, PostureUntested)
             }
@@ -3131,7 +3125,7 @@ object AwakeningCards {
               choice(game.cellsAvailable > 0,            "cell", "Place an active cell"),
               choice(game.availablePlots contains Plot1, "plot", "Place a Plot 1")
             ).flatten
-            askMenu("\nChoose one:", choices).head match {
+            askMenu("Choose one:", choices).head match {
               case "cell" => addActiveCellsToCountry(name, 1)
               case "plot" => addAvailablePlotToCountry(name, Plot1)
             }
@@ -3159,7 +3153,7 @@ object AwakeningCards {
               choice(n.hasCadre,       "cadre", "Remove cadre"),
               choice(n.hasPlots,       "plot" , "Alert a plot")
             ).flatten
-            askMenu("\nChoose one:", choices).head match {
+            askMenu("Choose one:", choices).head match {
               case "cell"  =>
                 // Use the Bot routine to pick a sleeper first
                 val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 1)
@@ -3391,7 +3385,7 @@ object AwakeningCards {
               "cell" -> "Place a cell from the track in a random Schengen country",
               "draw" -> "Draw \"Paris Attacks\" or \"Training Camps\" from the discard pile")
             println()
-            askMenu("\nChoose one:", choices).head match {
+            askMenu("Choose one:", choices).head match {
               case "draw" => log("Jihadist draws \"Paris Attacks\" or \"Training Camps\" from the discard pile")
               case "cell" =>
                 val schengen = randomSchengenCountry
@@ -3745,12 +3739,12 @@ object AwakeningCards {
           val nonSchengen = countryNames(game.nonMuslims filter (n => n.canChangePosture && !(Schengen contains n.name)))
           if (role == game.humanRole) {
             val schengen  = askCountry("Select posture of which Schengen country: ", Schengen)
-            val posture = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+            val posture = askSimpleMenu(s"New posture of $schengen: ", List(Soft, Hard))
             addEventTarget(schengen)
             setCountryPosture(schengen, posture)
 
             val other  = askCountry("Select posture of which non-Schengen country: ", nonSchengen)
-            val posture2 = askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get
+            val posture2 = askSimpleMenu(s"New posture of $other: ", List(Soft, Hard))
             addEventTarget(other)
             setCountryPosture(other, posture2)
           }
@@ -3780,7 +3774,7 @@ object AwakeningCards {
             if (choices.isEmpty)
               log("The event has no effect")
             else {
-              askMenu("\nChoose one:", choices).head match {
+              askMenu("Choose one:", choices).head match {
                 case "posture"  => setUSPosture(oppositePosture(game.worldPosture))
                 case "prestige" =>
                   val die = getDieRoll("Enter prestige die roll: ", Some(role))
@@ -3814,9 +3808,11 @@ object AwakeningCards {
         increasePrestige(if (game.caliphateDeclared) 2 else 1)
       }
       else {
-        val (name, posture) = if (role == game.humanRole)
-          (askCountry("Select Schengen country: ", Schengen),
-          askOneOf("New posture (Soft or Hard): ", Seq(Soft, Hard)).get)
+        val (name, posture) = if (role == game.humanRole) {
+          val name = askCountry("\nSelect Schengen country: ", Schengen)
+          val posture = askSimpleMenu("New posture: ", List(Soft, Hard))
+          (name, posture)
+        }
         else
           (JihadistBot.posturePriority(Schengen).get, oppositePosture(game.usPosture))
 
@@ -3957,7 +3953,7 @@ object AwakeningCards {
           val action = choices match {
             case Nil                => None
             case (action, _) :: Nil => Some(action)
-            case _                  => Some(askMenu("\nChoose one:", choices).head)
+            case _                  => Some(askMenu("Choose one:", choices).head)
           }
           (name, cells, action)
         }
@@ -4137,7 +4133,7 @@ object AwakeningCards {
         val (cells, militia) = if (role == game.humanRole) {
           val choices = List("cells"   -> "Place 2 cells and 1 militia in Syria",
                              "militia" -> "Place 2 militia and 1 cell in Syria")
-          if (askMenu("\nChoose one:", choices).head == "cells") (2, 1) else (1, 2)
+          if (askMenu("Choose one:", choices).head == "cells") (2, 1) else (1, 2)
         }
         else if (role == Jihadist) (2, 1)
         else (1, 2)
