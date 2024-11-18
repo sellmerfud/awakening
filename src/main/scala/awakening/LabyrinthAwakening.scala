@@ -3255,7 +3255,7 @@ object LabyrinthAwakening {
   def getLogName(save_number: Int)  = f"log-$save_number%03d"
 
   def getSaveFileNumber(filename: Pathname): Option[Int] = {
-    val SAVE_FILE = """save-(\d+)""".r
+    val SAVE_FILE = """(?:save|log)-(\d+)""".r
     filename.basename.toString match {
       case SAVE_FILE(n) => Some(n.toInt)
       case _            => None
@@ -3306,9 +3306,10 @@ object LabyrinthAwakening {
 
   // Given a directory for a saved game finds the most recent save file.
   def mostRecentSaveNumber(name: String): Option[Int] = {
+    import Pathname.glob
     val dir = gamesDir/name
     if (dir.isDirectory) {
-      val entries = dir.children(withDirectory = false) flatMap { child =>
+      val entries = glob(dir/"save-*") flatMap { child =>
         getSaveFileNumber(child)
       }
       entries.sortBy(num => -num).headOption
@@ -3407,6 +3408,7 @@ object LabyrinthAwakening {
               // Remove all safe files that succeed this one.
               // We are exploring anew
               removeSaveFiles(name, target + 1)
+              removeLogFiles(name, target + 1)
               displayGameStateDifferences(oldGameState, game)
             }
             else
@@ -3430,6 +3432,15 @@ object LabyrinthAwakening {
     import Pathname.glob
     for {
       path    <- glob(gamesDir/name/"save-*")
+      saveNum <- getSaveFileNumber(path)
+              if saveNum >= num
+    } path.delete()
+  }
+
+  def removeLogFiles(name: String, num: Int): Unit = {
+    import Pathname.glob
+    for {
+      path    <- glob(gamesDir/name/"log-*")
       saveNum <- getSaveFileNumber(path)
               if saveNum >= num
     } path.delete()
