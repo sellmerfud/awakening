@@ -1709,7 +1709,9 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(170, "Theft of State", Jihadist, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game hasMuslim theftOfStateCandidate
+      (role: Role, forTrigger: Boolean) =>
+        lapsingEventNotInPlay(ArabWinter) &&  // Would prevent "replacement" of marker
+        game.hasMuslim(theftOfStateCandidate)
       ,
       (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter theftOfStateCandidate)
