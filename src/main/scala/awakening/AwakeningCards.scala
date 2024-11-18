@@ -165,9 +165,13 @@ object AwakeningCards {
   // it contains the only cells currently on the map!
   def unCeasfireCandidates(role: Role) = {
     val basicTest       = (m: MuslimCountry) => m.civilWar && !game.isCaliphateMember(m.name)
-    val usBotTest       = (m: MuslimCountry) => basicTest(m) && (m.totalTroopsAndMilitia > m.totalCells) ||
-                                                                 m.totalCells == game.totalCellsOnMap
-    val jihadistBotTest = (m: MuslimCountry) => basicTest(m) && m.totalCells > m.totalTroopsAndMilitia
+    val usBotTest       = (m: MuslimCountry) =>
+      basicTest(m) &&
+      ((lapsingEventInPlay(ArabWinter) && m.totalCells == 0) ||
+       (lapsingEventNotInPlay(ArabWinter) && (m.totalTroopsAndMilitia >= m.totalCells || m.totalCells == game.totalCellsOnMap)))
+    val jihadistBotTest = (m: MuslimCountry) =>
+      basicTest(m) &&
+      m.totalCells > m.totalTroopsAndMilitia
     val test = if (role == game.humanRole)
       basicTest
     else if (role == US)
@@ -4071,10 +4075,13 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => {
         // Can we remove the last cell on the board?
-        unCeasfireCandidates(US) exists (name => game.getMuslim(name).totalCells == game.totalCellsOnMap)
+        lapsingEventNotInPlay(ArabWinter) &&  // Arab Winter would prevent replacing the cells with reaction markers
+        unCeasfireCandidates(US).exists(name => game.getMuslim(name).totalCells == game.totalCellsOnMap)
       }
       ,
-      (role: Role, forTrigger: Boolean) => unCeasfireCandidates(role).nonEmpty
+      (role: Role, forTrigger: Boolean) => {
+          unCeasfireCandidates(role).nonEmpty
+      }
       ,
       (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
@@ -4090,12 +4097,24 @@ object AwakeningCards {
         }
 
         addEventTarget(name)
-        val m = game getMuslim name
+        val m = game.getMuslim(name) // country state before any of of the changes
         endCivilWar(name)  // This will remove the militia
+        // If Arab Winter is in effect, then placing of Awakeing/Reaction markers
+        // is prohibited.  According to the designer (Trevor) this would prevent
+        // the cells being "replaced"
+        // Note: any milita will have been removed when the Civil War ended above
+        if (lapsingEventInPlay(ArabWinter)) {
+          if (m.militia > 0)
+            log("No awakening markers may be placed [Arab Winter]", Color.Event)
+          if (m.totalCells > 0)
+            log("Cells are not replaced with reaction markers [Arab Winter]", Color.Event)
+        }
+        else {
+          addAwakeningMarker(name, m.militia)
+          removeCellsFromCountry(name, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = true)
+          addReactionMarker(name, m.totalCells)
+        }
         moveTroops(name, "track", m.troops)
-        removeCellsFromCountry(name, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = true)
-        addAwakeningMarker(name, m.militia)
-        addReactionMarker(name, m.totalCells)
         setAlignment(name, Neutral)
         rollGovernance(name)
       }
