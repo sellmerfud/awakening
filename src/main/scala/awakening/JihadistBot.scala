@@ -1301,7 +1301,6 @@ object JihadistBot extends BotHelpers {
       val maxTravel = maxOpsPlusReserves(card)
 
       def nextTravelFrom(alreadyTried: Set[String], attempts: List[TravelAttempt]): List[TravelAttempt] = {
-        log(s"nextTravelFrom($alreadyTried, $attempts)", Color.Event)
         val remaining = maxTravel - attempts.size
         if (remaining == 0)
           attempts  // We've used all available Ops
