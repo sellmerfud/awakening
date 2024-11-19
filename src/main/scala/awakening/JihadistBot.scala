@@ -895,7 +895,7 @@ object JihadistBot extends BotHelpers {
 
     // Not needed
     object CellAvailableOrPlotDecision extends OperationDecision {
-      val desc = "Cells Available?"
+      val desc = "Cells Available and Recruit Possible?"
       def yesPath = RecruitOp
       def noPath  = PlotOpFunding
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
@@ -927,9 +927,10 @@ object JihadistBot extends BotHelpers {
     // Finds the highest priority travel destination among them and checks
     // to see if there is a cell in an adjacent country.
     object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
-      val desc = "Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible?"
+      val desc = """|Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible and
+                    |at least one adjacent cell that can travel""".stripMargin
       def yesPath = TravelOp
-      def noPath  = EnhancedTravelOp
+      def noPath  = ReecruitOrEnhanceTravelDecision
       def condition(ops: Int) = {
         val candidates = countryNames(game.getMuslims(game.jihadTargets).filter(poorMuslimNeedsCellsForMajorJihad))
         travelToTarget(candidates) match {
@@ -937,6 +938,13 @@ object JihadistBot extends BotHelpers {
           case Some(target) => game.adjacentCountries(target) exists hasCellForTravel
         }
       }
+    }
+
+    object ReecruitOrEnhanceTravelDecision extends OperationDecision {
+      val desc = "Cells Available and Recruit Possible?"
+      def yesPath = RecruitOp
+      def noPath  = EnhancedTravelOp
+      def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
     object FundingBelow7Decision extends OperationDecision {
