@@ -754,7 +754,7 @@ object JihadistBot extends BotHelpers {
   // Jihadist Operations Flowchart definitions.
   sealed trait Operation       extends OpFlowchartNode
   case object RecruitOp        extends Operation
-  case object TravelOp         extends Operation
+  case class TravelOp(adjacentOnly: Boolean) extends Operation
   case object PlotOpFunding    extends Operation // plot with focus on raising funding
   case object PlotOpPrestige   extends Operation // plot with focus on hammering US prestige
   case object MinorJihadOp     extends Operation
@@ -797,7 +797,7 @@ object JihadistBot extends BotHelpers {
     object CellAvailableOrTravelDecision extends OperationDecision {
       val desc = "Cells Available?"
       def yesPath = RecruitOp
-      def noPath  = TravelOp
+      def noPath  = TravelOp(adjacentOnly = false)
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
@@ -821,7 +821,7 @@ object JihadistBot extends BotHelpers {
     // to see if there is a cell in an adjacent country.
     object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
       val desc = "Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible?"
-      def yesPath = TravelOp
+      def yesPath = TravelOp(adjacentOnly = false)
       def noPath  = FundingModerateDecision
       def condition(ops: Int) = {
         val candidates = countryNames(game.getMuslims(game.jihadTargets).filter(poorMuslimNeedsCellsForMajorJihad))
@@ -858,7 +858,7 @@ object JihadistBot extends BotHelpers {
     object CellInNonMuslim extends OperationDecision {
       val desc = "Cell in non-Muslim?"
       def yesPath = PlotOpFunding
-      def noPath  = TravelOp
+      def noPath  = TravelOp(adjacentOnly = false)
       def condition(ops: Int) = game hasNonMuslim (totalUnused(_) > 0)
     }
   }
@@ -904,7 +904,7 @@ object JihadistBot extends BotHelpers {
     object CellAvailableOrTravelDecision extends OperationDecision {
       val desc = "Cells Available?"
       def yesPath = RecruitOp
-      def noPath  = TravelOp
+      def noPath  = TravelOp(adjacentOnly = false)
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
@@ -929,7 +929,7 @@ object JihadistBot extends BotHelpers {
     object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
       val desc = """|Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible and
                     |at least one adjacent cell that can travel""".stripMargin
-      def yesPath = TravelOp
+      def yesPath = TravelOp(adjacentOnly = true)
       def noPath  = ReecruitOrEnhanceTravelDecision
       def condition(ops: Int) = {
         val candidates = countryNames(game.getMuslims(game.jihadTargets).filter(poorMuslimNeedsCellsForMajorJihad))
@@ -1289,14 +1289,14 @@ object JihadistBot extends BotHelpers {
       }
       else {
         val opsUsed = operationsFlowchart(maxOpsPlusReserves(card)) match {
-          case RecruitOp        => recruitOperation(card)
-          case TravelOp         => travelOperation(card)
-          case PlotOpFunding    => plotOperation(card, prestigeFocus = false)
-          case PlotOpPrestige   => plotOperation(card, prestigeFocus = true)
-          case MinorJihadOp     => minorJihadOperation(card)
-          case MajorJihadOp     => majorJihadOperation(card)
-          case PlaceRandomCells => placeRandomCellsOnMap(card)   // Enhanced bot only
-          case EnhancedTravelOp => enhancedTravelOperation(card) // Enhanced bot only
+          case RecruitOp         => recruitOperation(card)
+          case TravelOp(adjOnly) => travelOperation(card, adjOnly)
+          case PlotOpFunding     => plotOperation(card, prestigeFocus = false)
+          case PlotOpPrestige    => plotOperation(card, prestigeFocus = true)
+          case MinorJihadOp      => minorJihadOperation(card)
+          case MajorJihadOp      => majorJihadOperation(card)
+          case PlaceRandomCells  => placeRandomCellsOnMap(card)   // Enhanced bot only
+          case EnhancedTravelOp  => enhancedTravelOperation(card) // Enhanced bot only
         }
 
         if (opsUsed < card.ops)
@@ -1419,7 +1419,7 @@ object JihadistBot extends BotHelpers {
   // - Select active cells for travel before sleeper cells
   // - Never travel sleeper cells within the same country
   // Returns the number of Ops used.
-  def travelOperation(card: Card): Int = {
+  def travelOperation(card: Card, adjacentOnly: Boolean): Int = {
 
     def carryoutTravelOp(toName: String): Int = {
       val maxTravel = maxOpsPlusReserves(card)
@@ -1431,6 +1431,7 @@ object JihadistBot extends BotHelpers {
         else {
           val canTravelFrom = (c: Country) =>
             !alreadyTried(c.name) &&
+            (!adjacentOnly || areAdjacent(c.name, toName)) &&
             hasCellForTravelWithPrevious(c, attempts)
           val canTravelInPlace =
             !game.botEnhancements &&
@@ -1509,7 +1510,7 @@ object JihadistBot extends BotHelpers {
     }
 
     log()
-    log(s"$Jihadist performs a Travel operation")
+    log(s"$Jihadist performs a Travel operation (from adjacent countries)")
     log(separator())
 
     // If Biometrics is in effect only adjacent travel is allowed.
@@ -1519,6 +1520,14 @@ object JihadistBot extends BotHelpers {
       // Note: The Enhanced bot does not travel in place.
       val validCountries = game.countries filter { c =>
         (c.activeCells > 0 && !game.botEnhancements) ||
+        game.adjacentCountries(c.name).exists(hasCellForTravel)
+      }
+      countryNames(validCountries)
+    }
+    else if (adjacentOnly) {
+      // The Enhanced Bot limits travel to adjacent only when the EvO
+      // selected Travel based on an available adjacent cell.
+      val validCountries = game.countries filter { c =>
         game.adjacentCountries(c.name).exists(hasCellForTravel)
       }
       countryNames(validCountries)
