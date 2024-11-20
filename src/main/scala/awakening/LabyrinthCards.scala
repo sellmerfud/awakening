@@ -1664,12 +1664,11 @@ object LabyrinthCards {
       (role: Role, forTrigger: Boolean) => game hasMuslim (m => m.inRegimeChange && m.totalCells > 0)
       ,
       (role: Role, forTrigger: Boolean) => {
-        if (role == game.humanRole) {
+        if (role == game.humanRole)
           log("Draw two cards and add them to your hand")
-          askCardsDrawn(2)
-        }
         else
           log(s"Draw 2 cards and place them on top of the $Jihadist Bot's hand")
+        askCardsDrawn(2)
         decreasePrestige(2)
         val candidates = countryNames(game.muslims filter (_.isAlly))
         if (candidates.isEmpty)
