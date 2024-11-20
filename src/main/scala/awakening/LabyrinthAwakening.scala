@@ -3067,19 +3067,20 @@ object LabyrinthAwakening {
   def logAdjustment(countryName: String, attributeName: String, oldValue: Any, newValue: Any): Unit =
     logAdjustment(s"$countryName: $attributeName", oldValue, newValue)
 
-  def logCardPlay(player: Role, card: Card, playable: Boolean): Unit = {
+  def logCardPlay(player: Role, card: Card, playable: Boolean, secondCard: Boolean = false): Unit = {
     val fakeNews = if (lapsingEventInPlay(FakeNews))
      """ but will be cancelled by "Fake News""""
     else
       ""
     log()
     log(separator(char = '='), echo = false)
-    log(s"$player plays $card")
+    val second = if (secondCard) " [2nd card play]" else ""
+    log(s"$player plays $card$second")
     if (card.autoTrigger)
       log(s"  (The ${card.association} event will automatically trigger)")
-    else if ((card.association == player || card.association == Unassociated) && playable)
+    else if ((card.association == player || card.association == Unassociated) && playable && !secondCard)
       log(s"  (The ${card.association} event is playable)$fakeNews")
-    else if ((card.association == player || card.association == Unassociated) && !playable)
+    else if ((card.association == player || card.association == Unassociated) && !playable && !secondCard)
       log(s"  (The ${card.association} event is not playable)")
   }
 
@@ -4202,10 +4203,6 @@ object LabyrinthAwakening {
     }
   }
 
-  def performReassessment(): Unit = {
-    val newPosture = oppositePosture(game.usPosture)
-    setUSPosture(newPosture)
-  }
 
   case class TravelAttempt(from: String, to: String, active: Boolean)
 
@@ -6969,7 +6966,7 @@ object LabyrinthAwakening {
               // Replace the head card play with a reassessment
               game = game.copy(plays = PlayedReassement(card.number, card2.number) :: game.plays.tail)
               secondCard = Some(card2)
-              logCardPlay(US, card2, card2.eventIsPlayable(US))
+              logCardPlay(US, card2, card2.eventIsPlayable(US), true)
               Reassess
           }
         case AbortCard =>
@@ -7006,7 +7003,7 @@ object LabyrinthAwakening {
 
     // There will only be a second card if the reassessment action was chosen.
     // If so we must check to see if the event on the second card will trigger
-    // an event.  (The first card event by still have to be triggered too.)
+    // an event.  (The first card event may still have to be triggered too.)
     val finalOrder = secondCard match {
       case Some(card2) if (card2.autoTrigger || card2.association == Jihadist) =>
         if (card1EventValid)
@@ -7194,8 +7191,9 @@ object LabyrinthAwakening {
     log()
     log(s"$US performs a Reassessment operation")
     log(separator())
-    performReassessment()
-  }
+
+    setUSPosture(oppositePosture(game.usPosture))
+}
 
   // Attempt to detect a change of action phase.
   // Normally an action phase consists to two card plays by the same side.
