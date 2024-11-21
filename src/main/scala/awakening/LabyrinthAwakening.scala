@@ -3874,7 +3874,7 @@ object LabyrinthAwakening {
     val usDie = getDieRoll(s"Enter US attrition die roll for $name: ")
     val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
     val totalTroopsAndMilitia = if (siegeOfMosul) m.totalTroopsAndMilitia * 2 else m.totalTroopsAndMilitia
-    val jihadHits = totalCells            / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
+    val jihadHits = totalCells / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
     val usHits    = totalTroopsAndMilitia / 6 + (if (usDie <= totalTroopsAndMilitia % 6) 1 else 0)
 
     if (totalCells == 0 && totalTroopsAndMilitia == 0)

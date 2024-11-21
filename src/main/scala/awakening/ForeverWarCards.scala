@@ -307,7 +307,7 @@ object ForeverWarCards {
   
   def bowlingGreenEventInPlay: Boolean =
     game.markers.nonEmpty ||
-    game.countries.exists(_.markers.nonEmpty) ||
+    game.countries.exists(c => c.markers.nonEmpty && !game.isCaliphateMember(c.name)) ||
     game.cardsLapsing.nonEmpty
 
   def bowlingGreenBotMarkers(role: Role): List[String] = {
@@ -3888,7 +3888,10 @@ object ForeverWarCards {
         (role == game.botRole && (bowlingGreenBotMarkers(role).nonEmpty || bowlingGreenBotLapsing(role).nonEmpty))
       ,
       (role: Role, forTrigger: Boolean) => if (role == game.humanRole) {
-        val markers: List[String] = game.markers ::: (game.countries flatMap (_.markers)).sorted.distinct
+        val countryMarkers = game.countries
+          .filterNot(c => game.isCaliphateMember(c.name))
+          .flatMap (_.markers)
+        val markers: List[String] = (game.markers ::: countryMarkers).sorted.distinct
         val lapsing: List[Int] = game.cardsLapsing
         if (markers.nonEmpty || lapsing.nonEmpty) {
           val choices = List(
