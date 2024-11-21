@@ -1818,6 +1818,7 @@ object JihadistBot extends BotHelpers {
     for (_ <- 1 to numPlacements) {
       val target = randomMuslimCountry.name
       addOpsTarget(target)
+      testCountry(target)
       addCellsToCountry(target, active = false, num = 1)
     }
 
