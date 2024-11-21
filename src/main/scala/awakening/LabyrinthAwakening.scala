@@ -6598,7 +6598,7 @@ object LabyrinthAwakening {
 
   // Parse the top level input and execute the appropriate command.
   def doCommand(input: String): Unit = {
-    val cardsPlayed     = (game.plays map (_.numCards)).sum
+    val cardsPlayed = game.plays.map(_.numCards).sum
     case class Command(val name: String, val help: String)
     val Commands = List(
       Command("us",
@@ -6684,7 +6684,13 @@ object LabyrinthAwakening {
 
     def showCommandHelp(cmd: String) = Commands find (_.name == cmd) foreach (c => println(c.help))
 
-    val tokens = input.split("\\s+").toList.dropWhile(_ == "")
+    // If the user type "u123" or "j345" then
+    // treat it as "u" "123" or  "j" "345"
+    val JoinedCardNum = raw"([Uu]|[Jj])(\d+)".r
+    val tokens = input.split("\\s+").toList.dropWhile(_ == "") match {
+      case JoinedCardNum(cmd, num) :: Nil => cmd :: num :: Nil
+      case tokens => tokens
+    }
     tokens.headOption foreach { verb =>
       val param = if (tokens.tail.nonEmpty) Some(tokens.tail.mkString(" ")) else None
       matchOne(verb, CmdNames) foreach {
