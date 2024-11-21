@@ -5538,6 +5538,7 @@ object LabyrinthAwakening {
       log(separator())
       log("An unblocked WMD plot was resolved in the United States", Color.Info)
       log("Game Over - Jihadist automatic victory!", Color.Info)
+      pause()
 
       saveGameState(Some("Game Over - Jihadist automatic victory!"))
       throw ExitGame
@@ -6527,6 +6528,7 @@ object LabyrinthAwakening {
       log(reason, Color.Info)
 
       if (game.exitAfterWin) {
+        pause()
         game = game.copy(plays = Nil)
         saveGameState(Some(summary))
         throw ExitGame
