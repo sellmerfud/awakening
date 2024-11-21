@@ -5928,7 +5928,7 @@ object LabyrinthAwakening {
       val threeResIR = (game.muslims find (m => m.resourceValue >= 3 && m.isIslamistRule))
       (game.sequestrationTroops, threeResIR) match {
         case (true, Some(m)) =>
-          log(s"\nThere 3 Resource Muslim country at Islamist Rule (${m.name})", Color.Event)
+          log(s"\nThere is a 3 Resource Muslim country at Islamist Rule (${m.name})", Color.Event)
           removeGlobalEventMarker(Sequestration)
         case _ =>
       }
