@@ -2073,13 +2073,13 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(299, "Foreign Fighters Return", Jihadist, 2,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, forTrigger: Boolean) =>
+      (role: Role, forTrigger: Boolean) =>
         !game.caliphateDeclared &&
-        forTrigger || (
+        (role == game.humanRole || forTrigger || (
           game.cellsAvailable > 0 &&
           ((game hasNonMuslim (n => n.isGood && n.name != UnitedStates)) ||
            (game hasNonMuslim (_.isFair)))
-        )                    
+        ))                    
       ,
       (role: Role, forTrigger: Boolean) => {
         val goodCandidates = countryNames(game.nonMuslims filter (n => n.isGood && n.name != UnitedStates))
