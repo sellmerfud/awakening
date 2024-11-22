@@ -2636,7 +2636,7 @@ object AwakeningCards {
           game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
         }
         else
-          log("None of the listed cards is in the discard pile.")
+          log("None of the listed cards is in the removed cards pile.")
         decreasePrestige(1)
       }
     )),
