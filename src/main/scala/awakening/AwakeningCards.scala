@@ -3279,13 +3279,30 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(211, "Smartphones", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) =>
-        (lapsingEventNotInPlay(ArabWinter) && (game hasMuslim smartPhonesCandidate)) ||
-        globalEventNotInPlay(Smartphones)
+      // If Arab Winter is in play the the only affect of the event is
+      // to enabled the play of Smartphones.  The Jihadist Bot will not willingly execute
+      // the event if this is the case
+      (role: Role, _: Boolean) => {
+        val canPlaceMarker = lapsingEventNotInPlay(ArabWinter) && game.hasMuslim(smartPhonesCandidate)
+        val wouldEnableFacebook = globalEventNotInPlay(Smartphones)
+
+        if (role == game.botRole)
+          (role == Jihadist && canPlaceMarker) || (role == US && (canPlaceMarker || wouldEnableFacebook))
+        else
+          true  // Always allow the Human to play the event.
+      }
       ,
       (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter smartPhonesCandidate)
-        if (candidates.nonEmpty) {
+        val marker = if (role == Jihadist)
+          "a reaction marker"
+        else
+          "an awakening marker"
+        if (globalEventInPlay(Smartphones))
+          log(s"Cannot place $marker [Arab Winter]", Color.Event)
+        else if (candidates.isEmpty)
+          log(s"There are no countries that can take $marker")
+        else {
           val name = if (role == game.humanRole)
             askCountry("Select country: ", candidates)
           else if (role == Jihadist)
