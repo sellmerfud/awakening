@@ -41,6 +41,7 @@ package awakening
 import scala.util.Random.shuffle
 import scala.annotation.tailrec
 import LabyrinthAwakening._
+import awakening.LabyrinthAwakening.Color.all
 
 // Common routines used by both of the Bots.
 
@@ -97,7 +98,7 @@ trait BotHelpers {
   trait OpFlowchartNode
   
   trait OperationDecision extends OpFlowchartNode {
-    val desc: String
+    def desc: String
     def yesPath: OpFlowchartNode
     def noPath: OpFlowchartNode
     def condition(ops: Int): Boolean
@@ -127,22 +128,27 @@ trait BotHelpers {
   // results from that filter are returned.
   // If none of the filters finds at least one matching country we return Nil, 
   // which indicates that no valid candidates were found for the OpP flowchart.
-  @tailrec final def selectCandidates(countries: List[Country], filters: List[CountryFilter]): List[Country] = {
-    botLog(s"OpP Flowchart: [${(countries map (_.name)) mkString ", "}]")
+  @tailrec final def selectCandidates(countries: List[Country], filters: List[CountryFilter], allowBotLog: Boolean = true): List[Country] = {
+    if (allowBotLog)
+      botLog(s"OpP Flowchart: [${(countries map (_.name)) mkString ", "}]")
     (countries, filters) match {
       case (Nil, _) =>
-        botLog("OpP Flowchart: no countries to consider")
+        if (allowBotLog)
+          botLog("OpP Flowchart: no countries to consider")
         Nil    // No countries to consider
       case (_, Nil) => 
-        botLog("OpP Flowchart: no candidates found")
+        if (allowBotLog)
+          botLog("OpP Flowchart: no candidates found")
         Nil    // No filter found any candidates
       case (cs, f::fs) =>
         (f filter cs) match {
           case Nil =>            // Filter did not match anything, try the next filter
-            botLog(s"OpP Flowchart ($f): failed")
-            selectCandidates(cs, fs)
+            if (allowBotLog)
+              botLog(s"OpP Flowchart ($f): failed")
+            selectCandidates(cs, fs, allowBotLog)
           case results =>        // We got some results…
-            botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
+            if (allowBotLog)
+              botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
             results
         }
     }
@@ -157,25 +163,30 @@ trait BotHelpers {
   // random.
   // Note: The only time this function will return None, is if the original list of
   //       countries is empty.
-  def topPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
-    botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")
+  def topPriority(countries: List[Country], priorities: List[CountryFilter], allowBotLog: Boolean = true): Option[Country] = {
+    if (allowBotLog)
+      botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")
     @tailrec def nextPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
       (countries, priorities) match {
         case (Nil, _)    => None
         case (c::Nil, _) => 
-          botLog(s"topPriority: Picked a winner [${c.name}]")
+          if (allowBotLog)
+            botLog(s"topPriority: Picked a winner [${c.name}]")
           Some(c)                             // We've narrowed it to one
         case (cs, Nil)   =>
           val c = shuffle(cs).head              // Take one at random
-          botLog(s"topPriority: Picked random country [${c.name}]")
+          if (allowBotLog)
+            botLog(s"topPriority: Picked random country [${c.name}]")
           Some(c)
         case (cs, f::fs) =>
           (f filter cs) match {
             case Nil =>
-              botLog(s"topPriority ($f) failed")
+              if (allowBotLog)
+                botLog(s"topPriority ($f) failed")
               nextPriority(cs, fs) // Filter entire list by next priority
             case rs  =>
-              botLog(s"topPriority ($f) [${(rs map (_.name) mkString ", ")}]")
+              if (allowBotLog)
+                botLog(s"topPriority ($f) [${(rs map (_.name) mkString ", ")}]")
               nextPriority(rs, fs) // Filter matched list by next priority
           }
       }

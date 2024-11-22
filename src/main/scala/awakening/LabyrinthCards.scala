@@ -1183,7 +1183,7 @@ object LabyrinthCards {
           log()
           log(s"$Jihadist performs a Recruit operation ${opsString(totalOps)}")
           log(separator())
-          JihadistBot.performRecruit(totalOps, ignoreFunding = true, madrassas = true)
+          JihadistBot.performRecruit(totalOps, None, ignoreFunding = true, madrassas = true)
         }
       }
     )),
