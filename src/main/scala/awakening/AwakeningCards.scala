@@ -3512,7 +3512,7 @@ object AwakeningCards {
         val syria = game getMuslim Syria
         val canAwakeReact = syria.canTakeAwakeningOrReactionMarker && lapsingEventNotInPlay(ArabWinter)
         !syria.isIslamistRule && (
-          (role == US && canAwakeReact) ||
+          (role == US && (!syria.isGood || canAwakeReact)) ||
           (role == Jihadist && (!syria.isPoor || canAwakeReact))
         )
       }
