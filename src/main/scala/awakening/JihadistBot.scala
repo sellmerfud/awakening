@@ -828,13 +828,13 @@ object JihadistBot extends BotHelpers {
 
     val irWithThreePlusCells = irCountryWith3PlusCells
     // val irCountryWith3Cells = game.muslims.exists(m => m.isIslamistRule && m.totalCells > 2)
-    val irCountryWith7CellsExists = game.muslims.exists(m => m.isIslamistRule && m.totalCells > 6)
+    val irCountryWith6CellsExists = game.muslims.exists(m => m.isIslamistRule && m.totalCells > 5)
 
     // Only recruit in IR if no IR country has 7+ cells
     // and if either no IR country has 3+ cells, or this is the IR country with 3+ cells
     val irCheck = (m: MuslimCountry) =>
       !m.isIslamistRule ||
-      (!irCountryWith7CellsExists && (irWithThreePlusCells.isEmpty || Some(m.name) == irWithThreePlusCells))
+      (!irCountryWith6CellsExists && (irWithThreePlusCells.isEmpty || Some(m.name) == irWithThreePlusCells))
 
     val criteria = if (game.botEnhancements)
       (c: Country) => c match {
