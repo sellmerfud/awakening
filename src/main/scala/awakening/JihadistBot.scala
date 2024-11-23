@@ -108,7 +108,7 @@ object JihadistBot extends BotHelpers {
     m.isFair &&
     majorJihadSuccessPossible(m)
 
-  def poorMuslimWithCadreAnNotTroopsOrMilitia(m: MuslimCountry): Boolean =
+  def poorMuslimWithCadreAnNoTroopsOrMilitia(m: MuslimCountry): Boolean =
     m.isPoor &&
     m.hasCadre &&
     m.totalTroopsAndMilitia == 0
@@ -136,7 +136,7 @@ object JihadistBot extends BotHelpers {
   // It must be a non-Fair country that allows auto-recruit.
   // (Note: by definition a Good country can never be an auto-recruit country)
   def autoRecruitPriorityCountry: Option[String] = {
-    val flowchart = List(
+    val priorities = List(
       new HighestScoreNode(
         "Poor Regime change w/ highest resource value",
         muslimTest(m => m.isPoor && m.inRegimeChange),
@@ -162,13 +162,13 @@ object JihadistBot extends BotHelpers {
     game.muslims.filter(m => m.autoRecruit && !m.isFair) match {
       case Nil => None
       case candidates =>
-        val bestCandidates = selectCandidates(candidates, flowchart, allowBotLog = false)
         // If we still have  more than one candidate, then select the
-        // first one alphabetically.  We do this so that we always select
+        // first one alphabetically.  (Note: countryNames alphabetizes the list)
+        // We do this so that we always select
         // the same target so that different parts of the code are not
         // targeting different countries.  Having multiple candidates
         // here should be rare.
-        countryNames(bestCandidates).headOption
+        countryNames(narrowCandidates(candidates, priorities, allowBotLog = false)).headOption
     }
   }
 
@@ -358,7 +358,7 @@ object JihadistBot extends BotHelpers {
     new CriteriaFilter(
       "Poor Muslim, (1-4 more cells than TandM or cadre and no TandM) and (awakening - reaction < 2) and JSP",
       muslimTest(m =>
-        (poorMuslimNeedsCellsForMajorJihad(m) || poorMuslimWithCadreAnNotTroopsOrMilitia(m))
+        (poorMuslimNeedsCellsForMajorJihad(m) || poorMuslimWithCadreAnNoTroopsOrMilitia(m))
       ))
 
   val EnhTravelPoorNeedCellsforMajorJihad =
@@ -778,17 +778,70 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
+  // If we have one or more Muslim countries at Islamist Rule
+  // that have 3 or more cells, then return the top priority one.
+  def irCountryWith3PlusCells: Option[String] = {
+    def hasAdjacent(country: Country, test: Country => Boolean): Boolean =
+       game.adjacentCountries(country.name).exists(test)
+
+    val priorities = List(
+      new HighestScoreNode(
+        "Adjacent to Poor Muslim with 1-4 more cells than TandM and Major JSP",
+        hasAdjacent(_, muslimTest(poorMuslimNeedsCellsForMajorJihad)),
+        muslimScore(m => m.resources)),
+      new HighestScoreNode(
+        "Adjacent to Poor Muslim where Major JSP",
+        hasAdjacent(_, muslimTest(poorMuslimWhereMajorJihadPossible)),
+        muslimScore(m => m.resources)),
+      new HighestScoreNode(
+        "Adjacent to Untested Muslim where Major JSP",
+        hasAdjacent(_, muslimTest(poorOrUnmarkedMuslimWhereMajorJihadPossible)),
+        muslimScore(m => m.resources)),
+      new HighestScoreNode(
+        "Adjacent to Fair Muslim where Major JSP and no TandM",
+        hasAdjacent(_, muslimTest(m => fairMuslimWhereMajorJihadPossible(m) && m.totalTroopsAndMilitia == 0)),
+        muslimScore(m => m.resources)),
+      new HighestScoreNode(
+        "Adjacent to Fair Muslim where JSP",
+        hasAdjacent(_, muslimTest(m => m.isFair && minorJihadSuccessPossible(m))),
+        muslimScore(m => m.resources)),
+      new HighestScoreNode(
+        "Adjacent to Good Muslim where JSP",
+        hasAdjacent(_, muslimTest(m => m.isGood && minorJihadSuccessPossible(m))),
+        muslimScore(m => m.resources)),
+    )
+
+    game.muslims.filter(m => m.isIslamistRule &&  m.totalCells > 2) match {
+      case Nil => None
+      case candidates =>
+        // If we still have  more than one candidate, then select the
+        // first one alphabetically.  (Note: countryNames alphabetizes the list)
+        // We do this so that we always select same target.
+        countryNames(narrowCandidates(candidates, priorities, allowBotLog = false)).headOption
+    }
+  }
+
+
+
 
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
+
+    val irWithThreePlusCells = irCountryWith3PlusCells
     // val irCountryWith3Cells = game.muslims.exists(m => m.isIslamistRule && m.totalCells > 2)
-    val irCountryWith7Cells = game.muslims.exists(m => m.isIslamistRule && m.totalCells > 6)
+    val irCountryWith7CellsExists = game.muslims.exists(m => m.isIslamistRule && m.totalCells > 6)
+
+    // Only recruit in IR if no IR country has 7+ cells
+    // and if either no IR country has 3+ cells, or this is the IR country with 3+ cells
+    val irCheck = (m: MuslimCountry) =>
+      !m.isIslamistRule ||
+      (!irCountryWith7CellsExists && (irWithThreePlusCells.isEmpty || Some(m.name) == irWithThreePlusCells))
+
     val criteria = if (game.botEnhancements)
       (c: Country) => c match {
-        case m: MuslimCountry =>                              // Only recruit in Muslim countries
-          (m.isPoor || m.autoRecruit) &&                      // Only recruit in Good/Fair if auto-recruit
-          // (m.totalCells > 0 || (m.hasCadre && m.totalTroopsAndMilitia == 0)) && // Do not recruit using Cadre if TandM preset
-          !(m.isIslamistRule && irCountryWith7Cells) &&      // Only recruit in IR if no IR country has  3+ cells
-          (!muslimWithCadreOnly || m.hasCadre)               // Special radicalization test
+        case m: MuslimCountry =>                // Only recruit in Muslim countries
+          (m.isPoor || m.autoRecruit) &&        // Only recruit in Good/Fair if auto-recruit
+          irCheck(m) &&
+          (!muslimWithCadreOnly || m.hasCadre)  // Special radicalization test
         case n: NonMuslimCountry => false
       }
     else
@@ -882,7 +935,7 @@ object JihadistBot extends BotHelpers {
         val candidates = countryNames(game.getMuslims(game.jihadTargets).filter(poorMuslimNeedsCellsForMajorJihad))
         travelToTarget(candidates) match {
           case None         => false
-          case Some(target) => game.adjacentCountries(target) exists hasCellForTravel
+          case Some(target) => game.adjacentCountries(target).exists(hasCellForTravel)
         }
       }
     }

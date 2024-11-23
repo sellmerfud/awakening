@@ -154,6 +154,42 @@ trait BotHelpers {
     }
   }
   
+  // Narrow down the list of candidates to those that match best conform
+  // to the given priorities.
+  // Each filter in the list is used against the given candidates:
+  // - If the result is a single candidate then a list with just that candidate
+  //   is returned
+  // - If the result is more than one candidate then the resulting list is
+  //   then used with the next filter in the list.
+  // - If the result is that none of the candidates match the filter then
+  //   the samme list of candidates is used with the next filter in the list.
+  //   Effectivlely skipping that priority filter.
+  // This will only return Nil if the original list of candidates is Nil.
+  def narrowCandidates(candidates: List[Country], priorities: List[CountryFilter], allowBotLog: Boolean = true): List[Country] = {
+    @tailrec def nextPriority(candidates: List[Country], priorities: List[CountryFilter]): List[Country] = {
+      (candidates, priorities) match {
+        case (Nil, _) => Nil  // Only happens if the initial list of canidates was empty.
+        case (sp :: Nil, _) =>
+          // Narrowed to a single candidate
+          List(sp)
+        case (best, Nil) =>
+          // No more priorities
+          best
+        case (list, f :: fs) =>
+          (f filter list) match {
+            case Nil =>
+              if (allowBotLog)
+                botLog(s"$f: matched nothing")
+              nextPriority(list, fs) // Filter entire list by next priority
+            case best  =>
+              if (allowBotLog)
+                botLog(s"$f: matched [${andList(best)}]")
+              nextPriority(best, fs) // Filter matched list by next priority
+          }
+      }
+    }
+    nextPriority(candidates, priorities)
+  }
   
   // Process the list of countries by each CountryFilter in the priorities list.
   // The priorities list represents a single column in a Priorities Table.
