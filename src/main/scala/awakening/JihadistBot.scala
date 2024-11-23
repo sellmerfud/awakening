@@ -977,17 +977,7 @@ object JihadistBot extends BotHelpers {
   // ------------------------------------------------------
   object EnhancedEvoTable {
     // This is the starting point of the Operations Flowchart
-    object MajorJihadDecision extends OperationDecision {
-      val desc = "Major Jihad Success possible at Poor?"
-      def yesPath = MajorJihadOp
-      def noPath  = NoCellsOnMapDecision
-      def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
-        m.isPoor &&
-        totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
-        majorJihadSuccessPossible(m)
-      }
-    }
-
+    // 
     // This is a special action taken by the Bot if all
     // cells are currently on the track.  (The Bot does not lose when this happens)
     // The enhanced Bot will not take a normal action.  Instead it will
@@ -997,8 +987,20 @@ object JihadistBot extends BotHelpers {
     object NoCellsOnMapDecision extends OperationDecision {
       val desc = "No cells on the map?"
       def yesPath = PlaceRandomCells
-      def noPath  = CellInGoodFairWhereJSP
+      def noPath  = MajorJihadDecision
       def condition(ops: Int) = game.totalCellsOnMap == 0
+    }
+
+
+    object MajorJihadDecision extends OperationDecision {
+      val desc = "Major Jihad Success possible at Poor?"
+      def yesPath = MajorJihadOp
+      def noPath  = CellInGoodFairWhereJSP
+      def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
+        m.isPoor &&
+        totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
+        majorJihadSuccessPossible(m)
+      }
     }
 
     // Not needed
@@ -1143,7 +1145,7 @@ object JihadistBot extends BotHelpers {
           evaluateNode(decision.noPath)
     }
     val startingNode = if (game.botEnhancements)
-      EnhancedEvoTable.MajorJihadDecision
+      EnhancedEvoTable.NoCellsOnMapDecision
     else
       StandardEvoTable.MajorJihadDecision
     evaluateNode(startingNode)
