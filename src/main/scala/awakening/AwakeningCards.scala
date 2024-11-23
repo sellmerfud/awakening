@@ -2152,12 +2152,25 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(185, "al-Maliki", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game hasCountry (_.totalTroops > 0)
+      (role: Role, forTrigger: Boolean) =>
+        // Bot will not play this in Caliphate Capital
+        if (role == game.botRole)
+          game.hasCountry(c =>  c.totalTroops > 0 && !JihadistBot.muslimTest(_.caliphateCapital)(c))
+        else
+          game.hasCountry(_.totalTroops > 0)
       ,
       (role: Role, forTrigger: Boolean) => {
         // The only non-muslim country that may contain troops is the Philippines
         // if (abu Sayyaf is in effect)
-        val candidates = countryNames(game.countries filter (_.totalTroops > 0))
+        val candidates = if (role == game.botRole)
+          // Bot will not play in caliphate capital
+          countryNames(
+            game.countries
+              .filter(c => c.totalTroops > 0 && !JihadistBot.muslimTest(_.caliphateCapital)(c))
+          )
+        else
+          countryNames(game.countries.filter(_.totalTroops > 0))
+
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else {
@@ -4164,15 +4177,22 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(235, "Qadhafi", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game hasMuslim { m =>
-        role match {
-          case Jihadist => m.civilWar && m.totalCells > m.totalTroopsAndMilitia
-          case US       => m.civilWar && m.totalTroopsAndMilitia > m.totalCells
-        }
-      }
+      (role: Role, forTrigger: Boolean) =>
+        if (role == Jihadist && role == game.botRole && !forTrigger)
+          JihadistBot.qadhafiCandidates.nonEmpty
+        else if (role == US && role == game.botRole && !forTrigger)
+          USBot.qadhafiCandidates.nonEmpty
+        else
+          game.hasMuslim(_.civilWar)
       ,
       (role: Role, forTrigger: Boolean) => {
-        val candidates = countryNames(game.muslims filter (_.civilWar))
+        val candidates = if (role == Jihadist && role == game.botRole && !forTrigger)
+          JihadistBot.qadhafiCandidates
+        else if (role == US && role == game.botRole && !forTrigger)
+          USBot.qadhafiCandidates
+        else
+          countryNames(game.muslims.filter(_.civilWar))
+
         val name = if (role == game.humanRole)
           askCountry("Select country in Civil War: ", candidates)
         else if (role == Jihadist)

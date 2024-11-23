@@ -1242,8 +1242,15 @@ object JihadistBot extends BotHelpers {
     topPriority(game getCountries names, priorities) map (_.name)
   }
 
+  // Bot will not execute this in the Caliphate capital
+  def qadhafiCandidates: List[String] =
+    game.muslims
+      .filter(m => m.civilWar && !m.caliphateCapital && m.totalCells > m.totalTroopsAndMilitia)
+      .map(_.name)
+
   def qadhafiTarget(names: List[String]): Option[String] = {
     val priorities = List(
+      new CriteriaFilter("Not Caliphate Capital", muslimTest(!_.caliphateCapital)),
       new CriteriaFilter("Cells > TandM", muslimTest(m => m.totalCells > m.totalTroopsAndMilitia)),
       HighestResourcePriority)
 
