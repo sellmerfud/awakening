@@ -2901,7 +2901,7 @@ object ForeverWarCards {
         }
                 
         addEventTarget(target)
-        
+        testCountry(target)
         if (placeAwakening) 
           addAwakeningMarker(target)
         else

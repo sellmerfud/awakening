@@ -1540,7 +1540,10 @@ object AwakeningCards {
         if (m.isPoor)
           improveGovernance(target, 1, canShiftToGood = false)
         removeCellsFromCountry(target, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = true)
-        addReactionMarker(target, m.totalCells)
+        if (m.totalCells > 0) {
+          testCountry(target)
+          addReactionMarker(target, m.totalCells)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -3096,6 +3099,7 @@ object AwakeningCards {
            else
              JihadistBot.markerAlignGovTarget(candidates).get
            addEventTarget(name)
+           testCountry(name)
            addReactionMarker(name)
         }
         else {
@@ -3105,6 +3109,7 @@ object AwakeningCards {
           else
             USBot.markerAlignGovTarget(candidates).get
           addEventTarget(name)
+          testCountry(name)
           addAwakeningMarker(name)
         }
       }
@@ -3946,6 +3951,7 @@ object AwakeningCards {
         }
 
         addEventTarget(name)
+        testCountry(name)
         addReactionMarker(name)
         adjacent foreach { adj =>
           addEventTarget(adj)
@@ -4089,6 +4095,7 @@ object AwakeningCards {
         decreasePrestige(1)
         shiaMix foreach { name =>
           addEventTarget(name)
+          testCountry(name)
           addReactionMarker(name)
         }
         if (!game.getCountry(Iran).hasMarker(TradeEmbargoJihadist)) {
