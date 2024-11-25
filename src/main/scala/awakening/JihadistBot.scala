@@ -149,6 +149,10 @@ object JihadistBot extends BotHelpers {
         muslimScore(m => m.resources)),
       new CriteriaFilter("Poor country w/ Training Camps",
         muslimTest(m => m.isPoor && m.hasMarker(TrainingCamps))),
+      new HighestScoreNode(
+        "Poor Civil War country w/ highest resource value",
+        muslimTest(m => m.isPoor && m.civilWar),
+        muslimScore(m => m.resources)),
       new CriteriaFilter("Islamist Rule Caliphate Capital",
         muslimTest(m => m.isIslamistRule && m.caliphateCapital)),
       new HighestScoreNode(
