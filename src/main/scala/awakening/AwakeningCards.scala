@@ -2153,20 +2153,22 @@ object AwakeningCards {
     entry(new Card(185, "al-Maliki", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
-        // Bot will not play this in Caliphate Capital
-        if (role == game.botRole)
-          game.hasCountry(c =>  c.totalTroops > 0 && !JihadistBot.muslimTest(_.caliphateCapital)(c))
+        // Bot will not play this in Caliphate Capital or in a country under  Regime Change
+        if (role == game.botRole && !forTrigger)
+          game.hasCountry(c =>  c.totalTroops > 0 &&
+                   !(JihadistBot.muslimTest(_.caliphateCapital)(c)) || JihadistBot.muslimTest(_.inRegimeChange)(c))
         else
           game.hasCountry(_.totalTroops > 0)
       ,
       (role: Role, forTrigger: Boolean) => {
         // The only non-muslim country that may contain troops is the Philippines
         // if (abu Sayyaf is in effect)
-        val candidates = if (role == game.botRole)
+        val candidates = if (role == game.botRole && !forTrigger)
           // Bot will not play in caliphate capital
           countryNames(
             game.countries
-              .filter(c => c.totalTroops > 0 && !JihadistBot.muslimTest(_.caliphateCapital)(c))
+              .filter(c => c.totalTroops > 0 &&
+                          !(JihadistBot.muslimTest(_.caliphateCapital)(c)) || JihadistBot.muslimTest(_.inRegimeChange)(c))
           )
         else
           countryNames(game.countries.filter(_.totalTroops > 0))
