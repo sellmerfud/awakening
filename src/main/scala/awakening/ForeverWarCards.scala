@@ -850,19 +850,21 @@ object ForeverWarCards {
               placeMilitia(numMilita)
                 
             case _ =>  // Reposition
-              println("\nThe target countries are:")
-              println(separator())
-              wrap("", reposCandidates) foreach (println(_))
-              println()
-              println(s"There are a total of $reposMilitia militia in the target countries.")
-              println("Assume that we start by taking all of those militia off of the map.")
-              println("You will be prompted with the name of each country one by one.")
-              println("Specify the number of militia that you would like in each country:")
               case class MilitiaCountry(name: String, newMilitia: Int) {
                 val muslim   = game.getMuslim(name)
                 def hasLess  = newMilitia < muslim.militia
                 def noChange = newMilitia == muslim.militia
               }
+              val starting = reposCandidates.map { name => MilitiaCountry(name, game.getMuslim(name).militia) }
+              val width = reposCandidates.map(_.length).max
+              println(s"\nThere are a total of $reposMilitia militia in the target countries.")
+              println(separator())
+              for (MilitiaCountry(name, numMilita) <- starting)
+                println(s"${padLeft(name, width)}: $numMilita militia")
+              println()
+              println("Assume that we start by taking all of those militia off of the map.")
+              println("You will be prompted with the name of each country one by one.")
+              println("Specify the number of militia that you would like in each country:\n")
               def nextCountry(members: List[String], remaining: Int): List[MilitiaCountry] = {
                 members match {
                   case Nil                     => Nil

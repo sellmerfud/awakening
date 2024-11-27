@@ -3111,11 +3111,13 @@ object LabyrinthAwakening {
     case x => s"${x}th"
   }
 
+
+  def padLeft(s: String, width: Int) = s + (" " * (width - s.length))
+
   // Sorts a list column wise.  Returns a list of rows where
   // each row is a string with the items of that row lined up
   // with a minimum of two spaces separating the columns.
   def columnFormat(list: List[String], numCols: Int): Seq[String] = {
-    def padLeft(s: String, width: Int) = s + (" " * (width - s.length))
     val numRows = (list.size + numCols - 1) / numCols
     def colsInRow(row: Int) = {
       val mod = list.size % numCols
