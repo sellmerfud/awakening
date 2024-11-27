@@ -358,11 +358,12 @@ object JihadistBot extends BotHelpers {
                   muslimTest(m => m.isPoor && m.troops > 0 && activeCells(m) > 0))
   val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
-  val EnhRecruitPoorCadreOrNeedCellsforMajorJihad =
+
+  val EnhRecruitPoorCadreNoTandMMajorJihadPossible =
     new CriteriaFilter(
-      "Poor Muslim, (1-4 more cells than TandM or cadre and no TandM) and (awakening - reaction < 2) and JSP",
+      "Poor Muslim, w/ cadre and no TandM and (awakening - reaction < 2) and JSP",
       muslimTest(m =>
-        (poorMuslimNeedsCellsForMajorJihad(m) || poorMuslimWithCadreAnNoTroopsOrMilitia(m))
+        (poorMuslimWhereMajorJihadPossible(m) && poorMuslimWithCadreAnNoTroopsOrMilitia(m))
       ))
 
   val EnhTravelPoorNeedCellsforMajorJihad =
@@ -371,6 +372,7 @@ object JihadistBot extends BotHelpers {
       muslimTest(m =>
         poorMuslimNeedsCellsForMajorJihad(m)
       ))
+
 
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
@@ -554,7 +556,8 @@ object JihadistBot extends BotHelpers {
   }
 
   def RecruitFlowchart = if (game.botEnhancements)
-    List(EnhRecruitPoorCadreOrNeedCellsforMajorJihad,
+    List(PoorNeedCellsforMajorJihad,
+         EnhRecruitPoorCadreNoTandMMajorJihadPossible,
          AutoRecruitBestJihadDRM,
          GoodMuslimFilter,
          EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells,
