@@ -4183,7 +4183,11 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(360, "US China Trade War", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, _: Boolean) => game.usPosture != game.getNonMuslim(China).posture && trumpTweetsON
+      (role: Role, _: Boolean) =>
+        // Enhancece Jihadist Bot will never play this event
+        game.usPosture != game.getNonMuslim(China).posture &&
+        trumpTweetsON &&
+        !(role == Jihadist && role == game.botRole && game.botEnhancements)
       ,
       (role: Role, forTrigger: Boolean) => {
         if (globalEventInPlay(USChinaTradeWar))
