@@ -156,8 +156,8 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Islamist Rule Caliphate Capital",
         muslimTest(m => m.isIslamistRule && m.caliphateCapital)),
       new HighestScoreNode(
-        "Islamist Rule Caliphate country w/ highest resource value",
-        muslimTest(m => m.isIslamistRule && game.isCaliphateMember(m.name)),
+        "Islamist Rule country w/ highest resource value",
+        muslimTest(m => m.isIslamistRule),
         muslimScore(m => m.resources)),
       new CriteriaFilter("All have same priority",
         _ => true),
