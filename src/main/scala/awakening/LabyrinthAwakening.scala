@@ -1127,7 +1127,7 @@ object LabyrinthAwakening {
     resolvedInGreenOnBlue: Boolean   = false // See Forever War card #301
   )
 
-    sealed trait Color {
+  sealed trait Color {
     val name: String
     val sequence: String
   }
@@ -1190,8 +1190,8 @@ object LabyrinthAwakening {
     cardsRemoved: List[Int]        = Nil,         // Card numbers removed from the game.
     targetsThisPhase: PhaseTargets = PhaseTargets(),
     targetsLastPhase: PhaseTargets = PhaseTargets(),
-    exitAfterWin: Boolean          = true,
     botLogging: Boolean            = false,
+    ignoreVictory: Boolean         = false,
     botEnhancements: Boolean       = true, // Use enhancements to official Awakening bot algorithms
     manualDieRolls: Boolean        = false,  // Overrides humanAutoRoll
     history: Vector[GameSegment]   = Vector.empty,
@@ -1586,7 +1586,6 @@ object LabyrinthAwakening {
       b += ""
       b += "Options:"
       b += separator()
-      b += s"Exit game after victory: ${if (exitAfterWin) "yes" else "no"}"
       b += s"Use Bot enhancments    : ${if (botEnhancements) "yes" else "no"}"
       if (manualDieRolls)
         b += s"Manual die rolls       : ${if (manualDieRolls) "yes" else "no"}"
@@ -1805,7 +1804,6 @@ object LabyrinthAwakening {
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
-    exitAfterWin: Boolean,
     showColor: Boolean) = {
 
     var countries = if (scenario.startingMode == LabyrinthMode && !campaign)
@@ -1836,13 +1834,12 @@ object LabyrinthAwakening {
       false,  // sequestrationTroops: true if 3 troops off map due to Sequestration event
       cardsRemoved = scenario.cardsRemoved,
       showColor = showColor,
-      offMapTroops = scenario.offMapTroops,
-      exitAfterWin = exitAfterWin)
+      offMapTroops = scenario.offMapTroops)
   }
 
 
   // Global variables
-  var game = initialGameState(Awakening, false, US, true, Muddled :: Nil, false, !scala.util.Properties.isWin)
+  var game = initialGameState(Awakening, false, US, true, Muddled :: Nil, !scala.util.Properties.isWin)
 
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -2007,7 +2004,14 @@ object LabyrinthAwakening {
       case None         => askYorN(prompt)
     }
   }
-
+  
+  def askExitAfterWin(): Boolean = {
+    val choices = List(
+      false -> "Continue with the game ignoring further victory conditions.",
+      true  -> "Exit the game."
+    )
+    askMenu("\nChoose one:", choices).head
+  }
 
   def askInt(prompt: String, low: Int, high: Int, default: Option[Int] = None, allowAbort: Boolean = true): Int = {
     assert(low <= high, "askInt() low cannot be greater than high")
@@ -5537,22 +5541,28 @@ object LabyrinthAwakening {
     var wmdsInCivilWars = Set.empty[String]
     var wmdInUS = unblocked exists (ub => ub.name == UnitedStates && ub.mapPlot.plot == PlotWMD)
 
+    if (wmdInUS && !game.ignoreVictory) {
+      // If there is a WMD in the United States resolve it first as it will end the game.
+      log(separator())
+      log("An unblocked WMD plot was resolved in the United States", Color.Info)
+      log("Game Over - Jihadist automatic victory!", Color.Info)
+
+      if (askExitAfterWin()) {
+        saveGameState(Some("Game Over - Jihadist automatic victory!"))
+        throw ExitGame
+      }
+      else {
+        game = game.copy(ignoreVictory = true)
+        saveGameState(Some("Ignore Jihadist Auto Victory"))
+      }
+    }
+
     log()
     log(separator(char='='))
     log("Resolve plots")
     if (unblocked.isEmpty) {
       log(separator())
       log("There are no unblocked plots on the map", Color.Info)
-    }
-    else if (wmdInUS && game.exitAfterWin) {
-      // If there is a WMD in the United States resolve it first as it will end the game.
-      log(separator())
-      log("An unblocked WMD plot was resolved in the United States", Color.Info)
-      log("Game Over - Jihadist automatic victory!", Color.Info)
-      pause()
-
-      saveGameState(Some("Game Over - Jihadist automatic victory!"))
-      throw ExitGame
     }
     else {
       for (Unblocked(name, _, mapPlot) <- unblocked) {
@@ -6198,13 +6208,10 @@ object LabyrinthAwakening {
                                 configParams.autoDice getOrElse
                                 !askYorN("\nDo you wish to roll your own dice (y/n)? ")
 
-            val exitAfterWin = cmdLineParams.exitAfterWin orElse
-                               configParams.exitAfterWin getOrElse askExitAfterWin()
-
             gameName = Some(askGameName("\nEnter a name for your new game: "))
 
             val showColor = cmdLineParams.showColor orElse configParams.showColor getOrElse !scala.util.Properties.isWin
-            game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties, exitAfterWin, showColor)
+            game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties, showColor)
             logSummary(game.scenarioSummary)
             printSummary(game.scoringSummary)
             if (scenario.cardsRemoved.nonEmpty) {
@@ -6309,8 +6316,6 @@ object LabyrinthAwakening {
           val values = (v map { case USDiff(diff) => diff }).sorted.distinct
           c.copy(usResolve = values)
         }
-        bool("", "--exit-after-win", "Exit the program when one side achieves victory")
-          { (v, c) => c.copy(exitAfterWin = Some(v)) }
         bool("", "--color", "Show colored log messages")
           { (v, c) => c.copy(showColor = Some(v)) }
         reqd[String]("", "--file=path", "Path to a saved game file")
@@ -6360,7 +6365,6 @@ object LabyrinthAwakening {
     val ideology: List[BotDifficulty] = Nil,
     val usResolve: List[BotDifficulty] = Nil,
     val showColor: Option[Boolean] = None,
-    val exitAfterWin: Option[Boolean] = None,
     val gameFile: Option[String] = None) {
 
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
@@ -6447,14 +6451,6 @@ object LabyrinthAwakening {
             println(s"Ignoring invalid us-resolve value ($value) in awakening_config file")
         }
 
-        propValue("exit-after-win") foreach { value =>
-          value.toLowerCase match {
-            case "yes" => params = params.copy(exitAfterWin = Some(true))
-            case "no"  => params = params.copy(exitAfterWin = Some(false))
-            case _ => println(s"Ignoring invalid exit-after-win value ($value) in awakening_config file")
-          }
-        }
-
         propValue("color") foreach { value =>
           value.toLowerCase match {
             case "yes" => params = params.copy(showColor = Some(true))
@@ -6509,15 +6505,6 @@ object LabyrinthAwakening {
     levels take askMenu("Choose a difficulty level:", nextChoice(1, None, levels), allowAbort = false).head.toInt
   }
 
-  def askExitAfterWin() = {
-    val choices = List(
-      true  -> "The program should terminate.",
-      false -> "The program should continue so I can explore the game further."
-    )
-
-    askMenu("What would happen when one side achieves victory:", choices).head
-  }
-
   def isValidIdeology(name: String) =
     JihadistLevels.keys exists (_.toLowerCase == name.toLowerCase)
 
@@ -6529,40 +6516,42 @@ object LabyrinthAwakening {
   // Note: The WMD resolved in United States condition is checked by resolvePlots()
   def checkAutomaticVictory(): Unit = {
     def gameOver(victor: Role, reason: String): Unit = {
-      val summary = if (game.exitAfterWin)
-        s"Game Over - $victor automatic victory!"
-      else
-        s"Victory condition met - $victor automatic victory!"
+      val summary = s"Victory condition met - $victor automatic victory!"
       log()
       log(separator())
       log(summary, Color.Info)
       log(reason, Color.Info)
 
-      if (game.exitAfterWin) {
-        pause()
+      if (askExitAfterWin()) {
         game = game.copy(plays = Nil)
         saveGameState(Some(summary))
         throw ExitGame
       }
+      else {
+        game = game.copy(ignoreVictory = true)
+        saveGameState(Some(summary))
+      }
     }
 
-    if (game.goodResources >= 12)
-      gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance")
-    else if (game.numGoodOrFair >= 15)
-      gameOver(US, s"${game.numGoodOrFair} Muslim countries have Fair or Good governance")
-    else if (game.totalCellsOnMap == 0 && game.humanRole == Jihadist)
-      gameOver(US, s"There are no cells on the map")
-    else if (game.islamistResources >= 6 && game.botRole == Jihadist)
-      gameOver(Jihadist, s"${game.islamistResources} resources controlled by countries with Islamist Rule governance")
-    else if (game.islamistResources >= 6 && game.islamistAdjacency) {
-      val reason = s"${game.islamistResources} resources controlled by countries with Islamist Rule governance\n" +
-                    "and at least two of the countries are adjacent"
-      gameOver(Jihadist, reason)
-    }
-    else if (game.numPoorOrIslamic >= 15 && game.prestige == 1) {
-      val reason = s"${game.numPoorOrIslamic} Muslim countries have Poor or Islamist rule governance " +
-                    "and US prestige is 1"
-      gameOver(Jihadist, reason)
+    if (!game.ignoreVictory) {
+      if (game.goodResources >= 12)
+        gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance")
+      else if (game.numGoodOrFair >= 15)
+        gameOver(US, s"${game.numGoodOrFair} Muslim countries have Fair or Good governance")
+      else if (game.totalCellsOnMap == 0 && game.humanRole == Jihadist)
+        gameOver(US, s"There are no cells on the map")
+      else if (game.islamistResources >= 6 && game.botRole == Jihadist)
+        gameOver(Jihadist, s"${game.islamistResources} resources controlled by countries with Islamist Rule governance")
+      else if (game.islamistResources >= 6 && game.islamistAdjacency) {
+        val reason = s"${game.islamistResources} resources controlled by countries with Islamist Rule governance\n" +
+                      "and at least two of the countries are adjacent"
+        gameOver(Jihadist, reason)
+      }
+      else if (game.numPoorOrIslamic >= 15 && game.prestige == 1) {
+        val reason = s"${game.numPoorOrIslamic} Muslim countries have Poor or Islamist rule governance " +
+                      "and US prestige is 1"
+        gameOver(Jihadist, reason)
+      }
     }
   }
 
@@ -7803,7 +7792,6 @@ object LabyrinthAwakening {
       case "markers"                 => adjustMarkers()
       case "reserves"                => adjustReserves()
       case "plots"                   => adjustPlots()
-      case "exit after win"          => adjustExitAfterWin()
       case name                      => adjustCountry(name)
     }
   }
@@ -7910,13 +7898,6 @@ object LabyrinthAwakening {
     logAdjustment("Manual die rolls", game.manualDieRolls, newValue)
     game = game.copy(manualDieRolls = newValue)
     saveAdjustment("Manual die rolls")
-  }
-
-  def adjustExitAfterWin(): Unit = {
-    val newValue = !game.exitAfterWin
-    logAdjustment("Exit after win", game.exitAfterWin, newValue)
-    game = game.copy(exitAfterWin = newValue)
-    saveAdjustment("Exit after win")
   }
 
   def adjustLapsingCards(): Unit = {
