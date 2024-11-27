@@ -4047,7 +4047,7 @@ object LabyrinthAwakening {
         log()
         testCountry(name)
         val tested = game.getMuslim(name)
-        if (ops < 3 && tested.isPoor)
+        if (ops < tested.governance)
           log(s"Not enough Ops to complete War of Ideas in $name")
         else {
           log(s"$US performs War of Ideas in $name")
