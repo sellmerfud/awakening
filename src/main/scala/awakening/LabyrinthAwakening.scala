@@ -126,6 +126,13 @@ object LabyrinthAwakening {
 
   def oppositeRole(role: Role) = if (role == US) Jihadist else US
 
+  def botTurn(role: Role, forTrigger: Boolean) =
+    !forTrigger && role == Jihadist && role == game.botRole
+
+  def enhBotTurn(role: Role, forTrigger: Boolean) =
+    !forTrigger && role == Jihadist && role == game.botRole && game.botEnhancements
+
+
   implicit val BotDifficultyOrdering: Ordering[BotDifficulty] = Ordering.by { x: BotDifficulty => x.order }
 
   // US

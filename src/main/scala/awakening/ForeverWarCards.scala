@@ -175,10 +175,10 @@ object ForeverWarCards {
     !m.isIslamistRule
 
   def attemptedCoupCandidates(role: Role, forTrigger: Boolean) =
-    if (role == game.humanRole || forTrigger || !game.botEnhancements)
-      countryNames(game.muslims.filter(attemptedCoupCondition))
-    else
+    if (enhBotTurn(role, forTrigger))
       countryNames(game.muslims.filter(enhancedBotAttemptedCoupCondition))
+    else
+      countryNames(game.muslims.filter(attemptedCoupCondition))
   
   def earlyExitCandidates = countryNames(
     game.countries filter (c => (c.hasCadre || c.totalCells > 0) && (c.totalTroops > 0 || c.numAdvisors > 0))
@@ -2278,7 +2278,12 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(305, "Presidential Whistleblower", Jihadist, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => trumpTweetsON
+      (role: Role, forTrigger: Boolean) => {
+        // Enhanced Jihad Bot will not play unless it will force
+        // the US player to discard at least one card
+        trumpTweetsON &&
+        (!enhBotTurn(role, forTrigger) || game.prestigeModifier - game.gwotPenalty < 0)
+      }
       ,
       (role: Role, forTrigger: Boolean) => {
         testCountry(Caucasus)
@@ -3987,8 +3992,7 @@ object ForeverWarCards {
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       // Enhanced Jihad Bot will not play this event.
       (role: Role, forTrigger: Boolean) =>
-        trumpTweetsON &&
-        (forTrigger || role == game.humanRole || !game.botEnhancements)
+        trumpTweetsON && !enhBotTurn(role, forTrigger)        
       ,
       (role: Role, forTrigger: Boolean) => {
         log()
@@ -4183,11 +4187,10 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(360, "US China Trade War", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, _: Boolean) =>
-        // Enhancece Jihadist Bot will never play this event
+      (role: Role, forTrigger: Boolean) =>        
         game.usPosture != game.getNonMuslim(China).posture &&
         trumpTweetsON &&
-        !(role == Jihadist && role == game.botRole && game.botEnhancements)
+        !enhBotTurn(role, forTrigger) // Enhancece Jihadist Bot will never play this event
       ,
       (role: Role, forTrigger: Boolean) => {
         if (globalEventInPlay(USChinaTradeWar))
