@@ -2851,9 +2851,11 @@ object LabyrinthAwakening {
 
   // Throws an exception if a Caliphate already exists
   def declareCaliphate(capital: String): Unit = {
+    val prevGameState = game
     assert(!game.caliphateDeclared, "declareCaliphate() called and a Caliphate Capital already on the map")
     log(s"A Caliphate is declared with $capital as the Capital", Color.Event)
     setCaliphateCapital(capital)
+    logExtraCellCapacityChange(prevGameState)
     increaseFunding(2)
     logSummary(game.caliphateSummary)
 
@@ -3503,7 +3505,7 @@ object LabyrinthAwakening {
     show(from.militiaAvailable, to.militiaAvailable, s"Set available militia to ${to.militiaAvailable}")
     show(from.funding, to.funding, s"Set jihadist funding to ${to.funding} (${to.fundingLevel})")
     show(from.cellsOnTrack, to.cellsOnTrack, s"Set cells on the funding track to ${to.cellsOnTrack}")
-    show(from.extraCellsAvailable, to.extraCellsAvailable, s"Set cells in training camp to ${to.extraCellsAvailable}")
+    show(from.extraCellsAvailable, to.extraCellsAvailable, s"Set cells in \"extra cells\" area to ${to.extraCellsAvailable}")
     show(from.resolvedPlots.sorted, to.resolvedPlots.sorted,
           s"Set resolvedPlots plots to ${plotsDisplay(to.resolvedPlots)}")
     show(from.availablePlots.sorted, to.availablePlots.sorted,
@@ -4872,20 +4874,20 @@ object LabyrinthAwakening {
         case 0                => s"There is no longer an event in play that grants extra cells"
         case 5 if alBaghdadi  => s"$AlBaghdadi is in play and a Caliphate has been declared"
         case 5                => s"$TrainingCamps is in a Caliphate country"
-        case 3 if alBaghdadi  => s"$AlBaghdadi is in play but no Caliphate has been displaced"
+        case 3 if alBaghdadi  => s"$AlBaghdadi is in play but no Caliphate has been declared"
         case 3                => s"$TrainingCamps is in play in a non-Caliphate country"
         case x => throw new IllegalStateException(s"Invalid training camp capacity: $x")
       }
 
       log(msg, Color.Info)
-      log(s"The extra cells area now has a capacity of ${amountOf(game.extraCellCapacity, "cell")}", Color.Info)
+      log(s"The \"extra cells\" area now has a capacity of ${amountOf(game.extraCellCapacity, "cell")}", Color.Info)
 
       val delta = game.extraCellsAvailable - priorGameState.extraCellsAvailable
       if (delta > 0)
         log(s"Add ${amountOf(delta, "out of play cell")} to the right of the Ample Funding Box", Color.MapPieces)
       else if (delta < 0)
         log(
-          s"Remove the ${amountOf(delta.abs, "cell")} cells from the extra cells area to out of play",
+          s"Remove the ${amountOf(delta.abs, "cell")} cells from the \"extra cells\" area to out of play",
           Color.MapPieces)
     }
   }
@@ -5116,7 +5118,7 @@ object LabyrinthAwakening {
           Color.MapPieces)
       if (fromCamp > 0)
         log(
-          "%sAdd %s to %s from the training camp available area".format(logPrefix, amountOf(fromCamp, cellType), name),
+          "%sAdd %s to %s from the \"extra cells\" available area".format(logPrefix, amountOf(fromCamp, cellType), name),
           Color.MapPieces)
     }
   }
@@ -5170,7 +5172,7 @@ object LabyrinthAwakening {
             Color.MapPieces)
         if (toExtra > 0)
           log(
-            "%sRemove %s from %s to the extra cell available area".format(logPrefix, amountOf(toExtra, cellType), name),
+            "%sRemove %s from %s to the \"extra cells\" area".format(logPrefix, amountOf(toExtra, cellType), name),
             Color.MapPieces)
         if (toTrack > 0)
           log(
