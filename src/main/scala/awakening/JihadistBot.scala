@@ -832,11 +832,19 @@ object JihadistBot extends BotHelpers {
 
 
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
+    val autoRecruitPriorityIsIR = autoRecruitPriorityCountry.map(name => game.getCountry(name).isIslamistRule).getOrElse(false)
+    // Only recruit in IR if:
+    //  1. This is the auto-recruite priority country OR The auto-recruite priority country is not IR
+    //  2. The country has less than 6 cells.
+    val irCheck = (m: MuslimCountry) =>
+      !m.isIslamistRule ||
+      ((autoRecruitPriorityCountry == Some(m.name) || !autoRecruitPriorityIsIR) && m.totalCells < 6)
+
     val criteria = if (game.botEnhancements)
       (c: Country) => c match {
         case m: MuslimCountry =>                     // Only recruit in Muslim countries
           (m.isPoor || m.autoRecruit) &&             // Only recruit in Good/Fair if auto-recruit
-          (!m.isIslamistRule || m.totalCells < 6) && // Only recruit in IR if the country has less than 6 cells.
+          irCheck(m) &&
           (!muslimWithCadreOnly || m.hasCadre)       // Special radicalization test
         case n: NonMuslimCountry => false
       }
