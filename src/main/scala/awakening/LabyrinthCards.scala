@@ -1047,18 +1047,9 @@ object LabyrinthCards {
         else
           s"Enter card # of the next card in the $Jihadist Bot's hand: "
         
+          // Add the card to the list of plays for the turn.
         val card = deck(askCardNumber(prompt, allowNone = false).get)
-        // Add the card to the list of plays for the turn.
-        game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
-        logCardPlay(Jihadist, card, playable = false)
-        log()
-        log(s"$Jihadist performs a Recruit operation in the US with ${opsString(card.ops)}")
-        log(separator())
-        if (game.cellsToRecruit == 1)
-          log(s"There is 1 cell available for recruitment")
-        else
-          log(s"There are ${game.cellsToRecruit} cells available for recruitment")
-        
+
         def nextRecruit(completed: Int): Unit = 
           if (completed < card.ops && game.cellsToRecruit > 0) {
             val ord = ordinal(completed + 1)
@@ -1078,8 +1069,46 @@ object LabyrinthCards {
             nextRecruit(completed + 1)
           }
 
-        addEventTarget(UnitedStates)
-        nextRecruit(0)
+        sealed trait EventAction
+        case object RecruitAction extends EventAction
+        case object TriggerAction extends EventAction
+
+        val actions = if (card.autoTrigger && role == game.botRole)
+          List(TriggerAction, RecruitAction)
+        else if (card.autoTrigger) {
+          println()
+          displayLine(s"""The "${card.name}" event will autonmatically trigger""", Color.Event)
+
+          val choices = List(
+            List(RecruitAction, TriggerAction) -> "Recruit before triggering the event",
+            List(TriggerAction, RecruitAction) -> "Trigger the event before recruiting",
+          )
+          askMenu("\nChoose one:", choices).head
+        }
+        else
+          List(RecruitAction)
+
+        for (action <- actions) {
+          action match {
+            case TriggerAction =>
+              log()
+              log(s"""The "${card.name}" event triggers""", Color.Event)
+              log(separator())
+              card.executeEvent(US, true)  // Role does not matter
+            case RecruitAction =>
+              log()
+              log(s"$Jihadist recruits in the US using: $card")
+              log(separator())
+              log("Recruit rolls will succeed with a roll of 1 or 2")
+              if (game.cellsToRecruit == 1)
+                log(s"There is 1 cell available for recruitment")
+              else
+                log(s"There are ${game.cellsToRecruit} cells available for recruitment")
+
+              addEventTarget(UnitedStates)
+              nextRecruit(0)
+          }          
+        }
       }
     )),
     // ------------------------------------------------------------------------
