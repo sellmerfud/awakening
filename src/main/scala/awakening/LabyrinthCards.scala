@@ -665,10 +665,11 @@ object LabyrinthCards {
         else 
           USBot.markerAlignGovTarget(candidates).get
         
-        val die = getDieRoll("Enter War of Ideas die roll: ", Some(role))
         addEventTarget(target)
         addAidMarker(target)
-        performWarOfIdeas(target, die, ignoreGwotPenalty = true)
+        // Use 3 ops because the WOI should always be carried out
+        // regardless of the countries governance.
+        performWarOfIdeas(target, 3, ignoreGwotPenalty = true)
       }
     )),
     // ------------------------------------------------------------------------
