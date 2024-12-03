@@ -707,22 +707,34 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(32, "Back Channel", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => game.usPosture == Soft && role == game.humanRole && {  // Unplayable by the Bot
-        //  Oil price spike can make 3 resource countries unplayable this turn
-        val neededOps = game.muslims
-          .filter(m => m.isAdversary && m.resourceValue < 4)
-          .map(_.resourceValue)
-          .distinct
-          .sorted
-        cacheYesOrNo(s"Do you have a card in hand with and Ops value of ${orList(neededOps)}? ")
-      }
+      (role: Role, forTrigger: Boolean) =>
+        game.usPosture == Soft &&
+        role == game.humanRole && // Unplayable by the Bot
+        game.muslims.exists(m => m.isAdversary && m.resourceValue < 4) && //  Oil price spike can make 3 resource countries unplayable this turn
+        cacheYesOrNo(s"Do you have a card in hand with an Ops value exactly matching the resource value of an Adversary country? ")
       ,
       (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (m => m.isAdversary && m.resourceValue < 4))
         val name = askCountry("Select adversary country: ", candidates)
         val ops = (game getMuslim name).resourceValue
-        log(s"You must discard card with Ops value: $ops")
-        askCardsDiscarded(1)
+
+        def doDiscard(): Unit = {
+          println(s"\nYou must discard card with Ops value: $ops")
+          val cardNum = askCardNumber("What is the card number of the discarded card? ", allowNone = false).get
+          val card = deck(cardNum)
+          if (card.printedOps != ops) {
+            displayLine(s"${card.numAndName} has ${amountOf(card.printedOps, "Op")}", Color.Event)
+            doDiscard()
+          }
+          else {
+            log(s"${deck(cardNum)} is discarded", Color.Event)
+            processDiscardedCard(cardNum)
+          }
+        }
+
+        printSummary(game.countrySummary(name))
+        doDiscard()
+        println()
         addEventTarget(name)
         setAlignment(name, Neutral)
         addAidMarker(name)
