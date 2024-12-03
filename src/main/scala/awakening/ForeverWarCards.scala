@@ -1558,6 +1558,7 @@ object ForeverWarCards {
           JihadistBot.plotPriority(candidates).get
         
         addEventTarget(target)
+        testCountry(target)
         addAvailablePlotToCountry(target, Plot1, visible = true)
       }
     )),
@@ -1578,9 +1579,10 @@ object ForeverWarCards {
           else
             JihadistBot.recruitTravelToPriority(countryNames(game.countries)).get
           
-          testCountry(target)
-          if (game.cellsAvailable > 0)
+          if (game.cellsAvailable > 0) {
+            testCountry(target)
             addSleeperCellsToCountry(target, 1)
+          }
           else
             log(s"There are no cells available to place in $target")
         }
@@ -1619,6 +1621,7 @@ object ForeverWarCards {
             JihadistBot.recruitTravelToPriority(hardCountries).get
           
           addEventTarget(cellTarget)
+          testCountry(cellTarget)
           addSleeperCellsToCountry(cellTarget, 1)
         }
       }
@@ -1898,6 +1901,7 @@ object ForeverWarCards {
           JihadistBot.plotPriority(vehicleRammingCandidates).get
         
         addEventTarget(target)
+        testCountry(target)
         addAvailablePlotToCountry(target, Plot1, visible = true)
       }
     )),
@@ -2049,6 +2053,7 @@ object ForeverWarCards {
               val target = askCountry("Place plot in which country: ", countryNames(game.countries))
               val plot  = askPlots(plots, 1).head
               addEventTarget(target)
+              testCountry(target)
               addAvailablePlotToCountry(target, plot)
               
             case _ =>
@@ -2499,6 +2504,8 @@ object ForeverWarCards {
         
         addEventTarget(target)
         println()
+        if (game.cellsAvailable > 0)
+          testCountry(target)
         addSleeperCellsToCountry(target, 2 min game.cellsAvailable)
         
         val caliphateCapital = game.getMuslim(target).caliphateCapital
@@ -2525,7 +2532,7 @@ object ForeverWarCards {
         val mapCells     = ((3 - trackCells) min maxAdjCells) max 0
         
         addEventTarget(Syria)
-
+        testCountry(Syria)
         addSleeperCellsToCountry(Syria, trackCells)
         // If there were not enough cells on the track
         // then we must make up the difference from adjacent
@@ -2705,6 +2712,8 @@ object ForeverWarCards {
         
         addEventTarget(target)
         removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
+        if (plots.nonEmpty)
+          testCountry(target)
         for (plot <- plots)
           addAvailablePlotToCountry(target, plot)
       }
@@ -3387,6 +3396,7 @@ object ForeverWarCards {
             askInt("Place how many cells", 1, maxNum, Some(maxNum))
           else
             maxNum
+          testCountry(Turkey)
           addSleeperCellsToCountry(Turkey, num)
         }
       }
@@ -3627,8 +3637,10 @@ object ForeverWarCards {
         addEventTarget(target)
         testCountry(target)
         
-        if (game.cellsAvailable > 0)
+        if (game.cellsAvailable > 0) {
+          testCountry(target)
           addSleeperCellsToCountry(target, 1)
+        }
         
         if (game.getMuslim(target).militia > 0)
           removeMilitiaFromCountry(target, 1)
@@ -3670,8 +3682,10 @@ object ForeverWarCards {
         addEventTarget(target)
         removeMilitiaFromCountry(target, 1)
         
-        if (game.cellsAvailable > 0)
+        if (game.cellsAvailable > 0) {
+          testCountry(target)
           addSleeperCellsToCountry(target, 1)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -3877,6 +3891,8 @@ object ForeverWarCards {
           
           val cellsToAdd = game.cellsAvailable min 3
           addEventTarget(target)
+          if (cellsToAdd > 0)
+            testCountry(target)
           addSleeperCellsToCountry(target, cellsToAdd)
           
           if (cellsToAdd == 3 &&
@@ -4143,6 +4159,7 @@ object ForeverWarCards {
             JihadistBot.recruitTravelToPriority(sunniCandidates).get
             
           addEventTarget(target)
+          testCountry(target)
           addSleeperCellsToCountry(target, 1)
         }
         
@@ -4153,6 +4170,7 @@ object ForeverWarCards {
             JihadistBot.recruitTravelToPriority(shiaCandidates).get
             
           addEventTarget(target)
+          testCountry(target)
           addSleeperCellsToCountry(target, 1)
         }
         

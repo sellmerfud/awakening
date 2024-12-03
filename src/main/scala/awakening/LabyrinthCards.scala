@@ -1240,9 +1240,10 @@ object LabyrinthCards {
       ,
       (role: Role, forTrigger: Boolean) => {
         addEventTarget(Philippines)
-        testCountry(Philippines)
-        if (game.cellsAvailable > 0)
+        if (game.cellsAvailable > 0) {
+          testCountry(Philippines)
           addSleeperCellsToCountry(Philippines, 1)
+        }
         else
           log(s"There are no cells available to place in $Philippines")
         addEventMarkersToCountry(Philippines, AbuSayyaf)
@@ -1255,9 +1256,10 @@ object LabyrinthCards {
       ,
       (role: Role, forTrigger: Boolean) => {
         addEventTarget(Iraq)
-        testCountry(Iraq)
-        if (game.cellsAvailable > 0)
+        if (game.cellsAvailable > 0) {
+          testCountry(Iraq)
           addSleeperCellsToCountry(Iraq, 1)
+        }
         else
           log(s"There are no cells available to place in $Iraq")
         addGlobalEventMarker(AlAnbar)
@@ -1302,8 +1304,12 @@ object LabyrinthCards {
           else
             JihadistBot.recruitTravelToPriority(candidates).get
           addEventTarget(name)
+          testCountry(name)
           addSleeperCellsToCountry(name, 1)
         }
+        else
+          log(s"There are no cells available to place on the map")
+
         if (role == game.humanRole) {
           log(s"Draw a card and add it to your hand")
           askCardsDrawn(1)
@@ -1800,7 +1806,13 @@ object LabyrinthCards {
         addEventTarget(target)
         val m = game.getMuslim(target)
         val numCells = 5 min game.cellsAvailable
-        addSleeperCellsToCountry(target, numCells)
+        if (numCells > 0) {
+          testCountry(target)
+          addSleeperCellsToCountry(target, numCells)
+        }
+        else
+          log(s"There are no cells available to place in $target")
+
         if (m.aidMarkers > 0)
           removeAidMarker(target, 1)
         else if (!m.besiegedRegime)
@@ -1841,11 +1853,11 @@ object LabyrinthCards {
         // Process all of the targets
         for (target <- targets) {
           addEventTarget(target)
-          testCountry(target)
           
           val c = game.getCountry(target)
           if (game.cellsAvailable > 0) {
             val cells = numCells min game.cellsAvailable
+            testCountry(target)
             if (c.autoRecruit) {
               log(s"Recruit in $target succeeds automatically")
               addSleeperCellsToCountry(target, cells)
@@ -1881,6 +1893,8 @@ object LabyrinthCards {
         shiftAlignmentRight(Pakistan)
         if (game.cellsAvailable > 0)
           addSleeperCellsToCountry(Pakistan, 1)
+        else
+          log(s"There are no cells available to place in $Pakistan")
       }
     )),
     // ------------------------------------------------------------------------
@@ -1981,8 +1995,10 @@ object LabyrinthCards {
         
         addEventTarget(target)
         removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
-        for (plot <- plots)
+        for (plot <- plots) {
+          testCountry(target)
           addAvailablePlotToCountry(target, plot)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -2128,23 +2144,25 @@ object LabyrinthCards {
         val pakistan    = game getMuslim Pakistan
         addEventTarget(Afghanistan)
         addEventTarget(Pakistan)
-        testCountry(Afghanistan)
-        testCountry(Pakistan)
         if (!afghanistan.besiegedRegime)
           addBesiegedRegimeMarker(Afghanistan)
         if (game.cellsAvailable == 0)
           log("No cells available for placement")
         else if (game.cellsAvailable > 1) {
+          testCountry(Afghanistan)
           addSleeperCellsToCountry(Afghanistan, 1)
+          testCountry(Pakistan)
           addSleeperCellsToCountry(Pakistan, 1)
         }
         else if (role == game.humanRole) {
           println("There is only 1 cell available for placement")
           val name = askCountry("Place a cell in which country: ", Afghanistan::Pakistan::Nil)
+          testCountry(name)
           addSleeperCellsToCountry(name, 1)
         }
         else {
           val name = JihadistBot.recruitTravelToPriority(Afghanistan::Pakistan::Nil).get
+          testCountry(name)
           addSleeperCellsToCountry(name, 1)
         }
         
@@ -2264,8 +2282,10 @@ object LabyrinthCards {
       }
       else {
         addEventTarget(Israel)
-        if (game.cellsAvailable > 0)
+        if (game.cellsAvailable > 0) {
+          testCountry(Israel)
           addSleeperCellsToCountry(Israel, 1)
+        }
         else
           log(s"There are no cells available to place in $Israel")
       }
@@ -2571,6 +2591,7 @@ object LabyrinthCards {
         
         addEventTarget(name)
         val num = 3 min game.cellsAvailable
+        testCountry(name)
         addSleeperCellsToCountry(name, num)
         if (num == 3 && canDeclareCaliphate(name) &&
           ((role == game.humanRole && askDeclareCaliphate(name)) ||
@@ -2578,8 +2599,10 @@ object LabyrinthCards {
           declareCaliphate(name)
         }
         
-        if (game.availablePlots contains Plot2)
+        if (game.availablePlots contains Plot2) {
+          testCountry(name)
           addAvailablePlotToCountry(name, Plot2, visible = true)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -2689,6 +2712,7 @@ object LabyrinthCards {
         }
         
         addEventTarget(name)
+        testCountry(name)
         addAvailablePlotToCountry(name, plot)
       }
     )),
@@ -2724,6 +2748,7 @@ object LabyrinthCards {
         }
           
         addEventTarget(name)
+        testCountry(name)
         addAvailablePlotToCountry(name, plot)
       }
     )),

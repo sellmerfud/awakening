@@ -1627,8 +1627,10 @@ object AwakeningCards {
       ,
       (role: Role, forTrigger: Boolean) => {
         addEventTarget(Yemen)
-        if (game.cellsAvailable > 0)
+        if (game.cellsAvailable > 0) {
+          testCountry(Yemen)
           addSleeperCellsToCountry(Yemen, 2 min game.cellsAvailable)
+        }
         else
           log(s"There are no cells available to place in $Yemen")
 
@@ -1957,8 +1959,10 @@ object AwakeningCards {
         // See Event Instructions table
         val num = 2 min (game.availablePlots count (_ == Plot1))
         addEventTarget(Israel)
-        for (i <- 1 to num)
+        for (i <- 1 to num) {
+          testCountry(Israel)
           addAvailablePlotToCountry(Israel, Plot1, visible = true)
+        }
         decreaseFunding(1)
       }
     )),
@@ -2083,8 +2087,10 @@ object AwakeningCards {
         def placePlots(name: String, plotList: List[Plot]): Unit = plotList match {
           case Nil =>
           case p::ps =>
-            if (game.availablePlots contains p)
+            if (game.availablePlots contains p) {
+              testCountry(name)
               addAvailablePlotToCountry(name, p)
+            }
             placePlots(name, ps)
         }
 
@@ -2230,11 +2236,13 @@ object AwakeningCards {
                 options.head
               else
                 askSimpleMenu("Place which plot:", options)
+              testCountry(Nigeria)
               addAvailablePlotToCountry(Nigeria, plot)
 
             case "cells" =>
               val maxCells = 3 min game.cellsAvailable
               val num = askInt("\nPlace how many cells", 1, maxCells, Some(maxCells))
+              testCountry(Nigeria)
               addSleeperCellsToCountry(Nigeria, num)
               if (num == 3 && canDeclareCaliphate(Nigeria) && askDeclareCaliphate(Nigeria))
                 declareCaliphate(Nigeria)
@@ -2255,12 +2263,15 @@ object AwakeningCards {
           else false                            // non-Muslim priority to plot
           if (placeCells)  {
             val numCells = 3 min game.cellsAvailable
+            testCountry(Nigeria)
             addSleeperCellsToCountry(Nigeria, numCells)
             if (numCells == 3 && JihadistBot.willDeclareCaliphate(Nigeria))
               declareCaliphate(Nigeria)
           }
-          else
+          else {
+            testCountry(Nigeria)
             addAvailablePlotToCountry(Nigeria, plot.get)
+          }
         }
       }
     )),
@@ -2287,7 +2298,12 @@ object AwakeningCards {
         addEventTarget(target)
         val m = game.getMuslim(target)
         val numCells = 5 min game.cellsAvailable
-        addSleeperCellsToCountry(target, numCells)
+        if (numCells > 0) {
+          testCountry(target)
+          addSleeperCellsToCountry(target, numCells)
+        }
+        else
+          log(s"There are no cells to place in $target")
         if (m.aidMarkers > 0)
           removeAidMarker(target, 1)
         else if (!m.besiegedRegime)
@@ -2400,8 +2416,10 @@ object AwakeningCards {
 
         addEventTarget(target)
         removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
-        for (plot <- plots)
+        for (plot <- plots) {
+          testCountry(target)
           addAvailablePlotToCountry(target, plot)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -2593,7 +2611,10 @@ object AwakeningCards {
         }
         addEventTarget(target)
         removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
-        plots foreach { p => addAvailablePlotToCountry(target, p) }
+        plots foreach { p =>
+          testCountry(target)
+          addAvailablePlotToCountry(target, p)
+        }
         // It is possible that the country is no longer a Muslim country.
         // For example: Target is Nigeria and we jsut removed the last cell (rule 11.3.3.3)
         if (game isMuslim target)
@@ -2630,6 +2651,7 @@ object AwakeningCards {
         playExtraCellsEvent(TrainingCamps, target)
 
         val cellsToAdd = game.cellsAvailable min 2
+        testCountry(target)
         addSleeperCellsToCountry(target, cellsToAdd)
       }
     )),
@@ -3647,6 +3669,7 @@ object AwakeningCards {
           if (cellsToPlace > 0) {
             val name = askCountry(s"Select country to place ${amountOf(cellsToPlace, "cell")}: ", candidates)
             addEventTarget(name)
+            testCountry(name)
             addSleeperCellsToCountry(name, cellsToPlace)
             if (cellsToPlace == 3 && canDeclareCaliphate(name) && askDeclareCaliphate(name))
               declareCaliphate(name)
@@ -3675,6 +3698,7 @@ object AwakeningCards {
           }
 
           addEventTarget(target)
+          testCountry(target)
           addSleeperCellsToCountry(target, countries.size)
           if (countries.size == 3 && canDeclareCaliphate(target) && JihadistBot.willDeclareCaliphate(target))
             declareCaliphate(target)
@@ -3718,6 +3742,7 @@ object AwakeningCards {
 
           val toPlace = reactions.size + numCells
           addEventTarget(target)
+          testCountry(target)
           addSleeperCellsToCountry(target, toPlace)
         }
       }
@@ -3890,6 +3915,7 @@ object AwakeningCards {
         addEventTarget(name)
         startCivilWar(name)
         val numCells = if (name == Mali) 2 else 1
+        testCountry(name)
         addSleeperCellsToCountry(name, numCells min game.cellsAvailable)
       }
     )),
@@ -4176,6 +4202,8 @@ object AwakeningCards {
         }
         else if (role == Jihadist) (2, 1)
         else (1, 2)
+        if (game.cellsAvailable > 0 || game.militiaAvailable > 0)
+          testCountry(Syria)
         addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
         addMilitiaToCountry(Syria, militia min game.militiaAvailable)
         addEventTarget(Turkey)
