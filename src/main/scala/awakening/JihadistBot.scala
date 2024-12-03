@@ -832,23 +832,12 @@ object JihadistBot extends BotHelpers {
 
 
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
-
-    // val irWithThreePlusCells = irCountryWith3PlusCells
-    val irCountryWith6CellsExists = game.muslims.exists(m => m.isIslamistRule && m.totalCells > 5)
-
-    // Only recruit in IR if no IR country has 6+ cells
-    // and if either no IR country has 3+ cells, or this is the IR country with 3+ cells
-    val irCheck = (m: MuslimCountry) =>
-      !m.isIslamistRule ||
-      // (!irCountryWith6CellsExists && (irWithThreePlusCells.isEmpty || Some(m.name) == irWithThreePlusCells))
-      !irCountryWith6CellsExists
-
     val criteria = if (game.botEnhancements)
       (c: Country) => c match {
-        case m: MuslimCountry =>                // Only recruit in Muslim countries
-          (m.isPoor || m.autoRecruit) &&        // Only recruit in Good/Fair if auto-recruit
-          irCheck(m) &&
-          (!muslimWithCadreOnly || m.hasCadre)  // Special radicalization test
+        case m: MuslimCountry =>                     // Only recruit in Muslim countries
+          (m.isPoor || m.autoRecruit) &&             // Only recruit in Good/Fair if auto-recruit
+          (!m.isIslamistRule || m.totalCells < 6) && // Only recruit in IR if the country has less than 6 cells.
+          (!muslimWithCadreOnly || m.hasCadre)       // Special radicalization test
         case n: NonMuslimCountry => false
       }
     else
