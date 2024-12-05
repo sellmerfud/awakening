@@ -1841,6 +1841,13 @@ object LabyrinthCards {
                                             (m.aidMarkers > 0 || !m.besiegedRegime)))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
+        else if (game.cellsAvailable >= 3) {
+          // If we are placing 3 cells and we can declare caliphate then
+          // select that country
+          JihadistBot.caliphatePriorityTarget(candidates)
+            .orElse(JihadistBot.recruitTravelToPriority(candidates))
+            .get
+        }
         else
           JihadistBot.recruitTravelToPriority(candidates).get
 
@@ -2625,10 +2632,16 @@ object LabyrinthCards {
         // Can create Caliphate (onlyinIraq,Syria,Lebanon,orJordan)
         val name = if (role == game.humanRole)
           askCountry("Select country: ", zarqawiCandidates)
+        else if (game.cellsAvailable >= 3 &&
+                 game.islamistResources == 5 &&
+                 JihadistBot.caliphatePriorityTarget(zarqawiCandidates).nonEmpty)
+          JihadistBot.caliphatePriorityTarget(zarqawiCandidates).get
         else if (game.availablePlots contains Plot2)
           JihadistBot.plotPriority(zarqawiCandidates).get
         else
-          JihadistBot.recruitTravelToPriority(zarqawiCandidates).get
+          JihadistBot.caliphatePriorityTarget(zarqawiCandidates)
+            .orElse(JihadistBot.recruitTravelToPriority(zarqawiCandidates))
+            .get
         
         addEventTarget(name)
         val num = 3 min game.cellsAvailable

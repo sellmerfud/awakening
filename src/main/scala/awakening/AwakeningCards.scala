@@ -2299,6 +2299,13 @@ object AwakeningCards {
                                                   (m.aidMarkers > 0 || !m.besiegedRegime)))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
+        else if (game.cellsAvailable >= 3) {
+          // If we are placing 3 cells and we can declare caliphate then
+          // select that country
+          JihadistBot.caliphatePriorityTarget(candidates)
+            .orElse(JihadistBot.recruitTravelToPriority(candidates))
+            .get
+        }
         else
           JihadistBot.recruitTravelToPriority(candidates).get
 
@@ -2842,7 +2849,11 @@ object AwakeningCards {
           (target, "militia")
         }
         else {
-          val target = JihadistBot.recruitTravelToPriority(African).get
+          val caliphateTarget = JihadistBot.caliphatePriorityTarget(Mali::Nigeria::Nil)
+          val target = if (game.cellsAvailable >= 3 && caliphateTarget.nonEmpty)
+            caliphateTarget.get
+          else
+            JihadistBot.recruitTravelToPriority(African).get
           (target, "cells")
         }
 
@@ -3454,7 +3465,11 @@ object AwakeningCards {
         else if (game.botEnhancements) {
           // Enhance Bot will move cells using Travel From priorities once all
           // cells on the track have been used.
-          val target = JihadistBot.recruitTravelToPriority(Syria::Iraq::Nil).get
+          val candidates = Syria::Iraq::Nil
+          val target = JihadistBot.caliphatePriorityTarget(candidates)
+              .orElse(JihadistBot.recruitTravelToPriority(candidates))
+              .get
+
           val sourceCountries = countryNames(game.countries.filter(c => c.name != target && JihadistBot.hasCellForTravel(c)))
           addEventTarget(target)
           testCountry(target)
@@ -3463,7 +3478,7 @@ object AwakeningCards {
           val totalPlaced = placements.map(_.total).sum
           moveCellsToTarget(target, placements)
 
-          if (totalPlaced == 3 && canDeclareCaliphate(target) && JihadistBot.willDeclareCaliphate(target))
+          if (totalPlaced == 3 && JihadistBot.willDeclareCaliphate(target))
             declareCaliphate(target)
 
           if (askYorN("Is \"Training Camps\" or \"Paris Attacks\" in the discard pile (y/n)? "))
@@ -3481,7 +3496,7 @@ object AwakeningCards {
           testCountry(target)
           val num = 3 min game.cellsAvailable
           addSleeperCellsToCountry(target, num)
-          if (num == 3 && canDeclareCaliphate(target) && JihadistBot.willDeclareCaliphate(target))
+          if (num == 3 && JihadistBot.willDeclareCaliphate(target))
             declareCaliphate(target)
 
           if (askYorN("Is \"Training Camps\" or \"Paris Attacks\" in the discard pile (y/n)? "))
@@ -3706,7 +3721,15 @@ object AwakeningCards {
         }
         else if (role == Jihadist) {
           // Bot removes only cells
-          val target = JihadistBot.recruitTravelToPriority(candidates).get
+          val calipihateTarget = JihadistBot.caliphatePriorityTarget(candidates).filter { name =>
+            game.countries.count(c => c.name != name && JihadistBot.hasCellForTravel(c)) >= 3
+          }
+          val target = if (game.botEnhancements || game.islamistResources == 5)
+            calipihateTarget
+              .orElse(JihadistBot.recruitTravelToPriority(candidates))
+              .get
+          else
+            JihadistBot.recruitTravelToPriority(candidates).get
           val withCells = countryNames(game.countries filter (c => c.name != target && JihadistBot.hasCellForTravel(c)))
           val countries = if (withCells.size <= 3)
             withCells

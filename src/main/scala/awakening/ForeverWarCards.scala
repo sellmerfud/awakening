@@ -2852,6 +2852,14 @@ object ForeverWarCards {
         val (target, num) = if (role == game.humanRole)
           (askCountry("Which country: ", ungovernedSpaceCandidates),
            askInt("Place how many cells", 1, game.cellsAvailable min 3))
+        else if (game.cellsAvailable >= 3 && (game.botEnhancements || game.islamistResources == 5)) {
+            // If we are placing 3 cells and we can declare caliphate then
+            // select that country
+            val t = JihadistBot.caliphatePriorityTarget(ungovernedSpaceCandidates)
+              .orElse(JihadistBot.recruitTravelToPriority(ungovernedSpaceCandidates))
+              .get
+            (t, game.cellsAvailable min 3)
+          }
         else
           (JihadistBot.recruitTravelToPriority(ungovernedSpaceCandidates).get, game.cellsAvailable min 3)
         
@@ -3302,6 +3310,14 @@ object ForeverWarCards {
           (askCountry("Place cells in which country: ", candidates),
            askInt("Place how many cells", 1, maxCells, Some(maxCells))
           )
+        else if (maxCells == 3 && (game.botEnhancements || game.islamistResources == 5)) {
+            // If we are placing 3 cells and we can declare caliphate then
+            // select that country
+            val t = JihadistBot.caliphatePriorityTarget(candidates)
+              .orElse(JihadistBot.recruitTravelToPriority(candidates))
+              .get
+            (t, maxCells)
+          }
         else
           (JihadistBot.recruitTravelToPriority(candidates).get, maxCells)
         
@@ -3863,7 +3879,7 @@ object ForeverWarCards {
         if (game.cellsAvailable > 0 && candidates.nonEmpty) {
           val target = if (role == game.humanRole)
             askCountry("Place cells in which country: ", candidates)
-          else if (game.botEnhancements) {
+          else if (game.cellsAvailable >= 3 && (game.botEnhancements || game.islamistResources == 5)) {
             // If we are placing 3 cells and we can declare caliphate then
             // select that country
             JihadistBot.caliphatePriorityTarget(candidates)

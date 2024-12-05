@@ -1351,9 +1351,13 @@ object JihadistBot extends BotHelpers {
         muslimScore(m => m.resources)),
     )
 
-    botLog("Find top priority caliphate target", Color.Debug)
-    val candidates = game.getCountries(names.filter(willDeclareCaliphate))
-    topPriority(candidates, priorities).map(_.name)
+    if (game.caliphateDeclared)
+      None
+    else {
+      botLog("Find top priority caliphate target", Color.Debug)
+      val candidates = game.getCountries(names.filter(willDeclareCaliphate))
+      topPriority(candidates, priorities).map(_.name)
+    }
   }
 
   // Note: this does not test for presence of a cadre, because
