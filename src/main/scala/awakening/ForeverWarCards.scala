@@ -3863,6 +3863,13 @@ object ForeverWarCards {
         if (game.cellsAvailable > 0 && candidates.nonEmpty) {
           val target = if (role == game.humanRole)
             askCountry("Place cells in which country: ", candidates)
+          else if (game.botEnhancements) {
+            // If we are placing 3 cells and we can declare caliphate then
+            // select that country
+            JihadistBot.caliphatePriorityTarget(candidates)
+              .orElse(JihadistBot.recruitTravelToPriority(candidates))
+              .get
+          }
           else
             JihadistBot.recruitTravelToPriority(candidates).get
           

@@ -1335,6 +1335,27 @@ object JihadistBot extends BotHelpers {
     canDeclareCaliphate(capital) &&
     (game.islamistResources == 5 || game.caliphateDaisyChain(capital).size > 1)
 
+  def caliphatePriorityTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      new HighestScoreNode(
+        "IR w/ highest resource value",
+        _.isIslamistRule,
+        muslimScore(m => m.resources)),
+      new HighestScoreNode(
+        "Poor Civil War w/ highest resource value",
+        muslimTest(m => m.isPoor && m.civilWar),
+        muslimScore(m => m.resources)),
+      new HighestScoreNode(
+        "Poor Regime Change w/ highest resource value",
+        muslimTest(m => m.isPoor && m.inRegimeChange),
+        muslimScore(m => m.resources)),
+    )
+
+    botLog("Find top priority caliphate target", Color.Debug)
+    val candidates = game.getCountries(names.filter(willDeclareCaliphate))
+    topPriority(candidates, priorities).map(_.name)
+  }
+
   // Note: this does not test for presence of a cadre, because
   // some events want do know where to NOT place a cadre that will
   // then be removed.
