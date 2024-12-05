@@ -3422,31 +3422,8 @@ object ForeverWarCards {
         val withCells = countryNames(game.countries filter (c => c.name != target && c.cells > 0))
         val cells = if (role == game.humanRole)
           askCellsFromAnywhere(2, true, withCells, sleeperFocus = false)
-        else {
-          def nextFrom(countries: List[String], remaining: Int, cellsAvailable: Int): List[CellsItem] = {
-            if (remaining == 0)
-              Nil
-            else if (cellsAvailable > 0) {
-              val n = remaining min cellsAvailable
-              CellsItem("track", 0, n)::nextFrom(countries, remaining - n, cellsAvailable - n)
-            }
-            else if (countries.isEmpty)
-              Nil
-            else {
-              JihadistBot.travelFromTarget(target, countries) match {
-                case Some(name) =>
-                  val c = (game getCountry name)
-                  val n = remaining min c.totalCells
-                  val a = n min c.activeCells
-                  val s = n - a
-                  CellsItem(name, a, s)::nextFrom(countries filterNot (_ == name), remaining - n, cellsAvailable)
-                case None => Nil
-              }
-            }
-          }
-          
-          nextFrom(withCells, 2, game.cellsAvailable)
-        }
+        else 
+          JihadistBot.selecCellsToPlace(target, withCells, 2)
         
         addEventTarget(target)
         testCountry(target)

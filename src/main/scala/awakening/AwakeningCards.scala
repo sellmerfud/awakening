@@ -253,6 +253,13 @@ object AwakeningCards {
     })
   }
 
+  def enhJihadistBotAbuBakrPlayable: Boolean = {
+    val withCells = game.countries.filter(JihadistBot.hasCellForTravel)
+    game.cellsAvailable > 0 ||
+    withCells.exists(_.name != Syria) ||
+    withCells.exists(_.name != Iraq)
+  }
+
   def servalPlayable(role: Role, forTrigger: Boolean): Boolean = {
     if (role == game.humanRole)
       servalCandidates.nonEmpty
@@ -2782,31 +2789,12 @@ object AwakeningCards {
             JihadistBot.criticalMiddleShiftPossibilities(jiCandidates) match {
               case Nil =>
                 val target = JihadistBot.travelToTarget(jiCandidates).get
-                def nextFrom(countries: List[String], remaining: Int, cellsAvailable: Int): List[CellsItem] =
-                  if (remaining == 0)
-                    Nil
-                  else if (cellsAvailable > 0) {
-                    val n = remaining min cellsAvailable
-                    CellsItem("track", 0, n)::nextFrom(countries, remaining - n, cellsAvailable - n)
-                  }
-                  else if (countries.isEmpty)
-                    Nil
-                  else {
-                    JihadistBot.travelFromTarget(target, countries) match {
-                      case Some(name) =>
-                        val c = (game getCountry name)
-                        val n = remaining min c.totalCells
-                        val a = n min c.activeCells
-                        val s = n - a
-                        CellsItem(name, a, s)::nextFrom(countries filterNot (_ == name), remaining - n, cellsAvailable)
-                      case None => Nil
-                    }
-                  }
 
                 val fromCandidates = countryNames(
                   game.countries.filter(c => c.name != target && JihadistBot.hasCellForTravel(c))
                 )
-                (target, Some("cells"), nextFrom(fromCandidates, 2, game.cellsAvailable))
+                
+                (target, Some("cells"), JihadistBot.selecCellsToPlace(target, fromCandidates, 2))
 
               case xs  => (JihadistBot.markerAlignGovTarget(xs).get, Some("shiftRight"), Nil)
             }
@@ -3406,11 +3394,20 @@ object AwakeningCards {
       }
     )),
     // ------------------------------------------------------------------------
+    // Normal event instructions:
+    //   Place Cells from Track only. Select card nearest bottom if possible, else Schengen.
+    // Enhanced Bot even t instructions:
+    //   Place MAX. CELLS POSSIBLE, FROM TRACK FIRST, THEN USE TRAVEL FROM PRIORITIES.
+    //    Priorities for 2nd part of event:
+    //       Select "Training Camps" from discard pile
+    //       Select "Paris Attacks" from discard pile
+    //       Place cell using Schengen table.
     entry(new Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2,
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
         (role == US && game.caliphateDeclared) ||
-        (role == Jihadist && game.cellsAvailable > 0)
+        (role == Jihadist && game.botEnhancements && enhJihadistBotAbuBakrPlayable) ||
+        (role == Jihadist && !game.botEnhancements && game.cellsAvailable > 0)
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {
         increasePrestige(3)
@@ -3454,6 +3451,30 @@ object AwakeningCards {
             }
           }
         }
+        else if (game.botEnhancements) {
+          // Enhance Bot will move cells using Travel From priorities once all
+          // cells on the track have been used.
+          val target = JihadistBot.recruitTravelToPriority(Syria::Iraq::Nil).get
+          val sourceCountries = countryNames(game.countries.filter(c => c.name != target && JihadistBot.hasCellForTravel(c)))
+          addEventTarget(target)
+          testCountry(target)
+
+          val placements = JihadistBot.selecCellsToPlace(target, sourceCountries, 3)
+          val totalPlaced = placements.map(_.total).sum
+          moveCellsToTarget(target, placements)
+
+          if (totalPlaced == 3 && canDeclareCaliphate(target) && JihadistBot.willDeclareCaliphate(target))
+            declareCaliphate(target)
+
+          if (askYorN("Is \"Training Camps\" or \"Paris Attacks\" in the discard pile (y/n)? "))
+            log("Jihadist draws \"Training Camps\" if available otherwise \"Paris Attacks\" from discard pile")
+          else if (game.cellsAvailable > 0) {
+            val schengen = randomSchengenCountry
+            addEventTarget(schengen.name)
+            testCountry(schengen.name)
+            addSleeperCellsToCountry(schengen.name, 1)
+          }
+        }
         else {
           val target = JihadistBot.recruitTravelToPriority(Syria::Iraq::Nil).get
           addEventTarget(target)
@@ -3463,7 +3484,7 @@ object AwakeningCards {
           if (num == 3 && canDeclareCaliphate(target) && JihadistBot.willDeclareCaliphate(target))
             declareCaliphate(target)
 
-          if (askYorN("Is \"Paris Attacks\" or \"Training Camps\" in the discard pile (y/n)? "))
+          if (askYorN("Is \"Training Camps\" or \"Paris Attacks\" in the discard pile (y/n)? "))
             log("Jihadist draws the card nearest the bottom of the discard pile")
           else if (game.cellsAvailable > 0) {
             val schengen = randomSchengenCountry

@@ -351,8 +351,10 @@ object JihadistBot extends BotHelpers {
   val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
 
   // Used with botEnhancements
-  val PoorTroopsCellsFilter = new CriteriaFilter("Poor with troops and cells",
-                  muslimTest(m => m.isPoor && m.troops > 0 && unusedCells(m) > 0))
+  val PoorTroopsCellsFilter =
+    new CriteriaFilter(
+      "Poor with troops and cells",
+      c => c.isPoor && c.troops > 0 && unusedCells(c) > 0)
 
   val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
                   muslimTest(m => m.isPoor && m.troops > 0 && activeCells(m) > 0))
@@ -536,7 +538,7 @@ object JihadistBot extends BotHelpers {
       if (prestigeFocus)
         List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter)
       else
-        List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter, PoorMuslimFilter, NonMuslimFilter)
+        List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter, PoorNonMuslimFilter, PoorMuslimFilter, NonMuslimFilter)
     }
     else {
       if (game.fundingLevel == Tight)
@@ -2012,20 +2014,20 @@ object JihadistBot extends BotHelpers {
         else {
           if (completed >= cardOps)
             expendBotReserves(1)
-            addOpsTarget(UnitedStates)
-            performPlots(3, PlotAttempt(UnitedStates, activeCells(us) > 0)::Nil)
-            usedCells(UnitedStates).addActives(1)
-            nextAttempt(completed + 1)
-          }
+          addOpsTarget(UnitedStates)
+          performPlots(3, PlotAttempt(UnitedStates, activeCells(us) > 0)::Nil)
+          usedCells(UnitedStates).addActives(1)
+          nextAttempt(completed + 1)
         }
-        nextAttempt(0)
       }
+      nextAttempt(0)
     }
+  }
 
-    // -----------------------------------------------------------
-    // Radicalization Action -  Travel to untested Muslim country
-    case object TravelToUntestedNonMuslim extends RadicalizationAction {
-      override
+  // -----------------------------------------------------------
+  // Radicalization Action -  Travel to untested Muslim country
+  case object TravelToUntestedNonMuslim extends RadicalizationAction {
+    override
     def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
       game.usPosture == Hard        &&
       game.gwotPenalty == 0         &&
@@ -2033,15 +2035,15 @@ object JihadistBot extends BotHelpers {
       game.hasNonMuslim(_.isUntested)
     }
 
-    // Travel to Untested Non-Muslim countries while the US is Hard to
-    // try and increase the GWOT penalty.
-    // We give preference to cells in adjacent countries to avoid die rolls
-    // when necessary.
-    // cardsOps   - The number of unused Ops remaining from the card
-    // reserveOps - The number of unused Ops remaining from reserves
-    // Returns the number of ops used
-    override
-    def perform(cardOps: Int, reserveOps: Int): Int = {
+      // Travel to Untested Non-Muslim countries while the US is Hard to
+      // try and increase the GWOT penalty.
+      // We give preference to cells in adjacent countries to avoid die rolls
+      // when necessary.
+      // cardsOps   - The number of unused Ops remaining from the card
+      // reserveOps - The number of unused Ops remaining from reserves
+      // Returns the number of ops used
+      override
+      def perform(cardOps: Int, reserveOps: Int): Int = {
       log()
       log(s"Radicalization: Travel to Untested Non-Muslim countries")
       val maxOps = cardOps + reserveOps
@@ -2492,4 +2494,32 @@ object JihadistBot extends BotHelpers {
       MapItem(target, num) :: troopsToTakeOffMap(remaining - num, candidates filterNot (_ == target))
     }
   }
+
+
+  // Select cells to place in a target country when the cells must first come from
+  // the track, then from any of the given countries.
+  def selecCellsToPlace(destination: String, sources: List[String], numCells: Int): List[CellsItem] = {
+
+    def nextFromMap(countries: List[String], remaining: Int): List[CellsItem] =
+      if (remaining == 0 || countries.isEmpty)
+        Nil
+      else
+        JihadistBot.travelFromTarget(destination, countries) match {
+          case Some(name) =>
+            val c = game.getCountry(name)
+            val n = remaining min JihadistBot.numCellsForTravel(c)
+            val a = n min activeCells(c)
+            val s = n - a
+            CellsItem(name, a, s) :: nextFromMap(countries filterNot (_ == name), remaining - n)
+          case None => Nil
+        }
+    
+      val numFromTrack = numCells min game.cellsAvailable
+      val fromMap = nextFromMap(sources, numCells - numFromTrack)
+      if (numFromTrack > 0)
+        CellsItem("track", 0, numFromTrack) :: fromMap
+      else
+        fromMap
+  }
+
 }
