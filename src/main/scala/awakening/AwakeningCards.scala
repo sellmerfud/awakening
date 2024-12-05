@@ -3406,8 +3406,8 @@ object AwakeningCards {
       USRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
         (role == US && game.caliphateDeclared) ||
-        (role == Jihadist && game.botEnhancements && enhJihadistBotAbuBakrPlayable) ||
-        (role == Jihadist && !game.botEnhancements && game.cellsAvailable > 0)
+        (role == Jihadist && game.botEnhancements && (forTrigger || enhJihadistBotAbuBakrPlayable)) ||
+        (role == Jihadist && !game.botEnhancements && (forTrigger || game.cellsAvailable > 0))
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {
         increasePrestige(3)
@@ -3619,10 +3619,18 @@ object AwakeningCards {
         if (role == game.humanRole)
           candidates.nonEmpty
         else if (role == Jihadist && candidates.nonEmpty) {
-          // Bot will only remove cells.  Make sure there are cell in a country
-          // other than the target country.
-          val target = JihadistBot.recruitTravelToPriority(candidates).get
-          game.totalCellsOnMap > game.getCountry(target).totalCells
+          if (game.botEnhancements) {
+            // Enhanced bot will only select the event if it can remove 3 cells
+            val target = JihadistBot.recruitTravelToPriority(candidates).get
+            game.countries.count(c => c.name != target && JihadistBot.hasCellForTravel(c)) >= 3
+
+          }
+          else {
+            // Bot will only remove cells.  Make sure there are cell in a country
+            // other than the target country.
+            val target = JihadistBot.recruitTravelToPriority(candidates).get
+            game.countries.exists(c => c.name != target && JihadistBot.hasCellForTravel(c))
+          }
         }
         else if (role == US && candidates.nonEmpty) {
           val lowResource = (game getMuslims candidates map (_.resourceValue)).min
@@ -3699,7 +3707,7 @@ object AwakeningCards {
         else if (role == Jihadist) {
           // Bot removes only cells
           val target = JihadistBot.recruitTravelToPriority(candidates).get
-          val withCells = countryNames(game.countries filter (c => c.name != target && c.totalCells > 0))
+          val withCells = countryNames(game.countries filter (c => c.name != target && JihadistBot.hasCellForTravel(c)))
           val countries = if (withCells.size <= 3)
             withCells
           else {
