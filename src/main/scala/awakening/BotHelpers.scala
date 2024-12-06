@@ -66,10 +66,9 @@ trait BotHelpers {
   def enhBotJihadAllowed(m: MuslimCountry, major: Boolean): Boolean = {
     val drm = jihadDRM(m, major)
     m.governance match {
-      case GovernanceUntested => true
-      case Good|Fair          => drm <= 0
-      case Poor               => drm <= 1
-      case _                  => false
+      case Good|Fair|GovernanceUntested => drm <= 0
+      case Poor                         => drm <= 1
+      case _                            => false
     }
   }
   // Return true if a die roll of 1 will succeed in the given country

@@ -1734,7 +1734,7 @@ object JihadistBot extends BotHelpers {
   // Use normal travel priorities among all that are selected
   def enhancedTravelToTarget(names: List[String]): Option[String] = {
     botLog("Find Poor/Unmarked \"Travel To\" target", Color.Debug)
-    topPriority(game.getCountries(names), recruitAndTravelToPriorities) map (_.name)
+    topPriority(game.getCountries(names), recruitAndTravelToPriorities).map(_.name)
   }
 
   // Travel to Poor/Unmarked Mulsim country where a Major Jihad roll
