@@ -11,6 +11,7 @@ default:
 @release *ARGS:
   scripts/release.sh {{ARGS}}
 
-
+# Build a release for Florian and copy it to Dropbox
+@to_florian:
 
 

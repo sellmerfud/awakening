@@ -419,8 +419,7 @@ object JihadistBot extends BotHelpers {
       case LabyrinthMode if game.botEnhancements =>
         List(
           BesiegedRegimePriority,  WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority,
-          OilExporterPriority)
+          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
 
       case LabyrinthMode =>
         List(
@@ -431,8 +430,7 @@ object JihadistBot extends BotHelpers {
       case AwakeningMode if game.botEnhancements =>
         jihadPriorities ::: List(
           BesiegedRegimePriority, WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority,
-          OilExporterPriority)
+          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
 
       case AwakeningMode =>
         jihadPriorities ::: List(
@@ -443,8 +441,7 @@ object JihadistBot extends BotHelpers {
       case ForeverWarMode if game.botEnhancements =>
         jihadPriorities ::: List(
           BesiegedRegimePriority, WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority,
-          OilExporterPriority)
+          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
 
       case ForeverWarMode =>
         jihadPriorities ::: List(
@@ -492,7 +489,7 @@ object JihadistBot extends BotHelpers {
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
              HighestResourcePriority, NeutralPriority, BesiegedRegimePriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
-             LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+             LowestRECPriority, AdjacentIslamistRulePriority)
 
       case LabyrinthMode =>
         List(USPriority, WithPrestigeTroopsPriority, PakistanPriority, PhilippinesPriority,
@@ -506,7 +503,7 @@ object JihadistBot extends BotHelpers {
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
              HighestResourcePriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
-             LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+             LowestRECPriority, AdjacentIslamistRulePriority)
 
       case AwakeningMode =>
         List(USPriority, WithPrestigeTroopsPriority, PakistanPriority,
@@ -520,14 +517,14 @@ object JihadistBot extends BotHelpers {
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
              HighestResourcePriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
-             LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+             LowestRECPriority, AdjacentIslamistRulePriority)
 
       case ForeverWarMode =>
         List(USPriority, WithPrestigeTroopsPriority, PakistanPriority,
              MostActveCellsPriority, IranPriority, WithAidPriority, RegimeChangeTroopsPriority,
              HighestResourcePriority, SyriaPriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
-             LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+             LowestRECPriority, AdjacentIslamistRulePriority)
     }
 
   def plotTarget(names: List[String], prestigeFocus: Boolean): Option[String] = {
@@ -588,9 +585,8 @@ object JihadistBot extends BotHelpers {
   def recruitAndTravelToPriorities: List[CountryFilter] = game.currentMode match {
     case LabyrinthMode if game.botEnhancements =>
       List(NotIslamistRulePriority, BesiegedRegimePriority,
-        USPriority, PoorPriority, FairPriority, GoodPriority, HighestResourcePriority,
-        RussiaPriority, NoDisruptPretigePriority, HighestRECPriority, SamePostureAsUSPriority,
-        MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+        USPriority, HighestResourcePriority, RussiaPriority, NoDisruptPretigePriority,
+        HighestRECPriority, SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority)
 
     case LabyrinthMode =>
       List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
@@ -600,10 +596,9 @@ object JihadistBot extends BotHelpers {
 
     case AwakeningMode if game.botEnhancements =>
       List(NotIslamistRulePriority, BesiegedRegimePriority,
-          USPriority, PoorPriority, FairPriority,
-          GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
+          USPriority, HighestResourcePriority, NoDisruptPretigePriority,
           HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
-          MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+          MostCellsPriority, AdjacentIslamistRulePriority)
 
     case AwakeningMode =>
       List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
@@ -614,10 +609,9 @@ object JihadistBot extends BotHelpers {
 
     case ForeverWarMode if game.botEnhancements  =>
       List(NotIslamistRulePriority, BesiegedRegimePriority,
-           USPriority, PoorPriority, FairPriority,
-           GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
+           USPriority, HighestResourcePriority, NoDisruptPretigePriority,
            HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
-           MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+           MostCellsPriority, AdjacentIslamistRulePriority)
 
     case ForeverWarMode =>
       List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
@@ -1112,12 +1106,12 @@ object JihadistBot extends BotHelpers {
     }
 
     object PrestigeAboveLowAndActiveCellWithTroopsDecision extends OperationDecision {
-      val desc = "Prestige > 3 and cell(s) with Troops?"
+      val desc = "Prestige > 3 and cell(s) with Troops in Poor country?"
       def yesPath = PlotOpPrestige
       def noPath  = PoorNeedCellsforMajorJihadDecision
       def condition(ops: Int) =
         game.prestige > 3 &&
-        (game hasMuslim (m => unusedCells(m) > 0 && m.totalTroopsThatAffectPrestige > 0))
+        (game hasCountry (c => c.isPoor && unusedCells(c) > 0 && c.totalTroopsThatAffectPrestige > 0))
     }
 
     object CellsAvailableOrPlotDecision extends OperationDecision {
