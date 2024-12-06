@@ -536,7 +536,7 @@ object JihadistBot extends BotHelpers {
       // And if the focus is on hammering US prestige then the final two priorities
       // for Poor Muslim and Non-Muslim are ignored
       if (prestigeFocus)
-        List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter)
+        List(PoorMuslimFilter, FairMuslimFilter)
       else
         List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter, PoorNonMuslimFilter, PoorMuslimFilter, NonMuslimFilter)
     }
@@ -1857,7 +1857,10 @@ object JihadistBot extends BotHelpers {
                                         (game isNonMuslim c.name) ||
                                         !(game getMuslim c.name).isIslamistRule
                                       )
-        val candidates = countryNames(game.countries filter canPlot)
+        val candidates = if (prestigeFocus)
+          countryNames(game.countries.filter(c => canPlot(c) && c.totalTroopsThatAffectPrestige > 0))
+        else
+          countryNames(game.countries.filter(canPlot))
         plotTarget(candidates, prestigeFocus) match {
           case None => completed
           case Some(name) =>
