@@ -1733,10 +1733,10 @@ object JihadistBot extends BotHelpers {
   // Select Poor where Best Jihad DRM, the Unmarked
   // Use normal travel priorities among all that are selected
   def enhancedTravelToTarget(names: List[String]): Option[String] = {
-    val flowchart = List(PoorMuslimWhereMajorJSPBestJihadDRM)
+    // val flowchart = List(PoorMuslimWhereMajorJSPBestJihadDRM)
     botLog("Find Poor/Unmarked \"Travel To\" target", Color.Debug)
-    val candidates = selectCandidates(game.getCountries(names), flowchart)
-    topPriority(candidates, recruitAndTravelToPriorities) map (_.name)
+    // val candidates = selectCandidates(game.getCountries(names), flowchart)
+    topPriority(game.getCountries(names), recruitAndTravelToPriorities) map (_.name)
   }
 
   // Travel to Poor/Unmarked Mulsim country where a Major Jihad roll
@@ -1824,7 +1824,7 @@ object JihadistBot extends BotHelpers {
     log("where Major Jihad success is possible and with no Troops or Militia")
     log(separator())
 
-    enhancedTravelToTarget(enhancedTravelCandidates) match {
+    enhancedTravelToTarget(inspect("candidates", enhancedTravelCandidates)) match {
       case None => 0 // No targets to no ops used
       case Some(toName) => carryoutTravelOp(toName)
     }
