@@ -1041,7 +1041,7 @@ object JihadistBot extends BotHelpers {
     object HaveAutoRecruitPriorityDecision extends OperationDecision {
       val desc = "Non-Fair Auto-Recruit country with < 3 cells?"
       def yesPath = RecruitInAutoRecruitPriorityDecision
-      def noPath  = PrestigeAboveLowAndActiveCellWithTroopsDecision
+      def noPath  = FundingBelow7Decision
       def condition(ops: Int) = autoRecruitPriorityCountry.exists(name => game.getMuslim(name).totalCells < 3)
     }
 
@@ -1060,7 +1060,7 @@ object JihadistBot extends BotHelpers {
     object AdjacentTravelToAutoRecruitPriorityDecision extends OperationDecision {
       def desc = s"Can travel to Auto-Recruit priority (${autoRecruitPriorityCountry.getOrElse("ERROR")} from ajacent?)"
       def yesPath = TravelOp(autoRecruitPriorityCountry, adjacentOnly = true)
-      def noPath  = PrestigeAboveLowAndActiveCellWithTroopsDecision
+      def noPath  = FundingBelow7Decision
       def condition(ops: Int) = autoRecruitPriorityCountry.toList
         .flatMap(game.adjacentCountries)
         .exists(hasCellForTravel)
@@ -1114,7 +1114,7 @@ object JihadistBot extends BotHelpers {
     object PrestigeAboveLowAndActiveCellWithTroopsDecision extends OperationDecision {
       val desc = "Prestige > 3 and cell(s) with Troops?"
       def yesPath = PlotOpPrestige
-      def noPath  = FundingBelow7Decision
+      def noPath  = PoorNeedCellsforMajorJihadDecision
       def condition(ops: Int) =
         game.prestige > 3 &&
         (game hasMuslim (m => unusedCells(m) > 0 && m.totalTroopsThatAffectPrestige > 0))
