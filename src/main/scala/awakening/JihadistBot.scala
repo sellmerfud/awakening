@@ -1124,14 +1124,12 @@ object JihadistBot extends BotHelpers {
     object Funding7AndNoCardsInHandDecision extends OperationDecision {
       val desc = "Funding = 7 and no more Jihadist cards in hand?"
       def yesPath = PlotOpFunding
-      def noPath  = PoorNeedCellsforMajorJihadDecision
+      def noPath  = PrestigeAboveLowAndActiveCellWithTroopsDecision
       def condition(ops: Int) =
         game.funding == 7 &&
         !askYorN(s"\nDoes the $Jihadist have any more cards in hand? (y/n) ")
     }
   }
-
-
 
   // Follow the operations flowchart (EvO) to pick which operation will be performed.
   def operationsFlowchart(ops: Int): Operation = {
