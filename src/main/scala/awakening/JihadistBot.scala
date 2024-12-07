@@ -1003,14 +1003,6 @@ object JihadistBot extends BotHelpers {
       }
     }
 
-    // Not needed
-    object CellAvailableOrPlotDecision extends OperationDecision {
-      val desc = "Cells Available and Recruit possible? (or Plot)"
-      def yesPath = RecruitOp(None)
-      def noPath  = PlotOpFunding
-      def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
-    }
-
     object CellAvailableOrTravelDecision extends OperationDecision {
       val desc = "Cells Available and Recruit possible? (or Travel)"
       def yesPath = RecruitOp(None)
@@ -1100,7 +1092,7 @@ object JihadistBot extends BotHelpers {
 
     object FundingBelow7Decision extends OperationDecision {
       val desc = "Funding < 7?"
-      def yesPath = CellsAvailableOrPlotDecision
+      def yesPath = PlotOpFunding
       def noPath  = Funding7AndNoCardsInHandDecision
       def condition(ops: Int) = game.funding < 7
     }
