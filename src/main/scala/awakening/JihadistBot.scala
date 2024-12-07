@@ -418,7 +418,7 @@ object JihadistBot extends BotHelpers {
     game.currentMode match {
       case LabyrinthMode if game.botEnhancements =>
         List(
-          BesiegedRegimePriority,  WithAidPriority, RegimeChangeTroopsPriority,
+          WithAidPriority, RegimeChangeTroopsPriority,
           HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
 
       case LabyrinthMode =>
@@ -429,7 +429,7 @@ object JihadistBot extends BotHelpers {
 
       case AwakeningMode if game.botEnhancements =>
         jihadPriorities ::: List(
-          BesiegedRegimePriority, WithAidPriority, RegimeChangeTroopsPriority,
+          WithAidPriority, RegimeChangeTroopsPriority,
           HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
 
       case AwakeningMode =>
@@ -440,7 +440,7 @@ object JihadistBot extends BotHelpers {
 
       case ForeverWarMode if game.botEnhancements =>
         jihadPriorities ::: List(
-          BesiegedRegimePriority, WithAidPriority, RegimeChangeTroopsPriority,
+          WithAidPriority, RegimeChangeTroopsPriority,
           HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
 
       case ForeverWarMode =>
@@ -487,42 +487,42 @@ object JihadistBot extends BotHelpers {
       case LabyrinthMode if game.botEnhancements =>
         List(USPriority, WithPrestigeTroopsPriority, PhilippinesPriority,
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, NeutralPriority, BesiegedRegimePriority,
+             HighestResourcePriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority)
 
       case LabyrinthMode =>
         List(USPriority, WithPrestigeTroopsPriority, PakistanPriority, PhilippinesPriority,
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, NeutralPriority, BesiegedRegimePriority,
+             HighestResourcePriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
 
       case AwakeningMode if game.botEnhancements =>
         List(USPriority, WithPrestigeTroopsPriority,
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
+             HighestResourcePriority, CivilWarPriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority)
 
       case AwakeningMode =>
         List(USPriority, WithPrestigeTroopsPriority, PakistanPriority,
              MostActveCellsPriority, SyriaPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, IranPriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
+             HighestResourcePriority, IranPriority, CivilWarPriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority, OilExporterPriority)
 
       case ForeverWarMode if game.botEnhancements =>
         List(USPriority, WithPrestigeTroopsPriority,
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
+             HighestResourcePriority, CivilWarPriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority)
 
       case ForeverWarMode =>
         List(USPriority, WithPrestigeTroopsPriority, PakistanPriority,
              MostActveCellsPriority, IranPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, SyriaPriority, CivilWarPriority, NeutralPriority, BesiegedRegimePriority,
+             HighestResourcePriority, SyriaPriority, CivilWarPriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority)
     }
@@ -584,7 +584,7 @@ object JihadistBot extends BotHelpers {
 
   def recruitAndTravelToPriorities: List[CountryFilter] = game.currentMode match {
     case LabyrinthMode if game.botEnhancements =>
-      List(NotIslamistRulePriority, BesiegedRegimePriority,
+      List(NotIslamistRulePriority,
         USPriority, HighestResourcePriority, RussiaPriority, NoDisruptPretigePriority,
         HighestRECPriority, SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority)
 
@@ -595,7 +595,7 @@ object JihadistBot extends BotHelpers {
         MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
 
     case AwakeningMode if game.botEnhancements =>
-      List(NotIslamistRulePriority, BesiegedRegimePriority,
+      List(NotIslamistRulePriority,
           USPriority, HighestResourcePriority, NoDisruptPretigePriority,
           HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
           MostCellsPriority, AdjacentIslamistRulePriority)
@@ -608,7 +608,7 @@ object JihadistBot extends BotHelpers {
           MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
 
     case ForeverWarMode if game.botEnhancements  =>
-      List(NotIslamistRulePriority, BesiegedRegimePriority,
+      List(NotIslamistRulePriority,
            USPriority, HighestResourcePriority, NoDisruptPretigePriority,
            HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
            MostCellsPriority, AdjacentIslamistRulePriority)
