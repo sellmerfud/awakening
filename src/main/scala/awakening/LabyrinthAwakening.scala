@@ -4551,9 +4551,12 @@ object LabyrinthAwakening {
           if (m.awakening > 0 ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name", Color.MapPieces)
           if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name", Color.MapPieces)
           if (m.militia > 0   ) log(s"Remove ${m.militia} militia from $name", Color.MapPieces)
+          // When a country becomes IR, any plots in the country are removed.
+          for (p <- m.plots)
+            removePlotFromCountry(name, p, toAvailable = !game.useExpansionRules)
           val degraded = m.copy(
             governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0,
-            aidMarkers = 0, militia = 0, besiegedRegime = false)
+            aidMarkers = 0, militia = 0, besiegedRegime = false, plots = Nil)
           game = game.updateCountry(degraded)
           moveWMDCacheToAvailable(name, m.wmdCache)
           removeAllAdvisorsFromCountry(name) // Country becomes Adversary
