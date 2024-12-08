@@ -879,7 +879,10 @@ object AwakeningCards {
 
         println()
         addEventTarget(target)
-        addMilitiaToCountry(target, game.getMuslim(target).resourceValue min game.militiaAvailable)
+        // We use country.resources here rather than country.resourceValue because
+        // we want the printed resource value and not the "current" resource value that
+        // may be modified by Oil Price Spike, etc.
+        addMilitiaToCountry(target, game.getMuslim(target).resources min game.militiaAvailable)
       }
     )),
     // ------------------------------------------------------------------------

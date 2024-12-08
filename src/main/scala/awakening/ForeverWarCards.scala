@@ -1000,6 +1000,8 @@ object ForeverWarCards {
         else
           USBot.deployToPriority(personalSecContractorsCandidates).get
         
+        // We use country.resources here rather than country.resourceValue because
+        // we want the "current" resource value that may be modified by Oil Price Spike, etc.
         val num = game.getMuslim(target).resourceValue min game.militiaAvailable
         addEventTarget(target)
         testCountry(target)
