@@ -176,6 +176,23 @@ object JihadistBot extends BotHelpers {
     }
   }
 
+  // Find the priority Major Jihad priority target.
+  // We start with all Muslim countries where a Major Jihad is possible (including umarked countries).
+  // We then use the Recruit/Travel OpP flowchart to pick the favorites and finally we use the
+  // Jihad priorities table to choose among those that remain.
+  def majorJihadPriorityCountry: Option[String] = {
+    val possibilities = game.muslims.filter(majorJihadSuccessPossible)
+    val candidates = selectCandidates(possibilities, RecruitFlowchart, allowBotLog = false)
+    // If we still have multiple caniddates, we choose the alphabetically first one
+    // so that we consistently return the same country given the current conditions
+    // of the game board.
+    narrowCandidates(candidates, jihadMarkerAlignGovPriorities(Some(true)), allowBotLog = false)
+      .map(_.name)
+      .sorted
+      .headOption
+  }
+
+
   // Pick all candidates that are not the same as the target unless there
   // is only the target to choose from.
   class NotDestinationPriority(target: String) extends CountryFilter {
@@ -564,7 +581,9 @@ object JihadistBot extends BotHelpers {
   def RecruitFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
          PoorAutoRecruit,
-         PoorOrUnmarkedMuslim)
+         PoorOrUnmarkedMuslim,
+         new CriteriaFilter("Any Country with cells or cadre", c => true)
+    )
     // List(PoorNeedCellsforMajorJihad,
     //      EnhRecruitPoorCadreNoTandMMajorJihadPossible,
     //      AutoRecruitBestJihadDRM,
@@ -1065,22 +1084,23 @@ object JihadistBot extends BotHelpers {
         .exists(hasCellForTravel)
     }
 
-    // This object incorporates two boxes on the Flowchart
-    // Finds poor countries in need of cells for major jihad,
-    // Finds the highest priority travel destination among them and checks
-    // to see if there is a cell in an adjacent country.
-    object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
-      val desc = """|Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible and
-                    |at least one adjacent cell that can travel""".stripMargin
-      def yesPath = TravelOp(None, adjacentOnly = true)
-      def noPath  = RecruitOrEnhancedTravelDecision
-      def condition(ops: Int) = {
-        val candidates = countryNames(game.getMuslims(game.jihadTargets).filter(poorMuslimNeedsCellsForMajorJihad))
-        travelToTarget(candidates).toList
-          .flatMap(game.adjacentCountries)
-          .exists(hasCellForTravel)
-      }
-    }
+    // No longer used:  See MajorJihadTargetIsAutoRecruitDecsion and following nodes
+    // // This object incorporates two boxes on the Flowchart
+    // // Finds poor countries in need of cells for major jihad,
+    // // Finds the highest priority travel destination among them and checks
+    // // to see if there is a cell in an adjacent country.
+    // object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
+    //   val desc = """|Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible and
+    //                 |at least one adjacent cell that can travel""".stripMargin
+    //   def yesPath = TravelOp(None, adjacentOnly = true)
+    //   def noPath  = RecruitOrEnhancedTravelDecision
+    //   def condition(ops: Int) = {
+    //     val candidates = countryNames(game.getMuslims(game.jihadTargets).filter(poorMuslimNeedsCellsForMajorJihad))
+    //     travelToTarget(candidates).toList
+    //       .flatMap(game.adjacentCountries)
+    //       .exists(hasCellForTravel)
+    //   }
+    // }
 
 
 
@@ -1113,7 +1133,7 @@ object JihadistBot extends BotHelpers {
     object PrestigeAboveLowAndActiveCellWithTroopsDecision extends OperationDecision {
       val desc = "Prestige > 3 and cell(s) with Troops in Poor country?"
       def yesPath = PlotOpPrestige
-      def noPath  = PoorNeedCellsforMajorJihadDecision
+      def noPath  = MajorJihadTargetIsAutoRecruitDecsion
       def condition(ops: Int) =
         game.prestige > 3 &&
         (game hasCountry (c => c.isPoor && unusedCells(c) > 0 && c.totalTroopsThatAffectPrestige > 0))
@@ -1134,14 +1154,73 @@ object JihadistBot extends BotHelpers {
         game.funding == 7 &&
         !askYorN(s"\nDoes the $Jihadist have any more cards in hand? (y/n) ")
     }
+
+    // This is starts the last decsion tree for the Enhanced EvO
+    // The goal is to get cells to the "Major Jihad Priority" country (MJP)
+    // - If MJP is an auto-recruit country then we first try to recruit cells
+    //   but it that is not possible then we try to travel cell to there.
+    //
+    // - If MJP is not an auto-recruit country, then we will first try to
+    //   travel cells IF there is at least one adjacent cell that can travel.
+    //   Failing that we will try to recruit first, then travel from non-adjacent,
+    //   and finally as a last resort we will do Radicalization.
+    object MajorJihadTargetIsAutoRecruitDecsion extends OperationDecision {
+      val desc = s"Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) is auto-recruit?"
+      def yesPath = RecruitInMajorJihadTargetRecruitDecision
+      def noPath  = AdjacentTravelToMajorJihadTargetDecision
+      def condition(ops: Int) = majorJihadPriorityCountry.map(game.getCountry).exists(_.autoRecruit)
+    }
+
+    // We get here if the MJP is auto-recruit
+    // We recruit if possible otherwise we branch to trying travel
+    object RecruitInMajorJihadTargetRecruitDecision extends OperationDecision {
+      val desc = s"Can recruit in Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")})?"
+      def yesPath = RecruitOp(majorJihadPriorityCountry)
+      def noPath  = TravelToMajorJihadTargetDecision
+      def condition(ops: Int) = majorJihadPriorityCountry match {
+        case None => false
+        case Some(name) =>
+          game.recruitPossible &&
+          botRecruitTargets(muslimWithCadreOnly = false).contains(name)
+      }
+    }
+
+    // We get here if the MJP is NOT auto-recruit.
+    // We check for adjacent travel.  If not possible then we
+    // try recruit, then non-adjacent travel.
+    object AdjacentTravelToMajorJihadTargetDecision extends OperationDecision {
+      val desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
+      def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = true)
+      def noPath  = RecruitInMajorJihadTargetRecruitDecision
+      def condition(ops: Int) = majorJihadPriorityCountry.toList
+        .flatMap(game.adjacentCountries)
+        .exists(hasCellForTravel)
+    }
+
+    // Check to see if non-ajacent travel is possible.
+    // If not resort to Radicalization.
+    object TravelToMajorJihadTargetDecision extends OperationDecision {
+      val desc = s"Any travel to Major Jihad priority ($majorJihadPriorityCountry) possible?"
+      def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = false)
+      def noPath  = Radicalization  // last resort, hopefully we never get here!
+      def condition(ops: Int) = majorJihadPriorityCountry match {
+        case None => false
+        case Some(name) =>
+          game.countries
+            .filterNot(_.name == name)
+            .exists(hasCellForTravel)
+      }
+    }
   }
+
+  def yesNo(result: Boolean) = if (result) "YES" else "NO"
 
   // Follow the operations flowchart (EvO) to pick which operation will be performed.
   def operationsFlowchart(ops: Int): Operation = {
     @tailrec def evaluateNode(node: OpFlowchartNode): Operation = node match {
       case operation: Operation        => operation
       case decision: OperationDecision =>
-        botLog(s"EvO Flowchart: $node", Color.Debug)
+        botLog(s"EvO Flowchart: $node ${yesNo(decision.condition(ops))}", Color.Debug)
         if (decision.condition(ops))
           evaluateNode(decision.yesPath)
         else
@@ -1702,7 +1781,11 @@ object JihadistBot extends BotHelpers {
     }
 
     log()
-    log(s"$Jihadist performs a Travel operation (from adjacent countries)")
+    if (adjacentOnly)
+      log(s"$Jihadist performs a Travel operation (from adjacent countries)")
+    else
+      log(s"$Jihadist performs a Travel operation")
+
     log(separator())
 
     // If Biometrics is in effect only adjacent travel is allowed.

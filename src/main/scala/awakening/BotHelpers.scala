@@ -274,7 +274,7 @@ trait BotHelpers {
   class HighestScorePriority(val desc: String, score: (Country) => Int) extends CountryFilter {
     def filter(countries: List[Country]): List[Country] = {
       val high = (countries map score).max
-      botLog(s"Highest ($desc): score = $high")
+      // botLog(s"Highest ($desc): score = $high")
       countries filter (c => score(c) == high)
     }
   }
@@ -286,7 +286,7 @@ trait BotHelpers {
   class LowestScorePriority(val desc: String, score: (Country) => Int) extends CountryFilter {
     def filter(countries: List[Country]): List[Country] = {
       val low = (countries map score).min
-      botLog(s"Lowest ($desc): score = $low")
+      // botLog(s"Lowest ($desc): score = $low")
       countries filter (c => score(c) == low)
     }
   }
