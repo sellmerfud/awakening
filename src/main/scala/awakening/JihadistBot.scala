@@ -360,6 +360,13 @@ object JihadistBot extends BotHelpers {
                   muslimTest(m => m.isPoor && m.troops > 0 && activeCells(m) > 0))
   val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and JSP",
                   muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
+  val PoorCellsOutnumberTroopsMilitiaByAtLeast3 = new CriteriaFilter("Poor Muslim country w/ (cells - TandM) > 2",
+                  muslimTest(m => m.isPoor && (m.totalCells - m.totalTroopsAndMilitia) > 2))
+  val PoorAutoRecruit = new CriteriaFilter("Poor, Auto-recruit Muslim country",
+                  muslimTest(m => m.isPoor && m.autoRecruit))
+  val PoorOrUnmarkedMuslim = new CriteriaFilter("Poor or Unmarked Muslim country",
+                  muslimTest(m => m.isPoor || m.isUntested))
+
 
   val EnhRecruitPoorCadreNoTandMMajorJihadPossible =
     new CriteriaFilter(
@@ -555,12 +562,15 @@ object JihadistBot extends BotHelpers {
   }
 
   def RecruitFlowchart = if (game.botEnhancements)
-    List(PoorNeedCellsforMajorJihad,
-         EnhRecruitPoorCadreNoTandMMajorJihadPossible,
-         AutoRecruitBestJihadDRM,
-         GoodMuslimFilter,
-         EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells,
-         PoorMuslimWhereMajorJSPBestJihadDRM)
+    List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
+         PoorAutoRecruit,
+         PoorOrUnmarkedMuslim)
+    // List(PoorNeedCellsforMajorJihad,
+    //      EnhRecruitPoorCadreNoTandMMajorJihadPossible,
+    //      AutoRecruitBestJihadDRM,
+    //      GoodMuslimFilter,
+    //      EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells,
+    //      PoorMuslimWhereMajorJSPBestJihadDRM)
   else
     List(PoorNeedCellsforMajorJihad,
          AutoRecruitBestJihadDRM,
@@ -570,11 +580,14 @@ object JihadistBot extends BotHelpers {
          PoorMuslimBestJihadDRM)
 
   def TravelToFlowchart = if (game.botEnhancements)
-    List(EnhTravelPoorNeedCellsforMajorJihad,
-         GoodMuslimWithAdjacentCellsFilter,
-         EnhTravelFairMuslimBestJihadDRMWithAdjacentCells,
-         PoorMuslimWhereMajorJSPBestJihadDRM,
-         NonMuslimFilter)
+    List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
+         PoorAutoRecruit,
+         PoorOrUnmarkedMuslim)
+    // List(EnhTravelPoorNeedCellsforMajorJihad,
+    //      GoodMuslimWithAdjacentCellsFilter,
+    //      EnhTravelFairMuslimBestJihadDRMWithAdjacentCells,
+    //      PoorMuslimWhereMajorJSPBestJihadDRM,
+    //      NonMuslimFilter)
   else
     List(PoorNeedCellsforMajorJihad,
          GoodMuslimFilter,
