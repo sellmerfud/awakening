@@ -383,7 +383,8 @@ object JihadistBot extends BotHelpers {
                   muslimTest(m => m.isPoor && m.autoRecruit))
   val PoorOrUnmarkedMuslim = new CriteriaFilter("Poor or Unmarked Muslim country",
                   muslimTest(m => m.isPoor || m.isUntested))
-
+  val AutoRecruitPriorityCountry = new CriteriaFilter("Auto-recruit priority country",
+                  c => Some(c.name) == autoRecruitPriorityCountry)
 
   val EnhRecruitPoorCadreNoTandMMajorJihadPossible =
     new CriteriaFilter(
@@ -581,8 +582,9 @@ object JihadistBot extends BotHelpers {
   def RecruitFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
          PoorAutoRecruit,
-         PoorOrUnmarkedMuslim,
-         new CriteriaFilter("Any Country with cells or cadre", c => true)
+         PoorMuslimFilter,
+         AutoRecruitPriorityCountry,
+         IslamistRulePriority
     )
     // List(PoorNeedCellsforMajorJihad,
     //      EnhRecruitPoorCadreNoTandMMajorJihadPossible,
@@ -1190,7 +1192,7 @@ object JihadistBot extends BotHelpers {
     // try recruit, then non-adjacent travel.
     object AdjacentTravelToMajorJihadTargetDecision extends OperationDecision {
       val desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
-      def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = true)
+      def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = false)
       def noPath  = RecruitInMajorJihadTargetRecruitDecision
       def condition(ops: Int) = majorJihadPriorityCountry.toList
         .flatMap(game.adjacentCountries)
