@@ -318,7 +318,7 @@ object JihadistBot extends BotHelpers {
   val CivilWarPriority = new CriteriaFilter("Civil War", muslimTest(_.civilWar))
 
   // 32. Neutral
-  val NeutralPriority = new CriteriaFilter("Neutral", muslimTest(_.isNeutral))
+  val NeutralPriority = new CriteriaFilter("Muslim Neutral", muslimTest(_.isNeutral))
 
   // 33. Besieged Regime (Already defined at #7)
 
@@ -346,7 +346,48 @@ object JihadistBot extends BotHelpers {
   // 40. Oil Exporter
   val OilExporterPriority = new CriteriaFilter("Oil exporter", muslimTest(_.oilExporter))
 
+  // Used by the Enh Bot.  Uses unmodified printed resource value 
+  // exception: Iran with Tehran-Beirut Land Corridor marker counts a Res=3
+  val HighestPrintedResourcePriority = new HighestScorePriority(
+    "Highest printed resource",
+    muslimScore { m =>
+      if (m.name == Iran && m.hasMarker(TehranBeirutLandCorridor))
+        m.resources + 1
+        else
+        m.resources
+    }
+  )
 
+  val HighestCellsMinusTandM = new HighestScorePriority(
+    "Highest cells - TandM",
+    muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)
+  )
+
+  val LowestTandM = new LowestScorePriority(
+    "Lowest TandM",
+    muslimScore(_.totalTroopsAndMilitia)
+  )
+  
+  val NoTandMGreatestCellsPlusAdjacent = new HighestScoreNode(
+        "No TandM present, Most cells present + adjacent moveable cells",
+        muslimTest(m => m.totalTroopsAndMilitia == 0),
+        muslimScore(m => m.totalCells + numAdjacentTravelCells(m)))
+
+  val MostMoveableAdjacentCells = new HighestScorePriority(
+        "Most moveable adjacent cells",
+        c => numAdjacentTravelCells(c))
+
+  val AdversaryPriority = new CriteriaFilter("Muslim Adversary", muslimTest(_.isAdversary))
+  val AllyPriority = new CriteriaFilter("Muslim Ally", muslimTest(_.isAlly))
+  val UnmarkedPriority = new CriteriaFilter("Unmarked", _.isUntested)
+  
+  val NoAwakeningOrReactionMarkersPriority = new CriteriaFilter("No Awakening/Reaction markers",
+    muslimTest(m => m.awakening == 0 && m.reaction == 0))
+  
+  val AdjacentToAutoRecruitPriority = new CriteriaFilter("Adjacent to Auto-Recruit country",
+    c => game.getCountries(getAdjacent(c.name)).exists(_.autoRecruit)
+  )
+    
   // Jihadist OpP Flowchart filters
 
   val NonMuslimFilter     = new CriteriaFilter("Non-Muslim", nonMuslimTest(_  => true))
@@ -616,44 +657,49 @@ object JihadistBot extends BotHelpers {
          NonMuslimFilter,
          PoorMuslimBestJihadDRM)
 
-  def recruitAndTravelToPriorities: List[CountryFilter] = game.currentMode match {
-    case LabyrinthMode if game.botEnhancements =>
-      List(NotIslamistRulePriority,
-        USPriority, HighestResourcePriority, RussiaPriority, NoDisruptPretigePriority,
-        HighestRECPriority, SamePostureAsUSPriority, MostCellsPriority, AdjacentIslamistRulePriority)
-
-    case LabyrinthMode =>
-      List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
-        USPriority, PoorPriority, FairPriority, GoodPriority, HighestResourcePriority,
-        RussiaPriority, NoDisruptPretigePriority, HighestRECPriority, SamePostureAsUSPriority,
-        MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
-
-    case AwakeningMode if game.botEnhancements =>
-      List(NotIslamistRulePriority,
-          USPriority, HighestResourcePriority, NoDisruptPretigePriority,
-          HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
-          MostCellsPriority, AdjacentIslamistRulePriority)
-
-    case AwakeningMode =>
-      List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
-          SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority,
-          GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
-          HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
+  def recruitAndTravelToPriorities: List[CountryFilter] = if (game.botEnhancements) {
+    List(
+      HighestPrintedResourcePriority,
+      BestJihadDRMPriority(false),
+      AutoRecruitFilter,
+      HighestCellsMinusTandM,
+      LowestTandM,
+      NoTandMGreatestCellsPlusAdjacent,
+      MostMoveableAdjacentCells,
+      BesiegedRegimePriority,
+      AdversaryPriority,
+      NeutralPriority,
+      AllyPriority,
+      UnmarkedPriority,
+      NoAwakeningOrReactionMarkersPriority,
+      AdjacentToAutoRecruitPriority,
+      OilExporterPriority
+    )
+  }
+  else {
+    game.currentMode match {
+      case LabyrinthMode =>
+        List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+          USPriority, PoorPriority, FairPriority, GoodPriority, HighestResourcePriority,
+          RussiaPriority, NoDisruptPretigePriority, HighestRECPriority, SamePostureAsUSPriority,
           MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
 
-    case ForeverWarMode if game.botEnhancements  =>
-      List(NotIslamistRulePriority,
-           USPriority, HighestResourcePriority, NoDisruptPretigePriority,
-           HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
-           MostCellsPriority, AdjacentIslamistRulePriority)
+      case AwakeningMode =>
+        List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+            SyriaPriority, IranPriority, USPriority, PoorPriority, FairPriority,
+            GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
+            HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
+            MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
 
-    case ForeverWarMode =>
-      List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
-           IranPriority, SyriaPriority, USPriority, PoorPriority, FairPriority,
-           GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
-           HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
-           MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+      case ForeverWarMode =>
+        List(NotIslamistRulePriority, PakistanPriority, BesiegedRegimePriority,
+            IranPriority, SyriaPriority, USPriority, PoorPriority, FairPriority,
+            GoodPriority, HighestResourcePriority, NoDisruptPretigePriority,
+            HighestRECPriority, BestJihadDRMPriority(false), SamePostureAsUSPriority,
+            MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority)
+    }
   }
+
 
   def recruitTravelToPriority(names: List[String]): Option[String] = {
     topPriority(game getCountries names, recruitAndTravelToPriorities) map (_.name)
@@ -1703,6 +1749,14 @@ object JihadistBot extends BotHelpers {
   // This does not account for previous Travel attempts
   def hasCellForTravel(c: Country) = numCellsForTravel(c, Nil) > 0
 
+  def numAdjacentTravelCells(destination: Country, prevAttempts: List[TravelAttempt] = Nil): Int = {
+    game.getCountries(getAdjacent(destination.name))
+      .map(c => numCellsForTravel(c, prevAttempts))
+      .sum
+  }
+
+  def hasAdjacentTravelCells(destination: Country, prevAttempts: List[TravelAttempt] = Nil) =
+    numAdjacentTravelCells(destination, prevAttempts) > 0
   // First select the target to country.
   // Then select one or more countries from which cells may travel.
   // For each source country, make as many attempts as possible, before
