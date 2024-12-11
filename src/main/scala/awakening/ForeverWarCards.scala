@@ -1651,7 +1651,7 @@ object ForeverWarCards {
         val target = if (role == game.humanRole)
           askCountry("Place reaction marker in which country: ", mohamedMorsiCandidates)
         else
-          JihadistBot.markerAlignGovTarget(mohamedMorsiCandidates).get
+          JihadistBot.markerTarget(mohamedMorsiCandidates).get
       
         addEventTarget(target)
         testCountry(target)
@@ -1667,7 +1667,7 @@ object ForeverWarCards {
         val target = if (role == game.humanRole)
           askCountry("Place reaction marker in which country: ", palestinianPeaceCandidates)
         else
-          JihadistBot.markerAlignGovTarget(palestinianPeaceCandidates).get
+          JihadistBot.markerTarget(palestinianPeaceCandidates).get
 
         addEventTarget(target)
         testCountry(target)
@@ -1719,13 +1719,13 @@ object ForeverWarCards {
         else {
           // Bot
           if (sayyedHassanReactionCandidates.nonEmpty) {
-            val target = JihadistBot.markerAlignGovTarget(sayyedHassanReactionCandidates).get
+            val target = JihadistBot.markerTarget(sayyedHassanReactionCandidates).get
             addEventTarget(target)
             testCountry(target)
             addReactionMarker(target)
           }
           else if (sayyedHassanBesiegedRegimeCandidates.nonEmpty) {
-            val target = JihadistBot.markerAlignGovTarget(sayyedHassanBesiegedRegimeCandidates).get
+            val target = JihadistBot.markerTarget(sayyedHassanBesiegedRegimeCandidates).get
             addEventTarget(target)
             testCountry(target)
             addBesiegedRegimeMarker(target)
@@ -1794,7 +1794,7 @@ object ForeverWarCards {
               val target = if (role == game.humanRole)
                 askCountry("Remove Aid marker from which country: ", candidates)
               else
-                JihadistBot.markerAlignGovTarget(candidates).get
+                JihadistBot.markerTarget(candidates).get
                 
               addEventTarget(target)
               removeAidMarker(target)
@@ -1808,7 +1808,7 @@ object ForeverWarCards {
               val target = if (role == game.humanRole)
                 askCountry("Place a Besieged Regime marker in which country: ", candidates)
               else
-                JihadistBot.markerAlignGovTarget(candidates).get
+                JihadistBot.markerTarget(candidates).get
               
               testCountry(target)
               addEventTarget(target)
@@ -2896,7 +2896,7 @@ object ForeverWarCards {
         val target = if (role == game.humanRole)
           askCountry("Place Reaction marker in which country: ", amnestyInternationJihadistCandidates)
         else
-          JihadistBot.markerAlignGovTarget(amnestyInternationJihadistCandidates).get
+          JihadistBot.markerTarget(amnestyInternationJihadistCandidates).get
         
         addEventTarget(target)
         testCountry(target)
@@ -2923,7 +2923,7 @@ object ForeverWarCards {
             val marker = humanMarker(target)
             (target, marker)
           case US       => (USBot.markerAlignGovTarget(candidates).get, true)
-          case Jihadist => (JihadistBot.markerAlignGovTarget(candidates).get, false)
+          case Jihadist => (JihadistBot.markerTarget(candidates).get, false)
         }
                 
         addEventTarget(target)
@@ -3353,7 +3353,7 @@ object ForeverWarCards {
         else if (role == US)
           USBot.posturePriority(countryNames(erdoganDanceNonMuslims filter (_.posture != game.usPosture))).get
         else if (role == Jihadist && erdoganDanceMuslims.nonEmpty)
-          JihadistBot.markerAlignGovTarget(countryNames(erdoganDanceMuslims filter (!_.isAdversary))).get
+          JihadistBot.alignGovTarget(countryNames(erdoganDanceMuslims filter (!_.isAdversary))).get
         else
           JihadistBot.posturePriority(
             countryNames(erdoganDanceNonMuslims filter (n => n.isUntested || n.posture == game.usPosture))
@@ -3509,7 +3509,7 @@ object ForeverWarCards {
         else if (role == US)
           USBot.markerAlignGovTarget(mediaManipulationCandidates(role)).get
         else
-          JihadistBot.markerAlignGovTarget(mediaManipulationCandidates(role)).get
+          JihadistBot.alignGovTarget(mediaManipulationCandidates(role)).get
 
         if (role == US)
           shiftAlignmentLeft(target)
@@ -3574,7 +3574,7 @@ object ForeverWarCards {
         else if (withMilitia.nonEmpty)
           JihadistBot.troopsMilitiaTarget(withMilitia).get
         else
-          JihadistBot.markerAlignGovTarget(notBesieged).get
+          JihadistBot.markerTarget(notBesieged).get
         
         addEventTarget(target)
         testCountry(target)
@@ -3703,7 +3703,7 @@ object ForeverWarCards {
             val target = if (role == game.humanRole)
               askCountry("Remove awakening marker from which country: ", candidates)
             else
-              JihadistBot.markerAlignGovTarget(candidates).get
+              JihadistBot.markerTarget(candidates).get
             removeAwakeningMarker(target)
           }
         }
@@ -4192,7 +4192,7 @@ object ForeverWarCards {
         else if (role == US)
           USBot.markerAlignGovTarget(quickWinBadIntelCandidates(role)).get
         else
-          JihadistBot.markerAlignGovTarget(quickWinBadIntelCandidates(role)).get
+          JihadistBot.markerTarget(quickWinBadIntelCandidates(role)).get
         
         addEventTarget(target)
         testCountry(target)

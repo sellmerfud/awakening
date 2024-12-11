@@ -1724,7 +1724,7 @@ object LabyrinthCards {
         val name = if (role == game.humanRole)
           askCountry("Select Ally Muslim country: ", candidates)
         else
-          JihadistBot.markerAlignGovTarget(candidates).get
+          JihadistBot.alignGovTarget(candidates).get
         
         addEventTarget(name)
         shiftAlignmentRight(name)
@@ -1739,7 +1739,7 @@ object LabyrinthCards {
         val name = if (role == game.humanRole)
           askCountry("Select country with troops: ", alJazeeraCandidites)
         else
-          JihadistBot.markerAlignGovTarget(alJazeeraCandidites).get
+          JihadistBot.alignGovTarget(alJazeeraCandidites).get
         
         addEventTarget(name)
         shiftAlignmentRight(name)
@@ -1978,7 +1978,7 @@ object LabyrinthCards {
           val name = if (role == game.humanRole)
             askCountry("Select Ally Muslim country: ", candidates)
           else
-            JihadistBot.markerAlignGovTarget(candidates).get
+            JihadistBot.alignGovTarget(candidates).get
           addEventTarget(name)
           shiftAlignmentRight(name)
         }
@@ -2231,7 +2231,7 @@ object LabyrinthCards {
         val name = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else
-          JihadistBot.markerAlignGovTarget(candidates).get
+          JihadistBot.alignGovTarget(candidates).get
         
         addEventTarget(name)
         worsenGovernance(name, 1, canShiftToIR = false)
@@ -2521,7 +2521,7 @@ object LabyrinthCards {
         val name = if (role == game.humanRole)
           askCountry("Select a Shia-Mix country with troops and cells: ", candidates)
         else
-          JihadistBot.markerAlignGovTarget(candidates).get
+          JihadistBot.alignGovTarget(candidates).get
         
         addEventTarget(name)
         worsenGovernance(name, 1, canShiftToIR = false)
@@ -2549,7 +2549,7 @@ object LabyrinthCards {
           val name = if (role == game.humanRole)
             askCountry("Select country degrade governance: ", candidates)
           else
-            JihadistBot.markerAlignGovTarget(candidates).get
+            JihadistBot.alignGovTarget(candidates).get
           
           addEventTarget(name)
           worsenGovernance(name, 1, canShiftToIR = false)

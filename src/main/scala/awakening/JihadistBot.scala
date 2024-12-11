@@ -99,7 +99,7 @@ object JihadistBot extends BotHelpers {
     poorMuslimWhereMajorJihadPossible(m) &&
     (m.totalCells - m.totalTroopsAndMilitia) > 0 &&
     (m.totalCells - m.totalTroopsAndMilitia) < 5
-    
+
   def poorOrUnmarkedMuslimWhereMajorJSPAndNoTandM(m: MuslimCountry): Boolean =
     poorOrUnmarkedMuslimWhereMajorJihadPossible(m) &&
     m.totalTroopsAndMilitia == 0
@@ -131,7 +131,7 @@ object JihadistBot extends BotHelpers {
     }
     else
       countryNames(game.muslims.filter(poorOrUnmarkedMuslimWhereMajorJSPAndNoTandM))
-  
+
   // The Enhanced bot will pick a top priority auto-recruit country.
   // It must be a non-Fair country that allows auto-recruit.
   // (Note: by definition a Good country can never be an auto-recruit country)
@@ -346,7 +346,7 @@ object JihadistBot extends BotHelpers {
   // 40. Oil Exporter
   val OilExporterPriority = new CriteriaFilter("Oil exporter", muslimTest(_.oilExporter))
 
-  // Used by the Enh Bot.  Uses unmodified printed resource value 
+  // Used by the Enh Bot.  Uses unmodified printed resource value
   // exception: Iran with Tehran-Beirut Land Corridor marker counts a Res=3
   val HighestPrintedResourcePriority = new HighestScorePriority(
     "Highest printed resource",
@@ -367,7 +367,7 @@ object JihadistBot extends BotHelpers {
     "Lowest TandM",
     muslimScore(_.totalTroopsAndMilitia)
   )
-  
+
   val NoTandMGreatestCellsPlusAdjacent = new HighestScoreNode(
         "No TandM present, Most cells present + adjacent moveable cells",
         muslimTest(m => m.totalTroopsAndMilitia == 0),
@@ -380,14 +380,14 @@ object JihadistBot extends BotHelpers {
   val AdversaryPriority = new CriteriaFilter("Muslim Adversary", muslimTest(_.isAdversary))
   val AllyPriority = new CriteriaFilter("Muslim Ally", muslimTest(_.isAlly))
   val UnmarkedPriority = new CriteriaFilter("Unmarked", _.isUntested)
-  
+
   val NoAwakeningOrReactionMarkersPriority = new CriteriaFilter("No Awakening/Reaction markers",
     muslimTest(m => m.awakening == 0 && m.reaction == 0))
-  
+
   val AdjacentToAutoRecruitPriority = new CriteriaFilter("Adjacent to Auto-Recruit country",
     c => game.getCountries(getAdjacent(c.name)).exists(_.autoRecruit)
   )
-    
+
   // Jihadist OpP Flowchart filters
 
   val NonMuslimFilter     = new CriteriaFilter("Non-Muslim", nonMuslimTest(_  => true))
@@ -527,6 +527,43 @@ object JihadistBot extends BotHelpers {
   def majorJihadTarget(names: List[String]): Option[String] = {
     botLog("Find \"Major Jihad\" target", Color.Debug)
     topPriority(game getMuslims names, jihadMarkerAlignGovPriorities(Some(true))) map (_.name)
+  }
+
+  def alignGovTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Align/Gov\" target", Color.Debug)
+    topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)) map (_.name)
+  }
+
+  def markerTarget(names: List[String]): Option[String] = {
+    botLog("Find \"Marker\" target", Color.Debug)
+    if (names.isEmpty)
+      None
+    else if (game.botEnhancements) {
+      // If any of the targets have less than 7 troops/mililta
+      // then only consider those that have less than 7 troops/militia
+      // Then with the resulting candidates,  se the following priorites:
+      //   HighestPrintedResource -> Poor -> Unmarked -> Fair -> Travel Priorities
+      val preferred = muslimTest(m => m.totalTroopsAndMilitia < 7, nonMuslim = true) _
+      val priorities = List(
+        HighestPrintedResourcePriority,
+        PoorMuslimFilter,
+        UnmarkedPriority,
+        FairMuslimFilter) ::: recruitAndTravelToPriorities
+      val candidates = game.getCountries(names) match {
+        case ns if ns.exists(preferred) =>
+          if (game.botLogging) {
+            val ignored = ns.filterNot(preferred)
+            botLog(s"Ignoring candidates with 6+ TandM: [${ignored.map(_.name).mkString(", ")}]")
+          }
+          ns.filter(preferred)
+        case ns =>
+          ns
+      }
+      val narrowed = narrowCandidates(candidates, priorities)
+      shuffle(narrowed).map(_.name).headOption
+    }
+    else
+      topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)) map (_.name)
   }
 
   def markerAlignGovTarget(names: List[String]): Option[String] = {
@@ -951,7 +988,7 @@ object JihadistBot extends BotHelpers {
   case object EnhancedTravelOp extends Operation  // Used only by Enhanced Bot
   case object Radicalization   extends Operation
 
-  
+
   // ------------------------------------------------------
   // EvO table as printed in the Forever War rules
   // ------------------------------------------------------
@@ -1057,7 +1094,7 @@ object JihadistBot extends BotHelpers {
   // ------------------------------------------------------
   object EnhancedEvoTable {
     // This is the starting point of the Operations Flowchart
-    // 
+    //
     // This is a special action taken by the Bot if all
     // cells are currently on the track.  (The Bot does not lose when this happens)
     // The enhanced Bot will not take a normal action.  Instead it will
@@ -1705,7 +1742,7 @@ object JihadistBot extends BotHelpers {
   // - Nigeria, If Nigeria is Muslim and is an Ally then
   //   will not allow the last cell to travel (as this would
   //   cause Nigeria to revert to Non-Muslim)
-  //  
+  //
   // Since we must determine all travels up front before executing
   // any of them, the travelOperation() code must tell this
   // function how many previous attempts have been made so that
@@ -1726,7 +1763,7 @@ object JihadistBot extends BotHelpers {
     //   counrtries with a cell
     // - The country contains the Training Camps marker
     // - The country is Nigeria while it is a Muslim Ally
-    val preserveOne = 
+    val preserveOne =
       (c.autoRecruit && totalAutoRecruitWithCells < 3) ||
       c.hasMarker(TrainingCamps) ||
       isNigeriaMuslimAlly
@@ -2695,7 +2732,7 @@ object JihadistBot extends BotHelpers {
             CellsItem(name, a, s) :: nextFromMap(countries filterNot (_ == name), remaining - n)
           case None => Nil
         }
-    
+
       val numFromTrack = numCells min game.cellsAvailable
       val fromMap = nextFromMap(sources, numCells - numFromTrack)
       if (numFromTrack > 0)

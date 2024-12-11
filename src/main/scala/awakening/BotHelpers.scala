@@ -131,7 +131,7 @@ trait BotHelpers {
   // which indicates that no valid candidates were found for the OpP flowchart.
   @tailrec final def selectCandidates(countries: List[Country], filters: List[CountryFilter], allowBotLog: Boolean = true): List[Country] = {
     if (allowBotLog)
-      botLog(s"OpP Flowchart: [${(countries map (_.name)) mkString ", "}]")
+      botLog(s"OpP Flowchart: [${countries.map(_.name).mkString(", ")}]")
     (countries, filters) match {
       case (Nil, _) =>
         if (allowBotLog)
@@ -149,7 +149,7 @@ trait BotHelpers {
             selectCandidates(cs, fs, allowBotLog)
           case results =>        // We got some results…
             if (allowBotLog)
-              botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
+              botLog(s"OpP Flowchart ($f): [${(results.map(_.name).mkString(", "))}]")
             results
         }
     }
@@ -167,6 +167,8 @@ trait BotHelpers {
   //   Effectivlely skipping that priority filter.
   // This will only return Nil if the original list of candidates is Nil.
   def narrowCandidates(candidates: List[Country], priorities: List[CountryFilter], allowBotLog: Boolean = true): List[Country] = {
+    if (allowBotLog)
+      botLog(s"narrow candidates: [${candidates.map(_.name).mkString(", ")}]")
     @tailrec def nextPriority(candidates: List[Country], priorities: List[CountryFilter]): List[Country] = {
       (candidates, priorities) match {
         case (Nil, _) => Nil  // Only happens if the initial list of canidates was empty.
@@ -184,7 +186,7 @@ trait BotHelpers {
               nextPriority(list, fs) // Filter entire list by next priority
             case best  =>
               if (allowBotLog)
-                botLog(s"$f: matched [${andList(best)}]")
+                botLog(s"$f: matched [${best.map(_.name).mkString(", ")}]")
               nextPriority(best, fs) // Filter matched list by next priority
           }
       }

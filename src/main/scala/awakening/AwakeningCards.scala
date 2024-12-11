@@ -1585,7 +1585,7 @@ object AwakeningCards {
           val target = if (role == game.humanRole)
             askCountry("Select country with awakening marker: ", candidates)
           else
-            JihadistBot.markerAlignGovTarget(candidates).get
+            JihadistBot.markerTarget(candidates).get
 
           addEventTarget(target)
           removeAwakeningMarker(target)
@@ -1737,7 +1737,7 @@ object AwakeningCards {
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
         else
-          JihadistBot.markerAlignGovTarget(candidates).get
+          JihadistBot.markerTarget(candidates).get
 
         addEventTarget(target)
         removeAwakeningMarker(target)
@@ -1923,7 +1923,7 @@ object AwakeningCards {
           val target = if (role == game.humanRole)
             askCountry("Select country: ", candidates)
           else
-            JihadistBot.markerAlignGovTarget(candidates).get
+            JihadistBot.markerTarget(candidates).get
 
           addEventTarget(target)
           val m = game.getMuslim(target)
@@ -2718,7 +2718,7 @@ object AwakeningCards {
           (at, pt)
         }
         else {
-          val at = JihadistBot.markerAlignGovTarget(alignCandidates).get
+          val at = JihadistBot.alignGovTarget(alignCandidates).get
           val pt = if (postureCandidates.isEmpty)
             None
           else
@@ -2806,7 +2806,7 @@ object AwakeningCards {
                 
                 (target, Some("cells"), JihadistBot.selecCellsToPlace(target, fromCandidates, 2))
 
-              case xs  => (JihadistBot.markerAlignGovTarget(xs).get, Some("shiftRight"), Nil)
+              case xs  => (JihadistBot.alignGovTarget(xs).get, Some("shiftRight"), Nil)
             }
         }
 
@@ -2942,7 +2942,7 @@ object AwakeningCards {
               clearReserves(US)
               addToReserves(role, opRes)
             case xs =>
-              val name = JihadistBot.markerAlignGovTarget(xs).get
+              val name = JihadistBot.alignGovTarget(xs).get
               addEventTarget(name)
               setCountryPosture(name, oppositePosture(game.usPosture))
           }
@@ -3085,7 +3085,7 @@ object AwakeningCards {
             val candidates = countryNames(
               game.getMuslims(Turkey::Iraq::Syria::Nil).filter(_.canTakeAwakeningOrReactionMarker)
             )
-            val name = JihadistBot.markerAlignGovTarget(candidates).get
+            val name = JihadistBot.markerTarget(candidates).get
             addEventTarget(name)
             testCountry(name)
             addReactionMarker(name)
@@ -3121,7 +3121,7 @@ object AwakeningCards {
            val name = if (role == game.humanRole)
              askCountry("Place reaction marker in which country? ", candidates)
            else
-             JihadistBot.markerAlignGovTarget(candidates).get
+             JihadistBot.markerTarget(candidates).get
            addEventTarget(name)
            testCountry(name)
            addReactionMarker(name)
@@ -3306,7 +3306,7 @@ object AwakeningCards {
         val name = if (role == game.humanRole)
           askCountry("Remove awakening marker from which country: ", candidates)
         else
-          JihadistBot.markerAlignGovTarget(candidates).get
+          JihadistBot.markerTarget(candidates).get
         addEventTarget(name)
         removeAwakeningMarker(name)
       }
@@ -3350,7 +3350,7 @@ object AwakeningCards {
           val name = if (role == game.humanRole)
             askCountry("Select country: ", candidates)
           else if (role == Jihadist)
-            JihadistBot.markerAlignGovTarget(candidates).get
+            JihadistBot.markerTarget(candidates).get
           else
             USBot.markerAlignGovTarget(candidates).get
 
@@ -3390,7 +3390,7 @@ object AwakeningCards {
           val name = if (role == game.humanRole)
             askCountry("Select unmarked Muslim country: ", candidates)
           else if (role == Jihadist)
-            JihadistBot.markerAlignGovTarget(candidates).get
+            JihadistBot.markerTarget(candidates).get
           else
             USBot.markerAlignGovTarget(candidates).get
 
@@ -4025,9 +4025,9 @@ object AwakeningCards {
           (name, adjacent)
         }
         else {
-          val name = JihadistBot.markerAlignGovTarget(candidates).get
+          val name = JihadistBot.markerTarget(candidates).get
           val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
-          val adjacent = JihadistBot.markerAlignGovTarget(adjCandidates)
+          val adjacent = JihadistBot.markerTarget(adjCandidates)
           (name, adjacent)
         }
 
@@ -4078,7 +4078,7 @@ object AwakeningCards {
         }
         else {  // JihadistBot
           val target = if (game.funding == 9)
-            JihadistBot.markerAlignGovTarget(selloutCandidates(role)).get
+            JihadistBot.alignGovTarget(selloutCandidates(role)).get
           else {
             val muslims = selloutCandidates(role) map game.getMuslim
             // The max number of cells need to get funding to 9
@@ -4170,7 +4170,7 @@ object AwakeningCards {
         else if (role == game.humanRole)
           Some(askCountry("Select Shia-Mix country to place reaction marker: ", candidates))
         else
-          JihadistBot.markerAlignGovTarget(candidates)
+          JihadistBot.markerTarget(candidates)
 
         addEventTarget(Iran)
         decreasePrestige(1)

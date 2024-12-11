@@ -1591,6 +1591,7 @@ object LabyrinthAwakening {
         b += s"Manual die rolls       : ${if (manualDieRolls) "yes" else "no"}"
       else
         b += s"Human auto roll        : ${if (humanAutoRoll) "yes" else "no"}"
+      b += s"Bot logging            : ${if (botLogging) "yes" else "no"}"
       b.toList
     }
 
