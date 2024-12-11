@@ -1086,25 +1086,6 @@ object JihadistBot extends BotHelpers {
         .exists(hasCellForTravel)
     }
 
-    // No longer used:  See MajorJihadTargetIsAutoRecruitDecsion and following nodes
-    // // This object incorporates two boxes on the Flowchart
-    // // Finds poor countries in need of cells for major jihad,
-    // // Finds the highest priority travel destination among them and checks
-    // // to see if there is a cell in an adjacent country.
-    // object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
-    //   val desc = """|Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible and
-    //                 |at least one adjacent cell that can travel""".stripMargin
-    //   def yesPath = TravelOp(None, adjacentOnly = true)
-    //   def noPath  = RecruitOrEnhancedTravelDecision
-    //   def condition(ops: Int) = {
-    //     val candidates = countryNames(game.getMuslims(game.jihadTargets).filter(poorMuslimNeedsCellsForMajorJihad))
-    //     travelToTarget(candidates).toList
-    //       .flatMap(game.adjacentCountries)
-    //       .exists(hasCellForTravel)
-    //   }
-    // }
-
-
 
     object RecruitOrEnhancedTravelDecision extends OperationDecision {
       val desc = "Cells Available and Recruit possible? (or Travel Poor/Unmarked)"
@@ -1135,7 +1116,7 @@ object JihadistBot extends BotHelpers {
     object PrestigeAboveLowAndActiveCellWithTroopsDecision extends OperationDecision {
       val desc = "Prestige > 3 and cell(s) with Troops in Poor country?"
       def yesPath = PlotOpPrestige
-      def noPath  = MajorJihadTargetIsAutoRecruitDecsion
+      def noPath  = MJP_IsAutoRecruitDecsion
       def condition(ops: Int) =
         game.prestige > 3 &&
         (game hasCountry (c => c.isPoor && unusedCells(c) > 0 && c.totalTroopsThatAffectPrestige > 0))
@@ -1160,25 +1141,28 @@ object JihadistBot extends BotHelpers {
     // This is starts the last decsion tree for the Enhanced EvO
     // The goal is to get cells to the "Major Jihad Priority" country (MJP)
     // - If MJP is an auto-recruit country then we first try to recruit cells
-    //   but it that is not possible then we try to travel cell to there.
+    //   but it that is not possible then we try to travel ADJACENT cells ONLY to there.
+    //   If that fails then we try to travel any cells to there.
     //
     // - If MJP is not an auto-recruit country, then we will first try to
-    //   travel cells IF there is at least one adjacent cell that can travel.
-    //   Failing that we will try to recruit first, then travel from non-adjacent,
-    //   and finally as a last resort we will do Radicalization.
-    object MajorJihadTargetIsAutoRecruitDecsion extends OperationDecision {
+    //   travel ADJACENT cells ONLY to there.
+    //   Failing that we will try to recruit first, then travel with non-adjacent cells.
+    //
+    //   In both cases, if no recruit/travel was possible we then try to recruit in
+    //   the auto-recruit priority country and if that is not possible
+    //   as a last resort we will do Radicalization.
+    object MJP_IsAutoRecruitDecsion extends OperationDecision {
       val desc = s"Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) is auto-recruit?"
-      def yesPath = RecruitInMajorJihadTargetRecruitDecision
-      def noPath  = AdjacentTravelToMajorJihadTargetDecision
+      def yesPath = MJP_Recruit_AdjacentTravel_Decision
+      def noPath  = MJP_AdjacentTravel_Recruit_Decision
       def condition(ops: Int) = majorJihadPriorityCountry.map(game.getCountry).exists(_.autoRecruit)
     }
 
-    // We get here if the MJP is auto-recruit
-    // We recruit if possible otherwise we branch to trying travel
-    object RecruitInMajorJihadTargetRecruitDecision extends OperationDecision {
+    // MJP Auto-recruit #1
+    object MJP_Recruit_AdjacentTravel_Decision extends OperationDecision {
       val desc = s"Can recruit in Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")})?"
       def yesPath = RecruitOp(majorJihadPriorityCountry)
-      def noPath  = TravelToMajorJihadTargetDecision
+      def noPath  = MJP_AdjacentTravel_OtherTravel_Decision
       def condition(ops: Int) = majorJihadPriorityCountry match {
         case None => false
         case Some(name) =>
@@ -1187,30 +1171,66 @@ object JihadistBot extends BotHelpers {
       }
     }
 
-    // We get here if the MJP is NOT auto-recruit.
-    // We check for adjacent travel.  If not possible then we
-    // try recruit, then non-adjacent travel.
-    object AdjacentTravelToMajorJihadTargetDecision extends OperationDecision {
+    // MJP Auto-recruit #2
+    object MJP_AdjacentTravel_OtherTravel_Decision extends OperationDecision {
       val desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
-      def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = false)
-      def noPath  = RecruitInMajorJihadTargetRecruitDecision
+      def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = true)
+      def noPath  = MJP_OtherTravel_AutoRecruitPriority_Decision
+      def condition(ops: Int) = majorJihadPriorityCountry match {
+        case None => false
+        case Some(name) =>
+          game.recruitPossible &&
+          botRecruitTargets(muslimWithCadreOnly = false).contains(name)
+      }
+    }
+
+    // MJP Not Auto-recruit #1
+    object MJP_AdjacentTravel_Recruit_Decision extends OperationDecision {
+      val desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
+      def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = true)
+      def noPath  = MJP_Recruit_OtherTravel_Decision
       def condition(ops: Int) = majorJihadPriorityCountry.toList
         .flatMap(game.adjacentCountries)
         .exists(hasCellForTravel)
     }
 
-    // Check to see if non-ajacent travel is possible.
-    // If not resort to Radicalization.
-    object TravelToMajorJihadTargetDecision extends OperationDecision {
-      val desc = s"Any travel to Major Jihad priority ($majorJihadPriorityCountry) possible?"
+    // MJP Not Auto-recruit #2
+    object MJP_Recruit_OtherTravel_Decision extends OperationDecision {
+      val desc = s"Can recruit in Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")})?"
+      def yesPath = RecruitOp(majorJihadPriorityCountry)
+      def noPath  = MJP_OtherTravel_AutoRecruitPriority_Decision
+      def condition(ops: Int) = majorJihadPriorityCountry match {
+        case None => false
+        case Some(name) =>
+          game.recruitPossible &&
+          botRecruitTargets(muslimWithCadreOnly = false).contains(name)
+      }
+    }
+
+    // MJP (Auto-recruit AND Not Auto-recruit ) #3
+    object MJP_OtherTravel_AutoRecruitPriority_Decision extends OperationDecision {
+      val desc = s"Any travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
       def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = false)
-      def noPath  = Radicalization  // last resort, hopefully we never get here!
+      def noPath  = RecruitInAutoRecruitPriority_Decision
       def condition(ops: Int) = majorJihadPriorityCountry match {
         case None => false
         case Some(name) =>
           game.countries
             .filterNot(_.name == name)
             .exists(hasCellForTravel)
+      }
+    }
+
+    // MJP (Auto-recruit AND Not Auto-recruit ) #4
+    object RecruitInAutoRecruitPriority_Decision extends OperationDecision {
+      val desc = s"Recruit in Auto-Recruit priority (${autoRecruitPriorityCountry.getOrElse("None")}) possible?"
+      def yesPath = RecruitOp(autoRecruitPriorityCountry)
+      def noPath  = Radicalization
+      def condition(ops: Int) = autoRecruitPriorityCountry match {
+        case None => false
+        case Some(name) =>
+          game.recruitPossible &&
+          botRecruitTargets(muslimWithCadreOnly = false).contains(name)
       }
     }
   }
