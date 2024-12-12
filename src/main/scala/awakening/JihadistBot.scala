@@ -1753,29 +1753,58 @@ object JihadistBot extends BotHelpers {
       case m: MuslimCountry => m.name == Nigeria && m.isAlly
       case _ => false
     }
-    val totalAutoRecruitWithCells =
-        game.muslims.count(m => m.autoRecruit && m.totalCells - prevTravellers(m.name) > 0) // Including Sadr
 
-    // Alwasy preseve one cell if the country is:
-    // - auto-recruit and there is not at least 2 other auto-recruit
-    //   counrtries with a cell
-    // - The country contains the Training Camps marker
-    // - The country is Nigeria while it is a Muslim Ally
-    val preserveOne =
-      (c.autoRecruit && totalAutoRecruitWithCells < 3) ||
-      c.hasMarker(TrainingCamps) ||
-      isNigeriaMuslimAlly
+    if (game.botEnhancements) {
+      // The Enhanced Bot will never travel any cells out of the Major Jihad Priority country
+      if (Some(c.name) == majorJihadPriorityCountry)
+        0
+      else {
+        val totalAutoRecruitWithCells =
+            game.muslims.count(m => m.autoRecruit && m.totalCells - prevTravellers(m.name) > 0) // Including Sadr
 
-    // The enhanced bot will not move that last three cells
-    // out of the Priority Auto Recruit country.
-    val numToPreserve = if (game.botEnhancements && autoRecruitPriorityCountry == Some(c.name))
-      3
-    else if (preserveOne)
-      1
-    else
-      0
+        // Always preseve one cell if the country is:
+        // - last cell in United States if there is a WMD plot available
+        // - auto-recruit and there is not at least 2 other auto-recruit
+        //   counrtries with a cell
+        // - The country contains the Training Camps marker
+        // - The country is Nigeria while it is a Muslim Ally
+        val preserveOne =
+          (c.name == UnitedStates && game.plotData.availablePlots.contains(PlotWMD)) ||
+          (c.autoRecruit && totalAutoRecruitWithCells < 3) ||
+          c.hasMarker(TrainingCamps) ||
+          isNigeriaMuslimAlly
+        // The enhanced bot will not move that last three cells
+        // out of the Priority Auto Recruit country.
+        val numToPreserve = if (Some(c.name) == autoRecruitPriorityCountry)
+          3
+        else if (preserveOne)
+          1
+        else
+          0
 
-    (unusedCellsInCountry - numToPreserve) max 0
+        (unusedCellsInCountry - numToPreserve) max 0
+      }
+    }
+    else {
+      // Standard Bot
+      // Always preseve one cell if the country is:
+      // - last cell in United States if there is a WMD plot available
+      // - auto-recruit and there is not at least 2 other auto-recruit
+      //   counrtries with a cell
+      // - The country contains the Training Camps marker
+      // - The country is Nigeria while it is a Muslim Ally
+      val preserveOne =
+        (c.name == UnitedStates && game.plotData.availablePlots.contains(PlotWMD)) ||  // Non-standard
+        (c.autoRecruit && totalAutoRecruitWithCells < 3) ||
+        c.hasMarker(TrainingCamps) ||  // Non-standard
+        isNigeriaMuslimAlly            // Non-standard
+      val numToPreserve = if (preserveOne)
+        1
+      else
+        0
+
+      (unusedCellsInCountry - numToPreserve) max 0
+    }
   }
 
   // Test the country to see if it has any unused cells that can travel.
