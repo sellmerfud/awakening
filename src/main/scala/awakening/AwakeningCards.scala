@@ -1884,7 +1884,7 @@ object AwakeningCards {
             (target1::target2::Nil)
           }
           else
-            JihadistBot.multipleTargets(2, candidates, JihadistBot.markerAlignGovTarget)
+            JihadistBot.multipleTargets(2, candidates, JihadistBot.markerTarget)
 
           addEventTarget(targets:_*)
           targets foreach (removeAwakeningMarker(_))
@@ -2454,7 +2454,7 @@ object AwakeningCards {
         else if (role == game.humanRole)
           List(candidates.head, candidates.head)
         else
-          JihadistBot.multipleTargets(2, candidates, JihadistBot.markerAlignGovTarget)
+          JihadistBot.multipleTargets(2, candidates, JihadistBot.markerTarget)
 
         val targets = if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker)
           Egypt :: other2
