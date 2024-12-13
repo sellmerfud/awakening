@@ -1753,14 +1753,14 @@ object JihadistBot extends BotHelpers {
       case m: MuslimCountry => m.name == Nigeria && m.isAlly
       case _ => false
     }
+    val totalAutoRecruitWithCells =
+        game.muslims.count(m => m.autoRecruit && m.totalCells - prevTravellers(m.name) > 0) // Including Sadr
 
     if (game.botEnhancements) {
       // The Enhanced Bot will never travel any cells out of the Major Jihad Priority country
       if (Some(c.name) == majorJihadPriorityCountry)
         0
       else {
-        val totalAutoRecruitWithCells =
-            game.muslims.count(m => m.autoRecruit && m.totalCells - prevTravellers(m.name) > 0) // Including Sadr
 
         // Always preseve one cell if the country is:
         // - last cell in United States if there is a WMD plot available

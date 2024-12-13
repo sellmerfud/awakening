@@ -4329,7 +4329,7 @@ object AwakeningCards {
          (game hasMuslim (m => m.isIslamistRule || m.civilWar))) ||
         (role == US &&
          (game.funding > 1 || game.prestige < 12) &&
-         !(game.getMuslim(Pakistan).isIslamistRule && game.getMuslim(Afghanistan).isIslamistRule))
+         !(game.getMuslim(Pakistan).isIslamistRule || game.getMuslim(Afghanistan).isIslamistRule))
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {
         decreaseFunding(2)
