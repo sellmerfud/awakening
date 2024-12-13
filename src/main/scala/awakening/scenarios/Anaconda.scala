@@ -76,7 +76,7 @@ object Anaconda extends Scenario {
       askCountries(3, candidates)
     }
     else
-      JihadistBot.multipleTargets(3, candidates, JihadistBot.recruitTravelToPriority)
+      JihadistBot.multipleTargets(3, candidates)(JihadistBot.recruitTravelToPriority)
     
     for (name <- targets) {
       testCountry(name)

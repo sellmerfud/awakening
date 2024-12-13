@@ -645,7 +645,7 @@ object LabyrinthCards {
           askCountries(num, Schengen)
         }
         else 
-          USBot.multipleTargets(3, Schengen, USBot.woiNonMuslimPriority)
+          USBot.multipleTargets(3, Schengen)(USBot.woiNonMuslimPriority)
 
         for (name <- schengens)
           performWarOfIdeas(name, 3)
@@ -873,7 +873,7 @@ object LabyrinthCards {
           }
         }
         else
-          USBot.multipleTargets(2, Schengen, USBot.posturePriority) map (n => (n, game.usPosture))
+          USBot.multipleTargets(2, Schengen)(USBot.posturePriority) map (n => (n, game.usPosture))
         
         for ((name, posture) <- schengens) {
           addEventTarget(name)
@@ -1886,10 +1886,9 @@ object LabyrinthCards {
           val eligible = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
           
           if (eligible contains UnitedStates)
-            UnitedStates :: JihadistBot.multipleTargets(2, eligible filterNot (_ == UnitedStates), 
-                                                JihadistBot.recruitTravelToPriority)
+            UnitedStates :: JihadistBot.multipleTargets(2, eligible.filterNot(_ == UnitedStates))(JihadistBot.recruitTravelToPriority)
           else 
-            JihadistBot.multipleTargets(3, eligible, JihadistBot.recruitTravelToPriority)
+            JihadistBot.multipleTargets(3, eligible)(JihadistBot.recruitTravelToPriority)
         }
         
         val numCells = if (role == game.botRole && game.jihadistIdeology(Potent)) {

@@ -558,7 +558,7 @@ object AwakeningCards {
           first::second::Nil
         }
         else
-          USBot.multipleTargets(2, candidates, USBot.markerAlignGovTarget)
+          USBot.multipleTargets(2, candidates)(USBot.markerAlignGovTarget)
 
         println()
         targets foreach { target =>
@@ -1220,7 +1220,7 @@ object AwakeningCards {
           nextTarget(1, candidates)
         }
         else
-          USBot.multipleTargets(3, candidates, USBot.markerAlignGovTarget)
+          USBot.multipleTargets(3, candidates)(USBot.markerAlignGovTarget)
 
         targets foreach { target =>
           addEventTarget(target)
@@ -1884,7 +1884,7 @@ object AwakeningCards {
             (target1::target2::Nil)
           }
           else
-            JihadistBot.multipleTargets(2, candidates, JihadistBot.markerTarget)
+            JihadistBot.multipleTargets(2, candidates)(JihadistBot.markerTarget)
 
           addEventTarget(targets:_*)
           targets foreach (removeAwakeningMarker(_))
@@ -2365,10 +2365,9 @@ object AwakeningCards {
           val eligible = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
 
           if (eligible contains UnitedStates)
-            UnitedStates :: JihadistBot.multipleTargets(2, eligible filterNot (_ == UnitedStates),
-                                                JihadistBot.recruitTravelToPriority)
+            UnitedStates :: JihadistBot.multipleTargets(2, eligible.filterNot(_ == UnitedStates))(JihadistBot.recruitTravelToPriority)
           else
-            JihadistBot.multipleTargets(3, eligible, JihadistBot.recruitTravelToPriority)
+            JihadistBot.multipleTargets(3, eligible)(JihadistBot.recruitTravelToPriority)
         }
 
         val numCells = if (role == game.botRole && game.jihadistIdeology(Potent)) {
@@ -2449,20 +2448,23 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))
 
+        log()
+        if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker) {
+          addEventTarget(Egypt)
+          testCountry(Egypt)
+          addReactionMarker(Egypt)
+        }
+        else
+          log("Egypt cannot currently take a reaction marker.")
+
         val other2 = if (role == game.humanRole && candidates.size > 1)
           askCountries(2, candidates, allowDuplicates = true)
         else if (role == game.humanRole)
           List(candidates.head, candidates.head)
         else
-          JihadistBot.multipleTargets(2, candidates, JihadistBot.markerTarget)
+          JihadistBot.multipleTargets(2, candidates, allowDuplicates = true)(JihadistBot.markerTarget)
 
-        val targets = if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker)
-          Egypt :: other2
-        else {
-          log("Egypt cannot currently take a reaction marker.")
-          other2
-        }
-        for (target <- targets) {
+        for (target <- other2) {
           addEventTarget(target)
           testCountry(target)
           addReactionMarker(target)

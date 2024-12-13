@@ -342,11 +342,12 @@ trait BotHelpers {
   // to choose from.
   // As each target is selected, it is removed from the list of candidates so that
   // a given target will not be picked more than once.
-  def multipleTargets(num: Int, candidates: List[String], pickBest: (List[String]) => Option[String]): List[String] = {
+  def multipleTargets(num: Int, candidates: List[String], allowDuplicates: Boolean = false)(pickBest: (List[String]) => Option[String]): List[String] = {
     def nextTarget(n: Int, targets: List[String]): List[String] = {
       if (n <= num && targets.nonEmpty) {
         pickBest(targets) match {
           case None => Nil
+          case Some(name) if allowDuplicates => name :: nextTarget(n + 1, targets)
           case Some(name) => name :: nextTarget(n + 1, targets filterNot (_ == name))
         }
       }
