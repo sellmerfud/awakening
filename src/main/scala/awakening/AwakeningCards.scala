@@ -3342,7 +3342,7 @@ object AwakeningCards {
           "a reaction marker"
         else
           "an awakening marker"
-        if (globalEventInPlay(Smartphones))
+        if (lapsingEventInPlay(ArabWinter))
           log(s"Cannot place $marker [Arab Winter]", Color.Event)
         else if (candidates.isEmpty)
           log(s"There are no countries that can take $marker")
