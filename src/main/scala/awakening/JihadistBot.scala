@@ -77,14 +77,14 @@ object JihadistBot extends BotHelpers {
   }
 
   object PriorityCountries {
-    var autoRecruitPriorityCountry: Option[String] = None
-    var majorJihadPriorityCountry: Option[String] = None
+    var autoRecruitPriority: Option[String] = None
+    var majorJihadPriority: Option[String] = None
     var autoRecruitPrioritySet: Boolean = false
     var majorJihadPrioritySet: Boolean = false
 
     def clear(): Unit = {
-      var autoRecruitPriorityCountry = None
-      var majorJihadPriorityCountry  = None
+      var autoRecruitPriority = None
+      var majorJihadPriority  = None
       var autoRecruitPrioritySet     = false
       var majorJihadPrioritySet      = false
     }
@@ -183,12 +183,12 @@ object JihadistBot extends BotHelpers {
         case candidates => topPriority(candidates, priorities, allowBotLog = false).map(_.name)
       }
 
-      PriorityCountries.autoRecruitPriorityCountry = target
+      PriorityCountries.autoRecruitPriority = target
       PriorityCountries.autoRecruitPrioritySet = true
 
     }
 
-    PriorityCountries.autoRecruitPriorityCountry
+    PriorityCountries.autoRecruitPriority
   }
 
   // Find the priority Major Jihad priority target.
@@ -203,11 +203,11 @@ object JihadistBot extends BotHelpers {
         case Nil => None
         case candidates => topPriority(candidates, recruitAndTravelToPriorities, allowBotLog = false).map(_.name)
       }
-      PriorityCountries.majorJihadPriorityCountry = target
+      PriorityCountries.majorJihadPriority = target
       PriorityCountries.majorJihadPrioritySet = true
     }
 
-    PriorityCountries.majorJihadPriorityCountry
+    PriorityCountries.majorJihadPriority
   }
 
 
@@ -1640,17 +1640,22 @@ object JihadistBot extends BotHelpers {
   }
 
 
-  def performTriggeredEvent(card: Card): Unit = {
+  def resetStaticData(): Unit = {
     usedCells.clear()
     PriorityCountries.clear()
+    // Select the MJP and ARP up front
+    autoRecruitPriorityCountry
+    majorJihadPriorityCountry
+  }
+
+  def performTriggeredEvent(card: Card): Unit = {
+    resetStaticData()
     performCardEvent(card, Jihadist, triggered = true)
   }
 
   // Starting point for Jihadist bot card play.
   def cardPlay(card: Card, playable: Boolean): Unit = {
-    usedCells.clear()
-    PriorityCountries.clear()
-    val _ = PriorityCountries.majorJihadPriorityCountry
+    resetStaticData()
     // If the event is playable then the event is always executed
     if (playable) {
       performCardEvent(card, Jihadist)
