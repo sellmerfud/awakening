@@ -83,10 +83,10 @@ object JihadistBot extends BotHelpers {
     var majorJihadPrioritySet: Boolean = false
 
     def clear(): Unit = {
-      var autoRecruitPriority = None
-      var majorJihadPriority  = None
-      var autoRecruitPrioritySet     = false
-      var majorJihadPrioritySet      = false
+      autoRecruitPriority = None
+      majorJihadPriority  = None
+      autoRecruitPrioritySet     = false
+      majorJihadPrioritySet      = false
     }
   }
 
@@ -199,6 +199,7 @@ object JihadistBot extends BotHelpers {
     // We only selecte the priority country once per play
     if (PriorityCountries.majorJihadPrioritySet == false) {
       val possibilities = game.muslims.filter(majorJihadSuccessPossible)
+      log(s"CWS possibilites=${possibilities.map(_.name)}", Color.Debug)
       val target = selectCandidates(possibilities, TravelToFlowchart, allowBotLog = false) match {
         case Nil => None
         case candidates => topPriority(candidates, recruitAndTravelToPriorities, allowBotLog = false).map(_.name)
