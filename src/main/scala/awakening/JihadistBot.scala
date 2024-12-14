@@ -52,7 +52,7 @@ object JihadistBot extends BotHelpers {
     // that have been used.  [Country, (actives, sleepers)]
     var sadrUsed = false
     var cellMap = Map.empty[String, (Int, Int)].withDefaultValue((0, 0))
-    def clear = {
+    def clear(): Unit = {
       cellMap = Map.empty.withDefaultValue((0, 0))
       sadrUsed = false
     }
@@ -73,6 +73,20 @@ object JihadistBot extends BotHelpers {
         val (a, s) = cellMap(name)
         cellMap += name -> (a, s + num)
       }
+    }
+  }
+
+  object PriorityCountries {
+    var autoRecruitPriorityCountry: Option[String] = None
+    var majorJihadPriorityCountry: Option[String] = None
+    var autoRecruitPrioritySet: Boolean = false
+    var majorJihadPrioritySet: Boolean = false
+
+    def clear(): Unit = {
+      var autoRecruitPriorityCountry = None
+      var majorJihadPriorityCountry  = None
+      var autoRecruitPrioritySet     = false
+      var majorJihadPrioritySet      = false
     }
   }
 
@@ -136,60 +150,64 @@ object JihadistBot extends BotHelpers {
   // It must be a non-Fair country that allows auto-recruit.
   // (Note: by definition a Good country can never be an auto-recruit country)
   def autoRecruitPriorityCountry: Option[String] = {
-    val priorities = List(
-      new HighestScoreNode(
-        "Poor Regime change w/ highest resource value",
-        muslimTest(m => m.isPoor && m.inRegimeChange),
-        muslimScore(m => m.resources)),
-      new CriteriaFilter("Poor Caliphate Capital",
-        muslimTest(m => m.isPoor && m.caliphateCapital)),
-      new HighestScoreNode(
-        "Poor Caliphate country w/ highest resource value",
-        muslimTest(m => m.isPoor && game.isCaliphateMember(m.name)),
-        muslimScore(m => m.resources)),
-      new CriteriaFilter("Poor country w/ Training Camps",
-        muslimTest(m => m.isPoor && m.hasMarker(TrainingCamps))),
-      new HighestScoreNode(
-        "Poor Civil War country w/ highest resource value",
-        muslimTest(m => m.isPoor && m.civilWar),
-        muslimScore(m => m.resources)),
-      new CriteriaFilter("Islamist Rule Caliphate Capital",
-        muslimTest(m => m.isIslamistRule && m.caliphateCapital)),
-      new HighestScoreNode(
-        "Islamist Rule country w/ highest resource value",
-        muslimTest(m => m.isIslamistRule),
-        muslimScore(m => m.resources)),
-      new CriteriaFilter("All have same priority",
-        _ => true),
-    )
+    if (PriorityCountries.autoRecruitPrioritySet == false) {
+      val priorities = List(
+        new HighestScoreNode(
+          "Poor Regime change w/ highest resource value",
+          muslimTest(m => m.isPoor && m.inRegimeChange),
+          muslimScore(m => m.resources)),
+        new CriteriaFilter("Poor Caliphate Capital",
+          muslimTest(m => m.isPoor && m.caliphateCapital)),
+        new HighestScoreNode(
+          "Poor Caliphate country w/ highest resource value",
+          muslimTest(m => m.isPoor && game.isCaliphateMember(m.name)),
+          muslimScore(m => m.resources)),
+        new CriteriaFilter("Poor country w/ Training Camps",
+          muslimTest(m => m.isPoor && m.hasMarker(TrainingCamps))),
+        new HighestScoreNode(
+          "Poor Civil War country w/ highest resource value",
+          muslimTest(m => m.isPoor && m.civilWar),
+          muslimScore(m => m.resources)),
+        new CriteriaFilter("Islamist Rule Caliphate Capital",
+          muslimTest(m => m.isIslamistRule && m.caliphateCapital)),
+        new HighestScoreNode(
+          "Islamist Rule country w/ highest resource value",
+          muslimTest(m => m.isIslamistRule),
+          muslimScore(m => m.resources)),
+        new CriteriaFilter("All have same priority",
+          _ => true),
+      )
 
-    game.muslims.filter(m => m.autoRecruit && !m.isFair) match {
-      case Nil => None
-      case candidates =>
-        // If we still have  more than one candidate, then select the
-        // first one alphabetically.  (Note: countryNames alphabetizes the list)
-        // We do this so that we always select
-        // the same target so that different parts of the code are not
-        // targeting different countries.  Having multiple candidates
-        // here should be rare.
-        countryNames(narrowCandidates(candidates, priorities, allowBotLog = false)).headOption
+      val target = game.muslims.filter(m => m.autoRecruit && !m.isFair) match {
+        case Nil => None
+        case candidates => topPriority(candidates, priorities, allowBotLog = false).map(_.name)
+      }
+
+      PriorityCountries.autoRecruitPriorityCountry = target
+      PriorityCountries.autoRecruitPrioritySet = true
+
     }
+
+    PriorityCountries.autoRecruitPriorityCountry
   }
 
   // Find the priority Major Jihad priority target.
   // We start with all Muslim countries where a Major Jihad is possible (including umarked countries).
-  // We then use the Recruit/Travel OpP flowchart to pick the favorites and finally we use the
-  // Jihad priorities table to choose among those that remain.
+  // We then use the Travel OpP flowchart to pick the favorites and finally we use the
+  // Recruit/Travel to priorities table to choose among those that remain.
   def majorJihadPriorityCountry: Option[String] = {
-    val possibilities = game.muslims.filter(majorJihadSuccessPossible)
-    val candidates = selectCandidates(possibilities, RecruitFlowchart, allowBotLog = false)
-    // If we still have multiple caniddates, we choose the alphabetically first one
-    // so that we consistently return the same country given the current conditions
-    // of the game board.
-    narrowCandidates(candidates, jihadMarkerAlignGovPriorities(Some(true)), allowBotLog = false)
-      .map(_.name)
-      .sorted
-      .headOption
+    // We only selecte the priority country once per play
+    if (PriorityCountries.majorJihadPrioritySet == false) {
+      val possibilities = game.muslims.filter(majorJihadSuccessPossible)
+      val target = selectCandidates(possibilities, TravelToFlowchart, allowBotLog = false) match {
+        case Nil => None
+        case candidates => topPriority(candidates, recruitAndTravelToPriorities, allowBotLog = false).map(_.name)
+      }
+      PriorityCountries.majorJihadPriorityCountry = target
+      PriorityCountries.majorJihadPrioritySet = true
+    }
+
+    PriorityCountries.majorJihadPriorityCountry
   }
 
 
@@ -425,7 +443,7 @@ object JihadistBot extends BotHelpers {
   val PoorOrUnmarkedMuslim = new CriteriaFilter("Poor or Unmarked Muslim country",
                   muslimTest(m => m.isPoor || m.isUntested))
   val AutoRecruitPriorityCountry = new CriteriaFilter("Auto-recruit priority country",
-                  c => Some(c.name) == autoRecruitPriorityCountry)
+                  c => PriorityCountries.autoRecruitPrioritySet && Some(c.name) == autoRecruitPriorityCountry)
 
   val EnhRecruitPoorCadreNoTandMMajorJihadPossible =
     new CriteriaFilter(
@@ -1140,10 +1158,12 @@ object JihadistBot extends BotHelpers {
     }
 
     object HaveAutoRecruitPriorityDecision extends OperationDecision {
-      val desc = "Non-Fair Auto-Recruit country with < 3 cells?"
+      val desc = "Have Auto-Recruit Priority country?"
       def yesPath = RecruitInAutoRecruitPriorityDecision
       def noPath  = FundingBelow7Decision
-      def condition(ops: Int) = autoRecruitPriorityCountry.exists(name => game.getMuslim(name).totalCells < 3)
+      def condition(ops: Int) =
+        PriorityCountries.autoRecruitPrioritySet &&
+        autoRecruitPriorityCountry.nonEmpty
     }
 
     object RecruitInAutoRecruitPriorityDecision extends OperationDecision {
@@ -1621,14 +1641,16 @@ object JihadistBot extends BotHelpers {
 
 
   def performTriggeredEvent(card: Card): Unit = {
-    usedCells.clear
+    usedCells.clear()
+    PriorityCountries.clear()
     performCardEvent(card, Jihadist, triggered = true)
   }
 
   // Starting point for Jihadist bot card play.
   def cardPlay(card: Card, playable: Boolean): Unit = {
-    usedCells.clear
-
+    usedCells.clear()
+    PriorityCountries.clear()
+    val _ = PriorityCountries.majorJihadPriorityCountry
     // If the event is playable then the event is always executed
     if (playable) {
       performCardEvent(card, Jihadist)
@@ -1758,7 +1780,7 @@ object JihadistBot extends BotHelpers {
 
     if (game.botEnhancements) {
       // The Enhanced Bot will never travel any cells out of the Major Jihad Priority country
-      if (Some(c.name) == majorJihadPriorityCountry)
+      if (PriorityCountries.majorJihadPrioritySet && Some(c.name) == majorJihadPriorityCountry)
         0
       else {
 
@@ -1775,7 +1797,7 @@ object JihadistBot extends BotHelpers {
           isNigeriaMuslimAlly
         // The enhanced bot will not move that last three cells
         // out of the Priority Auto Recruit country.
-        val numToPreserve = if (Some(c.name) == autoRecruitPriorityCountry)
+        val numToPreserve = if (PriorityCountries.autoRecruitPrioritySet && Some(c.name) == autoRecruitPriorityCountry)
           3
         else if (preserveOne)
           1
