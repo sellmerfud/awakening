@@ -3046,8 +3046,8 @@ object JihadistBot extends BotHelpers {
         EnhancedRadicalizationActions.TravelToUSForWMD,
         EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims,
         EnhancedRadicalizationActions.TravelToUntestedNonMuslim,
-        EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry,
         EnhancedRadicalizationActions.Recruit,
+        EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry,
         EnhancedRadicalizationActions.AddToReserves,
       )
     else
