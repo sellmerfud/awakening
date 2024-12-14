@@ -1158,12 +1158,12 @@ object JihadistBot extends BotHelpers {
     }
 
     object HaveAutoRecruitPriorityDecision extends OperationDecision {
-      val desc = "Have Auto-Recruit Priority country?"
+      val desc = "Have Auto-Recruit Priority country with < 3 cells?"
       def yesPath = RecruitInAutoRecruitPriorityDecision
       def noPath  = FundingBelow7Decision
       def condition(ops: Int) =
         PriorityCountries.autoRecruitPrioritySet &&
-        autoRecruitPriorityCountry.nonEmpty
+        autoRecruitPriorityCountry.exists(name => game.getCountry(name).totalCells < 3)
     }
 
     object RecruitInAutoRecruitPriorityDecision extends OperationDecision {
