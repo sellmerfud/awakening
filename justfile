@@ -19,8 +19,11 @@ to_florian:
     exit
   else
     sbt stage
-    cat .git/refs/heads/florian >  target/awakening-5.6-florian/commit
-    zip -j target/awakening-5.6-florian.zip target/awakening-5.6-florian/commit
+    rm target/awakening-5.6-florian/commit_*
+    COMMIT=$(cat .git/refs/heads/florian)
+    COMMIT_FILE="target/awakening-5.6-florian/commit_$COMMIT"
+    echo "$COMMIT" > "$COMMIT_FILE"
+    zip -j target/awakening-5.6-florian.zip "$COMMIT_FILE"
     cp target/awakening-5.6-florian.zip ~/Dropbox/Public/
   fi
 
