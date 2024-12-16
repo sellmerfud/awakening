@@ -1028,8 +1028,8 @@ object LabyrinthAwakening {
 
 
     def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar)
-    def canTakeBesiegedRegimeMarker = !(isIslamistRule || besiegedRegime)
-    def canTakeAidMarker = !(isGood || isIslamistRule)
+    def canTakeBesiegedRegimeMarker = !besiegedRegime  // At most one besiegedRegime marker per country
+    def canTakeAidMarker = true  // All Muslim countries can take an Aid marker by event
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
     def canDeployTo(ops: Int) = isAlly && !isIslamistRule && ops >= governance
