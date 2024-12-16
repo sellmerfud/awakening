@@ -84,7 +84,7 @@ trait BotHelpers {
   // Return true if a die roll of 1 will succeed in the given country
   def majorJihadSuccessPossible(m: MuslimCountry) = if (game.botEnhancements) {
     !benazirBhuttoPreventsJihad(m) &&
-    m.totalTroopsAndMilitia < 7 &&
+    // m.totalTroopsAndMilitia < 7 &&
     enhBotJihadAllowed(m, true)
   }
   else {

@@ -193,12 +193,13 @@ object JihadistBot extends BotHelpers {
 
   // Find the priority Major Jihad priority target.
   // We start with all Muslim countries where a Major Jihad is possible (including umarked countries).
+  // The country must have less than seven Troops and Militia.
   // We then use the Travel OpP flowchart to pick the favorites and finally we use the
   // Recruit/Travel to priorities table to choose among those that remain.
   def majorJihadPriorityCountry: Option[String] = {
     // We only selecte the priority country once per play
     if (PriorityCountries.majorJihadPrioritySet == false) {
-      val possibilities = game.muslims.filter(majorJihadSuccessPossible)
+      val possibilities = game.muslims.filter(m => majorJihadSuccessPossible(m) && m.totalTroopsAndMilitia < 7)
       val target = selectCandidates(possibilities, TravelToFlowchart, allowBotLog = false) match {
         case Nil => None
         case candidates => topPriority(candidates, recruitAndTravelToPriorities, allowBotLog = false).map(_.name)
