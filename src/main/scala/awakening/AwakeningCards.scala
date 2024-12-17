@@ -2957,12 +2957,23 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) => game.getMuslim(Yemen).canTakeAwakeningOrReactionMarker
       ,
       (role: Role, forTrigger: Boolean) => {
+        val placementAction = if (role == game.humanRole) {
+          val choices = List(addReactionMarker _ -> "Place reaction marker", addAwakeningMarker _ -> "Place awakening marker")
+          val orderedChoices = if (role == Jihadist)
+            choices
+          else
+            choices.reverse
+          askMenu("Choose one:", orderedChoices).head
+        }
+        else if (role == Jihadist)
+          addReactionMarker _
+        else
+          addAwakeningMarker _
+
+
         addEventTarget(Yemen)
         testCountry(Yemen)
-        if (role == US)
-          addAwakeningMarker(Yemen)
-        else
-          addReactionMarker(Yemen)
+        placementAction(Yemen, 1)
       }
     )),
     // ------------------------------------------------------------------------
@@ -3113,27 +3124,47 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(206, "Friday of Anger", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) =>
-        (role == Jihadist && (game hasMuslim (_.awakening > 0))) ||
-        (role == US       && (game hasMuslim (_.reaction > 0)))
+      (role: Role, forTrigger: Boolean) => {
+        val haveAwakeningMarker = game.hasMuslim(_.awakening > 0)
+        val haveReactionMarker = game.hasMuslim(_.reaction > 0)
+        (role == game.humanRole && (haveAwakeningMarker || haveReactionMarker)) ||
+        (role == Jihadist && haveAwakeningMarker) ||
+        (role == US && haveReactionMarker)
+      }
       ,
       (role: Role, forTrigger: Boolean) => {
-        if (role == Jihadist) {
-           val candidates = countryNames(game.muslims filter (_.awakening > 0))
-           val name = if (role == game.humanRole)
-             askCountry("Place reaction marker in which country? ", candidates)
-           else
-             JihadistBot.markerTarget(candidates).get
-           addEventTarget(name)
-           testCountry(name)
-           addReactionMarker(name)
+        val reactionCandidates = countryNames(game.muslims.filter(_.awakening > 0))
+        val awakeningCandidates = countryNames(game.muslims.filter(_.reaction > 0))
+        val action = if (role == game.humanRole) {
+          val choices = List(
+            choice(reactionCandidates.nonEmpty, "reaction", "Place reaction marker"),
+            choice(reactionCandidates.nonEmpty, "awakening", "Place awakening marker")
+          ).flatten
+          val orderedChoices = if (role == Jihadist)
+            choices
+          else
+            choices.reverse
+          askMenu("Choose one:", orderedChoices).head
+        }
+        else if (role == Jihadist)
+          "reaction"
+        else
+          "awakening"
+
+        if (action == "reaction") {
+          val name = if (role == game.humanRole)
+            askCountry("Place reaction marker in which country? ", reactionCandidates)
+          else
+            JihadistBot.markerTarget(reactionCandidates).get
+          addEventTarget(name)
+          testCountry(name)
+          addReactionMarker(name) 
         }
         else {
-          val candidates = countryNames(game.muslims filter (_.reaction > 0))
           val name = if (role == game.humanRole)
-            askCountry("Place awakening marker in which country? ", candidates)
+            askCountry("Place awakening marker in which country? ", awakeningCandidates)
           else
-            USBot.markerAlignGovTarget(candidates).get
+            USBot.markerAlignGovTarget(awakeningCandidates).get
           addEventTarget(name)
           testCountry(name)
           addAwakeningMarker(name)
@@ -3340,15 +3371,24 @@ object AwakeningCards {
       ,
       (role: Role, forTrigger: Boolean) => {
         val candidates = countryNames(game.muslims filter smartPhonesCandidate)
-        val marker = if (role == Jihadist)
-          "a reaction marker"
-        else
-          "an awakening marker"
         if (lapsingEventInPlay(ArabWinter))
-          log(s"Cannot place $marker [Arab Winter]", Color.Event)
+          log(s"Cannot place awakening/reaction markers [Arab Winter]", Color.Event)
         else if (candidates.isEmpty)
-          log(s"There are no countries that can take $marker")
+          log(s"There are no countries that can take awakening/reactions markers")
         else {
+          val placementAction = if (role == game.humanRole) {
+            val choices = List(addReactionMarker _ -> "Place reaction marker", addAwakeningMarker _ -> "Place awakening marker")
+            val orderedChoices = if (role == Jihadist)
+              choices
+            else
+              choices.reverse
+            askMenu("Choose one:", orderedChoices).head
+          }
+          else if (role == Jihadist)
+            addReactionMarker _
+          else
+            addAwakeningMarker _
+
           val name = if (role == game.humanRole)
             askCountry("Select country: ", candidates)
           else if (role == Jihadist)
@@ -3359,9 +3399,9 @@ object AwakeningCards {
           addEventTarget(name)
           testCountry(name)
           if (role == Jihadist)
-            addReactionMarker(name)
+            placementAction(name, 1)
           else
-            addAwakeningMarker(name)
+            placementAction(name, 1)
         }
         removeGlobalEventMarker(Censorship)
         addGlobalEventMarker(Smartphones)
@@ -3823,14 +3863,23 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) => {
         addEventTarget(Iran)
         flipIranToShiaMixMuslim()
-        if (role == US) {
-          addAwakeningMarker(Iran, 2)
-          addReactionMarker(Iran)
+        val (primaryPlacement, otherPlacement) = if (role == game.humanRole) {
+          val choices = List(
+            (addReactionMarker _, addAwakeningMarker _) -> "Place 2 reaction markers and 1 awakening marker",
+            (addAwakeningMarker _, addReactionMarker _) -> "Place 2 awakening markers and 1 reaction marker")
+          val orderedChoices = if (role == Jihadist)
+            choices
+          else
+            choices.reverse
+          askMenu("Choose one:", orderedChoices).head
         }
-        else {
-          addReactionMarker(Iran, 2)
-          addAwakeningMarker(Iran)
-        }
+        else if (role == Jihadist)
+          (addReactionMarker _, addAwakeningMarker _)
+        else
+          (addAwakeningMarker _, addReactionMarker _)
+
+        primaryPlacement(Iran, 2)
+        otherPlacement(Iran, 1)
         decreaseFunding(1)
       }
     )),
@@ -3979,67 +4028,74 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(227, "Popular Support", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) =>
+      (role: Role, forTrigger: Boolean) => {
+        val haveAwakeningMarker = game.hasMuslim(_.awakening > 0)
+        val haveReactionMarker = game.hasMuslim(_.reaction > 0)
         lapsingEventNotInPlay(ArabWinter) && (
-          (role == US && (game hasMuslim (_.awakening > 0))) ||
-          (role == Jihadist && (game hasMuslim (_.reaction > 0)))
+          (role == game.humanRole && (haveAwakeningMarker || haveReactionMarker)) ||
+          (role == US && haveAwakeningMarker) ||
+          (role == Jihadist && haveReactionMarker)
         )
+      }
       ,
-      (role: Role, forTrigger: Boolean) => if (role == US) {
-        val candidates = countryNames(game.muslims filter (_.awakening > 0))
+      (role: Role, forTrigger: Boolean) => {
+        val awakeningCandidates = countryNames(game.muslims.filter(_.awakening > 0))
+        val reactionCandidates = countryNames(game.muslims.filter(_.reaction > 0))
+        val markerType = if (role == game.humanRole) {
+          val choices = List(
+            choice(reactionCandidates.nonEmpty, "reaction", "Add reaction markers"),
+            choice(awakeningCandidates.nonEmpty, "awakening", "Add awakening markers"),
+          ).flatten
+          val orderedChoices = if (role == Jihadist)
+            choices
+          else
+            choices.reverse
+          askMenu("Choose one:", orderedChoices).head
+        }
+        else if (role == Jihadist)
+          "reaction"
+        else
+          "awakening"
+
         val (name, adjacent) = if (role == game.humanRole) {
-          val name = askCountry("Select country with awakening marker: ", candidates)
-          val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
+          val candidates = if (markerType == "reaction")
+            reactionCandidates
+          else
+            awakeningCandidates
+          val name = askCountry(s"Select country with $markerType marker: ", candidates)
+          val adjCandidates = countryNames(game.adjacentMuslims(name).filter(_.canTakeAwakeningOrReactionMarker))
           val adjacent = if (adjCandidates.nonEmpty)
             Some(askCountry("Select an adjacent Muslim country: ", adjCandidates))
           else {
-            println("No adjacent countries can take an awakening marker")
+            println("No adjacent countries can take awakening/reaction markers")
             None
           }
           (name, adjacent)
         }
-        else {
-          val name = USBot.markerAlignGovTarget(candidates).get
-          val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
+        else if (role == US) {
+          val name = USBot.markerAlignGovTarget(awakeningCandidates).get
+          val adjCandidates = countryNames(game.adjacentMuslims(name).filter(_.canTakeAwakeningOrReactionMarker))
           val adjacent = USBot.markerAlignGovTarget(adjCandidates)
           (name, adjacent)
         }
-
-        addEventTarget(name)
-        addAwakeningMarker(name)
-        adjacent foreach { adj =>
-          addEventTarget(adj)
-          testCountry(adj)
-          addAwakeningMarker(adj)
-        }
-      }
-      else {
-        val candidates = countryNames(game.muslims filter (_.reaction > 0))
-        val (name, adjacent) = if (role == game.humanRole) {
-          val name = askCountry("Select country with reaction marker: ", candidates)
-          val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
-          val adjacent = if (adjCandidates.nonEmpty)
-            Some(askCountry("Select an adjacent Muslim country: ", adjCandidates))
-          else {
-            println("No adjacent countries can take a reaction marker")
-            None
-          }
-          (name, adjacent)
-        }
-        else {
-          val name = JihadistBot.markerTarget(candidates).get
-          val adjCandidates = countryNames(game.adjacentMuslims(name) filter (_.canTakeAwakeningOrReactionMarker))
+        else { // Jihadist Bot
+          val name = JihadistBot.markerTarget(reactionCandidates).get
+          val adjCandidates = countryNames(game.adjacentMuslims(name).filter(_.canTakeAwakeningOrReactionMarker))
           val adjacent = JihadistBot.markerTarget(adjCandidates)
           (name, adjacent)
         }
 
+        val placmentAction = if (markerType == "reaction")
+          addReactionMarker _
+        else
+          addAwakeningMarker _
+
         addEventTarget(name)
-        testCountry(name)
-        addReactionMarker(name)
+        placmentAction(name, 1)
         adjacent foreach { adj =>
           addEventTarget(adj)
           testCountry(adj)
-          addReactionMarker(adj)
+          placmentAction(adj, 1)
         }
       }
     )),

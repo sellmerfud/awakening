@@ -2909,29 +2909,35 @@ object ForeverWarCards {
       (role: Role, _: Boolean) => blasphemyCandidates(role).nonEmpty
       ,
       (role: Role, forTrigger: Boolean) => {
-        def humanMarker(target: String): Boolean =
+        def humanMarker(target: String) =
           game.getMuslim(target).alignment match {
-            case Adversary => false
-            case Ally      => true
-            case _         => askPlaceAwakeningOrReactionMarker
+            case Adversary => addReactionMarker _
+            case Ally      => addAwakeningMarker _
+            case _         =>
+              val choices = List(
+                addReactionMarker _ -> "Place reaction marker",
+                addAwakeningMarker _ -> "Place awakening marker"
+              )
+              val orderedChoices = if (role == Jihadist)
+                choices
+              else
+                choices.reverse
+              askMenu("Choose one:",  orderedChoices).head
           }
         
         val candidates = blasphemyCandidates(role)
-        var (target, placeAwakening) = role match {
+        var (target, placementAction) = role match {
           case _ if role == game.humanRole => 
-            val target = askCountry("Place marker in which country: ", candidates)
+            val target = askCountry("Place a marker in which country: ", candidates)
             val marker = humanMarker(target)
             (target, marker)
-          case US       => (USBot.markerAlignGovTarget(candidates).get, true)
-          case Jihadist => (JihadistBot.markerTarget(candidates).get, false)
+          case US       => (USBot.markerAlignGovTarget(candidates).get, addAwakeningMarker _)
+          case Jihadist => (JihadistBot.markerTarget(candidates).get, addReactionMarker _)
         }
                 
         addEventTarget(target)
         testCountry(target)
-        if (placeAwakening) 
-          addAwakeningMarker(target)
-        else
-          addReactionMarker(target)
+        placementAction(target, 1)
       }
     )),
     // ------------------------------------------------------------------------
