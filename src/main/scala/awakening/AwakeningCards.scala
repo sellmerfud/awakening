@@ -161,6 +161,8 @@ object AwakeningCards {
     countryNames(muslims)
   }
 
+  // Removed card that can be retrieved by #197 Uncofirmed
+  val UnconfirmedCandidates = List(215, 216, 219, 225, 237)
   // The US Bot will also play the event if there is a candidate Civil War country and
   // it contains the only cells currently on the map!
   def unCeasfireCandidates(role: Role) = {
@@ -1619,7 +1621,11 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(166, "Ferguson", Jihadist, 1,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      AlwaysPlayable,
+      (role: Role, forTrigger: Boolean) =>
+        forTrigger ||
+        role == game.humanRole ||
+        cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
+      ,
       (role: Role, forTrigger: Boolean) => {
         log("Jihadist player may block 1 US associated event played later this turn.")
         if (role == game.botRole)
@@ -2678,22 +2684,22 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(197, "Unconfirmed", Jihadist, 3,
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => {
-        val candidates = Set(219, 215, 216, 225, 237)
-        forTrigger || game.cardsRemoved.exists(n => candidates contains n)
-      },
+      (role: Role, forTrigger: Boolean) =>
+        forTrigger || game.cardsRemoved.exists(UnconfirmedCandidates.contains)
+      ,
       (role: Role, forTrigger: Boolean) => {
         // See Event Instructions table
-        val candidates = Set(219, 215, 216, 225, 237)
-        if (game.cardsRemoved.exists(n => candidates contains n)) {
-          if (role == game.humanRole)
-            log("Draw one of the indicated cards from the removed cards pile.")
+        val candidates = game.cardsRemoved.filter(UnconfirmedCandidates.contains)
+        if (candidates.nonEmpty) {
+          val choices = candidates.map(n => n -> deck(n).numAndName)
+          val prompt = if (role == game.humanRole)
+            "Which card did you select from the removed cards pile:"
           else
-            log(s"The $Jihadist Bot draws the candidate card nearest the top of the removed cards pile...")
+            s"The $Jihadist Bot draws the card nearest the top of the removed cards pile:"
 
-          val prompt = s"Enter # of the card retrieved from out of play: "
-          val cardNum = askCardNumber(prompt, None, allowNone = false, only3Ops = false, removedLapsingOK = true).get
+          val cardNum = askMenu(prompt, choices).head
           game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
+          log(s"The $Jihadist draws the ${deck(cardNum).numAndName} from the removed cards pile.")
         }
         else
           log("None of the listed cards is in the removed cards pile.")
