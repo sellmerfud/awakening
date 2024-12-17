@@ -2378,6 +2378,7 @@ object AwakeningCards {
           1
         // Process all of the targets
         for (target <- targets) {
+          log(s"\nRecruit attempt in $target")
           addEventTarget(target)
           testCountry(target)
 
