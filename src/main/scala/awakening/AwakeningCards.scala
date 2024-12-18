@@ -2082,10 +2082,12 @@ object AwakeningCards {
         def placePlots(name: String, plotList: List[Plot]): Unit = plotList match {
           case Nil =>
           case p::ps =>
-            if (game.availablePlots contains p) {
+            if (game.availablePlots.contains(p)) {
               testCountry(name)
               addAvailablePlotToCountry(name, p)
             }
+            else
+              log(s"There is not an available $p to place")
             placePlots(name, ps)
         }
 
@@ -2102,9 +2104,14 @@ object AwakeningCards {
             log("No Hard country was selected for the Paris Attacks event")
           case Some(name) =>
             addEventTarget(name)
-            log(s"$name is the target of the Paris Attacks event")
+            log(s"\n$name is the target of the Paris Attacks event")
+            log(separator())
             placePlots(name, plots)
-            addActiveCellsToCountry(name, activeCells min game.cellsAvailable)
+            val numCells = activeCells min game.cellsAvailable
+            if (numCells > 0)
+              addActiveCellsToCountry(name, activeCells min game.cellsAvailable)
+            else
+              log(s"There are no available cells to place")
         }
       }
     )),
