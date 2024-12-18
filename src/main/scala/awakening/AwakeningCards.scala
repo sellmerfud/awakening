@@ -105,7 +105,9 @@ object AwakeningCards {
     !game.isCaliphateMember(m.name)
 
   val coupCandidate = (m: MuslimCountry) =>
-    m.resourceValue == 1 && m.totalCells >= 2 && !(m.civilWar && m.besiegedRegime)
+    m.resourceValue == 1 &&
+    m.totalCells >= 2 &&
+    !(m.civilWar && m.besiegedRegime)
 
   val islamicMaghrebCountry = Set(AlgeriaTunisia, Libya, Mali, Morocco, Nigeria)
   val islamicMaghrebCandidate = (c: Country) => islamicMaghrebCountry(c.name) && c.isPoor
@@ -1599,15 +1601,18 @@ object AwakeningCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
         ((role == game.humanRole || forTrigger) && (game hasMuslim coupCandidate)) ||
-        (role == game.botRole && (game hasMuslim (m => !m.isIslamistRule && coupCandidate(m))))
+        (role == game.botRole && (game.hasMuslim(m => !m.isIslamistRule && coupCandidate(m))))
       ,
       (role: Role, forTrigger: Boolean) => {
         val target = if (role == game.humanRole) {
-          val candidates = countryNames(game.muslims filter coupCandidate)
+          val candidates = countryNames(game.muslims.filter(coupCandidate))
           askCountry("Select country: ", candidates)
         }
-        else {
-          val candidates = countryNames(game.muslims filter (m => !m.isIslamistRule && coupCandidate(m)))
+        else {          
+          val candidates = if (forTrigger)
+            countryNames(game.muslims.filter(coupCandidate))
+          else
+            countryNames(game.muslims.filter(m => !m.isIslamistRule && coupCandidate(m)))
           JihadistBot.goodThenFairThenPoorPriority(candidates).get
         }
 
