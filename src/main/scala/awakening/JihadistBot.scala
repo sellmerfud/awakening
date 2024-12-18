@@ -655,7 +655,7 @@ object JihadistBot extends BotHelpers {
       if (prestigeFocus)
         List(PoorMuslimFilter, FairMuslimFilter)
       else
-        List(PoorTroopsCellsFilter, FairMuslimFilter, GoodMuslimFilter, PoorNonMuslimFilter, PoorMuslimFilter, NonMuslimFilter)
+        List(PoorTroopsCellsFilter, PoorNonMuslimFilter, PoorMuslimFilter, FairMuslimFilter, GoodMuslimFilter, NonMuslimFilter)
     }
     else {
       if (game.fundingLevel == Tight)
