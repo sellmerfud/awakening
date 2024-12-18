@@ -417,7 +417,6 @@ object AwakeningCards {
       (role: Role, forTrigger: Boolean) => {
         println()
         addEventTarget(GulfStates)
-        testCountry(GulfStates)
         addAwakeningMarker(GulfStates)
       }
     )),
@@ -567,7 +566,6 @@ object AwakeningCards {
         println()
         targets foreach { target =>
           addEventTarget(target)
-          testCountry(target)
           addAwakeningMarker(target)
         }
       }
@@ -619,7 +617,6 @@ object AwakeningCards {
       ,
       (role: Role, forTrigger: Boolean) => {
         println()
-        testCountry(Libya)
         addEventTarget(Libya)
         startCivilWar(Libya)
         addMilitiaToCountry(Libya, game.militiaAvailable min 2)
@@ -641,7 +638,6 @@ object AwakeningCards {
 
           println()
           addEventTarget(sunniTarget)
-          testCountry(sunniTarget)
           addAwakeningMarker(sunniTarget)
         }
 
@@ -654,7 +650,6 @@ object AwakeningCards {
               allowAbort = true)
             println()
             addEventTarget(shiaMix)
-            testCountry(shiaMix)
             addAwakeningMarker(shiaMix)
           }
           else {
@@ -663,7 +658,6 @@ object AwakeningCards {
               if (shiaMix.canTakeAwakeningOrReactionMarker) {
                 println()
                 addEventTarget(shiaMix.name)
-                testCountry(shiaMix.name)
                 addAwakeningMarker(shiaMix.name)
               }
               else
@@ -864,7 +858,6 @@ object AwakeningCards {
         increasePrestige(1)
         decreaseFunding(1)
         addEventTarget(Pakistan)
-        testCountry(Pakistan)
         addAwakeningMarker(Pakistan)
       }
     )),
@@ -916,13 +909,11 @@ object AwakeningCards {
                 val target = askCountry("Place awakening marker in which country: ",
                              countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker)))
                 addEventTarget(target)
-                testCountry(target)
                 addAwakeningMarker(target)
               case "aid" =>
                 val target = askCountry("Place aid marker in which country: ",
                              countryNames(game.muslims filter (_.canTakeAidMarker)))
                 addEventTarget(target)
-                testCountry(target)
                 addAidMarker(target)
               case "prestige" => increasePrestige(1)
               case "funding"  => decreaseFunding(1)
@@ -953,13 +944,11 @@ object AwakeningCards {
               val candidates = countryNames(game.muslims filter (_.canTakeAwakeningOrReactionMarker))
               val target = USBot.markerAlignGovTarget(candidates).get
               addEventTarget(target)
-              testCountry(target)
               addAwakeningMarker(target)
             case "aid" =>
               val candidates = countryNames(game.muslims filter (_.canTakeAidMarker))
               val target = USBot.markerAlignGovTarget(candidates).get
               addEventTarget(target)
-              testCountry(target)
               addAidMarker(target)
           }
         }
@@ -1037,7 +1026,6 @@ object AwakeningCards {
 
         println()
         addEventTarget(target)
-        testCountry(target)
         removeBesiegedRegimeMarker(target)
         addAwakeningMarker(target)
       }
@@ -1072,7 +1060,6 @@ object AwakeningCards {
         val candidates = countryNames(game.muslims filter tahrirCandidate)
 
         addEventTarget(Egypt)
-        testCountry(Egypt)
         addAwakeningMarker(Egypt, 2)
         addReactionMarker(Egypt)
 
@@ -1083,7 +1070,6 @@ object AwakeningCards {
             USBot.markerAlignGovTarget(candidates).get
 
           addEventTarget(target)
-          testCountry(target)
           addAwakeningMarker(target)
         }
       }
@@ -1228,7 +1214,6 @@ object AwakeningCards {
 
         targets foreach { target =>
           addEventTarget(target)
-          testCountry(target)
           addAwakeningMarker(target)
         }
       }
@@ -1284,7 +1269,6 @@ object AwakeningCards {
               val target = askCountry("Place militia in which country: ", placeCandidates)
               val num    = askInt(s"Place how many militia in $target", 1, maxMilitia, Some(maxMilitia))
               addEventTarget(target)
-              testCountry(target)
               addMilitiaToCountry(target, num)
 
             case _ => // Reposition militia with the Gulf Union countries
@@ -1320,15 +1304,13 @@ object AwakeningCards {
               else {
                 for (p <- placements; if p.hasLess) {
                   addEventTarget(p.name)
-                  testCountry(p.name)
                   val m = game.getMuslim(p.name) // Get fresh copy after testCountry()
                   game = game.updateCountry(m.copy(militia = p.newMilitia))
                   log(s"Remove ${p.muslim.militia - p.newMilitia} militia from ${p.name}")
                 }
                 for (p <- placements; if !p.hasLess) {
                   addEventTarget(p.name)
-                  testCountry(p.name)
-                  val m = game.getMuslim(p.name) // Get fresh copy after testCountry()
+                  val m = game.getMuslim(p.name)
                   game = game.updateCountry(m.copy(militia = p.newMilitia))
                   log(s"Add ${p.newMilitia - p.muslim.militia} militia to ${p.name}")
                 }
@@ -1342,7 +1324,6 @@ object AwakeningCards {
             .filter(m => m.totalCells > m.totalTroopsAndMilitia)
           val target = USBot.deployToPriority(USBot.highestCellsMinusTandM(countryNames(candidates.toList))).get
           addEventTarget(target)
-          testCountry(target)
           addMilitiaToCountry(target, maxMilitia)
         }
       }
@@ -1376,7 +1357,6 @@ object AwakeningCards {
           log("Awakening markers cannot be placed because \"Arab Winter\" is in effect")
         else
           adjacent foreach { m =>
-            testCountry(m)
             addAwakeningMarker(m)
           }
       }
@@ -1554,10 +1534,8 @@ object AwakeningCards {
         if (m.isPoor)
           improveGovernance(target, 1, canShiftToGood = false)
         removeCellsFromCountry(target, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = true)
-        if (m.totalCells > 0) {
-          testCountry(target)
+        if (m.totalCells > 0)
           addReactionMarker(target, m.totalCells)
-        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -1799,7 +1777,6 @@ object AwakeningCards {
               case "reaction" =>
                 val target = askCountry("Place reaction marker in which country: ", reactionCandidates)
                 addEventTarget(target)
-                testCountry(target)
                 addReactionMarker(target)
               case "cell" =>
                 val target = askCountry("Place a cell in which country: ", candidates)
@@ -1819,7 +1796,6 @@ object AwakeningCards {
               case "besiege"  =>
                 val target = askCountry("Place besieged regime marker in which country: ", besiegeCandidates)
                 addEventTarget(target)
-                testCountry(target)
                 addBesiegedRegimeMarker(target)
               case _ =>
                 log("Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
@@ -1855,7 +1831,6 @@ object AwakeningCards {
             action match {
               case "besiege"  =>
                 addEventTarget(besiegeTarget.get)
-                testCountry(besiegeTarget.get)
                 addBesiegedRegimeMarker(besiegeTarget.get)
               case "cell" =>
                 addEventTarget(cellTarget.get)
@@ -1863,7 +1838,6 @@ object AwakeningCards {
                 addSleeperCellsToCountry(cellTarget.get, 1)
               case "reaction" =>
                 addEventTarget(reactionTarget.get)
-                testCountry(reactionTarget.get)
                 addReactionMarker(reactionTarget.get)
               case "plot" =>
                 val plot = (game.availablePlots.sorted dropWhile (p => p != Plot1 && p != Plot2)).head
@@ -2357,7 +2331,6 @@ object AwakeningCards {
 
         for (name <- Seq(Syria, Iraq); if canCivilWar(game.getMuslim(name))) {
           addEventTarget(name)
-          testCountry(name)
           startCivilWar(name)
         }
         decreasePrestige(1)
@@ -2463,7 +2436,6 @@ object AwakeningCards {
         log()
         if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker) {
           addEventTarget(Egypt)
-          testCountry(Egypt)
           addReactionMarker(Egypt)
         }
         else
@@ -2478,7 +2450,6 @@ object AwakeningCards {
 
         for (target <- other2) {
           addEventTarget(target)
-          testCountry(target)
           addReactionMarker(target)
         }
       }
@@ -2873,7 +2844,6 @@ object AwakeningCards {
         }
 
         addEventTarget(target)
-        testCountry(target)
         val bump = (target == Mali || target == Nigeria)
         if (action == "militia") {
           val num = (if (bump) 2 else 1) min game.militiaAvailable
@@ -2882,6 +2852,7 @@ object AwakeningCards {
         else {
           // Can possibly declare Caliphate (only Mali or Muslim Nigeria)
           val num = (if (bump) 3 else 2) min game.cellsAvailable
+          testCountry(target)
           addSleeperCellsToCountry(target, num)
           if (num == 3 &&
               canDeclareCaliphate(target) &&
@@ -2982,7 +2953,6 @@ object AwakeningCards {
 
 
         addEventTarget(Yemen)
-        testCountry(Yemen)
         placementAction(Yemen, 1)
       }
     )),
@@ -3073,7 +3043,6 @@ object AwakeningCards {
             log(s"There are no valid actions that can be taken in $name")
           else {
             addEventTarget(name)
-            testCountry(name)
             askMenu("Choose one:", choices).head match {
               case "+aid" => addAidMarker(name)
               case "-aid" => removeAidMarker(name)
@@ -3085,7 +3054,9 @@ object AwakeningCards {
               case "-rea" => removeReactionMarker(name)
               case "+mil" => addMilitiaToCountry(name, 2 min game.militiaAvailable)
               case "-mil" => removeMilitiaFromCountry(name, 2 min (game getMuslim name).militia)
-              case "+cel" => addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
+              case "+cel" => 
+                testCountry(name)
+                addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
               case "-cel" =>
                 val (actives, sleepers, sadr) = askCells(name, 2, role == US)
                 removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
@@ -3110,7 +3081,6 @@ object AwakeningCards {
             )
             val name = JihadistBot.markerTarget(candidates).get
             addEventTarget(name)
-            testCountry(name)
             addReactionMarker(name)
           }
         }
@@ -3167,7 +3137,6 @@ object AwakeningCards {
           else
             JihadistBot.markerTarget(reactionCandidates).get
           addEventTarget(name)
-          testCountry(name)
           addReactionMarker(name) 
         }
         else {
@@ -3176,7 +3145,6 @@ object AwakeningCards {
           else
             USBot.markerAlignGovTarget(awakeningCandidates).get
           addEventTarget(name)
-          testCountry(name)
           addAwakeningMarker(name)
         }
       }
@@ -3407,7 +3375,6 @@ object AwakeningCards {
             USBot.markerAlignGovTarget(candidates).get
 
           addEventTarget(name)
-          testCountry(name)
           if (role == Jihadist)
             placementAction(name, 1)
           else
@@ -3447,7 +3414,6 @@ object AwakeningCards {
             USBot.markerAlignGovTarget(candidates).get
 
           addEventTarget(name)
-          testCountry(name)
           if (role == Jihadist)
             addReactionMarker(name)
           else
@@ -4106,7 +4072,6 @@ object AwakeningCards {
         placmentAction(name, 1)
         adjacent foreach { adj =>
           addEventTarget(adj)
-          testCountry(adj)
           placmentAction(adj, 1)
         }
       }
@@ -4246,7 +4211,6 @@ object AwakeningCards {
         decreasePrestige(1)
         shiaMix foreach { name =>
           addEventTarget(name)
-          testCountry(name)
           addReactionMarker(name)
         }
         if (!game.getCountry(Iran).hasMarker(TradeEmbargoJihadist)) {
@@ -4327,12 +4291,11 @@ object AwakeningCards {
         }
         else if (role == Jihadist) (2, 1)
         else (1, 2)
-        if (game.cellsAvailable > 0 || game.militiaAvailable > 0)
+        if (game.cellsAvailable > 0)
           testCountry(Syria)
         addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
         addMilitiaToCountry(Syria, militia min game.militiaAvailable)
         addEventTarget(Turkey)
-        testCountry(Turkey)
         addAidMarker(Turkey)
       }
     )),

@@ -366,7 +366,6 @@ object ForeverWarCards {
           USBot.markerAlignGovTarget(candidates).get
         println()
         addEventTarget(target)
-        testCountry(target)
         addAwakeningMarker(target)
       }
     )),
@@ -490,7 +489,6 @@ object ForeverWarCards {
           USBot.deployToPriority(candidates).get
         
         addEventTarget(target)
-        testCountry(target)
         println()
         addMilitiaToCountry(target, 1)
       }
@@ -510,7 +508,6 @@ object ForeverWarCards {
       (role: Role, forTrigger: Boolean) => {
         println()
         addEventTarget(Iran)
-        testCountry(Iran)
         addAwakeningMarker(Iran)
       }
     )),
@@ -543,7 +540,6 @@ object ForeverWarCards {
           USBot.markerAlignGovTarget(candidates).get
         println()
         addEventTarget(target)
-        testCountry(target)
         addAwakeningMarker(target)
       }
     )),
@@ -560,7 +556,6 @@ object ForeverWarCards {
           USBot.markerAlignGovTarget(candidates).get
         println()
         addEventTarget(target)
-        testCountry(target)
         addAwakeningMarker(target)
       }
     )),
@@ -666,7 +661,6 @@ object ForeverWarCards {
           case 0 => 
             val target = randomConvergenceTarget.name
             addEventTarget(target)
-            testCountry(target)
             addReactionMarker(target)
           case 1 => decreasePrestige(1)
           case 2 =>
@@ -679,14 +673,12 @@ object ForeverWarCards {
           case 5 => 
             addAidTarget foreach { target =>
               addEventTarget(target)
-              testCountry(target)
               addAidMarker(target)
             }            
           case 6 => increasePrestige(1)
           case _ =>
             val target = randomConvergenceTarget.name
             addEventTarget(target)
-            testCountry(target)
             addAwakeningMarker(target)
         }
         
@@ -841,7 +833,6 @@ object ForeverWarCards {
                     val target = askCountry("Place militia in which country: ", candidates)
                     val num    = askInt(s"Place how many militia in $target", 1, numLeft, Some(numLeft))
                     addEventTarget(target)
-                    testCountry(target)
                     addMilitiaToCountry(target, num)
                     placeMilitia(numLeft - num)
                 }
@@ -881,15 +872,13 @@ object ForeverWarCards {
               else {
                 for (p <- placements; if p.hasLess) {
                   addEventTarget(p.name)
-                  testCountry(p.name)
-                  val m = game.getMuslim(p.name) // Get fresh copy after testCountry()
+                  val m = game.getMuslim(p.name)
                   game = game.updateCountry(m.copy(militia = p.newMilitia))
                   log(s"Remove ${p.muslim.militia - p.newMilitia} militia from ${p.name}")
                 }
                 for (p <- placements; if !p.hasLess) {
                   addEventTarget(p.name)
-                  testCountry(p.name)
-                  val m = game.getMuslim(p.name) // Get fresh copy after testCountry()
+                  val m = game.getMuslim(p.name)
                   game = game.updateCountry(m.copy(militia = p.newMilitia))
                   log(s"Add ${p.newMilitia - p.muslim.militia} militia to ${p.name}")
                 }
@@ -906,7 +895,6 @@ object ForeverWarCards {
           for (x <- 1 to numMilita) {
             val target = USBot.deployToPriority(candidates).get
             addEventTarget(target)
-            testCountry(target)
             addMilitiaToCountry(target, 1)
           }
         }
@@ -1004,7 +992,6 @@ object ForeverWarCards {
         // we want the "current" resource value that may be modified by Oil Price Spike, etc.
         val num = game.getMuslim(target).resourceValue min game.militiaAvailable
         addEventTarget(target)
-        testCountry(target)
         addMilitiaToCountry(target, num)
       }
     )),
@@ -1021,7 +1008,6 @@ object ForeverWarCards {
           
           val num = game.getMuslim(target).governance min game.militiaAvailable
           addEventTarget(target)
-          testCountry(target)
           addMilitiaToCountry(target, num)
       }
     )),
@@ -1331,7 +1317,6 @@ object ForeverWarCards {
           USBot.deployToPriority(candidates).get
         
         addEventTarget(target)
-        testCountry(target)
         
         println()
         if (game.militiaAvailable > 0)
@@ -1654,7 +1639,6 @@ object ForeverWarCards {
           JihadistBot.markerTarget(mohamedMorsiCandidates).get
       
         addEventTarget(target)
-        testCountry(target)
         addReactionMarker(target)
       }
     )),
@@ -1670,7 +1654,6 @@ object ForeverWarCards {
           JihadistBot.markerTarget(palestinianPeaceCandidates).get
 
         addEventTarget(target)
-        testCountry(target)
         addReactionMarker(target)
       }
     )),
@@ -1698,7 +1681,6 @@ object ForeverWarCards {
             case "reaction" =>
               val target = askCountry("Place reaction marker in which country: ", sayyedHassanReactionCandidates)
               addEventTarget(target)
-              testCountry(target)
               addReactionMarker(target)
               
             case "besieged" =>
@@ -1706,7 +1688,6 @@ object ForeverWarCards {
                 "Place besieged regime marker in which country: ",
                 sayyedHassanBesiegedRegimeCandidates)
               addEventTarget(target)
-              testCountry(target)
               addBesiegedRegimeMarker(target)
             
             case _ =>
@@ -1721,13 +1702,11 @@ object ForeverWarCards {
           if (sayyedHassanReactionCandidates.nonEmpty) {
             val target = JihadistBot.markerTarget(sayyedHassanReactionCandidates).get
             addEventTarget(target)
-            testCountry(target)
             addReactionMarker(target)
           }
           else if (sayyedHassanBesiegedRegimeCandidates.nonEmpty) {
             val target = JihadistBot.markerTarget(sayyedHassanBesiegedRegimeCandidates).get
             addEventTarget(target)
-            testCountry(target)
             addBesiegedRegimeMarker(target)
           }
           else {
@@ -1768,7 +1747,6 @@ object ForeverWarCards {
             
           case 3 =>
               val target = randomConvergenceTarget.name
-              testCountry(target)
               addEventTarget(target)
               addReactionMarker(target)
               
@@ -1784,7 +1762,6 @@ object ForeverWarCards {
             else
               oppositePosture(game.usPosture)
             
-            testCountry(target)
             addEventTarget(target)
             setCountryPosture(target, posture)
             
@@ -1810,7 +1787,6 @@ object ForeverWarCards {
               else
                 JihadistBot.markerTarget(candidates).get
               
-              testCountry(target)
               addEventTarget(target)
               addBesiegedRegimeMarker(target)
             }
@@ -1861,7 +1837,6 @@ object ForeverWarCards {
         die match {
           case 1 | 2 =>
             if (game.getMuslim(CentralAsia).canTakeAwakeningOrReactionMarker) {
-              testCountry(CentralAsia)
               addEventTarget(CentralAsia)
               addReactionMarker(CentralAsia)
             }
@@ -2889,7 +2864,6 @@ object ForeverWarCards {
             USBot.markerAlignGovTarget(amnestyInternationUSCandidates).get
           
           addEventTarget(target)
-          testCountry(target)
           addAwakeningMarker(target)
       }
       else { // Jihadist
@@ -2899,7 +2873,6 @@ object ForeverWarCards {
           JihadistBot.markerTarget(amnestyInternationJihadistCandidates).get
         
         addEventTarget(target)
-        testCountry(target)
         addReactionMarker(target)
       }
     )),
@@ -2936,7 +2909,6 @@ object ForeverWarCards {
         }
                 
         addEventTarget(target)
-        testCountry(target)
         placementAction(target, 1)
       }
     )),
@@ -3040,7 +3012,6 @@ object ForeverWarCards {
           USBot.posturePriority(hafizSaeedKhanNonMuslimUSCandidates).get
         
         addEventTarget(target)
-        testCountry(target)
         if (target == India)
           setCountryPosture(India, Hard)
         else
@@ -3151,7 +3122,6 @@ object ForeverWarCards {
       ,
       (role: Role, forTrigger: Boolean) => {
         addEventTarget(SaudiArabia)
-        testCountry(SaudiArabia)
         if (role == US)
           addAwakeningMarker(SaudiArabia)
         else
@@ -3201,13 +3171,14 @@ object ForeverWarCards {
           val target = askCountry("Which country: ", names)
           
           addEventTarget(target)
-          testCountry(target)
           if (action == "posture") {
             val posture = askSimpleMenu(s"New posture of $target: ", List(Soft, Hard))
             setCountryPosture(target, posture)
           }
-          else
+          else {
+            testCountry(target)
             addSleeperCellsToCountry(target, 1)
+          }
         }
         else if (role == US) {
           val candidates = countries filter (n => n.isUntested || n.posture != game.usPosture)
@@ -3366,7 +3337,6 @@ object ForeverWarCards {
           ).get
         
         addEventTarget(target)
-        testCountry(target)
         
         (game.isMuslim(target), role) match {
           case (true,  US)       => shiftAlignmentLeft(target)
@@ -3408,7 +3378,6 @@ object ForeverWarCards {
       (role: Role, forTrigger: Boolean) => {
         addGlobalEventMarker(GulenMovement)
         addEventTarget(Turkey)
-        testCountry(Turkey)
         
         log()
         if (role == US)
@@ -3557,7 +3526,6 @@ object ForeverWarCards {
           USBot.markerAlignGovTarget(candidates).get
         
         addEventTarget(target)
-        testCountry(target)
         
         if (game.getMuslim(target).totalCells > 0) {
           val (actives, sleepers, sadr) = if (role == game.humanRole)
@@ -3583,7 +3551,6 @@ object ForeverWarCards {
           JihadistBot.markerTarget(notBesieged).get
         
         addEventTarget(target)
-        testCountry(target)
         
         if (game.getMuslim(target).militia > 0)
           removeMilitiaFromCountry(target, 1)
@@ -3616,7 +3583,6 @@ object ForeverWarCards {
           USBot.deployToPriority(pakistaniIntelligenceCandidates(role))).get
         
         addEventTarget(target)
-        testCountry(target)
         
         if (game.militiaAvailable > 0 && game.getMuslim(target).canTakeMilitia)
           addMilitiaToCountry(target, 1)
@@ -3636,7 +3602,6 @@ object ForeverWarCards {
           JihadistBot.recruitTravelToPriority(pakistaniIntelligenceCandidates(role)).get
         
         addEventTarget(target)
-        testCountry(target)
         
         if (game.cellsAvailable > 0) {
           testCountry(target)
@@ -4201,7 +4166,6 @@ object ForeverWarCards {
           JihadistBot.markerTarget(quickWinBadIntelCandidates(role)).get
         
         addEventTarget(target)
-        testCountry(target)
         if (role == US) {
           addAidMarker(target)
           addAwakeningMarker(target)

@@ -2534,7 +2534,6 @@ object LabyrinthCards {
       ,
       (role: Role, forTrigger: Boolean) => if (role == US) {
         addEventTarget(Iraq)
-        testCountry(Iraq)
         addAidMarker(Iraq)
       }
       else { // Jihadist
