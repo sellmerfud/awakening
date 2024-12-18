@@ -4860,9 +4860,15 @@ object LabyrinthAwakening {
     //  Place the appropriate event marker on the board
     event match {
       case TrainingCamps =>
-        assert(targetCountry.nonEmpty, "placeExtraCells() called with empty targetCountry")
-        addEventMarkersToCountry(targetCountry, TrainingCamps)
-
+        game.trainingCamp match {
+          case Some(existing) if existing == targetCountry =>
+            log(s"Training Camps marker remains in $targetCountry")
+          case Some(existing) =>
+            removeEventMarkersFromCountry(existing, TrainingCamps)
+            addEventMarkersToCountry(targetCountry, TrainingCamps)
+          case None =>
+            addEventMarkersToCountry(targetCountry, TrainingCamps)
+        }
       case AlBaghdadi =>
         addGlobalEventMarker(AlBaghdadi)
 

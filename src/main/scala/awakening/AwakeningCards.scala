@@ -2669,16 +2669,14 @@ object AwakeningCards {
           JihadistBot.recruitTravelToPriority(candidates).get
         }
         println()
-        game.trainingCamp foreach { name =>
-          removeEventMarkersFromCountry(name, TrainingCamps)
-        }
+        playExtraCellsEvent(TrainingCamps, target)
         addEventTarget(target)
 
-        playExtraCellsEvent(TrainingCamps, target)
-
         val cellsToAdd = game.cellsAvailable min 2
-        testCountry(target)
-        addSleeperCellsToCountry(target, cellsToAdd)
+        if (cellsToAdd > 0) {
+          testCountry(target)
+          addSleeperCellsToCountry(target, cellsToAdd)
+        }
       }
     )),
     // ------------------------------------------------------------------------
@@ -3476,6 +3474,8 @@ object AwakeningCards {
         increasePrestige(3)
       }
       else {
+        val TCDisplay = deck(196).numAndName
+        val PADisplay = deck(182).numAndName
         // See Event Instructions table
         // Can possibly declare Caliphate, only in Syria or Iraq
         if (role == game.humanRole) {
@@ -3502,10 +3502,10 @@ object AwakeningCards {
           else {
             val choices = List(
               "cell" -> "Place a cell from the track in a random Schengen country",
-              "draw" -> "Draw \"Paris Attacks\" or \"Training Camps\" from the discard pile")
+              "draw" -> s"Draw [$TCDisplay] or [$PADisplay] from the discard pile")
             println()
             askMenu("Choose one:", choices).head match {
-              case "draw" => log("Jihadist draws \"Paris Attacks\" or \"Training Camps\" from the discard pile")
+              case "draw" => log(s"Jihadist draws [$TCDisplay] or [$PADisplay] from the discard pile")
               case "cell" =>
                 val schengen = randomSchengenCountry
                 addEventTarget(schengen.name)
@@ -3533,8 +3533,8 @@ object AwakeningCards {
           if (totalPlaced == 3 && JihadistBot.willDeclareCaliphate(target))
             declareCaliphate(target)
 
-          if (askYorN("Is \"Training Camps\" or \"Paris Attacks\" in the discard pile (y/n)? "))
-            log("Jihadist draws \"Training Camps\" if available otherwise \"Paris Attacks\" from discard pile")
+          if (askYorN(s"Is [$TCDisplay] or [$PADisplay] in the discard pile (y/n)? "))
+            log(s"Jihadist draws [$TCDisplay] if available otherwise [$PADisplay]  from discard pile")
           else if (game.cellsAvailable > 0) {
             val schengen = randomSchengenCountry
             addEventTarget(schengen.name)
@@ -3551,7 +3551,7 @@ object AwakeningCards {
           if (num == 3 && JihadistBot.willDeclareCaliphate(target))
             declareCaliphate(target)
 
-          if (askYorN("Is \"Training Camps\" or \"Paris Attacks\" in the discard pile (y/n)? "))
+          if (askYorN(s"Is [$TCDisplay] or [$PADisplay] in the discard pile (y/n)? "))
             log("Jihadist draws the card nearest the bottom of the discard pile")
           else if (game.cellsAvailable > 0) {
             val schengen = randomSchengenCountry
