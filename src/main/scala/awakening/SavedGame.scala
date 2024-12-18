@@ -199,7 +199,6 @@ object SavedGame {
     val params = play match {
       case p: PlayedCard       => Map("role"  -> p.role.toString, "cardNum" -> p.cardNum)
       case p: PlayedReassement => Map("card1" -> p.card1,         "card2"   -> p.card2)
-      case p: AdditionalCard   => Map("role"  -> p.role.toString, "cardNum" -> p.cardNum)
       case p: PlotsResolved    => Map("num"   -> p.num)
       case p: AdjustmentMade   => Map("desc"  -> p.desc)
     }
@@ -212,7 +211,6 @@ object SavedGame {
       case "PlayedCard"       => PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")))
       // Account for misspelling in earlier versions
       case "PlayedReassessment" | "PlayedReassement" => PlayedReassement(asInt(params("card1")), asInt(params("card2")))
-      case "AdditionalCard"   => AdditionalCard(Role(asString(params("role"))), asInt(params("cardNum")))
       case "PlotsResolved"    => PlotsResolved(asInt(params("num")))
       case "AdjustmentMade"   => AdjustmentMade(asString(params("desc")))
     }

@@ -810,11 +810,6 @@ object LabyrinthAwakening {
     override def numCards = 2
     override def toString() = s"$role played ${cardNumAndName(card1)} and ${cardNumAndName(card2)}"
   }
-  case class AdditionalCard(role: Role, cardNum: Int) extends CardPlay {
-    override def name = "AdditionalCard"
-    override def numCards = 1
-    override def toString() = s"$role played additional card ${cardNumAndName(cardNum)}"
-  }
   case class PlotsResolved(num: Int) extends Play {
     override def name = "PlotsResolved"
     override def numCards = 0
@@ -6574,7 +6569,6 @@ object LabyrinthAwakening {
 
     val cardsPlayed     = (game.plays map (_.numCards)).sum
     val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved])
-                                      filterNot (_.isInstanceOf[AdditionalCard])
                                       map (_.numCards)).sum
 
     if (cardsSincePlots > 0 && cardsSincePlots % 4 == 0) {
@@ -6885,11 +6879,8 @@ object LabyrinthAwakening {
       val savedState = game
 
       // Add the card to the list of plays for the turn.
-      val thisPlay = if (additional)
-        AdditionalCard(US, card.number)
-      else
-        PlayedCard(US, card.number)
-      game = game.copy(plays = thisPlay :: game.plays)
+      val thisPlay = if (!additional)
+        game = game.copy(plays = PlayedCard(US, card.number) :: game.plays)
 
       cachedEventPlayableAnswer = None
 
@@ -6916,7 +6907,8 @@ object LabyrinthAwakening {
 
         if (cardNumber == CriticalMiddle)
           criticalMiddleReminder()
-        saveGameState()
+        if (!additional)
+          saveGameState()
       }
       catch {
         case AbortAction if additional => throw AbortAction // Abort back to the original card.
@@ -7244,7 +7236,6 @@ object LabyrinthAwakening {
 
     // Skip any additional card plays in the count
     val currentRollCardsPlayed = currentRolePlays
-      .filterNot(_.isInstanceOf[AdditionalCard])
       .map(_.numCards)
       .sum
     val newPhase = currentRollCardsPlayed % 2 == 0
@@ -7265,8 +7256,7 @@ object LabyrinthAwakening {
       case p: CardPlay if p.role == role => true
       case _ => false
     }
-    // Skip any additional card plays
-    (cardPlays filterNot (_.isInstanceOf[AdditionalCard]) map (_.numCards)).sum == 1
+    cardPlays.map(_.numCards).sum == 1
   }
 
   def jihadistCardPlay(param: Option[String]): Unit = {
