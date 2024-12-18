@@ -7061,13 +7061,15 @@ object LabyrinthAwakening {
     val Withdraw     = "Withdraw"
     val Disrupt      = "Disrupt"
     val Alert        = "Alert"
+    val Reserves     = "Add 1 OP to reserves"
     val actions = List(
       choice(true,                              WarOfIdeas, WarOfIdeas),
       choice(game.deployPossible(ops),          Deploy, Deploy),
       choice(game.regimeChangePossible(ops),    RegimeChg, RegimeChg),
       choice(game.withdrawPossible(ops),        Withdraw, Withdraw),
       choice(game.disruptTargets(ops).nonEmpty, Disrupt, Disrupt),
-      choice(game.alertPossible(ops),           Alert, Alert)
+      choice(game.alertPossible(ops),           Alert, Alert),
+      choice(game.reserves.us < 2,              Reserves, Reserves)
     ).flatten
     askMenu(s"$US action:", actions).head match {
       case WarOfIdeas => humanWarOfIdeas(ops)
@@ -7075,7 +7077,8 @@ object LabyrinthAwakening {
       case RegimeChg  => humanRegimeChange()
       case Withdraw   => humanWithdraw()
       case Disrupt    => humanDisrupt(ops)
-      case _          => humanAlert()
+      case Alert      => humanAlert()
+      case _          => addToReserves(US, 1)
     }
   }
 
