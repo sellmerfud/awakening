@@ -104,10 +104,17 @@ object AwakeningCards {
     (m.totalTroopsAndMilitia / 2) >= m.totalCells &&
     !game.isCaliphateMember(m.name)
 
-  val coupCandidate = (m: MuslimCountry) =>
+  def coupCandidate(forTrigger: Boolean)(m: MuslimCountry) = {
+    val botConditions = if (game.botEnhancements)
+      !m.isIslamistRule && !m.inRegimeChange
+    else
+      !m.isIslamistRule
+
     m.resourceValue == 1 &&
     m.totalCells >= 2 &&
-    !(m.civilWar && m.besiegedRegime)
+    !(m.civilWar && m.besiegedRegime) &&
+    (forTrigger || game.humanRole == Jihadist || botConditions)
+  }
 
   val islamicMaghrebCountry = Set(AlgeriaTunisia, Libya, Mali, Morocco, Nigeria)
   val islamicMaghrebCandidate = (c: Country) => islamicMaghrebCountry(c.name) && c.isPoor
@@ -1577,20 +1584,15 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(165, "Coup", Jihadist, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) =>
-        ((role == game.humanRole || forTrigger) && (game hasMuslim coupCandidate)) ||
-        (role == game.botRole && (game.hasMuslim(m => !m.isIslamistRule && coupCandidate(m))))
+      (role: Role, forTrigger: Boolean) => game.hasMuslim(coupCandidate(forTrigger))
       ,
       (role: Role, forTrigger: Boolean) => {
         val target = if (role == game.humanRole) {
-          val candidates = countryNames(game.muslims.filter(coupCandidate))
+          val candidates = countryNames(game.muslims.filter(coupCandidate(forTrigger)))
           askCountry("Select country: ", candidates)
         }
         else {          
-          val candidates = if (forTrigger)
-            countryNames(game.muslims.filter(coupCandidate))
-          else
-            countryNames(game.muslims.filter(m => !m.isIslamistRule && coupCandidate(m)))
+          val candidates = countryNames(game.muslims.filter(coupCandidate(forTrigger)))
           JihadistBot.goodThenFairThenPoorPriority(candidates).get
         }
 
