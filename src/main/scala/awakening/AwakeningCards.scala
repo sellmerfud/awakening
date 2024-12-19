@@ -99,6 +99,13 @@ object AwakeningCards {
     countryNames(game.muslims filter test)
   }
 
+  def trainingCampsCandidates(forTrigger: Boolean): List[String] = {
+    if (game.humanRole == Jihadist || forTrigger)
+      countryNames(game.muslims filter (m => !(m.isUntested || m.isGood)))
+    else
+      countryNames(game.muslims filter (m => !(m.isUntested || m.isGood && !m.autoRecruit)))
+  }
+
   val statusQuoCandidate = (m: MuslimCountry) =>
     m.regimeChange == TanRegimeChange &&
     (m.totalTroopsAndMilitia / 2) >= m.totalCells &&
@@ -2628,22 +2635,22 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(196, "Training Camps", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => {
-        if (role == game.humanRole)
-          game hasMuslim (m => !(m.isUntested || m.isGood))
-        else // See Event Instructions table
-          game hasMuslim (m => !(m.isUntested || m.isGood) && !m.autoRecruit)
-      }
+      (role: Role, forTrigger: Boolean) =>
+        if (role == game.humanRole || forTrigger)
+          trainingCampsCandidates(forTrigger).nonEmpty
+        else {
+          val candidates = trainingCampsCandidates(false)
+          val currentCamp = game.trainingCamp
+          candidates.nonEmpty &&
+          (!game.botEnhancements || currentCamp.isEmpty || currentCamp != JihadistBot.cellPlacementPriority(false)(candidates))
+        }
       ,
       (role: Role, forTrigger: Boolean) => {
-        val target = if (role == game.humanRole) {
-          val candidates = countryNames(game.muslims filter (m => !(m.isUntested || m.isGood)))
+        val candidates = trainingCampsCandidates(forTrigger)
+        val target = if (role == game.humanRole)
           askCountry("Place Training Camps in which country: ", candidates)
-        }
         else {
           // See Event Instructions table
-          val candidates =
-            countryNames(game.muslims filter (m => !(m.isUntested || m.isGood && !m.autoRecruit)))
           JihadistBot.cellPlacementPriority(false)(candidates).get
         }
         println()

@@ -1364,7 +1364,7 @@ object LabyrinthAwakening {
     // Training camp cells are always the last to be placed on the map and the first
     // to be removed.
 
-    def trainingCamp        = muslims find (_.hasMarker(TrainingCamps)) map (_.name)
+    def trainingCamp = muslims.find(_.hasMarker(TrainingCamps)).map(_.name)
     def isTrainingCamp(name: String) = trainingCamp == Some(name)
 
     def extraCellCapacity   = {
