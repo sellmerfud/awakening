@@ -1154,7 +1154,7 @@ object LabyrinthCards {
         val name = if (role == game.humanRole)
           askCountry("Place cell in which country: ", candidates)
         else
-          JihadistBot.recruitTravelToPriority(candidates).get
+          JihadistBot.cellPlacementPriority(false)(candidates).get
         
         addEventTarget(name)
         if (game.cellsAvailable > 0) {
@@ -1343,7 +1343,7 @@ object LabyrinthCards {
           val name = if (role == game.humanRole)
             askCountry("Select country where disrupt occurred: ", candidates)
           else
-            JihadistBot.recruitTravelToPriority(candidates).get
+            JihadistBot.cellPlacementPriority(false)(candidates).get
           addEventTarget(name)
           testCountry(name)
           addSleeperCellsToCountry(name, 1)
@@ -1499,7 +1499,7 @@ object LabyrinthCards {
         else if (game.cellsAvailable > 1)
           candidates
         else if (role == game.botRole)
-          JihadistBot.recruitTravelToPriority(candidates).toList
+          JihadistBot.cellPlacementPriority(false)(candidates).toList
         else {
           println("There is only one cell available to be placed")
           askCountry("Select country for cell: ", candidates)::Nil
@@ -1568,7 +1568,7 @@ object LabyrinthCards {
         val targets = if (game.cellsAvailable > 1)
           candidates
         else if (role == game.botRole)
-          JihadistBot.recruitTravelToPriority(candidates).toList
+          JihadistBot.cellPlacementPriority(false)(candidates).toList
         else {
           println("There is only one cell available to be placed")
           askCountry("Select country for cell: ", candidates)::Nil
@@ -1841,15 +1841,8 @@ object LabyrinthCards {
                                             (m.aidMarkers > 0 || !m.besiegedRegime)))
         val target = if (role == game.humanRole)
           askCountry("Select country: ", candidates)
-        else if (game.cellsAvailable >= 3) {
-          // If we are placing 3 cells and we can declare caliphate then
-          // select that country
-          JihadistBot.caliphatePriorityTarget(candidates)
-            .orElse(JihadistBot.recruitTravelToPriority(candidates))
-            .get
-        }
         else
-          JihadistBot.recruitTravelToPriority(candidates).get
+          JihadistBot.cellPlacementPriority(true)(candidates).get
 
         addEventTarget(target)
         val m = game.getMuslim(target)
@@ -1886,7 +1879,7 @@ object LabyrinthCards {
           val eligible = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
           
           if (eligible contains UnitedStates)
-            UnitedStates :: JihadistBot.multipleTargets(2, eligible.filterNot(_ == UnitedStates))(JihadistBot.recruitTravelToPriority)
+            UnitedStates :: JihadistBot.multipleTargets(2, eligible.filterNot(_ == UnitedStates))(JihadistBot.cellPlacementPriority(false))
           else 
             JihadistBot.multipleTargets(3, eligible)(JihadistBot.recruitTravelToPriority)
         }
@@ -2005,7 +1998,7 @@ object LabyrinthCards {
           val name = if (role == game.humanRole)
             askCountry("Select a Shia-Mix country: ", candidates)
           else
-            JihadistBot.recruitTravelToPriority(candidates).get
+            JihadistBot.cellPlacementPriority(false)(candidates).get
           
           addEventTarget(name)
           testCountry(name)
@@ -2208,7 +2201,7 @@ object LabyrinthCards {
           addSleeperCellsToCountry(name, 1)
         }
         else {
-          val name = JihadistBot.recruitTravelToPriority(Afghanistan::Pakistan::Nil).get
+          val name = JihadistBot.cellPlacementPriority(false)(Afghanistan::Pakistan::Nil).get
           testCountry(name)
           addSleeperCellsToCountry(name, 1)
         }
@@ -2633,13 +2626,11 @@ object LabyrinthCards {
         else if (game.cellsAvailable >= 3 &&
                  game.islamistResources == 5 &&
                  JihadistBot.caliphatePriorityTarget(zarqawiCandidates).nonEmpty)
-          JihadistBot.caliphatePriorityTarget(zarqawiCandidates).get
+          JihadistBot.cellPlacementPriority(true)(zarqawiCandidates).get
         else if (game.availablePlots contains Plot2)
           JihadistBot.plotPriority(zarqawiCandidates).get
         else
-          JihadistBot.caliphatePriorityTarget(zarqawiCandidates)
-            .orElse(JihadistBot.recruitTravelToPriority(zarqawiCandidates))
-            .get
+          JihadistBot.cellPlacementPriority(true)(zarqawiCandidates).get
         
         addEventTarget(name)
         val num = 3 min game.cellsAvailable

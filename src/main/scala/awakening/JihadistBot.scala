@@ -1560,6 +1560,18 @@ object JihadistBot extends BotHelpers {
     }
   }
 
+  // Find target for cell placement by event
+  def cellPlacementPriority(canDeclareCaliphate: Boolean)(candidates: List[String]): Option[String] = {
+    if (canDeclareCaliphate && game.cellsAvailable >= 3) {
+      // If we are placing 3 cells and we can declare caliphate then
+      // select that country
+      JihadistBot.caliphatePriorityTarget(candidates)
+        .orElse(JihadistBot.recruitTravelToPriority(candidates))
+    }
+    else
+      JihadistBot.recruitTravelToPriority(candidates)
+  }
+
   // Note: this does not test for presence of a cadre, because
   // some events want do know where to NOT place a cadre that will
   // then be removed.

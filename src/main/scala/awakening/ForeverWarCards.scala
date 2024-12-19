@@ -1564,7 +1564,7 @@ object ForeverWarCards {
           val target = if (role == game.humanRole)
             askCountry("Place a cell in which country: ", countryNames(game.countries))
           else
-            JihadistBot.recruitTravelToPriority(countryNames(game.countries)).get
+            JihadistBot.cellPlacementPriority(false)(countryNames(game.countries)).get
           
           if (game.cellsAvailable > 0) {
             testCountry(target)
@@ -1605,7 +1605,7 @@ object ForeverWarCards {
           val cellTarget = if (role == game.humanRole)
             askCountry("Place a cell in which country: ", hardCountries)
           else
-            JihadistBot.recruitTravelToPriority(hardCountries).get
+            JihadistBot.cellPlacementPriority(false)(hardCountries).get
           
           addEventTarget(cellTarget)
           testCountry(cellTarget)
@@ -1710,7 +1710,7 @@ object ForeverWarCards {
             addBesiegedRegimeMarker(target)
           }
           else {
-            val target = JihadistBot.recruitTravelToPriority(sayyedHassanCellCandidates).get
+            val target = JihadistBot.cellPlacementPriority(false)(sayyedHassanCellCandidates).get
             addEventTarget(target)
             testCountry(target)
             addSleeperCellsToCountry(target, 1)
@@ -2082,7 +2082,7 @@ object ForeverWarCards {
           if (role == game.humanRole)
             Some(askCountry("Place a cell in which Fair non-Muslim country: ", fairCandidates))
           else
-            JihadistBot.recruitTravelToPriority(fairCandidates)
+            JihadistBot.cellPlacementPriority(false)(fairCandidates)
         }
         else
           None
@@ -2613,7 +2613,7 @@ object ForeverWarCards {
               Action(target, Right(plots.head)) :: nextAction(cellsLeft, plots.tail, candidates filterNot (_ == target))
             }
             else {
-              val target = JihadistBot.recruitTravelToPriority(candidates).get
+              val target = JihadistBot.cellPlacementPriority(false)(candidates).get
               Action(target, Left(())) :: nextAction(cellsLeft - 1, plots, candidates filterNot (_ == target))
             }
           }
@@ -2832,13 +2832,11 @@ object ForeverWarCards {
         else if (game.cellsAvailable >= 3 && (game.botEnhancements || game.islamistResources == 5)) {
             // If we are placing 3 cells and we can declare caliphate then
             // select that country
-            val t = JihadistBot.caliphatePriorityTarget(ungovernedSpaceCandidates)
-              .orElse(JihadistBot.recruitTravelToPriority(ungovernedSpaceCandidates))
-              .get
+            val t = JihadistBot.cellPlacementPriority(true)(ungovernedSpaceCandidates).get
             (t, game.cellsAvailable min 3)
           }
         else
-          (JihadistBot.recruitTravelToPriority(ungovernedSpaceCandidates).get, game.cellsAvailable min 3)
+          (JihadistBot.cellPlacementPriority(false)(ungovernedSpaceCandidates).get, game.cellsAvailable min 3)
         
         addEventTarget(target)
         testCountry(target)
@@ -3030,7 +3028,7 @@ object ForeverWarCards {
         else if (game.availablePlots contains Plot1)
           (JihadistBot.plotPriority(candidates).get, "plot")
         else
-          (JihadistBot.recruitTravelToPriority(candidates).get, "cell")
+          (JihadistBot.cellPlacementPriority(false)(candidates).get, "cell")
         
         addEventTarget(target)
         testCountry(target)
@@ -3187,7 +3185,7 @@ object ForeverWarCards {
           setCountryPosture(target, game.usPosture)
         }
         else if (game.cellsAvailable > 0) {
-          val target = JihadistBot.recruitTravelToPriority(names).get
+          val target = JihadistBot.cellPlacementPriority(false)(names).get
           addEventTarget(target)
           testCountry(target)
           addSleeperCellsToCountry(target, 1)
@@ -3292,13 +3290,11 @@ object ForeverWarCards {
         else if (maxCells == 3 && (game.botEnhancements || game.islamistResources == 5)) {
             // If we are placing 3 cells and we can declare caliphate then
             // select that country
-            val t = JihadistBot.caliphatePriorityTarget(candidates)
-              .orElse(JihadistBot.recruitTravelToPriority(candidates))
-              .get
+            val t = JihadistBot.cellPlacementPriority(true)(candidates).get
             (t, maxCells)
           }
         else
-          (JihadistBot.recruitTravelToPriority(candidates).get, maxCells)
+          (JihadistBot.cellPlacementPriority(false)(candidates).get, maxCells)
         
         addEventTarget(target)
         testCountry(target)
@@ -3599,7 +3595,7 @@ object ForeverWarCards {
         val target = if (role == game.humanRole)
           askCountry("Which country: ", pakistaniIntelligenceCandidates(role))
         else
-          JihadistBot.recruitTravelToPriority(pakistaniIntelligenceCandidates(role)).get
+          JihadistBot.cellPlacementPriority(false)(pakistaniIntelligenceCandidates(role)).get
         
         addEventTarget(target)
         
@@ -3643,7 +3639,7 @@ object ForeverWarCards {
         val target = if (role == game.humanRole)
           askCountry("Which country: ", switchingJerseysCandidates(role))
         else
-          JihadistBot.recruitTravelToPriority(switchingJerseysCandidates(role)).get
+          JihadistBot.cellPlacementPriority(false)(switchingJerseysCandidates(role)).get
         
         addEventTarget(target)
         removeMilitiaFromCountry(target, 1)
@@ -3855,12 +3851,10 @@ object ForeverWarCards {
           else if (game.cellsAvailable >= 3 && (game.botEnhancements || game.islamistResources == 5)) {
             // If we are placing 3 cells and we can declare caliphate then
             // select that country
-            JihadistBot.caliphatePriorityTarget(candidates)
-              .orElse(JihadistBot.recruitTravelToPriority(candidates))
-              .get
+            JihadistBot.cellPlacementPriority(true)(candidates).get
           }
           else
-            JihadistBot.recruitTravelToPriority(candidates).get
+            JihadistBot.cellPlacementPriority(false)(candidates).get
           
           val cellsToAdd = game.cellsAvailable min 3
           addEventTarget(target)
@@ -4129,7 +4123,7 @@ object ForeverWarCards {
           val target = if (role == game.humanRole)
             askCountry("Place a cell in which Sunni country: ", sunniCandidates)
           else
-            JihadistBot.recruitTravelToPriority(sunniCandidates).get
+            JihadistBot.cellPlacementPriority(false)(sunniCandidates).get
             
           addEventTarget(target)
           testCountry(target)
@@ -4140,7 +4134,7 @@ object ForeverWarCards {
           val target = if (role == game.humanRole)
             askCountry("Place a cell in which Shia-Mix country: ", shiaCandidates)
           else
-            JihadistBot.recruitTravelToPriority(shiaCandidates).get
+            JihadistBot.cellPlacementPriority(false)(shiaCandidates).get
             
           addEventTarget(target)
           testCountry(target)
