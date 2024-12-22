@@ -1203,9 +1203,11 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(53, "Madrassas", Jihadist, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => firstCardOfPhase(Jihadist) &&
-                      game.cellsAvailable > 0    && // Ignore funding
-                      cacheYesOrNo(s"Does the $Jihadist player have another card in hand? (y/n) ")
+      (role: Role, forTrigger: Boolean) =>
+        !game.botEnhancements &&  // Enhance Bot never plays this event
+        firstCardOfPhase(Jihadist) &&
+        game.cellsAvailable > 0    && // Ignore funding
+        cacheYesOrNo(s"Does the $Jihadist player have another card in hand? (y/n) ")
       ,
       (role: Role, forTrigger: Boolean) => {
         val  prompt = if (role == game.humanRole)
@@ -2336,7 +2338,7 @@ object LabyrinthCards {
       (role: Role, forTrigger: Boolean) =>
         role == game.humanRole ||
         forTrigger ||
-        (role != US && (game.prestige > 1 || cacheYesOrNo(s"Do you ($US) have a card in hand? (y/n) ")))
+        (!game.botEnhancements && role != US && (game.prestige > 1 || cacheYesOrNo(s"Do you ($US) have a card in hand? (y/n) ")))
       ,      
       (role: Role, forTrigger: Boolean) => {
         if (game.humanRole == US)
@@ -2687,7 +2689,9 @@ object LabyrinthCards {
         true
       else if (role == US)
         (game.prestigeLevel == High || game.prestigeLevel == VeryHigh)
-      else {
+      else if (game.botEnhancements)  // Enhanced Jihadist Bot never plays this event
+        false
+      else  {
         val sudan = game getMuslim Sudan
         (game.prestigeLevel == Low || game.prestigeLevel == Medium) &&
         !(sudan.isAdversary && sudan.besiegedRegime)
@@ -2711,7 +2715,7 @@ object LabyrinthCards {
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => role == game.humanRole ||
         (role == US && game.prestigeLevel != High && game.prestigeLevel != VeryHigh) ||
-        (role == Jihadist && game.prestigeLevel != Low)
+        (role == Jihadist && !game.botEnhancements && game.prestigeLevel != Low)
       ,
       (role: Role, forTrigger: Boolean) => {
         rollPrestige()
@@ -2819,7 +2823,11 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(119, "Saleh", Unassociated, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => {
+      (role: Role, forTrigger: Boolean) => if (role == game.humanRole || forTrigger) 
+        true
+      else if (role == Jihadist && game.botEnhancements)
+        false  // Enhanced Jihadist Bot never plays this event
+      else {
         val yemen = game getMuslim Yemen
         yemen.isUntested ||
         (role == Jihadist && !(yemen.isAdversary && yemen.besiegedRegime) ) || 
