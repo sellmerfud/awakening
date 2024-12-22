@@ -124,6 +124,9 @@ object LabyrinthAwakening {
     val key = name.toLowerCase
   }
 
+  def isBot(role: Role) = (role == game.botRole)
+  def isHuman(role: Role) = (role == game.humanRole)
+
   def oppositeRole(role: Role) = if (role == US) Jihadist else US
 
   def botTurn(role: Role, forTrigger: Boolean) =
@@ -740,6 +743,38 @@ object LabyrinthAwakening {
 
   val AutoTrigger   = true
   val NoAutoTrigger = false
+
+  abstract class Card2(
+    val number: Int,
+    val name: String,
+    val association: CardAssociation,
+    val printedOps: Int,
+    val remove: CardRemoval,
+    val lapsing: CardLapsing,
+    val autoTrigger: Boolean = false) {
+
+    // Used by the US Bot to determine if the executing the event would alert a plot
+    // in the given country
+    def eventAlertsPlot(countryName: String, plot: Plot): Boolean
+    
+    // Used by the US Bot to determine if the executing the event would remove
+    // the last cell on the map resulting in victory.
+    def eventRemovesLastCell(): Boolean
+    
+    // Returns true if the printed conditions of the event are satisfied
+    def eventConditions(role: Role): Boolean
+  
+    // Returns true if the Bot associated with the given role will execute the event
+    // on its turn.  This implements the special Bot instructions for the event.
+    // When the event is triggered as part of the Human players turn, this is NOT used.
+    def botWillPlayEvent(role: Role): Boolean = true
+
+    // Carry out the event for the given role.
+    // forTrigger will be true if the event was triggered during the human player's turn
+    // and it associated with the Bot player.
+    def executeEvent(role: Role, forTrigger: Boolean): Unit
+
+  }
 
   class Card(
     val number: Int,
