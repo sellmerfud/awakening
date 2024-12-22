@@ -1050,6 +1050,7 @@ object LabyrinthCards {
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
         firstCardOfPhase(Jihadist) &&
+        !game.botEnhancements      &&  // Enhanced Bot never plays this
         game.cellsToRecruit > 0    &&
         cacheYesOrNo(s"Does the $Jihadist player have another card in hand? (y/n) ")
       ,
