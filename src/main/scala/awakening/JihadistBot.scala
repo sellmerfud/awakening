@@ -2859,7 +2859,7 @@ object JihadistBot extends BotHelpers {
         def nextTravel(completed: Int, target: String): Int = {
 
           val sources = game.getCountries(getAdjacent(target))
-            .filter(c => totalUnused(c) > 0)
+            .filter(c => hasCellForTravel(c))
           if (completed == maxOps || sources.isEmpty)
             completed
           else {
@@ -2882,6 +2882,7 @@ object JihadistBot extends BotHelpers {
           if (completed == maxOps || dests.isEmpty)
             completed
           else {
+            botLog("Find Good Muslim travel destination", Color.Debug)
             val target = topPriority(game.getCountries(dests), recruitAndTravelToPriorities).map(_.name).get
             val updatedCompleted = nextTravel(completed, target)
 
