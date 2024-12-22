@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Russia has a cell and no CTR marker.
+// Roll as if 1 operation there.
+// Success: Add a WMD to Available Plots.
+// Failure: Remove the cell.
 // ------------------------------------------------------------------
 object Card_071 extends Card2(71, "Loose Nuke", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +60,9 @@ object Card_071 extends Card2(71, "Loose Nuke", Jihadist, 2, Remove, NoLapsing, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditions(role: Role) =
+    game.getCountry(Russia).totalCells > 0 &&
+    countryEventNotInPlay(Russia, CTR)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +75,23 @@ object Card_071 extends Card2(71, "Loose Nuke", Jihadist, 2, Remove, NoLapsing, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Russia)
+    val die = getDieRoll("Enter event die roll: ", Some(role))
+    val success = die <= (game getCountry Russia).governance
+    log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
+    if (success) {
+      log(s"Move the Loose Nuke WMD plot marker to the available plots box")
+      val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
+      game = game.copy(plotData = updatedPlots)
+    }
+    else {
+      val (active, sleeper, sadr) = if (isHuman(role)) {
+        println("You must remove a cell")
+        askCells(Russia, 1, sleeperFocus = false)
+      }
+      else
+        JihadistBot.chooseCellsToRemove(Russia, 1)
+      removeCellsFromCountry(Russia, active, sleeper, sadr, addCadre = true)
+    }
   }
 }

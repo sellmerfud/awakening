@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Somalia or Yemen under Islamist Rule.
+// While either country is under Islamist Rule, no end-of-turn Funding drop.
 // ------------------------------------------------------------------
 object Card_073 extends Card2(73, "Pirates", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +57,9 @@ object Card_073 extends Card2(73, "Pirates", Jihadist, 2, Remove, NoLapsing, NoA
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditions(role: Role) =
+    globalEventNotInPlay(MaerskAlabama) &&
+    pirates1ConditionsInEffect // Neither country under Islamist Rule
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -68,7 +71,6 @@ object Card_073 extends Card2(73, "Pirates", Jihadist, 2, Remove, NoLapsing, NoA
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
-  }
+  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+    addGlobalEventMarker(Pirates1)
 }

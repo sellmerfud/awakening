@@ -7783,6 +7783,12 @@ object LabyrinthAwakening {
     }
   }
 
+  def choosesToDeclareCaliphate(role: Role, numCells: Int, countryName: String): Boolean =
+    numCells >= 3 &&
+    canDeclareCaliphate(countryName) &&
+    ((isHuman(role) && askDeclareCaliphate(countryName)) ||
+     (isBot(role)   && JihadistBot.willDeclareCaliphate(countryName)))
+
   def saveAdjustment(desc: String): Unit = {
     game = game.copy(plays = AdjustmentMade(desc) :: game.plays)
     saveGameState()

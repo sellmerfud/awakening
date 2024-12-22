@@ -41,7 +41,10 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Place a cell in Pakistan.
+// No disrupt operations there unless Regime Change.
+// Blocks US Bin Ladin and Zawahiri.
+// Removed by Pakistani Offensive.
 // ------------------------------------------------------------------
 object Card_080 extends Card2(80, "FATA", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +65,26 @@ object Card_080 extends Card2(80, "FATA", Jihadist, 3, NoRemove, NoLapsing, NoAu
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    countryEventNotInPlay(Pakistan, FATA) ||
+    game.cellsAvailable > 0
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Pakistan)
+    if (game.cellsAvailable > 0)
+      addSleeperCellsToCountry(Pakistan, 1)
+    else
+      log(s"\nThere are no cells available to place in $Pakistan", Color.Event)
+
+    if (game.getCountry(Pakistan).hasMarker(FATA))
+      log(s"\nThe $FATA marker is already in $Pakistan", Color.Event)
+    else
+      addEventMarkersToCountry(Pakistan, FATA)
+
   }
 }

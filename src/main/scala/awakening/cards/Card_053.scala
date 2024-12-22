@@ -68,7 +68,9 @@ object Card_053 extends Card2(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing,
   // NOTE: This event ignores funding, so all available cells may be used
   //       to recruit
   override
-  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
+  def botWillPlayEvent(role: Role): Boolean =
+    game.botEnhancements == false &&  // Unplayable for Enhanced Bot
+    game.cellsAvailable > 0
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

@@ -87,7 +87,7 @@ object Card_055 extends Card2(55, "Uyghur Jihad", Jihadist, 1, Remove, NoLapsing
           China
         else
           CentralAsia
-        log(s"There are no cells available to place in $target.", Color,Event)
+        log(s"There are no cells available to place in $target.", Color.Event)
       }
     }
     else

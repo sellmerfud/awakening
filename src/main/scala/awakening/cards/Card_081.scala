@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if a country has Regime Change.
+// Place 5 cells there and remove 1 Aid, if any, or, if none, place
+// Besieged Regime.
 // ------------------------------------------------------------------
 object Card_081 extends Card2(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +57,80 @@ object Card_081 extends Card2(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(game.muslims.filter(_.inRegimeChange))
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditions(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = {
+    val haveTarget = game.getMuslims(getCandidates())
+      .exists (m => m.aidMarkers > 0 || !m.besiegedRegime)
+
+    game.cellsAvailable > 0 || haveTarget
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+  def executeEvent(role: Role, forTrigger: Boolean): Unit = if (isHuman(role)) {
+    val candidates = if (game.cellsAvailable > 0)
+      countryNames(game.muslims
+        .filter(_.inRegimeChange))
+    else
+      countryNames(game.muslims
+        .filter(m => m.inRegimeChange && (m.aidMarkers > 0 || !m.besiegedRegime)))
+    val target = askCountry("Select country: ", candidates)
+
+    addEventTarget(target)
+    val m = game.getMuslim(target)
+    val numCells = 5 min game.cellsAvailable
+    if (numCells > 0) {
+      testCountry(target)
+      addSleeperCellsToCountry(target, numCells)
+    }
+    else
+      log(s"There are no cells available to place in $target")
+
+    if (m.aidMarkers > 0)
+      removeAidMarker(target, 1)
+    else if (!m.besiegedRegime)
+      addBesiegedRegimeMarker(target)
+
+    if (choosesToDeclareCaliphate(role, numCells, target))
+      declareCaliphate(target)
+  }
+  else {  // Bot
+    val numCells = 5 min game.cellsAvailable
+    val regimeChange = game.muslims.filter(_.inRegimeChange)
+    val withAid = game.muslims.filter(m => m.inRegimeChange && m.aidMarkers > 0)
+    val notBesieged = game.muslims.filter(m => m.inRegimeChange && !m.besiegedRegime)
+    val target = if (game.cellsAvailable > 0)
+      JihadistBot.cellPlacementPriority(numCells >= 3)(countryNames(regimeChange)).get
+    else if (withAid.nonEmpty)
+      JihadistBot.markerTarget(countryNames(withAid)).get
+      else
+      JihadistBot.minorJihadTarget(countryNames(notBesieged)).get
+
+    addEventTarget(target)
+    val m = game.getMuslim(target)
+    if (numCells > 0) {
+      testCountry(target)
+      addSleeperCellsToCountry(target, numCells)
+    }
+    else
+      log(s"There are no cells available to place in $target")
+
+    if (m.aidMarkers > 0)
+      removeAidMarker(target, 1)
+    else if (!m.besiegedRegime)
+      addBesiegedRegimeMarker(target)
+    
+    if (choosesToDeclareCaliphate(role, numCells, target))
+      declareCaliphate(target)    
   }
 }

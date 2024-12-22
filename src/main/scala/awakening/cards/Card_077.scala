@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Saudi Arabia or an adjacent has troops.
+// Shift the country 1 box toward Adversary.
 // ------------------------------------------------------------------
 object Card_077 extends Card2(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +56,13 @@ object Card_077 extends Card2(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates(): List[String] = {
+    val possibles = game.getMuslim(SaudiArabia)::game.adjacentMuslims(SaudiArabia)
+    countryNames(possibles.filter(m => m.totalTroops > 0 && !m.isAdversary))
+  }
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditions(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +75,12 @@ object Card_077 extends Card2(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val name = if (isHuman(role))
+      askCountry("Select country with troops: ", getCandidates())
+    else
+      JihadistBot.alignGovTarget(getCandidates()).get
+
+    addEventTarget(name)
+    shiftAlignmentRight(name)
   }
 }

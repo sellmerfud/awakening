@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Afghanistan has a cell. Place 3 more cells there.
+// Then, if at Islamist Rule, place all available cells there.
 // ------------------------------------------------------------------
 object Card_072 extends Card2(72, "Opium", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +58,31 @@ object Card_072 extends Card2(72, "Opium", Jihadist, 2, NoRemove, NoLapsing, NoA
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditions(role: Role) = game.getCountry(Afghanistan).totalCells > 0
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // Can create Caliphate (only in Afghanistan)
+    val num = if (game.getMuslim(Afghanistan).isIslamistRule)
+      game.cellsAvailable
+    else
+      3 min game.cellsAvailable
+    if (num > 0) {
+      addEventTarget(Afghanistan)
+      addSleeperCellsToCountry(Afghanistan, num)
+      if (choosesToDeclareCaliphate(role, num, Afghanistan))
+        declareCaliphate(Afghanistan)
+    }
+    else
+      log("There are no cells available, the event has no effect.", Color.Event)
   }
 }

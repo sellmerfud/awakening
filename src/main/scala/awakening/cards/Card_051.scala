@@ -80,11 +80,8 @@ object Card_051 extends Card2(51, "FREs", Jihadist, 1, NoRemove, NoLapsing, NoAu
       addEventTarget(Iraq)
       addSleeperCellsToCountry(Iraq, num)
 
-      if (num >= 3 && canDeclareCaliphate(Iraq) &&
-        ((isHuman(role) && askDeclareCaliphate(Iraq)) ||
-         (isBot(role) && JihadistBot.willDeclareCaliphate(Iraq)))) {
+      if (choosesToDeclareCaliphate(role, num, Iraq))
         declareCaliphate(Iraq)
-      }
     }
     else
       log("\nThere are no cells available to place in Iraq.", Color.Event)

@@ -1648,7 +1648,7 @@ object LabyrinthCards {
       Remove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) => globalEventNotInPlay(MaerskAlabama) && pirates1ConditionsInEffect
       ,
-      (role: Role, forTrigger: Boolean) => addGlobalEventMarker(Pirates2)
+      (role: Role, forTrigger: Boolean) => addGlobalEventMarker(Pirates1)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(74, "Schengen Visas", Jihadist, 2,

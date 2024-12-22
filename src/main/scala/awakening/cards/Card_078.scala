@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// US discards any Iran, Hizballah , or Jaysh al-Mahdi cards from hand.
+// US Posture to Hard. Then roll Prestige.
 // ------------------------------------------------------------------
 object Card_078 extends Card2(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +70,14 @@ object Card_078 extends Card2(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsi
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role))
+      log(s"\nThe $US Bot does NOT dicard any cards", Color.Event)
+    else {
+      log(s"\nYou ($US) must discard any of Iran, Hizballah, or Jaysh al-Mahdi", Color.Event)
+      askCardsDiscarded(1)
+    }
+
+    setUSPosture(Hard)
+    rollPrestige()
   }
 }

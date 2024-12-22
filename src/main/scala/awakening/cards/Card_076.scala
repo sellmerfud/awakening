@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if any cells are in a Regime Change country.
+// Draw 2 cards. -2 Prestige. Shift an Ally to Neutral.
 // ------------------------------------------------------------------
 object Card_076 extends Card2(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +58,8 @@ object Card_076 extends Card2(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditions(role: Role) =
+    game.hasMuslim(m => m.inRegimeChange && m.totalCells > 0)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +72,20 @@ object Card_076 extends Card2(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role))
+      log("\nDraw two cards and add them to your hand", Color.Event)
+    else
+      log(s"\nDraw 2 cards and place them on top of the $Jihadist Bot's hand", Color.Event)
+    askCardsDrawn(2)
+    decreasePrestige(2)
+    val candidates = countryNames(game.muslims filter (_.isAlly))
+    if (candidates.isEmpty)
+      log("\nThere are no Ally Muslim countries. No shift possible.", Color.Event)
+    val name = if (isHuman(role))
+      askCountry("Select Ally Muslim country: ", candidates)
+    else
+      JihadistBot.alignGovTarget(candidates).get
+    addEventTarget(name)
+    shiftAlignmentRight(name)
   }
 }
