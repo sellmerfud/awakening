@@ -2291,14 +2291,19 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Plot in the United States")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Plot in the United States")
+        }
         val maxOps = cardOps + reserveOps
         def nextAttempt(completed: Int): Int = {
           val us = game getCountry UnitedStates
           if (completed == maxOps || totalUnused(us) == 0 || game.availablePlots.isEmpty)
           completed
           else {
+            displayHeader()
             if (completed >= cardOps)
               expendBotReserves(1)
             addOpsTarget(UnitedStates)
@@ -2331,8 +2336,13 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Travel to Untested Non-Muslim countries")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Travel to Untested Non-Muslim countries")
+        }
+
         val maxOps = cardOps + reserveOps
         def createTravelAttempt(from: String, to: String): TravelAttempt = {
           TravelAttempt(from, to, activeCells(game getCountry from) > 0)
@@ -2353,6 +2363,7 @@ object JihadistBot extends BotHelpers {
               travelFromTarget(to, adjSources filterNot (_ == to)) match {
                 case None => nextTravel(completed, destinations filterNot (_ == to))
                 case Some(from) =>
+                  displayHeader()
                   if (completed >= cardOps)
                     expendBotReserves(1)
                   performTravels(createTravelAttempt(from, to)::Nil) match {
@@ -2370,13 +2381,14 @@ object JihadistBot extends BotHelpers {
               travelFromTarget(to, sources filterNot (_ == to)) match {
                 case None => nextTravel(completed, destinations filterNot (_ == to))
                 case Some(from) =>
-                    if (completed >= cardOps)
-                    expendBotReserves(1)
-                    performTravels(createTravelAttempt(from, to)::Nil) match {
-                      case (_, true)::Nil => usedCells(to).addSleepers(1)
-                      case _ =>
-                    }
-                    nextTravel(completed + 1, destinations filterNot (_ == to))
+                  displayHeader()
+                  if (completed >= cardOps)
+                  expendBotReserves(1)
+                  performTravels(createTravelAttempt(from, to)::Nil) match {
+                    case (_, true)::Nil => usedCells(to).addSleepers(1)
+                    case _ =>
+                  }
+                  nextTravel(completed + 1, destinations filterNot (_ == to))
               }
             }
           }
@@ -2404,8 +2416,12 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Plot in Soft Non-Muslim countries")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Plot in Soft Non-Muslim countries")
+        }
         val maxOps = cardOps + reserveOps
         def nextPlotTarget(completed: Int, candidates: List[NonMuslimCountry]): Int = {
           if (completed == maxOps || candidates.isEmpty || game.availablePlots.isEmpty)
@@ -2424,6 +2440,7 @@ object JihadistBot extends BotHelpers {
               if (completed + plotsPerformed == maxOps || totalUnused(target) == 0 || game.availablePlots.isEmpty)
                 plotsPerformed
               else {
+                displayHeader()
                 if (completed + plotsPerformed >= cardOps)
                   expendBotReserves(1)
 
@@ -2460,6 +2477,14 @@ object JihadistBot extends BotHelpers {
       // travel 1 cell to the highest priority of those.
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
+          log("                and there are no Troops or Militia present")
+        }
+
         val candidates = radTravelToPoorMuslimCandidates()
         // This should always succeed because it has been vetted, but check
         // just to be safe.
@@ -2475,6 +2500,7 @@ object JihadistBot extends BotHelpers {
                 travelFromTarget(target, countryNames(game.countries.filterNot(_.name == target))) match {
                   case None => (numAttempts, false)  // No more cells
                   case Some(source) =>
+                    displayHeader()
                     val attempt = TravelAttempt(source, target, activeCells(game.getCountry(source)) > 0)
                     val (_, success) = performTravels(attempt::Nil).head
                     if (success)
@@ -2484,10 +2510,6 @@ object JihadistBot extends BotHelpers {
                 }
               }
             }
-
-            log()
-            log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
-            log("                and there are no Troops or Militia present")
 
             // Make travel attempts until one of the following:
             // - We run out of Ops
@@ -2522,8 +2544,12 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Recruit in a Muslim country with a cadre")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Recruit in a Muslim country with a cadre")
+        }
         val maxOps     = cardOps + reserveOps
         val candidates = game.getMuslims(botRecruitTargets(muslimWithCadreOnly = true)).sortBy(m => jihadDRM(m, m.isPoor))
         val target     = recruitTarget(candidates.map(_.name)).get
@@ -2533,6 +2559,7 @@ object JihadistBot extends BotHelpers {
           if (completed == maxOps || game.cellsToRecruit == 0)
             completed
           else {
+            displayHeader()
             if (completed >= cardOps)
               expendBotReserves(1)
             log(s"\n$Jihadist attempts to recruit a cell into $target")
@@ -2602,8 +2629,12 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Recruit")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Recruit")
+        }
         val target = recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
         addOpsTarget(target)
         val m = game getMuslim target
@@ -2611,6 +2642,7 @@ object JihadistBot extends BotHelpers {
           if (completed == cardOps || game.cellsToRecruit == 0)
             completed
           else {
+            displayHeader()
             log(s"$Jihadist attempts to recruit a cell into $target")
             if (m.autoRecruit) {
               log(s"Recruit is automatically successful in $target")
@@ -2654,8 +2686,12 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Travel to the United States")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Travel to the United States")
+        }
 
         def createTravelAttempt(from: String): TravelAttempt = {
           TravelAttempt(from, UnitedStates, activeCells(game getCountry from) > 0)
@@ -2672,6 +2708,7 @@ object JihadistBot extends BotHelpers {
               travelFromTarget(UnitedStates, adjSources) match {
                 case None => completed  // No more source countries
                 case Some(from) =>
+                  displayHeader()
                   performTravels(createTravelAttempt(from)::Nil) match {
                     case (_, true)::Nil => usedCells(UnitedStates).addSleepers(1)
                     case _ =>
@@ -2683,6 +2720,7 @@ object JihadistBot extends BotHelpers {
             travelFromTarget(UnitedStates, sources) match {
               case None => completed   // No more source countries
               case Some(from) =>
+                displayHeader()
                 performTravels(createTravelAttempt(from)::Nil) match {
                   case (_, true)::Nil => usedCells(UnitedStates).addSleepers(1)
                   case _ =>
@@ -2715,14 +2753,19 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Plot in the United States")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Plot in the United States")
+        }
         val maxOps = cardOps + reserveOps
         def nextAttempt(completed: Int): Int = {
           val us = game.getCountry(UnitedStates)
           if (completed == maxOps || totalUnused(us) == 0 || game.availablePlots.isEmpty)
             completed
           else {
+            displayHeader()
             if (completed >= cardOps)
               expendBotReserves(1)
             addOpsTarget(UnitedStates)
@@ -2752,8 +2795,12 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Travel 1 adjacent cell to the United States")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Travel 1 adjacent cell to the United States")
+        }
         val maxOps = cardOps + reserveOps
         // Note: Under some circumstances adjacent travel may not
         // succeed automatically, so we will continue to try as many
@@ -2765,6 +2812,7 @@ object JihadistBot extends BotHelpers {
           if (completed == maxOps || us.totalCells > 0 || sources.isEmpty)
             completed
           else {
+            displayHeader()
             if (completed >= cardOps)
               expendBotReserves(1)
             addOpsTarget(UnitedStates)
@@ -2801,8 +2849,12 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Adjacent Travel to Good Muslim countries with no troops")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Adjacent Travel to Good Muslim countries with no troops")
+        }
         val maxOps = cardOps + reserveOps
 
         def nextTravel(completed: Int, target: String): Int = {
@@ -2812,6 +2864,7 @@ object JihadistBot extends BotHelpers {
           if (completed == maxOps || sources.isEmpty)
             completed
           else {
+            displayHeader()
             if (completed >= cardOps)
               expendBotReserves(1)
             addOpsTarget(target)
@@ -2862,8 +2915,13 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Travel to Untested Non-Muslim countries")
+        var headingDisplayed = false
+        def displayHeader(): Unit = if (!headingDisplayed) {
+          headingDisplayed = true
+          log()
+          log(s"Radicalization: Travel to Untested Non-Muslim countries")
+        }
+
         val maxOps = cardOps + reserveOps
         def createTravelAttempt(from: String, to: String): TravelAttempt = {
           TravelAttempt(from, to, activeCells(game getCountry from) > 0)
@@ -2884,6 +2942,7 @@ object JihadistBot extends BotHelpers {
               travelFromTarget(to, adjSources filterNot (_ == to)) match {
                 case None => nextTravel(completed, destinations filterNot (_ == to))
                 case Some(from) =>
+                  displayHeader()
                   if (completed >= cardOps)
                     expendBotReserves(1)
                   performTravels(createTravelAttempt(from, to)::Nil) match {
@@ -2901,13 +2960,14 @@ object JihadistBot extends BotHelpers {
               travelFromTarget(to, sources filterNot (_ == to)) match {
                 case None => nextTravel(completed, destinations filterNot (_ == to))
                 case Some(from) =>
-                    if (completed >= cardOps)
-                    expendBotReserves(1)
-                    performTravels(createTravelAttempt(from, to)::Nil) match {
-                      case (_, true)::Nil => usedCells(to).addSleepers(1)
-                      case _ =>
-                    }
-                    nextTravel(completed + 1, destinations filterNot (_ == to))
+                  displayHeader()
+                  if (completed >= cardOps)
+                  expendBotReserves(1)
+                  performTravels(createTravelAttempt(from, to)::Nil) match {
+                    case (_, true)::Nil => usedCells(to).addSleepers(1)
+                    case _ =>
+                  }
+                  nextTravel(completed + 1, destinations filterNot (_ == to))
               }
             }
           }
@@ -2937,8 +2997,12 @@ object JihadistBot extends BotHelpers {
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
         val mjpName = majorJihadPriorityCountry.get
-        log()
-        log(s"Radicalization: Travel to Major Jihad Priority country ($mjpName)")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Travel to Major Jihad Priority country ($mjpName)")
+        }
         val maxOps = cardOps + reserveOps
 
         def nextAttempt(completed: Int): Int = {
@@ -2949,6 +3013,7 @@ object JihadistBot extends BotHelpers {
           if (completed == maxOps || optSource.isEmpty)
             completed
           else {
+            displayHeader()
             if (completed >= cardOps)
               expendBotReserves(1)
             addOpsTarget(mjpName)
@@ -2978,8 +3043,12 @@ object JihadistBot extends BotHelpers {
       // Returns the number of ops used
       override
       def perform(cardOps: Int, reserveOps: Int): Int = {
-        log()
-        log(s"Radicalization: Recruit")
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true          
+          log()
+          log(s"Radicalization: Recruit")
+        }
         val maxOps = cardOps + reserveOps
         val target = recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
         addOpsTarget(target)
@@ -2988,6 +3057,7 @@ object JihadistBot extends BotHelpers {
           if (completed == maxOps || game.cellsToRecruit == 0)
             completed
           else {
+            displayHeader()
             log(s"$Jihadist attempts to recruit a cell into $target")
             if (completed >= cardOps)
               expendBotReserves(1)
