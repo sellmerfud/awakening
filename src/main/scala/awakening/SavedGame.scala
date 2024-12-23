@@ -209,7 +209,7 @@ object SavedGame {
   private def playFromMap(data: Map[String, Any]): Play = {
     val params = asMap(data("params"))
     asString(data("playType")) match {
-      case "PlayedCard" if (params("secondCardNum") != null) =>
+      case "PlayedCard" if params.contains("secondCardNum") && params("secondCardNum") != null =>
         PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(asInt(params("secondCardNum"))))
       case "PlayedCard" =>
         PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), None)
