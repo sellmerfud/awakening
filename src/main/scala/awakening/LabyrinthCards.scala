@@ -1062,6 +1062,13 @@ object LabyrinthCards {
         
           // Add the card to the list of plays for the turn.
         val card = deck(askCardNumber(prompt, allowNone = false).get)
+        val newPlays = game.plays match {
+          case PlayedCard(role, firstCard, _) :: others =>
+            PlayedCard(role, firstCard, Some(card.number)) :: others
+          case _ => game.plays
+        }
+        game = game.copy(plays = newPlays)
+        logCardPlay(Jihadist, card, playable = false, secondCard = true)
 
         def nextRecruit(completed: Int): Unit = 
           if (completed < card.ops && game.cellsToRecruit > 0) {
@@ -1217,9 +1224,14 @@ object LabyrinthCards {
           s"Enter card # of the next card in the $Jihadist Bot's hand: "
         
         val card = deck(askCardNumber(prompt, allowNone = false).get)
+        val newPlays = game.plays match {
+          case PlayedCard(role, firstCard, _) :: others =>
+            PlayedCard(role, firstCard, Some(card.number)) :: others
+          case _ => game.plays
+        }
+        game = game.copy(plays = newPlays)
         // Add the card to the list of plays for the turn.
-        game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
-        logCardPlay(Jihadist, card, playable = false)
+        logCardPlay(Jihadist, card, playable = false, secondCard = true)
         val totalOps = card.ops + 1 // Add 1 for the Ops on the Madrassas card.
         
         if (role == game.humanRole)

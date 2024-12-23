@@ -197,10 +197,11 @@ object SavedGame {
 
   private def playToMap(play: Play): Map[String, Any] = {
     val params = play match {
-      case p: PlayedCard       => Map("role"  -> p.role.toString, "cardNum" -> p.cardNum)
-      case p: PlayedReassement => Map("card1" -> p.card1,         "card2"   -> p.card2)
-      case p: PlotsResolved    => Map("num"   -> p.num)
-      case p: AdjustmentMade   => Map("desc"  -> p.desc)
+      case PlayedCard(role, cardNum, None) => Map("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> null)
+      case PlayedCard(role, cardNum, Some(card2)) => Map("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> card2)
+      case PlayedReassement(card1, card2) => Map("card1" -> card1, "card2"   -> card2)
+      case PlotsResolved(num)    => Map("num" -> num)
+      case AdjustmentMade(desc)   => Map("desc" -> desc)
     }
     Map("playType" -> play.name, "params" -> params)
   }
@@ -208,11 +209,17 @@ object SavedGame {
   private def playFromMap(data: Map[String, Any]): Play = {
     val params = asMap(data("params"))
     asString(data("playType")) match {
-      case "PlayedCard"       => PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")))
+      case "PlayedCard" if (params("secondCardNum") != null) =>
+        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(asInt(params("secondCardNum"))))
+      case "PlayedCard" =>
+        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), None)
       // Account for misspelling in earlier versions
-      case "PlayedReassessment" | "PlayedReassement" => PlayedReassement(asInt(params("card1")), asInt(params("card2")))
-      case "PlotsResolved"    => PlotsResolved(asInt(params("num")))
-      case "AdjustmentMade"   => AdjustmentMade(asString(params("desc")))
+      case "PlayedReassessment" | "PlayedReassement" =>
+        PlayedReassement(asInt(params("card1")), asInt(params("card2")))
+      case "PlotsResolved" =>
+        PlotsResolved(asInt(params("num")))
+      case "AdjustmentMade" =>
+        AdjustmentMade(asString(params("desc")))
     }
   }
 

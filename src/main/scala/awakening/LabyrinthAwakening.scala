@@ -799,10 +799,15 @@ object LabyrinthAwakening {
 
   // Used to keep track of cards played during the current turn
   // for display purposes only.  This is stored in the game state.
-  case class PlayedCard(role: Role, cardNum: Int) extends CardPlay {
+  // Some cards allow the play of a second card (#48 Adam Gadahn, #53 Madrassas)
+  case class PlayedCard(role: Role, cardNum: Int, secondCardNum: Option[Int]) extends CardPlay {
     override def name = "PlayedCard"
-    override def numCards = 1
-    override def toString() = s"$role played ${cardNumAndName(cardNum)}"
+    override def numCards = if (secondCardNum.isEmpty) 1 else 2
+    override def toString() = secondCardNum match {
+      case None => s"$role played ${cardNumAndName(cardNum)}"
+      case Some(card2Num) => s"$role played ${cardNumAndName(cardNum)} and ${cardNumAndName(card2Num)}"
+    }
+      
   }
   case class PlayedReassement(card1: Int, card2: Int) extends CardPlay {
     val role = US
@@ -3300,8 +3305,11 @@ object LabyrinthAwakening {
     val turnInfo = game.plays.headOption match {
       case Some(_: PlayedReassement) =>
         s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} card play)"
-      case Some(_: PlayedCard) =>
-          s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card play)"
+      case Some(pc: PlayedCard) =>
+        pc.secondCardNum match {
+          case None    => s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card play)"
+          case Some(_) => s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} card plays)"
+        }          
       case _ =>
         s"(turn ${game.turn} - ${amountOf(cardsPlayed, "card")} played)"
     }
@@ -6884,7 +6892,7 @@ object LabyrinthAwakening {
 
       // Add the card to the list of plays for the turn.
       val thisPlay = if (!additional)
-        game = game.copy(plays = PlayedCard(US, card.number) :: game.plays)
+        game = game.copy(plays = PlayedCard(US, card.number, None) :: game.plays)
 
       cachedEventPlayableAnswer = None
 
@@ -7292,7 +7300,7 @@ object LabyrinthAwakening {
       val savedState = game
 
       // Add the card to the list of plays for the turn.
-      game = game.copy(plays = PlayedCard(Jihadist, card.number) :: game.plays)
+      game = game.copy(plays = PlayedCard(Jihadist, card.number, None) :: game.plays)
 
       cachedEventPlayableAnswer = None
       // If TheDoorOfItjihad lapsing card is in effect,
