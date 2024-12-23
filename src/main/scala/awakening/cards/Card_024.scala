@@ -39,11 +39,9 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 
-// Card Text:
-// ------------------------------------------------------------------
-// Remove a cell from a Muslim country (not Iran).
+// -------------------------------------
 // This card is a duplicate of Card 23
-// ------------------------------------------------------------------
+// -------------------------------------
 object Card_024 extends Card2(24, "Predator", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country

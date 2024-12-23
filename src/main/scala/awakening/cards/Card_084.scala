@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,13 +37,19 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Enhanced Measures, Renditions , or Wiretapping is in the Event Box.
+// Flip 1 such marker, blocking event.
+// Roll US Posture and then Prestige.
+// Shift an Ally to Neutral.
 // ------------------------------------------------------------------
 object Card_084 extends Card2(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+  val eventMarkers = List(EnhancedMeasures, Renditions, Wiretapping)
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -56,7 +62,7 @@ object Card_084 extends Card2(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAu
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditions(role: Role) = eventMarkers.exists(globalEventInPlay)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +75,36 @@ object Card_084 extends Card2(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAu
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val markers = eventMarkers.filter(globalEventInPlay)
+    val marker = if (markers.size == 1)
+      markers.head
+    else if (isHuman(role))
+      askSimpleMenu(s"Block which marker:", markers)
+    else
+      shuffle(markers).head
+    log()
+    removeGlobalEventMarker(marker)
+    val leakMarker = marker match {
+      case EnhancedMeasures => LeakEnhancedMeasures
+      case Renditions       => LeakRenditions
+      case Wiretapping      => LeakWiretapping
+    }
+    addGlobalEventMarker(leakMarker)
+    log()
+    rollUSPosture()
+    log()
+    rollPrestige()
+    log()
+    val candidates = countryNames(game.muslims.filter(_.isAlly))
+    if (candidates.isEmpty)
+      log("There are no Ally Muslim countries.  Shift not possible.", Color.Event)
+    else {
+      val name = if (isHuman(role))
+        askCountry("Select Ally Muslim country: ", candidates)
+      else
+        JihadistBot.alignGovTarget(candidates).get
+      addEventTarget(name)
+      shiftAlignmentRight(name)
+    }
   }
 }

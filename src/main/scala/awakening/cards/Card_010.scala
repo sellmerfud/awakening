@@ -39,7 +39,9 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 
+// -------------------------------------
 // This card is a duplicate of Card 8
+// -------------------------------------
 object Card_010 extends Card2(10, "Special Forces", US, 1, NoRemove, NoLapsing) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country

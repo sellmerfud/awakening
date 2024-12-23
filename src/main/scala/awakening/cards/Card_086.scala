@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// US discards a random card. -1 Prestige.
+// Place a cell in a Shia-Mix country.
 // ------------------------------------------------------------------
 object Card_086 extends Card2(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +71,25 @@ object Card_086 extends Card2(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role))
+      log(s"\nDiscard the top card of the $US Bot's hand", Color.Event)
+    else
+      log(s"\nYou ($US) must randomly discard one card", Color.Event)
+    askCardsDiscarded(1)
+    decreasePrestige(1)
+
+    if (game.cellsAvailable > 0) {
+      val candidates = countryNames(game.muslims filter (_.isShiaMix))
+      val name = if (isHuman(role))
+        askCountry("Select a Shia-Mix country: ", candidates)
+      else
+        JihadistBot.cellPlacementPriority(false)(candidates).get
+
+      addEventTarget(name)
+      testCountry(name)
+      addSleeperCellsToCountry(name, 1)
+    }
+    else
+      log("\nNo cells available to place in a Shix-Mix country", Color.Event)
   }
 }
