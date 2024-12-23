@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening. { USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Select and test a Shia-Mix country.
+// If US play, remove 1 cell there or from Iran.
+// If jihadist, make 2 jihad rolls there. Ignore failures or shift to Islamist Rule.
 // ------------------------------------------------------------------
 object Card_104 extends Card2(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,26 +52,84 @@ object Card_104 extends Card2(104, "Iran", Unassociated, 2, NoRemove, NoLapsing,
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def getBotCellCandidates() = {
+    val iran = if ((game getCountry Iran).totalCells > 0) List(Iran) else Nil
+    iran ::: countryNames(
+      game.muslims.filter(m => m.isShiaMix && m.totalCells > 0) // Bot only cares if cell can be removed
+    )
+  }
+
+  def getBotJihadCandidates() = {
+    val jihadTest   = (m: MuslimCountry) =>
+      m.isShiaMix &&
+      (m.isUntested || m.isGood || m.isFair || m.aidMarkers > 0)
+    countryNames(game.muslims.filter(jihadTest))
+  }
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    getBotCellCandidates().exists (name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => getBotCellCandidates().nonEmpty
+    case Jihadist => getBotJihadCandidates().nonEmpty
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+  def executeEvent(role: Role, forTrigger: Boolean): Unit = role match {
+    case US if isHuman(role) =>
+      val iranHasCell = game.getCountry(Iran).totalCells > 0
+      val target = askCountry("Select a Shia-Mix country: ", countryNames(game.muslims.filter(_.isShiaMix)))
+      val targetHasCell = game.getCountry(target).totalCells > 0
+      addEventTarget(target)
+      testCountry(target)
+      val removeCellFrom = (iranHasCell, targetHasCell) match {
+        case (true, false) => Iran
+        case (false, true) => target
+        case (false, false) => ""
+        case _ =>
+          val choices = List(target -> target, Iran -> Iran)
+          askMenu("Remove cell from:", choices).head
+      }
+
+      if (removeCellFrom != "") {
+        val (active, sleeper, sadr) = askCells(removeCellFrom, 1, sleeperFocus = true)
+        removeCellsFromCountry(removeCellFrom, active, sleeper, sadr, addCadre = true)
+      }
+      else
+        log(s"\nThere is no cell to remove in either $target or $Iran.", Color.Event)
+
+    case US if getBotCellCandidates().nonEmpty => // Bot
+        val name = USBot.disruptPriority(getBotCellCandidates()).get
+        val (active, sleeper, sadr) = USBot.chooseCellsToRemove(name, 1)
+        addEventTarget(name)
+        testCountry(name)
+        removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+
+    case US => // Should never get here!
+      log("\nThere are cells in Shia-Mix countries or in Iran.  The event has no effect.", Color.Event)
+
+    case Jihadist =>
+      val name = if (isHuman(role))
+        askCountry("Select a Shix-Mix country: ", countryNames(game.muslims.filter(_.isShiaMix)))
+      else
+        JihadistBot.iranTarget(getBotJihadCandidates()).get
+
+      addEventTarget(name)
+      testCountry(name)
+      performJihads(JihadTarget(name, 2, 0, false, major = false)::Nil, ignoreFailures = true)
   }
 }

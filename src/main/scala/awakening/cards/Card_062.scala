@@ -58,7 +58,7 @@ object Card_062 extends Card2(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   def willHaveEffect =
     countryEventInPlay(Russia, CTR) ||

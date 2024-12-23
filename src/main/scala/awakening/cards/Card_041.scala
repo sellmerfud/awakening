@@ -64,7 +64,7 @@ object Card_041 extends Card2(41, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrig
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     game.gwotPenalty == 0 &&
     getCandidates().nonEmpty
 

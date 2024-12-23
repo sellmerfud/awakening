@@ -56,7 +56,7 @@ object Card_144 extends Card2(144, "Operation New Dawn", US, 2, NoRemove, NoLaps
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

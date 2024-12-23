@@ -382,7 +382,7 @@ object ForeverWarCards {
       else {
         // If the last two cells on the map are in a Muslim country the the Bot will go for the win.
         // Otherwise, the bot will only remove cells if there is a country where cells outnumber
-        // troops and miliia or if the Jihadist has not cards in hand.
+        // troops and miliia or if the Jihadist has no cards in hand.
         game.hasMuslim(m => m.totalCells == 2 && game.totalCellsOnMap == 2) ||
         game.hasMuslim(m => m.totalCells - m.totalTroopsAndMilitia > 4)     ||
         cacheYesOrNo(s"Does the $Jihadist player have any cards in hand? (y/n) ") ||

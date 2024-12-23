@@ -55,7 +55,7 @@ object Card_089 extends Card2(89, "Martyrdom Operation", Jihadist, 3, NoRemove, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = Card_087.eventConditions(role)
+  def eventConditionsMet(role: Role) = Card_087.eventConditionsMet(role)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

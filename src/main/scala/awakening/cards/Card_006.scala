@@ -56,7 +56,7 @@ object Card_006 extends Card2(6, "Sanctions", US, 1, NoRemove, NoLapsing) {
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = game.getCountry(UnitedStates).hasMarker(PatriotAct)
+  def eventConditionsMet(role: Role) = game.getCountry(UnitedStates).hasMarker(PatriotAct)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

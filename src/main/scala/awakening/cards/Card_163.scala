@@ -56,7 +56,7 @@ object Card_163 extends Card2(163, "Status Quo", US, 3, NoRemove, NoLapsing, NoA
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

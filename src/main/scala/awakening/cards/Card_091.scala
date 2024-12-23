@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if you can select 2 unmarked Muslim countries (not Iran).
+// Place a cell in each, or 2 in each if any Islamist Rule.
 // ------------------------------------------------------------------
 object Card_091 extends Card2(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +56,52 @@ object Card_091 extends Card2(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(game.muslims.filter(m => m.name != Iran && m.isUntested))
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    getCandidates().size >= 2
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val maxPerTarget = if (game.numIslamistRule > 0) 2 else 1
+    val maxTargets   = if (game.cellsAvailable > maxPerTarget) 2 else 1
+    case class Target(name: String, cells: Int)
+
+    def getTargets(available: Int, candidates: List[String], existingTargets: Vector[Target]): Vector[Target] = {
+      if (available == 0 || existingTargets.size == maxTargets)
+        existingTargets
+      else {
+        val (target, numCells) = if (isHuman(role)) {
+          val num = existingTargets.size + 1
+          val name = askCountry(s"\nSelect ${ordinal(num)} unmarked Muslim country: ", candidates)
+          val numCells = maxPerTarget min available
+          (name, numCells)
+        }
+        else {
+          var name = JihadistBot.recruitTravelToPriority(candidates).get
+          val numCells = maxPerTarget min available
+          (name, numCells)
+        }
+
+        getTargets(available - numCells, candidates.filterNot(_ == target), existingTargets :+ Target(target, numCells))
+      }
+    }
+
+    for (Target(name, num) <- getTargets(game.cellsAvailable, getCandidates(), Vector.empty)) {
+      addEventTarget(name)
+      testCountry(name)
+      addSleeperCellsToCountry(name, num)
+    }
   }
 }

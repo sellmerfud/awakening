@@ -69,7 +69,7 @@ object Card_031 extends Card2(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoA
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     globalEventNotInPlay(LeakWiretapping) &&
     getCandidates().nonEmpty
 

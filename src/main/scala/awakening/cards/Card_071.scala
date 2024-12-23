@@ -60,7 +60,7 @@ object Card_071 extends Card2(71, "Loose Nuke", Jihadist, 2, Remove, NoLapsing, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     game.getCountry(Russia).totalCells > 0 &&
     countryEventNotInPlay(Russia, CTR)
 

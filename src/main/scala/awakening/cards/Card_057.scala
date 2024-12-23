@@ -59,7 +59,7 @@ object Card_057 extends Card2(57, "Abu Sayyaf", Jihadist, 2, Remove, NoLapsing, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = countryEventNotInPlay(Philippines, MoroTalks)
+  def eventConditionsMet(role: Role) = countryEventNotInPlay(Philippines, MoroTalks)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

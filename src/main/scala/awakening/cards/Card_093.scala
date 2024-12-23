@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Place Besieged Regime in Afghanistan and a cell each there and in Pakistan.
+// -1 Prestige or -3 Prestige if either at Islamist Rule.
 // ------------------------------------------------------------------
 object Card_093 extends Card2(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +58,60 @@ object Card_093 extends Card2(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, N
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
+
+  def eventEffective =
+    game.cellsAvailable > 0 ||
+    game.prestige > 1       ||
+    !game.getMuslim(Afghanistan).besiegedRegime
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = eventEffective
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (!eventEffective)
+      log("\nThe event has no effect.", Color.Event)
+    else {
+      val afghanistan = game.getMuslim(Afghanistan)
+      val pakistan    = game.getMuslim(Pakistan)
+      addEventTarget(Afghanistan)
+      addEventTarget(Pakistan)
+
+      if (!afghanistan.besiegedRegime)
+        addBesiegedRegimeMarker(Afghanistan)
+
+      if (game.cellsAvailable == 0)
+        log("\nNo cells available for placement", Color.Event)
+      else if (game.cellsAvailable > 1) {
+        testCountry(Afghanistan)
+        addSleeperCellsToCountry(Afghanistan, 1)
+        testCountry(Pakistan)
+        addSleeperCellsToCountry(Pakistan, 1)
+      }
+      else if (isHuman(role)) {
+        displayLine("There is only 1 cell available for placement", Color.Event)
+        val name = askCountry("Place a cell in which country: ", Afghanistan::Pakistan::Nil)
+        testCountry(name)
+        addSleeperCellsToCountry(name, 1)
+      }
+      else {
+        val name = JihadistBot.cellPlacementPriority(false)(Afghanistan::Pakistan::Nil).get
+        testCountry(name)
+        addSleeperCellsToCountry(name, 1)
+      }
+
+      val prestigeAmount = if (afghanistan.isIslamistRule || pakistan.isIslamistRule)
+        3
+      else
+        1
+      decreasePrestige(prestigeAmount)
+    }
   }
 }

@@ -60,7 +60,7 @@ object Card_033 extends Card2(33, "Benazir Bhutto", US, 3, Remove, NoLapsing, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = {
+  def eventConditionsMet(role: Role) = {
     val pakistan = game.getMuslim( Pakistan)
     !pakistan.hasMarker(BhuttoShot) &&
     !pakistan.isIslamistRule &&

@@ -58,7 +58,7 @@ object Card_053 extends Card2(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     firstCardOfPhase(Jihadist) &&
     cacheYesOrNo(s"Does the $Jihadist player have another card in hand? (y/n) ")
   // Returns true if the Bot associated with the given role will execute the event

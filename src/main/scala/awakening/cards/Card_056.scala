@@ -61,7 +61,7 @@ object Card_056 extends Card2(56, "Vieira de Mello Slain", Jihadist, 1, Remove, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

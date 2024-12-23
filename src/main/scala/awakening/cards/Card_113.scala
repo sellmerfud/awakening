@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,10 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Test Sudan.
+// If US Prestige High or Very High, place 1 Aid in Sudan and
+// shift 1 box toward Ally; if not, place Besieged Regime and shift
+// toward Adversary.
 // ------------------------------------------------------------------
 object Card_113 extends Card2(113, "Darfur", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +59,37 @@ object Card_113 extends Card2(113, "Darfur", Unassociated, 3, NoRemove, NoLapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => game.prestigeLevel == High || game.prestigeLevel == VeryHigh
+    case Jihadist if game.botEnhancements => false
+    case Jihadist =>
+      val sudan = game.getMuslim(Sudan)
+      (game.prestigeLevel == Low || game.prestigeLevel == Medium) &&
+      !(sudan.isAdversary && sudan.besiegedRegime)
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Sudan)
+    testCountry(Sudan)
+    if (game.prestigeLevel == High || game.prestigeLevel == VeryHigh) {
+      addAidMarker(Sudan)
+      shiftAlignmentLeft(Sudan)
+    }
+    else if (game.getMuslim(Sudan).isAdversary && game.getMuslim(Sudan).besiegedRegime)
+      log("\nThe event has no effect.", Color.Event)
+    else {
+      addBesiegedRegimeMarker(Sudan)
+      shiftAlignmentRight(Sudan)
+    }
   }
 }

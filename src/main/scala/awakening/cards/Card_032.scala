@@ -64,7 +64,7 @@ object Card_032 extends Card2(32, "Back Channel", US, 3, NoRemove, NoLapsing, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     game.usPosture == Soft &&
     getCandidates().nonEmpty &&
     cacheYesOrNo(s"Do you have a card in hand with an Ops value exactly matching the resource value of an Adversary country? ")

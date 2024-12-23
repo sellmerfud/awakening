@@ -59,7 +59,7 @@ object Card_035 extends Card2(35, "Hijab", US, 3, Remove, NoLapsing, NoAutoTrigg
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = game.numIslamistRule == 0
+  def eventConditionsMet(role: Role) = game.numIslamistRule == 0
     
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

@@ -57,7 +57,7 @@ object Card_075 extends Card2(75, "Schroeder & Chirac", Jihadist, 2, Remove, NoL
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = (game.usPosture == Hard)
+  def eventConditionsMet(role: Role) = (game.usPosture == Hard)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

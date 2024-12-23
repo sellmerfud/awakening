@@ -58,7 +58,7 @@ object Card_050 extends Card2(50, "Ansar al-Islam", Jihadist, 1, Remove, NoLapsi
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     !game.getMuslim(Iraq).isUntested &&
     !game.getMuslim(Iraq).isGood
 

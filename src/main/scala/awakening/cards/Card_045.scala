@@ -59,7 +59,7 @@ object Card_045 extends Card2(45, "Safer Now", US, 3, NoRemove, NoLapsing, NoAut
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     game.numIslamistRule == 0 &&
     !game.hasCountry(c => c.isGood && (c.totalCells > 0 || c.plots.nonEmpty))
 

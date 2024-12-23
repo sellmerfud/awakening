@@ -57,7 +57,7 @@ object Card_012 extends Card2(12, "Al-Azhar", US, 2, NoRemove, NoLapsing) {
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = !game.getMuslim(Egypt).isUntested || game.funding > 1
+  def eventConditionsMet(role: Role) = !game.getMuslim(Egypt).isUntested || game.funding > 1
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

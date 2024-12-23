@@ -61,7 +61,7 @@ object Card_061 extends Card2(61, "Detainee Release", Jihadist, 2, NoRemove, NoL
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(GTMO) &&
     globalEventNotInPlay(Renditions) &&
     getCandidates().nonEmpty

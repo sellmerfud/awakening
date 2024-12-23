@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,12 +38,19 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if at least 2 cells in a Regime Change country.
+// Remove the 2 cells. Roll Prestige. Draw a card.
 // ------------------------------------------------------------------
 object Card_109 extends Card2(109, "Tora Bora", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
+
+ def getCandidates() = countryNames(
+    game.muslims.filter(m => m.inRegimeChange && m.totalCells > 1)
+  )
+
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -52,11 +59,12 @@ object Card_109 extends Card2(109, "Tora Bora", Unassociated, 2, Remove, NoLapsi
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 2))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +77,28 @@ object Card_109 extends Card2(109, "Tora Bora", Unassociated, 2, Remove, NoLapsi
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val (name, (actives, sleepers, sadr)) = if (isHuman(role)) {
+      val name = askCountry("Select a Regime Change country with 2+ cells: ", getCandidates())
+      (name, askCells(name, 2, sleeperFocus = role == US))
+    }
+    else if (role == US) {
+      val name = USBot.disruptPriority(getCandidates()).get
+      (name, USBot.chooseCellsToRemove(name, 2))
+    }
+    else {
+      val priorities = List(JihadistBot.MostCellsPriority)
+      val candidates = getCandidates().map(game.getCountry)
+      val name = JihadistBot.topPriority(candidates, priorities).map(_.name).get
+      (name, JihadistBot.chooseCellsToRemove(name, 2))
+    }
+
+    addEventTarget(name)
+    removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+    rollPrestige()
+    if (role == game.humanRole)
+      log(s"\nDraw a card and add it to your hand", Color.Event)
+    else
+      log(s"\nDraw a card and place it on top of the $role Bot's hand", Color.Event)
+    askCardsDrawn(1)
   }
 }

@@ -65,7 +65,7 @@ object Card_003 extends Card2(3, "CTR", US, 1, NoRemove, NoLapsing) {
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = {
+  def eventConditionsMet(role: Role) = {
     val russia = game.getNonMuslim(Russia)
     val cAsia  = game.getMuslim(CentralAsia)
     val russiaOK = !russia.hasMarker(CTR)

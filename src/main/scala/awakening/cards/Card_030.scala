@@ -65,7 +65,7 @@ object Card_030 extends Card2(30, "UN Nation Building", US, 2, NoRemove, NoLapsi
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     globalEventNotInPlay(VieiraDeMelloSlain) && 
     getCandidates().nonEmpty
 

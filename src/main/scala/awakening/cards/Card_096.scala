@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,11 +37,15 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// US side selects Scandinavia's Posture.
+// Then jihadists place an available Plot 1 or, if any Islamist Rule,
+// any available plot in a non-Islamist Rule Muslim country.
 // ------------------------------------------------------------------
 object Card_096 extends Card2(96, "Danish Cartoons", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +60,55 @@ object Card_096 extends Card2(96, "Danish Cartoons", Unassociated, 1, Remove, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
+
+  def getPlotCandidates() = if (game.numIslamistRule == 0)
+    game.availablePlots.filter(_ == Plot1)
+  else
+    game.availablePlots
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    (role == Jihadist && getPlotCandidates().nonEmpty) ||
+    (role == US && getPlotCandidates().isEmpty)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val posture = if (isHuman(US))
+      askSimpleMenu(s"New posture of Scandinavia: ", List(Soft, Hard))
+    else
+      game.usPosture
+
+    addEventTarget(Scandinavia)
+    setCountryPosture(Scandinavia, posture)
+
+    val plotCandidates = getPlotCandidates()
+    if (plotCandidates.nonEmpty) {
+      log()
+      val plot = plotCandidates match {
+        case p::Nil => p
+        case plots if game.botRole == Jihadist => shuffle(plots).head
+        case plots => askPlots(plots, 1).head
+      }
+      val candidates = countryNames(game.muslims filter (!_.isIslamistRule))
+      val name = if (isHuman(Jihadist))
+        askCountry(s"Place $plot in which country: ", candidates)
+      else
+        JihadistBot.plotPriority(candidates).get
+
+      addEventTarget(name)
+      testCountry(name)
+      addAvailablePlotToCountry(name, plot)
+    }
+    else if (game.numIslamistRule == 0)
+      log("\nThere is no available Plot 1.", Color.Event)
+    else
+      log("\nThere are no available Plots.", Color.Event)
   }
 }

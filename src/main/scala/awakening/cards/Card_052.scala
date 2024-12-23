@@ -57,7 +57,7 @@ object Card_052 extends Card2(52, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAu
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     game.hasMuslim(m => m.inRegimeChange && m.totalCells > 0) &&
     cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
 

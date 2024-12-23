@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if both sides have cards beyond this one.
+// Trade random cards.
+// Then conduct an operation with this card.
 // ------------------------------------------------------------------
 object Card_097 extends Card2(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +59,7 @@ object Card_097 extends Card2(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = cacheYesOrNo("Do both players have at least one card in hand? (y/n) ")
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +72,23 @@ object Card_097 extends Card2(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    log(s"\nTake the top card of the ${game.botRole} Bot's hand.", Color.Event)
+    askCardsDrawn(1)
+
+    log("\nPut a random card from your hand (not including the one you just took)", Color.Event)
+    log(s"on top card of the ${game.botRole} Bot's hand.", Color.Event)
+    askCardsDrawn(1)
+
+    val thisCard = this.asInstanceOf[Card]
+    (role) match {
+      case US if isHuman(role) =>
+        humanUsCardPlay(thisCard, false)
+      case US =>
+        USBot.cardPlay(thisCard, false)
+      case Jihadist if isHuman(role) =>
+        humanJihadistCardPlay(thisCard, false)
+      case Jihadist =>
+        JihadistBot.cardPlay(thisCard, false)
+    }
   }
 }

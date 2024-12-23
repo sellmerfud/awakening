@@ -59,7 +59,7 @@ object Card_036 extends Card2(36, "Indo-Pakistani Talks", US, 3, Remove, NoLapsi
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     game.getMuslim(Pakistan).isGood || game.getMuslim(Pakistan).isFair
 
 

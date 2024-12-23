@@ -57,7 +57,7 @@ object Card_079 extends Card2(79, "Clean Operatives", Jihadist, 3, NoRemove, NoL
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = game.cellsOnMap > 0
+  def eventConditionsMet(role: Role) = game.cellsOnMap > 0
 
 
   // Returns true if the Bot associated with the given role will execute the event

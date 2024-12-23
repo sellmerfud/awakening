@@ -60,7 +60,7 @@ object Card_034 extends Card2(34, "Enhanced Measures", US, 3, NoRemove, NoLapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     globalEventNotInPlay(LeakEnhancedMeasures) &&
     game.usPosture == Hard &&
     game.disruptTargets(3).nonEmpty

@@ -59,7 +59,7 @@ object Card_044 extends Card2(44, "Renditions", US, 3, NoRemove, NoLapsing, NoAu
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     globalEventNotInPlay(LeakRenditions) &&
     game.usPosture == Hard
 

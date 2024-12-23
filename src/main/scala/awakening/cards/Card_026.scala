@@ -57,7 +57,7 @@ object Card_026 extends Card2(26, "Quartet", US, 2, NoRemove, NoLapsing, NoAutoT
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = {
+  def eventConditionsMet(role: Role) = {
     globalEventInPlay(Abbas) &&
     game.troopCommitment != Overstretch &&
     !game.adjacentToIslamistRule(Israel)

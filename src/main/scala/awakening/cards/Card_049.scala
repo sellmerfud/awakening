@@ -56,7 +56,7 @@ object Card_049 extends Card2(49, "Al-Ittihad al-Islami", Jihadist, 1, Remove, N
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

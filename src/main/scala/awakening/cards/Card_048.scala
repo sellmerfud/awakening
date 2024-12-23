@@ -58,7 +58,7 @@ object Card_048 extends Card2(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     firstCardOfPhase(Jihadist) &&
     game.cellsToRecruit > 0    &&
     cacheYesOrNo(s"Does the $Jihadist player have another card in hand? (y/n) ")

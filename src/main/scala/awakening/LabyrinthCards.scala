@@ -2865,7 +2865,7 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(120, "US Election", Unassociated, 3,
       NoRemove, NoLapsing, AutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      NeverPlayable,  // No directly playable, but will always auto trigger
+      NeverPlayable,  // Not directly playable, but will always auto trigger
       (role: Role, forTrigger: Boolean) => {
         if (lapsingEventInPlay(USConsulateAttacked)) {
           log("US Consulate Attacked event is lapsing")

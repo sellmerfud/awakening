@@ -57,7 +57,7 @@ object Card_073 extends Card2(73, "Pirates", Jihadist, 2, Remove, NoLapsing, NoA
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     globalEventNotInPlay(MaerskAlabama) &&
     pirates1ConditionsInEffect // Neither country under Islamist Rule
 

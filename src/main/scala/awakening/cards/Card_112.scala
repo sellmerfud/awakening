@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// US may play if no Islamist Rule, FATA , or Al-Anbar :
+// -4 Funding, +1 prestige. REMOVE this card.
+// If jihadist play; -2 Prestige, or -4 Prestige if any Islamist Rule
 // ------------------------------------------------------------------
 object Card_112 extends Card2(112, "Bin Ladin", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +58,36 @@ object Card_112 extends Card2(112, "Bin Ladin", Unassociated, 3, USRemove, NoLap
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = role match {
+    case US => game.numIslamistRule == 0 &&
+               globalEventNotInPlay(AlAnbar) &&
+               countryEventNotInPlay(Pakistan, FATA)
+    case Jihadist => true
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => game.funding > 1 || game.prestige < 12
+    case Jihadist => game.prestige > 1
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    def executeEvent(role: Role, forTrigger: Boolean): Unit = role match {
+      case US if game.funding > 1 || game.prestige < 12 =>
+        decreaseFunding(4)
+        increasePrestige(1)
+
+      case Jihadist if game.prestige > 1 =>
+        val amount = if (game.numIslamistRule > 0) 4 else 2
+        decreasePrestige(amount)
+
+      case _ =>
+        log("\nThe event has no effect.", Color.Event)
   }
 }

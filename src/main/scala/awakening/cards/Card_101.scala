@@ -41,7 +41,7 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// +1 Prestige. Set Serbia to opposite of US Posture.
 // ------------------------------------------------------------------
 object Card_101 extends Card2(101, "Kosovo", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +56,26 @@ object Card_101 extends Card2(101, "Kosovo", Unassociated, 1, NoRemove, NoLapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+        role == US || !game.getNonMuslim(Serbia).isOppositeUsPosture
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Serbia)
+     if (game.prestige == 12 && game.getNonMuslim(Serbia).isOppositeUsPosture)
+      log("\nThe event has no effect.", Color.Event)
+    else {
+      increasePrestige(1)
+      setCountryPosture(Serbia, oppositePosture(game.usPosture))
+    }
   }
 }

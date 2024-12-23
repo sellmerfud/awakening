@@ -58,7 +58,7 @@ object Card_029 extends Card2(29, "Tony Blair", US, 2, Remove, NoLapsing, NoAuto
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   def botCandidates() = Schengen
     .filter(n => game.getNonMuslim(n).isUntested || game.getNonMuslim(n).posture != game.usPosture)

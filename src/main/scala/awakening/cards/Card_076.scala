@@ -58,7 +58,7 @@ object Card_076 extends Card2(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     game.hasMuslim(m => m.inRegimeChange && m.totalCells > 0)
 
   // Returns true if the Bot associated with the given role will execute the event

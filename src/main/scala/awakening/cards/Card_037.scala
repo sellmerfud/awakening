@@ -58,7 +58,7 @@ object Card_037 extends Card2(37, "Iraqi WMD", US, 3, Remove, NoLapsing, NoAutoT
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) =
+  def eventConditionsMet(role: Role) =
     game.usPosture == Hard &&
     game.getMuslim(Iraq).isAdversary
 

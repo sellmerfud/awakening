@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Indonesia or an adjacent country has a cell and is Ally or Hard.
+// If US play, remove the cell, draw 2 cards, REMOVE this card.
+// If jihadist, place an available plot there.
 // ------------------------------------------------------------------
 object Card_115 extends Card2(115, "Hambali", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,26 +52,68 @@ object Card_115 extends Card2(115, "Hambali", Unassociated, 3, USRemove, NoLapsi
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def getCandidates() = {
+    val possibles = game.getCountries(IndonesiaMalaysia :: getAdjacent(IndonesiaMalaysia))
+    countryNames(possibles.filter {
+      case m: MuslimCountry    => m.totalCells > 0 && m.isAlly
+      case n: NonMuslimCountry => n.totalCells > 0 && n.isHard
+    })
+  }
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean = getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => true
+    case Jihadist => game.availablePlots.nonEmpty
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
-  }
+  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+    role match {
+      case US =>
+        val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
+          val name = askCountry("Select country: ", getCandidates())
+          (name, askCells(name, 1, sleeperFocus = true))
+        }
+        else {
+          val name = USBot.disruptPriority(getCandidates()).get
+          (name, USBot.chooseCellsToRemove(name, 1))
+        }
+
+        addEventTarget(name)
+        removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+        log(s"\n$US player draw 2 cards", Color.Event)
+        askCardsDrawn(2)
+
+      case Jihadist if game.availablePlots.nonEmpty =>
+        val (name, plot) = if (isHuman(role)) {
+          val name = askCountry("Select country: ", getCandidates())
+          (name, askAvailablePlots(1, ops = 3).head)
+        }
+        else {
+          val name = JihadistBot.plotPriority(getCandidates()).get
+          (name, JihadistBot.preparePlots(game.availablePlots).head)
+        }
+
+        addEventTarget(name)
+        testCountry(name)
+        addAvailablePlotToCountry(name, plot)
+
+      case Jihadist =>
+        log("\nNo available plots. The event has no effect", Color.Event)
+    }
 }

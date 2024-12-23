@@ -60,7 +60,7 @@ object Card_028 extends Card2(28, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTr
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditions(role: Role) = true
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -74,7 +74,7 @@ object Card_028 extends Card2(28, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTr
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = getCandidates() match {
     case Nil =>
-      log(s"The event has not effect.", Color.Event)
+      log(s"The event has no effect.", Color.Event)
       log(s"There are no Besieged Regime markers on the map.", Color.Event)
     case candidates =>
       val name = if (isHuman(role))
