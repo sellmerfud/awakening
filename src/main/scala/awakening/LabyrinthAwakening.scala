@@ -6346,11 +6346,15 @@ object LabyrinthAwakening {
     else {
       val gameChoices = games.toList map { name =>
         val desc = loadGameDescription(name)
+        val descParts = if (desc == "")
+          Seq(s""""$name"""")
+        else
+          s""""$name"""" +: desc.split(",").toSeq.map(_.trim)
         val suffix = if (desc == "") "" else s", $desc"
-        name -> s"Resume '$name'$suffix"
+        name -> ("Resume", descParts)
       }
-      val choices = ("--new-game--" -> "Start a new game") :: gameChoices ::: List("--quit-game--" -> "Quit")
-      askMenu("Which game would you like to play:", choices, allowAbort = false).head match {
+      val choices = ("--new-game--" -> ("Start a new game", Seq.empty)) :: gameChoices ::: List("--quit-game--" -> ("Quit", Seq.empty))
+      askMenuWithWrap(choices, "Which game would you like to play:", allowAbort = false).head match {
         case "--new-game--"  => None
         case "--quit-game--" => throw ExitGame
         case name            => Some(name)
