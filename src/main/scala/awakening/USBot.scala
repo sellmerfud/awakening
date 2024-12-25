@@ -764,13 +764,13 @@ object USBot extends BotHelpers {
    topPriority(names map game.getCountry, disruptPriorities) map (_.name) 
   }
   
-  // Narrow a list of Muslim countries to those were the
+  // Narrow a list of Muslim countries to those where the
   // number of cells - (troops + militia) is highest.
   def highestCellsMinusTandM(names: List[String]): List[String] = {
-    val muslims = names map game.getMuslim
+    val muslims = names.map(game.getMuslim)
     val score = (m: MuslimCountry) => m.totalCells - m.totalTroopsAndMilitia
-    val high = (muslims map score).max
-    muslims filter (m => score(m) == high) map (_.name)
+    val high = muslims.map(score).max
+    muslims.filter(m => score(m) == high).map(_.name)
   }
   
   // ------------------------------------------------------------------
@@ -1145,8 +1145,11 @@ object USBot extends BotHelpers {
   
   
   def wouldRemoveLastCell(target: String, numToRemove: Int): Boolean = {
-    val totalCells = game.getCountry(target).totalCells
-    game.totalCellsOnMap <= numToRemove && totalCells == game.totalCellsOnMap
+    val targetCells = game.getCountry(target).totalCells
+
+    targetCells > 0 &&
+    targetCells == game.totalCellsOnMap &&
+    numToRemove >= targetCells
   }
   
   

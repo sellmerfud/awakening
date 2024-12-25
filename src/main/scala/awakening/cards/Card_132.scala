@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,11 +37,13 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Remove 1 Cell and place up to 2 Militia in any country in Civil War.
 // ------------------------------------------------------------------
 object Card_132 extends Card2(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,26 +51,50 @@ object Card_132 extends Card2(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def getCandidates() = countryNames(game.muslims.filter(m => m.civilWar))
+  def getCandidatesWithCells() = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    getCandidatesWithCells().exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    game.militiaAvailable > 0 ||
+    getCandidatesWithCells().nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+      val target = askCountry("Select civil war country: ", getCandidates())
+      (target, askCells(target, 1, sleeperFocus = true))
+    }
+    else {
+      // Bot chooses the candidate with the where (totalCells - TandM) is highest.
+      val target = if (getCandidatesWithCells().nonEmpty && game.totalCellsOnMap == 1)
+        getCandidatesWithCells().head
+      else {
+        val best = USBot.highestCellsMinusTandM(getCandidates())
+        shuffle(best).head
+      }
+      (target, USBot.chooseCellsToRemove(target, 1))
+    }
+
+    println()
+    addEventTarget(target)
+    removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    addMilitiaToCountry(target, game.militiaAvailable min 2)
   }
 }

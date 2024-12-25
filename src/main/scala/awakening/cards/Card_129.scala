@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if there is a Cell in or within two countries of a country with
+// Troops or Advisors. Remove the Cell.
 // ------------------------------------------------------------------
 object Card_129 extends Card2(129, "Special Forces", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,14 +51,30 @@ object Card_129 extends Card2(129, "Special Forces", US, 1, NoRemove, NoLapsing,
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  // Countries with cells that are not within two countries with troops/advisor
+  def getCandidates() = {
+    // First find all countries with troops or "Advisors"
+    val withForces = countryNames(game.countries.filter(c => c.totalTroops > 0 || c.hasMarker(Advisors)))
+    // Next get all countries that contain any cells and filter out the ones are are not
+    // within two of a country with forces.
+    countryNames(game.countries
+      .filter { country =>
+          country.totalCells > 0 &&
+          (withForces.exists(forces => distance(forces, country.name) <= 2))
+      }
+    )
+  }
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +87,18 @@ object Card_129 extends Card2(129, "Special Forces", US, 1, NoRemove, NoLapsing,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val target = if (isHuman(role))
+      askCountry("Remove cell in which country: ", getCandidates())
+    else
+      USBot.disruptPriority(getCandidates()).get
+
+    val (actives, sleepers, sadr) = if (isHuman(role))
+      askCells(target, 1, sleeperFocus = true)
+    else
+      USBot.chooseCellsToRemove(target, 1)
+
+    println()
+    addEventTarget(target)
+    removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,11 +37,16 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Immediately ends Sequestration.
+// Then play if 6+ Troops on Track.
+// If event played, US (even if Soft), must perform a Regime Change
+// Operation in any country in Civil War. Remove Civil War marker there.
 // ------------------------------------------------------------------
 object Card_152 extends Card2(152, "Congress Acts", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +59,47 @@ object Card_152 extends Card2(152, "Congress Acts", US, 3, NoRemove, NoLapsing, 
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCivilWars() = countryNames(game.muslims.filter(_.civilWar))
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    globalEventInPlay(Sequestration) ||
+    (game.troopsAvailable >= 6 && getCivilWars().nonEmpty)
 
+
+  def botCandidates() = countryNames(
+    game.muslims.filter(m => m.civilWar && m.totalCells > m.totalTroopsAndMilitia)
+  )
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    game.numIslamistRule > 2 &&
+    game.usPosture == Soft &&
+    botCandidates().nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (globalEventInPlay(Sequestration))
+      removeGlobalEventMarker(Sequestration)
+
+    if (isHuman(role)) {
+      if (game.troopsAvailable >= 6 && getCivilWars().nonEmpty) {
+        val target = askCountry("Select country: ", getCivilWars())
+        val numTroops = askInt("Deploy how many troops from the track", 6, game.troopsAvailable, Some(6))
+        addEventTarget(target)
+        performRegimeChange("track", target, numTroops)
+      }
+    }
+    else {
+      val target = shuffle(USBot.highestCellsMinusTandM(botCandidates())).head
+      addEventTarget(target)
+      performRegimeChange("track", target, 6)  // Bot always uses exactly 6 troops for regime change
+    }
   }
 }

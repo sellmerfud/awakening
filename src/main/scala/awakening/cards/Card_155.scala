@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Additional -1 Funding at end of Turn until next Event play of Oil Price Spike.
+// Roll Prestige. Draw a card.
 // ------------------------------------------------------------------
 object Card_155 extends Card2(155, "Fracking", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +70,9 @@ object Card_155 extends Card2(155, "Fracking", US, 3, NoRemove, NoLapsing, NoAut
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addGlobalEventMarker(Fracking)
+    rollPrestige()
+    log("\nUS player draws a card", Color.Event)
+    askCardsDrawn(1)
   }
 }

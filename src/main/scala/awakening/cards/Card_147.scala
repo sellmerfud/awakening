@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in a Poor, non-Ally country with unavailable WMD (not Pakistan).
+// Remove 1 unavailable WMD there. (+1 Prestige if WMD Removed; 11.3.)
+// Place 1 Cell in Israel.
+// +1 Funding.
 // ------------------------------------------------------------------
 object Card_147 extends Card2(147, "Strike Eagle", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +58,21 @@ object Card_147 extends Card2(147, "Strike Eagle", US, 2, NoRemove, NoLapsing, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  // Per Errata: If playing a campaign game this event cannot target WMD
+  // in Russia or Central Asia
+  val forbidden = Set(Pakistan, Russia, CentralAsia)
+
+  val isCandidate = (m: MuslimCountry) =>
+    !forbidden(m.name) &&
+    m.isPoor &&
+    !m.isAlly &&
+    m.wmdCache > 0
+
+  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +85,16 @@ object Card_147 extends Card2(147, "Strike Eagle", US, 2, NoRemove, NoLapsing, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val target = if (isHuman(role))
+      askCountry("Select country: ", getCandidates())
+    else
+      USBot.disruptPriority(getCandidates()).get
+
+    println()
+    addEventTarget(target)
+    removeCachedWMD(target, 1) // Handles bumping prestige!
+    if (game.cellsAvailable > 0)
+      addSleeperCellsToCountry(Israel, 1)
+    increaseFunding(1)
   }
 }

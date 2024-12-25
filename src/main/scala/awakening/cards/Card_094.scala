@@ -75,7 +75,7 @@ object Card_094 extends Card2(94, "The door of Itjihad was closed", Jihadist, 3,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-        val name = if (role == game.humanRole)
+        val name = if (isHuman(role))
           askCountry("Select country to worsen governance: ", getCandidates())
         else
           JihadistBot.alignGovTarget(getCandidates()).get

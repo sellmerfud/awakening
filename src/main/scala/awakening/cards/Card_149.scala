@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if a country is marked with Regime Change or Civil War.
+// Place 1 Aid there and roll a War of Ideas as if GWOT Penalty 0.
+// ** Not in Caliphate Member **
 // ------------------------------------------------------------------
 object Card_149 extends Card2(149, "UN Nation Building", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +57,17 @@ object Card_149 extends Card2(149, "UN Nation Building", US, 2, NoRemove, NoLaps
   override
   def eventRemovesLastCell(): Boolean = false
 
+  val isCandidate = (m: MuslimCountry) =>
+    (m.inRegimeChange || m.civilWar) &&
+    !game.isCaliphateMember(m.name) &&
+    !m.isAdversary &&       // Cannot perform WoI in adversary
+    !(m.isGood && m.isAlly) // Cannot perform WoI in Good Ally
+
+  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +80,13 @@ object Card_149 extends Card2(149, "UN Nation Building", US, 2, NoRemove, NoLaps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val target = if (isHuman(role))
+      askCountry("Select country: ", getCandidates())
+    else
+      USBot.markerAlignGovTarget(getCandidates()).get
+
+    addEventTarget(target)
+    addAidMarker(target)
+    performWarOfIdeas(target, 3, ignoreGwotPenalty = true)
   }
 }

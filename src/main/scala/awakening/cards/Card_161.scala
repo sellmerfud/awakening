@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,21 +38,25 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Activate half (rounded up) of all Sleeper Cells on the map,
+// OR Alert all Plots on the map.
+// -1 Prestige.
 // ------------------------------------------------------------------
 object Card_161 extends Card2(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
-  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = ???
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean =
+    game.hasCountry(_.hasPlots) // The event alerts ALL plot on the map.
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean = false
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -62,13 +66,83 @@ object Card_161 extends Card2(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTr
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    game.hasCountry(_.hasPlots) || game.sleeperCellsOnMap >= 5
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role)) {
+      val choices = List(
+        choice(game.sleeperCellsOnMap > 0, "activate", "Activate half (rounded up) of all sleeper cells on the map"),
+        choice(game.alertTargets.nonEmpty, "alert", "Alert all plots on the map")
+      ).flatten
+
+      if (choices.isEmpty && game.prestige == 1)
+        log("\nNo sleeper cells or plots on the map and prestige is 1. The event has no effect.", Color.Event)
+
+      if (choices.nonEmpty) {
+        askMenu("Choose one:", choices).head match {
+          case "activate" =>
+            val numToFlip = (game.sleeperCellsOnMap + 1) / 2  // half rounded up
+            // Ask which cells to activate
+            val withSleepers = game.countries
+              .filter(_.sleeperCells > 0)
+              .map(c => MapItem(c.name, c.sleeperCells))
+
+            println(s"Activate a total of ${amountOf(numToFlip, "sleeper cell")}")
+            val toFlip = askMapItems(withSleepers.sortBy(_.country), numToFlip, "sleeper cell")
+
+            // It is possible that the same country was chosen multiple times
+            // Consolidate them so we do 1 flip per country.
+            def flipNextBatch(remaining: List[MapItem]): Unit = {
+              if (remaining.nonEmpty) {
+                val name = remaining.head.country
+                val (batch, next) = remaining.partition(_.country == name)
+                val total = batch.foldLeft(0) { (sum, x) => sum + x.num }
+                addEventTarget(name)
+                flipSleeperCells(name, total)
+                flipNextBatch(next)
+              }
+            }
+            flipNextBatch(toFlip)
+
+          case _ =>
+            for (c <- game.countries; p <- c.plots)  {// Alert all plots on the map
+              addEventTarget(c.name)
+              performAlert(c.name, humanPickPlotToAlert(c.name))
+            }
+        }
+      }
+      // Even of neither action above was possible.
+      if (game.prestige > 1)
+        decreasePrestige(1)
+    }
+    else {
+      // See Event Instructions table
+      if (game hasCountry (_.hasPlots))
+        for (c <- game.countries; p <- c.plots)  {// Alert all plots on the map
+          addEventTarget(c.name)
+          performAlert(c.name, humanPickPlotToAlert(c.name))
+        }
+      else {
+        val candidates = countryNames(game.countries.filter(_.sleeperCells > 0))
+        def flipNext(numLeft: Int, targets: List[String]): Unit = {
+          if (numLeft > 0 && targets.nonEmpty) {
+            var name = USBot.disruptPriority(targets).get
+            val c = game getCountry name
+            addEventTarget(name)
+            val num = numLeft min c.sleeperCells
+            flipSleeperCells(name, num)
+            flipNext(numLeft - num, targets.filterNot(_ == name))
+          }
+        }
+
+        flipNext((game.sleeperCellsOnMap + 1) / 2, candidates)
+      }
+      decreasePrestige(1)
+    }
   }
 }

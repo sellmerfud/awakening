@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if US Hard.
+// Place 2 Troops from Track and an Aid marker in a country in Civil War,
+// even if not Ally. Place an Awakening marker in an Adjacent country.
 // ------------------------------------------------------------------
 object Card_157 extends Card2(157, "Limited Deployment", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +57,14 @@ object Card_157 extends Card2(157, "Limited Deployment", US, 3, NoRemove, NoLaps
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(game.muslims.filter(_.civilWar))
+
+  def awakeningCandidates(civilWarName: String) =
+    countryNames(game.adjacentMuslims(civilWarName).filter(_.canTakeAwakeningOrReactionMarker))
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.usPosture == Hard && getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +77,29 @@ object Card_157 extends Card2(157, "Limited Deployment", US, 3, NoRemove, NoLaps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val (target, adjacent) = if (isHuman(role)) {
+      val t = askCountry("Select country: ", getCandidates())
+      awakeningCandidates(t) match {
+        case Nil =>
+          log("\nThere are no adjacent countries that can take an awakening marker.", Color.Event)
+          (t, None)
+        case _ if lapsingEventInPlay(ArabWinter) =>
+          (t, None)
+        case candidates =>
+          (t, Some(askCountry("Place awakening marker in which adjacent country: ", candidates)))
+      }
+    }
+    else {
+      val t = USBot.deployToPriority(USBot.highestCellsMinusTandM(getCandidates())).get
+      (t, USBot.markerAlignGovTarget(awakeningCandidates(t)))
+    }
+
+    addEventTarget(target)
+    moveTroops("track", target, 2 min game.troopsAvailable)
+    addAidMarker(target)
+    if (lapsingEventInPlay(ArabWinter))
+      log("\nAwakening markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
+    else
+      adjacent foreach { name => addAwakeningMarker(name) }
   }
 }

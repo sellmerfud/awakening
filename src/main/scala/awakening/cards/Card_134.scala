@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Place 1 Awakening marker in a Sunni country, and then roll to place
+// another via the Random Shia-Mix Country table (9.5). If not placeable
+// there, roll again.
 // ------------------------------------------------------------------
 object Card_134 extends Card2(134, "Civil Resistance", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +59,7 @@ object Card_134 extends Card2(134, "Civil Resistance", US, 2, NoRemove, NoLapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = lapsingEventNotInPlay(ArabWinter)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +72,50 @@ object Card_134 extends Card2(134, "Civil Resistance", US, 2, NoRemove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    var markerPlaced = false
+    val sunnis = countryNames(game.muslims.filter(m => m.isSunni && m.canTakeAwakeningOrReactionMarker))
+    if (sunnis.nonEmpty) {  // This should never happen, but let's be defensive
+      val sunniTarget = if (isHuman(role))
+        askCountry("Select a Sunni country: ", sunnis)
+      else
+        USBot.markerAlignGovTarget(sunnis).get
+
+      println()
+      addEventTarget(sunniTarget)
+      addAwakeningMarker(sunniTarget)
+      markerPlaced = true
+    }
+
+    if (randomShiaMixList.exists(_.canTakeAwakeningOrReactionMarker)) {
+      if (game.manualDieRolls) {
+        val candidates = countryNames(randomShiaMixList.filter(_.canTakeAwakeningOrReactionMarker))
+        val shiaMix = askCountry(
+          "Select \"Random Shia Mix\" country to receive Awakening marker: ",
+          candidates,
+          allowAbort = true)
+        println()
+        addEventTarget(shiaMix)
+        addAwakeningMarker(shiaMix)
+        markerPlaced = true
+      }
+      else {
+        def doRandomShiaMix: Unit = {
+          val shiaMix = randomShiaMixCountry
+          if (shiaMix.canTakeAwakeningOrReactionMarker) {
+            println()
+            addEventTarget(shiaMix.name)
+            addAwakeningMarker(shiaMix.name)
+            markerPlaced = true
+          }
+          else
+            doRandomShiaMix
+        }
+
+        doRandomShiaMix
+      }
+    }
+
+    if (!markerPlaced)
+      log("\nThe event has no effect.", Color.Event)
   }
 }

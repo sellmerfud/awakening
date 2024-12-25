@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,13 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Search though the discard pile and Select, reveal and draw 1 of
+// the following into hand:
+// #219 Ayman al-Zawahiri
+// #215 Abu Bakr al-Baghdadi
+// #57  Abu Sayyaf (ISIL.),
+// #225 Jihadi John,
+// #237 Osama bin Ladin
 // ------------------------------------------------------------------
 object Card_160 extends Card2(160, "Operation Neptune Spear", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,6 +60,8 @@ object Card_160 extends Card2(160, "Operation Neptune Spear", US, 3, NoRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  val candidateCards = List(219, 215, 57, 225, 237)
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
@@ -62,13 +70,28 @@ object Card_160 extends Card2(160, "Operation Neptune Spear", US, 3, NoRemove, N
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = cacheYesOrNo("Is one of the indicated cards in the discard pile (y/n)? ")
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val choices = candidateCards.map(n => n -> deck(n).numAndName) :+
+      (0, "No card was drawn")
+
+    val prompt = if (isHuman(role))
+      "\nSelect a card from the discard pile:"
+    else  // See Event Instructions table
+      "\nThe Bot selects the card that is nearest the bottom of the discard pile:"
+
+    askMenu(prompt, choices).head match {
+      case 0 =>
+        log("\nNo card was drawn from the discard pile", Color.Event)
+      case n if isHuman(role) =>
+        log(s"\nThe $US player selected: ${deck(n).numAndName}", Color.Event)
+      case n =>
+        log(s"\nThe $US Bot selected: ${deck(n).numAndName}", Color.Event)
+    }
   }
 }

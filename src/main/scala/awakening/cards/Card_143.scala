@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,12 +38,32 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.scenarios.MittsTurn
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
+// Play if US Soft.
+// Do any 2 of the following:
+//   place 1 Awakening marker,
+//   place 1 Aid Marker,
+//  +1 Prestige,
+//  -1 Funding,
+//  Select posture of 1 Schengen country,
+//  Select, draw and reveal Reaper, Operation New Dawn or Advisors from discard pile.
 //
+// When playing the Mitt's Turn scenario the following changes are used:
+// - The card has 3 Ops
+// - The US must be Hard (not Soft) to play the event.
+// - Three options (not two) are selected.
 // ------------------------------------------------------------------
 object Card_143 extends Card2(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+
+  def isMittsTurnScenario = game.scenarioName == MittsTurn.name
+
+  override
+  def ops: Int = if (isMittsTurnScenario) 3 else printedOps
+
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -56,7 +76,10 @@ object Card_143 extends Card2(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = if (isMittsTurnScenario)
+    game.usPosture == Hard
+  else
+    game.usPosture == Soft
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -64,11 +87,91 @@ object Card_143 extends Card2(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing,
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
+  def awakeingCandidates = if (lapsingEventNotInPlay(ArabWinter))
+    Nil
+  else
+    countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
+
+  def canPlaceAwakening = awakeingCandidates.nonEmpty
+
+  def aidCandidates = countryNames(game.muslims)
+
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val numActions = if (isMittsTurnScenario)
+      3
+    else
+      2
+
+    if (isHuman(role)) {
+      val choices = List(
+        choice(canPlaceAwakening,  "awakening", "Place 1 Awakening marker"),
+        choice(true,               "aid",       "Place 1 Aid marker"),
+        choice(game.prestige < 12, "prestige",  "+1 Prestige"),
+        choice(game.funding > 1,   "funding",   "-1 Funding"),
+        choice(true,               "posture",   "Select posture of 1 Schengen country"),
+        choice(true,               "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
+      ).flatten
+
+      askMenu(s"Do any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
+        println()
+        action match {
+          case "awakening" =>
+            val target = askCountry("Place awakening marker in which country: ", awakeingCandidates)
+            addEventTarget(target)
+            addAwakeningMarker(target)
+
+          case "aid" =>
+            val target = askCountry("Place aid marker in which country: ", aidCandidates)
+            addEventTarget(target)
+            addAidMarker(target)
+
+          case "prestige" =>
+            increasePrestige(1)
+
+          case "funding"  =>
+            decreaseFunding(1)
+
+          case "posture" =>
+            val target  = askCountry("Select posture of which Schengen country: ", Schengen)
+            val posture = askSimpleMenu("\nSelect new posture:", List(Soft, Hard))
+            addEventTarget(target)
+            setCountryPosture(target, posture)
+
+          case _ =>
+            log("\nSelect Reaper, Operation New Dawn, or Advisors from discard pile", Color.Event)
+        }
+      }
+    }
+    else {
+      // See Event Instructions table
+      var actions = List(
+        if (game.prestige < 12) Some("prestige") else None,
+        if (game.funding  >  1) Some("funding") else None,
+        if (canPlaceAwakening ) Some("awakening") else None,
+        Some("aid")
+      ).flatten take numActions
+
+      actions foreach {
+        case "prestige" =>
+          increasePrestige(1)
+
+        case "funding" =>
+          decreaseFunding(1)
+
+        case "awakening" =>
+          val target = USBot.markerAlignGovTarget(awakeingCandidates).get
+          addEventTarget(target)
+          addAwakeningMarker(target)
+
+        case _ =>
+          val target = USBot.markerAlignGovTarget(aidCandidates).get
+          addEventTarget(target)
+          addAidMarker(target)
+      }
+    }
   }
 }

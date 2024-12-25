@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Remove up to 2 Cells in any one Muslim country, OR
+// randomly discard 1 card from the Jihadist hand.
 // ------------------------------------------------------------------
 object Card_126 extends Card2(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,10 +51,14 @@ object Card_126 extends Card2(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoT
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def getCandidates() = countryNames(game.muslims.filter(_.totalCells > 0))
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    getCandidates().exists(USBot.wouldRemoveLastCell(_, 2))
+
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -63,12 +69,60 @@ object Card_126 extends Card2(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoT
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = true
+    getCandidates().nonEmpty ||
+    cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand? (y/n) ")
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role)) {
+      val choices = List(
+        choice(getCandidates().nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),
+        choice(condition = true,         "discard", "Discard 1 card from the Jihadist hand")
+      ).flatten
+      askMenu("Choose one:", choices).head match {
+        case "discard" =>
+          log("\nDiscard the top card in the Jihadist hand", Color.Event)
+          askCardsDiscarded(1)
+
+        case _ =>
+          val target = askCountry("Remove 2 cells in which country? ", getCandidates())
+          val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
+          addEventTarget(target)
+          println()
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      }
+    }
+    else {
+      // First remove cells if it would remove last cell on the map
+      val candidates = getCandidates()
+      if (candidates.size == 1 && USBot.wouldRemoveLastCell(candidates.head, 2)) {
+        val target = candidates.head
+        addEventTarget(target)
+        val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
+        println()
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      }
+      else {
+        val nonIRWith5Cells = countryNames(game.muslims.filter(m => !m.isIslamistRule && m.totalCells >= 5))
+        if (nonIRWith5Cells.isEmpty && cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand? (y/n) ")) {
+          println()
+          log(s"\nYou ($Jihadist) must discard one random card", Color.Event)
+          askCardsDiscarded(1)
+        }
+        else {
+          val target = if (nonIRWith5Cells.nonEmpty)
+            USBot.disruptPriority(nonIRWith5Cells).get
+          else
+            USBot.disruptPriority(candidates).get
+          addEventTarget(target)
+          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
+          println()
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        }
+      }
+    }
   }
 }

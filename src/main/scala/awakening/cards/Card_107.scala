@@ -93,7 +93,7 @@ object Card_107 extends Card2(107, "Kurdistan", Unassociated, 2, NoRemove, NoLap
                             filter (m => !(m.isPoor || m.isIslamistRule)))
       // candidates could be empty if Iraq is Poor and Turkey just tested to Poor
       if (getJihadistCandidates().nonEmpty) {
-        val name = if (role == game.humanRole)
+        val name = if (isHuman(role))
           askCountry("Select country degrade governance: ", getJihadistCandidates())
         else
           JihadistBot.alignGovTarget(getJihadistCandidates()).get

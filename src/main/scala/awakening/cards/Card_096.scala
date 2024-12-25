@@ -93,8 +93,8 @@ object Card_096 extends Card2(96, "Danish Cartoons", Unassociated, 1, Remove, No
       log()
       val plot = plotCandidates match {
         case p::Nil => p
-        case plots if game.botRole == Jihadist => shuffle(plots).head
-        case plots => askPlots(plots, 1).head
+        case plots if isHuman(Jihadist) => askPlots(plots, 1).head
+        case plots => shuffle(plots).head
       }
       val candidates = countryNames(game.muslims filter (!_.isIslamistRule))
       val name = if (isHuman(Jihadist))

@@ -774,6 +774,34 @@ object LabyrinthAwakening {
     // and it associated with the Bot player.
     def executeEvent(role: Role, forTrigger: Boolean): Unit
 
+    def ops: Int = printedOps
+
+    def numAndName = s"#$number $name"
+    
+    override def toString() = s"${numAndName} (${opsString(ops)})"
+
+    def eventIsPlayable(role: Role): Boolean =
+      (association == Unassociated || association == role) && eventConditionsMet(role)
+
+    def eventWillTrigger(opponentRole: Role): Boolean = {
+      association  == opponentRole &&
+      opponentRole == game.botRole &&
+      eventConditionsMet(opponentRole)
+    }
+
+    def markLapsingAfterExecutingEvent(role: Role) = (lapsing, role) match {
+      case (Lapsing, _)                => true
+      case (USLapsing, US)             => true
+      case (JihadistLapsing, Jihadist) => true
+      case _                           => false
+    }
+
+    def removeAfterExecutingEvent(role: Role) = (remove, role) match {
+      case (Remove, _)                => true
+      case (USRemove, US)             => true
+      case (JihadistRemove, Jihadist) => true
+      case _                          => false
+    }
   }
 
   class Card(
@@ -6927,9 +6955,19 @@ object LabyrinthAwakening {
       val card = deck(cardNumber)
       val savedState = game
 
-      // Add the card to the list of plays for the turn.
-      val thisPlay = if (!additional)
+      if (additional) {
+        // Add the additional card to the most recent card play of for the turn.
+        val newPlays = game.plays match {
+          case PlayedCard(role, firstCard, _) :: others =>
+            PlayedCard(role, firstCard, Some(card.number)) :: others
+          case _ => game.plays
+        }
+        game = game.copy(plays = newPlays)
+      }
+      else {
+        // Add the card to the list of plays for the turn.
         game = game.copy(plays = PlayedCard(US, card.number, None) :: game.plays)
+      }
 
       cachedEventPlayableAnswer = None
 

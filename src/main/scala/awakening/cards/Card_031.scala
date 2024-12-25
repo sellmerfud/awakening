@@ -92,7 +92,7 @@ object Card_031 extends Card2(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoA
         performAlert(name, plot)
     }
     
-    if (role == game.humanRole) {
+    if (isHuman(role)) {
       log(s"$US draws one card and adds it to their hand")
       askCardsDrawn(1)
     }

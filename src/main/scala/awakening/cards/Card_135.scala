@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Draw a random card from the Jihadist hand and add it to the US hand,
+// OR temporarily reveal all Jihadist Available and/or placed WMD and
+// remove one (+1 Prestige if WMD Removed; 11.3.1).
 // ------------------------------------------------------------------
 object Card_135 extends Card2(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +64,65 @@ object Card_135 extends Card2(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, 
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    game.availablePlots.contains(PlotWMD) ||
+    cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand? (y/n) ")
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role)) {
+      val choices = List(
+        "reveal" -> "Reveal all WMD plots and remove one",
+        "draw"   -> "Randomly draw 1 card from the Jihadist hand")
+
+      askMenu("Choose one:", choices).head match {
+        case "draw" =>
+          log("\nDraw the top card in the Jihadist Bot's hand", Color.Event)
+          askCardsDrawn(1)
+
+        case _ =>
+          val Available = "Available Plots box"
+          val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
+            yield c.name
+          val wmdAvailable = game.availablePlots.sorted.takeWhile(_ == PlotWMD)
+          if (wmdOnMap.isEmpty && wmdAvailable.isEmpty)
+            log("\nThere are no WMD plots on the map or in the available plots box.", Color.Event)
+          else {
+            log(s"\nWMD plots in the available plots box: ${wmdAvailable.size}")
+            val onMapDisplay = if (wmdOnMap.isEmpty) "none" else wmdOnMap.mkString(", ")
+            log(s"WMD plots on the map: " + onMapDisplay)
+            val target = if (wmdOnMap.isEmpty)
+              Available
+            else if (wmdAvailable.isEmpty)
+              askCountry("Select country with WMD: ", wmdOnMap)
+            else {
+              val choices = (Available :: wmdOnMap).map(n => n -> s"Remove WMD plot in $n")
+              askMenu("Choose one", choices).head
+            }
+
+            if (target == Available)
+              removeAvailableWMD(1)
+            else {
+              addEventTarget(target)
+              removePlacedWMD(target, 1)
+            }
+          }
+      }
+    }
+    else {
+      // See Event Instructions table
+      // If there are any WMD plots in the available box, the bot
+      // will remove one. Otherwise take a US player's random card.
+      if (game.availablePlots.contains(PlotWMD))
+        removeAvailableWMD(1)
+      else {
+        log(s"\nYou ($Jihadist) must place one random card on top of the $US hand", Color.Event)
+        askCardsDrawn(1)
+      }
+    }
   }
 }

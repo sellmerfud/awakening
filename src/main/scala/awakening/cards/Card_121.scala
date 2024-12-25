@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,16 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in a non-Adversary country in Civil War with no Troops.
+// As long as Advisors remains, at the beginning of each Attrition phase,
+/// place 1 Militia in this country. Advisors removed if country becomes
+// Adversary, if the Civil War ends or if Troops present. Event card is
+// discarded but may be played again in the same or different countries
+// until a maximum of 3 Advisors are on the map.
 // ------------------------------------------------------------------
 object Card_121 extends Card2(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +60,36 @@ object Card_121 extends Card2(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAut
   override
   def eventRemovesLastCell(): Boolean = false
 
+  val advisorsCandidate = (m: MuslimCountry) =>
+    !m.isAdversary &&
+    m.civilWar &&
+    m.totalTroops == 0
+
+  def getCandidates() = countryNames(game.muslims.filter(advisorsCandidate))
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    game.muslims.map(_.numAdvisors).sum < 3 &&
+    getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = true
-
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val target = if (isHuman(role))
+      askCountry(s"Place Advisors in which country: ", getCandidates())
+    else
+      USBot.deployToPriority(getCandidates()).get
+    println()
+    addEventTarget(target)
+    testCountry(target)
+    addAdvisorsToCountry(target)
   }
 }

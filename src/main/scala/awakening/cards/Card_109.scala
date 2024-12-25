@@ -95,7 +95,7 @@ object Card_109 extends Card2(109, "Tora Bora", Unassociated, 2, Remove, NoLapsi
     addEventTarget(name)
     removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
     rollPrestige()
-    if (role == game.humanRole)
+    if (isHuman(role))
       log(s"\nDraw a card and add it to your hand", Color.Event)
     else
       log(s"\nDraw a card and place it on top of the $role Bot's hand", Color.Event)

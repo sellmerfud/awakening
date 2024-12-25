@@ -91,7 +91,7 @@ object Card_069 extends Card2(69, "Kazakh Strain", Jihadist, 2, Remove, NoLapsin
       game = game.copy(plotData = updatedPlots)
     }
     else {
-      val (active, sleeper, sadr) = if (role == game.humanRole) {
+      val (active, sleeper, sadr) = if (isHuman(role)) {
         displayLine("\nYou must remove a cell", Color.Event)
         askCells(CentralAsia, 1, sleeperFocus = false)
       }
