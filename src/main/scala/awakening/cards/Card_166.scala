@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Jihadist player may Block the play of 1 future US-Associated card
+// played by either player this turn. The card is discarded without
+// effect or OPS value, but counts as one card played for that Action Phase.
 // ------------------------------------------------------------------
 object Card_166 extends Card2(166, "Ferguson", Jihadist, 1, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +64,16 @@ object Card_166 extends Card2(166, "Ferguson", Jihadist, 1, NoRemove, Lapsing, N
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
-  }
+  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+    if (isHuman(role))
+      log("\nYou (Jihadist) may block 1 US associated event played later this turn.", Color.Event)
+    else
+      log("\nThe Jihadist Bot will cancel the NEXT US associated event played by the US player", Color.Event)
 }

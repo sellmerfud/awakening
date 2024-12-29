@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Somalia or Yemen is Poor and Adversary, or Islamist Rule.
+// While these conditions persist, no end-of-turn Funding drop.
+// Blocked by Maersk Alabama.
 // ------------------------------------------------------------------
 object Card_183 extends Card2(183, "Pirates", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +58,8 @@ object Card_183 extends Card2(183, "Pirates", Jihadist, 2, Remove, NoLapsing, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    globalEventNotInPlay(MaerskAlabama) && pirates2ConditionsInEffect
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +72,6 @@ object Card_183 extends Card2(183, "Pirates", Jihadist, 2, Remove, NoLapsing, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addGlobalEventMarker(Pirates2)
   }
 }

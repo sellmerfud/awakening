@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,21 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Roll a Tan & Black die and place the following in that result if Hard
+// (if unplayable, use highest # playable result).
+// Cells are placed Active side up.
+// Tan                    Black
+// -------------------    --------------------
+// 1. United States       1. 1 & 2 Plot
+// 2. Canada              2. 3 Plot & 2 Cells
+// 3. United Kingdom      3. 2 Plot & 1 Cell
+// 4. Benelux             4. 2 Plot
+// 5. France              5. 1 Plot & 1 Cell
+// 6. Any Hd. Schengen    6. 1 Plot
 // ------------------------------------------------------------------
 object Card_182 extends Card2(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +65,14 @@ object Card_182 extends Card2(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
+  val possibleCountries = UnitedStates :: Canada :: UnitedKingdom :: Benelux :: France :: Schengen
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = {
+    (game.cellsAvailable > 0 || game.availablePlots.nonEmpty) &&
+    possibleCountries.exists(name => game.getNonMuslim(name).isHard)
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +85,68 @@ object Card_182 extends Card2(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLap
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // Note: There is a slight chance that the Bot could execute this event,
+    // and get a black die roll for only plots or only cells and there are
+    // plot/cells available.
+    val isHard = (name: String) => game.getNonMuslim(name).isHard
+
+    val countries = List(UnitedStates, Canada, UnitedKingdom, Benelux, France)
+    val validSchengen = Schengen.filter(isHard)
+    println()
+    val tanDie     = getDieRoll("Enter tan die: ", Some(role))
+    val blackDie   = getDieRoll("Enter black die: ", Some(role))
+    val (plots, activeCells) = blackDie match {
+      case 1 => (Plot1::Plot2::Nil, 0)
+      case 2 => (Plot3::Nil, 2)
+      case 3 => (Plot2::Nil, 1)
+      case 4 => (Plot2::Nil, 0)
+      case 5 => (Plot1::Nil, 1)
+      case _ => (Plot1::Nil, 0)
+    }
+
+    def getTarget(list: List[String]): Option[String] = {
+      list match {
+        case Nil if validSchengen.nonEmpty => Some("Schengen")
+        case Nil                           => None
+        case x::xs if isHard(x)            => Some(x)
+        case x::xs                         => getTarget(xs)
+      }
+    }
+
+    def placePlots(name: String, plotList: List[Plot]): Unit = plotList match {
+      case Nil =>
+      case p::ps =>
+        if (game.availablePlots.contains(p)) {
+          testCountry(name)
+          addAvailablePlotToCountry(name, p)
+        }
+        else
+          log(s"\nThere is not an available $p to place", Color.Event)
+        placePlots(name, ps)
+    }
+
+
+    log(s"Tan die: $tanDie,  Black die: $blackDie")
+    val target = getTarget(countries.drop(tanDie - 1)).map {
+      case "Schengen" if isHuman(role) =>
+        askCountry("Choose a Hard Schengen country: ", validSchengen)
+      case "Schengen" => JihadistBot.plotPriority(validSchengen).get
+      case name => name
+    }
+
+    target match {
+      case None =>
+        log("\nNo Hard country was selected for the Paris Attacks event", Color.Event)
+      case Some(name) =>
+        addEventTarget(name)
+        log(s"\n$name is the target of the Paris Attacks event")
+        log(separator())
+        placePlots(name, plots)
+        val numCells = activeCells min game.cellsAvailable
+        if (numCells > 0)
+          addActiveCellsToCountry(name, activeCells min game.cellsAvailable)
+        else
+          log("\nThere are no available cells to place", Color.Event)
+    }
   }
 }

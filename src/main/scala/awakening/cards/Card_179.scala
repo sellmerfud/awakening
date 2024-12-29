@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,11 +37,15 @@
 
 package awakening.cards
 
+import scala.collection.mutable.ListBuffer
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Remove 2 Troops (from Track first) to Off Map Box until end of next
+// draw phase, then to Track.
+// Set China to opposite of US Posture.
 // ------------------------------------------------------------------
 object Card_179 extends Card2(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +60,7 @@ object Card_179 extends Card2(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsi
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = globalEventNotInPlay(USNKSummit)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +73,27 @@ object Card_179 extends Card2(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsi
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // Take troops from available if possible, otherwise we must
+    // ask the user where to take them from.
+    val items = if (isHuman(role))
+      selectTroopsToPutOffMap(2)
+    else {
+      val numFromTrack = 2 min game.troopsAvailable
+      val numFromMap   = 2 - numFromTrack
+      val botItems = new ListBuffer[MapItem]
+      if (numFromTrack > 0)
+        botItems += MapItem("track", numFromTrack)
+      if (numFromMap > 0)
+        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
+      botItems.toList
+    }
+
+    for (MapItem(name, num) <- items) {
+      if (name != "track")
+        addEventTarget(name)
+      putTroopsInOffMapBox(name, num)
+    }
+    addEventTarget(China)
+    setCountryPosture(China, oppositePosture(game.usPosture))
   }
 }

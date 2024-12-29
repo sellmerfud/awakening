@@ -2134,20 +2134,25 @@ object LabyrinthAwakening {
   // Used when the user must select 1 or more plots in a country
   def askMapPlots(plots: List[PlotOnMap], num: Int, allowAbort: Boolean = true): List[PlotOnMap] = {
     val maxPlots  = num min plots.size
-    val entries   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p }
-    val choices   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p.toString }
+    val entries   = plots.sorted.zipWithIndex.map { case (p, i) => i.toString -> p }
+    val choices   = plots.sorted.zipWithIndex.map { case (p, i) => i.toString -> p.toString }
     val plotMap   = Map(entries:_*)
-    askMenu(s"Choose ${amountOf(maxPlots, "plot")}:", choices, maxPlots, allowAbort = allowAbort) map plotMap
+    askMenu(s"Choose ${amountOf(maxPlots, "plot")}:", choices, maxPlots, allowAbort = allowAbort).map(plotMap)
   }
 
   // Used when the user must select 1 or more available plots to place in a country.
-  def askPlots(plots: List[Plot], num: Int, allowAbort: Boolean = true): List[Plot] = {
-    val maxPlots  = num min plots.size
-    val entries   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p }
-    val choices   = plots.sorted.zipWithIndex map { case (p, i) => i.toString -> p.toString }
-    val plotMap   = Map(entries:_*)
-    askMenu(s"Choose ${amountOf(maxPlots, "plot")}:", choices, maxPlots, allowAbort = allowAbort) map plotMap
-  }
+  def askPlots(plots: List[Plot], num: Int, allowAbort: Boolean = true): List[Plot] =
+    if (plots.isEmpty || num == 0)
+      Nil
+    else if (plots.size == num)
+      plots
+    else {
+      val maxPlots  = num min plots.size
+      val entries   = plots.sorted.zipWithIndex.map { case (p, i) => i.toString -> p }
+      val choices   = plots.sorted.zipWithIndex.map { case (p, i) => i.toString -> p.toString }
+      val plotMap   = Map(entries:_*)
+      askMenu(s"Choose ${amountOf(maxPlots, "plot")}:", choices, maxPlots, allowAbort = allowAbort).map(plotMap)
+    }
 
   // Ask the user to select a number of available plots
   def askAvailablePlots(num: Int, ops: Int): List[Plot] = {
@@ -2908,10 +2913,10 @@ object LabyrinthAwakening {
 
   // Return true if no caliphate exists and the given country is a caliphate candidate.
   def canDeclareCaliphate(capital: String): Boolean  =
-    game.useExpansionRules       &&
-    !game.caliphateDeclared      &&
-    (game isMuslim capital)      &&
-    (game getMuslim capital).caliphateCandidate
+    game.useExpansionRules  &&
+    !game.caliphateDeclared &&
+    game.isMuslim(capital)  &&
+    game.getMuslim(capital).caliphateCandidate
 
   def askDeclareCaliphate(capital: String): Boolean =
     askYorN(s"Do you wish to declare a Caliphate with $capital as the Capital (y/n)? ")
@@ -5436,15 +5441,19 @@ object LabyrinthAwakening {
 
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
-      val m = game.getMuslim(target)
-      if (lapsingEventInPlay(ArabWinter))
-        log("Awakening markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
-      else if (m.canTakeAwakeningOrReactionMarker) {
-        game = game.updateCountry(m.copy(awakening = m.awakening + num))
-        log(s"Add ${amountOf(num, "awakening marker")} to $target", Color.MapPieces)
+      game.getCountry(target) match {
+        case m: MuslimCountry => 
+          if (lapsingEventInPlay(ArabWinter))
+            log("Awakening markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
+          else if (m.canTakeAwakeningOrReactionMarker) {
+            game = game.updateCountry(m.copy(awakening = m.awakening + num))
+            log(s"Add ${amountOf(num, "awakening marker")} to $target", Color.MapPieces)
+          }
+          else
+            log(s"$target cannot take an awakening marker")
+        case _ =>
+            log(s"$target cannot take an awakening marker")
       }
-      else
-        log(s"$target cannot take an awakening marker")
     }
   }
 
@@ -5459,15 +5468,20 @@ object LabyrinthAwakening {
 
   def addReactionMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
-      val m = game.getMuslim(target)
-      if (lapsingEventInPlay(ArabWinter))
-        log("Reaction markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
-      else if (m.canTakeAwakeningOrReactionMarker) {
-        game = game.updateCountry(m.copy(reaction = m.reaction + num))
-        log(s"Add ${amountOf(num, "reaction marker")} to $target", Color.MapPieces)
+      game.getCountry(target) match {
+        case m: MuslimCountry => 
+          if (lapsingEventInPlay(ArabWinter))
+            log("Reaction markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
+          else if (m.canTakeAwakeningOrReactionMarker) {
+            game = game.updateCountry(m.copy(reaction = m.reaction + num))
+            log(s"Add ${amountOf(num, "reaction marker")} to $target", Color.MapPieces)
+          }
+          else
+            log(s"$target cannot take a reaction marker")
+
+        case _ => 
+            log(s"$target cannot take a reaction marker")
       }
-      else
-        log(s"$target cannot take a reaction marker")
     }
   }
 
@@ -5860,13 +5874,14 @@ object LabyrinthAwakening {
   }
 
   // Pirates from the base game
-  def pirates1ConditionsInEffect: Boolean = List(Somalia, Yemen) map game.getMuslim exists { m =>
-    m.isIslamistRule
-  }
+  def pirates1ConditionsInEffect: Boolean = List(Somalia, Yemen)
+    .map(game.getMuslim)
+    .exists(_.isIslamistRule)
+
   // Pirates from the awakening expansion
-  def pirates2ConditionsInEffect: Boolean = List(Somalia, Yemen) map game.getMuslim exists { m =>
-    (m.isPoor && m.isAdversary) || m.isIslamistRule
-  }
+  def pirates2ConditionsInEffect: Boolean = List(Somalia, Yemen)
+    .map(game.getMuslim)
+    .exists(m => (m.isPoor && m.isAdversary) || m.isIslamistRule)
 
   // This is used when playing a campaign scenario.
   // When the Awakening cards are added we must:

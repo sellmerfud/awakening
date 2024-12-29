@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if a country was subject to an Event or Operations in this or
+// last Action Phase.
+// Place 1 Awakening or 1 Reaction marker in one of those countries.
+// Allows play of Facebook.
 // ------------------------------------------------------------------
 object Card_211 extends Card2(211, "Smartphones", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,6 +58,12 @@ object Card_211 extends Card2(211, "Smartphones", Unassociated, 1, NoRemove, NoL
   override
   def eventRemovesLastCell(): Boolean = false
 
+  val isCandidate = (m: MuslimCountry) =>
+    m.canTakeAwakeningOrReactionMarker &&
+    (game.targetsThisPhase.wasOpsOrEventTarget(m.name) || game.targetsLastPhase.wasOpsOrEventTarget(m.name))
+
+  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
@@ -61,14 +71,46 @@ object Card_211 extends Card2(211, "Smartphones", Unassociated, 1, NoRemove, NoL
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  //
+  // US Bot will play if it can place a marker or if the Smartphone marker is not yet in play.
+  // Jihad Bot will only play if it can place a marker.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => globalEventNotInPlay(Smartphones) || (lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty)
+    case Jihadist => lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (lapsingEventInPlay(ArabWinter))
+      log(s"\nCannot place awakening/reaction markers. [Arab Winter]", Color.Event)
+    else if (getCandidates().isEmpty)
+      log(s"\nThere are no countries that can take awakening/reactions markers.", Color.Event)
+    else {
+      val (placementAction, target) = role match {
+        case _ if isHuman(role) =>
+          val choices = List(
+            addAwakeningMarker _ -> "Place awakening marker",
+            addReactionMarker _ -> "Place reaction marker")
+          val orderedChoices = if (role == US) choices else choices.reverse
+          (askMenu("Choose one:", orderedChoices).head, askCountry("Select country: ", getCandidates()))
+        case US =>
+          (addAwakeningMarker _, USBot.markerAlignGovTarget(getCandidates()).get)
+        case Jihadist =>
+          (addReactionMarker _, JihadistBot.markerTarget(getCandidates()).get)
+      }
+
+      addEventTarget(name)
+      if (role == Jihadist)
+        placementAction(name, 1)
+      else
+        placementAction(name, 1)
+    }
+
+    removeGlobalEventMarker(Censorship)
+    addGlobalEventMarker(Smartphones)
   }
 }

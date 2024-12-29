@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,12 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If Syria not Islamist Rule, Test and ...
+// If US play, improve Governance 1 level (not to Good) and place 1
+// Awakening marker there.
+// If Jihadist, worsen Governance 1 level (not to Islamist Rule) and
+// place 1 Reaction marker there.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_220 extends Card2(220, "Daraa", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +61,41 @@ object Card_220 extends Card2(220, "Daraa", Unassociated, 2, Remove, NoLapsing, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = !game.getMuslim(Syria).isIslamistRule
+
+  def isEffective(role: Role) = {
+    val syria = game.getMuslim(Syria)
+    role match {
+      case US => !syria.isGood || syria.canTakeAwakeningOrReactionMarker
+      case Jihadist => !syria.isPoor || syria.canTakeAwakeningOrReactionMarker
+    }
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = isEffective(role)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val syria = game.getMuslim(Syria)
+    addEventTarget(Syria)
+    testCountry(Syria)
+    role match {
+      case _ if !isEffective(role) =>
+        log("\nThe event has no effect.", Color.Event)
+
+      case US =>
+        improveGovernance(Syria, 1, canShiftToGood = false)
+        addAwakeningMarker(Syria)
+
+      case Jihadist =>
+        worsenGovernance(Syria, 1, canShiftToIR = false)
+        addReactionMarker(Syria)
+    }
   }
 }

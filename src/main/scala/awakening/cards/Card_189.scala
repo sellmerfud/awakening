@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Select 3 countries without Cells.
+// Test them. Recruit once in each, ignoring Funding.
+// Place Cadre in each country that does not receive a Cell.
 // ------------------------------------------------------------------
 object Card_189 extends Card2(189, "Jihadist Videos", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +65,67 @@ object Card_189 extends Card2(189, "Jihadist Videos", Jihadist, 3, NoRemove, NoL
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0 // Ignores funding so all cells can be used
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    var targets = if (isHuman(role))
+      askCountries(3, countryNames(game.countries.filter(_.totalCells == 0)))
+    else {
+      // See Event Instructions table
+      val candidates = countryNames(game.countries.filter(c => c.totalCells == 0 && !c.isIslamistRule)) match {
+        case Nil => countryNames(game.countries.filter(c => c.totalCells == 0))
+        case nonIR => nonIR
+      }
+
+      // Always US first if it is eligible.
+      if (candidates.contains(UnitedStates))
+        UnitedStates :: JihadistBot.multipleTargets(2, candidates.filterNot(_ == UnitedStates))(JihadistBot.cellPlacementPriority(false))
+      else
+        JihadistBot.multipleTargets(3, candidates)(JihadistBot.cellPlacementPriority(false))
+    }
+
+    val numCells = if (isBot(role) && game.jihadistIdeology(Potent)) {
+      log(s"\n$Jihadist Bot with Potent Ideology places two cells for each recruit success", Color.Event)
+      2
+    }
+    else
+      1
+
+    // Process all of the targets
+    for (target <- targets) {
+      addEventTarget(target)
+      log(s"\nRecruit attempt in $target")
+      log(separator())
+      testCountry(target)
+      val c = game.getCountry(target)  // Get country after testing!
+
+      if (game.cellsAvailable > 0) {
+        val cells = numCells min game.cellsAvailable
+        if (c.autoRecruit) {
+          log(s"Recruit in $target succeeds automatically")
+          addSleeperCellsToCountry(target, cells)
+        }
+        else {
+          val die = getDieRoll(s"Enter recruit die roll for $target: ", Some(role))
+          log(s"Die roll: $die")
+          if (c.recruitSucceeds(die)) {
+            log(s"Recruit in $target succeeds with a die roll of $die")
+            addSleeperCellsToCountry(target, cells)
+          }
+          else {
+            log(s"Recruit in $target fails with a die roll of $die")
+            addCadreToCountry(target)
+          }
+        }
+      }
+      else {
+        log("No available cells.")
+        addCadreToCountry(target)
+      }
+    }
   }
 }

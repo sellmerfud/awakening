@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,16 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Do any 2 of the following in Somalia or in Adjacent African countries:
+// place 1 Reaction marker,
+// place 1 Cell,
+// place a level 1 or 2 Plot,
+// place 1 Besieged Regime marker,
+// Select, reveal and draw Pirates, Boko Haram, or Islamic Maghreb from discard pile.
 // ------------------------------------------------------------------
 object Card_172 extends Card2(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +60,39 @@ object Card_172 extends Card2(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsin
   override
   def eventRemovesLastCell(): Boolean = false
 
+  val possibleCounries = List(Somalia, Sudan, KenyaTanzania).sorted
+
+  val canPlaceReaction = (c: Country) =>
+    lapsingEventNotInPlay(ArabWinter) &&
+    c.isMuslim &&
+    c.asInstanceOf[MuslimCountry].canTakeAwakeningOrReactionMarker
+
+  val canPlaceBesiegedRegime = (c: Country) =>
+    c.isMuslim &&
+    c.asInstanceOf[MuslimCountry].canTakeBesiegedRegimeMarker
+
+  val isCandidate = (c: Country) =>
+    game.cellsAvailable > 0 ||
+    game.availablePlots.exists(p => p == Plot1 || p == Plot2) ||
+    canPlaceBesiegedRegime(c) ||
+    canPlaceBesiegedRegime(c)
+
+  def getCandidates() = countryNames(game.countries.filter(isCandidate))
+
+  def getReactionCandidates() = countryNames(
+    game.countries.filter(c => isCandidate(c) && canPlaceReaction(c))
+  )
+
+  def getBesiegeCandidates() = countryNames(
+    game.countries.filter(c => isCandidate(c) && canPlaceBesiegedRegime(c))
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    getCandidates().nonEmpty ||
+    cacheYesOrNo("Is Pirates, Boko Haram, or Islamic Maghreb in the discard pile? (y/n) ")
+
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +105,97 @@ object Card_172 extends Card2(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role)) {
+      val canReaction = getReactionCandidates().nonEmpty
+      val canCell     = game.cellsAvailable > 0
+      val canPlot1    = game.availablePlots.contains(Plot1)
+      val canPlot2    = game.availablePlots.contains(Plot2)
+      val canBesiege  = getBesiegeCandidates().nonEmpty
+      val choices = List(
+        choice(canReaction,"reaction", "Place 1 Reaction marker"),
+        choice(canCell,    "cell",     "Place 1 cell"),
+        choice(canPlot1,   "plot1",    "Place a level 1 plot"),
+        choice(canPlot2,   "plot2",    "Place a level 2 plot"),
+        choice(canBesiege, "besiege",  "Place a besieged regime marker"),
+        choice(true,       "draw",     "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
+      ).flatten
+
+      askMenu("Do any 2 of the following:", choices, 2, repeatsOK = false) foreach { action =>
+        println()
+        action match {
+          case "reaction" =>
+            val target = askCountry("Place reaction marker in which country: ", getReactionCandidates())
+            addEventTarget(target)
+            addReactionMarker(target)
+          case "cell" =>
+            val target = askCountry("Place a cell in which country: ", getCandidates())
+            addEventTarget(target)
+            testCountry(target)
+            addSleeperCellsToCountry(target, 1)
+          case "plot1" =>
+            val target = askCountry("Place a level 1 plot in which country: ", getCandidates())
+            addEventTarget(target)
+            testCountry(target)
+            addAvailablePlotToCountry(target, Plot1)
+          case "plot2" =>
+            val target = askCountry("Place a level 2 plot in which country: ", getCandidates())
+            addEventTarget(target)
+            testCountry(target)
+            addAvailablePlotToCountry(target, Plot2)
+          case "besiege"  =>
+            val target = askCountry("Place besieged regime marker in which country: ", getBesiegeCandidates())
+            addEventTarget(target)
+            addBesiegedRegimeMarker(target)
+          case _ =>
+            log("\nSelect Pirates, Boko Haram, or Islamic Maghreb from discard pile.", Color.Event)
+        }
+      }
+    }
+    else {
+      // See Event Instructions table
+      val besiegeTarget = JihadistBot.markerTarget(
+        getBesiegeCandidates().filter(name => !game.getMuslim(name).isIslamistRule)
+      )
+      val cellTarget = if (game.cellsAvailable > 0)
+        JihadistBot.cellPlacementPriority(false)(getCandidates())
+      else
+        None
+      val reactionTarget = JihadistBot.markerTarget(getReactionCandidates())
+      val plotTarget = if (game.availablePlots.exists(p => p == Plot1 || p == Plot2))
+        JihadistBot.plotTarget(getCandidates(), game.funding >= 7)
+      else
+        None
+      val actions = List(
+        besiegeTarget  map (_ => "besiege"),
+        cellTarget     map (_ => "cell"),
+        reactionTarget map (_ => "reaction"),
+        plotTarget     map (_ => "plot"),
+        Some("draw")
+      ).flatten take 2
+
+      actions foreach { action =>
+        println()
+        action match {
+          case "besiege"  =>
+            addEventTarget(besiegeTarget.get)
+            addBesiegedRegimeMarker(besiegeTarget.get)
+          case "cell" =>
+            addEventTarget(cellTarget.get)
+            testCountry(cellTarget.get)
+            addSleeperCellsToCountry(cellTarget.get, 1)
+          case "reaction" =>
+            addEventTarget(reactionTarget.get)
+            addReactionMarker(reactionTarget.get)
+          case "plot" =>
+            val plot = (game.availablePlots.sorted dropWhile (p => p != Plot1 && p != Plot2)).head
+            addEventTarget(plotTarget.get)
+            testCountry(plotTarget.get)
+            addAvailablePlotToCountry(plotTarget.get, plot)
+          case _ =>
+            log("\nSelect Pirates, Boko Haram, or Islamic Maghreb randomly from the discard pile", Color.Event)
+            log("and place it on top of the Jihadist's hand of cards", Color.Event)
+        }
+      }
+    }
   }
 }

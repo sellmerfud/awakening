@@ -581,7 +581,7 @@ object JihadistBot extends BotHelpers {
         case ns =>
           ns
       }
-      val narrowed = narrowCandidates(candidates, priorities)
+      val narrowed = narrowCountries(candidates, priorities)
       shuffle(narrowed).map(_.name).headOption
     }
     else
@@ -954,7 +954,7 @@ object JihadistBot extends BotHelpers {
         // If we still have  more than one candidate, then select the
         // first one alphabetically.  (Note: countryNames alphabetizes the list)
         // We do this so that we always select same target.
-        countryNames(narrowCandidates(candidates, priorities, allowBotLog = false)).headOption
+        countryNames(narrowCountries(candidates, priorities, allowBotLog = false)).headOption
     }
   }
 
@@ -1655,6 +1655,7 @@ object JihadistBot extends BotHelpers {
   def resetStaticData(): Unit = {
     usedCells.clear()
     PriorityCountries.clear()
+    clearCachedTargets()
     // Select the MJP and ARP up front
     autoRecruitPriorityCountry
     majorJihadPriorityCountry

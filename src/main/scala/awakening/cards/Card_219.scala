@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,10 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If US play, -1 Funding. +1 Prestige (+2 if Osama bin Ladin REMOVED).
+// REMOVE
+// If Jihadist, -1 Prestige for every 4 Reaction markers
+// (or fraction thereof) on the map.
 // ------------------------------------------------------------------
 object Card_219 extends Card2(219, "Ayman al-Zawahiri", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -58,17 +61,34 @@ object Card_219 extends Card2(219, "Ayman al-Zawahiri", Unassociated, 2, USRemov
   override
   def eventConditionsMet(role: Role) = true
 
+  def isEffective(role: Role) = role match {
+    case US => game.funding > 1 || game.prestige < 12
+    case Jihadist => game.prestige > 1 && game.hasMuslim(_.reaction > 0)
+  }
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = isEffective(role)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (!isEffective(role))
+      log("\nThe event has no effect.", Color.Event)
+    else if (role == US) {
+      // Values adjusted if the #237 Osama Bin Laden card has been rmoved
+      val num = if (game.cardRemoved(237)) 2 else 1
+      decreaseFunding(1)
+      increasePrestige(num)
+    }
+    else {
+      val totalReactionMarkers = game.muslims.map(_.reaction).sum
+      // Prestige is decrease 1 for every 4 reaction markers on the map (rounded up)
+      val num = (totalReactionMarkers + 3) / 4
+      decreasePrestige(num)
+    }
   }
 }

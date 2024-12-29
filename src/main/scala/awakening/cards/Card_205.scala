@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,12 +38,29 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in Turkey or in one Adjacent non-Schengen country (but not Russia).
+// Place or remove (not flip) an Aid, Besieged Regime, Awakening, Reaction
+// or Posture marker, OR place or Remove up to 2 total Militia and/or Cells.
 // ------------------------------------------------------------------
 object Card_205 extends Card2(205, "Erdogan Effect", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+
+  val CandidateCountries = List(Turkey, Serbia, Iraq, Caucasus, Syria, Iran).sorted
+
+  def muslimCandidates() = CandidateCountries.filter(game.isMuslim)
+
+  def nonMuslimCandidates() = CandidateCountries.filter(game.isNonMuslim)
+
+  def awakeReactCandidates() = if (lapsingEventInPlay(ArabWinter))
+    Nil
+  else
+    muslimCandidates().filter(name => game.getMuslim(name).canTakeAwakeningOrReactionMarker)
+
+  def removeCellsCandidates() = CandidateCountries.filter(game.getCountry(_).totalCells > 0)
+
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -52,7 +69,9 @@ object Card_205 extends Card2(205, "Erdogan Effect", Unassociated, 1, NoRemove, 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+        removeCellsCandidates().exists(name => USBot.wouldRemoveLastCell(name, 2))
+
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -62,13 +81,104 @@ object Card_205 extends Card2(205, "Erdogan Effect", Unassociated, 1, NoRemove, 
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => removeCellsCandidates().nonEmpty || awakeReactCandidates().nonEmpty
+    case Jihadist => game.cellsAvailable > 0 || awakeReactCandidates().nonEmpty
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // See Event Instructions table
+    if (isHuman(role)) {
+      val name = askCountry("Select country: ", CandidateCountries)
+      val choices = game.getCountry(name) match {
+        case m: MuslimCountry =>
+          val canAwake = lapsingEventNotInPlay(ArabWinter) && m.canTakeAwakeningOrReactionMarker
+          val canBesiege = m.canTakeBesiegedRegimeMarker
+          val canMilitia = game.militiaAvailable > 0 && m.canTakeMilitia
+          List(
+            choice(m.canTakeAidMarker,      "+aid", "Place aid marker"),
+            choice(m.aidMarkers > 0,        "-aid", "Remove aid marker"),
+            choice(canBesiege,              "+bsg", "Place besieged regime marker"),
+            choice(m.besiegedRegime,        "-bsh", "Remove besieged regime marker"),
+            choice(canAwake,                "+awa", "Place awakening marker"),
+            choice(m.awakening > 0,         "-awa", "Remove awakening marker"),
+            choice(canAwake,                "+rea", "Place reaction marker"),
+            choice(m.reaction > 0,          "-rea", "Remove reaction marker"),
+            choice(canMilitia,              "+mil", "Place 2 militia"),
+            choice(m.militia > 0,           "-mil", "Remove 2 militia"),
+            choice(game.cellsAvailable > 0, "+cel", "Place 2 cells"),
+            choice(m.totalCells > 0,        "-cel", "Remove 2 cells")
+          ).flatten
+        case n: NonMuslimCountry =>
+          List(
+            choice(n.isUntested && n.canChangePosture,  "+pos", "Place posture marker"),
+            choice(!n.isUntested && n.canChangePosture, "-pos", "Remove posture marker"),
+            choice(game.cellsAvailable > 0,             "+cel", "Place 2 cells"),
+            choice(n.totalCells > 0,                    "-cel", "Remove 2 cells")
+          ).flatten
+      }
+
+      if (choices.isEmpty) {
+        log(s"\nThere are no valid actions that can be taken in $name", Color.Event)
+        log("The event has no effect.", Color.Event)
+      }
+      else {
+        addEventTarget(name)
+        askMenu("Choose one:", choices).head match {
+          case "+aid" => addAidMarker(name)
+          case "-aid" => removeAidMarker(name)
+          case "+bsg" => addBesiegedRegimeMarker(name)
+          case "-bsh" => removeBesiegedRegimeMarker(name)
+          case "+awa" => addAwakeningMarker(name)
+          case "-awa" => removeAwakeningMarker(name)
+          case "+rea" => addReactionMarker(name)
+          case "-rea" => removeReactionMarker(name)
+          case "+mil" => addMilitiaToCountry(name, 2 min game.militiaAvailable)
+          case "-mil" => removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
+          case "+cel" =>
+            testCountry(name)
+            addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
+          case "-cel" =>
+            val (actives, sleepers, sadr) = askCells(name, 2, role == US)
+            removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+          case "+pos" =>
+            val posture = askSimpleMenu(s"New posture for $name: ", List(Soft, Hard))
+            setCountryPosture(name, posture)
+          case _ => setCountryPosture(name, PostureUntested)
+        }
+      }
+    }
+    else if (role == Jihadist ) {
+      // Jihadist Bot only affects cells or reaction markers.
+      if (game.cellsAvailable > 0) {
+        val name = JihadistBot.cellPlacementPriority(false)(CandidateCountries).get
+        addEventTarget(name)
+        testCountry(name)
+        addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
+      }
+      else {
+        val name = JihadistBot.markerTarget(awakeReactCandidates()).get
+        addEventTarget(name)
+        addReactionMarker(name)
+      }
+    }
+    else {  // US Bot
+      removeCellsCandidates() match {
+        case Nil =>
+          val name = USBot.markerAlignGovTarget(awakeReactCandidates()).get
+          addEventTarget(name)
+          removeReactionMarker(name)
+
+        case candidates =>
+          val name = USBot.disruptPriority(candidates).get
+          addEventTarget(name)
+          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 2)
+          removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+      }
+    }
   }
 }

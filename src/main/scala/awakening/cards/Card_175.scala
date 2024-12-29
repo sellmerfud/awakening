@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Remove up to 2 Awakening markers from a single country.
+// Blocks the play of Facebook until the next play of Smartphones.
 // ------------------------------------------------------------------
 object Card_175 extends Card2(175, "Censorship", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +71,21 @@ object Card_175 extends Card2(175, "Censorship", Jihadist, 2, NoRemove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val candidates = countryNames(game.muslims.filter(_.awakening > 0))
+    if (candidates.isEmpty)
+      log(s"\nThere are no awakening markers on the map", Color.Event)
+    else {
+      val target = if (isHuman(role))
+        askCountry("Select country: ", candidates)
+      else
+        JihadistBot.markerTarget(candidates).get
+
+      addEventTarget(target)
+      val m = game.getMuslim(target)
+      removeAwakeningMarker(target, 2 min m.awakening)
+    }
+
+    removeGlobalEventMarker(Smartphones)
+    addGlobalEventMarker(Censorship)
   }
 }

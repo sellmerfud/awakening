@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,9 +41,29 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Search through discard pile and Select, reveal and draw any one
+// event card that causes Civil War or allows Regime Change
+// (specific cards listed in 11.3.13).
 // ------------------------------------------------------------------
 object Card_217 extends Card2(217, "Agitators", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+
+  def cardCandidates() = {
+    val labCards = if (GameModeOrdering.lt(game.startingMode, AwakeningMode))
+      List(37, 39)
+    else
+      Nil
+    val awakeCards = if (GameModeOrdering.lt(game.startingMode, ForeverWarMode))
+      List(165, 188, 234, 133, 226, 238, 167, 152)
+    else
+      Nil
+    val foreverCards = if (GameModeOrdering.gt(game.currentMode, AwakeningMode))
+      List(272, 277, 293)
+    else
+      Nil
+
+    labCards ::: awakeCards ::: foreverCards
+  }
+
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -62,13 +82,32 @@ object Card_217 extends Card2(217, "Agitators", Unassociated, 2, NoRemove, NoLap
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
-
+  def botWillPlayEvent(role: Role): Boolean = {
+    val cards = cardCandidates()
+      .sorted
+      .map(n => deck(n).numAndName)
+    displayLine("The following cards cause Civil War or Regime Change:")
+    displayLine(separator())
+    wrap("", cards) foreach (l => println(l))
+    cacheYesOrNo("\nAre one or more of these cards in the discard pile? (y/n) ")
+  }
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // See Event Instructions table
+    if (isHuman(role)) {
+      val cards = cardCandidates()
+        .sorted
+        .map(n => deck(n).numAndName)
+
+      displayLine("\nThe following cards cause Civil War or allows Regime Change.")
+      displayLine(separator())
+      cards.foreach(card => println(card))
+      log(s"\n$role takes one of the candidate cards from the discard pile.", Color.Event)
+    }
+    else
+      log(s"\n$role takes the candidate card nearest the bottom of the discard pile.", Color.Event)
   }
 }

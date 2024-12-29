@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Place 1 Reaction marker in Egypt and up to 2 more Reaction markers
+// in any countries including Egypt.
 // ------------------------------------------------------------------
 object Card_191 extends Card2(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +56,13 @@ object Card_191 extends Card2(191, "Muslim Brotherhood", Jihadist, 3, Remove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
+            lapsingEventNotInPlay(ArabWinter) &&
+            getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +75,26 @@ object Card_191 extends Card2(191, "Muslim Brotherhood", Jihadist, 3, Remove, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    log()
+    if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker) {
+      addEventTarget(Egypt)
+      addReactionMarker(Egypt)
+    }
+    else
+      log("Egypt cannot currently take a reaction marker.", Color.Event)
+
+    val other2 = getCandidates() match {
+      case c::Nil =>
+        List(c, c)
+      case candidates if isHuman(role) =>
+        askCountries(2, candidates, allowDuplicates = true)
+      case candidates =>
+        JihadistBot.multipleTargets(2, candidates, allowDuplicates = true)(JihadistBot.markerTarget)
+    }
+
+    for (target <- other2) {
+      addEventTarget(target)
+      addReactionMarker(target)
+    }
   }
 }

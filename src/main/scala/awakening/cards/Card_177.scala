@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Place up to two level 1 Plots in Israel.
+// -1 Funding.
 // ------------------------------------------------------------------
 object Card_177 extends Card2(177, "Gaza Rockets", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +63,25 @@ object Card_177 extends Card2(177, "Gaza Rockets", Jihadist, 2, NoRemove, NoLaps
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    game.availablePlots.contains(Plot1) && game.funding < 9
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Israel)
+    if (game.availablePlots.contains(Plot1) || game.funding > 1) {
+      // See Event Instructions table
+      val num = 2 min game.availablePlots.count(_ == Plot1)
+      for (i <- 1 to num) {
+        testCountry(Israel)
+        addAvailablePlotToCountry(Israel, Plot1, visible = true)
+      }
+      decreaseFunding(1)
+    }
+    else
+      log("\nNo level 1 Plots available are funding at 1. The event has no effect.", Color.Event)
   }
 }

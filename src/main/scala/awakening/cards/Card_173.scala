@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Remove 1 Awakening marker from up to 2 separate countries.
+// No more Awakening/Reaction markers may be placed this turn.
 // ------------------------------------------------------------------
 object Card_173 extends Card2(173, "Arab Winter", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -64,11 +66,31 @@ object Card_173 extends Card2(173, "Arab Winter", Jihadist, 2, NoRemove, Lapsing
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
+  def getCandidates() = countryNames(game.muslims.filter(_.awakening > 0))
+
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    getCandidates() match {
+      case Nil =>
+        log(s"\nThere are no awakening markers on the map.", Color.Event)
+
+      case candidates =>
+        val targets = if (candidates.size == 1)
+          candidates
+        else if (isHuman(role)) {
+          val target1 = askCountry("Select first country: ", candidates)
+          val target2 = askCountry("Select second country: ", candidates filterNot (_ == target1))
+          List(target1, target2)
+        }
+        else
+          JihadistBot.multipleTargets(2, candidates)(JihadistBot.markerTarget)
+
+        addEventTarget(targets:_*)
+        targets foreach (removeAwakeningMarker(_))
+        log("\nNo more Awakening/Reaction markers may be placed this turn.", Color.Event)
+    }
   }
 }

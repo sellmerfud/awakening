@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Place 1 Awakening or 1 Reaction marker in Yemen.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_203 extends Card2(203, "Day of Rage", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +57,9 @@ object Card_203 extends Card2(203, "Day of Rage", Unassociated, 1, Remove, NoLap
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    lapsingEventNotInPlay(ArabWinter) &&
+    game.getMuslim(Yemen).canTakeAwakeningOrReactionMarker
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +72,22 @@ object Card_203 extends Card2(203, "Day of Rage", Unassociated, 1, Remove, NoLap
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val placementAction = if (isHuman(role)) {
+      val choices = List(
+        addAwakeningMarker _ -> "Place awakening marker",
+        addReactionMarker _ -> "Place reaction marker")
+      val orderedChoices = if (role == US)
+        choices
+      else
+        choices.reverse
+      askMenu("Choose one:", orderedChoices).head
+    }
+    else if (role == Jihadist)
+      addReactionMarker _
+    else
+      addAwakeningMarker _
+
+    addEventTarget(Yemen)
+    placementAction(Yemen, 1)
   }
 }

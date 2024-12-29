@@ -92,6 +92,27 @@ trait BotHelpers {
     (1 + jihadDRM(m, major = true)) <= m.governance  // At least 1/6 chance
   }
   
+  // This is used by the Bots to cache country targets.
+  // This allows the code that determines if the event is playable
+  // to select a target country (which may include random selection)
+  // And then the code that carries out the event can use the cached
+  // target to ensure it uses the same target that was used when
+  // determining if the event was playable.
+  var cachedTargets: Map[String, String] = Map.empty
+
+  def cachedTarget(id: String)(targetValue: => String): String = {
+    cachedTargets.get(id) match {
+      case Some(target) =>
+        target
+      case None => 
+        val target = targetValue
+        cachedTargets += (id -> target)
+        target
+    }
+  }
+
+  def clearCachedTargets(): Unit = cachedTargets = Map.empty
+
   // trait representing nodes in the 
   // - Jihadist EvO Flowchart
   // - US PAR Flowchart
@@ -165,7 +186,10 @@ trait BotHelpers {
   //   the samme list of candidates is used with the next filter in the list.
   //   Effectivlely skipping that priority filter.
   // This will only return Nil if the original list of candidates is Nil.
-  def narrowCandidates(candidates: List[Country], priorities: List[CountryFilter], allowBotLog: Boolean = true): List[Country] = {
+  def narrowCountries(
+    candidates: List[Country],
+    priorities: List[CountryFilter],
+    allowBotLog: Boolean = true): List[Country] = {
     if (allowBotLog)
       botLog(s"narrow candidates: [${candidates.map(_.name).mkString(", ")}]")
     @tailrec def nextPriority(candidates: List[Country], priorities: List[CountryFilter]): List[Country] = {
@@ -193,6 +217,12 @@ trait BotHelpers {
     nextPriority(candidates, priorities)
   }
   
+  def narrowCandidates(
+    candidates: List[String],
+    priorities: List[CountryFilter],
+    allowBotLog: Boolean = true): List[String] =
+      narrowCountries(game.getCountries(candidates), priorities, allowBotLog).map(_.name)
+
   // Process the list of countries by each CountryFilter in the priorities list.
   // The priorities list represents a single column in a Priorities Table.
   // In this function each filter is processed in order until we have used all filters

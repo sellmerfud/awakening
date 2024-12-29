@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if there is any country in Civil War with a Cell.
+// +2 Funding.
 // ------------------------------------------------------------------
 object Card_180 extends Card2(180, "Mosul Central Bank", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +57,19 @@ object Card_180 extends Card2(180, "Mosul Central Bank", Jihadist, 2, Remove, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.hasMuslim(m => m.civilWar && m.totalCells > 0)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = game.funding < 9
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    increaseFunding(2)
   }
 }

@@ -1124,8 +1124,13 @@ object USBot extends BotHelpers {
   }
   
   
+  def resetStaticData(): Unit = {
+    clearCachedTargets()
+  }
+
   // Called when the Human Jihadist player plays a Jihadist Associated card.
   def performTriggeredEvent(card: Card): Unit = {
+    resetStaticData()
     performCardEvent(card, US, triggered = true)
   }
   
@@ -1155,6 +1160,7 @@ object USBot extends BotHelpers {
   
   // Starting point for Jihadist bot card play.
   def cardPlay(card: Card, playable: Boolean): Unit = {
+    resetStaticData()
     if (disruptRemovesLastCell(card))  {
       // The Bot will execute the auto trigger event first.
       if (card.autoTrigger) {

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,9 +41,16 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Search through the REMOVED cards and Select, reveal and draw 1 of
+// Ayman al-Zawabiri, Abu Bakr al-Baghdadi, Abu Sayyaf (ISIL),
+// Jihadi John, or Osama bin Ladin into hand.
+// -1 Prestige.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_197 extends Card2(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+  val UnconfirmedCandidates = List(215, 216, 219, 225, 237)
+
+  def getCandidates() = game.cardsRemoved.filter(UnconfirmedCandidates.contains)
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -62,13 +69,34 @@ object Card_197 extends Card2(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = getCandidates().nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // See Event Instructions table
+    if (getCandidates().isEmpty && game.prestige == 1) {
+      log("\nNone of the listed cards is in the removed cards pile and US prestige is 1.", Color.Event)
+      log("The event has no effect.", Color.Event)
+    }
+    else {
+      if (getCandidates().nonEmpty) {
+        val choices = getCandidates().map(n => n -> deck(n).numAndName)
+        val prompt = if (isHuman(role))
+          "\nWhich card did you select from the removed cards pile:"
+        else
+          s"\nThe $Jihadist Bot draws the card nearest the top of the removed cards pile:"
+
+        val cardNum = askMenu(prompt, choices).head
+        game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
+        log(s"\nThe $Jihadist draws the ${deck(cardNum).numAndName} from the removed cards pile.", Color.Event)
+      }
+      else
+        log("\nNone of the listed cards is in the removed cards pile.", Color.Event)
+
+      decreasePrestige(1)
+    }
   }
 }

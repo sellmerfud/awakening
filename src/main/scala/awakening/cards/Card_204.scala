@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If US play, remove 1 Troop (from Track first) to Off Map Box until
+// end of next draw phase, then to Track. +2 Prestige. LAPSING & REMOVE
+// If Jihadist, US randomly discards 1 card.  REMOVE
 // ------------------------------------------------------------------
 object Card_204 extends Card2(204, "Ebola Scare", Unassociated, 1, Remove, USLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +59,10 @@ object Card_204 extends Card2(204, "Ebola Scare", Unassociated, 1, Remove, USLap
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = role match {
+    case US => game.prestige < 12
+    case Jihadist => cacheYesOrNo(s"Does the $US player have any cards in hand? (y/n) ")
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +75,28 @@ object Card_204 extends Card2(204, "Ebola Scare", Unassociated, 1, Remove, USLap
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // See Event Instructions table
+    if (role == Jihadist) {
+      if (isHuman(role))
+        log(s"\nDiscard the top card of the $US hand", Color.Event)
+      else
+        log(s"\nYou ($US) must discard one random card", Color.Event)
+      askCardsDiscarded(1)
+    }
+    else {
+      val source = if (game.troopsAvailable > 0)
+        "track"
+      else if (isHuman(role))
+        selectTroopsToPutOffMap(1).head.country
+      else {
+        val withTroops = countryNames(game.countries.filter(_.troops > 0))
+        USBot.ebolaScareTarget(withTroops).get
+      }
+
+      if (source != "track")
+        addEventTarget(source)
+      putTroopsInOffMapBox(source, 1)
+      increasePrestige(2)
+    }
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// -2 Prestige. Randomly discard 1 card from US player's hand.
+// If US Election later this turn, US Posture automatically switches
+// (do not roll).
 // ------------------------------------------------------------------
 object Card_199 extends Card2(199, "US Consulate Attacked", Jihadist, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +71,14 @@ object Card_199 extends Card2(199, "US Consulate Attacked", Jihadist, 3, NoRemov
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    decreasePrestige(2)
+
+    if (isHuman(role))
+      log(s"\nDiscard the top card of the $US hand.", Color.Event)
+    else
+      log(s"\nYou ($US) must discard one random card.", Color.Event)
+    askCardsDiscarded(1)
+
+    log("\nIf US Elections is played later this turn, US Posture switches automatically", Color.Event)
   }
 }

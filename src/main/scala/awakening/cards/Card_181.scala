@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Iran has a Cell.
+// Blocked by US play of Trade Embargo.
+// Roll 1 die.
+//   Success (1-3), add Iranian WMD to Available Plots and REMOVE.
+//   Failure (4-6), remove the Cell.
 // ------------------------------------------------------------------
 object Card_181 extends Card2(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +60,10 @@ object Card_181 extends Card2(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemo
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    countryEventNotInPlay(Iran, TradeEmbargoUS) &&
+    game.getCountry(Iran).totalCells > 0 &&
+    game.getCountry(Iran).wmdCache   > 0
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +76,21 @@ object Card_181 extends Card2(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemo
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Iran)
+    val die = getDieRoll("Enter event die roll: ", Some(role))
+    val success = die < 4
+    log(s"Die roll: $die")
+    if (success) {
+      log("\nSuccess", Color.Event)
+      moveWMDCacheToAvailable(Iran, game.getCountry(Iran).wmdCache)
+      removeCardFromGame(181) // Card only removed if die roll was successful
+    }
+    else {
+      log("\nFailure", Color.Event)
+      if (game.getCountry(Iran).activeCells > 0)
+        removeCellsFromCountry(Iran, 1, 0, sadr = false, addCadre = true)
+      else
+        removeCellsFromCountry(Iran, 0, 1, sadr = false, addCadre = true)
+    }
   }
 }
