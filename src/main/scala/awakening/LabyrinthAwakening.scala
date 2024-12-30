@@ -2258,6 +2258,9 @@ object LabyrinthAwakening {
     }
   }
 
+  def askPosture(country: String): String =
+    askSimpleMenu(s"\nSelect the posture of $country: ", List(Soft, Hard))
+
   def askCardNumber(prompt: String,
                     initial: Option[String] = None,
                     allowNone: Boolean = true,

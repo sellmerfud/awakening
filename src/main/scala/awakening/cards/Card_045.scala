@@ -81,7 +81,7 @@ object Card_045 extends Card2(45, "Safer Now", US, 3, NoRemove, NoLapsing, NoAut
     )
     val (name, posture) = if (isHuman(role)) {
       val target = askCountry("Select posture of which country: ", candidates)
-      (target, askSimpleMenu(s"New posture of $target: ", List(Soft, Hard)))
+      (target, askPosture(target))
     }
     else
       (USBot.posturePriority(candidates).get, game.usPosture)

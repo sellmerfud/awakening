@@ -146,7 +146,7 @@ object Card_205 extends Card2(205, "Erdogan Effect", Unassociated, 1, NoRemove, 
             val (actives, sleepers, sadr) = askCells(name, 2, role == US)
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
           case "+pos" =>
-            val posture = askSimpleMenu(s"New posture for $name: ", List(Soft, Hard))
+            val posture = askPosture(name)
             setCountryPosture(name, posture)
           case _ => setCountryPosture(name, PostureUntested)
         }

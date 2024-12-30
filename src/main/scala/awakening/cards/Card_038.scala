@@ -81,7 +81,7 @@ object Card_038 extends Card2(38, "Libyan Deal", US, 3, Remove, NoLapsing, NoAut
     val schengens = if (isHuman(role)) {
       println("Select 2 Shegen countries' posture")
       askCountries(2, Schengen) map { name =>
-        (name, askSimpleMenu(s"New posture of $name: ", List(Soft, Hard)))
+        (name, askPosture(name))
       }
     }
     else

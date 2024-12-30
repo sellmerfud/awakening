@@ -73,7 +73,7 @@ object Card_016 extends Card2(16, "Euro-Islam", US, 2, Remove, NoLapsing, NoAuto
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
     val posture = if (isHuman(role))
-      askSimpleMenu(s"New posture of $Benelux: ", List(Soft, Hard))
+      askPosture(Benelux)
     else
       game.usPosture
       

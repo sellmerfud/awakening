@@ -80,7 +80,7 @@ object Card_036 extends Card2(36, "Indo-Pakistani Talks", US, 3, Remove, NoLapsi
     setAlignment(Pakistan, Ally)
 
     val newPosture = if (isHuman(role))
-      askSimpleMenu("New posture of India: ", List(Soft, Hard))
+      askPosture(India)
     else
       game.usPosture
       

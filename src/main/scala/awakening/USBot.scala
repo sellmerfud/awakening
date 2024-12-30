@@ -775,7 +775,7 @@ object USBot extends BotHelpers {
   
   // ------------------------------------------------------------------
   def servalTarget(names: List[String]): Option[String] = {
-    val candidates = game getMuslims highestCellsMinusTandM(names)
+    val candidates = game.getMuslims(highestCellsMinusTandM(names))
     topPriority(candidates, NeutralPriority::Nil) map (_.name)
   }
   

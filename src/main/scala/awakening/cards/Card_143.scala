@@ -137,7 +137,7 @@ object Card_143 extends Card2(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing,
 
           case "posture" =>
             val target  = askCountry("Select posture of which Schengen country: ", Schengen)
-            val posture = askSimpleMenu("\nSelect new posture:", List(Soft, Hard))
+            val posture = askPosture(target)
             addEventTarget(target)
             setCountryPosture(target, posture)
 

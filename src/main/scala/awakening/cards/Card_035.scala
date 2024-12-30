@@ -81,7 +81,7 @@ object Card_035 extends Card2(35, "Hijab", US, 3, Remove, NoLapsing, NoAutoTrigg
     if (!game.getMuslim(Turkey).isGood)
       improveGovernance(Turkey, 1, canShiftToGood = true)
     val newPosture = if (isHuman(role))
-      askSimpleMenu("New posture of France: ", List(Soft, Hard))
+      askPosture(France)
     else
       game.usPosture
 

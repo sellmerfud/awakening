@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If US play, US Posture to Hard.
+// If Jihadist, US Posture to Soft.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_222 extends Card2(222, "Hagel", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +64,20 @@ object Card_222 extends Card2(222, "Hagel", Unassociated, 2, Remove, NoLapsing, 
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    // See Event Instructions table
+    case US =>
+      game.usPosture == Soft &&
+      (game.islamistResources > 1 || (game.gwot != (Soft, 2) && game.gwot != (Soft, 3)))
+    case Jihadist =>
+      game.usPosture == Hard
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    setUSPosture(if (role == US) Hard else Soft)
   }
 }

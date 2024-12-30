@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,11 +37,17 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in any Civil War or Regime Change country with multiple Cells.
+// Remove all but 1 Cell. Increase Funding by ½ that number (rounded up).
+// Worsen Governance 1 level (not to IR) or Shift Alignment 1 box toward
+// Adversary.
+// Not playable in a Caliphate country.
 // ------------------------------------------------------------------
 object Card_230 extends Card2(230, "Sellout", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,6 +60,18 @@ object Card_230 extends Card2(230, "Sellout", Unassociated, 2, NoRemove, NoLapsi
   override
   def eventRemovesLastCell(): Boolean = false
 
+  val isCandidate = (m: MuslimCountry) =>
+    m.totalCells > 1 &&
+    (m.civilWar || m.inRegimeChange) &&
+    !game.isCaliphateMember(m.name)
+
+  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+
+  val isJihadistBotCandidate = (m: MuslimCountry) =>
+    isCandidate(m) && !(m.isPoor && m.isAdversary)
+
+  def getJihadistBotCandidates() = countryNames(game.muslims.filter(isJihadistBotCandidate))
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
@@ -61,14 +79,64 @@ object Card_230 extends Card2(230, "Sellout", Unassociated, 2, NoRemove, NoLapsi
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  //
+  //  The US Bot treats Sellout as unplayable so we return an empty list
+  //  The event has you remove all cells but 1 in a country and increase
+  //  funding by half that number rounded up.
+  //  Then either shift alignment toward Adversary or worsen governance toward Poor.
+  //  If funding is at 9, then we will ensure the Bot only takes the event if it
+  //  will be able to affect alignment/governance
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => false  // US Bot treats this as unplayable
+    case Jihadist => game.funding < 9 || getJihadistBotCandidates().nonEmpty
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val (name, (actives, sleepers, sadr), action) = role match {
+      case _ if isHuman(role) =>
+        val name = askCountry("Select country: ", getCandidates())
+        val m = game.getMuslim(name)
+        val numCells = m.totalCells - 1
+        displayLine(s"\nRemove ${amountOf(numCells, "cell")} from $name", Color.Event)
+        val cells = askCells(name, numCells, sleeperFocus = (role == US))
+        val choices = List(
+          choice(!m.isPoor,      "gov",   "Worsen governance 1 level"),
+          choice(!m.isAdversary, "align", "Shift alignment 1 box toward Adversary")
+        ).flatten
+        val action = askMenu("Choose one:", choices).headOption
+        (name, cells, action)
+
+      case _ => // Jihadist Bot
+        val name = if (game.funding == 9)
+          JihadistBot.alignGovTarget(getJihadistBotCandidates()).get
+        else {
+          val candidates = game.getMuslims(getJihadistBotCandidates()).sortBy(-_.totalCells)
+          shuffle(candidates.takeWhile(_.totalCells == candidates.head.totalCells)).head.name
+        }
+        val m = game.getMuslim(name)
+        val cells = JihadistBot.chooseCellsToRemove(name, m.totalCells - 1)
+        val action = if (!m.isAdversary)
+          Some("align")
+        else if (!m.isPoor)
+          Some("gov")
+        else
+          None
+        (name, cells, action)
+    }
+
+    addEventTarget(name)
+    removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+    val totalCells = actives + sleepers + (if (sadr) 1 else 0)
+    increaseFunding((totalCells + 1) / 2)  // half of removed cells rounded up
+    action match {
+      case Some("gov")   => worsenGovernance(name, 1, canShiftToIR = false)
+      case Some("align") => shiftAlignmentRight(name)
+      case _             => log(s"\n$name is already Poor Adversary.", Color.Event)
+    }
   }
 }

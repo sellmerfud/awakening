@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Flip Iran Country Mat to Shia-Mix.
+// Place 2 Awakening or 2 Reaction markers, and then 1 of the other
+// type there. Set to Fair Adversary.
+// -1 Funding
+// REMOVE
 // ------------------------------------------------------------------
 object Card_223 extends Card2(223, "Iranian Elections", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +73,21 @@ object Card_223 extends Card2(223, "Iranian Elections", Unassociated, 2, Remove,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val choices = List(
+      (addReactionMarker _, addAwakeningMarker _) -> "Place 2 reaction markers and 1 awakening marker",
+      (addAwakeningMarker _, addReactionMarker _) -> "Place 2 awakening markers and 1 reaction marker")
+    val orderedChoices = if (role == Jihadist) choices else choices.reverse
+
+    addEventTarget(Iran)
+    flipIranToShiaMixMuslim()
+    val (primaryPlacement, otherPlacement) = role match {
+      case _ if isHuman(role) => askMenu("Choose one:", orderedChoices).head
+      case US => (addAwakeningMarker _, addReactionMarker _)
+      case Jihadist => (addReactionMarker _, addAwakeningMarker _)
+    }
+
+    primaryPlacement(Iran, 2)
+    otherPlacement(Iran, 1)
+    decreaseFunding(1)
   }
 }

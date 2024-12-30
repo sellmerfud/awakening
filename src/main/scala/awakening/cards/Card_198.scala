@@ -118,7 +118,7 @@ object Card_198 extends Card2(198, "US Atrocities", Jihadist, 3, NoRemove, NoLap
 
         case candidates if isHuman(role) =>
           val name = askCountry(s"Select posture of which country: ", candidates)
-          val posture = askSimpleMenu(s"\nNew posture for $name: ",  List(Soft, Hard))
+          val posture = askPosture(name)
           Some((name, posture))
 
         case candidates =>

@@ -111,7 +111,7 @@ object Card_202 extends Card2(202, "Cyber Warfare", Unassociated, 1, NoRemove, N
 
         case "posture"  =>
           val name = askCountry("Set the posture of which country? ", PostureCountries)
-          val posture = askSimpleMenu(s"New posture for $name: ", List(Soft, Hard))
+          val posture = askPosture(name)
           addEventTarget(name)
           setCountryPosture(name, posture)
 

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,10 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Select, reveal, and draw a card other than Oil Price Spike from the
+// discard pile or a box. Add +1 to the Resources of each Oil Export
+// country for the turn.
+//Cancel effects of Fracking.
 // ------------------------------------------------------------------
 object Card_236 extends Card2(236, "Oil Price Spike", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +65,33 @@ object Card_236 extends Card2(236, "Oil Price Spike", Unassociated, 3, NoRemove,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US =>
+      // Unplayable if it would cause Jihadist instant victory
+      val jihadOilExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter)
+      game.islamistResources + jihadOilExporters < 6 || !game.islamistAdjacency
+
+    case Jihadist =>
+      // Unplayable if it would cause US instant victory
+      val usOilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
+      game.goodResources + usOilExporters < 12
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // See Event Instructions table
+    removeGlobalEventMarker(Fracking) // Cancels effects of "Fracking" marker
+    role match {
+      case role if isHuman(role) =>
+        log(s"\n$role player draws a card other than Oil Price Spike from the discad pile.", Color.Event)
+      case US =>
+        log(s"\n$US Bot draws highest Ops US associated card (at random) from the discard pile.", Color.Event)
+      case Jihadist =>
+        log(s"\n$Jihadist Bot draws highest Ops Jihadist associated card (at random) from the discard pile", Color.Event)
+    }
+    askCardsDrawn(1)
   }
 }

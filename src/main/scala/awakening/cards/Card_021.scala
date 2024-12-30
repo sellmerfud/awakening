@@ -91,7 +91,7 @@ object Card_021 extends Card2(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, N
       log(s"$US draws one card and adds it to their hand")
       askCardsDrawn(1)
       val postureName = askCountry("Select posture of which country: ", postureCandidates)
-      val newPosture = askSimpleMenu(s"New posture of $postureName: ", List(Soft, Hard))
+      val newPosture = askPosture(postureName)
       addEventTarget(postureName)
       setCountryPosture(postureName, newPosture)
     }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,10 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Whenever this card is used for Operations or discarded.
+// Roll US Posture. Then,
+// if GWOT Penalty 0, +1 Prestige.
+// If not, -1 Prestige.
 // ------------------------------------------------------------------
 object Card_240 extends Card2(240, "US Election", Unassociated, 3, NoRemove, NoLapsing, AutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +59,7 @@ object Card_240 extends Card2(240, "US Election", Unassociated, 3, NoRemove, NoL
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = false // Not directly playable, but will always auto trigger
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +72,18 @@ object Card_240 extends Card2(240, "US Election", Unassociated, 3, NoRemove, NoL
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+  if (lapsingEventInPlay(USConsulateAttacked)) {
+    log("\nUS Consulate Attacked event is lapsing", Color.Event)
+    setUSPosture(oppositePosture(game.usPosture))
+  }
+  else
+    rollUSPosture()
+
+  logWorldPosture()
+
+  if (game.gwotPenalty == 0)
+    increasePrestige(1)
+  else
+    decreasePrestige(1)
   }
 }

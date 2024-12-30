@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in a Civil War country.
+// If US play, remove up to 3 Cells.
+// If Jihadist, remove up to 2 Militia.
 // ------------------------------------------------------------------
 object Card_231 extends Card2(231, "Siege of Kobanigrad", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,26 +52,80 @@ object Card_231 extends Card2(231, "Siege of Kobanigrad", Unassociated, 2, NoRem
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def getCandidates() = countryNames(game.muslims.filter(_.civilWar))
+
+  def getCellsCandidates() = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
+
+  def getMilitiaCandidates() = countryNames(game.muslims.filter(m => m.civilWar && m.militia > 0))
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 3))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => getCellsCandidates().nonEmpty
+    case Jihadist => getMilitiaCandidates().nonEmpty
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val actionChoices = List(
+      choice(getCellsCandidates().nonEmpty, "cells", "Remove cells."),
+      choice(getMilitiaCandidates().nonEmpty, "militia", "Remove militia."),
+    ).flatten
+    val orderedActionChoices = if (role == US) actionChoices else actionChoices.reverse
+
+    val action = role match {
+      case _ if isHuman(role) => askMenu("Choose one:", orderedActionChoices).head
+      case US => "cells"
+      case Jihadist => "militia"
+    }
+
+    action match {
+      case "cells" if isHuman(role) =>
+        getCellsCandidates() match {
+          case Nil =>
+            log("\nThere are no Civil War countries with cells.  The event has no effect.", Color.Event)
+          case candidates =>
+            val name = askCountry("Select country: ", candidates)
+            val (actives, sleepers, sadr) = askCells(name, 3 min game.getMuslim(name).totalCells, sleeperFocus = true)
+            addEventTarget(name)
+            removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+        }
+
+      case "cells" =>
+        val name = USBot.disruptPriority(getCellsCandidates()).get
+        val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 3 min game.getMuslim(name).totalCells)
+        addEventTarget(name)
+        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+
+      case _  if isHuman(role) =>
+        getMilitiaCandidates() match {
+          case Nil =>
+            log("\nThere are no Civil War countries with militia.  The event has no effect.", Color.Event)
+          case candidates =>
+            val name = askCountry("Select country: ", candidates)
+            addEventTarget(name)
+            removeMilitiaFromCountry(name, 2 min (game getMuslim name).militia)
+        }
+
+      case _ =>
+        val name = JihadistBot.minorJihadTarget(getMilitiaCandidates()).get
+        addEventTarget(name)
+        removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
+    }
   }
 }

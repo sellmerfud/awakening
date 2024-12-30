@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,15 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If US play, Blocks NPT Safeguards Ignored. Remove Iranian WMD
+// (+1 Prestige if WMD removed; 11.3.1). Iran may resume Oil Exports.
+// MARK & REMOVE.
+// If Jihadist, -1 Prestige. Place 1 Reaction marker in a Shia-Mix country.
+// Iran no longer an Oil Exporter.
 // ------------------------------------------------------------------
 object Card_232 extends Card2(232, "Trade Embargo", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,6 +59,9 @@ object Card_232 extends Card2(232, "Trade Embargo", Unassociated, 2, USRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getReactionCandidates() = countryNames(
+    game.muslims.filter(m => m.isShiaMix && m.canTakeAwakeningOrReactionMarker)
+  )
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
@@ -62,13 +70,57 @@ object Card_232 extends Card2(232, "Trade Embargo", Unassociated, 2, USRemove, N
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => true
+    case Jihadist =>
+      game.prestige > 1 ||
+      (lapsingEventNotInPlay(ArabWinter) && getReactionCandidates().nonEmpty) ||
+      !game.getCountry(Iran).hasMarker(TradeEmbargoJihadist)
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (role == US) {
+      val iran = game.getCountry(Iran)
+      if (iran.wmdCache > 0) {
+        log("\nRemove the Iranian WMD from the game.", Color.Event)
+        increasePrestige(iran.wmdCache)
+        iran match {
+          case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = 0))
+          case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = 0))
+        }
+      }
+      addEventTarget(Iran)
+      if (iran.hasMarker(TradeEmbargoJihadist)) {
+        removeEventMarkersFromCountry(Iran, TradeEmbargoJihadist)
+        log("\nIran may resume oil exports.", Color.Event)
+      }
+      addEventMarkersToCountry(Iran, TradeEmbargoUS)
+    }
+    else { // Jihadist
+      decreasePrestige(1)
+      if (lapsingEventInPlay(ArabWinter))
+        log("\nCannot place a reaction marker. [Arab Winter]", Color.Event)
+      else if (getReactionCandidates().isEmpty)
+        log("\nThere are no Shix-Mix countries that can take a reaction marker.", Color.Event)
+      else {
+        val target = if (isHuman(role))
+          askCountry("Select Shia-Mix country to place reaction marker: ", getReactionCandidates())
+        else
+          JihadistBot.markerTarget(getReactionCandidates()).get
+        addEventTarget(target)
+        addReactionMarker(target)
+      }
+
+      addEventTarget(Iran)
+      if (!game.getCountry(Iran).hasMarker(TradeEmbargoJihadist)) {
+        // If Iran becomes Neutral or Ally, remove any Trade Embargo marker. [11.3.3.1]
+        addEventMarkersToCountry(Iran, TradeEmbargoJihadist)
+        log("\nIran is no longer an oil exporter.", Color.Event)
+      }
+    }
   }
 }
