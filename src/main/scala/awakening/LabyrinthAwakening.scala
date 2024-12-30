@@ -7324,7 +7324,7 @@ object LabyrinthAwakening {
             case _        => JihadistBot.cardPlay(card, playable)
           }
 
-        if (game.botEnhancements)
+        if (game.botRole == Jihadist && game.botEnhancements)
           JihadistBot.voluntaryCadreRemoval()
 
         if (cardNumber == CriticalMiddle)
