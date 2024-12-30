@@ -6714,7 +6714,7 @@ object LabyrinthAwakening {
       matchOne(verb, CmdNames) foreach {
         case "us"                    => usCardPlay(param)
         case "jihadist"              => jihadistCardPlay(param)
-        case "remove cadre"          => humanRemoveCadre()
+        case "remove cadre"          => humanVoluntarilyRemoveCadre()
         case "resolve plots"         => resolvePlots()
         case "end turn"              => endTurn()
         case "add awakening cards"   => addAwakeningCards()
@@ -6735,19 +6735,21 @@ object LabyrinthAwakening {
 
   // The Jihadist play can voluntarily remove cadre markers on the map
   // (To avoid giving the US an easy prestige bump)
-  def humanRemoveCadre(): Unit = {
-    val candidates = countryNames(game.countries filter (_.hasCadre))
+  def humanVoluntarilyRemoveCadre(): Unit = {
+    val candidates = countryNames(game.countries.filter(_.hasCadre))
     if (candidates.isEmpty)
       println("There are no cadres on the map")
     else {
-      val target = askCountry(s"Remove cadre in which country: ", candidates)
-      game.getCountry(target) match {
-        case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
-        case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+      val choices = candidates.map(n => n -> n) :+ ("cancel" -> "Do not remove a cadre")
+      askMenu(s"Remove cadre in which country: ", choices, allowAbort = false).head match {
+        case "cancel" =>
+        case target =>
+          game.getCountry(target) match {
+            case m: MuslimCountry    => game = game.updateCountry(m.copy(hasCadre = false))
+            case n: NonMuslimCountry => game = game.updateCountry(n.copy(hasCadre = false))
+          }
+          log(s"\n$Jihadist voluntarily removes a cadre from $target", Color.MapPieces)
       }
-      log()
-      log(separator())
-      log(s"$Jihadist voluntarily removes a cadre from $target", Color.MapPieces)
     }
   }
 
@@ -7382,7 +7384,7 @@ object LabyrinthAwakening {
           game = game.copy(reserves = game.reserves.copy(jihadist = 0))
           getAction()
         case RemoveCadre =>
-          humanRemoveCadre()
+          humanVoluntarilyRemoveCadre()
           getAction()
         case AbortCard =>
             if (askYorN("Really abort (y/n)? "))
