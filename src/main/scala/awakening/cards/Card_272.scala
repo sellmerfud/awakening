@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if US has 6 or more Troops on Track and is Hard, and Trump Tweets is ON.
+// The US may conduct a Regime Change Operation in any Civil War or
+// Adversary country (not Iran).
+// Flip Trump Tweets to OFF.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_272 extends Card2(272, "Fire and Fury", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +60,42 @@ object Card_272 extends Card2(272, "Fire and Fury", US, 3, Remove, NoLapsing, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    game.troopsAvailable >= 6 &&
+    game.usPosture == Hard &&
+    trumpTweetsON
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = false // Unplayable by Bot
+
+  def getCandidates() = countryNames(
+      game.muslims.filter(m => m.name != Iran && (m.civilWar || m.isAdversary))
+  )
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (getCandidates().nonEmpty && askYorN("Do you wish to perform a Regime Change Operation? (y/n) ")) {
+      val dest      = askCountry("Regime change in which country: ", getCandidates())
+      val source    = askCountry("Deploy troops from: ", game.regimeChangeSourcesFor(dest))
+      val maxTroops = if (source == "track")
+        game.troopsAvailable
+      else
+        game.getCountry(source).maxDeployFrom
+
+      val numTroops = askInt("Deploy how many troops: ", 6, maxTroops)
+
+      addEventTarget(dest)
+      log(s"\n$US performs a Regime Change operation")
+      log(separator())
+      testCountry(dest)
+      performRegimeChange(source, dest, numTroops)
+    }
+    setTrumpTweetsOFF()
   }
 }

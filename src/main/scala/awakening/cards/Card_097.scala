@@ -79,7 +79,7 @@ object Card_097 extends Card2(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing,
     log(s"on top card of the ${game.botRole} Bot's hand.", Color.Event)
     askCardsDrawn(1)
 
-    val thisCard = this.asInstanceOf[Card]
+    val thisCard = this.asInstanceOf[Card2]
     (role) match {
       case US if isHuman(role) =>
         humanUsCardPlay(thisCard, false)

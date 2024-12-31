@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Shift Alignment of 1 country 1 box
+// OR
+// Set Posture of 1 country to match that of US.
+// Cannot be played in a caliphate country.
 // ------------------------------------------------------------------
 object Card_268 extends Card2(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +58,16 @@ object Card_268 extends Card2(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoA
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getAlignmentCandidates() = countryNames(
+    game.muslims.filter(m => !(m.isIslamistRule || m.isAlly || game.isCaliphateMember(m.name)))
+  )
+  def getPostureCandidates() = countryNames(
+    game.nonMuslims.filter(n => n.canChangePosture && n.posture != game.usPosture)
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getAlignmentCandidates().nonEmpty || getPostureCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +80,35 @@ object Card_268 extends Card2(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoA
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val action = if (isHuman(role)) {
+      val choices = List(
+        choice(getAlignmentCandidates().nonEmpty, "align",   "Shift alignment of 1 country"),
+        choice(getPostureCandidates().nonEmpty,   "posture", "Set posture of 1 country")
+      ).flatten
+      askMenu("Choose one:", choices).head
+    }
+    else if (getAlignmentCandidates().nonEmpty)  // Bot
+      "align"
+    else
+      "posture"
+
+    action match {
+      case "align" =>
+        val target = if (isHuman(role))
+          askCountry("\nShift alignment of which country: ", getAlignmentCandidates())
+        else
+          USBot.markerAlignGovTarget(getAlignmentCandidates()).get
+        addEventTarget(target)
+        testCountry(target)
+        shiftAlignmentLeft(target)
+
+      case _ =>
+        val target = if (isHuman(role))
+          askCountry("\nSet posture of which country to match US posture: ", getPostureCandidates())
+        else
+          USBot.posturePriority(getPostureCandidates()).get
+        addEventTarget(target)
+        setCountryPosture(target, game.usPosture)
+    }
   }
 }

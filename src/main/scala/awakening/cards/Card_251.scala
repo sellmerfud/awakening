@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,20 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Roll a die and modify by US Prestige modifier:
+// 0) Random reaction marker
+// 1) -1 US Prestige
+// 2) Remove an Aid marker
+// 3) +1 Funding
+// 4) -1 Funding
+// 5) Place an Aid marker
+// 6) +1 US Prestige
+// 7-8) Random Awakening Marker
+// Then, place or flip Trump Tweets to ON.
 // ------------------------------------------------------------------
 object Card_251 extends Card2(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +79,93 @@ object Card_251 extends Card2(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    def logNotZero(value: Int, msg: String): Unit =
+      if (value != 0)
+        log(f"$value%+2d $msg")
+
+    def removeAidTarget: Option[String] =
+      if (isHuman(role))
+        countryNames(game.muslims.filter(_.aidMarkers > 0)) match {
+          case Nil => None
+          case candidates =>
+            Some(askCountry("Remove an aid marker from which country: ", candidates))
+        }
+      else
+        USBot.removeAidTarget
+
+    def addAidTarget: Option[String] = {
+      countryNames(game.muslims.filter(_.canTakeAidMarker)) match {
+        case Nil =>
+          None
+        case candidates if isHuman(role) =>
+          Some(askCountry("Place an aid marker in which country: ", candidates))
+        case candidates =>
+          USBot.markerAlignGovTarget(candidates)
+      }
+    }
+
+    //  Note: if scenario is HillaryWins then we add a +1 modifer to the die roll
+    val hillaryMod  = if (game.scenarioName == awakening.scenarios.HillaryWins.name) 1 else 0
+    val prestigeMod = game.prestigeModifier
+    val die = getDieRoll("Enter event die roll: ", Some(role))
+    val modRoll = die + hillaryMod + prestigeMod
+
+    log(s"Die roll: $die")
+    logNotZero(prestigeMod, "Prestige modifier")
+    logNotZero(hillaryMod,  s"${awakening.scenarios.HillaryWins.name} scenario rule")
+    if (modRoll != die)
+      log(s"Modified roll: $modRoll")
+    println()
+    modRoll match {
+      case 0 =>
+        log("\nPlace a random reaction marker.", Color.Event)
+        val target = randomConvergenceTarget.name
+        addEventTarget(target)
+        addReactionMarker(target)
+
+      case 1 =>
+        log("\nSubtract 1 from US Prestige.", Color.Event)
+        decreasePrestige(1)
+
+      case 2 =>
+        log("\nRemove an Aid marker.", Color.Event)
+        removeAidTarget match {
+          case Some(target) =>
+            addEventTarget(target)
+            removeAidMarker(target)
+          case None =>
+            log("There are no Aid markers on the map.", Color.Event)
+        }
+
+      case 3 =>
+        log("\nAdd 1 to Jihadist Funding.", Color.Event)
+        increaseFunding(1)
+
+      case 4 =>
+        log("\nSubtract 1 from Jihadist Funding.", Color.Event)
+        decreaseFunding(1)
+
+      case 5 =>
+        addAidTarget match {
+          case Some(target) =>
+            addEventTarget(target)
+            addAidMarker(target)
+          case None =>
+            // This will not happen!
+            log("\nThere are no countries that can take an Aid marker.", Color.Event)
+        }
+
+      case 6 =>
+        log("\nAdd 1 to US Prestige.", Color.Event)
+        increasePrestige(1)
+
+      case _ =>
+        log("\nPlace a random awakening marker.", Color.Event)
+        val target = randomConvergenceTarget.name
+        addEventTarget(target)
+        addAwakeningMarker(target)
+    }
+
+    setTrumpTweetsON()
   }
 }

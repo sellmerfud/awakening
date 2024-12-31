@@ -292,8 +292,8 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(7, "Sanctions", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(6).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(6).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, // deck(6).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(6).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(8, "Special Forces", US, 1,
@@ -322,16 +322,16 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(9, "Special Forces", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      () => deck(8).eventRemovesLastCell(),
-      (role: Role, forTrigger: Boolean) => deck(8).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(8).executeEvent(role, forTrigger)
+      () => false, //deck(8).eventRemovesLastCell(),
+      (role: Role, forTrigger: Boolean) => false, //deck(8).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(8).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(10, "Special Forces", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      () => deck(8).eventRemovesLastCell(),
-      (role: Role, forTrigger: Boolean) => deck(8).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(8).executeEvent(role, forTrigger)
+      () => false, //deck(8).eventRemovesLastCell(),
+      (role: Role, forTrigger: Boolean) => false, //deck(8).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(8).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(11, "Abbas", US, 2,
@@ -581,16 +581,16 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(24, "Predator", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      () => deck(23).eventRemovesLastCell(),
-      (role: Role, forTrigger: Boolean) => deck(23).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(23).executeEvent(role, forTrigger)
+      () => false, //deck(23).eventRemovesLastCell(),
+      (role: Role, forTrigger: Boolean) => false, //deck(23).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(23).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(25, "Predator", US, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      () => deck(23).eventRemovesLastCell(),      
-      (role: Role, forTrigger: Boolean) => deck(23).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(23).executeEvent(role, forTrigger)
+      () => false, //deck(23).eventRemovesLastCell(),      
+      (role: Role, forTrigger: Boolean) => false, //deck(23).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(23).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(26, "Quartet", US, 2,
@@ -1994,8 +1994,8 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(85, "Leak", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(84).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(84).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(84).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(84).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(86, "Lebanon War", Jihadist, 3,
@@ -2059,14 +2059,14 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(88, "Martyrdom Operation", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(87).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(87).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(87).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(87).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(89, "Martyrdom Operation", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(87).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(87).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(87).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(87).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(90, "Quagmire", Jihadist, 3,
@@ -2310,9 +2310,7 @@ object LabyrinthCards {
         askCardsDrawn(1)
         
         // Create a one Op card to satisfy the card play functions.
-        val card = new Card(0, "n/a", Unassociated, 1, 
-               NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,  CannotNotRemoveLastCell,
-               NeverPlayable, (_: Role, _: Boolean) =>())
+        val card = new Card2(0, "n/a", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger)
         (role, game.humanRole) match {
           case (US, US)             => humanUsCardPlay(card, false)
           case (US, _)              => USBot.cardPlay(card, false)
@@ -2488,9 +2486,9 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(105, "Iran", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
-      () => deck(104).eventRemovesLastCell(),
-      (role: Role, forTrigger: Boolean) => deck(104).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(104).executeEvent(role, forTrigger)
+      () => false, //deck(104).eventRemovesLastCell(),
+      (role: Role, forTrigger: Boolean) => false, //deck(104).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(104).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(106, "Jaysh al-Mahdi", Unassociated, 2,
@@ -2830,8 +2828,8 @@ object LabyrinthCards {
     // ------------------------------------------------------------------------
     entry(new Card(118, "Oil Price Spike", Unassociated, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(117).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(117).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(117).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(117).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(119, "Saleh", Unassociated, 3,

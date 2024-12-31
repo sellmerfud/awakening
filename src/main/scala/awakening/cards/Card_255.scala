@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if any Muslim country is an Ally.
+// Increase US Reserves by 1 (2 if Saudi Arabia is Ally).
+// Then, US conducts Operations with this card plus Reserves (if desired).
 // ------------------------------------------------------------------
 object Card_255 extends Card2(255, "Western Arms Sales", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +58,37 @@ object Card_255 extends Card2(255, "Western Arms Sales", US, 1, NoRemove, NoLaps
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.hasMuslim(_.isAlly)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  //
+  // Note: The US Bot should play this event in order to conduct an operation
+  //       with more than 1 Op.  But, currently the USBot code is not organized
+  //       such that this is possible so we just have the Bot ignore it for now.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = false
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val numToAdd = if (game.getMuslim(SaudiArabia).isAlly) 2 else 1
+    addToReserves(US, numToAdd)
+
+    val opsInReserve = game.reserves.us
+    println()
+    println(s"You have ${opsString(opsInReserve)} in reserve.")
+    val ops = if (askYorN(s"Do you wish to add them for this operation? (y/n) ")) {
+      println()
+      log(s"\n$US player expends their reserves of ${opsString(opsInReserve)}", Color.Event)
+      game = game.copy(reserves = game.reserves.copy(us = 0))
+      opsInReserve + 1
+    }
+    else
+      1
+    humanExecuteOperation(ops)
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Remove up to 3 Cells total from any countries in Civil War or Regime Change,
+// OR Remove 4 Cells total from Caliphate Countries.
 // ------------------------------------------------------------------
 object Card_269 extends Card2(269, "Air America", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,14 +51,29 @@ object Card_269 extends Card2(269, "Air America", US, 3, NoRemove, NoLapsing, No
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def getNonCaliphateCandidates() = countryNames(
+    game.muslims.filter(m => m.totalCells > 0 && (m.civilWar || m.inRegimeChange))
+  )
+
+  def getCaliphateCandidates() = countryNames(
+    game.muslims.filter(m => m.totalCells > 0 && game.isCaliphateMember(m.name))
+  )
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean = {
+    val nonCalNum = getNonCaliphateCandidates().map(name => game.getCountry(name).totalCells).sum min 3
+    val calNum    = getCaliphateCandidates().map(name => game.getCountry(name).totalCells).sum min 4
+
+    nonCalNum == game.totalCellsOnMap || calNum == game.totalCellsOnMap
+  }
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    getNonCaliphateCandidates().nonEmpty ||
+    getCaliphateCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +86,60 @@ object Card_269 extends Card2(269, "Air America", US, 3, NoRemove, NoLapsing, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    //  Allows US player to remove up to 4 cells from any caliphate members
+    //  or up to 3 cells from any Civil War/Regime Change countries
+    if (isHuman(role)) {
+      val choices = List(
+        choice(
+          getNonCaliphateCandidates().nonEmpty,
+          "non-cal",
+          "Remove up to 3 cells in Civil War/Regime Change countries"),
+        choice(
+          getCaliphateCandidates().nonEmpty,
+          "cal",
+          "Remove 4 cells total in Caliphate countries")
+      ).flatten
+
+      val (candidates, maxCells, upto) = askMenu("Choose one:", choices).head match {
+        case "non-cal" => (getNonCaliphateCandidates(), 3, true)
+        case _         => (getCaliphateCandidates(), 4, false)
+      }
+
+      println()
+      val removed = askToRemoveCells(maxCells, upto, candidates, sleeperFocus = true)
+      for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
+        addEventTarget(name)
+        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+      }
+    }
+    else {
+      // Bot will remove cells from caliphate countries only if it can remove
+      // four cells (or there are no Civil War/Regime change countries)
+      // Otherwise it will remove the max it can from Civil War/Regime change countries
+      val nonCalNum = getNonCaliphateCandidates().map(name => game.getCountry(name).totalCells).sum min 3
+      val calNum    = getCaliphateCandidates().map(name => game.getCountry(name).totalCells).sum min 4
+
+
+      val (candidates, maxCells) = if (calNum == 4 || calNum == game.totalCellsOnMap || nonCalNum == 0)
+        (getCaliphateCandidates(), calNum)
+      else
+        (getNonCaliphateCandidates(), nonCalNum)
+
+      // We will select the cells one at a time, because
+      // removal of a cell could change the Bots priorities
+      def nextRemoval(remaining: Int): Unit = {
+        val withCells = candidates.filter(name => game.getMuslim(name).totalCells > 0)
+        if (remaining > 0 && withCells.nonEmpty) {
+          val target = USBot.disruptPriority(withCells).get
+          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 1)
+
+          addEventTarget(target)
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          nextRemoval(remaining - 1)
+        }
+      }
+
+      nextRemoval(maxCells)
+    }
   }
 }

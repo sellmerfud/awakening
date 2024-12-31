@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Militia in a Civil War Country.
+// +1 Prestige OR -1 Funding
 // ------------------------------------------------------------------
 object Card_256 extends Card2(256, "White Helmets", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +58,36 @@ object Card_256 extends Card2(256, "White Helmets", US, 1, NoRemove, NoLapsing, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.hasMuslim(m => m.militia > 0 && m.civilWar)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = game.prestige < 12 || game.funding > 1
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val choices = List(
+      choice(game.prestige < 12, increasePrestige _, "+1 Prestige"),
+      choice(game.funding > 1,   decreaseFunding _, "-1 Funding")
+    ).flatten
+
+    val action = if (game.prestige == 12 && game.funding == 1)
+      None
+    else if (isHuman(role))
+      askMenu("Choose one:", choices).headOption
+    else if (game.prestige < 12)
+      Some(increasePrestige _)
+    else
+      Some(decreaseFunding _)
+
+    action match {
+      case None => log("\nThe event has no effect.", Color.Event)
+      case Some(action) => action(1)
+    }
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Inspect Jihadist hand. Remove a Cadre. Conduct a 1-value Operation.
+// You may interrupt this Action Phase now to play an extra card.
 // ------------------------------------------------------------------
 object Card_261 extends Card2(261, "Intel Community", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +63,28 @@ object Card_261 extends Card2(261, "Intel Community", US, 2, NoRemove, NoLapsing
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = false // Bot treat this as unplayable
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    // See Event Instructions table
+    log("\nUS player does not inspect the Jihadist hand in the solo game.", Color.Event)
+    countryNames(game.countries.filter(_.hasCadre)) match {
+      case Nil =>
+        log("\nNo cadres on the map to remove.", Color.Event)
+      case candidates =>
+        val target = askCountry("Select country with cadre: ", candidates)
+        addEventTarget(target)
+        removeCadreFromCountry(target)
+    }
+
+    // US player conducts a 1 Op operations.
+    log("\nUS player conducts an operation with 1 Op.", Color.Event)
+    humanExecuteOperation(1)
+    if (askYorN("\nDo you wish to play an extra card now during this action phase? (y/n) "))
+      usCardPlay(None, additional = true)
   }
 }

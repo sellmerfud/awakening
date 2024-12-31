@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,12 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if any Civil War countries and there are more Troops + Milita
+// on the map than Cells.
+// During Attrition in each Civil War country, halve the Cells count
+// (rounded down) and double the Troops + Militia count prior to
+// rolling Attrition dice.
+// +1 Prestige
 // ------------------------------------------------------------------
 object Card_278 extends Card2(278, "Siege of Mosul", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +61,9 @@ object Card_278 extends Card2(278, "Siege of Mosul", US, 3, NoRemove, Lapsing, N
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    game.hasMuslim(_.civilWar) &&
+    (game.totalTroopsOnMap + game.militiaOnMap) > game.cellsOnMap
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +76,10 @@ object Card_278 extends Card2(278, "Siege of Mosul", US, 3, NoRemove, Lapsing, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    log("\nDuring Attrition at the end of this turn, in each Civi War", Color.Event)
+    log("the number of cells will be halved and the number of troops", Color.Event)
+    log("plus militia will be doubled prior to rolling attrition dice.", Color.Event)
+    println()
+    increasePrestige(1)
   }
 }

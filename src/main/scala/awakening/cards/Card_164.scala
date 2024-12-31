@@ -78,7 +78,7 @@ object Card_164 extends Card2(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoL
       addGlobalEventMarker(BloodyThursday)
       val candidates = countryNames(game.muslims filter (_.awakening > 0))
       if (candidates.nonEmpty) {
-        val target = if (role == game.humanRole)
+        val target = if (isHuman(role))
           askCountry("Select country with awakening marker: ", candidates)
         else
           JihadistBot.markerTarget(candidates).get

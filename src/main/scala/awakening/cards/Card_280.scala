@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Iran is not a Special Case country.
+// Remove a total of up to 3 Cells from any Sunni or Shia Mix countries
+// that are adjacent to the other type.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_280 extends Card2(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,26 +53,60 @@ object Card_280 extends Card2(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, 
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  //  Candidates are any Muslim country with cells that is adjacent
+  //  to another Muslim country of the opposite type (Sunni/Shia Mix)
+  def getCandidates() = {
+    val adjOther = (m: MuslimCountry) =>
+      (m.isSunni && game.adjacentToShiaMix(m.name)) || (m.isShiaMix && game.adjacentToSunni(m.name))
+    countryNames(game.muslims.filter(m => m.totalCells > 0 && adjOther(m)))
+  }
+
+  def maxCellsToRemove = game.getMuslims(getCandidates()).map(_.totalCells).sum min 3
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean = maxCellsToRemove == game.totalCellsOnMap
+
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
-
+  def eventConditionsMet(role: Role) = !isIranSpecialCase
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = getCandidates().nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role)) {
+      println()
+      val removed = askToRemoveCells(maxCellsToRemove, true, getCandidates(), sleeperFocus = true)
+      for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
+        addEventTarget(name)
+        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+      }
+    }
+    else {
+      // Bot
+      // We will select the cells one at a time, because
+      // removal of a cell could change the Bot's priorities
+      def nextRemoval(remaining: Int): Unit = {
+        val withCells = getCandidates().filter(name => game.getMuslim(name).totalCells > 0)
+        if (remaining > 0 && withCells.nonEmpty) {
+          val target = USBot.disruptPriority(withCells).get
+          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 1)
+
+          addEventTarget(target)
+          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          nextRemoval(remaining - 1)
+        }
+      }
+
+      nextRemoval(maxCellsToRemove)
+    }
   }
 }

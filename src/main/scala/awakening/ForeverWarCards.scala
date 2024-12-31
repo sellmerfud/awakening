@@ -688,14 +688,14 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(252, "Trump Tweets", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(251).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(251).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(251).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () //deck(251).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(253, "Trump Tweets", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(251).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(251).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(251).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(251).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(254, "US Embassy to Jerusalem", US, 1,
@@ -1449,7 +1449,7 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(278, "Siege of Mosul", US, 3,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => (game hasMuslim (_.civilWar)) && (game.troopsOnMap + game.militiaOnMap) > game.cellsOnMap
+      (_: Role, _: Boolean) => (game hasMuslim (_.civilWar)) && (game.totalTroopsOnMap + game.militiaOnMap) > game.cellsOnMap
       ,
       (role: Role, forTrigger: Boolean) => {
         log("During Attrition at the end of this turn, in each Civi War")
@@ -2398,11 +2398,11 @@ object ForeverWarCards {
     // ------------------------------------------------------------------------
     entry(new Card(310, "Forever War", Jihadist, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (_: Role, _: Boolean) => game.troopsOnMap + game.militiaOnMap - game.cellsOnMap > 0
+      (_: Role, _: Boolean) => (game.totalTroopsOnMap + game.militiaOnMap) > game.cellsOnMap
       ,
       (role: Role, forTrigger: Boolean) => {
-        val difference = game.troopsOnMap + game.militiaOnMap - game.cellsOnMap
-        log(f"${game.troopsOnMap}%2d troops on map")
+        val difference = game.totalTroopsOnMap + game.militiaOnMap - game.cellsOnMap
+        log(f"${game.totalTroopsOnMap}%2d troops on map")
         log(f"${game.militiaOnMap}%2d militia on map")
         log(f"${game.cellsOnMap}%2d cells on map")
         decreasePrestige(difference min 3)

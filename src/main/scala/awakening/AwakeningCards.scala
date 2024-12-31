@@ -515,15 +515,15 @@ object AwakeningCards {
     entry(new Card(127, "Reaper", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => deck(126).eventRemovesLastCell(),
-      (role: Role, forTrigger: Boolean) => deck(126).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(126).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(126).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(126).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(128, "Reaper", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => deck(126).eventRemovesLastCell(),
-      (role: Role, forTrigger: Boolean) => deck(126).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(126).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, // deck(126).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(126).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(129, "Special Forces", US, 1,
@@ -555,8 +555,8 @@ object AwakeningCards {
     entry(new Card(130, "Special Forces", US, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot,
       () => deck(129).eventRemovesLastCell(),
-      (role: Role, forTrigger: Boolean) => deck(129).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(129).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(129).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () //deck(129).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(131, "Arab Spring Fallout", US, 2,
@@ -1235,8 +1235,8 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(154, "Facebook", US, 3,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(153).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(153).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, // deck(153).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(153).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(155, "Fracking", US, 3,
@@ -1991,7 +1991,7 @@ object AwakeningCards {
     entry(new Card(179, "Korean Crisis", Jihadist, 2,
       NoRemove, Lapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
       (role: Role, forTrigger: Boolean) =>
-        (game.troopsAvailable + game.troopsOnMap) > 0 && globalEventNotInPlay(USNKSummit)
+        (game.troopsAvailable + game.troopsCubesOnMap) > 0 && globalEventNotInPlay(USNKSummit)
       ,
       (role: Role, forTrigger: Boolean) => {
         // Take troops from available if possible, otherwise we must
@@ -3396,14 +3396,14 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(212, "Smartphones", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(211).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(211).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(211).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () //deck(211).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(213, "Smartphones", Unassociated, 1,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(211).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(211).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(211).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () //deck(211).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(214, "3 Cups of Tea", Unassociated, 2,
@@ -4085,8 +4085,8 @@ object AwakeningCards {
     // ------------------------------------------------------------------------
     entry(new Card(228, "Popular Support", Unassociated, 2,
       NoRemove, NoLapsing, NoAutoTrigger, DoesNotAlertPlot, CannotNotRemoveLastCell,
-      (role: Role, forTrigger: Boolean) => deck(227).eventConditions(role, forTrigger),
-      (role: Role, forTrigger: Boolean) => deck(227).executeEvent(role, forTrigger)
+      (role: Role, forTrigger: Boolean) => false, //deck(227).eventConditions(role, forTrigger),
+      (role: Role, forTrigger: Boolean) => () // deck(227).executeEvent(role, forTrigger)
     )),
     // ------------------------------------------------------------------------
     entry(new Card(229, "Prisoner Exchange", Unassociated, 2,

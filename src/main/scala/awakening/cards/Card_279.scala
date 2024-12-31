@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Place up to 2 Advisors total in up to 2 non-Adversary Civil War
+// countries without Troops.
 // ------------------------------------------------------------------
 object Card_279 extends Card2(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +56,13 @@ object Card_279 extends Card2(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTr
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(
+    game.muslims.filter(m => m.civilWar && m.alignment != Adversary && m.totalTroops == 0)
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +75,27 @@ object Card_279 extends Card2(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTr
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    //  Up to two targets
+    val targets = if (getCandidates().size == 1)
+      getCandidates()
+    else if (isHuman(role)) {
+      val numTargets = askInt("How many countries do you wish to target: ", 1, 2)
+      if (numTargets == 1)
+        askCountry("Select country for Advisors: ", getCandidates()) :: Nil
+      else
+        askCountries(2, getCandidates())
+    }
+    else {
+      val first = USBot.deployToPriority(getCandidates()).get
+      val second = USBot.deployToPriority(getCandidates().filterNot(_ == first)).get
+      first::second::Nil
+    }
+
+    val numPerTarget = 3 - targets.size
+    for (t <- targets) {
+      addEventTarget(t)
+      for (a <- 1 to numPerTarget)
+        addAdvisorsToCountry(t)
+    }
   }
 }

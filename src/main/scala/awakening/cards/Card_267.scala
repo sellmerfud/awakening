@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Jihadist currently has more than 1 card.
+// US randomly draws two cards from the Jihadist hand, reveals them,
+// then discards one and returns the other.
 // ------------------------------------------------------------------
 object Card_267 extends Card2(267, "Third Offset Strategy", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +58,8 @@ object Card_267 extends Card2(267, "Third Offset Strategy", US, 2, NoRemove, NoL
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    cacheYesOrNo(s"Does the $Jihadist player have more than one card in hand? (y/n) ")
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +72,10 @@ object Card_267 extends Card2(267, "Third Offset Strategy", US, 2, NoRemove, NoL
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role))
+      log(s"\nDiscard a random card from the $Jihadist hand.", Color.Event)
+    else
+      log(s"\nYou ($Jihadist) must randomly discard one card.", Color.Event)
+    askCardsDiscarded(1)
   }
 }

@@ -103,7 +103,7 @@ object Card_150 extends Card2(150, "UNSCR 1973", US, 2, NoRemove, NoLapsing, NoA
     }
 
     if (country.totalCells > 0) {
-      val (actives, sleepers, sadr) = if (role == game.humanRole)
+      val (actives, sleepers, sadr) = if (isHuman(role))
         askCells(name, 1, sleeperFocus = true)
       else
         USBot.chooseCellsToRemove(name, 1)

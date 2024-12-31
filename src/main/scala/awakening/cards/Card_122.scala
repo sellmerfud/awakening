@@ -48,12 +48,6 @@ import awakening.USBot.PlotInCountry
 // If unblocked, the Plot subtracts rather than adds Funding (if WMD, Funding to 1).
 // ------------------------------------------------------------------
 object Card_122 extends Card2(122, "Backlash", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
-  val backlashCandidate = (m: MuslimCountry) =>
-    (m.plots.exists(p => !p.backlashed)) &&
-    !game.isCaliphateMember(m.name)
-
-  def getCandidates() = countryNames(game.muslims.filter(backlashCandidate))
-
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -63,6 +57,11 @@ object Card_122 extends Card2(122, "Backlash", US, 1, NoRemove, NoLapsing, NoAut
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean = false
+
+  val isCandidate = (m: MuslimCountry) =>
+    m.plots.exists(!_.backlashed) && !game.isCaliphateMember(m.name)
+
+  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -79,7 +78,6 @@ object Card_122 extends Card2(122, "Backlash", US, 1, NoRemove, NoLapsing, NoAut
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    val candidates = countryNames(game.muslims filter backlashCandidate)
     if (isHuman(role)) {
       val target = askCountry(s"Backlash in which country: ", getCandidates())
       // Pick a random plot in the country

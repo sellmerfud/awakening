@@ -73,10 +73,10 @@ object Card_098 extends Card2(98, "Gaza Withdrawal", Unassociated, 1, Remove, No
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit =
     if (role == US) {
-      if (game.funding > 0)
+      if (game.funding > 1)
         decreaseFunding(1)
       else
-        log("\nFunding cannot be decreased, it is already a zero.", Color.Event)
+        log("\nFunding cannot be decreased, it is already at 1.", Color.Event)
     }
     else {
       addEventTarget(Israel)

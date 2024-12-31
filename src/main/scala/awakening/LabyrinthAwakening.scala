@@ -744,7 +744,7 @@ object LabyrinthAwakening {
   val AutoTrigger   = true
   val NoAutoTrigger = false
 
-  abstract class Card2(
+  class Card2(
     val number: Int,
     val name: String,
     val association: CardAssociation,
@@ -755,15 +755,15 @@ object LabyrinthAwakening {
 
     // Used by the US Bot to determine if the executing the event would alert a plot
     // in the given country
-    def eventAlertsPlot(countryName: String, plot: Plot): Boolean
-    
+    def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
+
     // Used by the US Bot to determine if the executing the event would remove
     // the last cell on the map resulting in victory.
-    def eventRemovesLastCell(): Boolean
-    
+    def eventRemovesLastCell(): Boolean = false
+
     // Returns true if the printed conditions of the event are satisfied
-    def eventConditionsMet(role: Role): Boolean
-  
+    def eventConditionsMet(role: Role): Boolean = false
+
     // Returns true if the Bot associated with the given role will execute the event
     // on its turn.  This implements the special Bot instructions for the event.
     // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -772,12 +772,12 @@ object LabyrinthAwakening {
     // Carry out the event for the given role.
     // forTrigger will be true if the event was triggered during the human player's turn
     // and it associated with the Bot player.
-    def executeEvent(role: Role, forTrigger: Boolean): Unit
+    def executeEvent(role: Role, forTrigger: Boolean): Unit = ()
 
     def ops: Int = printedOps
 
     def numAndName = s"#$number $name"
-    
+
     override def toString() = s"${numAndName} (${opsString(ops)})"
 
     def eventIsPlayable(role: Role): Boolean =
@@ -804,6 +804,11 @@ object LabyrinthAwakening {
     }
   }
 
+    // Sort by card number
+  implicit val Card2Ordering: Ordering[Card2] = new Ordering[Card2] {
+    def compare(x: Card2, y: Card2) = x.number compare y.number
+  }
+  
   class Card(
     val number: Int,
     val name: String,
@@ -870,7 +875,7 @@ object LabyrinthAwakening {
       case None => s"$role played ${cardNumAndName(cardNum)}"
       case Some(card2Num) => s"$role played ${cardNumAndName(cardNum)} and ${cardNumAndName(card2Num)}"
     }
-      
+
   }
   case class PlayedReassement(card1: Int, card2: Int) extends CardPlay {
     val role = US
@@ -889,16 +894,92 @@ object LabyrinthAwakening {
     override def toString() = s"Adjustment made: $desc"
   }
 
-  class CardDeck(val cardMap: Map[Int, Card]) {
-    def isValidCardNumber(num: Int): Boolean = cardMap contains num
-    def apply(num: Int): Card      = cardMap(num)  // Allows deck(4) to get a specific card
-    def cards: List[Card]          = cardMap.valuesIterator.toList.sorted
-    def lapsing: List[Card]        = cards filter (_.lapsing != NoLapsing)
-    def removable: List[Card]      = cards filter (_.remove != NoRemove)
+  object deck {
+    import awakening.cards._
+    private def entry(card: Card2) = (card.number -> card)
+
+    val deckMap: Map[Int, Card2] = Map(
+      entry(Card_001), entry(Card_002), entry(Card_003), entry(Card_004), entry(Card_005),
+      entry(Card_006), entry(Card_007), entry(Card_008), entry(Card_009), entry(Card_010),
+      entry(Card_011), entry(Card_012), entry(Card_013), entry(Card_014), entry(Card_015),
+      entry(Card_016), entry(Card_017), entry(Card_018), entry(Card_019), entry(Card_020),
+      entry(Card_021), entry(Card_022), entry(Card_023), entry(Card_024), entry(Card_025),
+      entry(Card_026), entry(Card_027), entry(Card_028), entry(Card_029), entry(Card_030),
+      entry(Card_031), entry(Card_032), entry(Card_033), entry(Card_034), entry(Card_035),
+      entry(Card_036), entry(Card_037), entry(Card_038), entry(Card_039), entry(Card_040),
+      entry(Card_041), entry(Card_042), entry(Card_043), entry(Card_044), entry(Card_045),
+      entry(Card_046), entry(Card_047), entry(Card_048), entry(Card_049), entry(Card_050),
+      entry(Card_051), entry(Card_052), entry(Card_053), entry(Card_054), entry(Card_055),
+      entry(Card_056), entry(Card_057), entry(Card_058), entry(Card_059), entry(Card_060),
+      entry(Card_061), entry(Card_062), entry(Card_063), entry(Card_064), entry(Card_065),
+      entry(Card_066), entry(Card_067), entry(Card_068), entry(Card_069), entry(Card_070),
+      entry(Card_071), entry(Card_072), entry(Card_073), entry(Card_074), entry(Card_075),
+      entry(Card_076), entry(Card_077), entry(Card_078), entry(Card_079), entry(Card_080),
+      entry(Card_081), entry(Card_082), entry(Card_083), entry(Card_084), entry(Card_085),
+      entry(Card_086), entry(Card_087), entry(Card_088), entry(Card_089), entry(Card_090),
+      entry(Card_091), entry(Card_092), entry(Card_093), entry(Card_094), entry(Card_095),
+      entry(Card_096), entry(Card_097), entry(Card_098), entry(Card_099), entry(Card_100),
+      entry(Card_101), entry(Card_102), entry(Card_103), entry(Card_104), entry(Card_105),
+      entry(Card_106), entry(Card_107), entry(Card_108), entry(Card_109), entry(Card_110),
+      entry(Card_111), entry(Card_112), entry(Card_113), entry(Card_114), entry(Card_115),
+      entry(Card_116), entry(Card_117), entry(Card_118), entry(Card_119), entry(Card_120),
+      entry(Card_121), entry(Card_122), entry(Card_123), entry(Card_124), entry(Card_125),
+      entry(Card_126), entry(Card_127), entry(Card_128), entry(Card_129), entry(Card_130),
+      entry(Card_131), entry(Card_132), entry(Card_133), entry(Card_134), entry(Card_135),
+      entry(Card_136), entry(Card_137), entry(Card_138), entry(Card_139), entry(Card_140),
+      entry(Card_141), entry(Card_142), entry(Card_143), entry(Card_144), entry(Card_145),
+      entry(Card_146), entry(Card_147), entry(Card_148), entry(Card_149), entry(Card_150),
+      entry(Card_151), entry(Card_152), entry(Card_153), entry(Card_154), entry(Card_155),
+      entry(Card_156), entry(Card_157), entry(Card_158), entry(Card_159), entry(Card_160),
+      entry(Card_161), entry(Card_162), entry(Card_163), entry(Card_164), entry(Card_165),
+      entry(Card_166), entry(Card_167), entry(Card_168), entry(Card_169), entry(Card_170),
+      entry(Card_171), entry(Card_172), entry(Card_173), entry(Card_174), entry(Card_175),
+      entry(Card_176), entry(Card_177), entry(Card_178), entry(Card_179), entry(Card_180),
+      entry(Card_181), entry(Card_182), entry(Card_183), entry(Card_184), entry(Card_185),
+      entry(Card_186), entry(Card_187), entry(Card_188), entry(Card_189), entry(Card_190),
+      entry(Card_191), entry(Card_192), entry(Card_193), entry(Card_194), entry(Card_195),
+      entry(Card_196), entry(Card_197), entry(Card_198), entry(Card_199), entry(Card_200),
+      entry(Card_201), entry(Card_202), entry(Card_203), entry(Card_204), entry(Card_205),
+      entry(Card_206), entry(Card_207), entry(Card_208), entry(Card_209), entry(Card_210),
+      entry(Card_211), entry(Card_212), entry(Card_213), entry(Card_214), entry(Card_215),
+      entry(Card_216), entry(Card_217), entry(Card_218), entry(Card_219), entry(Card_220),
+      entry(Card_221), entry(Card_222), entry(Card_223), entry(Card_224), entry(Card_225),
+      entry(Card_226), entry(Card_227), entry(Card_228), entry(Card_229), entry(Card_230),
+      entry(Card_231), entry(Card_232), entry(Card_233), entry(Card_234), entry(Card_235),
+      entry(Card_236), entry(Card_237), entry(Card_238), entry(Card_239), entry(Card_240),
+      entry(Card_241), entry(Card_242), entry(Card_243), entry(Card_244), entry(Card_245),
+      entry(Card_246), entry(Card_247), entry(Card_248), entry(Card_249), entry(Card_250),
+      entry(Card_251), entry(Card_252), entry(Card_253), entry(Card_254), entry(Card_255),
+      entry(Card_256), entry(Card_257), entry(Card_258), entry(Card_259), entry(Card_260),
+      entry(Card_261), entry(Card_262), entry(Card_263), entry(Card_264), entry(Card_265),
+      entry(Card_266), entry(Card_267), entry(Card_268), entry(Card_269), entry(Card_270),
+      entry(Card_271), entry(Card_272), entry(Card_273), entry(Card_274), entry(Card_275),
+      entry(Card_276), entry(Card_277), entry(Card_278), entry(Card_279), entry(Card_280),
+      entry(Card_281), entry(Card_282), entry(Card_283), entry(Card_284), entry(Card_285),
+      entry(Card_286), entry(Card_287), entry(Card_288), entry(Card_289), entry(Card_290),
+      entry(Card_291), entry(Card_292), entry(Card_293), entry(Card_294), entry(Card_295),
+      entry(Card_296), entry(Card_297), entry(Card_298), entry(Card_299), entry(Card_300),
+      entry(Card_301), entry(Card_302), entry(Card_303), entry(Card_304), entry(Card_305),
+      entry(Card_306), entry(Card_307), entry(Card_308), entry(Card_309), entry(Card_310),
+      entry(Card_311), entry(Card_312), entry(Card_313), entry(Card_314), entry(Card_315),
+      entry(Card_316), entry(Card_317), entry(Card_318), entry(Card_319), entry(Card_320),
+      entry(Card_321), entry(Card_322), entry(Card_323), entry(Card_324), entry(Card_325),
+      entry(Card_326), entry(Card_327), entry(Card_328), entry(Card_329), entry(Card_330),
+      entry(Card_331), entry(Card_332), entry(Card_333), entry(Card_334), entry(Card_335),
+      entry(Card_336), entry(Card_337), entry(Card_338), entry(Card_339), entry(Card_340),
+      entry(Card_341), entry(Card_342), entry(Card_343), entry(Card_344), entry(Card_345),
+      entry(Card_346), entry(Card_347), entry(Card_348), entry(Card_349), entry(Card_350),
+      entry(Card_351), entry(Card_352), entry(Card_353), entry(Card_354), entry(Card_355),
+      entry(Card_356), entry(Card_357), entry(Card_358), entry(Card_359), entry(Card_360),
+    )
+    def isValidCardNumber(num: Int): Boolean = deckMap.contains(num)
+    def apply(num: Int): Card2      = deckMap(num)  // Allows deck(4) to get a specific card
+    def cards: List[Card2]          = deckMap.valuesIterator.toList.sorted
+    def lapsing: List[Card2]        = cards.filter(_.lapsing != NoLapsing)
+    def removable: List[Card2]      = cards.filter(_.remove != NoRemove)
 
   }
 
-  val deck = new CardDeck(AwakeningCards.deckMap ++ LabyrinthCards.deckMap ++ ForeverWarCards.deckMap)
   def cardNumAndName(number: Int): String = deck(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
 
@@ -1420,10 +1501,11 @@ object LabyrinthAwakening {
       case _          => Ample
     }
 
-    def troopsOnMap   = countries.foldLeft(0) { (a, c) => a + c.troops }
+    def troopsCubesOnMap   = countries.foldLeft(0) { (a, c) => a + c.troops }
+    def totalTroopsOnMap   = countries.foldLeft(0) { (a, c) => a + c.totalTroops }
     def militiaOnMap  = muslims.foldLeft(0) { (a, m) => a + m.militia }
 
-    def troopsAvailable  = 15 - offMapTroops - troopsOnMap
+    def troopsAvailable  = 15 - offMapTroops - troopsCubesOnMap
     def militiaAvailable = 15 - militiaOnMap
 
     // Extra cells are only usable when funding is at 9 or by event or civil war attrition.
@@ -2068,7 +2150,7 @@ object LabyrinthAwakening {
       case None         => askYorN(prompt)
     }
   }
-  
+
   def askExitAfterWin(): Boolean = {
     val choices = List(
       false -> "Continue with the game ignoring further victory conditions.",
@@ -2113,7 +2195,7 @@ object LabyrinthAwakening {
     else if (candidates.size < 10) {
       askSimpleMenu(prompt, candidates, allowAbort = allowAbort)
     }
-    else 
+    else
       askOneOf(prompt, candidates, allowAbort = allowAbort, abbr = CountryAbbreviations).get
   }
 
@@ -2598,7 +2680,7 @@ object LabyrinthAwakening {
   def askToRemoveCells(maxCells: Int, upto: Boolean, countryNames: List[String], sleeperFocus: Boolean): Vector[CellsToRemove] = {
 
     @tailrec def askNext(numToRemove: Int, choices: List[(String, String)], removed: Vector[CellsToRemove]): Vector[CellsToRemove] = {
-      val totalRemaining = choices.foldLeft(0) { 
+      val totalRemaining = choices.foldLeft(0) {
         case (total, (name, _)) => total + game.getCountry(name).totalCells
       }
 
@@ -2610,7 +2692,7 @@ object LabyrinthAwakening {
           c = game.getCountry(name)
         } yield
           CellsToRemove(name, (c.activeCells, c.sleeperCells, c.hasSadr))
-        
+
         removed :++ remainder
       }
       else {
@@ -2629,8 +2711,8 @@ object LabyrinthAwakening {
         )
       }
     }
-  
-    val countries = game.getCountries(countryNames) 
+
+    val countries = game.getCountries(countryNames)
       .filter(_.totalCells > 0)
       .sortBy(_.name)
 
@@ -3152,7 +3234,7 @@ object LabyrinthAwakening {
   def logAdjustment(countryName: String, attributeName: String, oldValue: Any, newValue: Any): Unit =
     logAdjustment(s"$countryName: $attributeName", oldValue, newValue)
 
-  def logCardPlay(player: Role, card: Card, playable: Boolean, secondCard: Boolean = false): Unit = {
+  def logCardPlay(player: Role, card: Card2, playable: Boolean, secondCard: Boolean = false): Unit = {
     val fakeNews = if (lapsingEventInPlay(FakeNews))
      """ but will be cancelled by "Fake News""""
     else
@@ -3380,7 +3462,7 @@ object LabyrinthAwakening {
         pc.secondCardNum match {
           case None    => s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card play)"
           case Some(_) => s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} card plays)"
-        }          
+        }
       case _ =>
         s"(turn ${game.turn} - ${amountOf(cardsPlayed, "card")} played)"
     }
@@ -4437,7 +4519,7 @@ object LabyrinthAwakening {
           log(s"Rolling ${diceString(numAttempts)}")
           if (m.sleeperCells > 0)
             flipAllSleepersCells(name)
-        } 
+        }
         else {
           val disp = new ListBuffer[String]
           if (actives > 0)  disp += amountOf(actives, "active cell")
@@ -4491,7 +4573,7 @@ object LabyrinthAwakening {
   }
 
 
-  def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Unit = {
+  def performCardEvent(card: Card2, role: Role, triggered: Boolean = false): Unit = {
     if (!card.autoTrigger && lapsingEventInPlay(FakeNews)) {
       log("\n%s event \"%s\" is cancelled by \"Fake News\"".format(card.association, card.name), Color.Event)
       removeLapsingCards(FakeNews::Nil)
@@ -5287,7 +5369,7 @@ object LabyrinthAwakening {
     active: Boolean,
     forTravel: Boolean): Unit = {
     if (num > 0) {
-      val makeActive = 
+      val makeActive =
         game.isCaliphateMember(toName) ||
         (forTravel && toName == UnitedStates && globalEventInPlay(TravelBan))
       val fromType = if (active)     "active cell" else "sleeper cell"
@@ -5445,7 +5527,7 @@ object LabyrinthAwakening {
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
       game.getCountry(target) match {
-        case m: MuslimCountry => 
+        case m: MuslimCountry =>
           if (lapsingEventInPlay(ArabWinter))
             log("Awakening markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
           else if (m.canTakeAwakeningOrReactionMarker) {
@@ -5472,7 +5554,7 @@ object LabyrinthAwakening {
   def addReactionMarker(target: String, num: Int = 1): Unit = {
     if (num > 0) {
       game.getCountry(target) match {
-        case m: MuslimCountry => 
+        case m: MuslimCountry =>
           if (lapsingEventInPlay(ArabWinter))
             log("Reaction markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
           else if (m.canTakeAwakeningOrReactionMarker) {
@@ -5482,7 +5564,7 @@ object LabyrinthAwakening {
           else
             log(s"$target cannot take a reaction marker")
 
-        case _ => 
+        case _ =>
             log(s"$target cannot take a reaction marker")
       }
     }
@@ -6888,12 +6970,12 @@ object LabyrinthAwakening {
   }
 
   sealed trait CardAction
-  case class  TriggeredEvent(card: Card) extends CardAction
+  case class  TriggeredEvent(card: Card2) extends CardAction
   case object Ops                        extends CardAction
 
   // Return a list of actions.
   // card2 is only used for US reassessment
-  def getActionOrder(cards: List[Card], opponent: Role): List[CardAction] = {
+  def getActionOrder(cards: List[Card2], opponent: Role): List[CardAction] = {
     val triggeredCards = cards filter (c => c.autoTrigger || c.association == opponent)
     triggeredCards match {
       case c :: Nil =>
@@ -6929,7 +7011,7 @@ object LabyrinthAwakening {
 
   // Test to see if the event should trigger and if so
   // perform the event.
-  def attemptTriggeredEvent(opponentRole: Role, card: Card): Unit = {
+  def attemptTriggeredEvent(opponentRole: Role, card: Card2): Unit = {
     if (card.autoTrigger)
       performCardEvent(card, opponentRole, triggered = true)
     else if (card.association == opponentRole && card.eventWillTrigger(opponentRole))
@@ -7029,7 +7111,7 @@ object LabyrinthAwakening {
   // Once the user enters a valid command (other than using reserves), then in order to
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
-  def humanUsCardPlay(card: Card, playable: Boolean): Unit = {
+  def humanUsCardPlay(card: Card2, playable: Boolean): Unit = {
     val ExecuteEvent = "Execute event"
     val WarOfIdeas   = "War of ideas"
     val Deploy       = "Deploy"
@@ -7044,7 +7126,7 @@ object LabyrinthAwakening {
     var reservesUsed = 0
     var card1EventValid = false
     def inReserve    = game.reserves.us
-    var secondCard: Option[Card] = None   // For reassessment only
+    var secondCard: Option[Card2] = None   // For reassessment only
     def opsAvailable = (card.ops + reservesUsed) min 3
 
     @tailrec def getAction(): String = {
@@ -7437,7 +7519,7 @@ object LabyrinthAwakening {
   // Once the user enters a valid command (other than using reserves), then in order to
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
-  def humanJihadistCardPlay(card: Card, playable: Boolean): Unit = {
+  def humanJihadistCardPlay(card: Card2, playable: Boolean): Unit = {
     val ExecuteEvent = "Execute event"
     val Recruit      = "Recruit"
     val Travel       = "Travel"

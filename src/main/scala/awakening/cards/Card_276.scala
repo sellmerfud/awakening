@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,16 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in a Soft Schengen country if US is Hard.
+// Flip Posture marker from Soft to Hard.
+// Then, if Trump Tweets is ON, Set an untested Schengen country to Hard
+// and Flip Trump Tweets to OFF.
+// Adjust US Prestige by (Hard Schengen - Soft Schengen) countries (maximum of + or - 3).
+// Allows play of BREXIT
 // ------------------------------------------------------------------
 object Card_276 extends Card2(276, "Populism/Euroscepticism", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +60,75 @@ object Card_276 extends Card2(276, "Populism/Euroscepticism", US, 3, NoRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def schengenCandidates(posture: String) = countryNames(
+    game.getNonMuslims(Schengen).filter(_.posture == posture)
+  )
+
+  def numSchengen(posture: String) = schengenCandidates(posture).size
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.usPosture == Hard && numSchengen(Soft) > 0
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = {
+    val untestedBump = if (trumpTweetsON && numSchengen(PostureUntested) > 0) 1 else 0
+    // Bot will play if there is a benefit
+    // + 2 represents flipping one Hard to Soft
+    (numSchengen(Hard) - numSchengen(Soft) + 2 + untestedBump) > 0
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val softCandidates = countryNames(game.getNonMuslims(Schengen).filter(_.posture == Soft))
+    val untestedCandidates = countryNames(game.getNonMuslims(Schengen).filter(_.posture == PostureUntested))
+
+    val softTarget = if (isHuman(role))
+      askCountry("Flip posture of which Schengen country: ", schengenCandidates(Soft))
+    else
+      USBot.posturePriority(schengenCandidates(Soft)).get
+
+    addEventTarget(softTarget)
+    setCountryPosture(softTarget, Hard)
+
+    if (trumpTweetsON && schengenCandidates(PostureUntested).nonEmpty) {
+      println()
+      val untestedTarget = if (isHuman(role))
+        askCountry("Set posture of which untested Schengen country: ", schengenCandidates(PostureUntested))
+      else
+        USBot.posturePriority(schengenCandidates(PostureUntested)).get
+
+      addEventTarget(untestedTarget)
+      setCountryPosture(untestedTarget, Hard)
+    }
+
+    if (trumpTweetsON) {
+      println()
+      setTrumpTweetsOFF()
+    }
+
+    val prestigeAdjust = ((numSchengen(Hard) - numSchengen(Soft)) min 3) max -3
+    def amtSchengen(posture: String) = numSchengen(posture) match {
+      case 1 => s"1 $posture Schengen country"
+      case n => s"$n $posture Schengen countries"
+    }
+
+    println()
+    log(s"\nNow ${amtSchengen(Hard)} and ${amtSchengen(Soft)}", Color.Event)
+    if (prestigeAdjust == 0)
+      log("US Prestige is not changed.", Color.Event)
+    else if (prestigeAdjust > 0)
+      increasePrestige(prestigeAdjust)
+    else
+      decreasePrestige(-prestigeAdjust)
+
+    println()
+    addGlobalEventMarker(Euroscepticism)
   }
 }
