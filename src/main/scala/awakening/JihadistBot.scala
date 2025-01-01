@@ -1012,7 +1012,7 @@ object JihadistBot extends BotHelpers {
   object StandardEvoTable {
     // This is the starting point of the Operations Flowchart
     object MajorJihadDecision extends OperationDecision {
-      val desc = "Major Jihad Success possible at Poor?"
+      def desc = "Major Jihad Success possible at Poor?"
       def yesPath = MajorJihadOp
       def noPath  = FundingTightDecision
       def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
@@ -1023,28 +1023,28 @@ object JihadistBot extends BotHelpers {
     }
 
     object FundingTightDecision extends OperationDecision {
-      val desc = "Funding Tight?"
+      def desc = "Funding Tight?"
       def yesPath = CellAvailableOrPlotDecision
       def noPath  = CellInGoodFairWhereJSP
       def condition(ops: Int) = game.fundingLevel == Tight
     }
 
     object CellAvailableOrPlotDecision extends OperationDecision {
-      val desc = "Cells Available and Recruit possible? (1)"
+      def desc = "Cells Available and Recruit possible? (1)"
       def yesPath = RecruitOp(None)
       def noPath  = PlotOpFunding
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
     object CellAvailableOrTravelDecision extends OperationDecision {
-      val desc = "Cells Available and Recruit possible? (2)"
+      def desc = "Cells Available and Recruit possible? (2)"
       def yesPath = RecruitOp(None)
       def noPath  = TravelOp(None, adjacentOnly = false)
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
     object CellInGoodFairWhereJSP extends OperationDecision {
-      val desc = "Cells in Good or Fair Muslim where Jihad Success Possible?"
+      def desc = "Cells in Good or Fair Muslim where Jihad Success Possible?"
       def yesPath = MinorJihadOp
       def noPath  = PoorNeedCellsforMajorJihadDecision
       def condition(ops: Int) = {
@@ -1062,7 +1062,7 @@ object JihadistBot extends BotHelpers {
     // Finds the highest priority travel destination among them and checks
     // to see if there is a cell in an adjacent country.
     object PoorNeedCellsforMajorJihadDecision extends OperationDecision {
-      val desc = "Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible?"
+      def desc = "Poor Muslim w/ 1-4 more cells than TandM & Jihad Success Possible?"
       def yesPath = TravelOp(None, adjacentOnly = false)
       def noPath  = FundingModerateDecision
       def condition(ops: Int) = {
@@ -1075,14 +1075,14 @@ object JihadistBot extends BotHelpers {
     }
 
     object FundingModerateDecision extends OperationDecision {
-      val desc = "Funding Moderate?"
+      def desc = "Funding Moderate?"
       def yesPath = PrestigeOver1AndActiveCellWithTroopsDecision
       def noPath  = CellAvailableOrTravelDecision
       def condition(ops: Int) = game.fundingLevel == Moderate
     }
 
     object PrestigeOver1AndActiveCellWithTroopsDecision extends OperationDecision {
-      val desc = "Prestige > 1 and Active cell with Troops?"
+      def desc = "Prestige > 1 and Active cell with Troops?"
       def yesPath = PlotOpPrestige
       def noPath  = CellAvailableOrCellInNonMuslimDecision
       def condition(ops: Int) =
@@ -1091,14 +1091,14 @@ object JihadistBot extends BotHelpers {
     }
 
     object CellAvailableOrCellInNonMuslimDecision extends OperationDecision {
-      val desc = "Cells Available and Recruit possible? (3)"
+      def desc = "Cells Available and Recruit possible? (3)"
       def yesPath = RecruitOp(None)
       def noPath  = CellInNonMuslim
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
     object CellInNonMuslim extends OperationDecision {
-      val desc = "Cell in Non-Muslim?"
+      def desc = "Cell in Non-Muslim?"
       def yesPath = PlotOpFunding
       def noPath  = TravelOp(None, adjacentOnly = false)
       def condition(ops: Int) = game hasNonMuslim (totalUnused(_) > 0)
@@ -1119,7 +1119,7 @@ object JihadistBot extends BotHelpers {
     // It will use the Random Muslim Table to determine the destinations and
     // will place one cell in each.
     object NoCellsOnMapDecision extends OperationDecision {
-      val desc = "No cells on the map?"
+      def desc = "No cells on the map?"
       def yesPath = PlaceRandomCells
       def noPath  = MajorJihadDecision
       def condition(ops: Int) = game.totalCellsOnMap == 0
@@ -1127,7 +1127,7 @@ object JihadistBot extends BotHelpers {
 
 
     object MajorJihadDecision extends OperationDecision {
-      val desc = "Major Jihad Success possible at Poor?"
+      def desc = "Major Jihad Success possible at Poor?"
       def yesPath = MajorJihadOp
       def noPath  = CellInGoodFairWhereJSP
       def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
@@ -1138,14 +1138,14 @@ object JihadistBot extends BotHelpers {
     }
 
     object CellAvailableOrTravelDecision extends OperationDecision {
-      val desc = "Cells Available and Recruit possible? (or Travel)"
+      def desc = "Cells Available and Recruit possible? (or Travel)"
       def yesPath = RecruitOp(None)
       def noPath  = TravelOp(None, adjacentOnly = false)
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
     object CellInGoodFairWhereJSP extends OperationDecision {
-      val desc = "Cells in Good or Fair Muslim where Jihad Success Possible?"
+      def desc = "Cells in Good or Fair Muslim where Jihad Success Possible?"
       def yesPath = MinorJihadOp
       def noPath  = HaveAutoRecruitPriorityDecision
       def condition(ops: Int) = {
@@ -1159,7 +1159,7 @@ object JihadistBot extends BotHelpers {
     }
 
     object HaveAutoRecruitPriorityDecision extends OperationDecision {
-      val desc = "Have Auto-Recruit Priority country with < 3 cells?"
+      def desc = "Have Auto-Recruit Priority country with < 3 cells?"
       def yesPath = RecruitInAutoRecruitPriorityDecision
       def noPath  = FundingBelow7Decision
       def condition(ops: Int) =
@@ -1190,14 +1190,14 @@ object JihadistBot extends BotHelpers {
 
 
     object RecruitOrEnhancedTravelDecision extends OperationDecision {
-      val desc = "Cells Available and Recruit possible? (or Travel Poor/Unmarked)"
+      def desc = "Cells Available and Recruit possible? (or Travel Poor/Unmarked)"
       def yesPath = RecruitOp(None)
       def noPath  = EnhancedTravelDecision
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
     object EnhancedTravelDecision extends OperationDecision {
-      val desc = "Can travel to Poor/Unmarked where Major JSP and no TandM?"
+      def desc = "Can travel to Poor/Unmarked where Major JSP and no TandM?"
       def yesPath = EnhancedTravelOp
       def noPath  = Radicalization
       def condition(ops: Int) = {
@@ -1209,14 +1209,14 @@ object JihadistBot extends BotHelpers {
     }
 
     object FundingBelow7Decision extends OperationDecision {
-      val desc = "Funding < 7?"
+      def desc = "Funding < 7?"
       def yesPath = PlotOpFunding
       def noPath  = Funding7AndNoCardsInHandDecision
       def condition(ops: Int) = game.funding < 7
     }
 
     object PrestigeAboveLowAndActiveCellWithTroopsDecision extends OperationDecision {
-      val desc = "Prestige > 3 and cell(s) with Troops in Poor country?"
+      def desc = "Prestige > 3 and cell(s) with Troops in Poor country?"
       def yesPath = PlotOpPrestige
       def noPath  = MJP_IsAutoRecruitDecsion
       def condition(ops: Int) =
@@ -1225,14 +1225,14 @@ object JihadistBot extends BotHelpers {
     }
 
     object CellsAvailableOrPlotDecision extends OperationDecision {
-      val desc = "Cells Available and Recruit possible? (or Plot)"
+      def desc = "Cells Available and Recruit possible? (or Plot)"
       def yesPath = RecruitOp(None)
       def noPath  = PlotOpFunding
       def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
     }
 
     object Funding7AndNoCardsInHandDecision extends OperationDecision {
-      val desc = "Funding = 7 and no more Jihadist cards in hand?"
+      def desc = "Funding = 7 and no more Jihadist cards in hand?"
       def yesPath = PlotOpFunding
       def noPath  = PrestigeAboveLowAndActiveCellWithTroopsDecision
       def condition(ops: Int) =
@@ -1254,7 +1254,7 @@ object JihadistBot extends BotHelpers {
     //   the auto-recruit priority country and if that is not possible
     //   as a last resort we will do Radicalization.
     object MJP_IsAutoRecruitDecsion extends OperationDecision {
-      val desc = s"Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) is auto-recruit?"
+      def desc = s"Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) is auto-recruit?"
       def yesPath = MJP_Recruit_AdjacentTravel_Decision
       def noPath  = MJP_AdjacentTravel_Recruit_Decision
       def condition(ops: Int) = majorJihadPriorityCountry.map(game.getCountry).exists(_.autoRecruit)
@@ -1262,7 +1262,7 @@ object JihadistBot extends BotHelpers {
 
     // MJP Auto-recruit #1
     object MJP_Recruit_AdjacentTravel_Decision extends OperationDecision {
-      val desc = s"Can recruit in Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")})?"
+      def desc = s"Can recruit in Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")})?"
       def yesPath = RecruitOp(majorJihadPriorityCountry)
       def noPath  = MJP_AdjacentTravel_OtherTravel_Decision
       def condition(ops: Int) = majorJihadPriorityCountry match {
@@ -1275,7 +1275,7 @@ object JihadistBot extends BotHelpers {
 
     // MJP Auto-recruit #2
     object MJP_AdjacentTravel_OtherTravel_Decision extends OperationDecision {
-      val desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
+      def desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
       def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = true)
       def noPath  = MJP_OtherTravel_AutoRecruitPriority_Decision
       def condition(ops: Int) = majorJihadPriorityCountry match {
@@ -1288,7 +1288,7 @@ object JihadistBot extends BotHelpers {
 
     // MJP Not Auto-recruit #1
     object MJP_AdjacentTravel_Recruit_Decision extends OperationDecision {
-      val desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
+      def desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
       def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = true)
       def noPath  = MJP_Recruit_OtherTravel_Decision
       def condition(ops: Int) = majorJihadPriorityCountry.toList
@@ -1298,7 +1298,7 @@ object JihadistBot extends BotHelpers {
 
     // MJP Not Auto-recruit #2
     object MJP_Recruit_OtherTravel_Decision extends OperationDecision {
-      val desc = s"Can recruit in Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")})?"
+      def desc = s"Can recruit in Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")})?"
       def yesPath = RecruitOp(majorJihadPriorityCountry)
       def noPath  = MJP_OtherTravel_AutoRecruitPriority_Decision
       def condition(ops: Int) = majorJihadPriorityCountry match {
@@ -1311,7 +1311,7 @@ object JihadistBot extends BotHelpers {
 
     // MJP (Auto-recruit AND Not Auto-recruit ) #3
     object MJP_OtherTravel_AutoRecruitPriority_Decision extends OperationDecision {
-      val desc = s"Any travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
+      def desc = s"Any travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
       def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = false)
       def noPath  = RecruitInAutoRecruitPriority_Decision
       def condition(ops: Int) = majorJihadPriorityCountry match {
@@ -1325,7 +1325,7 @@ object JihadistBot extends BotHelpers {
 
     // MJP (Auto-recruit AND Not Auto-recruit ) #4
     object RecruitInAutoRecruitPriority_Decision extends OperationDecision {
-      val desc = s"Recruit in Auto-Recruit priority (${autoRecruitPriorityCountry.getOrElse("None")}) possible?"
+      def desc = s"Recruit in Auto-Recruit priority (${autoRecruitPriorityCountry.getOrElse("None")}) possible?"
       def yesPath = RecruitOp(autoRecruitPriorityCountry)
       def noPath  = Radicalization
       def condition(ops: Int) = autoRecruitPriorityCountry match {

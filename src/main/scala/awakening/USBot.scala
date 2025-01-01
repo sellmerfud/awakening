@@ -621,7 +621,7 @@ object USBot extends BotHelpers {
   
   // This is the starting point of the PAR Flowchart
   object DisruptMuslim2MoreCellsDecision extends OperationDecision {
-    val desc = "Disrupt Muslim at least 2 more cells than TandM and JSP?"
+    def desc = "Disrupt Muslim at least 2 more cells than TandM and JSP?"
     def yesPath = Disrupt
     def noPath  = IR3AndRegimeChangeDecision
     def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
@@ -631,14 +631,14 @@ object USBot extends BotHelpers {
   }
   
   object IR3AndRegimeChangeDecision extends OperationDecision {
-    val desc = "Islamist Rule resources >= 3 and Regime Change possible?"
+    def desc = "Islamist Rule resources >= 3 and Regime Change possible?"
     def yesPath = RegimeChange
     def noPath  = WoiMuslimNoPenaltyDecision
     def condition(ops: Int) = game.islamistResources >= 3 && game.regimeChangePossible(ops)
   }
   
   object WoiMuslimNoPenaltyDecision extends OperationDecision {
-    val desc = "WoI in Muslim with DRM >= 0?"
+    def desc = "WoI in Muslim with DRM >= 0?"
     def yesPath = WoiMuslimHighestDRM
     def noPath  = PrestigeLowDecision
     def condition(ops: Int) = 
@@ -646,14 +646,14 @@ object USBot extends BotHelpers {
   }
   
   object PrestigeLowDecision extends OperationDecision {
-    val desc = "Prestige Low?"
+    def desc = "Prestige Low?"
     def yesPath = DisruptForPrestigeDecision
     def noPath  = DeployDecision
     def condition(ops: Int) = game.prestigeLevel == Low
   }
   
   object DisruptForPrestigeDecision extends OperationDecision {
-    val desc = "Disrupt for Prestige gain?"
+    def desc = "Disrupt for Prestige gain?"
     def yesPath = Disrupt
     def noPath  = USSoftDecision
     def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
@@ -662,7 +662,7 @@ object USBot extends BotHelpers {
   }
     
   object DeployDecision extends OperationDecision {
-    val desc = "Deploy Possible?"
+    def desc = "Deploy Possible?"
     def yesPath = Deploy
     def noPath  = RegimeChangeDecision
     def condition(ops: Int) = botDeployTargets(ops) match {
@@ -675,21 +675,21 @@ object USBot extends BotHelpers {
   }
   
   object USSoftDecision extends OperationDecision {
-    val desc = "US Soft?"
+    def desc = "US Soft?"
     def yesPath = WoiNonMuslim
     def noPath  = DeployDecision
     def condition(ops: Int) = game.usPosture == Soft
   }
   
   object RegimeChangeDecision extends OperationDecision {
-    val desc = "Regime Change Possible?"
+    def desc = "Regime Change Possible?"
     def yesPath = RegimeChange
     def noPath  = DisruptForPrestigeOrPlaceCadreDecision
     def condition(ops: Int) = game.regimeChangePossible(ops)
   }
   
   object DisruptForPrestigeOrPlaceCadreDecision extends OperationDecision {
-    val desc = "Disrupt for Prestige gain or to place a Cadre?"
+    def desc = "Disrupt for Prestige gain or to place a Cadre?"
     def yesPath = Disrupt
     def noPath  = WoiMuslimMinus1DrmDecision
     def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
@@ -698,7 +698,7 @@ object USBot extends BotHelpers {
   }
   
   object WoiMuslimMinus1DrmDecision extends OperationDecision {
-    val desc = "WoI in Muslim with DRM of -1?"
+    def desc = "WoI in Muslim with DRM of -1?"
     def yesPath = WoiMuslimMinusOneDRM
     def noPath  = HomelandSecurity
     def condition(ops: Int) = 
