@@ -2836,6 +2836,7 @@ object JihadistBot extends BotHelpers {
       val destCandidate = (m: MuslimCountry) =>
         m.isGood &&
         m.totalTroops == 0 &&
+        !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
         hasAdjacentTravelCells(m)
 
       override
