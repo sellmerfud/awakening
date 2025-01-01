@@ -107,7 +107,7 @@ object Card_096 extends Card2(96, "Danish Cartoons", Unassociated, 1, Remove, No
       addAvailablePlotToCountry(name, plot)
     }
     else if (game.numIslamistRule == 0)
-      log("\nThere is no available Plot 1.", Color.Event)
+      log("\nThere is no available level 1 plot.", Color.Event)
     else
       log("\nThere are no available Plots.", Color.Event)
   }

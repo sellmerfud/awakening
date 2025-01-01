@@ -97,7 +97,7 @@ object Card_207 extends Card2(207, "JV / Copycat", Unassociated, 1, NoRemove, No
         testCountry(name)
         val choices = List(
           choice(game.cellsAvailable > 0,            "cell", "Place an active cell"),
-          choice(game.availablePlots contains Plot1, "plot", "Place a Plot 1")
+          choice(game.availablePlots contains Plot1, "plot", "Place a levle 1 plot")
         ).flatten
 
         askMenu("Choose one:", choices).head match {

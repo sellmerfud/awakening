@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Iran Adversary or a Special Case country
+// Reduce by 1 the Resource value of all Oil Exporter nations within
+// the Persian Gulf (Saudi Arabia, Gulf States, Iraq and Iran) and
+// increase by 1 the Resource value of all Oil Exporter countries
+// outside the Persian Gulf (all the rest).
 // ------------------------------------------------------------------
 object Card_289 extends Card2(289, "Strait of Hormuz", Jihadist, 1, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +60,32 @@ object Card_289 extends Card2(289, "Strait of Hormuz", Jihadist, 1, NoRemove, La
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = isIranSpecialCase || game.getMuslim(Iran).isAdversary
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = {
+    // First field of tuple is IR, second is Good
+    val irDown = persianGulfExporters.count(_.isIslamistRule)
+    val goodDown = persianGulfExporters.count(_.isGood)
+    val irUp = nonPersianGulfExporters.count(_.isIslamistRule)
+    val goodUp = nonPersianGulfExporters.count(_.isGood)
+    // Bot only plays if it would increase IR resources and not increase Good resources
+    (irUp - irDown) > 0 && (goodUp - goodDown) <= 0
+  }
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val gulf = countryNames(persianGulfExporters)
+    log(s"\nResource value of ${andList(gulf)}", Color.Event)
+    log("is decreased by 1 until the end of turn.", Color.Event)
+    log("\nResource value of all other oil exporters", Color.Event)
+    log("is increased by 1 until the end of turn.", Color.Event)
   }
 }

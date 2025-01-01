@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Roll 1 die:
+// 1-2) Place a Reaction marker in Central Asia
+// 3-4) Place a Cell in China
+// 5-6) Place a level 1 Plot in China.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_290 extends Card2(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +73,30 @@ object Card_290 extends Card2(290, "Uyghur Nationalism", Jihadist, 1, Remove, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val die = getDieRoll(s"Enter event die roll: ")
+    log(s"\nDie roll: $die", Color.Event)
+    die match {
+      case 1 | 2 =>
+        addEventTarget(CentralAsia)
+        addReactionMarker(CentralAsia)
+
+      case 3 | 4 =>
+        if (game.cellsAvailable > 0) {
+          testCountry(China)
+          addEventTarget(China)
+          addSleeperCellsToCountry(China, 1)
+        }
+        else
+          log("\nThere are no available cells to place in China.", Color.Event)
+
+      case _ => // 5 | 6
+        if (game.availablePlots.contains(Plot1)) {
+          testCountry(China)
+          addEventTarget(China)
+          addAvailablePlotToCountry(China, Plot1, visible = true)
+        }
+        else
+          log("\nThere are no available level 1 plots to place in China.", Color.Event)
+    }
   }
 }

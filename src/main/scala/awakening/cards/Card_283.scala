@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,11 +37,14 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Test one of Canada, Scandinavia or India.
+// Then, place 1 Cell in any Hard country.
 // ------------------------------------------------------------------
 object Card_283 extends Card2(283, "Lone Wolf", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +72,41 @@ object Card_283 extends Card2(283, "Lone Wolf", Jihadist, 1, NoRemove, NoLapsing
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val testCountries = Canada::Scandinavia::India::Nil
+
+    val testTarget = if (role == game.humanRole)
+      askCountry("Test which country: ", testCountries)
+    else {
+      // The Bot will only select and untested country if the GWOT penalty is zero
+      // (or if there are no tested countries)
+      val (untested, tested) = game.getNonMuslims(testCountries).partition(_.isUntested)
+      game.gwotPenalty match {
+        case 0 => shuffle(if (untested.nonEmpty) untested else tested).head.name
+        case _ => shuffle(if (tested.nonEmpty) tested else untested).head.name
+      }
+    }
+
+    addEventTarget(testTarget)
+    log(s"\n$Jihadist selects $testTarget to be tested.", Color.Event)
+    if (game.getNonMuslim(testTarget).isUntested)
+      testCountry(testTarget)
+    else
+      log(s"\n$testTarget is not untested so there is no effect.", Color.Event)
+
+    val hardCountries = countryNames(game.nonMuslims.filter(_.isHard))
+    if (hardCountries.isEmpty)
+      log("\nThere are no Non-Muslim countries with Hard posture.", Color.Event)
+    else if (game.cellsAvailable == 0)
+      log("\nThere are no available cells to place on the map.", Color.Event)
+    else {
+      println()
+      val cellTarget = if (isHuman(role))
+        askCountry("Place a cell in which country: ", hardCountries)
+      else
+        JihadistBot.cellPlacementPriority(false)(hardCountries).get
+
+      addEventTarget(cellTarget)
+      addSleeperCellsToCountry(cellTarget, 1)
+    }
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If US Hard, -1 Prestige.
+// If US Soft, place 1 Cell anywhere.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_282 extends Card2(282, "Executive Order 13492", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +65,28 @@ object Card_282 extends Card2(282, "Executive Order 13492", Jihadist, 1, Remove,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    (game.usPosture == Hard && game.prestige > 1) ||
+    (game.usPosture == Soft && game.cellsAvailable > 0)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (game.usPosture == Hard)
+      decreasePrestige(1)
+    else if (game.cellsAvailable > 0) {
+      val target = if (isHuman(role))
+        askCountry("Place a cell in which country: ", countryNames(game.countries))
+      else
+        JihadistBot.cellPlacementPriority(false)(countryNames(game.countries)).get
+
+      addEventTarget(target)
+      testCountry(target)
+      addSleeperCellsToCountry(target, 1)
+    }
+    else
+      log("\nThere are no available cells.  The event has not effect.", Color.Event)
   }
 }

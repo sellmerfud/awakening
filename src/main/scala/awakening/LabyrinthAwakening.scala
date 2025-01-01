@@ -5529,15 +5529,15 @@ object LabyrinthAwakening {
       game.getCountry(target) match {
         case m: MuslimCountry =>
           if (lapsingEventInPlay(ArabWinter))
-            log("Awakening markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
+            log(s"\nAwakening markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
           else if (m.canTakeAwakeningOrReactionMarker) {
             game = game.updateCountry(m.copy(awakening = m.awakening + num))
             log(s"Add ${amountOf(num, "awakening marker")} to $target", Color.MapPieces)
           }
           else
-            log(s"$target cannot take an awakening marker")
+            log(s"\n$target cannot take an awakening marker.", Color.Event)
         case _ =>
-            log(s"$target cannot take an awakening marker")
+            log(s"$target cannot take an awakening marker because it is Non-Muslim.", Color.Event)
       }
     }
   }
@@ -5556,16 +5556,16 @@ object LabyrinthAwakening {
       game.getCountry(target) match {
         case m: MuslimCountry =>
           if (lapsingEventInPlay(ArabWinter))
-            log("Reaction markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
+            log(s"\nReaction markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
           else if (m.canTakeAwakeningOrReactionMarker) {
             game = game.updateCountry(m.copy(reaction = m.reaction + num))
             log(s"Add ${amountOf(num, "reaction marker")} to $target", Color.MapPieces)
           }
           else
-            log(s"$target cannot take a reaction marker")
+            log(s"\n$target cannot take a reaction marker.", Color.Event)
 
         case _ =>
-            log(s"$target cannot take a reaction marker")
+            log(s"$target cannot take a reaction marker because it is Non-Muslim.", Color.Event)
       }
     }
   }
