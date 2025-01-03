@@ -4655,12 +4655,10 @@ object LabyrinthAwakening {
           if (m.awakening > 0 ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name", Color.MapPieces)
           if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name", Color.MapPieces)
           if (m.militia > 0   ) log(s"Remove ${m.militia} militia from $name", Color.MapPieces)
-          // When a country becomes IR, any plots in the country are removed.
-          for (p <- m.plots)
-            removePlotFromCountry(name, p, toAvailable = !game.useExpansionRules)
+          // When a country becomes IR, any plots in the country remain
           val degraded = m.copy(
             governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0,
-            aidMarkers = 0, militia = 0, besiegedRegime = false, plots = Nil)
+            aidMarkers = 0, militia = 0, besiegedRegime = false)
           game = game.updateCountry(degraded)
           moveWMDCacheToAvailable(name, m.wmdCache)
           removeAllAdvisorsFromCountry(name) // Country becomes Adversary
@@ -5655,13 +5653,16 @@ object LabyrinthAwakening {
   def resolvePlots(): Unit = {
     case class Unblocked(name: String, isMuslim: Boolean, mapPlot: PlotOnMap)
     def chng(amt: Int) = if (amt > 0) "Increase" else "Decrease"
-    val unblocked = for (c <- game.countries filter (_.hasPlots); p <- c.plots)
+    val unblocked = for (c <- game.countries.filter(_.hasPlots); p <- c.plots)
       yield Unblocked(c.name, c.isMuslim, p)
-    val greenOnBlue = game.muslims exists (m => m.hasPlots &&
-                                          (m.inRegimeChange || m.civilWar) &&
-                                          (m.totalTroops > 0 || m.numAdvisors > 0))
+    val greenOnBlue = game.muslims.exists { m =>
+      m.hasPlots &&
+      (m.inRegimeChange || m.civilWar) &&
+      (m.totalTroops > 0 || m.numAdvisors > 0)
+    }
     var wmdsInCivilWars = Set.empty[String]
-    var wmdInUS = unblocked exists (ub => ub.name == UnitedStates && ub.mapPlot.plot == PlotWMD)
+    var wmdInUS = unblocked
+      .exists(ub => ub.name == UnitedStates && ub.mapPlot.plot == PlotWMD)
 
     if (wmdInUS && !game.ignoreVictory) {
       // If there is a WMD in the United States resolve it first as it will end the game.
@@ -5688,7 +5689,7 @@ object LabyrinthAwakening {
     }
     else {
       for (Unblocked(name, _, mapPlot) <- unblocked) {
-        val country = game getCountry name
+        val country = game.getCountry(name)
         log(separator())
         log(s"Unblocked $mapPlot in $name", Color.Info)
         if (name == Israel)
@@ -5735,7 +5736,7 @@ object LabyrinthAwakening {
             }
 
             // rule 11.2.6    (WMD in Civil War)
-            if (mapPlot.plot == PlotWMD && m.civilWar && (wmdsInCivilWars contains m.name)) {
+            if (mapPlot.plot == PlotWMD && m.civilWar && wmdsInCivilWars.contains(m.name)) {
               // If second WMD in the same civil war.  Shift immediately to Islamist Rule.
               worsenGovernance(m.name, levels = 3, canShiftToIR = true) // 3 levels guarantees shift to IR
             }
@@ -5749,13 +5750,18 @@ object LabyrinthAwakening {
                 }
               }
 
-              if (m.isGood || m.isFair || m.aidMarkers > 0) {
+              // No roll for governance if the country is Islamist Rule,
+              // but one Aid marker is removed for each plot roll that
+              // would have been made.
+              if (m.isIslamistRule && m.aidMarkers > 0)
+                removeAidMarker(name, mapPlot.plot.number min m.aidMarkers)
+              else if (m.isGood || m.isFair || m.aidMarkers > 0) {
                 // Rare for a plot to exist in an IR country.  Jihadist would have to
                 // place the plot with one card, then do Major Jihad with the second
                 def isSuccess(die: Int) = m.isIslamistRule || die <= m.governance
                 // roll plot dice
                 val dice = List.fill(mapPlot.plot.number)(getDieRoll(s"Enter die roll plot placement: "))
-                val successes = dice count isSuccess
+                val successes = dice.count(isSuccess)
                 val diceStr = dice map (d => s"$d (${if (isSuccess(d)) "success" else "failure"})")
                 log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
                 // Remove 1 aid marker for each successful die roll
@@ -5826,8 +5832,8 @@ object LabyrinthAwakening {
               if (n.isSchengen)
                 if (game.botRole == Jihadist) {
                   val omit = Set(n.name)
-                  val s1 = JihadistBot.posturePriority(Schengen filterNot (_ == n.name)).get
-                  val s2 = JihadistBot.posturePriority(Schengen filterNot (x => x == n.name || x == s1)).get
+                  val s1 = JihadistBot.posturePriority(Schengen.filterNot(_ == n.name)).get
+                  val s2 = JihadistBot.posturePriority(Schengen.filterNot(x => x == n.name || x == s1)).get
                   log(s"Jihadist selects two other Schengen countries: $s1 and $s2")
                   rollCountryPosture(s1)
                   rollCountryPosture(s2)
@@ -5835,7 +5841,7 @@ object LabyrinthAwakening {
                 else {
                   println("Select two other Schengen countries for posture rolls")
                   val s1 = askCountry("First Schengen country: ", Schengen, allowAbort = false)
-                  val s2 = askCountry("Second Schengen country: ", Schengen filterNot (_ == s1), allowAbort = false)
+                  val s2 = askCountry("Second Schengen country: ", Schengen.filterNot(_ == s1), allowAbort = false)
                   log(s"Jihadist selects two other Schengen countries: $s1 and $s2")
                   rollCountryPosture(s1)
                   rollCountryPosture(s2)
@@ -5870,9 +5876,11 @@ object LabyrinthAwakening {
             s"Put the ${amountOf(otherCount, "resolved non-WMD plot")} in the available plots box",
             Color.MapPieces)
 
-      (game.countries filter (_.hasPlots)) foreach {
+      (game.countries.filter(_.hasPlots)) foreach {
         case m: MuslimCountry =>
-          val (removed, resolved) = m.plots map (_.plot) partition (_ == PlotWMD)
+          val (removed, resolved) = m.plots
+            .map(_.plot)
+            .partition(_ == PlotWMD)
           val updatedPlots = if (game.useExpansionRules)
             game.plotData.copy(
               resolvedPlots = resolved ::: game.resolvedPlots,
@@ -5884,7 +5892,9 @@ object LabyrinthAwakening {
 
           game = game.updateCountry(m.copy(plots = Nil)).copy(plotData = updatedPlots)
         case n: NonMuslimCountry =>
-          val (removed, resolved) = n.plots map (_.plot) partition (_ == PlotWMD)
+          val (removed, resolved) = n.plots
+            .map(_.plot)
+            .partition (_ == PlotWMD)
           val updatedPlots = if (game.useExpansionRules)
             game.plotData.copy(
               resolvedPlots = resolved ::: game.resolvedPlots,
@@ -5898,9 +5908,11 @@ object LabyrinthAwakening {
     }
     val targets = unblocked.map(u => PlotTarget(u.name, u.isMuslim)).toSet
     game = game.copy(
-      plotData = game.plotData.copy(resolvedTargets       = targets,
-                                    resolvedInGreenOnBlue = greenOnBlue),
-      plays    = PlotsResolved(unblocked.size) :: game.plays
+      plotData = game.plotData.copy(
+        resolvedTargets       = targets,
+        resolvedInGreenOnBlue = greenOnBlue
+      ),
+      plays = PlotsResolved(unblocked.size) :: game.plays
     )
     saveGameState()
   }
