@@ -802,7 +802,7 @@ object LabyrinthAwakening {
   implicit val CardOrdering: Ordering[Card] = new Ordering[Card] {
     def compare(x: Card, y: Card) = x.number compare y.number
   }
-  
+
   sealed trait Play {
     def name: String  // Used for quantifying type in save game files
     def numCards: Int
@@ -837,7 +837,7 @@ object LabyrinthAwakening {
       case Some(AdditionalCard(num)) => s"$role played ${cardNumAndName(cardNum)} with addtional ${cardNumAndName(num)}"
     }
   }
-  
+
   case class PlayedReassement(card1: Int, card2: Int) extends CardPlay {
     val role = US
     override def name = "PlayedReassessment"
@@ -949,7 +949,7 @@ object LabyrinthAwakening {
     game = game.copy(plays = PlayedCard(role, cardNum, None) :: game.plays)
   }
 
-  // Add a second card to the most recent Played Card 
+  // Add a second card to the most recent Played Card
   // in the list of plays.  The will be done by events
   // and the card counts as the 2nd card of the action phase
   def addSecondCardToPlayedCard(cardNum: Int): Unit = {
@@ -964,7 +964,7 @@ object LabyrinthAwakening {
     game = game.copy(plays = newPlays)
   }
 
-  // Add an additional card to the most recent Played Card 
+  // Add an additional card to the most recent Played Card
   // in the list of plays.  The will be done by events
   // and the card does not count one of the cards oof the
   // current action phase
@@ -3457,10 +3457,10 @@ object LabyrinthAwakening {
     val turnInfo = game.plays.headOption match {
       case Some(_: PlayedReassement) =>
         s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} cards this turn)"
-          
+
       case Some(PlayedCard(_, _, Some(SecondCard(num2)))) =>
         s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} cards this turn)"
-        
+
       case Some(PlayedCard(_, _, _)) =>
         s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card this turn)"
 

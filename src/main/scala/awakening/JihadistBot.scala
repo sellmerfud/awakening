@@ -191,6 +191,29 @@ object JihadistBot extends BotHelpers {
     PriorityCountries.autoRecruitPriority
   }
 
+  // The Enhanced Bot uses its current IR resources score
+  // to make some decisions about certain priorities.
+  // 
+  // In this case the Bot ignores temporary increaese due to 
+  // Oil Price Spike, but does honor the +1 bump for Tehran-Beirut Land Corridor
+  // in Iran and the +1 bump for the Caliphate capital being declared.
+
+  val enhBotResourceValue = (m: MuslimCountry) =>
+    if (m.name == Iran && m.hasMarker(TehranBeirutLandCorridor))
+      m.resources + 1
+    else
+      m.resources
+
+  def currentIRResources = {
+    val muslimResources = game.muslims
+      .filter(_.isIslamistRule)
+      .foldLeft(0) { (sum, muslim) => sum + enhBotResourceValue(muslim) }
+    val caliphateResources = if (game.caliphateDeclared) 1 else 0
+    
+    muslimResources + caliphateResources
+  }
+
+
   // Find the priority Major Jihad priority target.
   // We start with all Muslim countries where a Major Jihad is possible (including umarked countries).
   // The country must have less than seven Troops and Militia.
@@ -368,13 +391,15 @@ object JihadistBot extends BotHelpers {
   // Used by the Enh Bot.  Uses unmodified printed resource value
   // exception: Iran with Tehran-Beirut Land Corridor marker counts a Res=3
   val HighestPrintedResourcePriority = new HighestScorePriority(
-    "Highest printed resource",
-    muslimScore { m =>
-      if (m.name == Iran && m.hasMarker(TehranBeirutLandCorridor))
-        m.resources + 1
-        else
-        m.resources
-    }
+    "Highest printed resource*",
+    muslimScore(enhBotResourceValue)    
+  )
+
+  // Used by the Enh Bot.
+  // Poor or Unmarked Muslim with 2+ 
+  val PoorOrUntested2PlusResources = new CriteriaFilter(
+    "Poor/Untested Muslim with 2+ resources*",
+    muslimTest(m => (m.isPoor || m.isUntested) && enhBotResourceValue(m) >= 2)
   )
 
   val HighestCellsMinusTandM = new HighestScorePriority(
@@ -712,8 +737,15 @@ object JihadistBot extends BotHelpers {
          PoorMuslimBestJihadDRM)
 
   def recruitAndTravelToPriorities: List[CountryFilter] = if (game.botEnhancements) {
+    // The first priority for the Ennanced Bot is determined by how close to the Bot
+    // is to victory.
+    val firstPriority = currentIRResources match {
+      case n if n < 4 => HighestPrintedResourcePriority::Nil
+      case 4 => PoorOrUntested2PlusResources::Nil
+      case _ => Nil
+    }
+    firstPriority :::
     List(
-      HighestPrintedResourcePriority,
       BestJihadDRMPriority(false),
       AutoRecruitFilter,
       HighestCellsMinusTandM,
