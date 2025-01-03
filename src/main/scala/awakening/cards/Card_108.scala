@@ -70,8 +70,11 @@ object Card_108 extends Card(108, "Musharraf", Unassociated, 2, NoRemove, NoLaps
   def botWillPlayEvent(role: Role): Boolean = {
     val pakistan = game.getMuslim(Pakistan)
     role match {
-      case US => !pakistan.isAlly && !pakistan.isGood && !(pakistan.isFair && pakistan.isNeutral)
-      case Jihadist => pakistan.isAlly && (pakistan.isGood || pakistan.isFair)
+      case US =>
+        eventRemovesLastCell() ||
+        (!pakistan.isAlly && !pakistan.isGood && !(pakistan.isFair && pakistan.isNeutral))
+      case Jihadist => 
+        pakistan.isAlly && (pakistan.isGood || pakistan.isFair)
     }
   }
 
