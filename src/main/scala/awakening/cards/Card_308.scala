@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Place an Active Cell and any Available Plot marker in the Philippines.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_308 extends Card2(308, "Battle of Marawi City", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +64,35 @@ object Card_308 extends Card2(308, "Battle of Marawi City", Jihadist, 3, Remove,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    game.cellsAvailable > 0 || game.availablePlots.nonEmpty
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Philippines)
+    val plot = if (game.availablePlots.isEmpty)
+        None
+    else if (isHuman(role))
+      Some(askPlots(game.availablePlots, 1).head)
+    else
+      Some(JihadistBot.preparePlots(game.availablePlots).head)
+
+    println()
+    testCountry(Philippines)
+    if (game.cellsAvailable > 0)
+      addActiveCellsToCountry(Philippines, 1)
+    else
+      log(s"\nThere are no cells available to place in $Philippines", Color.Event)
+
+    plot match {
+      case Some(p) =>
+        addAvailablePlotToCountry(Philippines, p)
+      case None =>
+        log(s"\nThere are no plots available to place in $Philippines", Color.Event)
+    }
   }
 }

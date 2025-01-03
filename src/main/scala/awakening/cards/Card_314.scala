@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in any African countries (Test if needed).
+// Place a total of 3 Cells and/or Plots in African countries,
+// no more than 1 per country.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_314 extends Card2(314, "Jihadist African Safari", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +66,83 @@ object Card_314 extends Card2(314, "Jihadist African Safari", Jihadist, 3, Remov
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    game.availablePlots.nonEmpty || game.cellsAvailable > 0
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (game.availablePlots.nonEmpty || game.cellsAvailable > 0) {
+      case class Action(name: String, item: Either[Unit, Plot])
+
+      val actions = if (isHuman(role)) {
+        def nextAction(actionNum: Int, cellsRemaining: Int, plots: List[Plot], candidates: List[String]): List[Action] = {
+          if (actionNum > 3 || (cellsRemaining == 0 && plots.isEmpty))
+            Nil
+          else {
+            val choices = List(
+              choice(cellsRemaining > 0, "cell", "Place a Cell"),
+              choice(plots.nonEmpty,     "plot", "Place a Plot")
+            ).flatten
+            println()
+            askMenu(s"${ordinal(actionNum)} action:", choices).head match {
+              case "cell" =>
+                val target = askCountry("Place a cell in which country: ", candidates)
+                Action(target, Left(())) :: nextAction(actionNum + 1, cellsRemaining - 1, plots, candidates.filterNot(_ == target))
+
+              case _ =>
+                val target = askCountry("Place a plot in which country: ", candidates)
+                val plot   = askPlots(plots, 1).head
+                val index  = plots.indexOf(plot)
+                val others = plots.take(index) ::: plots.drop(index + 1)
+                Action(target, Right(plot)) :: nextAction(actionNum + 1, cellsRemaining, others, candidates.filterNot(_ == target))
+            }
+          }
+        }
+        nextAction(1, game.cellsAvailable, game.availablePlots, African)
+      }
+      else {
+        // Bot
+        val plotsFirst = game.funding < 9
+        val plotsToPlace = if (plotsFirst)
+          JihadistBot.preparePlots(game.availablePlots).take(3)
+        else
+          JihadistBot.preparePlots(game.availablePlots).take((3 - game.cellsAvailable) max 0)
+        val numCells = (3 - plotsToPlace.size) min game.cellsAvailable
+
+        def nextAction(cellsLeft: Int, plots: List[Plot], candidates: List[String]): List[Action] = {
+          if (cellsLeft == 0 && plots.isEmpty)
+            Nil
+          else if (plots.nonEmpty && (plotsFirst || cellsLeft == 0)) {
+            val target = JihadistBot.plotPriority(candidates).get
+            Action(target, Right(plots.head)) :: nextAction(cellsLeft, plots.tail, candidates filterNot (_ == target))
+          }
+          else {
+            val target = JihadistBot.cellPlacementPriority(false)(candidates).get
+            Action(target, Left(())) :: nextAction(cellsLeft - 1, plots, candidates filterNot (_ == target))
+          }
+        }
+
+        nextAction(numCells, plotsToPlace, African)
+      }
+
+      println()
+      actions foreach {
+        case Action(name, Left(_)) =>
+          addEventTarget(name)
+          testCountry(name)
+          addSleeperCellsToCountry(name, 1)
+
+        case Action(name, Right(plot)) =>
+          addEventTarget(name)
+          testCountry(name)
+          addAvailablePlotToCountry(name, plot)
+      }
+    }
+    else
+      log("\nThere are no available cells or plots. The event has no effect.", Color.Event)
   }
 }

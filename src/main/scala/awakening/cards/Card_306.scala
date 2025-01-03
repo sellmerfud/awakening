@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if US Soft.
+// US must play rest of turn with its cards face up.
 // ------------------------------------------------------------------
 object Card_306 extends Card2(306, "Public Debate", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +57,7 @@ object Card_306 extends Card2(306, "Public Debate", Jihadist, 2, NoRemove, Lapsi
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = false // Not playable in Solo game
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -68,7 +69,5 @@ object Card_306 extends Card2(306, "Public Debate", Jihadist, 2, NoRemove, Lapsi
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
-  }
+  def executeEvent(role: Role, forTrigger: Boolean): Unit = ()
 }

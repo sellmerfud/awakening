@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Iran has an unavailable WMD.
+// Roll Posture of France and Germany.
+// If US play: Add +2 to die roll.
+// If Jihadist: Subtract 1 from roll, and US may not perform
+// War of Ideas in Schengen countries the rest of this turn.  REMOVE
 // ------------------------------------------------------------------
 object Card_340 extends Card2(340, "EU Bolsters Iran Deal", Unassociated, 2, JihadistRemove, JihadistLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +60,30 @@ object Card_340 extends Card2(340, "EU Bolsters Iran Deal", Unassociated, 2, Jih
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.getCountry(Iran).wmdCache > 0
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => game.gwotPenalty > 0
+    case Jihadist => true
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val drm = if (role == US) 2 else -1
+
+    for (name <- List(France, Germany)) {
+      addEventTarget(name)
+      rollCountryPosture(name, drm)
+    }
+
+    if (role == Jihadist)
+      log(s"\n$US may not perform War of Ideas in Schengen countries for the rest of this turn.", Color.Event)
   }
 }

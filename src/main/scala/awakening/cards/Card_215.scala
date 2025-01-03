@@ -129,7 +129,7 @@ object Card_215 extends Card2(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRe
           moveCellsToTarget(target, sources)
           // Count how many were actually placed (based on availability)
           val totalPlaced = (sources map (_.total)).sum
-          if (choosesToDeclareCaliphate(Jihadist, num, target))
+          if (jihadistChoosesToDeclareCaliphate(target, num))
             declareCaliphate(target)
         }
 
@@ -160,7 +160,7 @@ object Card_215 extends Card2(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRe
         val totalPlaced = placements.map(_.total).sum
         moveCellsToTarget(target, placements)
 
-        if (choosesToDeclareCaliphate(Jihadist, totalPlaced, target))
+        if (jihadistChoosesToDeclareCaliphate(target, totalPlaced))
           declareCaliphate(target)
 
         if (askYorN(s"\nIs [$TCDisplay] or [$PADisplay] in the discard pile? (y/n) "))
@@ -178,7 +178,7 @@ object Card_215 extends Card2(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRe
         testCountry(target)
         val num = 3 min game.cellsAvailable
         addSleeperCellsToCountry(target, num)
-        if (choosesToDeclareCaliphate(Jihadist, num, target))
+        if (jihadistChoosesToDeclareCaliphate(target, num))
           declareCaliphate(target)
 
         if (askYorN(s"\nIs [$TCDisplay] or [$PADisplay] in the discard pile? (y/n) "))

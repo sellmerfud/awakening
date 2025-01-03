@@ -79,7 +79,7 @@ object Card_072 extends Card2(72, "Opium", Jihadist, 2, NoRemove, NoLapsing, NoA
     if (num > 0) {
       addEventTarget(Afghanistan)
       addSleeperCellsToCountry(Afghanistan, num)
-      if (choosesToDeclareCaliphate(role, num, Afghanistan))
+      if (jihadistChoosesToDeclareCaliphate(Afghanistan, num))
         declareCaliphate(Afghanistan)
     }
     else

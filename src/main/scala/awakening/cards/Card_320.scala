@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Remove up to 3 Militia total from Regime Change or Civil War countries.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_320 extends Card2(320, "Tribal Leaders Withdraw Support", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +56,13 @@ object Card_320 extends Card2(320, "Tribal Leaders Withdraw Support", Jihadist, 
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(
+    game.muslims filter (m => m.militia > 0 && (m.inRegimeChange || m.civilWar))
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +75,36 @@ object Card_320 extends Card2(320, "Tribal Leaders Withdraw Support", Jihadist, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role)) {
+      def nextMilitia(numLeft: Int): Unit = {
+        if (numLeft > 0 && getCandidates().nonEmpty) {
+          val target = askCountry("Remove militia from which country: ", getCandidates())
+          val maxNum = game.getMuslim(target).militia min numLeft
+          val num    = askInt(s"Remove how many from $target", 1, maxNum)
+          addEventTarget(target)
+          removeMilitiaFromCountry(target, num)
+          nextMilitia(numLeft - num)
+        }
+      }
+
+      val maxRemoval = getCandidates().map(game.getMuslim(_).militia).sum min 3
+      askInt("\nRemove how many total militia from the map", 0, maxRemoval) match {
+        case 0 => log("\nJihadist choose to remove no milita.", Color.Event)
+        case num => nextMilitia(num)
+      }
+    }
+    else {
+      // Bot
+      def nextMilitia(numLeft: Int): Unit = {
+        if (numLeft > 0 && getCandidates().nonEmpty) {
+          val target = JihadistBot.troopsMilitiaTarget(getCandidates()).get
+          val num    = game.getMuslim(target).militia min numLeft
+          addEventTarget(target)
+          removeMilitiaFromCountry(target, num)
+          nextMilitia(numLeft - num)
+        }
+      }
+      nextMilitia(3)
+    }
   }
 }

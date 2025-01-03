@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,9 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Allows play of Turkish Coup.
+// If US play: Place an Awakening marker in Turkey.
+// If Jihadist: Place up to 2 Cells in Turkey.
 // ------------------------------------------------------------------
 object Card_341 extends Card2(341, "Gulen Movement", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +64,38 @@ object Card_341 extends Card2(341, "Gulen Movement", Unassociated, 2, NoRemove, 
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US =>
+      globalEventNotInPlay(GulenMovement) &&
+      lapsingEventNotInPlay(ArabWinter) &&
+      game.getMuslim(Turkey).canTakeAwakeningOrReactionMarker
+    case Jihadist =>
+      globalEventNotInPlay(GulenMovement) &&
+      game.cellsAvailable > 0
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addGlobalEventMarker(GulenMovement)
+    addEventTarget(Turkey)
+
+    if (role == US)
+      addAwakeningMarker(Turkey)
+    else if (game.cellsAvailable > 0) {
+      // Jihadist
+      val maxNum = 2 min game.cellsAvailable
+      val num = if (isHuman(role))
+        askInt("Place how many cells", 0, maxNum, Some(maxNum))
+      else
+        maxNum
+      if (num > 0)
+        testCountry(Turkey)
+      addSleeperCellsToCountry(Turkey, num)
+    }
+    else
+      log("\nThere are no available cells to place in Turkey.", Color.Event)
   }
 }

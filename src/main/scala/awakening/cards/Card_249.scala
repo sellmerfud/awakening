@@ -74,7 +74,7 @@ object Card_249 extends Card2(249, "Saudi Air Strikes", US, 1, NoRemove, NoLapsi
   override
   def eventConditionsMet(role: Role) = {
     val saudi = game.getMuslim(SaudiArabia)
-    !saudi.isUntested &&
+    saudi.isTested &&
     (saudi.isNeutral || saudi.isAlly) &&
     getCandidates().nonEmpty
   }

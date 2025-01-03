@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,17 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Populism/Euro-scepticism in Event Box, or a Schengen Country
+// has a Cell, or a Plot was resolved in a Schengen Country in the last US
+// Action Phase.
+// If US play: Set UK to Hard. UK Recruit level is reduced to 1.
+//             As long as UK is Hard, no Celis may travel there from
+//             Schengen Countries. MARK & REMOVE
+// If Jibadist: -1 Prestige. Move closest Cell (Jihadist choice if equidistant) to the UK.
 // ------------------------------------------------------------------
 object Card_324 extends Card2(324, "BREXIT", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -57,6 +64,9 @@ object Card_324 extends Card2(324, "BREXIT", Unassociated, 1, USRemove, NoLapsin
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
+    globalEventInPlay(Euroscepticism) ||
+    (game.hasNonMuslim(n => n.isSchengen && n.totalCells > 0)) ||
+    game.resolvedPlotTargets.exists(t => Schengen.contains(t.name))
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -68,7 +78,27 @@ object Card_324 extends Card2(324, "BREXIT", Unassociated, 1, USRemove, NoLapsin
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
-  }
+  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+    role match {
+      case US =>
+        addEventTarget(UnitedKingdom)
+        setCountryPosture(UnitedKingdom, Hard)
+        addEventMarkersToCountry(UnitedKingdom, BREXIT)
+
+      case Jihadist =>
+        decreasePrestige(1)
+        addEventTarget(UnitedKingdom)
+        val source = closestWithCells(UnitedKingdom) match {
+          case Nil => None
+          case candidates if isHuman(role) =>
+            Some(askCountry(s"Move cell to $UnitedKingdom from which country: ", candidates))
+          case candidates =>
+            JihadistBot.travelFromTarget(UnitedKingdom, candidates)
+        }
+
+        source.foreach { name =>
+          testCountry(UnitedKingdom)
+          moveCellsBetweenCountries(name, UnitedKingdom, 1, game.getCountry(name).activeCells > 0, forTravel = false)
+        }
+    }
 }

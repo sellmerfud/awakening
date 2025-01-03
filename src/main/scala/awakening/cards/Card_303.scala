@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,16 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if US Hard and Iran has an unavailable WMD and a Cell.
+// Roll a die.
+// Success (1-3): Add a WMD to Available Plots. If Iran is a Special
+// Case country, flip Iran country mat to Shia-Mix.
+// Set to Fair Adversary. REMOVE
+// Failure (4-6): Remove the Cell.
 // ------------------------------------------------------------------
 object Card_303 extends Card2(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +62,10 @@ object Card_303 extends Card2(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = {
+    val iran = game.getCountry(Iran)
+    game.usPosture == Hard && iran.wmdCache > 0 && iran.totalCells > 0
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +78,34 @@ object Card_303 extends Card2(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Iran)
+    val die = getDieRoll(s"Enter event die roll: ")
+    val dieResult = if (die < 4) "Success" else "Failure"
+    log(s"\nDie roll: $die [$dieResult]", Color.Event)
+    if (die < 4) {
+      moveWMDCacheToAvailable(Iran, 1)
+      if (isIranSpecialCase) {
+        log("\nFlip Iran country mat to its Shia-Mix Muslim side and set it to Fair Adversary.", Color.Event)
+        val iran = game.getNonMuslim(Iran)
+        game = game.updateCountry(DefaultMuslimIran.copy(
+          sleeperCells = iran.sleeperCells,
+          activeCells  = iran.activeCells,
+          hasCadre     = iran.hasCadre,
+          plots        = iran.plots,
+          markers      = iran.markers,
+          wmdCache     = iran.wmdCache
+        ))
+      }
+      // Card only removed if die roll was successful
+      removeCardFromGame(this.number)
+    }
+    else {
+      val (actives, sleepers, sadr) = if (isHuman(role))
+        askCells(Iran, 1, sleeperFocus = false)
+      else
+          JihadistBot.chooseCellsToRemove(Iran, 1)
+
+      removeCellsFromCountry(Iran, actives, sleepers, sadr, addCadre = true)
+    }
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Select posture for either India or Thailand.
+// OR
+// Place a Cell in either country.
 // ------------------------------------------------------------------
 object Card_335 extends Card2(335, "Rohingya Genocide", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -58,17 +61,64 @@ object Card_335 extends Card2(335, "Rohingya Genocide", Unassociated, 1, NoRemov
   override
   def eventConditionsMet(role: Role) = true
 
+  val Countries = List(India, Thailand)
+
+  def getBotPostureCandidates(role: Role) = {
+    val badPosture = role match {
+      case US => oppositePosture(game.usPosture)
+      case Jihadist => game.usPosture
+    }
+    Countries.filter { name =>
+      val n = game.getNonMuslim(name)
+      n.isUntested || n.posture == badPosture
+    }
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => getBotPostureCandidates(US).nonEmpty
+    case Jihadist => game.cellsAvailable > 0 || getBotPostureCandidates(Jihadist).nonEmpty
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val choices = List(
+      choice(true,                    "posture", "Set posture of India or Thailand"),
+      choice(game.cellsAvailable > 0, "cell",    "Place a Cell in India or Thailand")
+    ).flatten
+
+    val (action, target, posture) = role match {
+      case _ if isHuman(role) =>
+        val action = askMenu("Choose one:", choices).head
+        val name = askCountry("Which country: ", Countries)
+        val posture = if (action == "posture")
+          askPosture(name)
+        else
+          ""
+        (action, name, posture)
+
+      case US =>
+        ("posture", USBot.posturePriority(getBotPostureCandidates(US)).get, game.usPosture)
+
+      case Jihadist if game.cellsAvailable > 0 =>
+        ("cell", JihadistBot.cellPlacementPriority(false)(Countries).get, "")
+
+      case Jihadist =>
+        ("posture", JihadistBot.posturePriority(getBotPostureCandidates(Jihadist)).get, oppositePosture(game.usPosture))
+    }
+
+    addEventTarget(target)
+    if (action == "posture")
+      setCountryPosture(target, posture)
+    else {
+      testCountry(target)
+      addSleeperCellsToCountry(target, 1)
+    }
   }
 }

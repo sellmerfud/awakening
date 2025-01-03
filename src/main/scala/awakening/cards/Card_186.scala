@@ -101,7 +101,7 @@ object Card_186 extends Card2(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsin
             val num = askInt("\nPlace how many cells", 1, maxCells, Some(maxCells))
             addSleeperCellsToCountry(Nigeria, num)
 
-            if (choosesToDeclareCaliphate(role, num, Nigeria))
+            if (jihadistChoosesToDeclareCaliphate(Nigeria, num))
               declareCaliphate(Nigeria)
         }
       }
@@ -124,7 +124,7 @@ object Card_186 extends Card2(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsin
           case _ =>
             val num = 3 min game.cellsAvailable
             addSleeperCellsToCountry(Nigeria, num)
-            if (choosesToDeclareCaliphate(role, num, Nigeria))
+            if (jihadistChoosesToDeclareCaliphate(Nigeria, num))
               declareCaliphate(Nigeria)
         }
       }

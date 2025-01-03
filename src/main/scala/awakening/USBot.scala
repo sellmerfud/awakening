@@ -50,7 +50,7 @@ object USBot extends BotHelpers {
   def woiMuslimTargets(ops: Int): List[MuslimCountry] = if (ops >= 3)
     game.muslims filter (_.warOfIdeasOK(ops))
   else
-    game.muslims filter (m => !m.isUntested && m.warOfIdeasOK(ops))
+    game.muslims filter (m => m.isTested && m.warOfIdeasOK(ops))
   def woiNonMuslimTargets(ops: Int): List[NonMuslimCountry] = game.nonMuslims filter (_.warOfIdeasOK(ops))
   
   // Pick sleepers before actives
@@ -783,7 +783,7 @@ object USBot extends BotHelpers {
   def posturePriority(names: List[String]): Option[String] = {
     val priorities = List(
       new CriteriaFilter("Opposite posture of US",
-        nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
+        nonMuslimTest(n => n.isTested && n.canChangePosture && n.posture != game.usPosture)),
       new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)))
     topPriority(game getNonMuslims names, priorities) map (_.name)
   }
@@ -792,10 +792,10 @@ object USBot extends BotHelpers {
   
   val WoiNonMuslimFlowchart = List(
     new CriteriaFilter("Opposite posture of US",
-      nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
+      nonMuslimTest(n => n.isTested && n.canChangePosture && n.posture != game.usPosture)),
     new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)),
     new CriteriaFilter("Same posture as US",
-      nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture == game.usPosture))
+      nonMuslimTest(n => n.isTested && n.canChangePosture && n.posture == game.usPosture))
   )
   
   def woiNonMuslimTarget(names: List[String]): Option[String] = {
@@ -810,9 +810,9 @@ object USBot extends BotHelpers {
   def woiNonMuslimPriority(names: List[String]): Option[String] = {
     val priorities = List(
       new CriteriaFilter("Opposite posture of US",
-        nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture != game.usPosture)),
+        nonMuslimTest(n => n.isTested && n.canChangePosture && n.posture != game.usPosture)),
       new CriteriaFilter("Same posture as US",
-        nonMuslimTest(n => !n.isUntested && n.canChangePosture && n.posture == game.usPosture)),
+        nonMuslimTest(n => n.isTested && n.canChangePosture && n.posture == game.usPosture)),
         FewestCellsPriority, GoodPriority, FairPriority, PoorPriority)
     
     botLog("Find \"non-Muslim WoI\" priority", Color.Debug)

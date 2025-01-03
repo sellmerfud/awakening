@@ -116,7 +116,7 @@ object Card_205 extends Card2(205, "Erdogan Effect", Unassociated, 1, NoRemove, 
         case n: NonMuslimCountry =>
           List(
             choice(n.isUntested && n.canChangePosture,  "+pos", "Place posture marker"),
-            choice(!n.isUntested && n.canChangePosture, "-pos", "Remove posture marker"),
+            choice(n.isTested && n.canChangePosture,    "-pos", "Remove posture marker"),
             choice(game.cellsAvailable > 0,             "+cel", "Place 2 cells"),
             choice(n.totalCells > 0,                    "-cel", "Remove 2 cells")
           ).flatten

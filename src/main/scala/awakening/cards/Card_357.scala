@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
+// US Play if Low Intensity.
+// Jihadist Play if 10 or fewer Cells on the map.
 //
+// Select, Reveal, and Draw a card other than OPEC Production Cut or
+// Oil Price Spike from the Discard pile or a box.
 // ------------------------------------------------------------------
 object Card_357 extends Card2(357, "Peace Dividend", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +60,52 @@ object Card_357 extends Card2(357, "Peace Dividend", Unassociated, 3, NoRemove, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = role match {
+    case US => game.troopCommitment == LowIntensity
+    case Jihadist => game.totalCellsOnMap <= 10
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = false // Bot treats as unplayable
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val offLimits = Set(117, 118, 236, 356)
+    val boxChoice = (num : Int, plot: Boolean) => {
+      val box = if (plot) "First Plot box" else "Lapsing box"
+      (num -> s"${deck(num).numAndName} from the $box")
+    }
+    val lapsingChoices = game.cardsLapsing map (boxChoice(_, false))
+    val plotChoices    = game.firstPlotCard.toList map (boxChoice(_, true))
+    val boxChoices = lapsingChoices ::: plotChoices filterNot { case (num, _) => offLimits(num) }
+
+    log()
+    log("""You cannot choose "OPEC Production Cut" or "Oil Price Spike"""", Color.Event)
+    if (boxChoices.isEmpty) {
+      log("\nSelect a card from the discard pile and add it to your hand.")
+      askCardsDrawn(1)
+    }
+    else {
+      val choices = boxChoices :+ (-1, "A card from the discard pile")
+      askMenu("Add which card to your hand:", choices).head match {
+        case -1 =>
+          askCardsDrawn(1)
+        case num if game.firstPlotCard == Some(num) =>
+          game = game.copy(firstPlotCard = None)
+          if (num == AvengerCard)
+            avengerCardDrawn(discarded = false)
+        case num =>
+          val lapsing = game.cardsLapsing filterNot (_ == num)
+          game = game.copy(cardsLapsing = lapsing)
+          if (num == AvengerCard)
+            avengerCardDrawn(discarded = false)
+      }
+    }
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,11 +37,17 @@
 
 package awakening.cards
 
+import scala.collection.mutable.ListBuffer
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Remove 2 Troops (from Track first) to Off Map Box.
+// Return them to Track at the end of a draw phase in which China and
+// US are same Posture.
+// Roll posture for Thailand or Philippines with US Prestige as a modifier.
+// MARK & REMOVE
 // ------------------------------------------------------------------
 object Card_318 extends Card2(318, "South China Sea Crisis", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -69,6 +75,40 @@ object Card_318 extends Card2(318, "South China Sea Crisis", Jihadist, 3, Remove
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val items = if (isHuman(role))
+      selectTroopsToPutOffMap(2)
+    else {
+      val numFromTrack = 2 min game.troopsAvailable
+      val numFromMap   = 2 - numFromTrack
+      val botItems = new ListBuffer[MapItem]
+      if (numFromTrack > 0)
+        botItems += MapItem("track", numFromTrack)
+      if (numFromMap > 0)
+        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
+      botItems.toList
+    }
+
+    for (MapItem(name, num) <- items) {
+      if (name != "track")
+        addEventTarget(name)
+      putTroopsInOffMapBox(name, num)
+    }
+
+    val postureCandidates = List(Thailand, Philippines)
+    val postureTarget = if (isHuman(role))
+      askCountry("Roll posture for which country: ", postureCandidates)
+    else
+      JihadistBot.posturePriority(postureCandidates).get
+
+    val die = getDieRoll(s"Enter event die roll: ")
+    val modifiedDie = (die + game.prestigeModifier) max 1 min 6
+    val newPosture = if (modifiedDie < 5) Soft else Hard
+    log(s"\nDie roll: $die", Color.Event)
+    log(f"${game.prestigeModifier}%+d (US prestige modifier)", Color.Event)
+    log(s"Modified roll: $modifiedDie", Color.Event)
+
+    addEventTarget(postureTarget)
+    setCountryPosture(postureTarget, newPosture)
+    addGlobalEventMarker(SouthChinaSeaCrisis)
   }
 }

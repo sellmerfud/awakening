@@ -45,8 +45,6 @@ import awakening.USBot
 // Play in a non-Adversary Muslim country.
 // Place an awakening marker.
 // Cannot target a Caliphate country.
-// NOTE:  The Vassal module show this card text incorrectly
-//        as a copy of card #266 "Presidential Reality Show"
 // ------------------------------------------------------------------
 object Card_248 extends Card2(248, "Patriotic Arab Democracies Movement", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot

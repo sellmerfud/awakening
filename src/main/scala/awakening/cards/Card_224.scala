@@ -122,7 +122,7 @@ object Card_224 extends Card2(224, "Je Suis Charlie", Unassociated, 2, NoRemove,
     }
     else { // Jihadist
       if (isHuman(role)) {
-        val canPosture = (game.usPosture == game.worldPosture) && (game.worldPosture != Even)
+        val canPosture = (game.usPosture == game.worldPosture)
         val choices = List(
           choice(canPosture,        "posture" , "Set US posture to opposite of World"),
           choice(game.prestige > 1, "prestige", "Reduce US prestige by 1/2 die roll (rounded up)")

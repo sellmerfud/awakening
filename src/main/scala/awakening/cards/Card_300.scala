@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Execute a Jihad with this card's Operations value, then all
+// participating Cells that remain become Sleeper
+// (except in a Caliphate country).
 // ------------------------------------------------------------------
 object Card_300 extends Card2(300, "Going Underground", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +57,85 @@ object Card_300 extends Card2(300, "Going Underground", Jihadist, 2, NoRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = game.jihadTargets.sorted
+
+  def botMajorJihadCandidates() = countryNames(
+    game.getMuslims(game.majorJihadTargets(2)).filter(m => m.isPoor && JihadistBot.majorJihadSuccessPossible(m))
+  )
+
+  def botMinorJihadCandidates() = countryNames(
+    game.getMuslims(game.jihadTargets).filter(m => (m.isFair || m.isGood) && JihadistBot.minorJihadSuccessPossible(m))
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    botMajorJihadCandidates().nonEmpty || botMinorJihadCandidates().nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val targets = if (isHuman(role))
+      getHumanJihadTargets(2, getCandidates())
+    else {  // Bot
+      if (botMajorJihadCandidates().nonEmpty) {
+        val target = JihadistBot.majorJihadPriorityCountry match {
+          case Some(name) if botMajorJihadCandidates().contains(name) => name
+          case _ => JihadistBot.majorJihadTarget(botMajorJihadCandidates()).get
+        }
+        List(JihadTarget(target, 2, 0, false, true))
+      }
+      else {
+        def nextTarget(opsLeft: Int, candidates: List[String], targets: Vector[JihadTarget]): Vector[JihadTarget] = {
+          if (opsLeft == 0 || candidates.isEmpty)
+            targets
+          else {
+            val name = JihadistBot.minorJihadTarget(candidates).get
+            val country = game.getCountry(name)
+            val active = opsLeft min country.activeCells
+            val sleeper = ((opsLeft - active) max 0) min country.sleeperCells
+            val target = JihadTarget(name, active, sleeper, false, false)
+            val remainingCandidates = candidates.filterNot(_ == name)
+            nextTarget(opsLeft - active - sleeper, remainingCandidates, targets :+ target)
+          }
+        }
+
+        // preferred minor jihad canidates may be empty if triggered during US turn
+        botMinorJihadCandidates() match {
+          case Nil => nextTarget(2, getCandidates(), Vector.empty).toList
+          case candidates => nextTarget(2, candidates, Vector.empty).toList
+        }
+      }
+    }
+
+    for (t <- targets)
+      addEventTarget(t.name)
+
+    val results = performJihads(targets.toList)
+    val makeSleepers = results.exists {
+      case (name, successes, false) => !game.isCaliphateMember(name) && successes > 0
+      case (name, successes, true)  => !game.isCaliphateMember(name) && successes > 1
+      case _ => false
+    }
+
+    if (makeSleepers) {
+      log("\nSuccessful participating cells become sleeper cells.", Color.Event)
+      log(separator())
+      for ((name, successes, sadr) <- results) {
+        // Remaining cells that participated become sleepers
+        val successCells = successes - (if (sadr) 1 else 0)  // Sadr does not flip
+
+        if (successCells > 0 && !game.isCaliphateMember(name))
+          hideActiveCells(name, successCells)
+      }
+    }
   }
 }

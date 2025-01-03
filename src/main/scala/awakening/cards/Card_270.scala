@@ -61,7 +61,7 @@ object Card_270 extends Card2(270, "Deep State", US, 3, Remove, NoLapsing, NoAut
 
   val isCandidate = (name: String) => {
       val m = game.getMuslim(name)
-      !(m.isUntested || m.isIslamistRule || m.civilWar)
+      m.isTested && !(m.isIslamistRule || m.civilWar)
   }
 
   def getCandidates() = List(Egypt, Syria, Pakistan, Turkey).filter(isCandidate)

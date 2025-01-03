@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Russia is untested or opposite of US Posture.
+// US Discards a random card.
 // ------------------------------------------------------------------
 object Card_307 extends Card2(307, "Russian Subterfuge", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +57,27 @@ object Card_307 extends Card2(307, "Russian Subterfuge", Jihadist, 2, NoRemove, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = {
+    val russia = game.getNonMuslim(Russia)
+    russia.isUntested || russia.posture == oppositePosture(game.usPosture)
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (isHuman(role))
+      log(s"\nDiscard the top card of the $US Bot's hand.", Color.Event)
+    else
+      log(s"\nYou ($US) must discard a random card.", Color.Event)
+    askCardsDiscarded(1)
   }
 }

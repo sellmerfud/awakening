@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -37,11 +37,16 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if there is a Lapsing or Marked event in play.
+// Immediately end that Event and Discard or Remove it as appropriate.
+// Draw a Card.
+// Cannot be played in a Caliphate country.
 // ------------------------------------------------------------------
 object Card_353 extends Card2(353, "Bowling Green Massacre", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +59,101 @@ object Card_353 extends Card2(353, "Bowling Green Massacre", Unassociated, 3, No
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def bowlingGreenTargetEventInPlay(): Boolean =
+    game.markers.nonEmpty ||
+    game.countries.exists(c => c.markers.nonEmpty && !game.isCaliphateMember(c.name)) ||
+    game.cardsLapsing.nonEmpty
+
+  def bowlingGreenBotMarkers(role: Role): List[String] = {
+    val opponent = oppositeRole(role)
+    val globalMarkers = game.markers
+      .filter(GlobalMarkers(_) == opponent)
+    val countryMarkers =
+      game.countries
+      .filterNot(c => game.isCaliphateMember(c.name))
+      .flatMap(_.markers)
+      .filter(CountryMarkers(_) == opponent)
+    (globalMarkers ::: countryMarkers).sorted.distinct
+  }
+
+  def bowlingGreenBotLapsing(role: Role): List[Int] =
+    game.cardsLapsing
+      .filter { num =>
+        val card = deck(num)
+        (role == US && card.association == Jihadist || card.lapsing == JihadistLapsing) ||
+        (role == Jihadist && card.association == US || card.lapsing == USLapsing)
+      }
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = bowlingGreenTargetEventInPlay()
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    bowlingGreenBotMarkers(role).nonEmpty || bowlingGreenBotLapsing(role).nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val countryMarkers = game.countries
+      .filterNot(c => game.isCaliphateMember(c.name))
+      .flatMap (_.markers)
+    val markerChoices = (game.markers ::: countryMarkers)
+      .sorted
+      .distinct
+      .map(m => m -> m)
+    val lapsingChoices = game.cardsLapsing
+      .map(n => n -> deck(n).numAndName)
+    val eventTypechoices = List(
+      choice(markerChoices.nonEmpty, "marker",  "Remove an event marker"),
+      choice(lapsingChoices.nonEmpty, "lapsing", "Remove a lapsing card")
+    ).flatten
+
+    // Left: marker name, Right: Lapsing card number
+    val eventSelection: Either[String, Int] = if (isHuman(role)) {
+      askMenu("Choose one:", eventTypechoices).head match {
+        case "marker" =>
+          Left(askMenu("\nRemove which event marker:", markerChoices).head)
+        case _ =>
+          Right(askMenu[Int]("\nRemove which lapsing card: ", lapsingChoices).head)
+      }
+    }
+    else { // Bot will choose event marker first, then lapsing event
+      val markers = bowlingGreenBotMarkers(role)
+      val lapsing = bowlingGreenBotLapsing(role)
+      if (markers.nonEmpty)
+        Left(shuffle(markers).head)
+      else
+        Right(shuffle(lapsing).head)
+    }
+
+    eventSelection match {
+      case Left(marker) if GlobalMarkers.contains(marker) =>
+        removeGlobalEventMarker(marker)
+
+      case Left(marker) =>
+        // Advisors marker can exist in multiple countries
+        val target = countryNames(game.countries.filter(_.hasMarker(marker))) match {
+          case single::Nil => single
+          case candidates if isHuman(role) => askCountry(s"""Remove "$marker" from which country: """, candidates)
+          case candidates => JihadistBot.troopsMilitiaTarget(candidates).get
+        }
+        addEventTarget(target)
+        removeEventMarkersFromCountry(target, marker)
+
+      case Right(lapsingCardNum) =>
+        removeLapsingCards(lapsingCardNum::Nil)
+    }
+
+    if (isHuman(role))
+      log(s"\nDraw a card and add it to your ($role) hand.", Color.Event)
+    else
+      log(s"\nPut the top card of the draw deck on top of the $role Bot's hand of cards.", Color.Event)
+    askCardsDrawn(1)
   }
 }

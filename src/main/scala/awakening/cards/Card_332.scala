@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,10 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in Syria if in Civil War.
+// If US play: Remove any unavailable WMD there from the game
+// (+1 Prestige if WMID removed, 11.3.1).  REMOVE
+// If Jihadist: Remove a Militia.
 // ------------------------------------------------------------------
 object Card_332 extends Card2(332, "Khan Shaykhun Chemical Attack", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +59,35 @@ object Card_332 extends Card2(332, "Khan Shaykhun Chemical Attack", Unassociated
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.getMuslim(Syria).civilWar
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => game.getMuslim(Syria).wmdCache > 0
+    case Jihadist => game.getMuslim(Syria).militia > 0
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+  def executeEvent(role: Role, forTrigger: Boolean): Unit = role match {
+    case US =>
+      addEventTarget(Syria)
+      val numWMDs = game.getMuslim(Syria).wmdCache
+      if (numWMDs > 0)
+        removeCachedWMD(Syria, numWMDs)
+      else
+        log("\nThe are no unavailable WMD plots in Syria.", Color.Event)
+
+    case Jihadist =>
+      addEventTarget(Syria)
+      if (game.getMuslim(Syria).militia > 0)
+        removeMilitiaFromCountry(Syria, 1)
+      else
+        log("\nThere are no militia in Syria.", Color.Event)
   }
 }

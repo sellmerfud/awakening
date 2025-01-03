@@ -60,19 +60,13 @@ object Card_003 extends Card2(3, "CTR", US, 1, NoRemove, NoLapsing) {
   
   def centralAsiaOK = {
     val cAsia  = game.getMuslim(CentralAsia)
-    !cAsia.isUntested && (cAsia.isAlly || cAsia.isNeutral) && !cAsia.hasMarker(CTR)
+    cAsia.isTested && (cAsia.isAlly || cAsia.isNeutral) && !cAsia.hasMarker(CTR)
   }
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = {
-    val russia = game.getNonMuslim(Russia)
-    val cAsia  = game.getMuslim(CentralAsia)
-    val russiaOK = !russia.hasMarker(CTR)
-    val centralAsiaOK = !cAsia.isUntested && (cAsia.isAlly || cAsia.isNeutral) && !cAsia.hasMarker(CTR)
-
-    game.usPosture == Soft && (russiaOK || centralAsiaOK)
-  }
+  def eventConditionsMet(role: Role) = game.usPosture == Soft && (russiaOK || centralAsiaOK)
+  
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

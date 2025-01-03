@@ -80,7 +80,7 @@ object Card_051 extends Card2(51, "FREs", Jihadist, 1, NoRemove, NoLapsing, NoAu
       addEventTarget(Iraq)
       addSleeperCellsToCountry(Iraq, num)
 
-      if (choosesToDeclareCaliphate(role, num, Iraq))
+      if (jihadistChoosesToDeclareCaliphate(Iraq, num))
         declareCaliphate(Iraq)
     }
     else

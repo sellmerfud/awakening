@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in a country in Civil War.
+// Place up to 2 Cells there.
+// Immediately check for Attrition there as per End of Turn (11.2.5).
+// Jihadist hits inflict 2 losses instead of 1 for this special round.
 // ------------------------------------------------------------------
 object Card_312 extends Card2(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +58,49 @@ object Card_312 extends Card2(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLa
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(game.muslims.filter(_.civilWar))
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  //
+  // Bot execute event only if civil war countries with more cells
+  // (included any added by this event) than troops/militia.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = {
+    val addedCells = 2 min game.cellsAvailable
+    game.hasMuslim { m =>
+      m.civilWar && (m.totalCells + addedCells > m.totalTroopsAndMilitia)
+    }
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val target = if (isHuman(role))
+      askCountry("Which country: ", getCandidates())
+    else
+      JihadistBot.hamaOffensiveTarget(getCandidates()).get
+
+    addEventTarget(target)
+    println()
+    if (game.cellsAvailable > 0)
+      testCountry(target)
+    addSleeperCellsToCountry(target, 2 min game.cellsAvailable)
+
+    val caliphateCapital = game.getMuslim(target).caliphateCapital
+
+    civilWarAttrition(target, hamaOffensive = true, endOfTurn = false)
+
+    // Check to see if the Caliphate Capital has been displaced
+    // because its country was improved to Good governance.
+    if (caliphateCapital && !game.getMuslim(target).caliphateCapital)
+        displaceCaliphateCapital(target)
   }
 }

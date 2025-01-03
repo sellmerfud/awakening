@@ -126,7 +126,7 @@ object Card_201 extends Card2(201, "Cross Border Support", Unassociated, 1, NoRe
         val num = (2 + extra(target)) min game.cellsAvailable
         testCountry(target)
         addSleeperCellsToCountry(target, num)
-        if (role == Jihadist && choosesToDeclareCaliphate(role, num, target))
+        if (jihadistChoosesToDeclareCaliphate(target, num))
           declareCaliphate(target)
 
       case None =>

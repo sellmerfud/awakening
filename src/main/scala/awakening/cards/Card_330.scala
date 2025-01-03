@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Iran not Ally.
+// If US play: Remove 1 Cell adjacent to Iran.
+// If Jihadist: Remove 1 Militia adjacent to Iran.
 // ------------------------------------------------------------------
 object Card_330 extends Card2(330, "IRGC", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,14 +52,23 @@ object Card_330 extends Card2(330, "IRGC", Unassociated, 1, NoRemove, NoLapsing,
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def getCandidates(role: Role) = role match {
+    case US => countryNames(game.adjacentCountries(Iran).filter(_.totalCells > 0))
+    case Jihadist => countryNames(game.adjacentMuslims(Iran).filter(_.militia > 0))
+  }
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    getCandidates(US).exists(name => USBot.wouldRemoveLastCell(name, 1))
+
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    (isIranSpecialCase || !game.getMuslim(Iran).isAlly) &&
+    getCandidates(role).nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -68,7 +80,26 @@ object Card_330 extends Card2(330, "IRGC", Unassociated, 1, NoRemove, NoLapsing,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
-  }
+  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+    if (role == US) {
+      val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+        val t = askCountry("Remove a cell from which country: ", getCandidates(role))
+        (t, askCells(t, 1, true))
+      }
+      else  {
+        val t = USBot.disruptPriority(getCandidates(role)).get
+        (t, USBot.chooseCellsToRemove(t, 1))
+      }
+      addEventTarget(target)
+      removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    }
+    else { // Jihadist
+      val target = if (isHuman(role))
+        askCountry("Remove a militia from which country: ", getCandidates(role))
+      else
+        JihadistBot.troopsMilitiaTarget(getCandidates(role)).get
+
+      addEventTarget(target)
+      removeMilitiaFromCountry(target, 1)
+    }
 }

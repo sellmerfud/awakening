@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in a country that is Poor, or in Civil War, or in any
+// untested Muslim country in Africa.
+// Place up to three Cells there.
 // ------------------------------------------------------------------
 object Card_321 extends Card2(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +57,48 @@ object Card_321 extends Card2(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(
+    game.countries.filter(_.isPoor) :::
+    game.muslims.filter(_.civilWar) :::
+    game.getCountries(African).filter(_.isUntested)
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (game.cellsAvailable > 0) {
+      val (target, num) = if (isHuman(role))
+        (askCountry("Which country: ", getCandidates()),
+         askInt("Place how many cells", 1, game.cellsAvailable min 3))
+      else if (game.cellsAvailable >= 3 && (game.botEnhancements || game.islamistResources == 5)) {
+          // If we are placing 3 cells and we can declare caliphate then
+          // select that country
+          val t = JihadistBot.cellPlacementPriority(true)(getCandidates()).get
+          (t, game.cellsAvailable min 3)
+        }
+      else
+        (JihadistBot.cellPlacementPriority(false)(getCandidates()).get, game.cellsAvailable min 3)
+
+      addEventTarget(target)
+      testCountry(target)
+      addSleeperCellsToCountry(target, num)
+
+      if (jihadistChoosesToDeclareCaliphate(target, num))
+        declareCaliphate(target)
+    }
+    else
+      log("\nThere are no available cells. The event has no effect.", Color.Event)
   }
 }

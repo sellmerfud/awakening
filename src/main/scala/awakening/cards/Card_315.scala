@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,10 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Test Turkey. Test Saudi Arabia.
+// Then, either Shift Saudi Arabia Alignment 1 box toward Adversary OR
+// -2 Prestige
+// REMOVE
 // ------------------------------------------------------------------
 object Card_315 extends Card2(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -63,12 +66,31 @@ object Card_315 extends Card2(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLa
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = true
+    game.prestige > 3 || !game.getMuslim(SaudiArabia).isAdversary
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(Turkey)
+    testCountry(Turkey)
+    addEventTarget(SaudiArabia)
+    testCountry(SaudiArabia)
+
+    if (isHuman(role)) {
+      val choices = List(
+        "shift"    -> "Shift alignment of Saudi Arabia toward Adversary",
+        "prestige" -> "Decrease prestige by 2",
+      )
+      askMenu("Choose one:", choices).head match {
+        case "shift" => shiftAlignmentRight(SaudiArabia)
+        case _       => decreasePrestige(2)
+      }
+    }
+    else if (game.prestige > 3)
+      decreasePrestige(2)
+    else
+        shiftAlignmentRight(SaudiArabia)
   }
 }

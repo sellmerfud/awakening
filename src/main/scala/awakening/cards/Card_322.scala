@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If US play: Place an Awakening marker in an Adversary country.
+// If Jibadist: Place a Reaction marker in an Ally country.
+// Cannot be played in a Caliphate country.
 // ------------------------------------------------------------------
 object Card_322 extends Card2(322, "Amnesty International", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +57,20 @@ object Card_322 extends Card2(322, "Amnesty International", Unassociated, 1, NoR
   override
   def eventRemovesLastCell(): Boolean = false
 
+ def getCandidates(role: Role) = {
+  val isCandidate = role match {
+    case US =>
+      (m: MuslimCountry) => m.isAdversary && m.canTakeAwakeningOrReactionMarker && !game.isCaliphateMember(m.name)
+    case Jihadist =>
+      (m: MuslimCountry) => m.isAlly && m.canTakeAwakeningOrReactionMarker && !game.isCaliphateMember(m.name)
+  }
+  countryNames(game.muslims.filter(isCandidate))
+ }
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    lapsingEventNotInPlay(ArabWinter) && getCandidates(role).nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +83,21 @@ object Card_322 extends Card2(322, "Amnesty International", Unassociated, 1, NoR
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val target = role match {
+      case US if isHuman(US) =>
+        askCountry("Place Awakening marker in which country: ", getCandidates(role))
+      case US =>
+        USBot.markerAlignGovTarget(getCandidates(role)).get
+      case Jihadist if isHuman(Jihadist) =>
+        askCountry("Place Reaction marker in which country: ", getCandidates(role))
+      case Jihadist =>
+        JihadistBot.markerTarget(getCandidates(role)).get
+    }
+
+    addEventTarget(target)
+    role match {
+      case US => addAwakeningMarker(target, 1)
+      case Jihadist => addReactionMarker(target, 1)
+    }
   }
 }

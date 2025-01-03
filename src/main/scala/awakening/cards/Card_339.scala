@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if a country within two countries of Turkey was subject to
+// an Event or Operations in this or last Action Phase.
+// Select Posture or Shift Alignment one box in either direction for
+// that country (Not Iran or US).
 // ------------------------------------------------------------------
 object Card_339 extends Card2(339, "Erdogan Dance", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,21 +58,78 @@ object Card_339 extends Card2(339, "Erdogan Dance", Unassociated, 2, NoRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = {
+    val targets =
+      game.targetsLastPhase.ops ++
+      game.targetsLastPhase.event ++
+      game.targetsThisPhase.ops ++
+      game.targetsThisPhase.event
+
+    targets
+      .toList
+      .filter(name => name != Iran && name != UnitedStates && distance(name, Turkey) <= 2)
+      .sorted
+  }
+
+  def muslimCandidates() = getCandidates().filter(game.isMuslim)
+
+  def nonMuslimCandidates() = getCandidates().filter(game.isNonMuslim)
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+
+  def botMuslimCandidates(role: Role) = {
+    val isCandidate = role match {
+      case US => (m: MuslimCountry) => !m.isAlly
+      case Jihadist => (m: MuslimCountry) => !m.isAdversary
+    }
+
+    muslimCandidates().filter(name => isCandidate(game.getMuslim(name)))
+  }
+
+  def botNonMuslimCandidates(role: Role) = {
+    val badPosture = role match {
+      case US => oppositePosture(game.usPosture)
+      case Jihadist => game.usPosture
+    }
+    val isCandidate = (n: NonMuslimCountry) =>
+      n.canChangePosture && (n.isUntested || n.posture == badPosture)
+
+    nonMuslimCandidates().filter(name => isCandidate(game.getNonMuslim(name)))
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    botMuslimCandidates(role).nonEmpty || botNonMuslimCandidates(role).nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val target = role match {
+      case _ if isHuman(role) =>
+        askCountry("Which country: ", getCandidates())
+      case US if botMuslimCandidates(US).nonEmpty =>
+        USBot.markerAlignGovTarget(botMuslimCandidates(US)).get
+      case US =>
+        USBot.posturePriority(botNonMuslimCandidates(US)).get
+      case Jihadist if botMuslimCandidates(Jihadist).nonEmpty =>
+        JihadistBot.alignGovTarget(botMuslimCandidates(Jihadist)).get
+      case Jihadist =>
+        JihadistBot.posturePriority(botNonMuslimCandidates(Jihadist)).get
+    }
+
+    addEventTarget(target)
+    (game.isMuslim(target), role) match {
+      case (true,  US)       => shiftAlignmentLeft(target)
+      case (true,  Jihadist) => shiftAlignmentRight(target)
+      case (false, US)       => setCountryPosture(target, game.usPosture)
+      case (false, Jihadist) => setCountryPosture(target, oppositePosture(game.usPosture))
+    }
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If US play: Remove a Cell.
+// + 1 Prestige
+// REMOVE
+// If Jihadist play: Place up to 3 Cells in a single Muslim country.
 // ------------------------------------------------------------------
 object Card_338 extends Card2(338, "Abu Muhammad al-Shimali", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,10 +53,16 @@ object Card_338 extends Card2(338, "Abu Muhammad al-Shimali", Unassociated, 2, U
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def removeCellCandidates() = countryNames(game.countries.filter(_.totalCells > 0))
+
+  def placeCellCandidates() = countryNames(game.muslims)
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    removeCellCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -62,13 +72,58 @@ object Card_338 extends Card2(338, "Abu Muhammad al-Shimali", Unassociated, 2, U
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => removeCellCandidates().nonEmpty || game.prestige < 12
+    case Jihadist => game.cellsAvailable > 0
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (role == US) {
+      if (removeCellCandidates().nonEmpty) {
+        val (target, (actives, sleepers, sadr)) = if (isHuman(role) == game.humanRole) {
+          val t = askCountry("Remove a Cell from which country: ", removeCellCandidates())
+          (t, askCells(t, 1, true))
+        }
+        else {
+          val t = USBot.disruptPriority(removeCellCandidates()).get
+          (t, USBot.chooseCellsToRemove(t, 1))
+        }
+
+        addEventTarget(target)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      }
+      else
+        log("\nThere are no cells on the map to remove.", Color.Event)
+
+      increasePrestige(1)
+    }
+    else if (game.cellsAvailable == 0)
+      log("\nThere are no available cells.  The event has not effect.", Color.Event)
+    else { // Jihadist
+      val maxCells = game.cellsAvailable min 3
+      val (target, num) = if (isHuman(role)) {
+        val name = askCountry("Place cells in which country: ", placeCellCandidates())
+        val num  = askInt("Place how many cells", 1, maxCells, Some(maxCells))
+        (name, num)
+      }
+      else if (maxCells == 3 && (game.botEnhancements || game.islamistResources == 5)) {
+          // If we are placing 3 cells and we can declare caliphate then
+          // select that country
+          val t = JihadistBot.cellPlacementPriority(true)(placeCellCandidates()).get
+          (t, maxCells)
+        }
+      else
+        (JihadistBot.cellPlacementPriority(false)(placeCellCandidates()).get, maxCells)
+
+      addEventTarget(target)
+      testCountry(target)
+      addSleeperCellsToCountry(target, num)
+      if (jihadistChoosesToDeclareCaliphate(target, num))
+        declareCaliphate(target)
+    }
   }
 }

@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if the following countries are Tested and not Ally and not
+// in Civil War: Iran, Syria, Lebanon, and either Iraq or Turkey.
+// +3 Funding. Make Iran a 3 Resource Country
+// (remove marker if corridor as defined above is disrupted).
+// MARK & REMOVE
 // ------------------------------------------------------------------
 object Card_319 extends Card2(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +60,7 @@ object Card_319 extends Card2(319, "Tehran-Beirut Land Corridor", Jihadist, 3, R
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = tehranBeirutLandCorridorSatisfied
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +73,11 @@ object Card_319 extends Card2(319, "Tehran-Beirut Land Corridor", Jihadist, 3, R
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    increaseFunding(3)
+    addEventTarget(Iran)
+    addEventMarkersToCountry(Iran, TehranBeirutLandCorridor)
+    log("\nIran is now a 3 Resource country and will remain so as long as", Color.Event)
+    log("none of Iran, Syria nor Lebanon become Ally or Civil War", Color.Event)
+    log("and at least one of Iraq and Turkey are not Ally or Civil War", Color.Event)
   }
 }

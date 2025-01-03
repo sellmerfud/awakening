@@ -38,10 +38,15 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Caliphate Capital on Map.
+// If US play: +1 Prestige, -1 Funding  REMOVE
+// If Jihadist: Place 2 Cells in a Muslim country (may come from anywhere),
+// then conduct a Jihad there with this card's Operations value.
+// Ignore failures. Ignore any Shifts to Islamist Rule.
 // ------------------------------------------------------------------
 object Card_342 extends Card2(342, "Gulmurod Khalimov", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +61,70 @@ object Card_342 extends Card2(342, "Gulmurod Khalimov", Unassociated, 2, USRemov
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.caliphateDeclared
+
+  def muslimCandidates() = countryNames(game.muslims)
+
+  def cellSources(target: String) = countryNames(
+    game.countries.filter(c => c.name != target && c.cells > 0)
+  )
+
+  def jihadistBotTarget = JihadistBot.cachedTarget("gulmurod-target") {
+    val withCells = countryNames(game.muslims.filter(_.totalCells > 0))
+    val mjp = if (game.botEnhancements)
+      JihadistBot.majorJihadPriorityCountry
+    else
+      None
+    val target = mjp.getOrElse(JihadistBot.majorJihadTarget(muslimCandidates()).get)
+
+    val travelers = cellSources(target).map(name => JihadistBot.numCellsForTravel(game.getCountry(name))).sum
+
+    if (game.cellsAvailable + travelers > 0 || game.getMuslim(target).totalCells > 0)
+      target
+    else
+      JihadistBot.majorJihadTarget(withCells).get
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => game.prestige < 12 || game.funding > 1
+    case Jihadist => true
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (role == US) {
+      increasePrestige(1)
+      decreaseFunding(1)
+    }
+    else { // Jihadist
+      val candidates = countryNames(game.muslims)
+      val (target, cells) = if (isHuman(role)) {
+        val name = askCountry("Which country: ", candidates)
+        val cells = askCellsFromAnywhere(2, true, cellSources(name), sleeperFocus = false)
+        (name, cells)
+      }
+      else
+        (jihadistBotTarget, JihadistBot.selecCellsToPlace(jihadistBotTarget, cellSources(jihadistBotTarget), 2))
+            
+      addEventTarget(target)
+      testCountry(target)
+      moveCellsToTarget(target, cells)
+      
+      val m = game.getMuslim(target)
+      if (m.jihadOK) {
+        val actives  = 2 min m.activeCells
+        val sleepers = (2 - actives) min m.sleeperCells
+        val sadr = (m.hasSadr && (actives + sleepers < 2))
+
+        performJihads(JihadTarget(target, actives, sleepers, sadr, false)::Nil, ignoreFailures = true)
+      }        
+    }
   }
 }

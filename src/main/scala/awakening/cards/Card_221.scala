@@ -172,7 +172,7 @@ object Card_221 extends Card2(221, "FlyPaper", Unassociated, 2, NoRemove, NoLaps
         addEventTarget(name)
         testCountry(name)
         addSleeperCellsToCountry(name, numToPlace)
-        if (choosesToDeclareCaliphate(role, numToPlace, name))
+        if (jihadistChoosesToDeclareCaliphate(name, numToPlace))
           declareCaliphate(name)
       }
       else
@@ -204,7 +204,7 @@ object Card_221 extends Card2(221, "FlyPaper", Unassociated, 2, NoRemove, NoLaps
       addEventTarget(target)
       testCountry(target)
       addSleeperCellsToCountry(target, countries.size)
-      if (choosesToDeclareCaliphate(Jihadist, countries.size, target))
+      if (jihadistChoosesToDeclareCaliphate(target, countries.size))
         declareCaliphate(target)
     }
     else {

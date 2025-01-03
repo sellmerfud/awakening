@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,13 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play in a Civil War country with both Cells and Militia where you
+// have more Troops + Militia or Cells than your opponent.
+// Replace a Cell with a Militia or vice versa.
 // ------------------------------------------------------------------
 object Card_347 extends Card2(347, "Switching Jerseys", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,14 +52,31 @@ object Card_347 extends Card2(347, "Switching Jerseys", Unassociated, 2, NoRemov
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  val isCandidate = (m: MuslimCountry) =>
+    m.civilWar && m.totalCells > 0 && m.militia > 0
+
+  val isUSCandidate = (m: MuslimCountry) =>
+    isCandidate(m) && m.totalTroopsAndMilitia > m.totalCells
+
+  val isJihadistCandidate = (m: MuslimCountry) =>
+    isCandidate(m) && m.totalCells > m.totalTroopsAndMilitia
+
+  def getUSCandidates = countryNames(game.muslims.filter(isUSCandidate))
+
+  def getJihadistCandidates = countryNames(game.muslims.filter(isJihadistCandidate))
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean =
+    getUSCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = role match {
+    case US => getUSCandidates.nonEmpty && game.militiaAvailable > 0
+    case Jihadist => getJihadistCandidates.nonEmpty && game.cellsAvailable > 0
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +89,29 @@ object Card_347 extends Card2(347, "Switching Jerseys", Unassociated, 2, NoRemov
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (role == US) {
+      val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+        val name = askCountry("Which country: ", getUSCandidates)
+        (name, askCells(name, 1, true))
+      }
+      else {
+        val name = USBot.deployToPriority(getUSCandidates).get
+        (name, USBot.chooseCellsToRemove(name, 1))
+      }
+
+      addEventTarget(target)
+      removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      addMilitiaToCountry(target, 1)
+    }
+    else { // Jihadist
+      val target = if (isHuman(role))
+        askCountry("Which country: ", getJihadistCandidates)
+      else
+        JihadistBot.cellPlacementPriority(false)(getJihadistCandidates).get
+
+      addEventTarget(target)
+      removeMilitiaFromCountry(target, 1)
+      addSleeperCellsToCountry(target, 1)
+    }
   }
 }

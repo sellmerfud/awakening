@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,13 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if any Shia-Mix country is in Civil War.
+// Test Gulf States.
+// Worsen Governance of Gulf States one level, but not to IR.
+// OR Shift its Alignment one box towards Adversary.
+// Blocks play of Arab NATO.
+// Makes Iran, Gulf States, Saudi Arabia, and Yemen all adjacent through a Persian Gulf water link.
+// MARK & REMOVE
 // ------------------------------------------------------------------
 object Card_317 extends Card2(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +62,8 @@ object Card_317 extends Card2(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsi
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    game.hasMuslim(m => m.isShiaMix && m.civilWar)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +76,27 @@ object Card_317 extends Card2(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsi
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    addEventTarget(GulfStates)
+    testCountry(GulfStates)
+    val m = game.getMuslim(GulfStates)
+    if (m.isGood || m.isFair || !m.isAdversary) {
+      if (isHuman(role)) {
+        val choices = List(
+          choice(m.isGood || m.isFair, "worsen", "Worsen governance of Gulf States"),
+          choice(!m.isAdversary,       "shift",  "Shift alignment of Gulf States towards Adversary")
+        ).flatten
+        askMenu("Choose one:", choices).head match {
+          case "worsen" => worsenGovernance(GulfStates, 1, canShiftToIR = false)
+          case _        => shiftAlignmentRight(GulfStates)
+        }
+      }
+      else if (m.isGood || m.isFair)
+        worsenGovernance(GulfStates, 1, canShiftToIR = false)
+      else
+        shiftAlignmentRight(GulfStates)
+    }
+
+    log("\nIran, Gulf States, Saudi Arabia and Yemen are all now adjacent.", Color.Event)
+    addGlobalEventMarker(QatariCrisis)
   }
 }

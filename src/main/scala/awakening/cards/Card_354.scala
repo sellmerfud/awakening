@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,10 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Whenever this card is used for Operations or Discarded.
+// Roll US Posture with these modifiers:
+// Russia Soft -1. Russia Hard +1.
+// Then, if GWOT Penalty 0, +1 Prestige. If not, -1 Prestige.
 // ------------------------------------------------------------------
 object Card_354 extends Card2(354, "Election Meddling", Unassociated, 3, NoRemove, NoLapsing, AutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,19 +59,29 @@ object Card_354 extends Card2(354, "Election Meddling", Unassociated, 3, NoRemov
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = false // Never playable, it auto-triggers
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = false
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val drm = game.getNonMuslim(Russia).posture match {
+      case PostureUntested => None
+      case Hard            => Some((1, "Russia Hard"))
+      case Soft            => Some((-1, "Russia Soft"))
+    }
+    rollUSPosture(drm.toList)
+    logWorldPosture()
+    if (game.gwotPenalty == 0)
+      increasePrestige(1)
+    else
+      decreasePrestige(1)
   }
 }

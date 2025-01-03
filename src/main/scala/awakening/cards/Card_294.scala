@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,8 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Test Spain, then place up to 2 Level 1 Plots there.
+// REMOVE
 // ------------------------------------------------------------------
 object Card_294 extends Card2(294, "Barcelona Bombs", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -62,13 +63,27 @@ object Card_294 extends Card2(294, "Barcelona Bombs", Jihadist, 2, Remove, NoLap
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = game.availablePlots.contains(Plot1)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val maxPlots = game.availablePlots.count(_ == Plot1) min 2
+
+    addEventTarget(Spain)
+    if (maxPlots == 0 && game.getNonMuslim(Spain).isTested)
+      log("\nSpain not unmarked and no level 1 plots available. The event has no effect.", Color.Event)
+    else {
+      val numPlots = if (isBot(role) || maxPlots == 1)
+        maxPlots
+      else
+        askInt(s"Place how many Level 1 plots in $Spain", 1, maxPlots, Some(maxPlots))
+
+      testCountry(Spain)
+      for (i <- 1 to numPlots)
+        addAvailablePlotToCountry(Spain, Plot1, visible = true)
+    }
   }
 }

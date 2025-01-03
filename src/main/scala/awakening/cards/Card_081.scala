@@ -101,7 +101,7 @@ object Card_081 extends Card2(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
     else if (!m.besiegedRegime)
       addBesiegedRegimeMarker(target)
 
-    if (choosesToDeclareCaliphate(role, numCells, target))
+    if (jihadistChoosesToDeclareCaliphate(target, numCells))
       declareCaliphate(target)
   }
   else {  // Bot
@@ -130,7 +130,7 @@ object Card_081 extends Card2(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
     else if (!m.besiegedRegime)
       addBesiegedRegimeMarker(target)
     
-    if (choosesToDeclareCaliphate(role, numCells, target))
+    if (jihadistChoosesToDeclareCaliphate(target, numCells))
       declareCaliphate(target)    
   }
 }

@@ -106,7 +106,7 @@ object Card_187 extends Card2(187, "Foreign Fighters", Jihadist, 3, NoRemove, No
       if (numCells > 0) {
         testCountry(target)
         addSleeperCellsToCountry(target, numCells)
-        if (choosesToDeclareCaliphate(role, numCells, target))
+        if (jihadistChoosesToDeclareCaliphate(target, numCells))
           declareCaliphate(target)
       }
       else

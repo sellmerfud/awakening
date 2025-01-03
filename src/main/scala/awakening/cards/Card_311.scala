@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,11 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if there is a Cell in Israel.
+// Activate all Cells in Israel. Place a Plot there equal to or less
+// than the number of Cells (WMD requires 3 or more Cells).
+// If US Embasy to Jerusalem has been Removed, place 2 Plots whose
+// combined value does not exceed the number of Cells.
 // ------------------------------------------------------------------
 object Card_311 extends Card2(311, "Gaza Border Protests", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +58,15 @@ object Card_311 extends Card2(311, "Gaza Border Protests", Jihadist, 3, NoRemove
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def availablePlots(numCells: Int) =
+    game.availablePlots.filter(_.number <= numCells).sorted
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = {
+    val numCells = game.getCountry(Israel).totalCells
+    numCells > 0 && availablePlots(numCells).nonEmpty
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +79,57 @@ object Card_311 extends Card2(311, "Gaza Border Protests", Jihadist, 3, NoRemove
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val USEmbassyToJerusalem = 254
+    val maxPlots = if (game.cardRemoved(USEmbassyToJerusalem)) 2 else 1
+    val numCells = game.getCountry(Israel).totalCells
+
+    addEventTarget(Israel)
+    flipAllSleepersCells(Israel)
+
+    if (maxPlots == 1 && numCells > 2)
+      displayLine("\nPlace any available plot in Israel", Color.Event)
+    else if (maxPlots == 1)
+      displayLine(s"\nPlace an available plot with level <= ${numCells} in Israel", Color.Event)
+    else if (numCells == 1)
+      displayLine(s"\nPlace and available level 1 plot in Israel", Color.Event)
+    else
+      displayLine(s"\nPlace up to 2 plots with combined levels <= ${numCells} in Israel", Color.Event)
+
+    val plots = if (isHuman(role)) {
+      def nextPlot(numLeft: Int, plotSum: Int, remainingPlots: List[Plot]): List[Plot] = {
+        if (numLeft == 0)
+          Nil
+        else
+          remainingPlots.dropWhile(_.number > numCells - plotSum) match {
+            case Nil => Nil
+            case ps  =>
+              val p = askPlots(ps, 1).head
+              val index = ps.indexOf(p)
+              val pps = ps.take(index) ::: ps.drop(index + 1)
+              p :: nextPlot(numLeft - 1, plotSum + p.number, pps)
+          }
+      }
+
+      println()
+      nextPlot(maxPlots, 0, availablePlots(numCells))
+    }
+    else {
+      // Bot
+      def nextPlot(numLeft: Int, plotSum: Int, remainingPlots: List[Plot]): List[Plot] = {
+        if (numLeft == 0)
+          Nil
+        else
+          remainingPlots.dropWhile(_.number > numCells - plotSum) match {
+            case Nil => Nil
+            case p::ps => p::nextPlot(numLeft - 1, plotSum + p.number, ps)
+          }
+      }
+
+      nextPlot(maxPlots, 0, availablePlots(numCells))
+    }
+
+    println()
+    for (p <- plots)
+      addAvailablePlotToCountry(Israel, p)
   }
 }

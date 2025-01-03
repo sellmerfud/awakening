@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,12 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if a non-Islamist Rule country has a Cell.
+// Replace the Cell with any 2 Available Plot markers.
 // ------------------------------------------------------------------
 object Card_316 extends Card2(316, "Martyrdom Operation", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -54,9 +56,16 @@ object Card_316 extends Card2(316, "Martyrdom Operation", Jihadist, 3, NoRemove,
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def getCandidates() = countryNames(
+    game.countries.filter { c =>
+      c.totalCells > 0 && (game.isNonMuslim(c.name) || !game.getMuslim(c.name).isIslamistRule)
+    }
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    game.availablePlots.nonEmpty && getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +78,29 @@ object Card_316 extends Card2(316, "Martyrdom Operation", Jihadist, 3, NoRemove,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
+      val target = askCountry("Select country: ", getCandidates())
+      val cell = askCells(target, 1, sleeperFocus = false)
+      (target, cell, askAvailablePlots(2, ops = 3))
+    }
+    else {
+      // See Event Instructions table
+      val target = JihadistBot.plotPriority(getCandidates()).get
+      val c = game getCountry target
+      val cell = if (c.activeCells > 0)
+        (1, 0, false)
+      else if (c.hasSadr)
+        (0, 0, true)
+      else
+        (0, 1, false)
+      (target, cell, JihadistBot.preparePlots(game.availablePlots) take 2)
+    }
+
+    addEventTarget(target)
+    removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
+    if (plots.nonEmpty)
+      testCountry(target)
+    for (plot <- plots)
+      addAvailablePlotToCountry(target, plot)
   }
 }

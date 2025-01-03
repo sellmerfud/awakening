@@ -62,7 +62,7 @@ object Card_151 extends Card2(151, "UNSCR 2118", US, 2, Remove, NoLapsing, NoAut
   override
   def eventConditionsMet(role: Role) = {
     val syria = game.getMuslim(Syria)
-    !syria.isUntested && syria.wmdCache > 0
+    syria.isTested && syria.wmdCache > 0
   }
 
 

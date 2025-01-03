@@ -83,7 +83,7 @@ object Card_181 extends Card2(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemo
     if (success) {
       log("\nSuccess", Color.Event)
       moveWMDCacheToAvailable(Iran, game.getCountry(Iran).wmdCache)
-      removeCardFromGame(181) // Card only removed if die roll was successful
+      removeCardFromGame(this.number) // Card only removed if die roll was successful
     }
     else {
       log("\nFailure", Color.Event)

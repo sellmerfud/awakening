@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,14 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// If US play: Remove 1 Cell each from a Sunni and a Shia-Mix country.
+// -1 Funding. Blocks play of Mohamed Morsi Supporters.
+// If Jihadist: Place 1 Cell each in a Sunni and a Shia-Mix country.
+// +1 Funding. Blocks play of Abdel Fattah el-Sisi.
 // ------------------------------------------------------------------
 object Card_358 extends Card2(358, "Political Islamism/Pan Arab Nationalism", Unassociated, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -49,10 +53,26 @@ object Card_358 extends Card2(358, "Political Islamism/Pan Arab Nationalism", Un
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
+  def getSunniUSCandidates() = countryNames(game.muslims.filter(m => m.isSunni && m.totalCells > 0))
+
+  def getShiaUSCandidates() = countryNames(game.muslims.filter(m => m.isShiaMix && m.totalCells > 0))
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = ???
+  def eventRemovesLastCell(): Boolean = {
+    val numSunni = getSunniUSCandidates()
+      .map(game.getMuslim)
+      .filter(m => m.isSunni && m.totalCells > 0)
+      .map(_.totalCells)
+      .sum
+    val numShia = getShiaUSCandidates()
+      .map(game.getMuslim)
+      .filter(m => m.isShiaMix && m.totalCells > 0)
+      .map(_.totalCells)
+      .sum
+    numSunni == 1 && numShia == 1 && game.totalCellsOnMap == 2
+  }
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -69,6 +89,65 @@ object Card_358 extends Card2(358, "Political Islamism/Pan Arab Nationalism", Un
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    if (role == US) {
+      if (getSunniUSCandidates().nonEmpty) {
+        val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+          val t = askCountry("Remove cell from which Sunni country: ", getSunniUSCandidates())
+          (t, askCells(t, 1, true))
+        }
+        else {
+          val t = USBot.disruptPriority(getSunniUSCandidates()).get
+          (t, USBot.chooseCellsToRemove(t, 1))
+        }
+        addEventTarget(target)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      }
+
+      if (getShiaUSCandidates().nonEmpty) {
+        val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+          val t = askCountry("Remove cell from which Shia-Mix country: ", getShiaUSCandidates())
+          (t, askCells(t, 1, true))
+        }
+        else {
+          val t = USBot.disruptPriority(getShiaUSCandidates()).get
+          (t, USBot.chooseCellsToRemove(t, 1))
+        }
+        addEventTarget(target)
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      }
+
+      println()
+      decreaseFunding(1)
+      addGlobalEventMarker(PoliticalIslamismUS)
+    }
+    else { // Jihadist
+      val sunniCandidates = countryNames(game.muslims.filter(_.isSunni))
+      val shiaCandidates = countryNames(game.muslims.filter(_.isShiaMix))
+      if (sunniCandidates.nonEmpty && game.cellsAvailable > 0) {
+        val target = if (isHuman(role))
+          askCountry("Place a cell in which Sunni country: ", sunniCandidates)
+        else
+          JihadistBot.cellPlacementPriority(false)(sunniCandidates).get
+
+        addEventTarget(target)
+        testCountry(target)
+        addSleeperCellsToCountry(target, 1)
+      }
+
+      if (shiaCandidates.nonEmpty && game.cellsAvailable > 0) {
+        val target = if (isHuman(role))
+          askCountry("Place a cell in which Shia-Mix country: ", shiaCandidates)
+        else
+          JihadistBot.cellPlacementPriority(false)(shiaCandidates).get
+
+        addEventTarget(target)
+        testCountry(target)
+        addSleeperCellsToCountry(target, 1)
+      }
+
+      println()
+      increaseFunding(1)
+      addGlobalEventMarker(PoliticalIslamismJihadist)
+    }
   }
 }

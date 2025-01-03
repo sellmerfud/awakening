@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -41,7 +41,12 @@ import awakening.LabyrinthAwakening._
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if both sides have at least 1 card remaining.
+// Draw a random card from your opponent's hand. Then, you may:
+// (1) interrupt this Action Phase to play it as an event,
+// (2) discard it,
+// (3) return it, or
+// (4) keep it by giving your opponent another card from your hand.
 // ------------------------------------------------------------------
 object Card_351 extends Card2(351, "Advanced Persistent Threat (APT)", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +61,8 @@ object Card_351 extends Card2(351, "Advanced Persistent Threat (APT)", Unassocia
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    cacheYesOrNo(s"Do both players have at least 1 card in hand? (y/n) ")
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +75,61 @@ object Card_351 extends Card2(351, "Advanced Persistent Threat (APT)", Unassocia
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    val opponent = oppositeRole(role)
+    if (isHuman(role))
+      log(s"\nTake the top card of the $opponent hand", Color.Event)
+    else
+      log(s"\nTake a random card from your ($opponent) hand", Color.Event)
+
+    val cardNum = askCardNumber(s"Card # of the card taken: ", allowNone = false).get
+    val card = deck(cardNum)
+    val cardDisplay = s""""${card.name}""""
+
+    // Clear this in case it is need by the event that was drawn.
+    cachedEventPlayableAnswer = None
+
+    // Avenger card will trigger when randomly drawn.
+    if (cardNum == AvengerCard) {
+      log(s"\nThe $cardDisplay card was randomly drawn, so the event triggers", Color.Event)
+      log(separator())
+      card.executeEvent(US, true)
+    }
+    else {
+      val action = if (isHuman(role)) {
+        val choices = List(
+          choice(card.eventIsPlayable(role), "event",  s"Play the $cardDisplay event"),
+          choice(!card.autoTrigger,          "discard",s"Discard $cardDisplay"),
+          choice(true,                       "return", s"Return $cardDisplay to the $opponent hand"),
+          choice(true,                       "keep",   s"Keep $cardDisplay and give another card to the $opponent")
+        ).flatten
+        askMenu("Choose one:", choices).head
+      }
+      else if (card.eventIsPlayable(role))
+        "event"  // Bot will play event if possible
+      else
+        "discard" // Otherwise Bot will discard (which will trigger any auto-event)
+
+      action match {
+        case "discard" =>
+          log(s"\nPlace $cardDisplay in the discard pile", Color.Event)
+          processDiscardedCard(cardNum)
+
+        case "return"  =>
+          log(s"\nReturn $cardDisplay to the top of the $opponent hand", Color.Event)
+
+        case "keep"    =>
+          log(s"\nKeep $cardDisplay and place another card from your hand the $opponent hand", Color.Event)
+          askCardsDrawn(1)
+
+        case _ => // Play the event
+          log(s"\n$role executes the $cardDisplay event")
+          log(separator())
+          card.executeEvent(role, false)
+          if (card.markLapsingAfterExecutingEvent(role))
+            markCardAsLapsing(card.number)
+          else if (card.removeAfterExecutingEvent(role))
+            removeCardFromGame(card.number)
+      }
+    }
   }
 }

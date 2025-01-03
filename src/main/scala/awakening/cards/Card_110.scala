@@ -100,7 +100,7 @@ object Card_110 extends Card2(110, "Zarqawi", Unassociated, 2, USRemove, NoLapsi
       val num = 3 min game.cellsAvailable
       testCountry(name)
       addSleeperCellsToCountry(name, num)
-      if (choosesToDeclareCaliphate(role, num, name))
+      if (jihadistChoosesToDeclareCaliphate(name, num))
         declareCaliphate(name)
 
       if (game.availablePlots.contains(Plot2)) {

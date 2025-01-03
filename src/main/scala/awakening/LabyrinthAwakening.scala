@@ -129,9 +129,6 @@ object LabyrinthAwakening {
 
   def oppositeRole(role: Role) = if (role == US) Jihadist else US
 
-  def botTurn(role: Role, forTrigger: Boolean) =
-    !forTrigger && role == Jihadist && role == game.botRole
-
   def enhBotTurn(role: Role, forTrigger: Boolean) =
     !forTrigger && role == Jihadist && role == game.botRole && game.botEnhancements
 
@@ -998,6 +995,7 @@ object LabyrinthAwakening {
     def isNonMuslim: Boolean = !isMuslim
 
     def isUntested: Boolean
+    def isTested = !isUntested
     def isGood         = governance == Good
     def isFair         = governance == Fair
     def isPoor         = governance == Poor
@@ -1069,8 +1067,8 @@ object LabyrinthAwakening {
     def isSchengen = Schengen contains name
     def isHard = posture == Hard
     def isSoft = posture == Soft
-    def isOppositeUsPosture = !isUntested && posture != game.usPosture
-    def canRemovePosture = !isUntested && !(iranSpecialCase || name == UnitedStates || name == Israel)
+    def isOppositeUsPosture = isTested && posture != game.usPosture
+    def canRemovePosture = isTested && !(iranSpecialCase || name == UnitedStates || name == Israel)
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) =
       ops >= governance &&
       !(iranSpecialCase || name == UnitedStates || name == Israel || (isSchengen && lapsingEventInPlay(EUBolstersIranDeal)))
@@ -1477,7 +1475,7 @@ object LabyrinthAwakening {
     // 0, 1, 2, 3
     def gwotPenalty: Int = {
       gwot match {
-        case (posture, value)  if posture != usPosture => value min 3
+        case (posture, value)  if posture != usPosture => value
         case _ => 0
       }
     }
@@ -3009,14 +3007,14 @@ object LabyrinthAwakening {
 
   // Throws an exception if a Caliphate already exists
   def declareCaliphate(capital: String): Unit = {
+    val side = if (isHuman(Jihadist)) "Player" else "Bot"
     val prevGameState = game
     assert(!game.caliphateDeclared, "declareCaliphate() called and a Caliphate Capital already on the map")
-    log(s"A Caliphate is declared with $capital as the Capital", Color.Event)
+    log(s"\nJihadist $side declares $capital as the Caliphate Capital.", Color.Event)
     setCaliphateCapital(capital)
     logExtraCellCapacityChange(prevGameState)
     increaseFunding(2)
     logSummary(game.caliphateSummary)
-
   }
 
   def setCaliphateCapital(name: String): Unit = {
@@ -4789,7 +4787,7 @@ object LabyrinthAwakening {
     m.alignment match {
       case Adversary => setAlignment(name, Neutral)
       case Neutral   => setAlignment(name, Ally)
-      case _         =>
+      case _         => log(s"The alignment of $name remains ${m.alignment}", Color.MapPieces)
     }
   }
 
@@ -4798,7 +4796,7 @@ object LabyrinthAwakening {
     m.alignment match {
       case Ally    => setAlignment(name, Neutral)
       case Neutral => setAlignment(name, Adversary)
-      case _       =>
+      case _       => log(s"The alignment of $name remains ${m.alignment}", Color.MapPieces)
     }
   }
 
@@ -4985,9 +4983,9 @@ object LabyrinthAwakening {
   }
 
   def removeCountryEventMarkerAnywhere(marker: String): Unit = {
-     game.countries filter (c => countryEventInPlay(c.name, marker)) foreach { c =>
-       removeEventMarkersFromCountry(c.name, marker)
-     }
+     game.countries
+      .filter(c => countryEventInPlay(c.name, marker))
+      .foreach(c => removeEventMarkersFromCountry(c.name, marker))
   }
 
   // A country can have more than one Advisors counter
@@ -7921,11 +7919,11 @@ object LabyrinthAwakening {
     }
   }
 
-  def choosesToDeclareCaliphate(role: Role, numCells: Int, countryName: String): Boolean =
+  def jihadistChoosesToDeclareCaliphate(countryName: String, numCells: Int): Boolean =
     numCells >= 3 &&
     canDeclareCaliphate(countryName) &&
-    ((isHuman(role) && askDeclareCaliphate(countryName)) ||
-     (isBot(role)   && JihadistBot.willDeclareCaliphate(countryName)))
+    ((isHuman(Jihadist) && askDeclareCaliphate(countryName)) ||
+     (isBot(Jihadist)   && JihadistBot.willDeclareCaliphate(countryName)))
 
   def saveAdjustment(desc: String): Unit = {
     game = game.copy(plays = AdjustmentMade(desc) :: game.plays)

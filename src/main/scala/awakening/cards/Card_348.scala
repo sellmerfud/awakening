@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -38,10 +38,19 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-//
+// Play if Trump Tweets is ON.
+// Flip Trump Taxets to OFF:
+// If US play: No Cells may travel to the US directly
+//   from: Iran, Iraq, Libya, Somalia, Sudan, Syria, Yemen, or
+//   any Civil War, Regime Change, and Islamist Rule country:
+//   Any Cells that Travel to the US from any other country become Active.
+// If Jihadist: Cancels all cards currently in play with Travel Restrictions:
+//   Biometrics, Patriot Act, Islamic Maghreb, Travel Ban, and BREXIT.
+//   Remove an Awakening marker.
 // ------------------------------------------------------------------
 object Card_348 extends Card2(348, "Travel Ban", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -56,7 +65,10 @@ object Card_348 extends Card2(348, "Travel Ban", Unassociated, 2, NoRemove, NoLa
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = role match {
+    case US => trumpTweetsON && globalEventNotInPlay(TravelBan)
+    case Jihadist => trumpTweetsON
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -69,6 +81,23 @@ object Card_348 extends Card2(348, "Travel Ban", Unassociated, 2, NoRemove, NoLa
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role, forTrigger: Boolean): Unit = {
-    ???
+    setTrumpTweetsOFF()
+    if (role == US)
+      addGlobalEventMarker(TravelBan)
+    else {
+      removeGlobalEventMarker(TravelBan)
+      List(PatriotAct, BREXIT)
+        .foreach(removeCountryEventMarkerAnywhere)
+      removeLapsingCards(List(Biometrics, IslamicMaghreb))
+      val candidates = countryNames(game.muslims.filter(_.awakening > 0))
+      if (candidates.nonEmpty) {
+        val target = if (role == game.humanRole)
+          askCountry("Remove awakening marker from which country: ", candidates)
+        else
+          JihadistBot.markerTarget(candidates).get
+        removeAwakeningMarker(target)
+      }
+      log("\nThere are no awakening markers to remove from the map.", Color.Event)
+    }
   }
 }
