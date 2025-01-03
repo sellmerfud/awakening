@@ -68,7 +68,7 @@ object Card_095 extends Card(95, "Wahhabism", Jihadist, 3, NoRemove, NoLapsing, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val saudi = game.getMuslim(SaudiArabia)
     if (saudi.isIslamistRule) {
       log("\nSet funding to 9", Color.Event)

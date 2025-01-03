@@ -82,7 +82,7 @@ object Card_344 extends Card(344, "Media Manipulation", Unassociated, 2, NoRemov
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     def choices(target: String) = {
       val m = game.getMuslim(target)
       val list = List(

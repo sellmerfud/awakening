@@ -74,7 +74,7 @@ object Card_255 extends Card(255, "Western Arms Sales", US, 1, NoRemove, NoLapsi
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val numToAdd = if (game.getMuslim(SaudiArabia).isAlly) 2 else 1
     addToReserves(US, numToAdd)
 

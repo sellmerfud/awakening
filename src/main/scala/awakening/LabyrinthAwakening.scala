@@ -129,9 +129,6 @@ object LabyrinthAwakening {
 
   def oppositeRole(role: Role) = if (role == US) Jihadist else US
 
-  def enhBotTurn(role: Role, forTrigger: Boolean) =
-    !forTrigger && role == Jihadist && role == game.botRole && game.botEnhancements
-
 
   implicit val BotDifficultyOrdering: Ordering[BotDifficulty] = Ordering.by { x: BotDifficulty => x.order }
 
@@ -769,7 +766,7 @@ object LabyrinthAwakening {
     // Carry out the event for the given role.
     // forTrigger will be true if the event was triggered during the human player's turn
     // and it associated with the Bot player.
-    def executeEvent(role: Role, forTrigger: Boolean): Unit = ()
+    def executeEvent(role: Role): Unit = ()
 
     def ops: Int = printedOps
 
@@ -2399,7 +2396,7 @@ object LabyrinthAwakening {
     log()
     log(s"""The "$name" card was $action, so the event triggers""", Color.Event)
     log(separator())
-    card.executeEvent(US, true)
+    card.executeEvent(US)
     log()
     log(s"""Place the "$name" card in the discard pile.""")
   }
@@ -2411,7 +2408,7 @@ object LabyrinthAwakening {
     log()
     log(s"""The "$name" card was discared, so the event triggers""", Color.Event)
     log(separator())
-    card.executeEvent(US, true)  // Role does not matter
+    card.executeEvent(US)  // Role does not matter
   }
 
   // The Critical Middle card is always placed in the approximate middle of the
@@ -4536,7 +4533,7 @@ object LabyrinthAwakening {
       else
         log("\n%s executes the \"%s\" event".format(role, card.name))
       log(separator())
-      card.executeEvent(role, triggered)
+      card.executeEvent(role)
 
       if (card.markLapsingAfterExecutingEvent(role))
         markCardAsLapsing(card.number)

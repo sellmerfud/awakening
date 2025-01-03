@@ -71,7 +71,7 @@ object Card_134 extends Card(134, "Civil Resistance", US, 2, NoRemove, NoLapsing
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     var markerPlaced = false
     val sunnis = countryNames(game.muslims.filter(m => m.isSunni && m.canTakeAwakeningOrReactionMarker))
     if (sunnis.nonEmpty) {  // This should never happen, but let's be defensive

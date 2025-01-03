@@ -88,7 +88,7 @@ object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val action = role match {
       case _ if isHuman(role) =>
         val choices = List(

@@ -88,7 +88,7 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (role == US) {
       if (getSunniUSCandidates().nonEmpty) {
         val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {

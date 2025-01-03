@@ -67,5 +67,5 @@ object Card_252 extends Card(252, "Trump Tweets", US, 1, NoRemove, NoLapsing, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = Card_251.executeEvent(role, forTrigger)
+  def executeEvent(role: Role): Unit = Card_251.executeEvent(role)
 }

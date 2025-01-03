@@ -74,7 +74,7 @@ object Card_084 extends Card(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAut
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val markers = eventMarkers.filter(globalEventInPlay)
     val marker = if (markers.size == 1)
       markers.head

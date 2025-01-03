@@ -87,7 +87,7 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     def numToRemove(name: String) = if (game.getMuslim(name).isSunni) 1 else 2
 

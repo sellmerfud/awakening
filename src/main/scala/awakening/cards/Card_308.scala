@@ -72,7 +72,7 @@ object Card_308 extends Card(308, "Battle of Marawi City", Jihadist, 3, Remove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(Philippines)
     val plot = if (game.availablePlots.isEmpty)
         None

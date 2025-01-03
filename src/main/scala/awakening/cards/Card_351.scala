@@ -74,7 +74,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val opponent = oppositeRole(role)
     if (isHuman(role))
       log(s"\nTake the top card of the $opponent hand", Color.Event)
@@ -92,7 +92,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
     if (cardNum == AvengerCard) {
       log(s"\nThe $cardDisplay card was randomly drawn, so the event triggers", Color.Event)
       log(separator())
-      card.executeEvent(US, true)
+      card.executeEvent(US)
     }
     else {
       val action = if (isHuman(role)) {
@@ -124,7 +124,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
         case _ => // Play the event
           log(s"\n$role executes the $cardDisplay event")
           log(separator())
-          card.executeEvent(role, false)
+          card.executeEvent(role)
           if (card.markLapsingAfterExecutingEvent(role))
             markCardAsLapsing(card.number)
           else if (card.removeAfterExecutingEvent(role))

@@ -69,7 +69,7 @@ object Card_047 extends Card(47, "The door of Itjihad was closed", US, 3, NoRemo
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // The code will handle the Bot not play non-US events
     // because the card will be noted as Lapsing.
     if (isHuman(role))

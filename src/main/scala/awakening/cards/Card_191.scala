@@ -74,7 +74,7 @@ object Card_191 extends Card(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoL
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     log()
     if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker) {
       addEventTarget(Egypt)

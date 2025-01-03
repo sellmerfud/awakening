@@ -75,7 +75,7 @@ object Card_336 extends Card(336, "US/NK Summit", Unassociated, 1, NoRemove, NoL
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = role match {
+  def executeEvent(role: Role): Unit = role match {
     case US =>
       setTrumpTweetsOFF()
       setCountryPosture(China, game.usPosture)

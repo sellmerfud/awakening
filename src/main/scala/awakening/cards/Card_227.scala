@@ -82,7 +82,7 @@ object Card_227 extends Card(227, "Popular Support", Unassociated, 2, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val choices = List(
       choice(getAwakeningCandidates().nonEmpty, "awakening", "Add awakening markers"),
       choice(getReactionCandidates().nonEmpty, "reaction", "Add reaction markers"),

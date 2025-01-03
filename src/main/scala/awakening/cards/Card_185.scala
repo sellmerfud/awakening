@@ -84,7 +84,7 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // The only non-muslim country that may contain troops is the Philippines
     // if (abu Sayyaf is in effect)
     val target = if (isHuman(role))

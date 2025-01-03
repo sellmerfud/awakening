@@ -73,7 +73,7 @@ object Card_208 extends Card(208, "Kinder - Gentler", Unassociated, 1, NoRemove,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (game.troopCommitment == LowIntensity) {
       decreaseFunding(1)
       increasePrestige(1)

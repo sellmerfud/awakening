@@ -78,7 +78,7 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (game.availablePlots.contains(Plot1)) {
       val maxPlots = game.availablePlots.count(_ == Plot1)
       val (target, numPlots) = if (isHuman(role)) {

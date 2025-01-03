@@ -76,7 +76,7 @@ object Card_053 extends Card(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val  prompt = if (isHuman(role))
       "\nEnter card # of card you wish to use for recruiting: "
     else

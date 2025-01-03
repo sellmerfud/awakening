@@ -92,7 +92,7 @@ object Card_270 extends Card(270, "Deep State", US, 3, Remove, NoLapsing, NoAuto
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // When triggered during US turn the Bot's perferred candidates
     // may not be available.
     val target = if (isHuman(role))

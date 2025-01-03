@@ -75,7 +75,7 @@ object Card_159 extends Card(159, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrig
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val currentNATO = game.muslims
       .find(_.hasMarker(NATO2))
       .map(_.name)

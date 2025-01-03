@@ -73,7 +73,7 @@ object Card_282 extends Card(282, "Executive Order 13492", Jihadist, 1, Remove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (game.usPosture == Hard)
       decreasePrestige(1)
     else if (game.cellsAvailable > 0) {

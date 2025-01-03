@@ -73,7 +73,7 @@ object Card_114 extends Card(114, "GTMO", Unassociated, 3, NoRemove, Lapsing, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     rollPrestige()
     log("\nNo recruit operations or Detainee Release for the rest of this turn.", Color.Event)
   }

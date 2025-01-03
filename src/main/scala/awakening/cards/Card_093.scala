@@ -75,7 +75,7 @@ object Card_093 extends Card(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (!eventEffective)
       log("\nThe event has no effect.", Color.Event)
     else {

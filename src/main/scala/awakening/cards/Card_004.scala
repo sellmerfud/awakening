@@ -72,7 +72,7 @@ object Card_004 extends Card(4, "Moro Talks", US, 1, Remove, NoLapsing) {
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(Philippines)
     testCountry(Philippines)
     decreaseFunding(1)

@@ -71,7 +71,7 @@ object Card_059 extends Card(59, "Amerithrax", Jihadist, 2, NoRemove, NoLapsing,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     log(s"\nYou ($US) must discard your highest-value US associated card (if any)", Color.Event)
     askCardsDiscarded(1)
   }

@@ -77,7 +77,7 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = if (role == US) {
+  def executeEvent(role: Role): Unit = if (role == US) {
     setTrumpTweetsOFF()
 
     val withTroops = countryNames(game.countries.filter(_.troops > 0))

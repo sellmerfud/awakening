@@ -78,7 +78,7 @@ object Card_133 extends Card(133, "Benghazi Falls", US, 2, Remove, NoLapsing, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     println()
     addEventTarget(Libya)
     startCivilWar(Libya)

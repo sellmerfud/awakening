@@ -81,7 +81,7 @@ object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       println()
       val removed = askToRemoveCells(maxCellsToRemove, true, getCandidates(), sleeperFocus = true)

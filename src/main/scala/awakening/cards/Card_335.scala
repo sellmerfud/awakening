@@ -87,7 +87,7 @@ object Card_335 extends Card(335, "Rohingya Genocide", Unassociated, 1, NoRemove
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val choices = List(
       choice(true,                    "posture", "Set posture of India or Thailand"),
       choice(game.cellsAvailable > 0, "cell",    "Place a Cell in India or Thailand")

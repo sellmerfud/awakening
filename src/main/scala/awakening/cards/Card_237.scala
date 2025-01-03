@@ -78,7 +78,7 @@ object Card_237 extends Card(237, "Osama bin Ladin", Unassociated, 3, USRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     role match {
       case US =>
         decreaseFunding(2)

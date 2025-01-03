@@ -78,7 +78,7 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
       askCountry("Place militia and Advisors in which country: ", IraqSyria)
     else

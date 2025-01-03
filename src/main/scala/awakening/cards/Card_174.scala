@@ -71,7 +71,7 @@ object Card_174 extends Card(174, "Boston Marathon", Jihadist, 2, Remove, NoLaps
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     rollUSPosture()
     increaseFunding(1)
     addEventTarget(Caucasus)

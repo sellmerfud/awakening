@@ -77,7 +77,7 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val name = role match {
       case _ if isHuman(role) => askCountry("Select country in Civil War: ", getCandidates())
       case US => USBot.qadhafiTarget(USBot.qadhafiCandidates).get

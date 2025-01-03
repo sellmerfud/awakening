@@ -75,7 +75,7 @@ object Card_062 extends Card(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoA
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (willHaveEffect) {
       val canShift   = !game.getMuslim(CentralAsia).isAdversary
       val canPosture = game.getNonMuslim(Caucasus).posture != game.usPosture

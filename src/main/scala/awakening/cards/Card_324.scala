@@ -78,7 +78,7 @@ object Card_324 extends Card(324, "BREXIT", Unassociated, 1, USRemove, NoLapsing
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+  def executeEvent(role: Role): Unit =
     role match {
       case US =>
         addEventTarget(UnitedKingdom)

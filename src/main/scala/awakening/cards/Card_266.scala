@@ -76,7 +76,7 @@ object Card_266 extends Card(266, "Presidential Reality Show", US, 2, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       log()
       log(s"""$role player draws from the discard pile either "Trump Tweets" or""", Color.Event)

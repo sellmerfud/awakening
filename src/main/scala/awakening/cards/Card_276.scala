@@ -85,7 +85,7 @@ object Card_276 extends Card(276, "Populism/Euroscepticism", US, 3, NoRemove, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val softCandidates = countryNames(game.getNonMuslims(Schengen).filter(_.posture == Soft))
     val untestedCandidates = countryNames(game.getNonMuslims(Schengen).filter(_.posture == PostureUntested))
 

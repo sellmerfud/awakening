@@ -75,7 +75,7 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     if (getCandidates().isEmpty && game.prestige == 1) {
       log("\nNone of the listed cards is in the removed cards pile and US prestige is 1.", Color.Event)

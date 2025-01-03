@@ -70,7 +70,7 @@ object Card_256 extends Card(256, "White Helmets", US, 1, NoRemove, NoLapsing, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val choices = List(
       choice(game.prestige < 12, increasePrestige _, "+1 Prestige"),
       choice(game.funding > 1,   decreaseFunding _, "-1 Funding")

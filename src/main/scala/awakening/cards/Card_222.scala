@@ -77,7 +77,7 @@ object Card_222 extends Card(222, "Hagel", Unassociated, 2, Remove, NoLapsing, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     setUSPosture(if (role == US) Hard else Soft)
   }
 }

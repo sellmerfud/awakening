@@ -71,7 +71,7 @@ object Card_203 extends Card(203, "Day of Rage", Unassociated, 1, Remove, NoLaps
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val placementAction = if (isHuman(role)) {
       val choices = List(
         addAwakeningMarker _ -> "Place awakening marker",

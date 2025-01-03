@@ -84,7 +84,7 @@ object Card_182 extends Card(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLaps
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // Note: There is a slight chance that the Bot could execute this event,
     // and get a black die roll for only plots or only cells and there are
     // plot/cells available.

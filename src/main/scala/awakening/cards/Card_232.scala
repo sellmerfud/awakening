@@ -82,7 +82,7 @@ object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (role == US) {
       val iran = game.getCountry(Iran)
       if (iran.wmdCache > 0) {

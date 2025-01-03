@@ -64,16 +64,20 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    game.countries
-      .exists(c => c.name != UnitedStates && JihadistBot.hasCellForTravel(c))
+  def botWillPlayEvent(role: Role): Boolean = {
+    val travelers = game.countries
+      .filter(_.name != UnitedStates)
+      .map(c => JihadistBot.numCellsForTravel(c))
+      .sum
+    travelers > 1
+  }
 
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = if (isHuman(role)) {
+  def executeEvent(role: Role): Unit = if (isHuman(role)) {
     val allCountries = countryNames(game.countries)
     val num = 2 min game.cellsOnMap
     val travellers = if (num == 1) {
@@ -116,11 +120,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
       addEventTarget(UnitedStates)
       if (numTravels < 2) {
         val from = JihadistBot.travelFromTarget(UnitedStates, preferredTravellers) orElse {
-          if (forTrigger)
-            JihadistBot.travelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates)) orElse
-            allTravellers.find(_ == UnitedStates) // Last option travel within US
-          else
-            None
+            JihadistBot.travelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates))
         }
         from match {
           case Some(from) =>

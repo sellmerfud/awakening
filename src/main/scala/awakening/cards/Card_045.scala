@@ -73,7 +73,7 @@ object Card_045 extends Card(45, "Safer Now", US, 3, NoRemove, NoLapsing, NoAuto
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     rollUSPosture()
     increasePrestige(3)
     val candidates = countryNames(

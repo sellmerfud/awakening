@@ -69,7 +69,7 @@ object Card_043 extends Card(43, "Patriot Act", US, 3, Remove, NoLapsing, NoAuto
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventMarkersToCountry(UnitedStates, PatriotAct)
     log("\nThe United State is not adjacent to any country except Canada", Color.Event)
   }

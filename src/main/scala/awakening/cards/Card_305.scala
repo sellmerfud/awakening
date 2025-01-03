@@ -76,7 +76,7 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     testCountry(Caucasus)
     val result = game.prestigeModifier - game.gwotPenalty
     val opPoints = -result

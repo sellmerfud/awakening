@@ -70,7 +70,7 @@ object Card_002 extends Card(2, "Biometrics", US, 1, NoRemove, Lapsing) {
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // The card will be marked as lapsing
     log("\nFor the rest of the turn")
     log(separator())

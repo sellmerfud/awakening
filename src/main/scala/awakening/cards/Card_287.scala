@@ -94,7 +94,7 @@ object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemo
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       val choices = List(
         choice(canPlaceReaction, "reaction", "Place a reaction marker"),

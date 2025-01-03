@@ -73,7 +73,7 @@ object Card_171 extends Card(171, "Abu Ghraib Jail Break", Jihadist, 2, Remove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(Iraq)
     if (game.cellsAvailable > 0) {
       testCountry(Iraq)

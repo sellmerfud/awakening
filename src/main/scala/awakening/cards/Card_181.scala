@@ -75,7 +75,7 @@ object Card_181 extends Card(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemov
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(Iran)
     val die = getDieRoll("Enter event die roll: ", Some(role))
     val success = die < 4

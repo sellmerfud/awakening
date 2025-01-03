@@ -71,7 +71,7 @@ object Card_310 extends Card(310, "Forever War", Jihadist, 3, NoRemove, NoLapsin
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val difference = game.totalTroopsOnMap + game.militiaOnMap - game.cellsOnMap
     log(f"\n${game.totalTroopsOnMap}%2d troops on map", Color.Event)
     log(f"${game.militiaOnMap}%2d militia on map", Color.Event)

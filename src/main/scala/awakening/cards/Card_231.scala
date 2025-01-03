@@ -81,7 +81,7 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val actionChoices = List(
       choice(getCellsCandidates().nonEmpty, "cells", "Remove cells."),
       choice(getMilitiaCandidates().nonEmpty, "militia", "Remove militia."),

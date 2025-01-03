@@ -71,7 +71,7 @@ object Card_166 extends Card(166, "Ferguson", Jihadist, 1, NoRemove, Lapsing, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+  def executeEvent(role: Role): Unit =
     if (isHuman(role))
       log("\nYou (Jihadist) may block 1 US associated event played later this turn.", Color.Event)
     else

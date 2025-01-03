@@ -79,7 +79,7 @@ object Card_017 extends Card(17, "FSB", US, 2, NoRemove, NoLapsing, NoAutoTrigge
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // In the solo game, the discard option of the event it ignored.
     val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
       val target = askCountry("Select country: ", getCandidates())

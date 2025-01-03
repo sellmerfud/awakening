@@ -73,7 +73,7 @@ object Card_099 extends Card(99, "HAMAS Elected", Unassociated, 1, Remove, NoLap
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(US))
       log(s"\nYou ($US) must select and discard one card if you have any", Color.Event)
     else

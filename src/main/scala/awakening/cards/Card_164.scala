@@ -73,7 +73,7 @@ object Card_164 extends Card(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoLa
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isEventEffective) {
       addGlobalEventMarker(BloodyThursday)
       val candidates = countryNames(game.muslims filter (_.awakening > 0))

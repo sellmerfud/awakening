@@ -74,7 +74,7 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       def nextMilitia(numLeft: Int): Unit = {
         if (numLeft > 0 && getCandidates().nonEmpty) {

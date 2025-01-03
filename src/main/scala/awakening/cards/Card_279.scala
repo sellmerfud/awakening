@@ -74,7 +74,7 @@ object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTri
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     //  Up to two targets
     val targets = if (getCandidates().size == 1)
       getCandidates()

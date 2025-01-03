@@ -75,7 +75,7 @@ object Card_141 extends Card(141, "Malala Yousafzai", US, 2, Remove, NoLapsing, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = if (isEffective) {
+  def executeEvent(role: Role): Unit = if (isEffective) {
     println()
     increasePrestige(1)
     decreaseFunding(1)

@@ -81,7 +81,7 @@ object Card_289 extends Card(289, "Strait of Hormuz", Jihadist, 1, NoRemove, Lap
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val gulf = countryNames(persianGulfExporters)
     log(s"\nResource value of ${andList(gulf)}", Color.Event)
     log("is decreased by 1 until the end of turn.", Color.Event)

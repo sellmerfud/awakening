@@ -75,7 +75,7 @@ object Card_167 extends Card(167, "Houthi Rebels", Jihadist, 1, Remove, NoLapsin
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(Yemen)
     if (!game.getMuslim(Yemen).civilWar || game.cellsAvailable > 0) {
       if (game.cellsAvailable > 0) {

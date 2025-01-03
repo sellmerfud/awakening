@@ -73,7 +73,7 @@ object Card_326 extends Card(326, "Filibuster/Nuclear Option", Unassociated, 1, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val choices = List(
       setTrumpTweetsON _ -> "Set Trump Tweets ON",
       setTrumpTweetsOFF _ -> "Set Trump Tweets OFF")

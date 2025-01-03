@@ -69,7 +69,7 @@ object Card_005 extends Card(5, "NEST", US, 1, Remove, NoLapsing) {
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(US)) {
       addEventMarkersToCountry(UnitedStates, NEST)
       log("\nPlots in the US are now placed face up", Color.Event)

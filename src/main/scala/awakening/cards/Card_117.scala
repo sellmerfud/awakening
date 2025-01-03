@@ -82,7 +82,7 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     role match {
       case role if isHuman(role) =>
         log(s"\n$role player draws a card other than Oil Price Spike from the discad pile.", Color.Event)

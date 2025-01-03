@@ -77,7 +77,7 @@ object Card_224 extends Card(224, "Je Suis Charlie", Unassociated, 2, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     if (role == US) {
       val nonSchengen = countryNames(game.nonMuslims.filter(n => n.canChangePosture && !n.isSchengen))

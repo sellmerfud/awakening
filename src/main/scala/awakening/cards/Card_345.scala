@@ -84,7 +84,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     def removeChoices(target: String) = {
       val cellOK = game.getMuslim(target).totalCells > 0
       val miliiaOK = game.getMuslim(target).militia > 0

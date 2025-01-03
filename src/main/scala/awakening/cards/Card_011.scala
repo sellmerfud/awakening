@@ -71,7 +71,7 @@ object Card_011 extends Card(11, "Abbas", US, 2, Remove, NoLapsing) {
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addGlobalEventMarker(Abbas)
     if (game.troopCommitment != Overstretch && !game.adjacentToIslamistRule(Israel)) {
       increasePrestige(1)

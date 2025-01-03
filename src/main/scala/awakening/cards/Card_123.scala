@@ -73,7 +73,7 @@ object Card_123 extends Card(123, "Humanitarian Aid", US, 1, NoRemove, NoLapsing
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
       askCountry(s"Humanitarian Aid in which country: ", getCandidates())
     else

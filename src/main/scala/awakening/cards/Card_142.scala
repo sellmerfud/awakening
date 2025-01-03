@@ -74,7 +74,7 @@ object Card_142 extends Card(142, "Militia", US, 2, NoRemove, NoLapsing, NoAutoT
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
       askCountry("Place militia in which country: ", getCandidates())
     else

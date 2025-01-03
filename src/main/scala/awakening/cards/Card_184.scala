@@ -75,7 +75,7 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(US)) {
       log("\nUS player draws one card from the discard pile", Color.Event)
       log("Must draw \"Obama Doctrine\" if it is available.", Color.Event)

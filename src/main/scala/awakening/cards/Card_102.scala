@@ -80,7 +80,7 @@ object Card_102 extends Card(102, "Former Soviet Union", Unassociated, 2, NoRemo
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(CentralAsia)
     setAlignment(CentralAsia, Neutral)
     rollGovernance(CentralAsia)

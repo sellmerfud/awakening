@@ -78,7 +78,7 @@ object Card_113 extends Card(113, "Darfur", Unassociated, 3, NoRemove, NoLapsing
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(Sudan)
     testCountry(Sudan)
     if (game.prestigeLevel == High || game.prestigeLevel == VeryHigh) {

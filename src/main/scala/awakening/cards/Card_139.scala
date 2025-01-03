@@ -68,7 +68,7 @@ object Card_139 extends Card(139, "Int'l Banking Regime", US, 2, NoRemove, NoLap
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val die = getDieRoll("Enter event die roll: ", Some(role))
     log(s"\nDie roll for funding decrease: $die")
     println()

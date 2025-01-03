@@ -81,7 +81,7 @@ object Card_150 extends Card(150, "UNSCR 1973", US, 2, NoRemove, NoLapsing, NoAu
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val name = if (isHuman(role))
       askCountry("Place UNSCR 1973 in which country: ", getCandidates())
     else if (eventRemovesLastCell())

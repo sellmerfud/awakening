@@ -85,7 +85,7 @@ object Card_234 extends Card(234, "Free Syrian Army", Unassociated, 3, Remove, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val choices = List(
       "militia" -> "Place 2 militia and 1 cell in Syria",
       "cells"   -> "Place 2 cells and 1 militia in Syria",

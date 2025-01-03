@@ -71,7 +71,7 @@ object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemo
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val offLimits = Set(117, 118, 236, 357)
     val boxChoice = (num : Int, plot: Boolean) => {
       val box = if (plot) "First Plot box" else "Lapsing box"

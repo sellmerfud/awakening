@@ -87,7 +87,7 @@ object Card_323 extends Card(323, "Blasphemy", Unassociated, 1, NoRemove, NoLaps
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     def humanMarker(target: String) =
       game.getMuslim(target).alignment match {
         case Adversary => addReactionMarker _

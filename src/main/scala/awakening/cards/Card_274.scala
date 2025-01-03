@@ -78,7 +78,7 @@ object Card_274 extends Card(274, "Government of National Accord", US, 3, NoRemo
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val numMilitia = game.militiaAvailable min 2
     val candidates = getCandidates()
     val target = if (isHuman(role))

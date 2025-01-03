@@ -82,7 +82,7 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (game.cellsAvailable == 0)
       log("\nThere are no availabe cells. The event has no effect.", Color.Event)
     else if (getGoodCandidates().isEmpty && getFairCandidates().isEmpty)

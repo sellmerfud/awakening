@@ -71,7 +71,7 @@ object Card_254 extends Card(254, "US Embassy to Jerusalem", US, 1, Remove, NoLa
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     rollPrestige()
     increaseFunding(1)
     setTrumpTweetsOFF()

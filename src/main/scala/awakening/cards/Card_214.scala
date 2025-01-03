@@ -79,7 +79,7 @@ object Card_214 extends Card(214, "3 Cups of Tea", Unassociated, 2, NoRemove, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isEffective(role)) {
       if (getCandidates().nonEmpty) {
         val name = role match {

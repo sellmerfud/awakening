@@ -70,7 +70,7 @@ object Card_175 extends Card(175, "Censorship", Jihadist, 2, NoRemove, NoLapsing
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val candidates = countryNames(game.muslims.filter(_.awakening > 0))
     if (candidates.isEmpty)
       log(s"\nThere are no awakening markers on the map", Color.Event)

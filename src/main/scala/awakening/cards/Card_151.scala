@@ -76,7 +76,7 @@ object Card_151 extends Card(151, "UNSCR 2118", US, 2, Remove, NoLapsing, NoAuto
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val syria = game.getMuslim(Syria)
     val num = if (syria.isAlly)
       syria.wmdCache

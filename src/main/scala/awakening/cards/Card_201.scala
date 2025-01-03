@@ -81,7 +81,7 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     sealed trait Action
     case object MilitiaAction extends Action
     case object CellsAction extends Action

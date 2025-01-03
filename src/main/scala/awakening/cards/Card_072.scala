@@ -70,7 +70,7 @@ object Card_072 extends Card(72, "Opium", Jihadist, 2, NoRemove, NoLapsing, NoAu
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // Can create Caliphate (only in Afghanistan)
     val num = if (game.getMuslim(Afghanistan).isIslamistRule)
       game.cellsAvailable

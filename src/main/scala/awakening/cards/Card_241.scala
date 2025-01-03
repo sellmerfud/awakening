@@ -77,7 +77,7 @@ object Card_241 extends Card(241, "Abdel Fattah el-Sisi", US, 1, Remove, NoLapsi
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (arabWinter)
       log("\nAwakening markers cannot be placed. [Arab Winter]", Color.Event)
     else if (getCandidates().isEmpty)

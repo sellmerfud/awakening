@@ -98,7 +98,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (!canPlace && !canReposition)
       log("\nThere are no milita to place or reposition. The event has no effect.", Color.Event)
     else if (isHuman(role)) {

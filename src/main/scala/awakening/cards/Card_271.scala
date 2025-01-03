@@ -70,7 +70,7 @@ object Card_271 extends Card(271, "Expanded ROE", US, 3, NoRemove, Lapsing, NoAu
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     log("\nDuring Attrition at the end of this turn, add +1 to the", Color.Event)
     log("number of cells to be removed for each hit secured by the US player.", Color.Event)
     decreasePrestige(1)

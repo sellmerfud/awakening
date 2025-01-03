@@ -76,7 +76,7 @@ object Card_132 extends Card(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
       val target = askCountry("Select civil war country: ", getCandidates())
       (target, askCells(target, 1, sleeperFocus = true))

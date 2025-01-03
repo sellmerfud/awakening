@@ -76,7 +76,7 @@ object Card_355 extends Card(355, "Fake News", Unassociated, 3, NoRemove, Lapsin
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     log("\nThe next non-Automatic event card played by either player will be cancelled.", Color.Event)
     log("These cards may be played for OPs.", Color.Event)
     log()

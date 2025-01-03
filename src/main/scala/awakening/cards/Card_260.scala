@@ -74,7 +74,7 @@ object Card_260 extends Card(260, "Imran Khan", US, 2, Remove, NoLapsing, NoAuto
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     testCountry(Pakistan)
     if (game.getMuslim(Pakistan).isGood)
       log("\nPakistan is at Good governance. The event has no effect.", Color.Event)

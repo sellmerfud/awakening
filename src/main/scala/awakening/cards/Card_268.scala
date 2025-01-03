@@ -79,7 +79,7 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val action = if (isHuman(role)) {
       val choices = List(
         choice(getAlignmentCandidates().nonEmpty, "align",   "Shift alignment of 1 country"),

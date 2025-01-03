@@ -88,7 +88,7 @@ object Card_162 extends Card(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrig
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // If the event was triggered during Jihadist player's turn
     // then the Bot's preferred candidates may not exsist
     val botCandidates = getBotCanndidates() match {

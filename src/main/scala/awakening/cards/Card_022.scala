@@ -78,7 +78,7 @@ object Card_022 extends Card(22, "Mossad & Shin Bet", US, 2, NoRemove, NoLapsing
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     getCandidates().foreach { name =>
       val c = game.getCountry(name)
       addEventTarget(name)

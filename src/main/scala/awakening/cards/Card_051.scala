@@ -70,7 +70,7 @@ object Card_051 extends Card(51, "FREs", Jihadist, 1, NoRemove, NoLapsing, NoAut
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (game.cellsAvailable > 0) {
       val num = if (globalEventInPlay(SaddamCaptured))
         2 min game.cellsAvailable

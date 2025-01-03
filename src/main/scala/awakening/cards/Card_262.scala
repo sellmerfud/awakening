@@ -76,7 +76,7 @@ object Card_262 extends Card(262, "MOAB", US, 2, NoRemove, NoLapsing, NoAutoTrig
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
       val name = askCountry("Remove a cell from which country: ", getCandidates())
       (name, askCells(name, 1, true))

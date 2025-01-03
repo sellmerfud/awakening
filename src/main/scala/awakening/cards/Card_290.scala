@@ -72,7 +72,7 @@ object Card_290 extends Card(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoL
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val die = getDieRoll(s"Enter event die roll: ")
     log(s"\nDie roll: $die", Color.Event)
     die match {

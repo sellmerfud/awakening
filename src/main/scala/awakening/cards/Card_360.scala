@@ -80,7 +80,7 @@ object Card_360 extends Card(360, "US China Trade War", Unassociated, 3, NoRemov
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (globalEventNotInPlay(USChinaTradeWar))
       addGlobalEventMarker(USChinaTradeWar)
     else

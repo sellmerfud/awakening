@@ -98,7 +98,7 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (role == US) {
       increasePrestige(1)
       decreaseFunding(1)

@@ -71,7 +71,7 @@ object Card_120 extends Card(120, "US Election", Unassociated, 3, NoRemove, NoLa
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (lapsingEventInPlay(USConsulateAttacked)) {
       log("\nUS Consulate Attacked event is lapsing", Color.Event)
       setUSPosture(oppositePosture(game.usPosture))

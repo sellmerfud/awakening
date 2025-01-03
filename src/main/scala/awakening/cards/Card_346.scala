@@ -100,7 +100,7 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val choices = List(
       choice(canPlaceMilitia, "militia", "Place a militia"),
       choice(canPlaceCell,    "cell", "Place a cell"),

@@ -76,7 +76,7 @@ object Card_190 extends Card(190, "Martyrdom Operation", Jihadist, 3, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (game.availablePlots.nonEmpty) {
       val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
         val target = askCountry("Select country: ", getCandidates())

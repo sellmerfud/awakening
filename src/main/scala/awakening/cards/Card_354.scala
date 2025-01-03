@@ -71,7 +71,7 @@ object Card_354 extends Card(354, "Election Meddling", Unassociated, 3, NoRemove
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val drm = game.getNonMuslim(Russia).posture match {
       case PostureUntested => None
       case Hard            => Some((1, "Russia Hard"))

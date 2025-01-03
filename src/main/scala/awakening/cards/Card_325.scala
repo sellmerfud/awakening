@@ -72,7 +72,7 @@ object Card_325 extends Card(325, "Dissent Channel", Unassociated, 1, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = role match {
+  def executeEvent(role: Role): Unit = role match {
     case US => decreaseFunding(1)
     case Jihadist => decreasePrestige(1)
   }

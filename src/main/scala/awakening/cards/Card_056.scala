@@ -73,7 +73,7 @@ object Card_056 extends Card(56, "Vieira de Mello Slain", Jihadist, 1, Remove, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     decreasePrestige(1)
     addGlobalEventMarker(VieiraDeMelloSlain)
   }

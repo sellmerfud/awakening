@@ -75,7 +75,7 @@ object Card_029 extends Card(29, "Tony Blair", US, 2, Remove, NoLapsing, NoAutoT
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     setCountryPosture(UnitedKingdom, game.usPosture)
     val schengens = if (isHuman(role)) {
       val num = askInt("Roll War of Ideas in how many Schengen countries", 0, 3)

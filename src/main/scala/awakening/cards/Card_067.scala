@@ -69,7 +69,7 @@ object Card_067 extends Card(67, "Islamic Jihad Union", Jihadist, 2, Remove, NoL
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val candidates = List(CentralAsia, Afghanistan)
     val targets = if (game.cellsAvailable == 0)
       Nil

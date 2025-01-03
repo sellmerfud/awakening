@@ -71,7 +71,7 @@ object Card_333 extends Card(333, "MbS", Unassociated, 1, NoRemove, NoLapsing, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(SaudiArabia)
     role match {
       case US => addAwakeningMarker(SaudiArabia)

@@ -94,7 +94,7 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     val (target, action, from) = role match {
       case US if isHuman(role) =>

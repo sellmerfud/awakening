@@ -83,7 +83,7 @@ object Card_247 extends Card(247, "Nadia Murad", US, 1, NoRemove, NoLapsing, NoA
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
       askCountry(s"Place an awakening marker in which country: ", getCandidates())
     else

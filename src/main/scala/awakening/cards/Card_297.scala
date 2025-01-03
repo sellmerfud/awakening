@@ -78,7 +78,7 @@ object Card_297 extends Card(297, "Early Exit", Jihadist, 2, Remove, NoLapsing, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
       askCountry("Which country: ", getCandidates())
     else

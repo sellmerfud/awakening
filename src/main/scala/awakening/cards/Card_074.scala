@@ -73,7 +73,7 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = if (isHuman(role)) {
+  def executeEvent(role: Role): Unit = if (isHuman(role)) {
     val num = 2 min game.cellsOnMap
     val travellers = if (num == 1) {
       for (c <- game.countries; if c.cells > 0)
@@ -117,10 +117,7 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
         val candidates = Schengen.filterNot(alreadyTried.contains)
         val to   = JihadistBot.posturePriority(candidates).get
         val from = JihadistBot.travelFromTarget(to, preferredTravellers.filterNot(_ == to)) orElse {
-          if (forTrigger) 
             JihadistBot.travelFromTarget(to, allTravellers.filterNot(_ == to))
-          else
-            None
         }
         from match {
           case Some(from) =>

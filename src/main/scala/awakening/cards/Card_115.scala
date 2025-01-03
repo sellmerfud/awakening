@@ -82,7 +82,7 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+  def executeEvent(role: Role): Unit =
     role match {
       case US =>
         val (name, (active, sleeper, sadr)) = if (isHuman(role)) {

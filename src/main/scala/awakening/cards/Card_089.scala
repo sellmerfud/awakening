@@ -67,5 +67,5 @@ object Card_089 extends Card(89, "Martyrdom Operation", Jihadist, 3, NoRemove, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = Card_087.executeEvent(role, forTrigger)
+  def executeEvent(role: Role): Unit = Card_087.executeEvent(role)
 }

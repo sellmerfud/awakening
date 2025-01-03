@@ -72,7 +72,7 @@ object Card_146 extends Card(146, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTr
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // Get candidates in this priority order:
     // 1. Muslims with besieged regime markers that can take an awakening marker
     // 2. Muslims with besieged regime markers (cannot take awakening because of Civil War)

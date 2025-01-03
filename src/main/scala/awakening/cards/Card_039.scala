@@ -73,7 +73,7 @@ object Card_039 extends Card(39, "Libyan WMD", US, 3, Remove, NoLapsing, NoAutoT
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     addEventTarget(Libya)
     addEventMarkersToCountry(Libya, LibyanWMD)
     val sources = game.regimeChangeSourcesFor(Libya)

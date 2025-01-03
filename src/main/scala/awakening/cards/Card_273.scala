@@ -70,6 +70,6 @@ object Card_273 extends Card(273, "Fully Resourced COIN", US, 3, NoRemove, Lapsi
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+  def executeEvent(role: Role): Unit =
     log("\nUS player will draw 2 additional cards next turn.", Color.Event)
 }

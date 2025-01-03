@@ -78,7 +78,7 @@ object Card_311 extends Card(311, "Gaza Border Protests", Jihadist, 3, NoRemove,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val USEmbassyToJerusalem = 254
     val maxPlots = if (game.cardRemoved(USEmbassyToJerusalem)) 2 else 1
     val numCells = game.getCountry(Israel).totalCells

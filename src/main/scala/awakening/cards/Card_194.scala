@@ -74,7 +74,7 @@ object Card_194 extends Card(194, "Snowden", Jihadist, 3, Remove, NoLapsing, NoA
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     decreasePrestige(2)
     addEventTarget(Russia)
     setCountryPosture(Russia, oppositePosture(game.usPosture))

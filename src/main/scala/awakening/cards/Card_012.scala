@@ -70,7 +70,7 @@ object Card_012 extends Card(12, "Al-Azhar", US, 2, NoRemove, NoLapsing) {
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     testCountry(Egypt)
     if (game.numIslamistRule > 0)
       decreaseFunding(2)

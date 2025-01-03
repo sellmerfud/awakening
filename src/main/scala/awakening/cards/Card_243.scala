@@ -78,7 +78,7 @@ object Card_243 extends Card(243, "Backlash", US, 1, NoRemove, NoLapsing, NoAuto
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       val target = askCountry(s"Backlash in which country: ", getCandidates())
       // Pick a random plot in the country

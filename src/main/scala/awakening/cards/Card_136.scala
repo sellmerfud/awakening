@@ -83,7 +83,7 @@ object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLap
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val candidates = getCandidates()
     if (candidates.isEmpty && game.funding == 1)
       log("\nThe event has no effect.", Color.Event)

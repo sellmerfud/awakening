@@ -84,7 +84,7 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (lapsingEventInPlay(ArabWinter))
       log(s"\nCannot place awakening/reaction markers. [Arab Winter]", Color.Event)
     else if (getCandidates().isEmpty)

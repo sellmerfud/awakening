@@ -76,7 +76,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       val choices = List(
         choice(getCandidates().nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),

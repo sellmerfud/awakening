@@ -81,7 +81,7 @@ object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, 
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     removeGlobalEventMarker(Fracking) // Cancels effects of "Fracking" marker
     role match {

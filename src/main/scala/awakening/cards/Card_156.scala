@@ -104,7 +104,7 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val maxMilitia = 4 min game.militiaAvailable
     if (isHuman(role)) {
       // Card allows placing militia or repositioning militia in the Gulf Union countries.

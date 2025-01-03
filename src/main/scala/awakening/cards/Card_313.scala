@@ -81,7 +81,7 @@ object Card_313 extends Card(313, "Hayat Tahir al-Sham", Jihadist, 3, Remove, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val trackCells   = 3 min game.cellsAvailable
     val adjWithCells = game.adjacentCountriesWithCells(Syria).map(_.name)
     val mapCells     = ((3 - trackCells) min numAdjacentCells) max 0

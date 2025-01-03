@@ -71,7 +71,7 @@ object Card_098 extends Card(98, "Gaza Withdrawal", Unassociated, 1, Remove, NoL
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+  def executeEvent(role: Role): Unit =
     if (role == US) {
       if (game.funding > 1)
         decreaseFunding(1)

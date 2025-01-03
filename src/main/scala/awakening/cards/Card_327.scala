@@ -71,7 +71,7 @@ object Card_327 extends Card(327, "Gaza Aid", Unassociated, 1, NoRemove, NoLapsi
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     increasePrestige(1)
     increaseFunding(1)
   }

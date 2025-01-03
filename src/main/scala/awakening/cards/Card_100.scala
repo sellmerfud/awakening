@@ -71,7 +71,7 @@ object Card_100 extends Card(100, "Hizb Ut-Tahrir", Unassociated, 1, NoRemove, N
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit =
+  def executeEvent(role: Role): Unit =
     if (game.troopCommitment == Overstretch)
       increaseFunding(2)
     else if (game.troopCommitment == LowIntensity)

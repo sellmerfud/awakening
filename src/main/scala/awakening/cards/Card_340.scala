@@ -75,7 +75,7 @@ object Card_340 extends Card(340, "EU Bolsters Iran Deal", Unassociated, 2, Jiha
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     val drm = if (role == US) 2 else -1
 
     for (name <- List(France, Germany)) {

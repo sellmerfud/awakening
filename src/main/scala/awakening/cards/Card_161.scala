@@ -73,7 +73,7 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       val choices = List(
         choice(game.sleeperCellsOnMap > 0, "activate", "Activate half (rounded up) of all sleeper cells on the map"),

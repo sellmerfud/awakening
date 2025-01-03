@@ -69,7 +69,7 @@ object Card_261 extends Card(261, "Intel Community", US, 2, NoRemove, NoLapsing,
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role, forTrigger: Boolean): Unit = {
+  def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     log("\nUS player does not inspect the Jihadist hand in the solo game.", Color.Event)
     countryNames(game.countries.filter(_.hasCadre)) match {

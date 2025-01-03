@@ -710,7 +710,8 @@ object USBot extends BotHelpers {
   // Follow the operations flowchart to pick which operation will be performed.
   def operationsFlowchart(ops: Int): Operation = {
     @tailrec def evaluateNode(node: OpFlowchartNode): Operation = node match {
-      case operation: Operation        => operation
+      case operation: Operation =>
+        operation
       case decision: OperationDecision =>
         botLog(s"PAR Flowchart: $node", Color.Debug)
         if (decision.condition(ops))
