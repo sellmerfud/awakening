@@ -82,13 +82,13 @@ object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, 
     val thisCard = this.asInstanceOf[Card]
     (role) match {
       case US if isHuman(role) =>
-        humanUsCardPlay(thisCard, false)
+        humanUsCardPlay(thisCard, ignoreEvent = true)
       case US =>
-        USBot.cardPlay(thisCard, false)
+        USBot.cardPlay(thisCard, ignoreEvent = true)
       case Jihadist if isHuman(role) =>
-        humanJihadistCardPlay(thisCard, false)
+        humanJihadistCardPlay(thisCard, ignoreEvent = true)
       case Jihadist =>
-        JihadistBot.cardPlay(thisCard, false)
+        JihadistBot.cardPlay(thisCard, ignoreEvent = true)
     }
   }
 }

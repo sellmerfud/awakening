@@ -7018,8 +7018,7 @@ object LabyrinthAwakening {
 
       cachedEventPlayableAnswer = None
 
-      val playable = card.eventIsPlayable(US)
-      logCardPlay(US, card, playable)
+      logCardPlay(US, card, card.eventIsPlayable(US))
       try {
 
         // When the Ferguson event is in effect, the Jihadist player
@@ -7035,8 +7034,8 @@ object LabyrinthAwakening {
         }
         else
           game.humanRole match {
-            case US => humanUsCardPlay(card, playable)
-            case _  => USBot.cardPlay(card, playable)
+            case US => humanUsCardPlay(card, ignoreEvent = false)
+            case _  => USBot.cardPlay(card, ignoreEvent = false)
           }
 
         if (cardNumber == CriticalMiddle)
@@ -7058,7 +7057,8 @@ object LabyrinthAwakening {
   // Once the user enters a valid command (other than using reserves), then in order to
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
-  def humanUsCardPlay(card: Card, playable: Boolean): Unit = {
+  def humanUsCardPlay(card: Card, ignoreEvent: Boolean): Unit = {
+    val eventPlayable = !ignoreEvent && card.eventIsPlayable(US)
     val ExecuteEvent = "Execute event"
     val WarOfIdeas   = "War of ideas"
     val Deploy       = "Deploy"
@@ -7079,7 +7079,7 @@ object LabyrinthAwakening {
     @tailrec def getAction(): String = {
       val canReassess = firstCardOfPhase(US) && card.ops == 3 && reservesUsed == 0
       val actions = List(
-        choice(playable && reservesUsed == 0,              ExecuteEvent, ExecuteEvent),
+        choice(eventPlayable && reservesUsed == 0,         ExecuteEvent, ExecuteEvent),
         choice(true,                                       WarOfIdeas, WarOfIdeas),
         choice(game.deployPossible(opsAvailable),          Deploy, Deploy),
         choice(game.regimeChangePossible(opsAvailable),    RegimeChg, RegimeChg),
@@ -7442,8 +7442,8 @@ object LabyrinthAwakening {
         }
         else
           game.humanRole match {
-            case Jihadist => humanJihadistCardPlay(card, playable)
-            case _        => JihadistBot.cardPlay(card, playable)
+            case Jihadist => humanJihadistCardPlay(card, ignoreEvent = false)
+            case _        => JihadistBot.cardPlay(card, ignoreEvent = false)
           }
 
         if (game.botRole == Jihadist && game.botEnhancements)
@@ -7466,7 +7466,11 @@ object LabyrinthAwakening {
   // Once the user enters a valid command (other than using reserves), then in order to
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
-  def humanJihadistCardPlay(card: Card, playable: Boolean): Unit = {
+  def humanJihadistCardPlay(card: Card, ignoreEvent: Boolean): Unit = {
+    val eventPlayable =
+      !ignoreEvent &&
+      lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks al Non-US events
+      card.eventIsPlayable(Jihadist)
     val ExecuteEvent = "Execute event"
     val Recruit      = "Recruit"
     val Travel       = "Travel"
@@ -7485,7 +7489,7 @@ object LabyrinthAwakening {
     @tailrec def getAction(): String = {
       val actions = List(
         choice(firstPlot,                                        PlotAction, PlotAction),
-        choice(!firstPlot && playable && reservesUsed == 0,      ExecuteEvent, ExecuteEvent),
+        choice(!firstPlot && eventPlayable && reservesUsed == 0, ExecuteEvent, ExecuteEvent),
         choice(!firstPlot && game.recruitPossible,               Recruit, Recruit),
         choice(!firstPlot,                                       Travel, Travel), // Travel must be possible or the Jihadist has lost
         choice(!firstPlot && game.jihadPossible,                 Jihad, Jihad),

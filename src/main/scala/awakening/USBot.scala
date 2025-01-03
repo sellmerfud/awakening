@@ -1160,8 +1160,13 @@ object USBot extends BotHelpers {
   
   
   // Starting point for Jihadist bot card play.
-  def cardPlay(card: Card, playable: Boolean): Unit = {
+  def cardPlay(card: Card, ignoreEvent: Boolean): Unit = {
     resetStaticData()
+    val eventPlayable =
+      !ignoreEvent &&
+      card.eventIsPlayable(US) &&
+      card.botWillPlayEvent(US)
+
     if (disruptRemovesLastCell(card))  {
       // The Bot will execute the auto trigger event first.
       if (card.autoTrigger) {
@@ -1171,7 +1176,7 @@ object USBot extends BotHelpers {
       
       disruptOperation(card)
     }
-    else if (playable && card.eventRemovesLastCell())
+    else if (eventPlayable && card.eventRemovesLastCell())
       performCardEvent(card, US)
     else {
       val maxOps = maxOpsPlusReserves(card)
@@ -1182,7 +1187,7 @@ object USBot extends BotHelpers {
       // If there is at least one plot on the map then
       // we consult the Alert Resolution Flowchart (ARF)
       val consultPAR = plots.isEmpty || {
-        alertResolutionFlowchart(card, maxOps, playable && card.botWillPlayEvent(US), plots) match {
+        alertResolutionFlowchart(card, maxOps, eventPlayable, plots) match {
           case AlertPlot       => 
             val plot = priorityPlot(plots)
             val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
@@ -1212,7 +1217,7 @@ object USBot extends BotHelpers {
       // not performed, then finally we consult the PAR flowchart.
       if (consultPAR && !reassessment(card)) {
         // If the event is playable then the event is always executed
-        if (playable && card.botWillPlayEvent(US)) {
+        if (eventPlayable) {
           performCardEvent(card, US)
           // If the card event is Unassociated add ops to the Bot's reserves.
           if (card.association == Unassociated) 

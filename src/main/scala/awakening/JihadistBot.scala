@@ -1667,10 +1667,16 @@ object JihadistBot extends BotHelpers {
   }
 
   // Starting point for Jihadist bot card play.
-  def cardPlay(card: Card, playable: Boolean): Unit = {
+  // The playable argument indicates if the 
+  def cardPlay(card: Card, ignoreEvent: Boolean): Unit = {
     resetStaticData()
+    val eventPlayable =
+      !ignoreEvent &&
+      lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks al Non-US events
+      card.eventIsPlayable(Jihadist) &&
+      card.botWillPlayEvent(Jihadist)
     // If the event is playable then the event is always executed
-    if (playable && card.botWillPlayEvent(Jihadist)) {
+    if (eventPlayable) {
       performCardEvent(card, Jihadist)
       // If the card event is Unassociated add ops to the Bot's reserves.
       if (card.association == Unassociated)
