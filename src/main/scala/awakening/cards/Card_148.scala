@@ -45,7 +45,7 @@ import awakening.USBot
 // Place 2 Awakening and 1 Reaction marker in Egypt, and
 // 1 Awakening marker in any other country which does not already have one.
 // ------------------------------------------------------------------
-object Card_148 extends Card2(148, "Tahrir Square", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_148 extends Card(148, "Tahrir Square", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

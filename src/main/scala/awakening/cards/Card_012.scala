@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Test Egypt.
 // -2 Funding, or -4 Funding if no country under Islamist Rule.
 // ------------------------------------------------------------------
-object Card_012 extends Card2(12, "Al-Azhar", US, 2, NoRemove, NoLapsing) {
+object Card_012 extends Card(12, "Al-Azhar", US, 2, NoRemove, NoLapsing) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // If Jihadist, Select Posture for 1 Schengen country. +1 Funding
 // (+2 Funding if Caliphate Capital in play).
 // ------------------------------------------------------------------
-object Card_225 extends Card2(225, "Jihadi John", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_225 extends Card(225, "Jihadi John", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

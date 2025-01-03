@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // If US play: Shift Alignment one box towards Ally or Set to Hard. REMOVE
 // If Jihadist: Place 1 Cell or a Level 1 Plot there.
 // ------------------------------------------------------------------
-object Card_328 extends Card2(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

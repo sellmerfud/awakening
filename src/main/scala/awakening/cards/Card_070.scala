@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Place a cell each in Pakistan and Inda.
 // Blocked by Indo-Pakistani Talks .
 // ------------------------------------------------------------------
-object Card_070 extends Card2(70, "Lashkar-e-Tayyiba", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_070 extends Card(70, "Lashkar-e-Tayyiba", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

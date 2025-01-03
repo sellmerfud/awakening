@@ -48,7 +48,7 @@ import awakening.USBot.PlotInCountry
 // If unblocked, the Plot subtracts rather than adds Funding (If WMD, Funding to 1).
 // Cannot be played in a caliphate country.
 // ------------------------------------------------------------------
-object Card_243 extends Card2(243, "Backlash", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_243 extends Card(243, "Backlash", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

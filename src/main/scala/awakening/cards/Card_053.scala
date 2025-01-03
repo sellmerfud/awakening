@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play if 1st card of jihadist Action Phase. Use this and 2nd card to recruit. Ignore Funding.
 // You may recruit in countries marked worse than Fair even if no cell or cadre.
 // ------------------------------------------------------------------
-object Card_053 extends Card2(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_053 extends Card(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

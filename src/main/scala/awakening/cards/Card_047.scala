@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Jihadist randomly selects from hand each jihadist card play this turn.
 // 1-player: On jihadist Action Phase this turn, non-US events are not playable. 
 // ------------------------------------------------------------------
-object Card_047 extends Card2(47, "The door of Itjihad was closed", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_047 extends Card(47, "The door of Itjihad was closed", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

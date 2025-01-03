@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // +1 Prestige +1 Funding
 // ------------------------------------------------------------------
-object Card_327 extends Card2(327, "Gaza Aid", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_327 extends Card(327, "Gaza Aid", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.USBot
 // Remove up to 2 Cells in any one Muslim country, OR
 // randomly discard 1 card from the Jihadist hand.
 // ------------------------------------------------------------------
-object Card_126 extends Card2(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

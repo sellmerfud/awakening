@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Increase US Reserves by 1 (2 if Saudi Arabia is Ally).
 // Then, US conducts Operations with this card plus Reserves (if desired).
 // ------------------------------------------------------------------
-object Card_255 extends Card2(255, "Western Arms Sales", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_255 extends Card(255, "Western Arms Sales", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

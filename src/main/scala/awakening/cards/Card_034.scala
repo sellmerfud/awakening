@@ -47,7 +47,7 @@ import awakening.USBot
 // Take a random card from the Jihadist hand.
 // Can be blocked by Leak . 
 // ------------------------------------------------------------------
-object Card_034 extends Card2(34, "Enhanced Measures", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_034 extends Card(34, "Enhanced Measures", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

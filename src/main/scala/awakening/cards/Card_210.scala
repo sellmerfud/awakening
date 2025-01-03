@@ -44,7 +44,7 @@ import awakening.{ USBot, JihadistBot }
 // ------------------------------------------------------------------
 // Remove 1 Awakening or 1 Reaction marker from any country.
 // ------------------------------------------------------------------
-object Card_210 extends Card2(210, "Sectarian Violence", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_210 extends Card(210, "Sectarian Violence", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

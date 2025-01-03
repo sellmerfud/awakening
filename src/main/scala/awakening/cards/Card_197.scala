@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // -1 Prestige.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_197 extends Card2(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   val UnconfirmedCandidates = List(215, 216, 219, 225, 237)
 
   def getCandidates() = game.cardsRemoved.filter(UnconfirmedCandidates.contains)

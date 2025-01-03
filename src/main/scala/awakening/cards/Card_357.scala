@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // Select, Reveal, and Draw a card other than OPEC Production Cut or
 // Oil Price Spike from the Discard pile or a box.
 // ------------------------------------------------------------------
-object Card_357 extends Card2(357, "Peace Dividend", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_357 extends Card(357, "Peace Dividend", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

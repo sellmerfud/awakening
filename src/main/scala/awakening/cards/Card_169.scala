@@ -49,7 +49,7 @@ import awakening.JihadistBot
 // Roll Serbia's Posture.
 // All Travel to/within Schengen countries must roll as if not Adjacent this Turn.
 // ------------------------------------------------------------------
-object Card_169 extends Card2(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

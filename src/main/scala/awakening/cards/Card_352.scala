@@ -52,7 +52,7 @@ import awakening.JihadistBot
 // Muslim country. Remove marker and capability if al-Baghdadi is
 // removed by US play. MARK
 // ------------------------------------------------------------------
-object Card_352 extends Card2(352, "al-Baghdadi", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_352 extends Card(352, "al-Baghdadi", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

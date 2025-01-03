@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Place a Cadre in up to 3 countries.
 // Test if Unmarked.
 // ------------------------------------------------------------------
-object Card_292 extends Card2(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

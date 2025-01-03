@@ -42,7 +42,7 @@ import awakening.LabyrinthAwakening._
 // -------------------------------------
 // This card is a duplicate of Card 23
 // -------------------------------------
-object Card_025 extends Card2(25, "Predator", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_025 extends Card(25, "Predator", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

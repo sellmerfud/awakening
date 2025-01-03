@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // OR temporarily reveal all Jihadist Available and/or placed WMD and
 // remove one (+1 Prestige if WMD Removed; 11.3.1).
 // ------------------------------------------------------------------
-object Card_135 extends Card2(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_135 extends Card(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

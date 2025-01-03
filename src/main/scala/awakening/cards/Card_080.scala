@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Blocks US Bin Ladin and Zawahiri.
 // Removed by Pakistani Offensive.
 // ------------------------------------------------------------------
-object Card_080 extends Card2(80, "FATA", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_080 extends Card(80, "FATA", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

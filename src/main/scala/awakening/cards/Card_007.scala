@@ -42,7 +42,7 @@ import awakening.LabyrinthAwakening._
 // -------------------------------------
 // This card is a duplicate of Card 6
 // -------------------------------------
-object Card_007 extends Card2(7, "Sanctions", US, 1, NoRemove, NoLapsing) {
+object Card_007 extends Card(7, "Sanctions", US, 1, NoRemove, NoLapsing) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

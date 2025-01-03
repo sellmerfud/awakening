@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // If US play, +2 Prestige. -1 Funding. REMOVE
 // If Jihadist, +2 Funding (+3 if Caliphate Capital on the map).
 // ------------------------------------------------------------------
-object Card_216 extends Card2(216, "Abu Sayyaf (ISIL)", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_216 extends Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

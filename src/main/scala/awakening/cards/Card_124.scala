@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Place 1 Awakening marker in Gulf States. Blocked by Bloody Thursday.
 // ------------------------------------------------------------------
-object Card_124 extends Card2(124, "Pearl Roundabout", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_124 extends Card(124, "Pearl Roundabout", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

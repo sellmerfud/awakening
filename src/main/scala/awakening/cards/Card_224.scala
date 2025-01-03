@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // If Jihadist, Set US Posture to opposite of World (N/A if World at 0),
 // OR roll 1 die; Prestige reduced by half that number rounded up.
 // ------------------------------------------------------------------
-object Card_224 extends Card2(224, "Je Suis Charlie", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_224 extends Card(224, "Je Suis Charlie", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

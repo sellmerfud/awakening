@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // if GWOT Penalty 0, +1 Prestige.
 // If not, -1 Prestige.
 // ------------------------------------------------------------------
-object Card_240 extends Card2(240, "US Election", Unassociated, 3, NoRemove, NoLapsing, AutoTrigger) {
+object Card_240 extends Card(240, "US Election", Unassociated, 3, NoRemove, NoLapsing, AutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

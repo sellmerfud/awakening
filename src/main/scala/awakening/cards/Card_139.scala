@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Roll 1 die. Funding reduced by half that number rounded up.
 // ------------------------------------------------------------------
-object Card_139 extends Card2(139, "Int'l Banking Regime", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_139 extends Card(139, "Int'l Banking Regime", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

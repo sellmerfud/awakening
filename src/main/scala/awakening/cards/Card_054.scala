@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // It is an active cell but cannot travel or be disrupted.
 // If the cell is removed, remove the marker from the game. 
 // ------------------------------------------------------------------
-object Card_054 extends Card2(54, "Moqtada al-Sadr", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_054 extends Card(54, "Moqtada al-Sadr", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

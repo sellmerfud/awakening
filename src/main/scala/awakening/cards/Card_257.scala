@@ -44,7 +44,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 // Remove a Reaction marker.
 // ------------------------------------------------------------------
-object Card_257 extends Card2(257, "Women's Rights Activism", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_257 extends Card(257, "Women's Rights Activism", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

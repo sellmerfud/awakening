@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if a cell is in a Regime Change country.
 // US randomly discards 1 card.
 // ------------------------------------------------------------------
-object Card_052 extends Card2(52, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_052 extends Card(52, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

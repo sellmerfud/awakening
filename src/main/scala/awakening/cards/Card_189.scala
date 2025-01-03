@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // Test them. Recruit once in each, ignoring Funding.
 // Place Cadre in each country that does not receive a Cell.
 // ------------------------------------------------------------------
-object Card_189 extends Card2(189, "Jihadist Videos", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_189 extends Card(189, "Jihadist Videos", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

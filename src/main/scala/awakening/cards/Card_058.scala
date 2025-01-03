@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Blocks US Bin Ladin and Zawahiri .
 // Blocked by Anbar Awakening. 
 // ------------------------------------------------------------------
-object Card_058 extends Card2(58, "Al-Anbar", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_058 extends Card(58, "Al-Anbar", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -48,7 +48,7 @@ import awakening.USBot
 // If event played, US (even if Soft), must perform a Regime Change
 // Operation in any country in Civil War. Remove Civil War marker there.
 // ------------------------------------------------------------------
-object Card_152 extends Card2(152, "Congress Acts", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_152 extends Card(152, "Congress Acts", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

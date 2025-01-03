@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play if a non-Islanist Rule country has a cell.
 // Replace the cell with any 2 available plot markers.
 // ------------------------------------------------------------------
-object Card_087 extends Card2(87, "Martyrdom Operation", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

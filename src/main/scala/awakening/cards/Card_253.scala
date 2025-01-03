@@ -42,7 +42,7 @@ import awakening.LabyrinthAwakening._
 // -------------------------------------
 // This card is a duplicate of Card 251
 // -------------------------------------
-object Card_253 extends Card2(253, "Trump Tweets", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_253 extends Card(253, "Trump Tweets", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

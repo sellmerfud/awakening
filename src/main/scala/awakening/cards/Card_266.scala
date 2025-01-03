@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Trump Tweets or any other card that has a prerequisite that Trump
 // Tweets is ON.
 // ------------------------------------------------------------------
-object Card_266 extends Card2(266, "Presidential Reality Show", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_266 extends Card(266, "Presidential Reality Show", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

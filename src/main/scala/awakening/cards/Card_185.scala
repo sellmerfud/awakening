@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // any Regime Change marker; other markers/pieces remain.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_185 extends Card2(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

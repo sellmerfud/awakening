@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if Iraq Poor Adversary. Set Funding to 9.
 // Blocked by Saddam Captured.
 // ------------------------------------------------------------------
-object Card_092 extends Card2(92, "Saddam", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_092 extends Card(92, "Saddam", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

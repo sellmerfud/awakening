@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Place 1 Ops value in Reserves.
 // +1 Prestige.
 // ------------------------------------------------------------------
-object Card_140 extends Card2(140, "Maersk Alabama", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_140 extends Card(140, "Maersk Alabama", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

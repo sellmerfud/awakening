@@ -46,7 +46,7 @@ import awakening.cards.Card_145.getCandidates
 // or a Civil War country with Troops.
 // US randomly discards 1 card.
 // ------------------------------------------------------------------
-object Card_168 extends Card2(168, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_168 extends Card(168, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

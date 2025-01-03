@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Play if Pakistan has a cell. Block Benazir Bhutto. 
 // ------------------------------------------------------------------
-object Card_060 extends Card2(60, "Bhutto Shot", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_060 extends Card(60, "Bhutto Shot", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

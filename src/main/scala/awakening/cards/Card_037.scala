@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Use this or a later card for Regime Change in Iraq at any
 // Governance. (Remove marker if you do.)
 // ------------------------------------------------------------------
-object Card_037 extends Card2(37, "Iraqi WMD", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_037 extends Card(37, "Iraqi WMD", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

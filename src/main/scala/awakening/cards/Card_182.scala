@@ -54,7 +54,7 @@ import awakening.JihadistBot
 // 5. France              5. 1 Plot & 1 Cell
 // 6. Any Hd. Schengen    6. 1 Plot
 // ------------------------------------------------------------------
-object Card_182 extends Card2(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_182 extends Card(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

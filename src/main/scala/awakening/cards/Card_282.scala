@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // If US Soft, place 1 Cell anywhere.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_282 extends Card2(282, "Executive Order 13492", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_282 extends Card(282, "Executive Order 13492", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

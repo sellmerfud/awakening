@@ -49,7 +49,7 @@ import awakening.{ USBot, JihadistBot }
 //   Draw a card. LAPSING
 // If Jihadist: US randomly discards 1 card.
 // ------------------------------------------------------------------
-object Card_337 extends Card2(337, "US Border Crisis", Unassociated, 1, NoRemove, USLapsing, NoAutoTrigger) {
+object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove, USLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

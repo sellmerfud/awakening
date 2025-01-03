@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Remove 1 Awakening marker from up to 2 separate countries.
 // No more Awakening/Reaction markers may be placed this turn.
 // ------------------------------------------------------------------
-object Card_173 extends Card2(173, "Arab Winter", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_173 extends Card(173, "Arab Winter", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

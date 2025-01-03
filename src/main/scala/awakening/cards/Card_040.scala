@@ -45,7 +45,7 @@ import awakening.USBot
 // Play if there is a Regime Change country.
 // Improve its Governance 1 Level.
 // ------------------------------------------------------------------
-object Card_040 extends Card2(40, "Mass Turnout", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_040 extends Card(40, "Mass Turnout", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

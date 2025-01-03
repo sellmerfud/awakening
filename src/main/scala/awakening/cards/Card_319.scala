@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // (remove marker if corridor as defined above is disrupted).
 // MARK & REMOVE
 // ------------------------------------------------------------------
-object Card_319 extends Card2(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_319 extends Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

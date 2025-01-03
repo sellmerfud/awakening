@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // You may interrupt this Action phase now to play an extra card.
 // NOTE: In solo game the player does not inspect the Jihadist's hand
 // ------------------------------------------------------------------
-object Card_018 extends Card2(18, "Intel Community", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_018 extends Card(18, "Intel Community", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

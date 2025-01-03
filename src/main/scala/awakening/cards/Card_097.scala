@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // Trade random cards.
 // Then conduct an operation with this card.
 // ------------------------------------------------------------------
-object Card_097 extends Card2(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -79,7 +79,7 @@ object Card_097 extends Card2(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing,
     log(s"on top card of the ${game.botRole} Bot's hand.", Color.Event)
     askCardsDrawn(1)
 
-    val thisCard = this.asInstanceOf[Card2]
+    val thisCard = this.asInstanceOf[Card]
     (role) match {
       case US if isHuman(role) =>
         humanUsCardPlay(thisCard, false)

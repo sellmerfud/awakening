@@ -55,7 +55,7 @@ import awakening.JihadistBot
 // (4-6) no effect.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_343 extends Card2(343, "JCPOA", Unassociated, 2, JihadistRemove, NoLapsing, NoAutoTrigger) {
+object Card_343 extends Card(343, "JCPOA", Unassociated, 2, JihadistRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

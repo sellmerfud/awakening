@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // event cards whose combined Operations value is equal to or exceeds
 // the result. Any Jihadist event(s) discarded this way are triggered.
 // ------------------------------------------------------------------
-object Card_305 extends Card2(305, "Presidential Whistleblower", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

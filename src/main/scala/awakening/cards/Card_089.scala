@@ -42,7 +42,7 @@ import awakening.LabyrinthAwakening._
 // -------------------------------------
 // This card is a duplicate of Card 87
 // -------------------------------------
-object Card_089 extends Card2(89, "Martyrdom Operation", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_089 extends Card(89, "Martyrdom Operation", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

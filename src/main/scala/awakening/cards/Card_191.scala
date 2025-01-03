@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Place 1 Reaction marker in Egypt and up to 2 more Reaction markers
 // in any countries including Egypt.
 // ------------------------------------------------------------------
-object Card_191 extends Card2(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_191 extends Card(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // +1 Prestige. Set Serbia to opposite of US Posture.
 // ------------------------------------------------------------------
-object Card_101 extends Card2(101, "Kosovo", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_101 extends Card(101, "Kosovo", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

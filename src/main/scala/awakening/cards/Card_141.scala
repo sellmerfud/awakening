@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Place 1 Awakening marker in Pakistan.
 // Blocked by Jihadist play of 3 Cups of Tea.
 // ------------------------------------------------------------------
-object Card_141 extends Card2(141, "Malala Yousafzai", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_141 extends Card(141, "Malala Yousafzai", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

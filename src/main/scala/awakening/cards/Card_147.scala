@@ -47,7 +47,7 @@ import awakening.USBot
 // Place 1 Cell in Israel.
 // +1 Funding.
 // ------------------------------------------------------------------
-object Card_147 extends Card2(147, "Strike Eagle", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_147 extends Card(147, "Strike Eagle", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

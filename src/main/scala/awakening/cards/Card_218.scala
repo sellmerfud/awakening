@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // If one side has more Cells or Militia than the other, remove the
 // difference so both sides are equal. Troops unaffected.
 // ------------------------------------------------------------------
-object Card_218 extends Card2(218, "Al-Nusra Front", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

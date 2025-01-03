@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Test Philippines. -1 Funding, Block Abu Sayyaf. 
 // ------------------------------------------------------------------
-object Card_004 extends Card2(4, "Moro Talks", US, 1, Remove, NoLapsing) {
+object Card_004 extends Card(4, "Moro Talks", US, 1, Remove, NoLapsing) {
   val isCandidate = (m: MuslimCountry) =>
     m.plots.exists(p => !p.backlashed) &&
     !game.isCaliphateMember(m.name)

@@ -47,7 +47,7 @@ import awakening.USBot
 // or Islamist Rule.
 // Remove a Cell (2 if in Yemen).
 // ------------------------------------------------------------------
-object Card_249 extends Card2(249, "Saudi Air Strikes", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_249 extends Card(249, "Saudi Air Strikes", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // -1 Funding
 // REMOVE
 // ------------------------------------------------------------------
-object Card_223 extends Card2(223, "Iranian Elections", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_223 extends Card(223, "Iranian Elections", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

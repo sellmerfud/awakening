@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Place Besieged Regime in Afghanistan and a cell each there and in Pakistan.
 // -1 Prestige or -3 Prestige if either at Islamist Rule.
 // ------------------------------------------------------------------
-object Card_093 extends Card2(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_093 extends Card(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

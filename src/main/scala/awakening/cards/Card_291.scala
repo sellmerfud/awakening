@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // or if Travel Ban in effect.
 // Place a level 1 Plot there.
 // ------------------------------------------------------------------
-object Card_291 extends Card2(291, "Vehicle-ramming Attacks", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_291 extends Card(291, "Vehicle-ramming Attacks", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

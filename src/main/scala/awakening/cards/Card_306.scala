@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if US Soft.
 // US must play rest of turn with its cards face up.
 // ------------------------------------------------------------------
-object Card_306 extends Card2(306, "Public Debate", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_306 extends Card(306, "Public Debate", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

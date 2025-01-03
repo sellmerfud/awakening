@@ -45,7 +45,7 @@ import awakening.USBot
 // Play in a Civil War country.
 // Remove up to 2 Cells.
 // ------------------------------------------------------------------
-object Card_258 extends Card2(258, "75th Ranger Regiment", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_258 extends Card(258, "75th Ranger Regiment", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

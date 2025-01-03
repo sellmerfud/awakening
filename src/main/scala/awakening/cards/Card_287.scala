@@ -48,7 +48,7 @@ import awakening.JihadistBot
 // - Besieged Regime
 // - Cell
 // ------------------------------------------------------------------
-object Card_287 extends Card2(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

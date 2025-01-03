@@ -46,7 +46,7 @@ import awakening.USBot
 // Place 1 Awakening marker there, or anywhere if there are no
 // Besieged Regime markers on the map to be removed.
 // ------------------------------------------------------------------
-object Card_146 extends Card2(146, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_146 extends Card(146, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

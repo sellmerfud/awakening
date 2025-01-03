@@ -57,7 +57,7 @@ import awakening.USBot
 // - The US must be Hard (not Soft) to play the event.
 // - Three options (not two) are selected.
 // ------------------------------------------------------------------
-object Card_143 extends Card2(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
   def isMittsTurnScenario = game.scenarioName == MittsTurn.name
 

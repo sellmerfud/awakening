@@ -48,7 +48,7 @@ import awakening.JihadistBot
 // Blocks Operation Inherent Resolve.
 // Flip Trump Tweets to OFF.
 // ------------------------------------------------------------------
-object Card_297 extends Card2(297, "Early Exit", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_297 extends Card(297, "Early Exit", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

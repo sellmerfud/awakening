@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // If US play, remove up to 3 Cells.
 // If Jihadist, remove up to 2 Militia.
 // ------------------------------------------------------------------
-object Card_231 extends Card2(231, "Siege of Kobanigrad", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

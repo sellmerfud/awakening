@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // Immediately check for Attrition there as per End of Turn (11.2.5).
 // Jihadist hits inflict 2 losses instead of 1 for this special round.
 // ------------------------------------------------------------------
-object Card_312 extends Card2(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_312 extends Card(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

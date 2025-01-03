@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // -1 to the Resource value of each Oil Exporter country for the
 // rest of the turn.
 // ------------------------------------------------------------------
-object Card_356 extends Card2(356, "OPEC Production Cut", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.USBot
 // Place an awakening marker.
 // Cannot target a Caliphate country.
 // ------------------------------------------------------------------
-object Card_248 extends Card2(248, "Patriotic Arab Democracies Movement", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_248 extends Card(248, "Patriotic Arab Democracies Movement", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

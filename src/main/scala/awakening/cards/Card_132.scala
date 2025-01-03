@@ -45,7 +45,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 // Remove 1 Cell and place up to 2 Militia in any country in Civil War.
 // ------------------------------------------------------------------
-object Card_132 extends Card2(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_132 extends Card(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

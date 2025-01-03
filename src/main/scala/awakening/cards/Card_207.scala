@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // If Jihadist, place an Active Cell or a level 1 Plot in any one
 // non-Muslim country.
 // ------------------------------------------------------------------
-object Card_207 extends Card2(207, "JV / Copycat", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
 
   def getRemoveCellCandidates() = countryNames(game.nonMuslims.filter(_.totalCells > 0))
 

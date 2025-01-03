@@ -45,7 +45,7 @@ import awakening.{ USBot, JihadistBot }
 // Play in a Civil War country with at least one Militia and Cell.
 // Shift Alignment one box in either direction.
 // ------------------------------------------------------------------
-object Card_344 extends Card2(344, "Media Manipulation", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_344 extends Card(344, "Media Manipulation", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

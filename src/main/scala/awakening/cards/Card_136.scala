@@ -46,7 +46,7 @@ import awakening.USBot
 // non-Islamist Rule country.
 // -1 Funding.
 // ------------------------------------------------------------------
-object Card_136 extends Card2(136, "Factional Infighting", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

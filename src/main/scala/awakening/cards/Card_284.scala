@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // +1 Funding.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_284 extends Card2(284, "Manchester Bombing", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_284 extends Card(284, "Manchester Bombing", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

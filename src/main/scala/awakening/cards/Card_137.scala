@@ -44,7 +44,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 // Place 3 Militia in any one Ally country.
 // ------------------------------------------------------------------
-object Card_137 extends Card2(137, "FMS", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_137 extends Card(137, "FMS", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

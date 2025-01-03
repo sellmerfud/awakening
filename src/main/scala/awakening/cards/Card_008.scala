@@ -45,7 +45,7 @@ import awakening.USBot
 // Play if there is a cell in or adjacent to a country with troops.
 // Remove the cell.
 // ------------------------------------------------------------------
-object Card_008 extends Card2(8, "Special Forces", US, 1, NoRemove, NoLapsing) {
+object Card_008 extends Card(8, "Special Forces", US, 1, NoRemove, NoLapsing) {
 
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"

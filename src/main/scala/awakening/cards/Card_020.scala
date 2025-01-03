@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Set Jordan to Fair Ally. +1 Prestige. -1 Funding. 
 // ------------------------------------------------------------------
-object Card_020 extends Card2(20, "King Abdullah", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_020 extends Card(20, "King Abdullah", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

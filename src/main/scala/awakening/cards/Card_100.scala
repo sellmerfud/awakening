@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // If Troops in Overstretch: +2 Funding.
 // If Troops at Low Intensity: -2 Funding.
 // ------------------------------------------------------------------
-object Card_100 extends Card2(100, "Hizb Ut-Tahrir", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_100 extends Card(100, "Hizb Ut-Tahrir", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

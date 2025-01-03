@@ -46,7 +46,7 @@ import awakening. { USBot, JihadistBot }
 // If US play, remove 1 cell there or from Iran.
 // If jihadist, make 2 jihad rolls there. Ignore failures or shift to Islamist Rule.
 // ------------------------------------------------------------------
-object Card_104 extends Card2(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

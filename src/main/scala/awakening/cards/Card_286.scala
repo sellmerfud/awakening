@@ -44,7 +44,7 @@ import awakening.JihadistBot
 // ------------------------------------------------------------------
 // Place a Reaction marker in a country adjacent to Israel.
 // ------------------------------------------------------------------
-object Card_286 extends Card2(286, "Palestinian Peace", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_286 extends Card(286, "Palestinian Peace", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

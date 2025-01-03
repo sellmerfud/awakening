@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Place a cell in the United Kingdom.
 // ------------------------------------------------------------------
-object Card_066 extends Card2(66, "Homegrown", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_066 extends Card(66, "Homegrown", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

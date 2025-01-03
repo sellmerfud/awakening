@@ -45,7 +45,7 @@ import awakening.USBot
 // Play if there is a plot in an Ally or Good country. Reveal and remove it.
 // Draw a card. Select 1 non-US country's Posture.
 // ------------------------------------------------------------------
-object Card_021 extends Card2(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
   def getCandidates(): List[String] = countryNames(
     game.countries.filter {

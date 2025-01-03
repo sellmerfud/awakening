@@ -44,7 +44,7 @@ import awakening.JihadistBot
 // ------------------------------------------------------------------
 // Automatically travel 2 cells anywhere.
 // ------------------------------------------------------------------
-object Card_079 extends Card2(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

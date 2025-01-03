@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Play if any cells in Israel, Jordan, or Lebanon. Remove them all.
 // ------------------------------------------------------------------
-object Card_022 extends Card2(22, "Mossad & Shin Bet", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_022 extends Card(22, "Mossad & Shin Bet", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
   def getCandidates() = countryNames(
     game.getCountries(Israel::Jordan::Lebanon::Nil)

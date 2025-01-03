@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // If US Election later this turn, US Posture automatically switches
 // (do not roll).
 // ------------------------------------------------------------------
-object Card_199 extends Card2(199, "US Consulate Attacked", Jihadist, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_199 extends Card(199, "US Consulate Attacked", Jihadist, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

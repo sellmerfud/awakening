@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // OR Select Posture of either China, Russia or India,
 // OR place or Remove a Cadre.
 // ------------------------------------------------------------------
-object Card_202 extends Card2(202, "Cyber Warfare", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

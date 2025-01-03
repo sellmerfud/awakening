@@ -45,7 +45,7 @@ import awakening.{ USBot, JihadistBot }
 // Place 1 Awakening or 1 Reaction marker in any country which already
 // has one of the same type, and then another in an Adjacent country.
 // ------------------------------------------------------------------
-object Card_227 extends Card2(227, "Popular Support", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_227 extends Card(227, "Popular Support", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

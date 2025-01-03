@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if Somalia or Yemen under Islamist Rule.
 // While either country is under Islamist Rule, no end-of-turn Funding drop.
 // ------------------------------------------------------------------
-object Card_073 extends Card2(73, "Pirates", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_073 extends Card(73, "Pirates", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

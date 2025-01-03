@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if troops in Iraq. Place 1 Aid there. +1 Prestige.
 // Block Saddam (and modify FREs event). 
 // ------------------------------------------------------------------
-object Card_027 extends Card2(27, "Saddam Captured", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_027 extends Card(27, "Saddam Captured", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

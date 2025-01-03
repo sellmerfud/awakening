@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if Russia Tested.
 // Set UK to opposite of Russia Posture.
 // ------------------------------------------------------------------
-object Card_334 extends Card2(334, "Novichok Agent", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_334 extends Card(334, "Novichok Agent", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

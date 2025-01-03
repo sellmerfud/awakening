@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // again elsewhere. Also place 1 Militia.
 // If Jibadist, place in Civil War and place 1 Cell (2 if Mali).
 // ------------------------------------------------------------------
-object Card_226 extends Card2(226, "Operation Serval", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

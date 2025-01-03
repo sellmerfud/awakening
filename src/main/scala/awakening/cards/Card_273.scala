@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if there is a Regime Change country and US Hard.
 // US player draws 2 additional cards next turn.
 // ------------------------------------------------------------------
-object Card_273 extends Card2(273, "Fully Resourced COIN", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_273 extends Card(273, "Fully Resourced COIN", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -49,7 +49,7 @@ import awakening.USBot
 // If Civil War ends, +1 Prestige.
 // Cannot be played in a caliphate country.
 // ------------------------------------------------------------------
-object Card_274 extends Card2(274, "Government of National Accord", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_274 extends Card(274, "Government of National Accord", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

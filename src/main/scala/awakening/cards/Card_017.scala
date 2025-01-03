@@ -46,7 +46,7 @@ import awakening.USBot
 // If not, remove a cell from Russia or Central Asia
 // NOTE: In the solo game, the discard option of the event it ignored.
 // ------------------------------------------------------------------
-object Card_017 extends Card2(17, "FSB", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_017 extends Card(17, "FSB", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

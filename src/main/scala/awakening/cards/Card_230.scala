@@ -49,7 +49,7 @@ import awakening.JihadistBot
 // Adversary.
 // Not playable in a Caliphate country.
 // ------------------------------------------------------------------
-object Card_230 extends Card2(230, "Sellout", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

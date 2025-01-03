@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Remove up to 3 Militia total from Regime Change or Civil War countries.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_320 extends Card2(320, "Tribal Leaders Withdraw Support", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // +1 Funding.
 // Roll 1 die. (1-3) US posture switches. (4-6) US posture stays the same.
 // ------------------------------------------------------------------
-object Card_301 extends Card2(301, "Green on Blue", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_301 extends Card(301, "Green on Blue", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

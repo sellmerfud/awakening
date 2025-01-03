@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // If Troops in Overstretch: +1 Funding -1 Prestige.
 // If Troops at Low Intensity: -1 Funding +1 Prestige.
 // ------------------------------------------------------------------
-object Card_208 extends Card2(208, "Kinder - Gentler", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_208 extends Card(208, "Kinder - Gentler", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

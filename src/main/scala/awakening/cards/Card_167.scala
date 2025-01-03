@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if Yemen Poor and Iran not Ally.
 // Place 2 Cells in Yemen and place into Civil War.
 // ------------------------------------------------------------------
-object Card_167 extends Card2(167, "Houthi Rebels", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_167 extends Card(167, "Houthi Rebels", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // Blocked by US play of Political Islamism / Pan Arab Nationalism.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_285 extends Card2(285, "Mohamed Morsi Supporters", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_285 extends Card(285, "Mohamed Morsi Supporters", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

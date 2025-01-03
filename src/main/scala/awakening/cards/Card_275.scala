@@ -46,7 +46,7 @@ import awakening.USBot
 // Place 1 Militia and 1 Advisors in either Iraq or Syria.
 // Then, remove up to a total of 3 Cells from these two countries.
 // ------------------------------------------------------------------
-object Card_275 extends Card2(275, "Operation Inherent Resolve", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

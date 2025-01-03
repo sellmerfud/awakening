@@ -52,7 +52,7 @@ import awakening.JihadistBot
 //   Biometrics, Patriot Act, Islamic Maghreb, Travel Ban, and BREXIT.
 //   Remove an Awakening marker.
 // ------------------------------------------------------------------
-object Card_348 extends Card2(348, "Travel Ban", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_348 extends Card(348, "Travel Ban", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

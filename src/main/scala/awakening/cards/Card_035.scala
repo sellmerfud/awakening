@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Select France's Posture.
 // -2 Funding.
 // ------------------------------------------------------------------
-object Card_035 extends Card2(35, "Hijab", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_035 extends Card(35, "Hijab", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

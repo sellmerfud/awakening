@@ -49,7 +49,7 @@ import awakening.LabyrinthAwakening._
 // by either player by reducing their Prestige or Funding equal to the
 // Resources of this country.
 // ------------------------------------------------------------------
-object Card_239 extends Card2(239, "Truce", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_239 extends Card(239, "Truce", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // country that is adjacent to a tested Muslim country.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_309 extends Card2(309, "Easter Bombings", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

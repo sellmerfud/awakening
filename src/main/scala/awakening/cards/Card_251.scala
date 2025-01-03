@@ -53,7 +53,7 @@ import awakening.USBot
 // 7-8) Random Awakening Marker
 // Then, place or flip Trump Tweets to ON.
 // ------------------------------------------------------------------
-object Card_251 extends Card2(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_251 extends Card(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

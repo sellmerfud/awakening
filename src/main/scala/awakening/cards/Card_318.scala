@@ -49,7 +49,7 @@ import awakening.JihadistBot
 // Roll posture for Thailand or Philippines with US Prestige as a modifier.
 // MARK & REMOVE
 // ------------------------------------------------------------------
-object Card_318 extends Card2(318, "South China Sea Crisis", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_318 extends Card(318, "South China Sea Crisis", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Playable jihadist events on them happen.
 // US Posture to Soft.
 // ------------------------------------------------------------------
-object Card_090 extends Card2(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

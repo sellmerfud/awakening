@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // May come from adjacent countries if there are insufficient Cells on the Track.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_313 extends Card2(313, "Hayat Tahir al-Sham", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_313 extends Card(313, "Hayat Tahir al-Sham", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

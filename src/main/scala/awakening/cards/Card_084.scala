@@ -48,7 +48,7 @@ import awakening.JihadistBot
 // Roll US Posture and then Prestige.
 // Shift an Ally to Neutral.
 // ------------------------------------------------------------------
-object Card_084 extends Card2(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_084 extends Card(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   val eventMarkers = List(EnhancedMeasures, Renditions, Wiretapping)
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country

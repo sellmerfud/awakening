@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Flip Trump Tweets to OFF.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_254 extends Card2(254, "US Embassy to Jerusalem", US, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_254 extends Card(254, "US Embassy to Jerusalem", US, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

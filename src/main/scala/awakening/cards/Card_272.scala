@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // Flip Trump Tweets to OFF.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_272 extends Card2(272, "Fire and Fury", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_272 extends Card(272, "Fire and Fury", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

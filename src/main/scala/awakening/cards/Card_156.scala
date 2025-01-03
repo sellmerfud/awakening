@@ -47,7 +47,7 @@ import awakening.USBot
 // OR
 // reposition Militia existing within the borders of these countries.
 // ------------------------------------------------------------------
-object Card_156 extends Card2(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

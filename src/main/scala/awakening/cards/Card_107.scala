@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // If jihadist, test Turkey and worsen its or Iraq's Governance 1
 // Level but not to Islamist Rule.
 // ------------------------------------------------------------------
-object Card_107 extends Card2(107, "Kurdistan", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

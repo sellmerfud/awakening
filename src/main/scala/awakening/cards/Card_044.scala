@@ -46,7 +46,7 @@ import awakening.USBot
 // Jihadists discard a randon card. Block Detainee Release .
 // Can be blocked by Leak . 
 // ------------------------------------------------------------------
-object Card_044 extends Card2(44, "Renditions", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_044 extends Card(44, "Renditions", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

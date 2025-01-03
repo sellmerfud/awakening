@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // participating Cells that remain become Sleeper
 // (except in a Caliphate country).
 // ------------------------------------------------------------------
-object Card_300 extends Card2(300, "Going Underground", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

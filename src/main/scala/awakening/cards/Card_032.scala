@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // You may discard the card to shift the Adversary to Neutral and
 // place 1 Aid there.
 // ------------------------------------------------------------------
-object Card_032 extends Card2(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

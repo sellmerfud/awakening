@@ -42,7 +42,7 @@ import awakening.LabyrinthAwakening._
 // -------------------------------------
 // This card is a duplicate of Card 153
 // -------------------------------------
-object Card_154 extends Card2(154, "Facebook", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_154 extends Card(154, "Facebook", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

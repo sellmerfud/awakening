@@ -48,7 +48,7 @@ import awakening.JihadistBot
 // Select Posture for 1 Unmarked non-Schengen country (not US).
 // -1 Prestige.
 // ------------------------------------------------------------------
-object Card_198 extends Card2(198, "US Atrocities", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

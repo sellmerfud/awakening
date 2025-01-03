@@ -50,7 +50,7 @@ import awakening.JihadistBot
 // country becomes Good or if there are no Cells or Cadre there, or
 // if played again elsewhere.
 // ------------------------------------------------------------------
-object Card_196 extends Card2(196, "Training Camps", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

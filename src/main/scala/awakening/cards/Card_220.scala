@@ -48,7 +48,7 @@ import awakening.LabyrinthAwakening._
 // place 1 Reaction marker there.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_220 extends Card2(220, "Daraa", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_220 extends Card(220, "Daraa", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

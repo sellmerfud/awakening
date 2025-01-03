@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Roll Prestige.
 // No recruit operations or Detainee Release the rest of this turn.
 // ------------------------------------------------------------------
-object Card_114 extends Card2(114, "GTMO", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_114 extends Card(114, "GTMO", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

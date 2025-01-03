@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // If US Embasy to Jerusalem has been Removed, place 2 Plots whose
 // combined value does not exceed the number of Cells.
 // ------------------------------------------------------------------
-object Card_311 extends Card2(311, "Gaza Border Protests", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_311 extends Card(311, "Gaza Border Protests", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

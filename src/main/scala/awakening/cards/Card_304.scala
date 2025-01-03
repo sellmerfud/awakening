@@ -48,7 +48,7 @@ import awakening.JihadistBot
 // REMOVE
 // Failure (4-6): Remove the Cell.
 // ------------------------------------------------------------------
-object Card_304 extends Card2(304, "Loose Chemicals", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_304 extends Card(304, "Loose Chemicals", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

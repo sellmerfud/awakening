@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if Russia is untested or opposite of US Posture.
 // US Discards a random card.
 // ------------------------------------------------------------------
-object Card_307 extends Card2(307, "Russian Subterfuge", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_307 extends Card(307, "Russian Subterfuge", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

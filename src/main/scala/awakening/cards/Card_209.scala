@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // OR play if Iran not Islamist Rule.
 // Remove 1 Cell from a Sunni Country or 2 Cells from a Shia-Mix Country.
 // ------------------------------------------------------------------
-object Card_209 extends Card2(209, "Quds Force", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

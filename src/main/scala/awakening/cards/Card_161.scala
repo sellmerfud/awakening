@@ -46,7 +46,7 @@ import awakening.USBot
 // OR Alert all Plots on the map.
 // -1 Prestige.
 // ------------------------------------------------------------------
-object Card_161 extends Card2(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

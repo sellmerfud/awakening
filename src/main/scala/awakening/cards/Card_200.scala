@@ -49,7 +49,7 @@ import awakening.{ USBot, JihadistBot }
 // SPECIAL: After playing or discarding place this card face down in
 // the approximate middle of the draw pile.
 // ------------------------------------------------------------------
-object Card_200 extends Card2(200, "Critical Middle", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.USBot
 // Play if you can select an Adversary country.
 // On a roll of 4 to 6, shift it to Neutral.
 // ------------------------------------------------------------------
-object Card_014 extends Card2(14, "Covert Action", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_014 extends Card(14, "Covert Action", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

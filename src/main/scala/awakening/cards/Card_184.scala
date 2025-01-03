@@ -50,7 +50,7 @@ import awakening.JihadistBot
 // Track immediately upon play of Congress Acts, or if a WMID is resolved,
 // or at the end of a draw phase in which a 3 Resource country is Islamist Rule.
 // ------------------------------------------------------------------
-object Card_184 extends Card2(184, "Sequestration", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

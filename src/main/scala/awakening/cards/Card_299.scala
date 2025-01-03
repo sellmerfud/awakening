@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // Fair non-Muslim country.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_299 extends Card2(299, "Foreign Fighters Return", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

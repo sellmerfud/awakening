@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play if you can select 2 unmarked Muslim countries (not Iran).
 // Place a cell in each, or 2 in each if any Islamist Rule.
 // ------------------------------------------------------------------
-object Card_091 extends Card2(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

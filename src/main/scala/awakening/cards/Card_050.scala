@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play if Iraq's Governance is worse than Good.
 // Place a cell in Iraq or Iran.
 // ------------------------------------------------------------------
-object Card_050 extends Card2(50, "Ansar al-Islam", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_050 extends Card(50, "Ansar al-Islam", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

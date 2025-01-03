@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Roll US Posture. +1 Funding.
 // Roll Posture for Caucasus.
 // ------------------------------------------------------------------
-object Card_174 extends Card2(174, "Boston Marathon", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_174 extends Card(174, "Boston Marathon", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

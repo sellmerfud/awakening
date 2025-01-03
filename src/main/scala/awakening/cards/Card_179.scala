@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // draw phase, then to Track.
 // Set China to opposite of US Posture.
 // ------------------------------------------------------------------
-object Card_179 extends Card2(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_179 extends Card(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

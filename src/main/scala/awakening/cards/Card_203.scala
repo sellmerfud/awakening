@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Place 1 Awakening or 1 Reaction marker in Yemen.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_203 extends Card2(203, "Day of Rage", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_203 extends Card(203, "Day of Rage", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

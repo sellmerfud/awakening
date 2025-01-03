@@ -46,7 +46,7 @@ import awakening. { USBot, JihadistBot }
 // If US play, remove up to 2 cells.
 // If jihadist, worsen Governance 1 Level, not to Islamist Rule.
 // ------------------------------------------------------------------
-object Card_106 extends Card2(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // turn. he card may still be played for OPs.
 // Flip Trump Tweets to OFF.
 // ------------------------------------------------------------------
-object Card_355 extends Card2(355, "Fake News", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_355 extends Card(355, "Fake News", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

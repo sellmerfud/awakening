@@ -47,7 +47,7 @@ import awakening.USBot
 // from Jihadist Operations. Remove once Civil War ends or when played
 // again elsewhere.
 // ------------------------------------------------------------------
-object Card_150 extends Card2(150, "UNSCR 1973", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_150 extends Card(150, "UNSCR 1973", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

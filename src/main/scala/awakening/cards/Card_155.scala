@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Additional -1 Funding at end of Turn until next Event play of Oil Price Spike.
 // Roll Prestige. Draw a card.
 // ------------------------------------------------------------------
-object Card_155 extends Card2(155, "Fracking", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_155 extends Card(155, "Fracking", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.USBot
 // Place an Awakening marker in or adjacent to Iraq.
 // Cannot target a Caliphate Country.
 // ------------------------------------------------------------------
-object Card_247 extends Card2(247, "Nadia Murad", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_247 extends Card(247, "Nadia Murad", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

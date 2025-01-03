@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Shift Syria to Adversary and worsen its Governance 1 Level but
 // not to Islamist Rule.
 // ------------------------------------------------------------------
-object Card_064 extends Card2(64, "Hariri Killed", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_064 extends Card(64, "Hariri Killed", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

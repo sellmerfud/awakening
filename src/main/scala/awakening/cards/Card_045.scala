@@ -46,7 +46,7 @@ import awakening.USBot
 // plots. Roll US Posture. +3 Prestige.
 // Select 1 non-US country's Posture.
 // ------------------------------------------------------------------
-object Card_045 extends Card2(45, "Safer Now", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_045 extends Card(45, "Safer Now", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

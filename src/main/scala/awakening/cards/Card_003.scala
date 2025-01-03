@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if US Soft. Place CTR in Russia and, if Ally or Neutral,
 // Central Asia. It blocks Loose Nukes , HEU , and Kazakh Strain. 
 // ------------------------------------------------------------------
-object Card_003 extends Card2(3, "CTR", US, 1, NoRemove, NoLapsing) {
+object Card_003 extends Card(3, "CTR", US, 1, NoRemove, NoLapsing) {
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country

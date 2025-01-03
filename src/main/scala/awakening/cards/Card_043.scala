@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // The US is not adjacent to any country except Canada.
 // Allows Sanctions.
 // ------------------------------------------------------------------
-object Card_043 extends Card2(43, "Patriot Act", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_043 extends Card(43, "Patriot Act", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

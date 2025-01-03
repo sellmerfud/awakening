@@ -42,7 +42,7 @@ import awakening.LabyrinthAwakening._
 // -------------------------------------
 // This card is a duplicate of Card 126
 // -------------------------------------
-object Card_127 extends Card2(127, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_127 extends Card(127, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

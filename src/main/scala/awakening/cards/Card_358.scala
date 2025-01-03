@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // If Jihadist: Place 1 Cell each in a Sunni and a Shia-Mix country.
 // +1 Funding. Blocks play of Abdel Fattah el-Sisi.
 // ------------------------------------------------------------------
-object Card_358 extends Card2(358, "Political Islamism/Pan Arab Nationalism", Unassociated, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Unassociated, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // Place or remove (not flip) an Aid, Besieged Regime, Awakening, Reaction
 // or Posture marker, OR place or Remove up to 2 total Militia and/or Cells.
 // ------------------------------------------------------------------
-object Card_205 extends Card2(205, "Erdogan Effect", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
 
   val CandidateCountries = List(Turkey, Serbia, Iraq, Caucasus, Syria, Iran).sorted
 

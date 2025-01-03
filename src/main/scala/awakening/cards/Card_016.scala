@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Select Benelux's Posture.
 // If no country under Islamist Funding, -1 Funding
 // ------------------------------------------------------------------
-object Card_016 extends Card2(16, "Euro-Islam", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_016 extends Card(16, "Euro-Islam", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

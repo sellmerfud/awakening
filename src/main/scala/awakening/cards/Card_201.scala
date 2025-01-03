@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // Place 1 Militia or 2 Cells in an African country
 // (add 1 additional of either if in Mali or Nigeria).
 // ------------------------------------------------------------------
-object Card_201 extends Card2(201, "Cross Border Support", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

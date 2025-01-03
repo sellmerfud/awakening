@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Set Central Asia to Neutral and roll its Governance as if an
 // Initial Test.
 // ------------------------------------------------------------------
-object Card_102 extends Card2(102, "Former Soviet Union", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_102 extends Card(102, "Former Soviet Union", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

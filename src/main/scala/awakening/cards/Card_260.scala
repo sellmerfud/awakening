@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // REMOVE
 // Cannot be played in a caliphate country
 // ------------------------------------------------------------------
-object Card_260 extends Card2(260, "Imran Khan", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_260 extends Card(260, "Imran Khan", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

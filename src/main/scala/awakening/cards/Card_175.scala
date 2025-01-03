@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Remove up to 2 Awakening markers from a single country.
 // Blocks the play of Facebook until the next play of Smartphones.
 // ------------------------------------------------------------------
-object Card_175 extends Card2(175, "Censorship", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_175 extends Card(175, "Censorship", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

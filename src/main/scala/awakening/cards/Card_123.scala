@@ -44,7 +44,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 // Place an Aid marker in any country with a Cell.
 // ------------------------------------------------------------------
-object Card_123 extends Card2(123, "Humanitarian Aid", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_123 extends Card(123, "Humanitarian Aid", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

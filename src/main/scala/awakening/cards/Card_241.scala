@@ -46,7 +46,7 @@ import awakening.USBot
 // Blocked by Jihadist play of Political Islaimism / Pan Arab Nationalism.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_241 extends Card2(241, "Abdel Fattah el-Sisi", US, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_241 extends Card(241, "Abdel Fattah el-Sisi", US, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

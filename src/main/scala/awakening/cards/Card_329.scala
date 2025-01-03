@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // If US play: +1 Prestige REMOVE
 // If Jihadist play: +2 Funding
 // ------------------------------------------------------------------
-object Card_329 extends Card2(329, "Hamza bin Laden", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_329 extends Card(329, "Hamza bin Laden", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

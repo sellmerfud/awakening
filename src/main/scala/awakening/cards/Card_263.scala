@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if Caliphate Capital on the map.
 // -2 Funding
 // ------------------------------------------------------------------
-object Card_263 extends Card2(263, "Operation Tidal Wave II", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_263 extends Card(263, "Operation Tidal Wave II", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

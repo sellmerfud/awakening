@@ -45,7 +45,7 @@ import awakening.USBot
 // Play in a country (not Iran or Syria) with both Awakening and Reaction markers present.
 // Make Ally and Set to Fair. Replace all Cells there with Reaction markers.
 // ------------------------------------------------------------------
-object Card_162 extends Card2(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_162 extends Card(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

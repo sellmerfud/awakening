@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // no more than 1 per country.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_314 extends Card2(314, "Jihadist African Safari", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

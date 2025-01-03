@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if Trump Tweets marker is in Events Box.
 // Set the Trump Tweets marker to either ON or OFF.
 // ------------------------------------------------------------------
-object Card_326 extends Card2(326, "Filibuster/Nuclear Option", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_326 extends Card(326, "Filibuster/Nuclear Option", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

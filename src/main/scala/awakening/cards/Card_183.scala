@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // While these conditions persist, no end-of-turn Funding drop.
 // Blocked by Maersk Alabama.
 // ------------------------------------------------------------------
-object Card_183 extends Card2(183, "Pirates", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_183 extends Card(183, "Pirates", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

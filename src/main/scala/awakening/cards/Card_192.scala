@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Playable events on them happen.
 // US Posture to Soft.
 // ------------------------------------------------------------------
-object Card_192 extends Card2(192, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_192 extends Card(192, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

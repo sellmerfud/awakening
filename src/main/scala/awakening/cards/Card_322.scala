@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // If Jibadist: Place a Reaction marker in an Ally country.
 // Cannot be played in a Caliphate country.
 // ------------------------------------------------------------------
-object Card_322 extends Card2(322, "Amnesty International", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_322 extends Card(322, "Amnesty International", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

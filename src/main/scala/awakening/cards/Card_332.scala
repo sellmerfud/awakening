@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // (+1 Prestige if WMID removed, 11.3.1).  REMOVE
 // If Jihadist: Remove a Militia.
 // ------------------------------------------------------------------
-object Card_332 extends Card2(332, "Khan Shaykhun Chemical Attack", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_332 extends Card(332, "Khan Shaykhun Chemical Attack", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

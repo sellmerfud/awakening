@@ -48,7 +48,7 @@ import awakening.LabyrinthAwakening._
 // (3) return it, or
 // (4) keep it by giving your opponent another card from your hand.
 // ------------------------------------------------------------------
-object Card_351 extends Card2(351, "Advanced Persistent Threat (APT)", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -323,7 +323,7 @@ object USBot extends BotHelpers {
   
   
   // Returns true if the plot is Alerted.
-  def alertTable(card: Card2, plots: List[PlotInCountry]): Boolean = {
+  def alertTable(card: Card, plots: List[PlotInCountry]): Boolean = {
     val plot = priorityPlot(plots)
     val (fundingMod, prestigeMod) = alertTableMods(plots filterNot (_.id == plot.id))
     val funding     = (game.funding  + fundingMod)  max 1 min 9
@@ -398,7 +398,7 @@ object USBot extends BotHelpers {
     def yesPath: AlertFlowchartNode
     def noPath: AlertFlowchartNode
     // ops is the total number of ops available including reserves
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]): Boolean
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]): Boolean
     override def toString() = desc
   }
   
@@ -413,21 +413,21 @@ object USBot extends BotHelpers {
     val desc = "WMD place in country?"
     def yesPath = ThreeOpsForWMD
     def noPath  = ThreeOpsAvailable
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = plots exists (_.isWMD)
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = plots exists (_.isWMD)
   }
   
   object ThreeOpsForWMD extends AlertDecision {
     val desc = "3 Ops available for WMD alert?"
     def yesPath = WMDInUS
     def noPath  = LastCardOrEventAlertsPriorityPlot
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = ops >= 3
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = ops >= 3
   }
   
   object WMDInUS extends AlertDecision {
     val desc = "WMD in the United States?"
     def yesPath = AlertPlot
     def noPath  = WMDWithTroopsAndPrestigeAbove3
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = 
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = 
       plots exists (p => p.isWMD && p.country.name == UnitedStates)
   }
   
@@ -435,7 +435,7 @@ object USBot extends BotHelpers {
     val desc = "Last card of phase or Event would alert priority plot?"
     def yesPath = PARFlowchart
     def noPath  = AddToUSReserves
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
       val targetPlot = priorityPlot(plots)
       (playableEvent && card.eventAlertsPlot(targetPlot.country.name, targetPlot.onMap.plot)) ||
       !firstCardOfPhase(US)
@@ -446,7 +446,7 @@ object USBot extends BotHelpers {
     val desc = "WMD with troops and Prestige > 3?"
     def yesPath = AlertPlot
     def noPath  = WMDAtNonMuslimAndFundingBelow8
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) =
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) =
       game.prestige > 3 &&
       (plots.exists (plot => plot.isWMD && 
                      inMuslimCountry(plot) && 
@@ -457,7 +457,7 @@ object USBot extends BotHelpers {
     val desc = "WMD at non-Muslim and Funding <8?"
     def yesPath = AlertPlot
     def noPath  = AlertTable
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) =
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) =
       game.funding < 8 &&
       (plots exists (plot => plot.isWMD && inNonMuslimCountry(plot)))
   }
@@ -467,14 +467,14 @@ object USBot extends BotHelpers {
     val desc = "3 Ops available?"
     def yesPath = LastCardOrOrReservesBelow2
     def noPath  = PlayableNonJihadistEvent
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = ops >= 3
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = ops >= 3
   }
   
   object LastCardOrOrReservesBelow2 extends AlertDecision {
     val desc = "Last card of phase or US reserves < 2?"
     def yesPath = AlertTable
     def noPath  = MultiplePlots
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = {
       game.reserves.us < 2 || !firstCardOfPhase(US)
     }
   }
@@ -483,20 +483,20 @@ object USBot extends BotHelpers {
     val desc = "Playable non-Jihadist event?"
     def yesPath = PARFlowchart
     def noPath  = LastCardOrEventAlertsPriorityPlot
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = playableEvent
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = playableEvent
   }
   
   object MultiplePlots extends AlertDecision {
     val desc = "Multiple plots?"
     def yesPath = AlertTable
     def noPath  = PARFlowchart
-    def condition(card: Card2, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = plots.size > 1
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = plots.size > 1
   }
   
   // ------------------------------------------------------------------
   // Follow the operations flowchart to pick which operation will be performed.
   def alertResolutionFlowchart(
-    card: Card2,
+    card: Card,
     ops: Int,
     playableEvent: Boolean,
     plots: List[PlotInCountry]): AlertAction = {
@@ -1110,7 +1110,7 @@ object USBot extends BotHelpers {
   }
   
   // ------------------------------------------------------------------
-  def maxOpsPlusReserves(card: Card2): Int = (card.ops + game.reserves.us) min 3
+  def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.us) min 3
   
   // Decrement the Bots reserves and log that they were used.
   def expendBotReserves(ops: Int): Unit = {
@@ -1129,12 +1129,12 @@ object USBot extends BotHelpers {
   }
 
   // Called when the Human Jihadist player plays a Jihadist Associated card.
-  def performTriggeredEvent(card: Card2): Unit = {
+  def performTriggeredEvent(card: Card): Unit = {
     resetStaticData()
     performCardEvent(card, US, triggered = true)
   }
   
-  def disruptRemovesLastCell(card: Card2): Boolean = {
+  def disruptRemovesLastCell(card: Card): Boolean = {
     val maxOps  = maxOpsPlusReserves(card)
     game.disruptTargets(maxOps) exists { name =>
       game.disruptLosses(name) match {
@@ -1159,7 +1159,7 @@ object USBot extends BotHelpers {
   
   
   // Starting point for Jihadist bot card play.
-  def cardPlay(card: Card2, playable: Boolean): Unit = {
+  def cardPlay(card: Card, playable: Boolean): Unit = {
     resetStaticData()
     if (disruptRemovesLastCell(card))  {
       // The Bot will execute the auto trigger event first.
@@ -1240,7 +1240,7 @@ object USBot extends BotHelpers {
   }
   
   // Alert the given plot
-  def alertPlot(card: Card2, plot: PlotInCountry): Unit = {
+  def alertPlot(card: Card, plot: PlotInCountry): Unit = {
     log()
     log(s"$US performs an Alert operation")
     log(separator())
@@ -1253,7 +1253,7 @@ object USBot extends BotHelpers {
   // Checks to see if the Bot wants to do a Reassessment and
   // has enough Ops to do so.
   // Returns true if Reassessment performed
-  def reassessment(card: Card2): Boolean = {
+  def reassessment(card: Card): Boolean = {
     val tryReassess = {
        firstCardOfPhase(US) &&
        (card.ops + game.reserves.us >= 3) &&  // Possible if we have at least 3 on hand
@@ -1303,7 +1303,7 @@ object USBot extends BotHelpers {
   }
 
 
-  def woiMuslimHighestDRMOperation(card: Card2): Int = {
+  def woiMuslimHighestDRMOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     val target  = woiBestDRMTarget(countryNames(woiMuslimTargets(maxOps))).get
     testCountry(target)
@@ -1315,7 +1315,7 @@ object USBot extends BotHelpers {
     opsUsed
   }
   
-  def woiMuslimDRMMinusOneOperation(card: Card2): Int = {
+  def woiMuslimDRMMinusOneOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     val target  = woiDrmMinusOneTarget(countryNames(woiMuslimTargets(maxOps))).get
     testCountry(target)
@@ -1327,7 +1327,7 @@ object USBot extends BotHelpers {
     opsUsed
   }
   
-  def woiNonMuslimOperation(card: Card2): Int = {
+  def woiNonMuslimOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     val target  = woiNonMuslimTarget(countryNames(woiNonMuslimTargets(maxOps))).get
     val opsUsed = (game getNonMuslim target).governance
@@ -1338,7 +1338,7 @@ object USBot extends BotHelpers {
     opsUsed
   }
   
-  def deployOperation(card: Card2): Int = {
+  def deployOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     val (fromCandidates, toCandidates) = botDeployTargets(maxOps).get
     val from = deployFromTarget(fromCandidates).get
@@ -1380,7 +1380,7 @@ object USBot extends BotHelpers {
     opsUsed
   }
   
-  def disruptOperation(card: Card2): Int = {
+  def disruptOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     val target  = disruptTarget(game disruptTargets maxOps).get
     val opsUsed = (game getMuslim target).governance
@@ -1392,7 +1392,7 @@ object USBot extends BotHelpers {
     opsUsed
   }
   
-  def regimeChangeOperation(card: Card2): Int = {
+  def regimeChangeOperation(card: Card): Int = {
     val maxOps  = maxOpsPlusReserves(card)
     assert(maxOps >= 3, "regimeChangeOperation() called with less than 3 Ops available")
     assert(
@@ -1470,7 +1470,7 @@ object USBot extends BotHelpers {
   // But no single operation can be performed using only reserve ops.
   // If the opUsed is greater than or equal to the number of Ops on the card,
   // then we do nothing.
-  def homelandSecurity(card: Card2, opsUsed: Int): Unit = {
+  def homelandSecurity(card: Card, opsUsed: Int): Unit = {
     if (opsUsed < card.ops) {
       val unusedOps  = card.ops - opsUsed
       val maxRadOps  = unusedOps + game.reserves.us

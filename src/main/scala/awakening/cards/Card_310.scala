@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // the number of Cells.
 // Reduce US Prestige by the difference (max 3).
 // ------------------------------------------------------------------
-object Card_310 extends Card2(310, "Forever War", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_310 extends Card(310, "Forever War", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

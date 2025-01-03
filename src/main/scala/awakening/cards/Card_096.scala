@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // Then jihadists place an available Plot 1 or, if any Islamist Rule,
 // any available plot in a non-Islamist Rule Muslim country.
 // ------------------------------------------------------------------
-object Card_096 extends Card2(96, "Danish Cartoons", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -1638,7 +1638,7 @@ object JihadistBot extends BotHelpers {
   }
 
 
-  def maxOpsPlusReserves(card: Card2): Int = (card.ops + game.reserves.jihadist) min 3
+  def maxOpsPlusReserves(card: Card): Int = (card.ops + game.reserves.jihadist) min 3
 
   // Decrement the Bots reserves and log that they were used.
   def expendBotReserves(ops: Int): Unit = {
@@ -1661,13 +1661,13 @@ object JihadistBot extends BotHelpers {
     majorJihadPriorityCountry
   }
 
-  def performTriggeredEvent(card: Card2): Unit = {
+  def performTriggeredEvent(card: Card): Unit = {
     resetStaticData()
     performCardEvent(card, Jihadist, triggered = true)
   }
 
   // Starting point for Jihadist bot card play.
-  def cardPlay(card: Card2, playable: Boolean): Unit = {
+  def cardPlay(card: Card, playable: Boolean): Unit = {
     resetStaticData()
     // If the event is playable then the event is always executed
     if (playable && card.botWillPlayEvent(Jihadist)) {
@@ -1719,7 +1719,7 @@ object JihadistBot extends BotHelpers {
   // If we run out of cells and still have card ops (not reserves), then use the
   // excess card ops for radicalization.
   // Returns the number of Ops used.
-  def recruitOperation(card: Card2, optTarget: Option[String]): Int = {
+  def recruitOperation(card: Card, optTarget: Option[String]): Int = {
     if (botRecruitPossible(muslimWithCadreOnly = false)) {
       val recruitOps = game.cellsToRecruit min maxOpsPlusReserves(card)
       log()
@@ -1870,7 +1870,7 @@ object JihadistBot extends BotHelpers {
   // - Select active cells for travel before sleeper cells
   // - Never travel sleeper cells within the same country
   // Returns the number of Ops used.
-  def travelOperation(card: Card2, optTarget: Option[String], adjacentOnly: Boolean): Int = {
+  def travelOperation(card: Card, optTarget: Option[String], adjacentOnly: Boolean): Int = {
 
     def carryoutTravelOp(toName: String): Int = {
       val maxTravel = maxOpsPlusReserves(card)
@@ -2005,7 +2005,7 @@ object JihadistBot extends BotHelpers {
 
   // Travel to Poor/Unmarked Mulsim country where a Major Jihad roll
   // will succeds and where there are no Troops/Militia.
-  def enhancedTravelOperation(card: Card2): Int = {
+  def enhancedTravelOperation(card: Card): Int = {
 
     def carryoutTravelOp(toName: String): Int = {
       val maxTravel = maxOpsPlusReserves(card)
@@ -2096,7 +2096,7 @@ object JihadistBot extends BotHelpers {
 
 
   // Returns the number of Ops used.
-  def plotOperation(card: Card2, prestigeFocus: Boolean): Int = {
+  def plotOperation(card: Card, prestigeFocus: Boolean): Int = {
     val maxCells = (game.plotTargets map game.getCountry map unusedCells).sum
     val maxAttempts = maxOpsPlusReserves(card) min maxCells
     log()
@@ -2158,7 +2158,7 @@ object JihadistBot extends BotHelpers {
   // Make as many attempts as possible
   // If ops left over, repeat
   // Returns the number of Ops used.
-  def minorJihadOperation(card: Card2): Int = {
+  def minorJihadOperation(card: Card): Int = {
     log()
     log(s"$Jihadist performs a Minor Jihad operation")
     log(separator())
@@ -2203,7 +2203,7 @@ object JihadistBot extends BotHelpers {
   }
 
   // Returns the number of Ops used.
-  def majorJihadOperation(card: Card2): Int = {
+  def majorJihadOperation(card: Card): Int = {
     log()
     log(s"$Jihadist performs a Major Jihad operation")
     log(separator())
@@ -2248,7 +2248,7 @@ object JihadistBot extends BotHelpers {
   // This is a special action used by the Enhanced Bot when
   // there are currently no cells anywhere on the map.
   // Cells are placed in random muslim countries.
-  def placeRandomCellsOnMap(card: Card2): Int = {
+  def placeRandomCellsOnMap(card: Card): Int = {
     log()
     log(s"$Jihadist Places cells in random Muslim countries")
     log(separator())
@@ -3144,7 +3144,7 @@ object JihadistBot extends BotHelpers {
   // any available reserves as necessary.
   // If the opUsed is greater than or equal to the number of Ops on the card,
   // then we do nothing.
-  def radicalization(card: Card2, opsUsed: Int): Unit = {
+  def radicalization(card: Card, opsUsed: Int): Unit = {
     // A maximum of 3 ops can be used on a given card.  This is limited by the
     // number of available reserves.
     // Determine how ops we can use for radicalization.

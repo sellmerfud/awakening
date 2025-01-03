@@ -45,7 +45,7 @@ import awakening.USBot
 // Play if there is a Cell in a country with Troops or Advisors.
 // Remove the Cell.
 // ------------------------------------------------------------------
-object Card_250 extends Card2(250, "Special Forces", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_250 extends Card(250, "Special Forces", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

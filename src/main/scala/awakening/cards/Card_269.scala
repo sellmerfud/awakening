@@ -45,7 +45,7 @@ import awakening.USBot
 // Remove up to 3 Cells total from any countries in Civil War or Regime Change,
 // OR Remove 4 Cells total from Caliphate Countries.
 // ------------------------------------------------------------------
-object Card_269 extends Card2(269, "Air America", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

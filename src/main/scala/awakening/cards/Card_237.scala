@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // If US play, -2 Funding. +3 Prestige.  REMOVE
 // If Jihadist, -1 Prestige for each Islamist Rule and/or Civil War country,
 // ------------------------------------------------------------------
-object Card_237 extends Card2(237, "Osama bin Ladin", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_237 extends Card(237, "Osama bin Ladin", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

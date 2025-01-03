@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // REMOVE
 // If Jihadist play: Place up to 3 Cells in a single Muslim country.
 // ------------------------------------------------------------------
-object Card_338 extends Card2(338, "Abu Muhammad al-Shimali", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.USBot
 // another via the Random Shia-Mix Country table (9.5). If not placeable
 // there, roll again.
 // ------------------------------------------------------------------
-object Card_134 extends Card2(134, "Civil Resistance", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_134 extends Card(134, "Civil Resistance", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

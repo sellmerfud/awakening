@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // +1 Prestige and -2 Funding.
 // Remove marker if a plot resolved in Israel. 
 // ------------------------------------------------------------------
-object Card_011 extends Card2(11, "Abbas", US, 2, Remove, NoLapsing) {
+object Card_011 extends Card(11, "Abbas", US, 2, Remove, NoLapsing) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

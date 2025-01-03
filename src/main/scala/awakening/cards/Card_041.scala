@@ -46,7 +46,7 @@ import awakening.USBot
 // Place 1 Aid and NATO there. NATO is 2 troops.
 // If it deploys, remove it. 
 // ------------------------------------------------------------------
-object Card_041 extends Card2(41, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_041 extends Card(41, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

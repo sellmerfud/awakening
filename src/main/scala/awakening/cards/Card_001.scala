@@ -47,7 +47,7 @@ import awakening.USBot
 // If unblocked, the plot subtracts rather than adss Funding
 // (if WMD, Funding to 1).
 // ------------------------------------------------------------------
-object Card_001 extends Card2(1, "Backlash", US, 1, NoRemove, NoLapsing) {
+object Card_001 extends Card(1, "Backlash", US, 1, NoRemove, NoLapsing) {
   val isCandidate = (m: MuslimCountry) =>
     m.plots.exists(p => !p.backlashed) &&
     !game.isCaliphateMember(m.name)

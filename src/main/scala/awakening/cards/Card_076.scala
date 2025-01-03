@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play if any cells are in a Regime Change country.
 // Draw 2 cards. -2 Prestige. Shift an Ally to Neutral.
 // ------------------------------------------------------------------
-object Card_076 extends Card2(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_076 extends Card(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

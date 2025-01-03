@@ -45,7 +45,7 @@ import awakening.USBot
 // Set United Kingdon's Posture to that of US.
 // Roll War of Ideas in up to 3 Schengen countries. 
 // ------------------------------------------------------------------
-object Card_029 extends Card2(29, "Tony Blair", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_029 extends Card(29, "Tony Blair", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.USBot
 // Play in a non-Adversary Muslim country with a Cell.
 // Place 1 Militia there.
 // ------------------------------------------------------------------
-object Card_244 extends Card2(244, "Foreign Internal Defense", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_244 extends Card(244, "Foreign Internal Defense", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

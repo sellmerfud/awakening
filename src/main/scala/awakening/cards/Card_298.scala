@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Place a non-WMD Plot in any country OR Remove a Posture marker
 // from a tested non-Muslim country.
 // ------------------------------------------------------------------
-object Card_298 extends Card2(298, "False Flag Attacks", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

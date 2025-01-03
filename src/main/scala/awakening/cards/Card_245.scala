@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Place an Awakening marker in Iran.
 // Cannot be played in a Caliphate country.
 // ------------------------------------------------------------------
-object Card_245 extends Card2(245, "Green Movement 2.0", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_245 extends Card(245, "Green Movement 2.0", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

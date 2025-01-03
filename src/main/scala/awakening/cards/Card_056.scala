@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if a Regime Change country has a cell. -1 Prestige.
 // Block UN Nation Building. 
 // ------------------------------------------------------------------
-object Card_056 extends Card2(56, "Vieira de Mello Slain", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_056 extends Card(56, "Vieira de Mello Slain", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

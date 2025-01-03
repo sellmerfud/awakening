@@ -50,7 +50,7 @@ import awakening.USBot
 // not a Special Case country.
 // -2 Prestige afterwards if Regime Change occurs.
 // ------------------------------------------------------------------
-object Card_277 extends Card2(277, "Regime Change Policy", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_277 extends Card(277, "Regime Change Policy", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

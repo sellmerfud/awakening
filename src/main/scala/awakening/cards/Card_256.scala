@@ -45,7 +45,7 @@ import awakening.USBot
 // Play if Militia in a Civil War Country.
 // +1 Prestige OR -1 Funding
 // ------------------------------------------------------------------
-object Card_256 extends Card2(256, "White Helmets", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_256 extends Card(256, "White Helmets", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

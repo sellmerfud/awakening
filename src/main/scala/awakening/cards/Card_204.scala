@@ -46,7 +46,7 @@ import awakening.USBot
 // end of next draw phase, then to Track. +2 Prestige. LAPSING & REMOVE
 // If Jihadist, US randomly discards 1 card.  REMOVE
 // ------------------------------------------------------------------
-object Card_204 extends Card2(204, "Ebola Scare", Unassociated, 1, Remove, USLapsing, NoAutoTrigger) {
+object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Place a cell in Somalia. 
 // ------------------------------------------------------------------
-object Card_049 extends Card2(49, "Al-Ittihad al-Islami", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_049 extends Card(49, "Al-Ittihad al-Islami", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.USBot
 // Play if Somalia or Sudan in under Islamist Rule.
 // Set it to Poor Neutral.
 // ------------------------------------------------------------------
-object Card_015 extends Card2(15, "Ethiopia Strikes", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_015 extends Card(15, "Ethiopia Strikes", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

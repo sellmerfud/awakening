@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // This turn, travel to adjacent Good countries must roll to succeed
 // and no non-adjacent travel. 
 // ------------------------------------------------------------------
-object Card_002 extends Card2(2, "Biometrics", US, 1, NoRemove, Lapsing) {
+object Card_002 extends Card(2, "Biometrics", US, 1, NoRemove, Lapsing) {
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country

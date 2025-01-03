@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Recruit in the US with the 2nd card. Succeeding on rolls of 1 or
 // 2 and ignoring any US event.
 // ------------------------------------------------------------------
-object Card_048 extends Card2(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

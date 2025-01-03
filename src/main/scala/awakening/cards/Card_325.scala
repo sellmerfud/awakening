@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // If US play: -1 Funding
 // If Jihadist: -1 Prestige
 // ------------------------------------------------------------------
-object Card_325 extends Card2(325, "Dissent Channel", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_325 extends Card(325, "Dissent Channel", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

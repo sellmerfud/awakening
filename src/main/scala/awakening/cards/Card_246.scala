@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // or a country with more than one Cell.
 // +1 Prestige
 // ------------------------------------------------------------------
-object Card_246 extends Card2(246, "Holiday Surprise", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_246 extends Card(246, "Holiday Surprise", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

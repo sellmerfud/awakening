@@ -45,7 +45,7 @@ import awakening.USBot
 // Place up to 2 Advisors total in up to 2 non-Adversary Civil War
 // countries without Troops.
 // ------------------------------------------------------------------
-object Card_279 extends Card2(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

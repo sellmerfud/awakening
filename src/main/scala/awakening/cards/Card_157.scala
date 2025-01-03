@@ -46,7 +46,7 @@ import awakening.USBot
 // Place 2 Troops from Track and an Aid marker in a country in Civil War,
 // even if not Ally. Place an Awakening marker in an Adjacent country.
 // ------------------------------------------------------------------
-object Card_157 extends Card2(157, "Limited Deployment", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_157 extends Card(157, "Limited Deployment", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

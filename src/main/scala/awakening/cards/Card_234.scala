@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // Place 1 Aid marker in Turkey,
 // REMOVE
 // ------------------------------------------------------------------
-object Card_234 extends Card2(234, "Free Syrian Army", Unassociated, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_234 extends Card(234, "Free Syrian Army", Unassociated, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

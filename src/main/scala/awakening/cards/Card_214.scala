@@ -45,7 +45,7 @@ import awakening.{ USBot, JihadistBot }
 // If Jihadist, place 1 Reaction marker in an Unmarked country and
 // Blocks Malala Yousafzai.
 // ------------------------------------------------------------------
-object Card_214 extends Card2(214, "3 Cups of Tea", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_214 extends Card(214, "3 Cups of Tea", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

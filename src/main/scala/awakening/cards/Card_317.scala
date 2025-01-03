@@ -49,7 +49,7 @@ import awakening.LabyrinthAwakening._
 // Makes Iran, Gulf States, Saudi Arabia, and Yemen all adjacent through a Persian Gulf water link.
 // MARK & REMOVE
 // ------------------------------------------------------------------
-object Card_317 extends Card2(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_317 extends Card(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // If US play: Place an Awakening marker in Turkey.
 // If Jihadist: Place up to 2 Cells in Turkey.
 // ------------------------------------------------------------------
-object Card_341 extends Card2(341, "Gulen Movement", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_341 extends Card(341, "Gulen Movement", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

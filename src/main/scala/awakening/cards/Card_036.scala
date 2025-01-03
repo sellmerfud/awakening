@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Block Kashmir and Lashkar-e-Tayyiba.
 // Remove marker if a plot resolved in India.
 // ------------------------------------------------------------------
-object Card_036 extends Card2(36, "Indo-Pakistani Talks", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_036 extends Card(36, "Indo-Pakistani Talks", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

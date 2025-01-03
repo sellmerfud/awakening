@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // If Jihadist, US Posture to Soft.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_222 extends Card2(222, "Hagel", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_222 extends Card(222, "Hagel", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

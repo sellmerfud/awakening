@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // If Jihadist: Worsen Turkish Governance 1 level OR Shift Alignment
 // one box towards Adversary. REMOVE
 // ------------------------------------------------------------------
-object Card_349 extends Card2(349, "Turkish Coup", Unassociated, 2, JihadistRemove, NoLapsing, NoAutoTrigger) {
+object Card_349 extends Card(349, "Turkish Coup", Unassociated, 2, JihadistRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

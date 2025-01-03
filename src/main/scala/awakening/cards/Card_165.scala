@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play if a 1 Resource value country has 2 or more Cells.
 // Place a Civil War and Besieged Regime marker there.
 // ------------------------------------------------------------------
-object Card_165 extends Card2(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_165 extends Card(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

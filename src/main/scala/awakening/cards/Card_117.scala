@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // the discard pile or a box.
 // Add +1 to the resources of each Oil Exporter country for the turn.
 // ------------------------------------------------------------------
-object Card_117 extends Card2(117, "Oil Price Spike", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

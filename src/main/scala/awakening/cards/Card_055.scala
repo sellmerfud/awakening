@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Test China.
 // Place a cell in Central Asia if China Hard, in China if Soft.
 // ------------------------------------------------------------------
-object Card_055 extends Card2(55, "Uyghur Jihad", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_055 extends Card(55, "Uyghur Jihad", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

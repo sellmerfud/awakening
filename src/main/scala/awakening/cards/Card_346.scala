@@ -47,7 +47,7 @@ import awakening.{USBot, JihadistBot }
 // Place either a Cell or a Militia there.
 // Then remove 1 of the other type if present in the same country:
 // ------------------------------------------------------------------
-object Card_346 extends Card2(346, "Pakistani Intelligence (ISI)", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

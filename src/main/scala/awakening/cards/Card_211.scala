@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // Place 1 Awakening or 1 Reaction marker in one of those countries.
 // Allows play of Facebook.
 // ------------------------------------------------------------------
-object Card_211 extends Card2(211, "Smartphones", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // Remove a Militia or a Cell.
 // Place an Aid or a Besieged Regime marker.
 // ------------------------------------------------------------------
-object Card_345 extends Card2(345, "Operation Euphrates Shield", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

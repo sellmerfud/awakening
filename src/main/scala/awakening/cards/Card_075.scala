@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if US Hard.
 // Set Germany and France to Soft. -1 Prestige.
 // ------------------------------------------------------------------
-object Card_075 extends Card2(75, "Schroeder & Chirac", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_075 extends Card(75, "Schroeder & Chirac", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

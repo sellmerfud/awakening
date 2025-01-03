@@ -47,7 +47,7 @@ import awakening.USBot.PlotInCountry
 // Play if you can select a Plot in a Muslim country.
 // If unblocked, the Plot subtracts rather than adds Funding (if WMD, Funding to 1).
 // ------------------------------------------------------------------
-object Card_122 extends Card2(122, "Backlash", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_122 extends Card(122, "Backlash", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

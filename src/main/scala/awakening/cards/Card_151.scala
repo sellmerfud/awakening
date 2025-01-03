@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // (+1 Prestige for each WMD Removed; 11.3.1).
 // REMOVE
 // ------------------------------------------------------------------
-object Card_151 extends Card2(151, "UNSCR 2118", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_151 extends Card(151, "UNSCR 2118", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

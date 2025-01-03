@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 //   Success (1-3), add Iranian WMD to Available Plots and REMOVE.
 //   Failure (4-6), remove the Cell.
 // ------------------------------------------------------------------
-object Card_181 extends Card2(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_181 extends Card(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

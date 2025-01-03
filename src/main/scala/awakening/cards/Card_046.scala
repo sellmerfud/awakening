@@ -45,7 +45,7 @@ import awakening.USBot
 // Play if Shia-Mix Regime Change country has a cell.
 // Improve Governance there 1 Level.
 // ------------------------------------------------------------------
-object Card_046 extends Card2(46, "Sistani", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_046 extends Card(46, "Sistani", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

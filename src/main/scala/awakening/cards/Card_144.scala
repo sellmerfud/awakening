@@ -44,7 +44,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 // Replace 2 US Troops with 2 Militia. Return Troops to Track.
 // ------------------------------------------------------------------
-object Card_144 extends Card2(144, "Operation New Dawn", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_144 extends Card(144, "Operation New Dawn", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

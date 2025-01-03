@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // and Poor (or adjacent to a Civil War and not Good).
 // Activate all Cells and place the country in Civil War.
 // ------------------------------------------------------------------
-object Card_293 extends Card2(293, "Attempted Coup", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_293 extends Card(293, "Attempted Coup", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

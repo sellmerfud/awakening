@@ -45,7 +45,7 @@ import awakening.USBot
 // Play in any country in Civil War or Regime Change.
 // Place a number of Militia equal to the Resource value of that country.
 // ------------------------------------------------------------------
-object Card_142 extends Card2(142, "Militia", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_142 extends Card(142, "Militia", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 //   -2 Funding REMOVE this card.
 // If jihadist play: -1 Prestige, or -3 Prestige if any Islamist Rule.
 // ------------------------------------------------------------------
-object Card_111 extends Card2(111, "Zawahiri", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_111 extends Card(111, "Zawahiri", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

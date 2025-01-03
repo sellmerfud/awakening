@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // -1 Prestige.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_188 extends Card2(188, "ISIL", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_188 extends Card(188, "ISIL", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

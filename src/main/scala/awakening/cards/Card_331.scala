@@ -50,7 +50,7 @@ import awakening.LabyrinthAwakening._
 // Vehicle-ramming Attacks, Barcelona Bombs.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_331 extends Card2(331, "JASTA", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_331 extends Card(331, "JASTA", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

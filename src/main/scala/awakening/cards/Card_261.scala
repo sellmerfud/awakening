@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Inspect Jihadist hand. Remove a Cadre. Conduct a 1-value Operation.
 // You may interrupt this Action Phase now to play an extra card.
 // ------------------------------------------------------------------
-object Card_261 extends Card2(261, "Intel Community", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_261 extends Card(261, "Intel Community", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

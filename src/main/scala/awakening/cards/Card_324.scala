@@ -50,7 +50,7 @@ import awakening.JihadistBot
 //             Schengen Countries. MARK & REMOVE
 // If Jibadist: -1 Prestige. Move closest Cell (Jihadist choice if equidistant) to the UK.
 // ------------------------------------------------------------------
-object Card_324 extends Card2(324, "BREXIT", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_324 extends Card(324, "BREXIT", Unassociated, 1, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

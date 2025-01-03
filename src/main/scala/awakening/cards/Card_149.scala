@@ -46,7 +46,7 @@ import awakening.USBot
 // Place 1 Aid there and roll a War of Ideas as if GWOT Penalty 0.
 // ** Not in Caliphate Member **
 // ------------------------------------------------------------------
-object Card_149 extends Card2(149, "UN Nation Building", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_149 extends Card(149, "UN Nation Building", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

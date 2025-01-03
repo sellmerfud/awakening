@@ -49,7 +49,7 @@ import awakening.USBot
 // Adjust US Prestige by (Hard Schengen - Soft Schengen) countries (maximum of + or - 3).
 // Allows play of BREXIT
 // ------------------------------------------------------------------
-object Card_276 extends Card2(276, "Populism/Euroscepticism", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_276 extends Card(276, "Populism/Euroscepticism", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

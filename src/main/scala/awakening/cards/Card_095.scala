@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Add the number of Saudi Arabia's Governance to Funding or set
 // to 9 if Islamist Rule.
 // ------------------------------------------------------------------
-object Card_095 extends Card2(95, "Wahhabism", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_095 extends Card(95, "Wahhabism", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

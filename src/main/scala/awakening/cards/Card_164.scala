@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Blocks Pearl Roundabout.
 // Remove 1 Awakening marker in any country.
 // ------------------------------------------------------------------
-object Card_164 extends Card2(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_164 extends Card(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

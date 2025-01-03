@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // If Jihadist: Subtract 1 from roll, and US may not perform
 // War of Ideas in Schengen countries the rest of this turn.  REMOVE
 // ------------------------------------------------------------------
-object Card_340 extends Card2(340, "EU Bolsters Iran Deal", Unassociated, 2, JihadistRemove, JihadistLapsing, NoAutoTrigger) {
+object Card_340 extends Card(340, "EU Bolsters Iran Deal", Unassociated, 2, JihadistRemove, JihadistLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // for each hit secured by the US player.
 //-1 Prestige.
 // ------------------------------------------------------------------
-object Card_271 extends Card2(271, "Expanded ROE", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_271 extends Card(271, "Expanded ROE", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

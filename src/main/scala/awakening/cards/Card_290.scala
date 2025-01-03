@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // 5-6) Place a level 1 Plot in China.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_290 extends Card2(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_290 extends Card(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

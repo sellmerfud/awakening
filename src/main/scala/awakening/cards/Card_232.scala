@@ -48,7 +48,7 @@ import awakening.JihadistBot
 // If Jihadist, -1 Prestige. Place 1 Reaction marker in a Shia-Mix country.
 // Iran no longer an Oil Exporter.
 // ------------------------------------------------------------------
-object Card_232 extends Card2(232, "Trade Embargo", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

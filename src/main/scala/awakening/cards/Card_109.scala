@@ -45,7 +45,7 @@ import awakening.{ USBot, JihadistBot }
 // Play if at least 2 cells in a Regime Change country.
 // Remove the 2 cells. Roll Prestige. Draw a card.
 // ------------------------------------------------------------------
-object Card_109 extends Card2(109, "Tora Bora", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
 
  def getCandidates() = countryNames(
     game.muslims.filter(m => m.inRegimeChange && m.totalCells > 1)

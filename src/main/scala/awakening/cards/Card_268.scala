@@ -47,7 +47,7 @@ import awakening.USBot
 // Set Posture of 1 country to match that of US.
 // Cannot be played in a caliphate country.
 // ------------------------------------------------------------------
-object Card_268 extends Card2(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

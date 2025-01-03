@@ -48,7 +48,7 @@ import awakening.LabyrinthAwakening._
 // one to give.
 // If no events of the opposing side, give any card.
 // ------------------------------------------------------------------
-object Card_229 extends Card2(229, "Prisoner Exchange", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_229 extends Card(229, "Prisoner Exchange", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

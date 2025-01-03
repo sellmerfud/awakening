@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Draw a card.
 // Can be blocked by Leak . 
 // ------------------------------------------------------------------
-object Card_031 extends Card2(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   val PotentialTargets = List(UnitedStates, UnitedKingdom, Canada)
   def getCandidates() = countryNames(
     game.getCountries(PotentialTargets) filter { c =>

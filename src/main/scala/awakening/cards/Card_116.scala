@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // If jihadist play, place an available plot in a non-Islamist Rule
 // country with a cell.
 // ------------------------------------------------------------------
-object Card_116 extends Card2(116, "KSM", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
   def getUSCandidates() = countryNames(
     (game.nonMuslims ::: game.muslims.filter(_.isAlly))
       .filter(_.plots.nonEmpty)

@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Roll 1 die.
 // Funding increased by half the result, rounded up.
 // ------------------------------------------------------------------
-object Card_295 extends Card2(295, "Black Gold", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_295 extends Card(295, "Black Gold", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // untested Muslim country in Africa.
 // Place up to three Cells there.
 // ------------------------------------------------------------------
-object Card_321 extends Card2(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_321 extends Card(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

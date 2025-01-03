@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // Place 5 Cells there and remove 1 Aid, if any, or, if none, place
 // Besieged Regime.
 // ------------------------------------------------------------------
-object Card_187 extends Card2(187, "Foreign Fighters", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_187 extends Card(187, "Foreign Fighters", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

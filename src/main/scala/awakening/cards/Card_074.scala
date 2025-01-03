@@ -44,7 +44,7 @@ import awakening.JihadistBot
 // ------------------------------------------------------------------
 // Automatically travel 2 cells to or within any Schengen countries.
 // ------------------------------------------------------------------
-object Card_074 extends Card2(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

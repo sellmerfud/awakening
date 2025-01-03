@@ -48,7 +48,7 @@ import awakening.{ USBot, JihadistBot }
 // and place the same number as Cells in one Civil War, Regime Change
 // or Caliphate country.
 // ------------------------------------------------------------------
-object Card_221 extends Card2(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // If Jihadist, -1 Prestige for every 4 Reaction markers
 // (or fraction thereof) on the map.
 // ------------------------------------------------------------------
-object Card_219 extends Card2(219, "Ayman al-Zawahiri", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_219 extends Card(219, "Ayman al-Zawahiri", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

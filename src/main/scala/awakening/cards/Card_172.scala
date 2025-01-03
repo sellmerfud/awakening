@@ -49,7 +49,7 @@ import awakening.JihadistBot
 // place 1 Besieged Regime marker,
 // Select, reveal and draw Pirates, Boko Haram, or Islamic Maghreb from discard pile.
 // ------------------------------------------------------------------
-object Card_172 extends Card2(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

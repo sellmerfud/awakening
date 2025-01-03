@@ -47,7 +47,7 @@ import awakening.JihadistBot
 // Success: Add a WMD to Available Plots.
 // Failure: Remove the cell.
 // ------------------------------------------------------------------
-object Card_069 extends Card2(69, "Kazakh Strain", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_069 extends Card(69, "Kazakh Strain", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.{ USBot, JihadistBot }
 // Play in any Poor country with both Awakening and Reaction markers present.
 // Place that country into Civil War.
 // ------------------------------------------------------------------
-object Card_238 extends Card2(238, "Revolution", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_238 extends Card(238, "Revolution", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

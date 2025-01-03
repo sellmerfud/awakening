@@ -741,7 +741,7 @@ object LabyrinthAwakening {
   val AutoTrigger   = true
   val NoAutoTrigger = false
 
-  class Card2(
+  class Card(
     val number: Int,
     val name: String,
     val association: CardAssociation,
@@ -802,58 +802,10 @@ object LabyrinthAwakening {
   }
 
     // Sort by card number
-  implicit val Card2Ordering: Ordering[Card2] = new Ordering[Card2] {
-    def compare(x: Card2, y: Card2) = x.number compare y.number
-  }
-  
-  class Card(
-    val number: Int,
-    val name: String,
-    val association: CardAssociation,
-    val printedOps: Int,
-    val remove: CardRemoval,
-    val lapsing: CardLapsing,
-    val autoTrigger: Boolean,
-    val eventAlertsPlot: EventAlertsPlot,
-    val eventRemovesLastCell: EventRemovesLastCell,
-    val eventConditions: EventConditions,
-    val executeEvent: CardEvent) {
-
-    def ops: Int = printedOps
-
-    def numAndName = s"#$number $name"
-    override def toString() = s"${numAndName} (${opsString(ops)})"
-
-    def eventIsPlayable(role: Role): Boolean =
-      (association == Unassociated || association == role) && eventConditions(role, false)
-
-    def eventWillTrigger(opponentRole: Role): Boolean = {
-      association  == opponentRole &&
-      opponentRole == game.botRole &&
-      eventConditions(opponentRole, true)
-    }
-
-    def markLapsingAfterExecutingEvent(role: Role) = (lapsing, role) match {
-      case (Lapsing, _)                => true
-      case (USLapsing, US)             => true
-      case (JihadistLapsing, Jihadist) => true
-      case _                           => false
-    }
-
-    def removeAfterExecutingEvent(role: Role) = (remove, role) match {
-      case (Remove, _)                => true
-      case (USRemove, US)             => true
-      case (JihadistRemove, Jihadist) => true
-      case _                          => false
-    }
-
-  }
-
-  // Sort by card number
   implicit val CardOrdering: Ordering[Card] = new Ordering[Card] {
     def compare(x: Card, y: Card) = x.number compare y.number
   }
-
+  
   sealed trait Play {
     def name: String  // Used for quantifying type in save game files
     def numCards: Int
@@ -893,9 +845,9 @@ object LabyrinthAwakening {
 
   object deck {
     import awakening.cards._
-    private def entry(card: Card2) = (card.number -> card)
+    private def entry(card: Card) = (card.number -> card)
 
-    val deckMap: Map[Int, Card2] = Map(
+    val deckMap: Map[Int, Card] = Map(
       entry(Card_001), entry(Card_002), entry(Card_003), entry(Card_004), entry(Card_005),
       entry(Card_006), entry(Card_007), entry(Card_008), entry(Card_009), entry(Card_010),
       entry(Card_011), entry(Card_012), entry(Card_013), entry(Card_014), entry(Card_015),
@@ -970,10 +922,10 @@ object LabyrinthAwakening {
       entry(Card_356), entry(Card_357), entry(Card_358), entry(Card_359), entry(Card_360),
     )
     def isValidCardNumber(num: Int): Boolean = deckMap.contains(num)
-    def apply(num: Int): Card2      = deckMap(num)  // Allows deck(4) to get a specific card
-    def cards: List[Card2]          = deckMap.valuesIterator.toList.sorted
-    def lapsing: List[Card2]        = cards.filter(_.lapsing != NoLapsing)
-    def removable: List[Card2]      = cards.filter(_.remove != NoRemove)
+    def apply(num: Int): Card      = deckMap(num)  // Allows deck(4) to get a specific card
+    def cards: List[Card]          = deckMap.valuesIterator.toList.sorted
+    def lapsing: List[Card]        = cards.filter(_.lapsing != NoLapsing)
+    def removable: List[Card]      = cards.filter(_.remove != NoRemove)
 
   }
 
@@ -3232,7 +3184,7 @@ object LabyrinthAwakening {
   def logAdjustment(countryName: String, attributeName: String, oldValue: Any, newValue: Any): Unit =
     logAdjustment(s"$countryName: $attributeName", oldValue, newValue)
 
-  def logCardPlay(player: Role, card: Card2, playable: Boolean, secondCard: Boolean = false): Unit = {
+  def logCardPlay(player: Role, card: Card, playable: Boolean, secondCard: Boolean = false): Unit = {
     val fakeNews = if (lapsingEventInPlay(FakeNews))
      """ but will be cancelled by "Fake News""""
     else
@@ -4571,7 +4523,7 @@ object LabyrinthAwakening {
   }
 
 
-  def performCardEvent(card: Card2, role: Role, triggered: Boolean = false): Unit = {
+  def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Unit = {
     if (!card.autoTrigger && lapsingEventInPlay(FakeNews)) {
       log("\n%s event \"%s\" is cancelled by \"Fake News\"".format(card.association, card.name), Color.Event)
       removeLapsingCards(FakeNews::Nil)
@@ -6968,12 +6920,12 @@ object LabyrinthAwakening {
   }
 
   sealed trait CardAction
-  case class  TriggeredEvent(card: Card2) extends CardAction
+  case class  TriggeredEvent(card: Card) extends CardAction
   case object Ops                        extends CardAction
 
   // Return a list of actions.
   // card2 is only used for US reassessment
-  def getActionOrder(cards: List[Card2], opponent: Role): List[CardAction] = {
+  def getActionOrder(cards: List[Card], opponent: Role): List[CardAction] = {
     val triggeredCards = cards filter (c => c.autoTrigger || c.association == opponent)
     triggeredCards match {
       case c :: Nil =>
@@ -7009,7 +6961,7 @@ object LabyrinthAwakening {
 
   // Test to see if the event should trigger and if so
   // perform the event.
-  def attemptTriggeredEvent(opponentRole: Role, card: Card2): Unit = {
+  def attemptTriggeredEvent(opponentRole: Role, card: Card): Unit = {
     if (card.autoTrigger)
       performCardEvent(card, opponentRole, triggered = true)
     else if (card.association == opponentRole && card.eventWillTrigger(opponentRole))
@@ -7109,7 +7061,7 @@ object LabyrinthAwakening {
   // Once the user enters a valid command (other than using reserves), then in order to
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
-  def humanUsCardPlay(card: Card2, playable: Boolean): Unit = {
+  def humanUsCardPlay(card: Card, playable: Boolean): Unit = {
     val ExecuteEvent = "Execute event"
     val WarOfIdeas   = "War of ideas"
     val Deploy       = "Deploy"
@@ -7124,7 +7076,7 @@ object LabyrinthAwakening {
     var reservesUsed = 0
     var card1EventValid = false
     def inReserve    = game.reserves.us
-    var secondCard: Option[Card2] = None   // For reassessment only
+    var secondCard: Option[Card] = None   // For reassessment only
     def opsAvailable = (card.ops + reservesUsed) min 3
 
     @tailrec def getAction(): String = {
@@ -7517,7 +7469,7 @@ object LabyrinthAwakening {
   // Once the user enters a valid command (other than using reserves), then in order to
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
-  def humanJihadistCardPlay(card: Card2, playable: Boolean): Unit = {
+  def humanJihadistCardPlay(card: Card, playable: Boolean): Unit = {
     val ExecuteEvent = "Execute event"
     val Recruit      = "Recruit"
     val Travel       = "Travel"

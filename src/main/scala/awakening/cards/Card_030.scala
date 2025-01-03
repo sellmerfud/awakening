@@ -46,7 +46,7 @@ import awakening.USBot
 // Place 1 Aid there and roll a War of Ideas as if GWOT Penalty 0.
 // Blocked by Vieira de Mello Slain. 
 // ------------------------------------------------------------------
-object Card_030 extends Card2(30, "UN Nation Building", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_030 extends Card(30, "UN Nation Building", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

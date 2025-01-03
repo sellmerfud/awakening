@@ -58,7 +58,7 @@ import awakening.{ USBot, JihadistBot }
 //       Place cell using Schengen table.
 
 // ------------------------------------------------------------------
-object Card_215 extends Card2(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

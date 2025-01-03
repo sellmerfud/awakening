@@ -47,7 +47,7 @@ import awakening.USBot
 // that are adjacent to the other type.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_280 extends Card2(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

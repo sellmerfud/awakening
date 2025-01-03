@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Shift Pakistan 1 box toward Adversary and place a cell there.
 // Blocked by Indo-Pakistani Talks.
 // ------------------------------------------------------------------
-object Card_083 extends Card2(83, "Kashmir", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_083 extends Card(83, "Kashmir", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

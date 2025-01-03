@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // US side discards its highest-value US-associated event card, if it has any.
 // ------------------------------------------------------------------
-object Card_059 extends Card2(59, "Amerithrax", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_059 extends Card(59, "Amerithrax", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

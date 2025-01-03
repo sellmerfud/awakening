@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play if troops in Iraq.
 // If Saddam Captured, place 2 cells in Iraq. If not, place 4.
 // ------------------------------------------------------------------
-object Card_051 extends Card2(51, "FREs", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_051 extends Card(51, "FREs", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

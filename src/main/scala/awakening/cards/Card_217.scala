@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // event card that causes Civil War or allows Regime Change
 // (specific cards listed in 11.3.13).
 // ------------------------------------------------------------------
-object Card_217 extends Card2(217, "Agitators", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
   def cardCandidates() = {
     val labCards = if (GameModeOrdering.lt(game.startingMode, AwakeningMode))

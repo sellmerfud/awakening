@@ -44,7 +44,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 // Remove a Besieged Regime marker.
 // ------------------------------------------------------------------
-object Card_028 extends Card2(28, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_028 extends Card(28, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
   def getCandidates() = countryNames(game.muslims.filter(_.besiegedRegime))
 

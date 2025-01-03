@@ -48,7 +48,7 @@ import awakening.USBot
 // If US Soft, shift Alignment 1 box towards Adversary.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_270 extends Card2(270, "Deep State", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_270 extends Card(270, "Deep State", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

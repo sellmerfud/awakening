@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // In a Poor country,
 // replace 1 Awakening marker with 1 Reaction marker.
 // ------------------------------------------------------------------
-object Card_170 extends Card2(170, "Theft of State", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_170 extends Card(170, "Theft of State", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

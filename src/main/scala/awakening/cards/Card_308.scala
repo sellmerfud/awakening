@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Place an Active Cell and any Available Plot marker in the Philippines.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_308 extends Card2(308, "Battle of Marawi City", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_308 extends Card(308, "Battle of Marawi City", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // Good, Islamist Rule, Civil War or Regime Change.
 // Remove all pieces and markers; return to Unmarked status.
 // ------------------------------------------------------------------
-object Card_176 extends Card2(176, "Change of State", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

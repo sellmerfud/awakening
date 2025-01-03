@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Set Turkey to Fair Ally.
 // ------------------------------------------------------------------
-object Card_019 extends Card2(19, "Kemalist Republic", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_019 extends Card(19, "Kemalist Republic", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

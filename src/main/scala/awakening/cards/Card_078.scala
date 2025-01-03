@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // US discards any Iran, Hizballah , or Jaysh al-Mahdi cards from hand.
 // US Posture to Hard. Then roll Prestige.
 // ------------------------------------------------------------------
-object Card_078 extends Card2(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_078 extends Card(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

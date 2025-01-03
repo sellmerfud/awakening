@@ -48,7 +48,7 @@ import awakening.JihadistBot
 // then conduct a Jihad there with this card's Operations value.
 // Ignore failures. Ignore any Shifts to Islamist Rule.
 // ------------------------------------------------------------------
-object Card_342 extends Card2(342, "Gulmurod Khalimov", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

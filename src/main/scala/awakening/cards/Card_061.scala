@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // Place a cell where a disrupt occurred. Draw a card.
 // Blocked by GTMO or Renditions .
 // ------------------------------------------------------------------
-object Card_061 extends Card2(61, "Detainee Release", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

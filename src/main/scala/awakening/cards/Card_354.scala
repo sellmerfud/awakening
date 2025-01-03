@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Russia Soft -1. Russia Hard +1.
 // Then, if GWOT Penalty 0, +1 Prestige. If not, -1 Prestige.
 // ------------------------------------------------------------------
-object Card_354 extends Card2(354, "Election Meddling", Unassociated, 3, NoRemove, NoLapsing, AutoTrigger) {
+object Card_354 extends Card(354, "Election Meddling", Unassociated, 3, NoRemove, NoLapsing, AutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

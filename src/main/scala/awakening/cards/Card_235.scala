@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // make Poor Adversary. If Militia + Troops outnumber Cells, make Fair Ally.
 // Otherwise no change in Governance or Alignment.
 // ------------------------------------------------------------------
-object Card_235 extends Card2(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

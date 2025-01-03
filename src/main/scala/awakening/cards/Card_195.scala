@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // Remove 3 Cells. Place any 2 Available Plots (non-WMD) and make 2 Jihad
 // rolls there. Ignore failures or shifts to Islamist Rule.
 // ------------------------------------------------------------------
-object Card_195 extends Card2(195, "Taliban Resurgent", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

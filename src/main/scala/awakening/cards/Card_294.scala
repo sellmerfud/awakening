@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Test Spain, then place up to 2 Level 1 Plots there.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_294 extends Card2(294, "Barcelona Bombs", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_294 extends Card(294, "Barcelona Bombs", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

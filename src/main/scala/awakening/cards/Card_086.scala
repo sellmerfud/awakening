@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // US discards a random card. -1 Prestige.
 // Place a cell in a Shia-Mix country.
 // ------------------------------------------------------------------
-object Card_086 extends Card2(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_086 extends Card(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

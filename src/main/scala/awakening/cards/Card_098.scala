@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // If US Play: -1 Funding.
 // If jihadist: Place a cell in Israel.
 // ------------------------------------------------------------------
-object Card_098 extends Card2(98, "Gaza Withdrawal", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_098 extends Card(98, "Gaza Withdrawal", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

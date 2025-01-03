@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // -1 Prestige.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_171 extends Card2(171, "Abu Ghraib Jail Break", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_171 extends Card(171, "Abu Ghraib Jail Break", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

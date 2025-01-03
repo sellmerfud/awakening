@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // have more Troops + Militia or Cells than your opponent.
 // Replace a Cell with a Militia or vice versa.
 // ------------------------------------------------------------------
-object Card_347 extends Card2(347, "Switching Jerseys", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_347 extends Card(347, "Switching Jerseys", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

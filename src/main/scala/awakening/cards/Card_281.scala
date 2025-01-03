@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play in a Civil War country.
 // Place a level 1 Plot there.
 // ------------------------------------------------------------------
-object Card_281 extends Card2(281, "Drone Swarms", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_281 extends Card(281, "Drone Swarms", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

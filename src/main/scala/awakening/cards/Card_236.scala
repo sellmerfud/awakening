@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // country for the turn.
 //Cancel effects of Fracking.
 // ------------------------------------------------------------------
-object Card_236 extends Card2(236, "Oil Price Spike", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

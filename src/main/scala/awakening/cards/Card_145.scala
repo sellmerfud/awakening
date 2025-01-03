@@ -44,7 +44,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 // Place 1 Militia and an Aid marker in a country in Civil War.
 // ------------------------------------------------------------------
-object Card_145 extends Card2(145, "Russian Aid", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_145 extends Card(145, "Russian Aid", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Set Russia and Germany to opposite of US Posture.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_194 extends Card2(194, "Snowden", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_194 extends Card(194, "Snowden", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

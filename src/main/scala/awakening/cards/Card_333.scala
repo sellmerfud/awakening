@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // If US play: Place an Awakening marker in Saudi Arabia.
 // If Jibadist: Place a Reaction marker in Saudi Arabia.
 // ------------------------------------------------------------------
-object Card_333 extends Card2(333, "MbS", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_333 extends Card(333, "MbS", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

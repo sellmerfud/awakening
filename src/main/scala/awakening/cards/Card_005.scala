@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // WMD plots in the US are always face up.
 // 1-player : If jihadists have WMD, all plots in the US placed face up.
 // ------------------------------------------------------------------
-object Card_005 extends Card2(5, "NEST", US, 1, Remove, NoLapsing) {
+object Card_005 extends Card(5, "NEST", US, 1, Remove, NoLapsing) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // Test one of Canada, Scandinavia or India.
 // Then, place 1 Cell in any Hard country.
 // ------------------------------------------------------------------
-object Card_283 extends Card2(283, "Lone Wolf", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_283 extends Card(283, "Lone Wolf", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // US selects and discards 1 card from US hand.
 // -1 Prestife. -1 Funding.
 // ------------------------------------------------------------------
-object Card_099 extends Card2(99, "HAMAS Elected", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
+object Card_099 extends Card(99, "HAMAS Elected", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

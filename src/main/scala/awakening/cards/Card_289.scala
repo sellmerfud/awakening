@@ -47,7 +47,7 @@ import awakening.LabyrinthAwakening._
 // increase by 1 the Resource value of all Oil Exporter countries
 // outside the Persian Gulf (all the rest).
 // ------------------------------------------------------------------
-object Card_289 extends Card2(289, "Strait of Hormuz", Jihadist, 1, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_289 extends Card(289, "Strait of Hormuz", Jihadist, 1, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -48,7 +48,7 @@ import awakening.LabyrinthAwakening._
 // rolling Attrition dice.
 // +1 Prestige
 // ------------------------------------------------------------------
-object Card_278 extends Card2(278, "Siege of Mosul", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_278 extends Card(278, "Siege of Mosul", US, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

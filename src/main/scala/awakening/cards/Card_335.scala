@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // OR
 // Place a Cell in either country.
 // ------------------------------------------------------------------
-object Card_335 extends Card2(335, "Rohingya Genocide", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_335 extends Card(335, "Rohingya Genocide", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // If US play: Place an Aid and an Awakening marker there.
 // If Jihadist: Place a Besieged Regime and a Reaction marker there.
 // ------------------------------------------------------------------
-object Card_359 extends Card2(359, "Quick Win/Bad Intel", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_359 extends Card(359, "Quick Win/Bad Intel", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

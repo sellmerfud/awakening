@@ -46,7 +46,7 @@ import awakening.USBot
 // do not already have Awakening markers and are not Adjacent to
 // countries with Awakening markers.
 // ------------------------------------------------------------------
-object Card_131 extends Card2(131, "Arab Spring Fallout", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_131 extends Card(131, "Arab Spring Fallout", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

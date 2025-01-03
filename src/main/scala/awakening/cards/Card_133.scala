@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Place 2 Militia there. Set Italy to Hard.
 // REMOVE
 // ------------------------------------------------------------------
-object Card_133 extends Card2(133, "Benghazi Falls", US, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_133 extends Card(133, "Benghazi Falls", US, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

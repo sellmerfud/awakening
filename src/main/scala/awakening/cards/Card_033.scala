@@ -47,7 +47,7 @@ import awakening.USBot
 // If at Poor, shift to Fair.
 // Block Musharraf . Blocked by Bhutto Shot.
 // ------------------------------------------------------------------
-object Card_033 extends Card2(33, "Benazir Bhutto", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_033 extends Card(33, "Benazir Bhutto", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

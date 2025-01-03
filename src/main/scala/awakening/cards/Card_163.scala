@@ -48,7 +48,7 @@ import awakening.USBot
 // All other markers and pieces remain.
 // Cannot be played in a caliphate member.
 // ------------------------------------------------------------------
-object Card_163 extends Card2(163, "Status Quo", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_163 extends Card(163, "Status Quo", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -51,7 +51,7 @@ import awakening.JihadistBot
 // 5) Remove an Aid marker
 // 6) Place a Besieged Regime marker
 // ------------------------------------------------------------------
-object Card_288 extends Card2(288, "Soldiers of the Caliphate", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

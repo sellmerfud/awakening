@@ -49,7 +49,7 @@ import awakening.LabyrinthAwakening._
 // Trade War ends if this Event played again.
 // -1 Prestige
 // ------------------------------------------------------------------
-object Card_360 extends Card2(360, "US China Trade War", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_360 extends Card(360, "US China Trade War", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

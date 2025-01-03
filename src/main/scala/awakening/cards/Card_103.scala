@@ -44,7 +44,7 @@ import awakening.{ USBot, JihadistBot }
 // If US play, remove a cell from a Shia-Mix country within 3 countries of Lebanon.
 // If jihadist, Lebanon to Poor Neutral.
 // ------------------------------------------------------------------
-object Card_103 extends Card2(103, "Hizballah", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

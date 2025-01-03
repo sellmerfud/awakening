@@ -44,7 +44,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 // Remove a cell from a Muslim country (not Iran).
 // ------------------------------------------------------------------
-object Card_023 extends Card2(23, "Predator", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_023 extends Card(23, "Predator", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   def getCandidates() = countryNames(
     game.muslims
       .filter(m => m.name != Iran && m.totalCells > 0)

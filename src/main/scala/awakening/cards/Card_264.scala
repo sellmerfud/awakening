@@ -47,7 +47,7 @@ import awakening.USBot
 // Place a number of Militia there equal to the country's current
 // Resource value.
 // ------------------------------------------------------------------
-object Card_264 extends Card2(264, "Personal Security Contractors", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_264 extends Card(264, "Personal Security Contractors", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

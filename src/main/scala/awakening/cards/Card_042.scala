@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if Pakistani Ally and marked with FATA .
 // Remove FATA .
 // ------------------------------------------------------------------
-object Card_042 extends Card2(42, "Pakistani Offensive", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_042 extends Card(42, "Pakistani Offensive", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

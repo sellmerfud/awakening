@@ -47,7 +47,7 @@ import awakening.USBot
 // Select 2 Schengen countries' Posture.
 // Block Libyan WMD. 
 // ------------------------------------------------------------------
-object Card_038 extends Card2(38, "Libyan Deal", US, 3, Remove, NoLapsing, NoAutoTrigger) {
+object Card_038 extends Card(38, "Libyan Deal", US, 3, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

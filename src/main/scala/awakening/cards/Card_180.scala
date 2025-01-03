@@ -44,7 +44,7 @@ import awakening.LabyrinthAwakening._
 // Play if there is any country in Civil War with a Cell.
 // +2 Funding.
 // ------------------------------------------------------------------
-object Card_180 extends Card2(180, "Mosul Central Bank", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_180 extends Card(180, "Mosul Central Bank", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

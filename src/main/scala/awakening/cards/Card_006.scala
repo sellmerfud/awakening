@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Play if Patriot Act is in effect. -2 Funding.
 // ------------------------------------------------------------------
-object Card_006 extends Card2(6, "Sanctions", US, 1, NoRemove, NoLapsing) {
+object Card_006 extends Card(6, "Sanctions", US, 1, NoRemove, NoLapsing) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

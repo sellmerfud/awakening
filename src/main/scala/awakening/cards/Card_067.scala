@@ -44,7 +44,7 @@ import awakening.JihadistBot
 // ------------------------------------------------------------------
 // Place a cell each in Central Asia and Afghanistan.
 // ------------------------------------------------------------------
-object Card_067 extends Card2(67, "Islamic Jihad Union", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_067 extends Card(67, "Islamic Jihad Union", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

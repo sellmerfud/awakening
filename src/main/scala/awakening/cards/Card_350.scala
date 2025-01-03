@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // one-for-one until one or both sides no longer remain.
 // Cannot be played in a Caliphate country.
 // ------------------------------------------------------------------
-object Card_350 extends Card2(350, "UN Peace Envoy", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_350 extends Card(350, "UN Peace Envoy", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

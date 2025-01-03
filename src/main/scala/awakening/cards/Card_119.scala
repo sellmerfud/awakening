@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // If US play, unless Islamist Rule, shift it to Ally and place 1 Aid.
 // If jihadist, shift it 1 box toward Adversary and place Besieged Regime.
 // ------------------------------------------------------------------
-object Card_119 extends Card2(119, "Saleh", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_119 extends Card(119, "Saleh", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

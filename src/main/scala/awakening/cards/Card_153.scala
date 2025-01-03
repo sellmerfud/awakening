@@ -46,7 +46,7 @@ import awakening.USBot
 // Place 1 Awakening marker in up to 3 countries that already have an
 // Awakening marker in or Adjacent to that country.
 // ------------------------------------------------------------------
-object Card_153 extends Card2(153, "Facebook", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_153 extends Card(153, "Facebook", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

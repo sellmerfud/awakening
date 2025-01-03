@@ -42,7 +42,7 @@ import awakening.LabyrinthAwakening._
 // -------------------------------------
 // This card is a duplicate of Card 117
 // -------------------------------------
-object Card_118 extends Card2(118, "Oil Price Spike", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_118 extends Card(118, "Oil Price Spike", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

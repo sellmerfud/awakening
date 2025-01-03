@@ -49,7 +49,7 @@ import awakening.USBot
 // discarded but may be played again in the same or different countries
 // until a maximum of 3 Advisors are on the map.
 // ------------------------------------------------------------------
-object Card_121 extends Card2(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_121 extends Card(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

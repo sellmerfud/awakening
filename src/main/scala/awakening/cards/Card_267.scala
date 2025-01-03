@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // US randomly draws two cards from the Jihadist hand, reveals them,
 // then discards one and returns the other.
 // ------------------------------------------------------------------
-object Card_267 extends Card2(267, "Third Offset Strategy", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

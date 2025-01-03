@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // Prestige for each plot placed there unless troops outnumber
 // cells. Blocked by Moro Talks 
 // ------------------------------------------------------------------
-object Card_057 extends Card2(57, "Abu Sayyaf", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
+object Card_057 extends Card(57, "Abu Sayyaf", Jihadist, 2, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -47,7 +47,7 @@ import awakening.USBot
 // SPECIAL: If this card is randomly drawn by another event, this event
 // is immediately implemented. Do not draw a replacement card.
 // ------------------------------------------------------------------
-object Card_242 extends Card2(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

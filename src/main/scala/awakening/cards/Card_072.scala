@@ -45,7 +45,7 @@ import awakening.JihadistBot
 // Play if Afghanistan has a cell. Place 3 more cells there.
 // Then, if at Islamist Rule, place all available cells there.
 // ------------------------------------------------------------------
-object Card_072 extends Card2(72, "Opium", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_072 extends Card(72, "Opium", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

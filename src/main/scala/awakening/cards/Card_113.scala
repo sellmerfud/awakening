@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // shift 1 box toward Ally; if not, place Besieged Regime and shift
 // toward Adversary.
 // ------------------------------------------------------------------
-object Card_113 extends Card2(113, "Darfur", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_113 extends Card(113, "Darfur", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // If not, set Caucasus to opposite Posture of US or test and shift
 // Central Asia 1 box toward Adversary.
 // ------------------------------------------------------------------
-object Card_062 extends Card2(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_062 extends Card(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

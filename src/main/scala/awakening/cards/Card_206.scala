@@ -45,7 +45,7 @@ import awakening.{ USBot, JihadistBot }
 // Place 1 Awakening or 1 Reaction marker in any country which already
 // has the opposite kind of marker.
 // ------------------------------------------------------------------
-object Card_206 extends Card2(206, "Friday of Anger", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

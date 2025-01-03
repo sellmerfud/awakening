@@ -49,7 +49,7 @@ import awakening.JihadistBot
 // Set to Fair Adversary. REMOVE
 // Failure (4-6): Remove the Cell.
 // ------------------------------------------------------------------
-object Card_303 extends Card2(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_303 extends Card(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

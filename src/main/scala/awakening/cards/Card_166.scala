@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // played by either player this turn. The card is discarded without
 // effect or OPS value, but counts as one card played for that Action Phase.
 // ------------------------------------------------------------------
-object Card_166 extends Card2(166, "Ferguson", Jihadist, 1, NoRemove, Lapsing, NoAutoTrigger) {
+object Card_166 extends Card(166, "Ferguson", Jihadist, 1, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

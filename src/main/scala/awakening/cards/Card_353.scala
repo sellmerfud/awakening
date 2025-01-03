@@ -48,7 +48,7 @@ import awakening.JihadistBot
 // Draw a Card.
 // Cannot be played in a Caliphate country.
 // ------------------------------------------------------------------
-object Card_353 extends Card2(353, "Bowling Green Massacre", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

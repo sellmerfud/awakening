@@ -46,7 +46,7 @@ import awakening.{ USBot, JihadistBot }
 // If US play, +3 Prestige, REMOVE this card.
 // If jihadist, place 3 cells and a Plot 2 there.
 // ------------------------------------------------------------------
-object Card_110 extends Card2(110, "Zarqawi", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
+object Card_110 extends Card(110, "Zarqawi", Unassociated, 2, USRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

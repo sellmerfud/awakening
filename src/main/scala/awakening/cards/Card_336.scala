@@ -46,7 +46,7 @@ import awakening.LabyrinthAwakening._
 // If US play: Set China to the same posture as US. Blocks play of Korean Crisis. MARK
 // If Jihadist: Set China to the opposite posture of US.
 // ------------------------------------------------------------------
-object Card_336 extends Card2(336, "US/NK Summit", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_336 extends Card(336, "US/NK Summit", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

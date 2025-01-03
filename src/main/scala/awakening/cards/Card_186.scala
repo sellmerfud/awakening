@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // Each time this event is played, the Jihadist player may return this
 // card to hand by discarding a non-US Associated 3 Ops card.
 // ------------------------------------------------------------------
-object Card_186 extends Card2(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override

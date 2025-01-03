@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // If Ally: Place an Awakening marker.
 // If Neutral: Place either type of marker.
 // ------------------------------------------------------------------
-object Card_323 extends Card2(323, "Blasphemy", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
+object Card_323 extends Card(323, "Blasphemy", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
