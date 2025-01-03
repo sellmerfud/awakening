@@ -80,12 +80,7 @@ object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing
       s"Enter card # of the next card in the $Jihadist Bot's hand: "
     
     val card = deck(askCardNumber(prompt, allowNone = false).get)
-    val newPlays = game.plays match {
-      case PlayedCard(role, firstCard, _) :: others =>
-        PlayedCard(role, firstCard, Some(card.number)) :: others
-      case _ => game.plays
-    }
-    game = game.copy(plays = newPlays)
+    addSecondCardToPlayedCard(card.number)
     logCardPlay(Jihadist, card, playable = false, secondCard = true)
 
     def nextRecruit(completed: Int): Unit = 

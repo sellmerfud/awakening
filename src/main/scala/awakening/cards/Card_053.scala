@@ -83,12 +83,7 @@ object Card_053 extends Card(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing, 
       s"\nEnter card # of the next card in the $Jihadist Bot's hand: "
     
     val card = deck(askCardNumber(prompt, allowNone = false).get)
-    val newPlays = game.plays match {
-      case PlayedCard(role, firstCard, _) :: others =>
-        PlayedCard(role, firstCard, Some(card.number)) :: others
-      case _ => game.plays
-    }
-    game = game.copy(plays = newPlays)
+    addSecondCardToPlayedCard(card.number)
     logCardPlay(Jihadist, card, playable = false, secondCard = true)
     
     // Add Ops on the Madrassas card.

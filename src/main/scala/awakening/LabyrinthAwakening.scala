@@ -811,18 +811,33 @@ object LabyrinthAwakening {
     val role: Role
   }
 
+  // Some events allow the play of an additional card.
+  // In come cases this card counts as the second card of the
+  // action phase.  In other cases this card is an "additional"
+  // card played during the action phase and does not count as
+  // one of the two cards that make up an action phase.
+  sealed trait AddedCard
+  case class SecondCard(num: Int) extends AddedCard
+  case class AdditionalCard(num: Int) extends AddedCard
+
   // Used to keep track of cards played during the current turn
   // for display purposes only.  This is stored in the game state.
   // Some cards allow the play of a second card (#48 Adam Gadahn, #53 Madrassas)
-  case class PlayedCard(role: Role, cardNum: Int, secondCardNum: Option[Int]) extends CardPlay {
+  case class PlayedCard(role: Role, cardNum: Int, addedCard: Option[AddedCard]) extends CardPlay {
     override def name = "PlayedCard"
-    override def numCards = if (secondCardNum.isEmpty) 1 else 2
-    override def toString() = secondCardNum match {
-      case None => s"$role played ${cardNumAndName(cardNum)}"
-      case Some(card2Num) => s"$role played ${cardNumAndName(cardNum)} and ${cardNumAndName(card2Num)}"
+
+    override def numCards = addedCard match {
+      case Some(SecondCard(_)) => 2
+      case _ => 1
     }
 
+    override def toString() = addedCard match {
+      case None => s"$role played ${cardNumAndName(cardNum)}"
+      case Some(SecondCard(num)) => s"$role played ${cardNumAndName(cardNum)} and ${cardNumAndName(num)}"
+      case Some(AdditionalCard(num)) => s"$role played ${cardNumAndName(cardNum)} with addtional ${cardNumAndName(num)}"
+    }
   }
+  
   case class PlayedReassement(card1: Int, card2: Int) extends CardPlay {
     val role = US
     override def name = "PlayedReassessment"
@@ -928,6 +943,43 @@ object LabyrinthAwakening {
 
   def cardNumAndName(number: Int): String = deck(number).numAndName
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
+
+  // Add a Played Card to the list of plays
+  def addPlayedCard(role: Role, cardNum: Int): Unit ={
+    game = game.copy(plays = PlayedCard(role, cardNum, None) :: game.plays)
+  }
+
+  // Add a second card to the most recent Played Card 
+  // in the list of plays.  The will be done by events
+  // and the card counts as the 2nd card of the action phase
+  def addSecondCardToPlayedCard(cardNum: Int): Unit = {
+    val newPlays = game.plays match {
+      case PlayedCard(role, firstCard, None) :: others =>
+        PlayedCard(role, firstCard, Some(SecondCard(cardNum))) :: others
+      case PlayedCard(role, firstCard, Some(_)) :: others =>
+        throw new IllegalStateException("Cannot add second card. Current PlayedCard already has an added card.")
+      case _ =>
+        throw new IllegalStateException("Cannot add second card here.")
+    }
+    game = game.copy(plays = newPlays)
+  }
+
+  // Add an additional card to the most recent Played Card 
+  // in the list of plays.  The will be done by events
+  // and the card does not count one of the cards oof the
+  // current action phase
+  def addAdditionalCardToPlayedCard(cardNum: Int): Unit = {
+    val newPlays = game.plays match {
+      case PlayedCard(role, firstCard, None) :: others =>
+        PlayedCard(role, firstCard, Some(AdditionalCard(cardNum))) :: others
+      case PlayedCard(role, firstCard, Some(_)) :: others =>
+        throw new IllegalStateException("Cannot add additional card. Current PlayedCard already has an added card.")
+      case _ =>
+        throw new IllegalStateException("Cannot add additional card here.")
+    }
+    game = game.copy(plays = newPlays)
+  }
+
 
   sealed trait Country {
     val name: String
@@ -3401,15 +3453,17 @@ object LabyrinthAwakening {
     val save_path   = gamesDir/gameName.get/getSaveName(save_number)
     val log_path    = gamesDir/gameName.get/getLogName(save_number)
     val segmentDesc = desc orElse game.plays.headOption.map(_.toString) getOrElse ""
-    val cardsPlayed = (game.plays map (_.numCards)).sum
+    val cardsPlayed = game.plays.map(_.numCards).sum
     val turnInfo = game.plays.headOption match {
       case Some(_: PlayedReassement) =>
-        s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} card play)"
-      case Some(pc: PlayedCard) =>
-        pc.secondCardNum match {
-          case None    => s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card play)"
-          case Some(_) => s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} card plays)"
-        }
+        s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} cards this turn)"
+          
+      case Some(PlayedCard(_, _, Some(SecondCard(num2)))) =>
+        s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} cards this turn)"
+        
+      case Some(PlayedCard(_, _, _)) =>
+        s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card this turn)"
+
       case _ =>
         s"(turn ${game.turn} - ${amountOf(cardsPlayed, "card")} played)"
     }
@@ -7014,19 +7068,10 @@ object LabyrinthAwakening {
       val card = deck(cardNumber)
       val savedState = game
 
-      if (additional) {
-        // Add the additional card to the most recent card play of for the turn.
-        val newPlays = game.plays match {
-          case PlayedCard(role, firstCard, _) :: others =>
-            PlayedCard(role, firstCard, Some(card.number)) :: others
-          case _ => game.plays
-        }
-        game = game.copy(plays = newPlays)
-      }
-      else {
-        // Add the card to the list of plays for the turn.
-        game = game.copy(plays = PlayedCard(US, card.number, None) :: game.plays)
-      }
+      if (additional)
+        addAdditionalCardToPlayedCard(card.number)  // Add card to most recent PlayedCard
+      else
+        addPlayedCard(US, card.number)  // Add the card to the list of plays for the turn.
 
       cachedEventPlayableAnswer = None
 
@@ -7434,7 +7479,7 @@ object LabyrinthAwakening {
       val savedState = game
 
       // Add the card to the list of plays for the turn.
-      game = game.copy(plays = PlayedCard(Jihadist, card.number, None) :: game.plays)
+      addPlayedCard(Jihadist, card.number)
 
       cachedEventPlayableAnswer = None
       // If TheDoorOfItjihad lapsing card is in effect,

@@ -197,11 +197,18 @@ object SavedGame {
 
   private def playToMap(play: Play): Map[String, Any] = {
     val params = play match {
-      case PlayedCard(role, cardNum, None) => Map("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> null)
-      case PlayedCard(role, cardNum, Some(card2)) => Map("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> card2)
-      case PlayedReassement(card1, card2) => Map("card1" -> card1, "card2"   -> card2)
-      case PlotsResolved(num)    => Map("num" -> num)
-      case AdjustmentMade(desc)   => Map("desc" -> desc)
+      case PlayedCard(role, cardNum, None) =>
+        Map("role" -> role.toString, "cardNum" -> cardNum)
+      case PlayedCard(role, cardNum, Some(SecondCard(card2))) =>
+        Map("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> card2)
+      case PlayedCard(role, cardNum, Some(AdditionalCard(card2))) =>
+        Map("role" -> role.toString, "cardNum" -> cardNum, "additionalCardNum" -> card2)
+      case PlayedReassement(card1, card2) =>
+        Map("card1" -> card1, "card2"   -> card2)
+      case PlotsResolved(num) =>
+        Map("num" -> num)
+      case AdjustmentMade(desc) =>
+        Map("desc" -> desc)
     }
     Map("playType" -> play.name, "params" -> params)
   }
@@ -210,7 +217,9 @@ object SavedGame {
     val params = asMap(data("params"))
     asString(data("playType")) match {
       case "PlayedCard" if params.contains("secondCardNum") && params("secondCardNum") != null =>
-        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(asInt(params("secondCardNum"))))
+        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(SecondCard(asInt(params("secondCardNum")))))
+      case "PlayedCard" if params.contains("additionalCardNum") && params("additionalCardNum") != null =>
+        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(AdditionalCard(asInt(params("additionalCardNum")))))
       case "PlayedCard" =>
         PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), None)
       // Account for misspelling in earlier versions

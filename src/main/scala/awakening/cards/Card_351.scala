@@ -122,6 +122,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
           askCardsDrawn(1)
 
         case _ => // Play the event
+          addAdditionalCardToPlayedCard(card.number)
           log(s"\n$role executes the $cardDisplay event")
           log(separator())
           card.executeEvent(role)
