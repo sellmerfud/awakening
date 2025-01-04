@@ -991,7 +991,7 @@ object JihadistBot extends BotHelpers {
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
     val autoRecruitPriorityIsIR = autoRecruitPriorityCountry.map(name => game.getCountry(name).isIslamistRule).getOrElse(false)
     // Only recruit in IR if:
-    //  1. This is the auto-recruite priority country OR The auto-recruite priority country is not IR
+    //  1. This is the auto-recruit priority country OR The auto-recruit priority country is not IR
     //  2. The country has less than 6 cells.
     val irCheck = (m: MuslimCountry) =>
       !m.isIslamistRule ||
@@ -3094,6 +3094,7 @@ object JihadistBot extends BotHelpers {
     // A maximum of 3 ops can be used on a given card.  This is limited by the
     // number of available reserves.
     // Determine how ops we can use for radicalization.
+    val noActionTakern = opsUsed == 0
     val unusedOps   = card.ops - opsUsed
     val maxReserves = (3 - card.ops) min game.reserves.jihadist
     val maxRadOps   = unusedOps + maxReserves
@@ -3121,7 +3122,7 @@ object JihadistBot extends BotHelpers {
 
 
     // Returns the number of actions executed
-    def nextAction(actions: List[RadicalizationAction], completed: Int): Unit = {
+    def nextAction(actions: List[RadicalizationAction], completed: Int): Int = {
       if (actions.nonEmpty && completed < maxRadOps) {
         val cardOps    = (unusedOps - completed) max 0   // Ops remaining from the card
         val reserveOps = maxRadOps - cardOps - completed // Ops remaining from reserves
@@ -3135,13 +3136,16 @@ object JihadistBot extends BotHelpers {
 
         nextAction(actions.tail, completed + opsUsedByAction)
       }
+      else
+        completed
     }
 
     log()
     log(s"$Jihadist performs Radicalization with ${amountOf(unusedOps, "unused Op")}")
     log(s"(Can add up to ${amountOf(maxReserves,"Op")} from reserve)")
     log(separator())
-    nextAction(actionsToConsider, 0)
+    if (nextAction(actionsToConsider, 0) == 0)
+      log(s"\nThe $Jihadist does not perform any action.", Color.Event)
   }
 
   // Selects troops that are on the map to take off of the map.
