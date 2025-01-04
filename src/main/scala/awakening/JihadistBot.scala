@@ -3098,17 +3098,21 @@ object JihadistBot extends BotHelpers {
     val unusedOps   = card.ops - opsUsed
     val maxReserves = (3 - card.ops) min game.reserves.jihadist
     val maxRadOps   = unusedOps + maxReserves
+    val biometrics = lapsingEventInPlay(Biometrics)
+    
+    def addAction(test: Boolean, action: RadicalizationAction): Option[RadicalizationAction] =
+      if (test) Some(action) else None
 
     val actionsToConsider = if (game.botEnhancements)
       List(
-        EnhancedRadicalizationActions.PlotWMDInUS,
-        EnhancedRadicalizationActions.TravelToUSForWMD,
-        EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims,
-        EnhancedRadicalizationActions.TravelToUntestedNonMuslim,
-        EnhancedRadicalizationActions.Recruit,
-        EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry,
-        EnhancedRadicalizationActions.AddToReserves,
-      )
+        addAction(true, EnhancedRadicalizationActions.PlotWMDInUS),
+        addAction(!biometrics, EnhancedRadicalizationActions.TravelToUSForWMD),
+        addAction(!biometrics, EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims),
+        addAction(true, EnhancedRadicalizationActions.TravelToUntestedNonMuslim),
+        addAction(true, EnhancedRadicalizationActions.Recruit),
+        addAction(true, EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry),
+        addAction(true, EnhancedRadicalizationActions.AddToReserves),
+      ).flatten
     else // Standard Bot
       List(
       StandardRadicalizationActions.PlotWMDInUS,
