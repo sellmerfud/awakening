@@ -136,15 +136,10 @@ object JihadistBot extends BotHelpers {
   // Travel to Poor/Unmarked countries where Major Jihad roll can succeed
   // and there are no Troops/Militia present.
   // If Biometrics is in effect only adjacent travel is allowed.
-  def enhancedTravelCandidates = if (lapsingEventInPlay(Biometrics)) {
-      countryNames(
-        game.muslims
-          .filter(poorOrUnmarkedMuslimWhereMajorJSPAndNoTandM)
-          .filter(m => game.adjacentCountries(m.name).exists(hasCellForTravel))
-      )
-    }
-    else
-      countryNames(game.muslims.filter(poorOrUnmarkedMuslimWhereMajorJSPAndNoTandM))
+  def enhancedTravelCandidates = countryNames(
+    game.muslims
+      .filter(m => poorOrUnmarkedMuslimWhereMajorJSPAndNoTandM(m) && canTravelTo(m))
+  )
 
   // The Enhanced bot will pick a top priority auto-recruit country.
   // It must be a non-Fair country that allows auto-recruit.
@@ -193,8 +188,8 @@ object JihadistBot extends BotHelpers {
 
   // The Enhanced Bot uses its current IR resources score
   // to make some decisions about certain priorities.
-  // 
-  // In this case the Bot ignores temporary increaese due to 
+  //
+  // In this case the Bot ignores temporary increaese due to
   // Oil Price Spike, but does honor the +1 bump for Tehran-Beirut Land Corridor
   // in Iran and the +1 bump for the Caliphate capital being declared.
 
@@ -209,7 +204,7 @@ object JihadistBot extends BotHelpers {
       .filter(_.isIslamistRule)
       .foldLeft(0) { (sum, muslim) => sum + enhBotResourceValue(muslim) }
     val caliphateResources = if (game.caliphateDeclared) 1 else 0
-    
+
     muslimResources + caliphateResources
   }
 
@@ -392,11 +387,11 @@ object JihadistBot extends BotHelpers {
   // exception: Iran with Tehran-Beirut Land Corridor marker counts a Res=3
   val HighestPrintedResourcePriority = new HighestScorePriority(
     "Highest printed resource*",
-    muslimScore(enhBotResourceValue)    
+    muslimScore(enhBotResourceValue)
   )
 
   // Used by the Enh Bot.
-  // Poor or Unmarked Muslim with 2+ 
+  // Poor or Unmarked Muslim with 2+
   val PoorOrUntested2PlusResources = new CriteriaFilter(
     "Poor/Untested Muslim with 2+ resources*",
     muslimTest(m => (m.isPoor || m.isUntested) && enhBotResourceValue(m) >= 2)
@@ -1098,11 +1093,9 @@ object JihadistBot extends BotHelpers {
       def yesPath = TravelOp(None, adjacentOnly = false)
       def noPath  = FundingModerateDecision
       def condition(ops: Int) = {
-        val candidates = countryNames(game.getMuslims(game.jihadTargets).filter(poorMuslimNeedsCellsForMajorJihad))
-        travelToTarget(candidates) match {
-          case None         => false
-          case Some(target) => game.adjacentCountries(target).exists(hasCellForTravel)
-        }
+        val candidates = game.getMuslims(game.jihadTargets)
+          .filter(m => poorMuslimNeedsCellsForMajorJihad(m) && canAdjacentTravelTo(m))
+        travelToTarget(countryNames(candidates)).nonEmpty
       }
     }
 
@@ -1169,13 +1162,6 @@ object JihadistBot extends BotHelpers {
       }
     }
 
-    object CellAvailableOrTravelDecision extends OperationDecision {
-      def desc = "Cells Available and Recruit possible? (or Travel)"
-      def yesPath = RecruitOp(None)
-      def noPath  = TravelOp(None, adjacentOnly = false)
-      def condition(ops: Int) = botRecruitPossible(muslimWithCadreOnly = false)
-    }
-
     object CellInGoodFairWhereJSP extends OperationDecision {
       def desc = "Cells in Good or Fair Muslim where Jihad Success Possible?"
       def yesPath = MinorJihadOp
@@ -1215,9 +1201,7 @@ object JihadistBot extends BotHelpers {
       def desc = s"Can travel to Auto-Recruit priority (${autoRecruitPriorityCountry.getOrElse("ERROR")} from ajacent?)"
       def yesPath = TravelOp(autoRecruitPriorityCountry, adjacentOnly = true)
       def noPath  = FundingBelow7Decision
-      def condition(ops: Int) = autoRecruitPriorityCountry.toList
-        .flatMap(game.adjacentCountries)
-        .exists(hasCellForTravel)
+      def condition(ops: Int) = autoRecruitPriorityCountry.exists(canTravelTo)
     }
 
 
@@ -1232,12 +1216,7 @@ object JihadistBot extends BotHelpers {
       def desc = "Can travel to Poor/Unmarked where Major JSP and no TandM?"
       def yesPath = EnhancedTravelOp
       def noPath  = Radicalization
-      def condition(ops: Int) = {
-        // We must have a viable destination and we must have at least
-        // one country (other than the desination) that has a cell that can travel
-        val sources = game.countries.filter(hasCellForTravel).map(_.name).toSet
-        enhancedTravelCandidates.exists(name => (sources - name).nonEmpty)
-      }
+      def condition(ops: Int) = enhancedTravelCandidates.nonEmpty
     }
 
     object FundingBelow7Decision extends OperationDecision {
@@ -1310,12 +1289,7 @@ object JihadistBot extends BotHelpers {
       def desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
       def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = true)
       def noPath  = MJP_OtherTravel_AutoRecruitPriority_Decision
-      def condition(ops: Int) = majorJihadPriorityCountry match {
-        case None => false
-        case Some(name) =>
-          game.recruitPossible &&
-          botRecruitTargets(muslimWithCadreOnly = false).contains(name)
-      }
+      def condition(ops: Int) = majorJihadPriorityCountry.exists(canAdjacentTravelTo)
     }
 
     // MJP Not Auto-recruit #1
@@ -1323,9 +1297,7 @@ object JihadistBot extends BotHelpers {
       def desc = s"Adjacent travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
       def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = true)
       def noPath  = MJP_Recruit_OtherTravel_Decision
-      def condition(ops: Int) = majorJihadPriorityCountry.toList
-        .flatMap(game.adjacentCountries)
-        .exists(hasCellForTravel)
+      def condition(ops: Int) = majorJihadPriorityCountry.exists(canAdjacentTravelTo)
     }
 
     // MJP Not Auto-recruit #2
@@ -1346,13 +1318,7 @@ object JihadistBot extends BotHelpers {
       def desc = s"Any travel to Major Jihad priority (${majorJihadPriorityCountry.getOrElse("None")}) possible?"
       def yesPath = TravelOp(majorJihadPriorityCountry, adjacentOnly = false)
       def noPath  = RecruitInAutoRecruitPriority_Decision
-      def condition(ops: Int) = majorJihadPriorityCountry match {
-        case None => false
-        case Some(name) =>
-          game.countries
-            .filterNot(_.name == name)
-            .exists(hasCellForTravel)
-      }
+      def condition(ops: Int) = majorJihadPriorityCountry.exists(canTravelTo)
     }
 
     // MJP (Auto-recruit AND Not Auto-recruit ) #4
@@ -1699,7 +1665,7 @@ object JihadistBot extends BotHelpers {
   }
 
   // Starting point for Jihadist bot card play.
-  // The playable argument indicates if the 
+  // The playable argument indicates if the
   def cardPlay(card: Card, ignoreEvent: Boolean): Unit = {
     resetStaticData()
     val eventPlayable =
@@ -1899,6 +1865,26 @@ object JihadistBot extends BotHelpers {
 
   def hasAdjacentTravelCells(destination: Country, prevAttempts: List[TravelAttempt] = Nil) =
     numAdjacentTravelCells(destination, prevAttempts) > 0
+
+  // True if there is at least one cell adjacent to the destinations
+  // that is free to travel.
+  def canAdjacentTravelTo(dest: Country): Boolean =
+    hasAdjacentTravelCells(dest)
+
+  def canAdjacentTravelTo(destName: String): Boolean =
+    canAdjacentTravelTo(game.getCountry(destName))
+
+  // True if there is at least on cell that can attempt to travel
+  // to the destination.
+  def canTravelTo(dest : Country): Boolean =
+    if (lapsingEventInPlay(Biometrics))  // Only ajacent travel allowed
+      hasAdjacentTravelCells(dest)
+    else
+      game.hasCountry(source => source.name != dest.name && hasCellForTravel(source))
+
+  def canTravelTo(destName : String): Boolean =
+    canTravelTo(game.getCountry(destName))
+
   // First select the target to country.
   // Then select one or more countries from which cells may travel.
   // For each source country, make as many attempts as possible, before
@@ -2331,7 +2317,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Plot in the United States")
         }
@@ -2361,8 +2347,7 @@ object JihadistBot extends BotHelpers {
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
         game.usPosture == Hard        &&
         game.gwotPenalty == 0         &&
-        unusedCellsOnMapForTravel > 0 &&
-        game.hasNonMuslim(_.isUntested)
+        game.hasNonMuslim(n => n.isUntested && canTravelTo(n))
       }
 
       // Travel to Untested Non-Muslim countries while the US is Hard to
@@ -2376,7 +2361,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Travel to Untested Non-Muslim countries")
         }
@@ -2456,7 +2441,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Plot in Soft Non-Muslim countries")
         }
@@ -2497,76 +2482,6 @@ object JihadistBot extends BotHelpers {
     }
 
     // -----------------------------------------------------------
-    // Radicalization Action -  Plot in Soft Muslim
-    //
-    // For botEnhancements only, if there are no Poor Muslim with 1-4 more cells than TandM
-    // where Major Jihad possible, but there are Poor Muslim where Major Jihad is possible
-    // and no TandM, then attempt to travel cells there.
-    case object TravelToPoorMuslimWhereMajorJSP extends RadicalizationAction {
-      override
-      def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
-        game.botEnhancements &&
-        radTravelToPoorMuslimCandidates().nonEmpty
-      }
-
-      // Used only when botEnhancements in effect.
-      // If there are no Countries where Major JSP and 1-4 more cells that TandM,
-      // but there are countries where Major JSP and NOT 1-4 more cells than TandM,
-      // travel 1 cell to the highest priority of those.
-      override
-      def perform(cardOps: Int, reserveOps: Int): Int = {
-        var headerDisplayed = false
-        def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
-          log()
-          log("Radicalization: Travel to Poor Muslim country where Major Jihad is possible")
-          log("                and there are no Troops or Militia present")
-        }
-
-        val candidates = radTravelToPoorMuslimCandidates()
-        // This should always succeed because it has been vetted, but check
-        // just to be safe.
-        if (candidates.nonEmpty) {
-            val maxOps = cardOps + reserveOps
-            val target = majorJihadTarget(candidates).get
-
-            // Returns (numAttempts, success)
-            def nextAttempt(numAttempts: Int): (Int, Boolean) = {
-              if (numAttempts == maxOps)
-                (numAttempts, false)  // No more Ops
-              else {
-                travelFromTarget(target, countryNames(game.countries.filterNot(_.name == target))) match {
-                  case None => (numAttempts, false)  // No more cells
-                  case Some(source) =>
-                    displayHeader()
-                    val attempt = TravelAttempt(source, target, activeCells(game.getCountry(source)) > 0)
-                    val (_, success) = performTravels(attempt::Nil).head
-                    if (success)
-                      (numAttempts + 1, true)  // Success
-                    else
-                      nextAttempt(numAttempts + 1)  // Try again
-                }
-              }
-            }
-
-            // Make travel attempts until one of the following:
-            // - We run out of Ops
-            // - We get a successfull attempt
-            // - We run out of cells to make the attempt
-            val (numAttempts, success) = nextAttempt(0)
-            expendBotReserves(numAttempts - cardOps)
-            if (success)
-              usedCells(target).addSleepers(1)
-
-            numAttempts
-        }
-        else
-          0
-      }
-    }
-
-
-    // -----------------------------------------------------------
     // Radicalization Action -  Recruit at Muslim country with Cadre
     case object RecruitAtMuslimCadre extends RadicalizationAction {
       override
@@ -2584,7 +2499,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Recruit in a Muslim country with a cadre")
         }
@@ -2669,7 +2584,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Recruit")
         }
@@ -2726,7 +2641,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Travel to the United States")
         }
@@ -2793,7 +2708,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Plot in the United States")
         }
@@ -2824,7 +2739,7 @@ object JihadistBot extends BotHelpers {
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
         game.availablePlots.contains(PlotWMD) &&
         game.getCountry(UnitedStates).totalCells == 0 &&
-        hasAdjacentTravelCells(game.getCountry(UnitedStates))
+        canAdjacentTravelTo(UnitedStates)
       }
 
       // Travel 1 cell to the US from an adjacent country.
@@ -2835,7 +2750,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Travel 1 adjacent cell to the United States")
         }
@@ -2876,7 +2791,7 @@ object JihadistBot extends BotHelpers {
         m.isGood &&
         m.totalTroops == 0 &&
         !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
-        hasAdjacentTravelCells(m)
+        canAdjacentTravelTo(m)
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
@@ -2890,7 +2805,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Adjacent Travel to Good Muslim countries with no troops")
         }
@@ -2942,8 +2857,7 @@ object JihadistBot extends BotHelpers {
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
         game.usPosture == Hard        &&
         game.gwotPenalty == 0         &&
-        unusedCellsOnMapForTravel > 0 &&
-        game.hasNonMuslim(_.isUntested)
+        game.hasNonMuslim(n => n.isUntested && canTravelTo(n))
       }
 
       // Travel to Untested Non-Muslim countries while the US is Hard to
@@ -3020,17 +2934,11 @@ object JihadistBot extends BotHelpers {
     // Radicalization Action -  Travel to the Major Jihad Priority Country
     case object TravelToMajorJihadPriorityCountry extends RadicalizationAction {
       override
-      def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
-        majorJihadPriorityCountry match {
-          case None =>
-            false
-          case Some(mjpName) =>
-            game.countries.exists(c => c.name != mjpName && hasCellForTravel(c))
-        }
-      }
+      def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
+        majorJihadPriorityCountry.exists(canTravelTo)
 
       // Make as many travel attempts as possible to the MJP
-      // 
+      //
       // cardsOps   - The number of unused Ops remaining from the card
       // reserveOps - The number of unused Ops remaining from reserves
       // Returns the number of ops used
@@ -3039,7 +2947,7 @@ object JihadistBot extends BotHelpers {
         val mjpName = majorJihadPriorityCountry.get
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Travel to Major Jihad Priority country ($mjpName)")
         }
@@ -3085,7 +2993,7 @@ object JihadistBot extends BotHelpers {
       def perform(cardOps: Int, reserveOps: Int): Int = {
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
-          headerDisplayed = true          
+          headerDisplayed = true
           log()
           log(s"Radicalization: Recruit")
         }
@@ -3200,12 +3108,11 @@ object JihadistBot extends BotHelpers {
         EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry,
         EnhancedRadicalizationActions.AddToReserves,
       )
-    else
+    else // Standard Bot
       List(
       StandardRadicalizationActions.PlotWMDInUS,
       StandardRadicalizationActions.TravelToUntestedNonMuslim,
       StandardRadicalizationActions.PlotInSoftMuslim,
-      StandardRadicalizationActions.TravelToPoorMuslimWhereMajorJSP,  // Enhanced Bot only
       StandardRadicalizationActions.RecruitAtMuslimCadre,
       StandardRadicalizationActions.AddToReserves,
       StandardRadicalizationActions.Recruit,
