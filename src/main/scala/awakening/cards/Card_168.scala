@@ -83,6 +83,6 @@ object Card_168 extends Card(168, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAu
       log(s"\nYou ($US) must randomly discard one card", Color.Event)
     else
       log(s"\nDiscard the top card of the $US hand", Color.Event)
-    askCardsDiscarded(1)
+    askCardsDiscarded(US, 1)
   }
 }

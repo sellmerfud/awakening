@@ -154,6 +154,6 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
       log(s"\nDraw a card and add it to your ($role) hand.", Color.Event)
     else
       log(s"\nPut the top card of the draw deck on top of the $role Bot's hand of cards.", Color.Event)
-    askCardsDrawn(1)
+    askCardsDrawn(role, 1, FromDeck)
   }
 }

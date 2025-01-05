@@ -72,10 +72,14 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role))
-      log(s"\nDiscard a random card from the $Jihadist hand.", Color.Event)
-    else
+    if (isHuman(role)) {
+      log(s"\nTake the top two cards from the $Jihadist hand.", Color.Event)
+      log(s"Keep one and return the other to the top of the $Jihadist hand.")
+      askCardsDrawn(US, 1, FromOpponent, Some("What is the card# of the card that you kept? "))
+    }
+    else {
       log(s"\nYou ($Jihadist) must randomly discard one card.", Color.Event)
-    askCardsDiscarded(1)
+      askCardsDiscarded(Jihadist, 1)
+    }
   }
 }

@@ -85,7 +85,7 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
       log("\nUS Bot will draw \"Obama Doctrine\", or \"Congress Acts\", or", Color.Event)
       log("randomly among the US associated cards with the highest Ops.", Color.Event)
     }
-    askCardsDrawn(1)
+    askCardsDrawn(US, 1, FromDiscard)
 
     val items = if (isHuman(role))
       selectTroopsToPutOffMap(3)

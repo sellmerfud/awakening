@@ -95,6 +95,7 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
         log(s"You ($US) must discard cards until the combined Operational value")
         log(s"is at least $opPoints")
       }
+      askCardsDiscarded(US, 9) 
 
       def nextDiscard(num: Int, pointsDiscarded: Int): List[Int] = {
         if (pointsDiscarded >= opPoints)

@@ -75,7 +75,7 @@ object Card_086 extends Card(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing
       log(s"\nDiscard the top card of the $US Bot's hand", Color.Event)
     else
       log(s"\nYou ($US) must randomly discard one card", Color.Event)
-    askCardsDiscarded(1)
+    askCardsDiscarded(US, 1)
     decreasePrestige(1)
 
     if (game.cellsAvailable > 0) {

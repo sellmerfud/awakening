@@ -79,7 +79,7 @@ object Card_044 extends Card(44, "Renditions", US, 3, NoRemove, NoLapsing, NoAut
         humanDisrupt(3)
       addGlobalEventMarker(Renditions)
       log(s"Discard the top card of the $Jihadist Bot's hand")
-      askCardsDiscarded(1)
+      askCardsDiscarded(Jihadist, 1)
     }
     else {
       val target  = USBot.disruptTarget(game disruptTargets 3) foreach { target =>
@@ -88,6 +88,6 @@ object Card_044 extends Card(44, "Renditions", US, 3, NoRemove, NoLapsing, NoAut
       }
       addGlobalEventMarker(Renditions)
       log(s"$US (you) must discard a random card from your hand")
-      askCardsDiscarded(1)
+      askCardsDiscarded(Jihadist, 1)
     }
 }

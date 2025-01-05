@@ -72,12 +72,28 @@ object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    val prompt = ("\nWhat is the card# of the card that was drawn: (blank if none) ")
     log(s"\nTake the top card of the ${game.botRole} Bot's hand.", Color.Event)
-    askCardsDrawn(1)
+    val cardTaken = askCardNumber(prompt, allowNone = false).get
+    decreaseCardsInHand(game.botRole, 1)
+    if (cardTaken == AvengerCard) {
+      // No increase because Avenger card was discarded
+      avengerCardDrawn(discarded = false)
+    }
+    else
+      increaseCardsInHand(game.humanRole, 1)
 
     log("\nPut a random card from your hand (not including the one you just took)", Color.Event)
     log(s"on top card of the ${game.botRole} Bot's hand.", Color.Event)
-    askCardsDrawn(1)
+    val cardGiven = askCardNumber(prompt, allowNone = false).get
+    decreaseCardsInHand(game.humanRole, 1)
+    if (cardGiven == AvengerCard) {
+      // No increase because Avenger card was discarded
+      avengerCardDrawn(discarded = false)
+    }
+    else
+      increaseCardsInHand(game.botRole, 1)
+
 
     val thisCard = this.asInstanceOf[Card]
     (role) match {

@@ -78,7 +78,7 @@ object Card_099 extends Card(99, "HAMAS Elected", Unassociated, 1, Remove, NoLap
       log(s"\nYou ($US) must select and discard one card if you have any", Color.Event)
     else
       log(s"\nDiscard the top card of the $US Bot's hand", Color.Event)
-    askCardsDiscarded(1)
+    askCardsDiscarded(US, 1)
     decreasePrestige(1)
     decreaseFunding(1)
   }

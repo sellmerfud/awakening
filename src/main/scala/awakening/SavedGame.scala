@@ -116,7 +116,7 @@ object SavedGame {
       throw new IllegalArgumentException(s"Invalid save file - No game-state")
 
     asInt(top("file-version")) match {
-      case 2 => gameFromVersion2(asMap(top("game-state")))
+      case 3 => gameFromVersion3(asMap(top("game-state")))
       case v => throw new IllegalArgumentException(s"Invalid save file version: $v")
     }
   }
@@ -178,6 +178,12 @@ object SavedGame {
 
   private def reservesFromMap(data: Map[String, Any]): Reserves =
     Reserves(asInt(data("us")), asInt(data("jihadist")))
+
+  private def cardsInHandToMap(data: CardsInHand): Map[String, Any] =
+    Map("us" -> data.us, "jihadist" -> data.jihadist)
+
+  private def cardsInHandFromMap(data: Map[String, Any]): CardsInHand =
+    CardsInHand(asInt(data("us")), asInt(data("jihadist")))
 
   private def phaseTargetsToMap(data: PhaseTargets): Map[String, Any] =
     Map(
@@ -345,6 +351,7 @@ object SavedGame {
       "history"             -> gameState.history,
       "offMapTroops"        -> gameState.offMapTroops,
       "reserves"            -> reservesToMap(gameState.reserves),
+      "cardsInHand"         -> cardsInHandToMap(gameState.cardsInHand),
       "plays"               -> (gameState.plays map playToMap),
       "firstPlotCard"       -> (gameState.firstPlotCard getOrElse null),
       "cardsLapsing"        -> gameState.cardsLapsing,
@@ -373,8 +380,8 @@ object SavedGame {
       asList(data("summary")) map (_.toString)
     )
   }
-  // Note: We no longer support save file versions less than 2.
-  private def gameFromVersion2(data: Map[String, Any]): GameState = {
+  // Note: We no longer support save file versions less than 3.
+  private def gameFromVersion3(data: Map[String, Any]): GameState = {
     GameState(
       asString(data("scenarioName")),
       GameMode(asString(data("startingMode"))),
@@ -394,6 +401,7 @@ object SavedGame {
       asBoolean(data("sequestrationTroops")),
       asInt(data("offMapTroops")),
       reservesFromMap(asMap(data("reserves"))),
+      cardsInHandFromMap(asMap(data("cardsInHand"))),
       asList(data("plays")) map (p => playFromMap(asMap(p))),
       if (data("firstPlotCard") == null) None else Some(asInt(data("firstPlotCard"))),
       asList(data("cardsLapsing")) map asInt,

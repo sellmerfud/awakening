@@ -73,6 +73,6 @@ object Card_059 extends Card(59, "Amerithrax", Jihadist, 2, NoRemove, NoLapsing,
   override
   def executeEvent(role: Role): Unit = {
     log(s"\nYou ($US) must discard your highest-value US associated card (if any)", Color.Event)
-    askCardsDiscarded(1)
+    askCardsDiscarded(US, 1)
   }
 }

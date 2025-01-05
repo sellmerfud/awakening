@@ -77,7 +77,7 @@ object Card_199 extends Card(199, "US Consulate Attacked", Jihadist, 3, NoRemove
       log(s"\nDiscard the top card of the $US hand.", Color.Event)
     else
       log(s"\nYou ($US) must discard one random card.", Color.Event)
-    askCardsDiscarded(1)
+    askCardsDiscarded(US, 1)
 
     log("\nIf US Elections is played later this turn, US Posture switches automatically", Color.Event)
   }

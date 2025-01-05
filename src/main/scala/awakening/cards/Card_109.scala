@@ -99,6 +99,6 @@ object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsin
       log(s"\nDraw a card and add it to your hand", Color.Event)
     else
       log(s"\nDraw a card and place it on top of the $role Bot's hand", Color.Event)
-    askCardsDrawn(1)
+    askCardsDrawn(role, 1, FromDeck)
   }
 }

@@ -95,7 +95,7 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
         case "discard" =>
           println()
           log(s"Discard top card of the $Jihadist hand")
-          askCardsDiscarded(1)
+          askCardsDiscarded(Jihadist, 1)
 
         case _ if getCandidates().isEmpty =>
           log("\nThere are no Muslim countries with cells.  The event has no effect.", Color.Event)
@@ -121,7 +121,7 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
       target match {
         case None if jihadistHasCardsInHand =>
           log(s"\nYou ($Jihadist) must discard one card randomly.", Color.Event)
-          askCardsDiscarded(1)
+          askCardsDiscarded(Jihadist, 1)
 
         case None =>
           // Event was triggered during Jihadist turn and there are no cells in muslim countries.

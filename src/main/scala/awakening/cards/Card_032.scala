@@ -93,6 +93,7 @@ object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoA
       }
       else {
         log(s"${deck(cardNum)} is discarded", Color.Event)
+        decreaseCardsInHand(US, 1)
         processDiscardedCard(cardNum)
       }
     }

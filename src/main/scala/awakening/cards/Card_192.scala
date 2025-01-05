@@ -75,9 +75,9 @@ object Card_192 extends Card(192, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
-      log(s"\nDiscard the top two cards of the $Jihadist Bot's hand.", Color.Event)
+      log(s"\nDiscard the top two cards of the $US Bot's hand.", Color.Event)
       log(s"$Jihadist associated events will not be triggered.", Color.Event)
-      askCardsDiscarded(2)
+      askCardsDiscarded(US, 2)
     }
     else {
       // Bot
@@ -91,6 +91,7 @@ object Card_192 extends Card(192, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, 
             case Some(cardNum) =>
               val card = deck(cardNum)
               log(s"\n$card is discarded", Color.Event)
+              decreaseCardsInHand(US, 1)
               if (cardNum == AvengerCard)
                   avengerCardDrawn(discarded = false)
               else if (card.autoTrigger)

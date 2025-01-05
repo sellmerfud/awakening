@@ -1251,6 +1251,7 @@ object LabyrinthAwakening {
   case class ExtraCells(available: Int, onMap: Int)
   case class ExtraCellInfo(capacity:Int, available: Int, onMap: Int)
   case class Reserves(us: Int, jihadist: Int)
+  case class CardsInHand(us: Int, jihadist: Int)
   // Keeps track of the which countries were the target of
   // -operations
   // -events
@@ -1339,6 +1340,7 @@ object LabyrinthAwakening {
     sequestrationTroops: Boolean   = false,  // true if 3 troops off map due to Sequestration event
     offMapTroops: Int              = 0,
     reserves: Reserves             = Reserves(0, 0),
+    cardsInHand: CardsInHand       = CardsInHand(0, 0),
     plays: List[Play]              = Nil,               // Cards plays/plot resolutions during current turn (most recent first).
     firstPlotCard: Option[Int]     = None,     // Card number
     cardsLapsing: List[Int]        = Nil,         // Card numbers currently lapsing
@@ -1783,6 +1785,7 @@ object LabyrinthAwakening {
       b += f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}  (GWOT penalty $gwotPenalty)"
       b += f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d"
       b += f"US reserves     : ${reserves.us}%2d   | Jihadist reserves : ${reserves.jihadist}%2d"
+      b += f"US cards        : ${game.cardsInHand.us}%2d   | Jihadist cards    : ${game.cardsInHand.jihadist}%2d"
       b += separator()
       if (game.useExpansionRules) {
         b += f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"
@@ -2407,20 +2410,38 @@ object LabyrinthAwakening {
   val CriticalMiddle   = 200
   val AvengerCard      = 242
 
+  sealed trait CardDrawSource
+  case object FromDeck extends CardDrawSource
+  case object FromDiscard extends CardDrawSource
+  case object FromBox extends CardDrawSource  // Card removed from play
+  case object FromOpponent extends CardDrawSource
+
   // Returns true if the card was discarded (eg. Avenger)
-  def askCardsDrawn(numDrawn: Int): Unit = {
+  def askCardsDrawn(role: Role, numDrawn: Int, source: CardDrawSource, optPrompt: Option[String] = None): Unit = {
     for (num <- (1 to numDrawn)) {
-      val prompt = if (numDrawn == 1)
-        "\nWhat is the card# of the card that was drawn: (blank if none) "
-      else
-        s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: (blank if none) "
+      val prompt = optPrompt match {
+        case Some(prompt) =>
+          prompt
+        case None if numDrawn == 1 =>
+          "\nWhat is the card# of the card that was drawn: (blank if none) "
+        case None =>
+          s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: (blank if none) "
+      }
+
       askCardNumber(prompt) match {
         case None =>
           return
         case Some(cardNum) =>
           log(s"${deck(cardNum)} is drawn", Color.Event)
+          if (source == FromOpponent)
+            decreaseCardsInHand(oppositeRole(role), 1)
+          // Avenger event triggers and is placed in the
+          // discard pile.  Otherwise the play that drew the
+          // card adds it to their hand
           if (cardNum == AvengerCard)
             avengerCardDrawn(discarded = false)
+          else
+            increaseCardsInHand(role, 1)
       }
     }
   }
@@ -2435,17 +2456,18 @@ object LabyrinthAwakening {
       autoTriggerCardDiscarded(cardNum)
   }
 
-  def askCardsDiscarded(numberDiscarded: Int): Unit = {
+  def askCardsDiscarded(role: Role, numberDiscarded: Int): Unit = {
     for (num <- (1 to numberDiscarded)) {
       val prompt = if (numberDiscarded == 1)
-        "\nWhat is the card# of the card that was discarded: (blank if none) "
+        s"\nWhat is the card# of the $role card that was discarded: (blank if none) "
       else
-        s"\nWhat is the card# of the ${ordinal(num)} card that was discarded: (blank if none) "
+        s"\nWhat is the card# of the ${ordinal(num)} $role card that was discarded: (blank if none) "
       askCardNumber(prompt) match {
         case None =>
           return
         case Some(cardNum) =>
           log(s"${deck(cardNum)} is discarded", Color.Event)
+          decreaseCardsInHand(role, 1)
           processDiscardedCard(cardNum)
       }
     }
@@ -3848,6 +3870,22 @@ object LabyrinthAwakening {
       game = game.copy(reserves = game.reserves.copy(jihadist = 0))
       log(s"$role reserves set to zero", Color.MapMarker)
     }
+  }
+
+  def increaseCardsInHand(role: Role, num: Int): Unit = {
+    val newCardsInHand = role match {
+      case US => game.cardsInHand.copy(us = game.cardsInHand.us + num)
+      case Jihadist => game.cardsInHand.copy(jihadist = game.cardsInHand.jihadist + num)
+    }
+    game = game.copy(cardsInHand = newCardsInHand)
+  }
+
+  def decreaseCardsInHand(role: Role, num: Int): Unit = {
+    val newCardsInHand = role match {
+      case US => game.cardsInHand.copy(us = game.cardsInHand.us - (num min game.cardsInHand.us))
+      case Jihadist => game.cardsInHand.copy(jihadist = game.cardsInHand.jihadist - (num min game.cardsInHand.jihadist))
+    }
+    game = game.copy(cardsInHand = newCardsInHand)
   }
 
   def polarization(): Unit = {
@@ -6100,6 +6138,8 @@ object LabyrinthAwakening {
       val extraUSCards = usCardMods.map(_._2).sum
       val usCards       = USCardDraw(game.troopCommitment) + extraUSCards
       val jihadistCards = JihadistCardDraw(game.fundingLevel)
+      increaseCardsInHand(US, usCards)
+      increaseCardsInHand(Jihadist, jihadistCards)
       log()
       log("Draw Cards")
       log(separator())
@@ -6800,11 +6840,16 @@ object LabyrinthAwakening {
 
   def numUnresolvedPlots: Int = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
 
+  def getCardPlays(): List[CardPlay] = game.plays
+    .takeWhile(_.isInstanceOf[CardPlay])
+    .map(_.asInstanceOf[CardPlay])
+
+
   // ---------------------------------------------
   // Process all top level user commands.
   @tailrec def commandLoop(): Unit = {
     checkAutomaticVictory() // Will Exit game if auto victory has been achieved
-
+    
     val cardsPlayed     = (game.plays map (_.numCards)).sum
     val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved])
                                       map (_.numCards)).sum
@@ -6821,13 +6866,23 @@ object LabyrinthAwakening {
       resolvePlots()
     }
 
+    val activeRole = getCardPlays()
+      .headOption
+      .map(_.role)
+      .getOrElse(Jihadist)
+    val numPlayed = getCardPlays()
+      .takeWhile(_.role == activeRole)
+      .map(_.numCards)
+      .sum
+
     val plots = numUnresolvedPlots
     val plotDisp = if (plots == 0) "" else s", ${amountOf(plots, "unresolved plot")}"
     val prompt = {
-      s"""
-         |>>> Turn ${game.turn}  (${amountOf(cardsPlayed, "card")} played$plotDisp) <<<
-         |${separator()}
-         |Command: """.stripMargin
+      s"""|
+          |
+          |>>> $activeRole action phase (${amountOf(numPlayed, "card")} played$plotDisp) <<<
+          |${separator()}
+          |Command: """.stripMargin
     }
     readLine(prompt) match {
       case null =>
@@ -7118,6 +7173,7 @@ object LabyrinthAwakening {
       val card = deck(cardNumber)
       val savedState = game
 
+      decreaseCardsInHand(US, 1)
       if (additional)
         addAdditionalCardToPlayedCard(card.number)  // Add card to most recent PlayedCard
       else
@@ -7528,6 +7584,7 @@ object LabyrinthAwakening {
       val card = deck(cardNumber)
       val savedState = game
 
+      decreaseCardsInHand(Jihadist, 1)
       // Add the card to the list of plays for the turn.
       addPlayedCard(Jihadist, card.number)
 

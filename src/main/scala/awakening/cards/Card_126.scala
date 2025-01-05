@@ -85,7 +85,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
       askMenu("Choose one:", choices).head match {
         case "discard" =>
           log("\nDiscard the top card in the Jihadist hand", Color.Event)
-          askCardsDiscarded(1)
+          askCardsDiscarded(Jihadist, 1)
 
         case _ =>
           val target = askCountry("Remove 2 cells in which country? ", getCandidates())
@@ -110,7 +110,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
         if (nonIRWith5Cells.isEmpty && cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand? (y/n) ")) {
           println()
           log(s"\nYou ($Jihadist) must discard one random card", Color.Event)
-          askCardsDiscarded(1)
+          askCardsDiscarded(Jihadist, 1)
         }
         else {
           val target = if (nonIRWith5Cells.nonEmpty)

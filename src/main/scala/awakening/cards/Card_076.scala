@@ -76,7 +76,7 @@ object Card_076 extends Card(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing, 
       log("\nDraw two cards and add them to your hand", Color.Event)
     else
       log(s"\nDraw 2 cards and place them on top of the $Jihadist Bot's hand", Color.Event)
-    askCardsDrawn(2)
+    askCardsDrawn(Jihadist, 2, FromDeck)
     decreasePrestige(2)
     val candidates = countryNames(game.muslims filter (_.isAlly))
     if (candidates.isEmpty)

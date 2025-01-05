@@ -93,7 +93,7 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
     putTroopsInOffMapBox(source, 1)
 
     log(s"\n$US player draws 1 card", Color.Event)
-    askCardsDrawn(1)
+    askCardsDrawn(US, 1, FromDeck)
   }
   else { // Jihadist
     setTrumpTweetsOFF()
@@ -102,6 +102,6 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
       log(s"\nDiscard top card of the $US Bot's hand", Color.Event)
     else
       log(s"\nYou ($US) must discard one random card.", Color.Event)
-    askCardsDiscarded(1)
+    askCardsDiscarded(US, 1)
   }
 }

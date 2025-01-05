@@ -77,7 +77,7 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
     if (isHuman(role)) {
       log(s"\nDiscard the top two cards of the $Jihadist Bot's hand.", Color.Event)
       log(s"$Jihadist associated events will not be triggered.", Color.Event)
-      askCardsDiscarded(2)
+      askCardsDiscarded(Jihadist, 2)
     }
     else {
       log(s"\nYou ($US) must randomly discard two cards", Color.Event)
@@ -89,6 +89,7 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
           askCardNumber(prompt) match {
             case Some(cardNum) =>
               val card = deck(cardNum)
+              decreaseCardsInHand(US, 1)
               log(s"$card is discarded", Color.Event)
               if (cardNum == AvengerCard)
                   avengerCardDrawn(discarded = false)

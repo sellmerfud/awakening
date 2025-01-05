@@ -74,7 +74,7 @@ object Card_078 extends Card(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsin
       log(s"\nThe $US Bot does NOT dicard any cards", Color.Event)
     else {
       log(s"\nYou ($US) must discard any of Iran, Hizballah, or Jaysh al-Mahdi", Color.Event)
-      askCardsDiscarded(1)
+      askCardsDiscarded(US, 1)
     }
 
     setUSPosture(Hard)

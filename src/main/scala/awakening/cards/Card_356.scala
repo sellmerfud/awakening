@@ -84,14 +84,14 @@ object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemo
     log()
     log("""You cannot choose "Peace Dividend" or "Oil Price Spike"""", Color.Event)
     if (boxChoices.isEmpty) {
-      log("\nSelect a card from the discard pile and add it to your hand.")
-      askCardsDrawn(1)
+      log("\nSelect a card from the discard pile or box and add it to your hand.")
+      askCardsDrawn(role, 1, FromDiscard)
     }
     else {
       val choices = boxChoices :+ (-1, "A card from the discard pile")
       askMenu("Add which card to your hand:", choices).head match {
         case -1 =>
-          askCardsDrawn(1)
+          askCardsDrawn(role, 1, FromDiscard)
         case num if game.firstPlotCard == Some(num) =>
           game = game.copy(firstPlotCard = None)
           if (num == AvengerCard)

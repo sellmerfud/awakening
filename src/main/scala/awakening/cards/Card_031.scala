@@ -92,12 +92,11 @@ object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAu
         performAlert(name, plot)
     }
     
-    if (isHuman(role)) {
+    if (isHuman(role))
       log(s"$US draws one card and adds it to their hand")
-      askCardsDrawn(1)
-    }
     else
       log(s"Add one card to the top of the $US Bot hand")
+    askCardsDrawn(US, 1, FromDeck)
     addGlobalEventMarker(Wiretapping)
   }
 }

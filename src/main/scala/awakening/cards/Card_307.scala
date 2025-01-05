@@ -78,6 +78,6 @@ object Card_307 extends Card(307, "Russian Subterfuge", Jihadist, 2, NoRemove, N
       log(s"\nDiscard the top card of the $US Bot's hand.", Color.Event)
     else
       log(s"\nYou ($US) must discard a random card.", Color.Event)
-    askCardsDiscarded(1)
+    askCardsDiscarded(US, 1)
   }
 }

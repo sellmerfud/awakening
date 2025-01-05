@@ -80,6 +80,7 @@ object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing
       s"Enter card # of the next card in the $Jihadist Bot's hand: "
     
     val card = deck(askCardNumber(prompt, allowNone = false).get)
+    decreaseCardsInHand(Jihadist, 1)
     addSecondCardToPlayedCard(card.number)
     logCardPlay(Jihadist, card, playable = false, secondCard = true)
 

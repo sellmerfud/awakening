@@ -86,12 +86,12 @@ object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, 
     removeGlobalEventMarker(Fracking) // Cancels effects of "Fracking" marker
     role match {
       case role if isHuman(role) =>
-        log(s"\n$role player draws a card other than Oil Price Spike from the discad pile.", Color.Event)
+        log(s"\n$role player draws a card other than Oil Price Spike from the discad pile or box.", Color.Event)
       case US =>
-        log(s"\n$US Bot draws highest Ops US associated card (at random) from the discard pile.", Color.Event)
+        log(s"\n$US Bot draws highest Ops US associated card (at random) from the discard pile or box.", Color.Event)
       case Jihadist =>
-        log(s"\n$Jihadist Bot draws highest Ops Jihadist associated card (at random) from the discard pile", Color.Event)
+        log(s"\n$Jihadist Bot draws highest Ops Jihadist associated card (at random) from the discard pile or box", Color.Event)
     }
-    askCardsDrawn(1)
+    askCardsDrawn(role, 1, FromDiscard)
   }
 }

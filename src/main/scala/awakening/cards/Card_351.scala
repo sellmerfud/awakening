@@ -92,6 +92,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
     if (cardNum == AvengerCard) {
       log(s"\nThe $cardDisplay card was randomly drawn, so the event triggers", Color.Event)
       log(separator())
+      decreaseCardsInHand(opponent, 1)
       card.executeEvent(US)
     }
     else {
@@ -112,6 +113,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
       action match {
         case "discard" =>
           log(s"\nPlace $cardDisplay in the discard pile", Color.Event)
+          decreaseCardsInHand(opponent, 1)
           processDiscardedCard(cardNum)
 
         case "return"  =>
@@ -119,9 +121,10 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
 
         case "keep"    =>
           log(s"\nKeep $cardDisplay and place another card from your hand the $opponent hand", Color.Event)
-          askCardsDrawn(1)
+          askCardsDrawn(role, 1, FromOpponent)
 
         case _ => // Play the event
+          decreaseCardsInHand(opponent, 1)
           addAdditionalCardToPlayedCard(card.number)
           log(s"\n$role executes the $cardDisplay event")
           log(separator())

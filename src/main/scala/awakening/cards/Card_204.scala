@@ -81,7 +81,7 @@ object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLaps
         log(s"\nDiscard the top card of the $US hand", Color.Event)
       else
         log(s"\nYou ($US) must discard one random card", Color.Event)
-      askCardsDiscarded(1)
+      askCardsDiscarded(US, 1)
     }
     else {
       val source = if (game.troopsAvailable > 0)
