@@ -64,10 +64,7 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = {
-    val sources = game.countries.filter(JihadistBot.hasCellForTravel)
-    sources.size > 1 || (sources.size == 1 && !Schengen.contains(sources.head.name))
-  }
+  def botWillPlayEvent(role: Role): Boolean = Schengen.exists(JihadistBot.canTravelTo)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -108,14 +105,13 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   else {
     // Bot
     def nextTravel(numDestinations: Int, alreadyTried: Set[String]): Int = {
-      val canTravelFrom = (c: Country) => JihadistBot.hasCellForTravel(c)
       // If the event was triggered during US turn then the Bot may be forced
       // to travel a cell that it normally would not use
-      val preferredTravellers = countryNames(game.countries.filter(canTravelFrom))
       val allTravellers = countryNames(game.countries.filter(c => JihadistBot.unusedCells(c) > 0))
       if (numDestinations < 2) {
-        val candidates = Schengen.filterNot(alreadyTried.contains)
+        val candidates = Schengen.filter(namem => !alreadyTried(name) && JihadistBot.canTravelTo(name))
         val to   = JihadistBot.posturePriority(candidates).get
+        val preferredTravellers = countryNames(game.countries.filter(JihadistBot.hasCellForTravel(_, to)))
         val from = JihadistBot.travelFromTarget(to, preferredTravellers.filterNot(_ == to)) orElse {
             JihadistBot.travelFromTarget(to, allTravellers.filterNot(_ == to))
         }

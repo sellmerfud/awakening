@@ -96,7 +96,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
         game.botEnhancements &&
         game.caliphateCapital.isEmpty &&
         game.islamistResources == 5 &&
-        game.countries.count(c => c.name != name && JihadistBot.hasCellForTravel(c)) > 2
+        game.countries.count(c => JihadistBot.hasCellForTravel(c, name, placement = true)) > 2
       }
       .getOrElse(JihadistBot.cellPlacementPriority(false)(getCandidates()).get)
   }
@@ -111,7 +111,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
 
     case Jihadist =>
       val target = getJihadistBotTarget()
-      val numTravelers = game.countries.count(c => c.name != target && JihadistBot.hasCellForTravel(c))
+      val numTravelers = game.countries.count(c => JihadistBot.hasCellForTravel(c, target, placement = true))
       // Enhanced bot will only select the event if it can remove 3 cells
       // Normal bot only requires 1
       if (game.botEnhancements)
@@ -181,7 +181,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
     else if (role == Jihadist) {
       // Jihadist Bot removes only "cells""
       val target = getJihadistBotTarget()
-      val cellSources = countryNames(game.countries.filter (c => c.name != target && JihadistBot.hasCellForTravel(c)))
+      val cellSources = countryNames(game.countries.filter (c => JihadistBot.hasCellForTravel(c, target, placement = true)))
       val countries = if (cellSources.size <= 3)
         cellSources
       else {

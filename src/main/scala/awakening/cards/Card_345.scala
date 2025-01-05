@@ -57,8 +57,9 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
   def getCandidates() = countryNames(game.muslims.filter(isCandidate))
 
   def jihadBotCandidates() = {
-    val botTest =
-      (m: MuslimCountry) => m.militia > 0 || (!m.besiegedRegime && JihadistBot.hasCellForTravel(m))
+    val botTest = (m: MuslimCountry) =>
+      m.militia > 0 ||
+      (!m.besiegedRegime && JihadistBot.hasCellForTravel(m, "", placement = true)) // Target is "" here because the cell will be removed
     countryNames(game.muslims.filter(m => isCandidate(m) && botTest(m)))
   }
   // Used by the US Bot to determine if the executing the event would remove

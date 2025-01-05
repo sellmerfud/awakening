@@ -444,7 +444,7 @@ object JihadistBot extends BotHelpers {
   val GoodMuslimWithAdjacentCellsFilter =
     new CriteriaFilter(
       "Good Muslim w/ adjacent cells",
-      muslimTest(m => m.isGood && m.hasAdjacent(hasCellForTravel) && m.awakening - m.reaction < 1))
+      muslimTest(m => m.isGood && m.hasAdjacent(c => hasCellForTravel(c, m.name)) && m.awakening - m.reaction < 1))
   val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
 
   // Used with botEnhancements
@@ -495,7 +495,7 @@ object JihadistBot extends BotHelpers {
   // the travel will succeed  without a die roll
   val EnhTravelFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode(
     "Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM w/ Adjacent cells",
-    muslimTest(m => m.isFair && m.hasAdjacent(hasCellForTravel) && m.awakening - m.reaction < 1),
+    muslimTest(m => m.isFair && m.hasAdjacent(c => hasCellForTravel(c, m.name)) && m.awakening - m.reaction < 1),
     muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
   val EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode(
     "Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM",
@@ -832,7 +832,7 @@ object JihadistBot extends BotHelpers {
     // if adjacent: Non-Muslim (priorities within those: most cells -->good non-Schengen-->lowest governance), THEN
 
     // If the target destination is GOOD/FAIR, then only allow travel from
-    // adjacent coutnries
+    // adjacent countries
     val fromAdjacentOnly = game.getCountry(toCountry) match {
       case m: MuslimCountry => (m.isGood || m.isFair)
       case _ => false
@@ -842,7 +842,7 @@ object JihadistBot extends BotHelpers {
       game.getCountries(names)
         .filter(_.name != toCountry)   // Never travel within same country
         .filter(c => !fromAdjacentOnly || areAdjacent(c.name, toCountry))
-        .filter(hasCellForTravel)
+        .filter(c => hasCellForTravel(c, toCountry))
 
     type FromTest = (Country => Boolean, String)
     type TravelFromCriteria = (FromTest, List[CountryFilter])
@@ -920,11 +920,9 @@ object JihadistBot extends BotHelpers {
                           MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
                           DisruptPrestigePriority, LowestRECPriority)
 
-    // Enhanced Bot will only travel from adjacent if target is
-    // a Muslim Good/Fair country
     val withCells  =
       game.getCountries(names)
-        .filter(hasCellForTravel)
+        .filter(c => hasCellForTravel(c, toCountry))
         .filter(wouldMoveOrTravelWithinToSleep)
     val candidates = selectCandidates(withCells, flowchart)
     topPriority(candidates, priorities).map(_.name)
@@ -1789,23 +1787,56 @@ object JihadistBot extends BotHelpers {
   // any of them, the travelOperation() code must tell this
   // function how many previous attempts have been made so that
   // the county of auto-recruit countries with cells is accurate
+  // `placement` should be true if this is used by and event that can
+  // place cell from anywhere on the map.  In this case, Travel Ban
+  // is ignored.
 
-  def numCellsForTravel(c: Country, prevAttempts: List[TravelAttempt] = Nil): Int = {
-    def prevTravellers(name: String) = prevAttempts.count(_.from == name)
-    val unusedCellsInCountry = (unusedCells(c) - prevTravellers(c.name)) max 0
-    val isNigeriaMuslimAlly = c match {
-      case m: MuslimCountry => m.name == Nigeria && m.isAlly
-      case _ => false
-    }
-    val totalAutoRecruitWithCells =
-        game.muslims.count(m => m.autoRecruit && m.totalCells - prevTravellers(m.name) > 0) // Including Sadr
+  def numCellsForTravel(c: Country, dest: String, prevAttempts: List[TravelAttempt] = Nil, placement: Boolean = false): Int = {
+    if (c.name == dest)
+      0  // This function is not used for travel within the same country
+    else if (!placement && dest == UnitedStates && globalEventInPlay(TravelBan) && isTravelBanCountry(c.name))
+      0  // Travel ban prevents travel to the US from certain countries
+    else {
+      def prevTravellers(name: String) = prevAttempts.count(_.from == name)
+      val unusedCellsInCountry = (unusedCells(c) - prevTravellers(c.name)) max 0
+      val isNigeriaMuslimAlly = c match {
+        case m: MuslimCountry => m.name == Nigeria && m.isAlly
+        case _ => false
+      }
+      val totalAutoRecruitWithCells =
+          game.muslims.count(m => m.autoRecruit && m.totalCells - prevTravellers(m.name) > 0) // Including Sadr
 
-    if (game.botEnhancements) {
-      // The Enhanced Bot will never travel any cells out of the Major Jihad Priority country
-      if (PriorityCountries.majorJihadPrioritySet && Some(c.name) == majorJihadPriorityCountry)
-        0
+      if (game.botEnhancements) {
+        // The Enhanced Bot will never travel any cells out of the Major Jihad Priority country
+        if (PriorityCountries.majorJihadPrioritySet && Some(c.name) == majorJihadPriorityCountry)
+          0
+        else {
+
+          // Always preseve one cell if the country is:
+          // - last cell in United States if there is a WMD plot available
+          // - auto-recruit and there is not at least 2 other auto-recruit
+          //   counrtries with a cell
+          // - The country contains the Training Camps marker
+          // - The country is Nigeria while it is a Muslim Ally
+          val preserveOne =
+            (c.name == UnitedStates && game.plotData.availablePlots.contains(PlotWMD)) ||
+            (c.autoRecruit && totalAutoRecruitWithCells < 3) ||
+            c.hasMarker(TrainingCamps) ||
+            isNigeriaMuslimAlly
+          // The enhanced bot will not move that last three cells
+          // out of the Priority Auto Recruit country.
+          val numToPreserve = if (PriorityCountries.autoRecruitPrioritySet && Some(c.name) == autoRecruitPriorityCountry)
+            3
+          else if (preserveOne)
+            1
+          else
+            0
+
+          (unusedCellsInCountry - numToPreserve) max 0
+        }
+      }
       else {
-
+        // Standard Bot
         // Always preseve one cell if the country is:
         // - last cell in United States if there is a WMD plot available
         // - auto-recruit and there is not at least 2 other auto-recruit
@@ -1813,15 +1844,11 @@ object JihadistBot extends BotHelpers {
         // - The country contains the Training Camps marker
         // - The country is Nigeria while it is a Muslim Ally
         val preserveOne =
-          (c.name == UnitedStates && game.plotData.availablePlots.contains(PlotWMD)) ||
+          (c.name == UnitedStates && game.plotData.availablePlots.contains(PlotWMD)) ||  // Non-standard
           (c.autoRecruit && totalAutoRecruitWithCells < 3) ||
-          c.hasMarker(TrainingCamps) ||
-          isNigeriaMuslimAlly
-        // The enhanced bot will not move that last three cells
-        // out of the Priority Auto Recruit country.
-        val numToPreserve = if (PriorityCountries.autoRecruitPrioritySet && Some(c.name) == autoRecruitPriorityCountry)
-          3
-        else if (preserveOne)
+          c.hasMarker(TrainingCamps) ||  // Non-standard
+          isNigeriaMuslimAlly            // Non-standard
+        val numToPreserve = if (preserveOne)
           1
         else
           0
@@ -1829,37 +1856,22 @@ object JihadistBot extends BotHelpers {
         (unusedCellsInCountry - numToPreserve) max 0
       }
     }
-    else {
-      // Standard Bot
-      // Always preseve one cell if the country is:
-      // - last cell in United States if there is a WMD plot available
-      // - auto-recruit and there is not at least 2 other auto-recruit
-      //   counrtries with a cell
-      // - The country contains the Training Camps marker
-      // - The country is Nigeria while it is a Muslim Ally
-      val preserveOne =
-        (c.name == UnitedStates && game.plotData.availablePlots.contains(PlotWMD)) ||  // Non-standard
-        (c.autoRecruit && totalAutoRecruitWithCells < 3) ||
-        c.hasMarker(TrainingCamps) ||  // Non-standard
-        isNigeriaMuslimAlly            // Non-standard
-      val numToPreserve = if (preserveOne)
-        1
-      else
-        0
-
-      (unusedCellsInCountry - numToPreserve) max 0
-    }
   }
 
   // Test the country to see if it has any unused cells that can travel.
-  def hasCellForTravelWithPrevious(c: Country, prevAttempts: List[TravelAttempt]) = numCellsForTravel(c, prevAttempts) > 0
+  def hasCellForTravelWithPrevious(c: Country, dest: String, prevAttempts: List[TravelAttempt]) =
+    numCellsForTravel(c, dest, prevAttempts) > 0
 
   // This does not account for previous Travel attempts
-  def hasCellForTravel(c: Country) = numCellsForTravel(c, Nil) > 0
+  // `placement` should be true if this is used by and event that can
+  // place cell from anywhere on the map.  In this case, Travel Ban
+  // is ignored.
+  def hasCellForTravel(c: Country, dest: String, placement: Boolean = false) =
+    numCellsForTravel(c, dest: String, Nil, placement) > 0
 
   def numAdjacentTravelCells(destination: Country, prevAttempts: List[TravelAttempt] = Nil): Int = {
     game.getCountries(getAdjacent(destination.name))
-      .map(c => numCellsForTravel(c, prevAttempts))
+      .map(c => numCellsForTravel(c, destination.name, prevAttempts))
       .sum
   }
 
@@ -1880,10 +1892,19 @@ object JihadistBot extends BotHelpers {
     if (lapsingEventInPlay(Biometrics))  // Only ajacent travel allowed
       hasAdjacentTravelCells(dest)
     else
-      game.hasCountry(source => source.name != dest.name && hasCellForTravel(source))
+      game.hasCountry(source => hasCellForTravel(source, dest.name))
 
   def canTravelTo(destName : String): Boolean =
     canTravelTo(game.getCountry(destName))
+
+  def travelSources(dest: String): List[String] =
+    game.countries
+      .filter(source => hasCellForTravel(source, dest))
+      .map(_.name)
+
+  def adjacentTravelSources(dest: String): List[String] =
+    getAdjacent(dest).filter(source => hasCellForTravel(game.getCountry(source), dest))
+
 
   // First select the target to country.
   // Then select one or more countries from which cells may travel.
@@ -1907,7 +1928,7 @@ object JihadistBot extends BotHelpers {
           val canTravelFrom = (c: Country) =>
             !alreadyTried(c.name) &&
             (!adjacentOnly || areAdjacent(c.name, toName)) &&
-            hasCellForTravelWithPrevious(c, attempts)
+            hasCellForTravelWithPrevious(c, toName, attempts)
           val canTravelInPlace =
             !game.botEnhancements &&
             !alreadyTried(toName) &&
@@ -1934,7 +1955,7 @@ object JihadistBot extends BotHelpers {
                 (activeCells(from) - prevTravellers) max 0 min remaining
               }
               else
-                numCellsForTravel(from, attempts) min remaining
+                numCellsForTravel(from, toName, attempts) min remaining
 
               if (numAttempts == 0) {
                 botLog(s"No cells in $fromName are allowed to travel")
@@ -1997,22 +2018,18 @@ object JihadistBot extends BotHelpers {
       // Find countries that are adjacent to other countries with cells, or that
       // have active cells (which can travel in place)
       // Note: The Enhanced bot does not travel in place.
-      val validCountries = game.countries filter { c =>
-        (c.activeCells > 0 && !game.botEnhancements) ||
-        game.adjacentCountries(c.name).exists(hasCellForTravel)
+      val validCountries = game.countries.filter { c =>
+        (c.activeCells > 0 && !game.botEnhancements) || canAdjacentTravelTo(c)
       }
       countryNames(validCountries)
     }
     else if (adjacentOnly) {
       // The Enhanced Bot limits travel to adjacent only when the EvO
       // selected Travel based on an available adjacent cell.
-      val validCountries = game.countries filter { c =>
-        game.adjacentCountries(c.name).exists(hasCellForTravel)
-      }
-      countryNames(validCountries)
+      countryNames(game.countries.filter(canAdjacentTravelTo))
     }
     else
-      countryNames(game.countries)
+      countryNames(game.countries.filter(canTravelTo))
 
     (optTarget orElse travelToTarget(toCandidates)) match {
       case None => 0 // No targets to no ops used
@@ -2041,7 +2058,7 @@ object JihadistBot extends BotHelpers {
         else {
           val canTravelFrom = (c: Country) =>
             !alreadyTried(c.name) &&
-            hasCellForTravelWithPrevious(c, attempts)
+            hasCellForTravelWithPrevious(c, toName, attempts)
           val canTravelInPlace =
             !game.botEnhancements &&
             !alreadyTried(toName) &&
@@ -2068,7 +2085,7 @@ object JihadistBot extends BotHelpers {
                 (activeCells(from) - prevTravellers) max 0 min remaining
               }
               else
-                numCellsForTravel(from, attempts) min remaining
+                numCellsForTravel(from, toName, attempts) min remaining
 
               if (numAttempts == 0) {
                 botLog(s"No cells in $fromName are allowed to travel")
@@ -2372,18 +2389,15 @@ object JihadistBot extends BotHelpers {
         }
         // Create the next highest priority travel attempt.  Max of one per destination.
         def nextTravel(completed: Int, destinations: List[String]): Int = {
-          val sources = countryNames(game.countries filter hasCellForTravel)
-          if (completed == maxOps || destinations.isEmpty || sources.isEmpty)
+          if (completed == maxOps || !destinations.exists(canTravelTo))
             completed
           else {
             // First we try to do adjacent travel so that it will automatically succeed.
-            val adjSources = sources filter (s => destinations exists (d => areAdjacent(s, d)))
-            if (adjSources.nonEmpty) {
+            val adjDests = destinations.filter(canAdjacentTravelTo)
+            if (adjDests.nonEmpty) {
               // Now pick just the destinations that are adjacent to one of the sources
-              val adjDests = destinations filter (d => adjSources exists (s => areAdjacent(s, d)))
               val to = recruitTravelToPriority(adjDests).get
-              // Don't allow travel within the same country
-              travelFromTarget(to, adjSources filterNot (_ == to)) match {
+              travelFromTarget(to, adjacentTravelSources(to)) match {
                 case None => nextTravel(completed, destinations filterNot (_ == to))
                 case Some(from) =>
                   displayHeader()
@@ -2400,8 +2414,7 @@ object JihadistBot extends BotHelpers {
               completed
             else {
               val to = recruitTravelToPriority(destinations).get
-              // Don't allow travel within the same country
-              travelFromTarget(to, sources filterNot (_ == to)) match {
+              travelFromTarget(to, travelSources(to)) match {
                 case None => nextTravel(completed, destinations filterNot (_ == to))
                 case Some(from) =>
                   displayHeader()
@@ -2651,14 +2664,12 @@ object JihadistBot extends BotHelpers {
         }
 
         def nextTravel(completed: Int): Int = {
-          val sources = countryNames(game.countries filter (c => c.name != UnitedStates && hasCellForTravel(c)))
-          if (completed == cardOps || sources.isEmpty)
+          if (completed == cardOps || travelSources(UnitedStates).isEmpty)
             completed
           else {
             // First we try to do adjacent travel so that it will automatically succeed.
-            val adjSources = sources filter (s => areAdjacent(s, UnitedStates))
-            if (adjSources.nonEmpty) {
-              travelFromTarget(UnitedStates, adjSources) match {
+            if (adjacentTravelSources(UnitedStates).nonEmpty) {
+              travelFromTarget(UnitedStates, adjacentTravelSources(UnitedStates)) match {
                 case None => completed  // No more source countries
                 case Some(from) =>
                   displayHeader()
@@ -2670,7 +2681,7 @@ object JihadistBot extends BotHelpers {
               }
             }
             else {
-            travelFromTarget(UnitedStates, sources) match {
+            travelFromTarget(UnitedStates, travelSources(UnitedStates)) match {
               case None => completed   // No more source countries
               case Some(from) =>
                 displayHeader()
@@ -2760,8 +2771,7 @@ object JihadistBot extends BotHelpers {
         // times as possible until successful.
         def nextAttempt(completed: Int): Int = {
           val us = game.getCountry(UnitedStates)
-          val sources = game.getCountries(getAdjacent(UnitedStates))
-            .filter(c => totalUnused(c) > 0)
+          val sources = adjacentTravelSources(UnitedStates)
           if (completed == maxOps || us.totalCells > 0 || sources.isEmpty)
             completed
           else {
@@ -2769,7 +2779,7 @@ object JihadistBot extends BotHelpers {
             if (completed >= cardOps)
               expendBotReserves(1)
             addOpsTarget(UnitedStates)
-            val source = travelFromTarget(UnitedStates, sources.map(_.name)).get
+            val source = travelFromTarget(UnitedStates, sources).get
             val activeCell = activeCells(game.getCountry(source)) > 0
             val attempt = TravelAttempt(source, UnitedStates, activeCell)
             performTravels(attempt::Nil) match {
@@ -2813,8 +2823,7 @@ object JihadistBot extends BotHelpers {
 
         def nextTravel(completed: Int, target: String): Int = {
 
-          val sources = game.getCountries(getAdjacent(target))
-            .filter(c => hasCellForTravel(c))
+          val sources = adjacentTravelSources(target)
           if (completed == maxOps || sources.isEmpty)
             completed
           else {
@@ -2822,7 +2831,7 @@ object JihadistBot extends BotHelpers {
             if (completed >= cardOps)
               expendBotReserves(1)
             addOpsTarget(target)
-            val source = travelFromTarget(target, sources.map(_.name)).get
+            val source = travelFromTarget(target, sources).get
             val activeCell = activeCells(game.getCountry(source)) > 0
             val attempt = TravelAttempt(source, target, activeCell)
             performTravels(attempt::Nil) match {
@@ -2882,18 +2891,14 @@ object JihadistBot extends BotHelpers {
         }
         // Create the next highest priority travel attempt.  Max of one per destination.
         def nextTravel(completed: Int, destinations: List[String]): Int = {
-          val sources = countryNames(game.countries filter hasCellForTravel)
-          if (completed == maxOps || destinations.isEmpty || sources.isEmpty)
+          if (completed == maxOps || !destinations.exists(canTravelTo))
             completed
           else {
             // First we try to do adjacent travel so that it will automatically succeed.
-            val adjSources = sources filter (s => destinations exists (d => areAdjacent(s, d)))
-            if (adjSources.nonEmpty) {
-              // Now pick just the destinations that are adjacent to one of the sources
-              val adjDests = destinations filter (d => adjSources exists (s => areAdjacent(s, d)))
+            val adjDests = destinations.filter(canAdjacentTravelTo)
+            if (adjDests.nonEmpty) {
               val to = recruitTravelToPriority(adjDests).get
-              // Don't allow travel within the same country
-              travelFromTarget(to, adjSources filterNot (_ == to)) match {
+              travelFromTarget(to, adjacentTravelSources(to)) match {
                 case None => nextTravel(completed, destinations filterNot (_ == to))
                 case Some(from) =>
                   displayHeader()
@@ -2911,7 +2916,7 @@ object JihadistBot extends BotHelpers {
             else {
               val to = recruitTravelToPriority(destinations).get
               // Don't allow travel within the same country
-              travelFromTarget(to, sources filterNot (_ == to)) match {
+              travelFromTarget(to, travelSources(to)) match {
                 case None => nextTravel(completed, destinations filterNot (_ == to))
                 case Some(from) =>
                   displayHeader()
@@ -2954,10 +2959,7 @@ object JihadistBot extends BotHelpers {
         val maxOps = cardOps + reserveOps
 
         def nextAttempt(completed: Int): Int = {
-          val mjp = game.getCountry(mjpName)
-
-          val sources = game.countries.filter(c => c.name != mjpName && hasCellForTravel(c)).map(_.name)
-          val optSource = travelFromTarget(mjpName, sources)
+          val optSource = travelFromTarget(mjpName, travelSources(mjpName))
           if (completed == maxOps || optSource.isEmpty)
             completed
           else {
@@ -3099,7 +3101,7 @@ object JihadistBot extends BotHelpers {
     val maxReserves = (3 - card.ops) min game.reserves.jihadist
     val maxRadOps   = unusedOps + maxReserves
     val biometrics = lapsingEventInPlay(Biometrics)
-    
+
     def addAction(test: Boolean, action: RadicalizationAction): Option[RadicalizationAction] =
       if (test) Some(action) else None
 
@@ -3178,7 +3180,7 @@ object JihadistBot extends BotHelpers {
         JihadistBot.travelFromTarget(destination, countries) match {
           case Some(name) =>
             val c = game.getCountry(name)
-            val n = remaining min JihadistBot.numCellsForTravel(c)
+            val n = remaining min JihadistBot.numCellsForTravel(c, destination)
             val a = n min activeCells(c)
             val s = n - a
             CellsItem(name, a, s) :: nextFromMap(countries filterNot (_ == name), remaining - n)

@@ -75,11 +75,13 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
   def eventConditionsMet(role: Role) = role == Jihadist || game.caliphateDeclared
 
 
+  // Enhanced Bot will only play if it can place at least one cell in Syria/Iraq
   def enhJihadistBotAbuBakrPlayable: Boolean = {
-    val withCells = game.countries.filter(JihadistBot.hasCellForTravel)
-    game.cellsAvailable > 0 ||
-    withCells.exists(_.name != Syria) ||
-    withCells.exists(_.name != Iraq)
+    val withCells = game.countries.filter { c =>
+      c.name != Syria && c.name != Iraq &&
+      (JihadistBot.hasCellForTravel(c, Syria, placement = true) || JihadistBot.hasCellForTravel(c, Iraq, placement = true))
+    }
+    game.cellsAvailable > 0 || withCells.nonEmpty
   }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -89,15 +91,8 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
   def botWillPlayEvent(role: Role): Boolean = role match {
     // US Bot will play event if Presting == 12 to remove the card from the game.
     case US => true
-
-    // Enhanced Bot will only play if it can place at least one cell in Syria/Iraq
-    case Jihadist if game.botEnhancements =>
-      val target = JihadistBot.cellPlacementPriority(true)(Syria::Iraq::Nil).get
-      val haveTraveler = game.countries.exists(c => c.name != target && JihadistBot.hasCellForTravel(c))
-      game.cellsAvailable > 0 || haveTraveler
-
-    case Jihadist =>
-      game.cellsAvailable > 0
+    case Jihadist if game.botEnhancements => enhJihadistBotAbuBakrPlayable
+    case Jihadist => game.cellsAvailable > 0
   }
 
   // Carry out the event for the given role.
@@ -152,7 +147,7 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         // Enhanced Bot will move cells using Travel From priorities once all
         // cells on the track have been used.
         val target = JihadistBot.cellPlacementPriority(true)(Syria::Iraq::Nil).get
-        val sourceCountries = countryNames(game.countries.filter(c => c.name != target && JihadistBot.hasCellForTravel(c)))
+        val sourceCountries = countryNames(game.countries.filter(c => JihadistBot.hasCellForTravel(c, target, placement = true)))
         addEventTarget(target)
         testCountry(target)
 

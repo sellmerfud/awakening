@@ -77,7 +77,9 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
       None
     val target = mjp.getOrElse(JihadistBot.majorJihadTarget(muslimCandidates()).get)
 
-    val travelers = cellSources(target).map(name => JihadistBot.numCellsForTravel(game.getCountry(name))).sum
+    val travelers = cellSources(target).map { name =>
+      JihadistBot.numCellsForTravel(game.getCountry(name), target, Nil, placement = true)
+    }.sum
 
     if (game.cellsAvailable + travelers > 0 || game.getMuslim(target).totalCells > 0)
       target

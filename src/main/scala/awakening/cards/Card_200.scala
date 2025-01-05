@@ -150,7 +150,7 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
         getJihadistAlignCandidates() match {
           case Nil =>
             val target = JihadistBot.travelToTarget(getCandidates(Jihadist)).get
-            val isFromCandidate = (c: Country) => c.name != target && JihadistBot.hasCellForTravel(c)
+            val isFromCandidate = (c: Country) => JihadistBot.hasCellForTravel(c, target, placement = true)
             val fromCandidates = countryNames(game.countries.filter(isFromCandidate))
             val from = JihadistBot.selecCellsToPlace(target, fromCandidates, 2)
             (target, Some("cells"), from)
