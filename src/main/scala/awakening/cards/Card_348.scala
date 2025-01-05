@@ -97,7 +97,8 @@ object Card_348 extends Card(348, "Travel Ban", Unassociated, 2, NoRemove, NoLap
           JihadistBot.markerTarget(candidates).get
         removeAwakeningMarker(target)
       }
-      log("\nThere are no awakening markers to remove from the map.", Color.Event)
+      else
+        log("\nThere are no awakening markers to remove from the map.", Color.Event)
     }
   }
 }
