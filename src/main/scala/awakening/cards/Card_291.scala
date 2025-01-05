@@ -62,7 +62,7 @@ object Card_291 extends Card(291, "Vehicle-ramming Attacks", Jihadist, 1, NoRemo
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(IslamicMaghreb) &&
     globalEventNotInPlay(TravelBan)       &&
     getCandidates().nonEmpty

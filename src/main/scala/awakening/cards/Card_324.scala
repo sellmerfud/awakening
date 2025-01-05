@@ -63,7 +63,7 @@ object Card_324 extends Card(324, "BREXIT", Unassociated, 1, USRemove, NoLapsing
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
     globalEventInPlay(Euroscepticism) ||
     (game.hasNonMuslim(n => n.isSchengen && n.totalCells > 0)) ||
     game.resolvedPlotTargets.exists(t => Schengen.contains(t.name))

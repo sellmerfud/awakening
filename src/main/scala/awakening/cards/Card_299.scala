@@ -74,7 +74,7 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
     game.cellsAvailable > 0 &&
     (getGoodCandidates().nonEmpty || getFairCandidates().nonEmpty)
 

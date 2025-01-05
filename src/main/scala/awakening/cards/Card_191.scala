@@ -60,7 +60,7 @@ object Card_191 extends Card(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoL
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
             lapsingEventNotInPlay(ArabWinter) &&
             getCandidates().nonEmpty
 

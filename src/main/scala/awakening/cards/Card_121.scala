@@ -78,6 +78,7 @@ object Card_121 extends Card(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAuto
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = true
+
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.

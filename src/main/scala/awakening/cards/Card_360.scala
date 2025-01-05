@@ -62,7 +62,7 @@ object Card_360 extends Card(360, "US China Trade War", Unassociated, 3, NoRemov
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
         game.usPosture != game.getNonMuslim(China).posture &&
         trumpTweetsON
 

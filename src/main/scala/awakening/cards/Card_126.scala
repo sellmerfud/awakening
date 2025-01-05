@@ -68,7 +68,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
     getCandidates().nonEmpty ||
     cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand? (y/n) ")
 
