@@ -5530,6 +5530,7 @@ object LabyrinthAwakening {
           if (lapsingEventInPlay(ArabWinter))
             log(s"\nAwakening markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
           else if (m.canTakeAwakeningOrReactionMarker) {
+            testCountry(target)
             game = game.updateCountry(m.copy(awakening = m.awakening + num))
             log(s"Add ${amountOf(num, "awakening marker")} to $target", Color.MapPieces)
           }
@@ -5557,6 +5558,7 @@ object LabyrinthAwakening {
           if (lapsingEventInPlay(ArabWinter))
             log(s"\nReaction markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
           else if (m.canTakeAwakeningOrReactionMarker) {
+            testCountry(target)
             game = game.updateCountry(m.copy(reaction = m.reaction + num))
             log(s"Add ${amountOf(num, "reaction marker")} to $target", Color.MapPieces)
           }
