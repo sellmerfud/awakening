@@ -75,6 +75,15 @@ object LabyrinthAwakening {
     }
   }
 
+
+  implicit class ThrowableWrapper(exception: Throwable) {
+    def stackTrace: String = {
+      val w = new java.io.StringWriter
+      exception.printStackTrace(new java.io.PrintWriter(w))
+      w.toString
+    }
+  }
+
   def dieRoll = nextInt(6) + 1
 
   // Prompt for a die roll value if so configured or just generate a random roll otherwise.
@@ -3190,14 +3199,15 @@ object LabyrinthAwakening {
   //  Return true if the user enters skip.
   //  This is a hidden feature to skip future pauses when showing
   //  game state differences.
-  def pause(): Boolean = {
+  def pause(optPrompt: Option[String] = None): Boolean = {
+    val prompt = optPrompt.getOrElse("Press Enter to continue...")
     val (color, reset) = if (game.showColor)
       (Console.GREEN, Console.RESET)
     else
       ("", "")
-    readLine(s"\n${color}>>>>> [ Press Enter to continue... ] <<<<<${reset}") == "skip"
+    
+    readLine(s"\n${color}>>>>> [ $prompt ] <<<<<${reset}") == "skip"
   }
-
 
   def displayLine(text: String = "", color: Option[Color] = None): Unit = {
     color match {
@@ -6430,6 +6440,9 @@ object LabyrinthAwakening {
     }
     catch {
       case ExitGame =>
+      case t: Throwable =>
+        System.err.println(t.stackTrace)
+        pause(Some("Press Enter to exit the program..."))
     }
   }
 
