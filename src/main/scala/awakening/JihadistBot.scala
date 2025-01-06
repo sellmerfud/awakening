@@ -1199,7 +1199,7 @@ object JihadistBot extends BotHelpers {
       def desc = s"Can travel to Auto-Recruit priority (${autoRecruitPriorityCountry.getOrElse("ERROR")} from ajacent?)"
       def yesPath = TravelOp(autoRecruitPriorityCountry, adjacentOnly = true)
       def noPath  = FundingBelow7Decision
-      def condition(ops: Int) = autoRecruitPriorityCountry.exists(canTravelTo)
+      def condition(ops: Int) = autoRecruitPriorityCountry.exists(canAdjacentTravelTo)
     }
 
 
