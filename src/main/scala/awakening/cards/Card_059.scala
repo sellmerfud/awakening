@@ -58,7 +58,7 @@ object Card_059 extends Card(59, "Amerithrax", Jihadist, 2, NoRemove, NoLapsing,
   override
   def eventConditionsMet(role: Role) =
     isBot(role) && // human player cannot play against US Bot!
-    cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
+    hasCardInHand(US)
 
 
   // Returns true if the Bot associated with the given role will execute the event

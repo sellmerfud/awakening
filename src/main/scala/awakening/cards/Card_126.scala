@@ -70,7 +70,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   override
   def botWillPlayEvent(role: Role): Boolean =
     getCandidates().nonEmpty ||
-    cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand? (y/n) ")
+    hasCardInHand(Jihadist)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -107,7 +107,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
       }
       else {
         val nonIRWith5Cells = countryNames(game.muslims.filter(m => !m.isIslamistRule && m.totalCells >= 5))
-        if (nonIRWith5Cells.isEmpty && cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand? (y/n) ")) {
+        if (nonIRWith5Cells.isEmpty && hasCardInHand(Jihadist)) {
           println()
           log(s"\nYou ($Jihadist) must discard one random card", Color.Event)
           askCardsDiscarded(Jihadist, 1)

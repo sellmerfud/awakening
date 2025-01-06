@@ -62,7 +62,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    cacheYesOrNo(s"Do both players have at least 1 card in hand? (y/n) ")
+    hasCardInHand(US) && hasCardInHand(Jihadist)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -83,17 +83,17 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
 
     val cardNum = askCardNumber(s"Card # of the card taken: ", allowNone = false).get
     val card = deck(cardNum)
-    val cardDisplay = s""""${card.cardName}""""
+    val cardDisplay = card.numAndName
+    val eventName = s""""${card.cardName}""""
 
     // Clear this in case it is need by the event that was drawn.
     cachedEventPlayableAnswer = None
 
     // Avenger card will trigger when randomly drawn.
     if (cardNum == AvengerCard) {
-      log(s"\nThe $cardDisplay card was randomly drawn, so the event triggers", Color.Event)
-      log(separator())
       decreaseCardsInHand(opponent, 1)
-      card.executeEvent(US)
+      avengerCardDrawn()
+      addCardToDiscardPile(AvengerCard)
     }
     else {
       val action = if (isHuman(role)) {
@@ -121,7 +121,12 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
 
         case "keep"    =>
           log(s"\nKeep $cardDisplay and place another card from your hand the $opponent hand", Color.Event)
-          askCardsDrawn(role, 1, FromOpponent)
+          val givenNum = askCardNumber(s"Card # of the card given: ", allowNone = false).get
+          if (givenNum == AvengerCard) {
+            avengerCardDrawn()
+            decreaseCardsInHand(opponent, 1) // Reduce oppoents hand because Avenger is discarded
+            addCardToDiscardPile(AvengerCard)
+          }
 
         case _ => // Play the event
           decreaseCardsInHand(opponent, 1)
@@ -130,9 +135,11 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
           log(separator())
           card.executeEvent(role)
           if (card.markLapsingAfterExecutingEvent(role))
-            markCardAsLapsing(card.number)
+            putCardInLapsingBox(card.number)
           else if (card.removeAfterExecutingEvent(role))
             removeCardFromGame(card.number)
+          else
+            addCardToDiscardPile(card.number)
       }
     }
   }

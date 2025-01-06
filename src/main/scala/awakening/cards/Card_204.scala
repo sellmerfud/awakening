@@ -61,7 +61,7 @@ object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLaps
   override
   def eventConditionsMet(role: Role) = role match {
     case US => game.prestige < 12
-    case Jihadist => cacheYesOrNo(s"Does the $US player have any cards in hand? (y/n) ")
+    case Jihadist => hasCardInHand(US)
   }
 
   // Returns true if the Bot associated with the given role will execute the event

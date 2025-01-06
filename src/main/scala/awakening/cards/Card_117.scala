@@ -37,6 +37,7 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
 
 // Card Text:
@@ -60,6 +61,30 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
   override
   def eventConditionsMet(role: Role) = true
 
+  def candidateCards(role: Role): List[Card] =
+    (game.cardsDiscarded ::: game.cardsLapsing ::: game.firstPlotCard.toList)
+      .map(deck.apply)
+      .filter(_.association == role)
+
+
+  def botCardDraw(role: Role): Unit = {
+    val highOps = candidateCards(role).map(_.printedOps).max
+    val cardNum = shuffle(candidateCards(role).filter(_.printedOps == highOps).map(_.number)).head
+
+    log(s"\n$role Bot selects ${deck(cardNum).numAndName}", Color.Event)
+
+    val source = if (game.cardsDiscarded.contains(cardNum))
+      cardDrawnFromDiscardPile(cardNum)
+    else if (game.cardsLapsing.contains(cardNum))
+      cardDrawnFromLapsingBox(cardNum)
+    else
+      cardDrawnFromFirstPlotBox(cardNum)
+
+    if (cardNum == AvengerCard)
+      avengerCardDrawn()
+    else
+      increaseCardsInHand(role, 1)
+  }
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -69,13 +94,13 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       // Will not play if it would cause immediate victory for the Jihadist player
       val IR_OilExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter)
       (game.islamistResources + IR_OilExporters < 6 || !game.islamistAdjacency) &&
-      cacheYesOrNo(s"\nIs there at least one $US associated card in the discard pile? (y/n) ")
+      candidateCards(US).nonEmpty
 
     case Jihadist =>
       // Will not play if it would cause immediate victory for the US player
       val US_OilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
       (game.goodResources + US_OilExporters < 12) &&
-      cacheYesOrNo(s"\nIs there at least one $Jihadist associated card in the discard pile? (y/n) ")
+      candidateCards(Jihadist).nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -83,14 +108,10 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    role match {
-      case role if isHuman(role) =>
-        log(s"\n$role player draws a card other than Oil Price Spike from the discad pile or box.", Color.Event)
-      case US =>
-        log(s"\n$US Bot draws highest Ops US associated card (at random) from the discard pile or box.", Color.Event)
-      case Jihadist =>
-        log(s"\n$Jihadist Bot draws highest Ops Jihadist associated card (at random) from the discard pile or box.", Color.Event)
-    }
-    askCardsDrawn(role, 1, FromDiscard)
+    if (isHuman(role))
+        askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236))
+    else
+      botCardDraw(role)
+    log("\nThe Resource value of each Oil Exporter is increased by 1 for the rest of the turn.", Color.Event)
   }
 }

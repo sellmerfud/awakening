@@ -37,6 +37,7 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
@@ -84,11 +85,16 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
 
   def getBesiegeCandidates() = getCandidates().filter(name => canPlaceBesiegedRegime(game.getCountry(name)))
 
+  def candidateCards() = {
+    val targets = List(73, 183, 186, 169)
+    targets.filter(game.cardsDiscarded.contains)
+  }
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
     getCandidates().nonEmpty ||
-    cacheYesOrNo("Is Pirates, Boko Haram, or Islamic Maghreb in the discard pile? (y/n) ")
+    candidateCards().nonEmpty
 
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -108,13 +114,14 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
       val canPlot1    = game.availablePlots.contains(Plot1)
       val canPlot2    = game.availablePlots.contains(Plot2)
       val canBesiege  = getBesiegeCandidates().nonEmpty
+      val canDraw     = candidateCards().nonEmpty
       val choices = List(
         choice(canReaction,"reaction", "Place 1 Reaction marker"),
         choice(canCell,    "cell",     "Place 1 cell"),
         choice(canPlot1,   "plot1",    "Place a level 1 plot"),
         choice(canPlot2,   "plot2",    "Place a level 2 plot"),
         choice(canBesiege, "besiege",  "Place a besieged regime marker"),
-        choice(true,       "draw",     "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
+        choice(canDraw,    "draw",     "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
       ).flatten
 
       askMenu("Do any 2 of the following:", choices, 2, repeatsOK = false) foreach { action =>
@@ -141,7 +148,10 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
             addEventTarget(target)
             addBesiegedRegimeMarker(target)
           case _ =>
-            log("\nSelect Pirates, Boko Haram, or Islamic Maghreb from discard pile.", Color.Event)
+            val choices = candidateCards().map(num => num -> deck(num).numAndName)
+            val cardNum = askMenu("Select which card from discard pile:", choices).head
+            cardDrawnFromDiscardPile(cardNum)
+            increaseCardsInHand(Jihadist, 1)
         }
       }
     }
@@ -164,7 +174,7 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
         cellTarget     map (_ => "cell"),
         reactionTarget map (_ => "reaction"),
         plotTarget     map (_ => "plot"),
-        Some("draw")
+        if (candidateCards().nonEmpty) Some("draw") else None,
       ).flatten take 2
 
       actions foreach { action =>
@@ -184,8 +194,11 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
             addEventTarget(plotTarget.get)
             addAvailablePlotToCountry(plotTarget.get, plot)
           case _ =>
-            log("\nSelect Pirates, Boko Haram, or Islamic Maghreb randomly from the discard pile", Color.Event)
-            log("and place it on top of the Jihadist's hand of cards", Color.Event)
+            val cardNum = shuffle(candidateCards()).head
+            val card = deck(cardNum)
+            log(s"\nBot selects ${card.numAndName}", Color.Event)
+            cardDrawnFromDiscardPile(cardNum)
+            increaseCardsInHand(Jihadist, 1)
         }
       }
     }

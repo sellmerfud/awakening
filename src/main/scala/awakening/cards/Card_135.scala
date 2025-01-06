@@ -66,7 +66,7 @@ object Card_135 extends Card(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, N
   override
   def botWillPlayEvent(role: Role): Boolean =
     game.availablePlots.contains(PlotWMD) ||
-    cacheYesOrNo(s"Do you ($Jihadist) have any cards in hand? (y/n) ")
+    hasCardInHand(Jihadist)
 
 
   // Carry out the event for the given role.

@@ -82,24 +82,10 @@ object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoA
   def executeEvent(role: Role): Unit = {
     val name = askCountry("Select adversary country: ", getCandidates())
     val ops = (game getMuslim name).resourceValue
-
-    def doDiscard(): Unit = {
-      println(s"\nYou must discard card with Ops value: $ops")
-      val cardNum = askCardNumber("What is the card number of the discarded card? ", allowNone = false).get
-      val card = deck(cardNum)
-      if (card.printedOps != ops) {
-        displayLine(s"${card.numAndName} has ${amountOf(card.printedOps, "Op")}", Color.Event)
-        doDiscard()
-      }
-      else {
-        log(s"${deck(cardNum)} is discarded", Color.Event)
-        decreaseCardsInHand(US, 1)
-        processDiscardedCard(cardNum)
-      }
-    }
+    val prompt = s"\nYou must discard card with Ops value: $ops"
 
     printSummary(game.countrySummary(name))
-    doDiscard()
+    askDiscardedCard(role, prompt, opsRequired = Some(ops), allowNone = false)
     println()
     addEventTarget(name)
     setAlignment(name, Neutral)

@@ -63,8 +63,7 @@ object Card_302 extends Card(302, "Imperial Overstretch", Jihadist, 2, NoRemove,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
+  def botWillPlayEvent(role: Role): Boolean = hasCardInHand(US)
 
 
   // Carry out the event for the given role.

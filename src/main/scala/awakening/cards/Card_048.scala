@@ -61,7 +61,7 @@ object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing
   def eventConditionsMet(role: Role) =
     firstCardOfPhase(Jihadist) &&
     game.cellsToRecruit > 0    &&
-    cacheYesOrNo(s"Does the $Jihadist player have another card in hand? (y/n) ")
+    hasCardInHand(Jihadist)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

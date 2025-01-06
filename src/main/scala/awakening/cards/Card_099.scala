@@ -66,7 +66,7 @@ object Card_099 extends Card(99, "HAMAS Elected", Unassociated, 1, Remove, NoLap
   def botWillPlayEvent(role: Role): Boolean =
     role == Jihadist &&
     !game.botEnhancements && // Enhanced Jihadist Bot never plays this
-    (game.prestige > 1 || cacheYesOrNo(s"Do you ($US) have a card in hand? (y/n) "))
+    (game.prestige > 1 || hasCardInHand(US))
 
 
   // Carry out the event for the given role.

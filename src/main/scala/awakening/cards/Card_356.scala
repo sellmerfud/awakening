@@ -72,37 +72,7 @@ object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemo
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val offLimits = Set(117, 118, 236, 357)
-    val boxChoice = (num : Int, plot: Boolean) => {
-      val box = if (plot) "First Plot box" else "Lapsing box"
-      (num -> s"${deck(num).numAndName} from the $box")
-    }
-    val lapsingChoices = game.cardsLapsing map (boxChoice(_, false))
-    val plotChoices    = game.firstPlotCard.toList map (boxChoice(_, true))
-    val boxChoices = lapsingChoices ::: plotChoices filterNot { case (num, _) => offLimits(num) }
-
-    log()
-    log("""You cannot choose "Peace Dividend" or "Oil Price Spike"""", Color.Event)
-    if (boxChoices.isEmpty) {
-      log("\nSelect a card from the discard pile or box and add it to your hand.")
-      askCardsDrawn(role, 1, FromDiscard)
-    }
-    else {
-      val choices = boxChoices :+ (-1, "A card from the discard pile")
-      askMenu("Add which card to your hand:", choices).head match {
-        case -1 =>
-          askCardsDrawn(role, 1, FromDiscard)
-        case num if game.firstPlotCard == Some(num) =>
-          game = game.copy(firstPlotCard = None)
-          if (num == AvengerCard)
-            avengerCardDrawn(discarded = false)
-        case num =>
-          val lapsing = game.cardsLapsing filterNot (_ == num)
-          game = game.copy(cardsLapsing = lapsing)
-          if (num == AvengerCard)
-            avengerCardDrawn(discarded = false)
-      }
-    }
+    askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236, 357))
     log("\nThe Resource value of each Oil Exporter is reduced by 1 for the rest of the turn.", Color.Event)
   }
 }

@@ -75,43 +75,14 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
   override
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
-      log(s"\nDiscard the top two cards of the $Jihadist Bot's hand.", Color.Event)
+      log(s"\nDiscard the top two cards of the $US Bot's hand.", Color.Event)
       log(s"$Jihadist associated events will not be triggered.", Color.Event)
-      askCardsDiscarded(Jihadist, 2)
+      askCardsDiscarded(US, 2, None)
     }
     else {
       log(s"\nYou ($US) must randomly discard two cards", Color.Event)
       log("Playable Jihadist events on the discards are triggered", Color.Event)
-
-      def nextDiscard(num: Int): Unit = {
-        if (num <= 2) {
-          val prompt = s"\nCard # of the ${ordinal(num)} discard (or blank if none) "
-          askCardNumber(prompt) match {
-            case Some(cardNum) =>
-              val card = deck(cardNum)
-              decreaseCardsInHand(US, 1)
-              log(s"$card is discarded", Color.Event)
-              if (cardNum == AvengerCard)
-                  avengerCardDrawn(discarded = false)
-              else if (card.autoTrigger)
-                autoTriggerCardDiscarded(cardNum)
-              else if (card.eventWillTrigger(Jihadist)) {
-                log(s"""The "${card.cardName}" event is triggered.""")
-                performCardEvent(card, Jihadist, triggered = true)
-              }
-              else {
-                log(s"""The "${card.cardName}" event does not trigger.""")
-                if (cardNum == CriticalMiddle)
-                  criticalMiddleReminder()
-              }
-              nextDiscard(num + 1)
-
-            case None => // exit
-          }
-        }
-      }
-
-      nextDiscard(1)
+      askCardsDiscarded(US, 2, Some(Jihadist))
     }
 
     if (game.usPosture != Soft) {

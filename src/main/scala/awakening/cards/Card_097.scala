@@ -59,7 +59,8 @@ object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = cacheYesOrNo("Do both players have at least one card in hand? (y/n) ")
+  def eventConditionsMet(role: Role) =
+    hasCardInHand(US) && hasCardInHand(Jihadist)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -78,7 +79,7 @@ object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, 
     decreaseCardsInHand(game.botRole, 1)
     if (cardTaken == AvengerCard) {
       // No increase because Avenger card was discarded
-      avengerCardDrawn(discarded = false)
+      avengerCardDrawn()
     }
     else
       increaseCardsInHand(game.humanRole, 1)
@@ -89,7 +90,7 @@ object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, 
     decreaseCardsInHand(game.humanRole, 1)
     if (cardGiven == AvengerCard) {
       // No increase because Avenger card was discarded
-      avengerCardDrawn(discarded = false)
+      avengerCardDrawn()
     }
     else
       increaseCardsInHand(game.botRole, 1)

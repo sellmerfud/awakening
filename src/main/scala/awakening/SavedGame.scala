@@ -179,6 +179,12 @@ object SavedGame {
   private def reservesFromMap(data: Map[String, Any]): Reserves =
     Reserves(asInt(data("us")), asInt(data("jihadist")))
 
+  private def cardsInUseToMap(data: Range): Map[String, Any] =
+    Map("min" -> data.head, "max" -> data.last)
+
+  private def cardsInUseFromMap(data: Map[String, Any]): Range =
+    Range.inclusive(asInt(data("min")), asInt(data("max")))
+
   private def cardsInHandToMap(data: CardsInHand): Map[String, Any] =
     Map("us" -> data.us, "jihadist" -> data.jihadist)
 
@@ -351,10 +357,12 @@ object SavedGame {
       "history"             -> gameState.history,
       "offMapTroops"        -> gameState.offMapTroops,
       "reserves"            -> reservesToMap(gameState.reserves),
+      "cardsInUse"          -> cardsInUseToMap(gameState.cardsInUse),
       "cardsInHand"         -> cardsInHandToMap(gameState.cardsInHand),
       "plays"               -> (gameState.plays map playToMap),
       "firstPlotCard"       -> (gameState.firstPlotCard getOrElse null),
       "cardsLapsing"        -> gameState.cardsLapsing,
+      "cardsDiscarded"      -> gameState.cardsDiscarded,
       "cardsRemoved"        -> gameState.cardsRemoved,
       "targetsThisPhase"    -> phaseTargetsToMap(gameState.targetsThisPhase),
       "targetsLastPhase"    -> phaseTargetsToMap(gameState.targetsLastPhase),
@@ -386,35 +394,37 @@ object SavedGame {
       asString(data("scenarioName")),
       GameMode(asString(data("startingMode"))),
       asBoolean(data("campaign")),
-      asList(data("scenarioNotes")) map asString,
+      asList(data("scenarioNotes")).map(asString),
       GameMode(asString(data("currentMode"))),
       Role(asString(data("humanRole"))),
       asBoolean(data("humanAutoRoll")),
-      asList(data("botDifficulties")) map (x => BotDifficulty(asString(x))),
+      asList(data("botDifficulties")).map(x => BotDifficulty(asString(x))),
       asInt(data("turn")),
       asInt(data("prestige")),
       asString(data("usPosture")),
       asInt(data("funding")),
-      asList(data("countries")) map (c => countryFromMap(asMap(c))),
-      asList(data("markers")) map asString,
+      asList(data("countries")).map(c => countryFromMap(asMap(c))),
+      asList(data("markers")).map(asString),
       plotDataFromMap(asMap(data("plotData"))),
       asBoolean(data("sequestrationTroops")),
       asInt(data("offMapTroops")),
       reservesFromMap(asMap(data("reserves"))),
+      cardsInUseFromMap(asMap(data("cardsInUse"))),
       cardsInHandFromMap(asMap(data("cardsInHand"))),
-      asList(data("plays")) map (p => playFromMap(asMap(p))),
+      asList(data("plays")).map(p => playFromMap(asMap(p))),
       if (data("firstPlotCard") == null) None else Some(asInt(data("firstPlotCard"))),
-      asList(data("cardsLapsing")) map asInt,
-      asList(data("cardsRemoved")) map asInt,
+      asList(data("cardsLapsing")).map(asInt),
+      asList(data("cardsDiscarded")).map(asInt),
+      asList(data("cardsRemoved")).map(asInt),
       phaseTargetsFromMap(asMap(data("targetsThisPhase"))),
       phaseTargetsFromMap(asMap(data("targetsLastPhase"))),
       asBoolean(data("botLogging")),
       asBoolean(data.get("exitAfterWin").map(_ => "false").orElse(data.get("ignoreVictory")).getOrElse("false")),
       data.get("botEnhancements").map(asBoolean).getOrElse(false),
       data.get("manualDieRolls").map(asBoolean).getOrElse(false),
-      (asList(data("history")) map (s => gameSegmentFromMap(asMap(s)))).toVector,
+      (asList(data("history")).map(s => gameSegmentFromMap(asMap(s)))).toVector,
       asString(data("description")),
-      asBoolean(data.get("showColor") getOrElse true)
+      asBoolean(data.get("showColor").getOrElse(true))
     )
   }
 

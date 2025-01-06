@@ -70,7 +70,7 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
     // Enhanced Jihad Bot will not play unless it will force
     // the US player to discard at least one card
     (!game.botEnhancements && game.getNonMuslim(Caucasus).isUntested && game.usPosture == Hard) ||
-    (game.prestigeModifier - game.gwotPenalty < 0 && cacheYesOrNo("Does the US player have at least one card in hand? (y/n) "))
+    (game.prestigeModifier - game.gwotPenalty < 0 && hasCardInHand(US))
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -79,7 +79,7 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
   def executeEvent(role: Role): Unit = {
     testCountry(Caucasus) // Event specifically says to test
     val result = game.prestigeModifier - game.gwotPenalty
-    val opPoints = -result
+    val opsPoints = -result
 
     log(s"\nGWOT penalty (-${game.gwotPenalty}) + prestige modifier (${game.prestigeModifier}) = $result", Color.Event)
     log(separator(), Color.Event)
@@ -89,43 +89,13 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
       println()
       if (isHuman(role)) {
         log(s"Discard from the top of the $US Bot's hand until the combined")
-        log(s"Operational value is at least $opPoints")
+        log(s"Operational value is at least $opsPoints")
       }
       else {
         log(s"You ($US) must discard cards until the combined Operational value")
-        log(s"is at least $opPoints")
+        log(s"is at least $opsPoints")
       }
-      askCardsDiscarded(US, 9) 
-
-      def nextDiscard(num: Int, pointsDiscarded: Int): List[Int] = {
-        if (pointsDiscarded >= opPoints)
-          Nil
-        else {
-          val prompt = s"\nCard # of the ${ordinal(num)} discard (or blank if none) "
-          askCardNumber(prompt) match {
-            case None         => Nil
-            case Some(cardNo) =>  cardNo :: nextDiscard(num + 1, pointsDiscarded + deck(cardNo).printedOps)
-          }
-        }
-      }
-
-      for (n <- nextDiscard(1, 0); card = deck(n)) {
-        if (n == AvengerCard)
-            avengerCardDrawn(discarded = false)
-        else if (card.autoTrigger)
-          autoTriggerCardDiscarded(n)
-        else if (isBot(Jihadist) && card.eventWillTrigger(Jihadist)) {
-          log()
-          log(s"""The "${card.numAndName}" event is triggered.""", Color.Event)
-          performCardEvent(card, Jihadist, triggered = true)
-        }
-        else{
-          log()
-          log(s"""The "${card.number}" event does not trigger.""", Color.Event)
-          if (n == CriticalMiddle)
-            criticalMiddleReminder()
-        }
-      }
+      askCardsDiscardedByOps(US, opsPoints) 
     }
   }
 }

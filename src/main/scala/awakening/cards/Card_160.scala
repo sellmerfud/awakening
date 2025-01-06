@@ -70,28 +70,34 @@ object Card_160 extends Card(160, "Operation Neptune Spear", US, 3, NoRemove, No
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = cacheYesOrNo("Is one of the indicated cards in the discard pile (y/n)? ")
+  def botWillPlayEvent(role: Role): Boolean =
+    candidateCards.exists(game.cardsDiscarded.contains)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val choices = candidateCards.map(n => n -> deck(n).numAndName) :+
-      (0, "No card was drawn")
-
-    val prompt = if (isHuman(role))
-      "\nSelect a card from the discard pile:"
-    else  // See Event Instructions table
-      "\nThe Bot selects the card that is nearest the bottom of the discard pile:"
-
-    askMenu(prompt, choices).head match {
-      case 0 =>
-        log("\nNo card was drawn from the discard pile", Color.Event)
-      case n if isHuman(role) =>
-        log(s"\nThe $US player selected: ${deck(n).numAndName}", Color.Event)
-      case n =>
-        log(s"\nThe $US Bot selected: ${deck(n).numAndName}", Color.Event)
+    if (isHuman(role)) {
+      val choices = candidateCards.map(n => n -> deck(n).numAndName) :+
+        (0, "No card was drawn")
+  
+      val prompt = "\nSelect a card from the discard pile:"
+      askMenu(prompt, choices).head match {
+        case 0 =>
+          log("\nNo card was drawn from the discard pile", Color.Event)
+        case cardNum =>
+          cardDrawnFromDiscardPile(cardNum)
+          increaseCardsInHand(role, 1)
+      }
+    }
+    else {
+      // See Event Instructions table
+      // Bot takes the candidate card closes to the bottom of the discard pile
+      val cardNum = game.cardsDiscarded.reverse.find(candidateCards.contains).get
+      log("\nThe Bot selects the card that is nearest the bottom of the discard pile:", Color.Event)
+      cardDrawnFromDiscardPile(cardNum)
+      increaseCardsInHand(role, 1)
     }
   }
 }

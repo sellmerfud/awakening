@@ -70,7 +70,7 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => true
-    case Jihadist => cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
+    case Jihadist => hasCardInHand(US)
   }
 
   // Carry out the event for the given role.

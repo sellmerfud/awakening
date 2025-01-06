@@ -66,7 +66,7 @@ object Card_168 extends Card(168, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAu
   override
   def eventConditionsMet(role: Role) =
         getCandidates().nonEmpty &&
-        cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
+        hasCardInHand(US)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

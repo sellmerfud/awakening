@@ -58,8 +58,7 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    cacheYesOrNo(s"Does the $Jihadist player have more than one card in hand? (y/n) ")
+  def eventConditionsMet(role: Role) = numCardsInHand(Jihadist) > 1
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

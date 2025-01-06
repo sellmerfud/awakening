@@ -59,7 +59,7 @@ object Card_052 extends Card(52, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAut
   override
   def eventConditionsMet(role: Role) =
     game.hasMuslim(m => m.inRegimeChange && m.totalCells > 0) &&
-    cacheYesOrNo(s"Does the $US player have least one card in hand? (y/n) ")
+    hasCardInHand(US)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

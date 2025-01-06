@@ -43,7 +43,7 @@ import awakening.USBot
 // Card Text:
 // ------------------------------------------------------------------
 // Remove up to 2 Cells in any one Muslim country OR Randomly discard
-// 1 card from the Tihadist hand.
+// 1 card from the Jihadist hand.
 // SPECIAL: If this card is randomly drawn by another event, this event
 // is immediately implemented. Do not draw a replacement card.
 // ------------------------------------------------------------------
@@ -68,7 +68,6 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
 
   def getBotPreferred() = countryNames(game.muslims.filter(m => m.totalCells - m.totalTroopsAndMilitia > 4))
 
-  def jihadistHasCardsInHand = cacheYesOrNo(s"Does the $Jihadist player have any cards in hand? (y/n) ")
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -78,7 +77,7 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
   // troops and miliia by 5 or more, or if the Jihadist has no cards in hand.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    game.hasMuslim(_.totalCells > 0) || jihadistHasCardsInHand
+    game.hasMuslim(_.totalCells > 0) || hasCardInHand(Jihadist)
 
 
   // Carry out the event for the given role.
@@ -113,13 +112,13 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
       // If no preferred candidates, the Bot will choose to have Jihadist discard
       // if it has cards in hand.  Otherwise it will remove from non-preferred country.
       val target = getBotPreferred() match {
-        case Nil if jihadistHasCardsInHand => None
+        case Nil if hasCardInHand(Jihadist) => None
         case Nil => USBot.disruptPriority(getCandidates())
         case preferred => USBot.disruptPriority(preferred)
       }
 
       target match {
-        case None if jihadistHasCardsInHand =>
+        case None if hasCardInHand(Jihadist) =>
           log(s"\nYou ($Jihadist) must discard one card randomly.", Color.Event)
           askCardsDiscarded(Jihadist, 1)
 

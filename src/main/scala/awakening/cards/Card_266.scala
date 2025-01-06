@@ -62,39 +62,39 @@ object Card_266 extends Card(266, "Presidential Reality Show", US, 2, NoRemove, 
   def eventConditionsMet(role: Role) =
     !(game.hasMuslim(m => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)))
 
+  def candidateCards() = {
+    val targets = List(251, 252, 253, 254, 272, 297, 305, 326, 336, 337, 348, 355, 360)
+    targets.filter(game.cardsDiscarded.contains)
+  }
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = {
-    val prompt = """Is there a "Trump Tweets" card or any card with prerequisite "Trump Tweets ON" """ +
-                  """in the discard pile? (y/n) """
-    cacheYesOrNo(prompt)
-  }
+  def botWillPlayEvent(role: Role): Boolean = candidateCards().nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role)) {
-      log()
-      log(s"""$role player draws from the discard pile either "Trump Tweets" or""", Color.Event)
-      log("""a card with the prerequisite "Trump Tweets ON".""", Color.Event)
+    val cardNum = if (isHuman(role)) {
+      val choices = candidateCards().map(n => n -> deck(n).numAndName)
+      askMenu("Select which card from the discard pile:", choices).head
     }
     else {
-      // Bot
-      println()
-      val getTrumpTweets = !trumpTweetsON && askYorN("Is there a \"Trump Tweets\" card in the discard pile? (y/n) ")
-
-      if (getTrumpTweets) {
-        log("""Place the "Trump Tweets" card closest to the bottom of the""", Color.Event)
-        log(s"discard pile on top of the $US hand.", Color.Event)
-      }
-      else {
-        log("Place the card closest to the bottom of the discard pile", Color.Event)
-        log(s"""with a prerequisite of "Trump Tweets ON" on top of the $US hand.""", Color.Event)
-      }
+      // If Trump Tweet is of the Bot will take the Trump Tweets card closest
+      // to the bottom of the pile if possible,  otherise it will take any 
+      // candidate card closeest to the bottom.
+      val AllCandidates = candidateCards().toSet
+      val TrumpTweetsCandidates = Set(251, 252, 253).intersect(AllCandidates)
+      if (!trumpTweetsON && TrumpTweetsCandidates.nonEmpty)
+        game.cardsDiscarded.reverse.find(TrumpTweetsCandidates.contains).get
+      else
+        game.cardsDiscarded.reverse.find(AllCandidates.contains).get
     }
+
+    log(s"\nThe US selects ${deck(cardNum).numAndName}", Color.Event)
+    cardDrawnFromDiscardPile(cardNum)
+    increaseCardsInHand(US, 1)
   }
 }
