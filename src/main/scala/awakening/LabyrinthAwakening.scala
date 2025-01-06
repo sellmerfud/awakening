@@ -5541,7 +5541,9 @@ object LabyrinthAwakening {
             log(s"\nAwakening markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
           else if (m.canTakeAwakeningOrReactionMarker) {
             testCountry(target)
-            game = game.updateCountry(m.copy(awakening = m.awakening + num))
+            // Need a fresh copy after testing the country.
+            val fresh = game.getMuslim(target)
+            game = game.updateCountry(fresh.copy(awakening = fresh.awakening + num))
             log(s"Add ${amountOf(num, "awakening marker")} to $target", Color.MapPieces)
           }
           else
@@ -5569,7 +5571,9 @@ object LabyrinthAwakening {
             log(s"\nReaction markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
           else if (m.canTakeAwakeningOrReactionMarker) {
             testCountry(target)
-            game = game.updateCountry(m.copy(reaction = m.reaction + num))
+            // Need a fresh copy after testing the country.
+            val fresh = game.getMuslim(target)
+            game = game.updateCountry(fresh.copy(reaction = fresh.reaction + num))
             log(s"Add ${amountOf(num, "reaction marker")} to $target", Color.MapPieces)
           }
           else
