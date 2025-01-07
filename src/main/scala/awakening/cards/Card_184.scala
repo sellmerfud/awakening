@@ -37,6 +37,7 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import scala.collection.mutable.ListBuffer
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
@@ -71,21 +72,57 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
+  val ObamaDoctrine = 143
+  val CongressActs = 152
+
+  def botCardChoice(): Int = 
+    if (game.cardsDiscarded.contains(ObamaDoctrine))
+      ObamaDoctrine
+    else if (game.cardsDiscarded.contains(CongressActs))
+      CongressActs
+    else {
+      // Bot will take randomly among highest Ops US cards
+      // Then randomly among highest Ops of all cards
+      val cards = List(
+        game.cardsDiscarded.map(deck.apply).filter(_.association == US),
+        game.cardsDiscarded.map(deck.apply)
+      ).dropWhile(_.isEmpty).head
+      val highOps = cards.map(_.printedOps).max
+      shuffle(cards.filter(_.printedOps == highOps).map(_.number)).head
+    }
+
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(US)) {
-      log("\nUS player draws one card from the discard pile", Color.Event)
-      log("Must draw \"Obama Doctrine\" if it is available.", Color.Event)
+    def cardName(num: Int) = deck(num).numAndName
+
+    if (game.cardsDiscarded.isEmpty)
+      log("\nThere are no cards in the discard pile.", Color.Event)
+    else if (isHuman(US)) {
+      if (game.cardsDiscarded.contains(ObamaDoctrine)) {
+        log(s"\nUS draws ${cardName(ObamaDoctrine)} from the discard pile.", Color.Event)
+        cardDrawnFromDiscardPile(ObamaDoctrine)
+        increaseCardsInHand(US, 1)
+      }
+      else {
+        log("\nUS player draws one card from the discard pile", Color.Event)
+        askCardsDrawn(US, 1, FromDiscard::Nil)
+      }
     }
     else {
-      // See Event Instructions table
-      log("\nUS Bot will draw \"Obama Doctrine\", or \"Congress Acts\", or", Color.Event)
-      log("randomly among the US associated cards with the highest Ops.", Color.Event)
+      // Bot
+      val cardNum = botCardChoice()
+      log(s"\nUS Bot draws ${cardName(cardNum)} from the discard pile.", Color.Event)
+      cardDrawnFromDiscardPile(cardNum)
+      if (cardNum == AvengerCard)
+        avengerCardDrawn()
+      else {
+        log(s"Place ${cardName(cardNum)} on top of the Bots hand.", Color.Event)
+        increaseCardsInHand(US, 1)
+      }
     }
-    askCardsDrawn(US, 1, FromDiscard)
 
     val items = if (isHuman(role))
       selectTroopsToPutOffMap(3)

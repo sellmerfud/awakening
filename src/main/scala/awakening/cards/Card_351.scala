@@ -81,7 +81,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
     else
       log(s"\nTake a random card from your ($opponent) hand", Color.Event)
 
-    val cardNum = askCardNumber(s"Card # of the card taken: ", allowNone = false).get
+    val cardNum = askCardNumber(FromRole(opponent)::Nil, s"Card # of the card taken: ", allowNone = false).get
     val card = deck(cardNum)
     val cardDisplay = card.numAndName
     val eventName = s""""${card.cardName}""""
@@ -112,7 +112,6 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
 
       action match {
         case "discard" =>
-          log(s"\nPlace $cardDisplay in the discard pile", Color.Event)
           decreaseCardsInHand(opponent, 1)
           processDiscardedCard(cardNum)
 
@@ -121,7 +120,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
 
         case "keep"    =>
           log(s"\nKeep $cardDisplay and place another card from your hand the $opponent hand", Color.Event)
-          val givenNum = askCardNumber(s"Card # of the card given: ", allowNone = false).get
+          val givenNum = askCardNumber(FromRole(role)::Nil, s"Card # of the card given: ", allowNone = false).get
           if (givenNum == AvengerCard) {
             avengerCardDrawn()
             decreaseCardsInHand(opponent, 1) // Reduce oppoents hand because Avenger is discarded

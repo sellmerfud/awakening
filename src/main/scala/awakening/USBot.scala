@@ -1262,24 +1262,18 @@ object USBot extends BotHelpers {
   def reassessment(card: Card): Boolean = {
     val tryReassess = {
        firstCardOfPhase(US) &&
+       hasCardInHand(US) &&
        (card.ops + game.reserves.us >= 3) &&  // Possible if we have at least 3 on hand
        ((game.usPosture == Soft && game.islamistResources >= 2) ||
         (game.usPosture == Hard && game.gwotPenalty == 3 && game.numIslamistRule == 0))
     }
-    tryReassess && {
+    if (tryReassess) {
       // Reassessment is desired. Ask if the next US card has enough Ops
       val opsNeeded = 6 - card.ops - game.reserves.us
-      println("The US is considering Reassessment.")
-      val reassess = if (opsNeeded > 1)
-        askYorN(s"Does the next card in the $US Bot hand have at least $opsNeeded Ops (y/n)? ")
-      else
-        askYorN(s"Does the $US Bot have another card in hand (y/n)? ")
 
-      reassess && {
-        val cardNum = askCardNumber(
-          "Enter the next card in the US hand. Card # ",
-          initial = None,
-          allowNone = false).get
+      if (opsNeeded == 1 || askYorN(s"Does the next card in the $US Bot hand have at least $opsNeeded Ops (y/n)? ")) {
+        val prompt = "Enter the next card in the US hand. Card # "
+        val cardNum = askCardNumber(FromRole(US)::Nil, prompt, allowNone = false).get
         val card2 = deck(cardNum)
         if (card2.ops >= opsNeeded) {
           // Replace the head card play with a reassessment 
@@ -1305,7 +1299,11 @@ object USBot extends BotHelpers {
           false
         }
       }
+      else
+        false
     }
+    else
+      false
   }
 
 

@@ -83,7 +83,7 @@ object Card_053 extends Card(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing, 
     else
       s"\nEnter card # of the next card in the $Jihadist Bot's hand: "
     
-    val card = deck(askCardNumber(prompt, allowNone = false).get)
+    val card = deck(askCardNumber(FromRole(role)::Nil, prompt, allowNone = false).get)
     decreaseCardsInHand(Jihadist, 1)
     addSecondCardToPlayedCard(card.number)
     logCardPlay(Jihadist, card, playable = false, secondCard = true)

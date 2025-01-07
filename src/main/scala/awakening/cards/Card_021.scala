@@ -89,7 +89,7 @@ object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, No
       addEventTarget(name)
       performAlert(name, plot)
       log(s"$US draws one card and adds it to their hand")
-      askCardsDrawn(US, 1, FromDeck)
+      askCardsDrawn(US, 1, FromDeck::Nil)
       val postureName = askCountry("Select posture of which country: ", postureCandidates)
       val newPosture = askPosture(postureName)
       addEventTarget(postureName)
@@ -100,7 +100,7 @@ object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, No
       addEventTarget(c.name)
       performAlert(c.name, plot)
       log(s"Add one card to the top of the $US Bot hand")
-      askCardsDrawn(US, 1, FromDeck)
+      askCardsDrawn(US, 1, FromDeck::Nil)
       val postureName = USBot.posturePriority(postureCandidates).get
       addEventTarget(postureName)
       setCountryPosture(postureName, game.usPosture)

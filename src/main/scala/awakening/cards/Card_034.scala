@@ -80,7 +80,7 @@ object Card_034 extends Card(34, "Enhanced Measures", US, 3, NoRemove, NoLapsing
       humanDisrupt(3)
       addGlobalEventMarker(EnhancedMeasures)
       log(s"Take the top card of the $Jihadist Bot's hand")
-      askCardsDrawn(US, 1, FromOpponent)
+      askCardsDrawn(US, 1, FromRole(game.botRole)::Nil)
     }
     else {
       val target  = USBot.disruptTarget(game disruptTargets 3).get
@@ -88,6 +88,6 @@ object Card_034 extends Card(34, "Enhanced Measures", US, 3, NoRemove, NoLapsing
       performDisrupt(target)
       addGlobalEventMarker(EnhancedMeasures)
       log(s"$Jihadist (you) must put a random card from your hand on top card of the $US Bot's hand")
-      askCardsDrawn(US, 1, FromOpponent)
+      askCardsDrawn(US, 1, FromRole(game.humanRole)::Nil)
     }    
 }

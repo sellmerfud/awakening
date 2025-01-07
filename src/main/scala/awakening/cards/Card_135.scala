@@ -82,7 +82,7 @@ object Card_135 extends Card(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, N
       askMenu("Choose one:", choices).head match {
         case "draw" =>
           log("\nDraw the top card in the Jihadist Bot's hand", Color.Event)
-          askCardsDrawn(US, 1, FromOpponent)
+          askCardsDrawn(US, 1, FromRole(game.botRole)::Nil)
 
         case _ =>
           val Available = "Available Plots box"
@@ -121,7 +121,7 @@ object Card_135 extends Card(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, N
         removeAvailableWMD(1)
       else {
         log(s"\nYou ($Jihadist) must place one random card on top of the $US hand", Color.Event)
-        askCardsDrawn(US, 1, FromOpponent)
+        askCardsDrawn(US, 1, FromRole(game.humanRole)::Nil)
       }
     }
   }

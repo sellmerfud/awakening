@@ -43,7 +43,7 @@ import FUtil.Pathname
 import LabyrinthAwakening._
 
 object SavedGame {
-  val CurrentFileVersion = 2
+  val CurrentFileVersion = 3
   val CurrentLogVersion  = 1
 
   def save(filepath: Pathname, gameState: GameState): Unit = {
@@ -69,28 +69,6 @@ object SavedGame {
     Json.build(top)
   }
 
-  // // The path should be the full path to the file to load.
-  // // Will set the game global variable
-  // def load_old(filepath: Pathname): GameState = {
-  //   val gs = try fromGameJson(filepath.readFile())
-  //   catch {
-  //     case e: IOException =>
-  //       val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-  //       println(s"IO Error reading saved game ($filepath)$suffix")
-  //       sys.exit(1)
-  //     case e: Throwable =>
-  //       val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-  //       println(s"Error reading saved game ($filepath)$suffix")
-  //       sys.exit(1)
-  //   }
-  //   // If there are no plays then this a save file for the
-  //   // end of the turn.  In this case we increment the turn counter
-  //   if (gs.plays.isEmpty)
-  //     gs.copy(turn = gs.turn + 1)
-  //   else
-  //     gs
-  // }
-
   // The path should be the full path to the file to load.
   // Will set the game global variable
   def load(filepath: Pathname): GameState = {
@@ -98,12 +76,10 @@ object SavedGame {
     catch {
       case e: IOException =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"IO Error reading saved game ($filepath)$suffix")
-        sys.exit(1)
+        throw new IllegalStateException(s"IO Error reading saved game ($filepath)$suffix", e)
       case e: Throwable =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"Error reading saved game ($filepath)$suffix")
-        sys.exit(1)
+        throw new IllegalStateException(s"Error reading saved game ($filepath)$suffix", e)
     }
   }
 
@@ -116,7 +92,7 @@ object SavedGame {
       throw new IllegalArgumentException(s"Invalid save file - No game-state")
 
     asInt(top("file-version")) match {
-      case 3 => gameFromVersion3(asMap(top("game-state")))
+      case CurrentFileVersion => gameFromCurrentVersion(asMap(top("game-state")))
       case v => throw new IllegalArgumentException(s"Invalid save file version: $v")
     }
   }
@@ -389,7 +365,7 @@ object SavedGame {
     )
   }
   // Note: We no longer support save file versions less than 3.
-  private def gameFromVersion3(data: Map[String, Any]): GameState = {
+  private def gameFromCurrentVersion(data: Map[String, Any]): GameState = {
     GameState(
       asString(data("scenarioName")),
       GameMode(asString(data("startingMode"))),
@@ -500,12 +476,10 @@ object SavedGame {
         }
       case e: IOException =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"IO Error reading log file ($filepath)$suffix")
-        sys.exit(1)
+        throw new IllegalStateException(s"IO Error reading log file ($filepath)$suffix", e)
       case e: Throwable =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"Error reading log file ($filepath)$suffix")
-        sys.exit(1)
+        throw new IllegalStateException(s"Error reading log file ($filepath)$suffix", e)
     }
   }
 }

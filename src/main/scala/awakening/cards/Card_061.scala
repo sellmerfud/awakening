@@ -92,6 +92,6 @@ object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLa
       log(s"\nDraw a card and add it to your hand", Color.Event)
     else
       log(s"\nAdd a card to the top of the $Jihadist Bot's hand", Color.Event)
-    askCardsDrawn(Jihadist, 1, FromDeck)
+    askCardsDrawn(Jihadist, 1, FromDeck::Nil)
   }
 }

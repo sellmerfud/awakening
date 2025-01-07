@@ -96,6 +96,12 @@ object LabyrinthAwakening {
 
   val INTEGER = """(\d+)""".r
 
+  // Zero or Positive numbers
+  def isInteger(str: String) = str match {
+    case INTEGER(str) => true
+    case _ => false
+  }
+
   sealed trait GameMode {
     val orderValue: Int
     val cardRange: Range
@@ -111,7 +117,7 @@ object LabyrinthAwakening {
     override def toString() = "Awakening"
     val cardRange = Range.inclusive(121, 240)
   }
-  
+
   case object ForeverWarMode extends GameMode {
     val orderValue = 3
     override def toString() = "Forever War"
@@ -1268,7 +1274,7 @@ object LabyrinthAwakening {
   case class ExtraCellInfo(capacity:Int, available: Int, onMap: Int)
   case class Reserves(us: Int, jihadist: Int)
   case class CardsInHand(us: Int, jihadist: Int)
-  
+
   // Keeps track of the which countries were the target of
   // -operations
   // -events
@@ -2380,62 +2386,127 @@ object LabyrinthAwakening {
   def askPosture(country: String): String =
     askSimpleMenu(s"\nSelect the posture of $country: ", List(Soft, Hard))
 
-  def askCardNumber(prompt: String,
-                    initial: Option[String] = None,
-                    allowNone: Boolean = true,
-                    opsRequired: Option[Int] = None,
-                    removedLapsingOK: Boolean = false): Option[Int] = {
 
-    def checkNumber(input: String): Boolean = input match {
-      case INTEGER(num) if deck.isValidCardNumber(num.toInt) =>
-        val cardNum = num.toInt
-        val card = deck(cardNum)
+  sealed trait CardDrawSource {
+    def name: String
+    def contains(cardNum: Int): Boolean
+  }
 
-        if (!game.cardsInUse.contains(cardNum)) {
-          println(s"${card.numAndName} is not valid for the current scenario")
-          false
-        }
-        else if (opsRequired != None && opsRequired != Some(card.printedOps)) {
-          val display = amountOf(opsRequired.get, "Op")
-          println(s"You must enter the number of a card with $display")
-          false      
-        }
-        else
-          true
+  case object FromDiscard extends CardDrawSource {
+    override def name = "Discard pile"
+    override def contains(cardNum: Int) = game.cardsDiscarded.contains(cardNum)
+  }
 
-      case _ =>
-        println(s"'$input' is not a valid card number")
-        false
+  case object FromLapsing extends CardDrawSource {
+    override def name = "Lapsing box"
+    override def contains(cardNum: Int) = game.cardsLapsing.contains(cardNum)
+  }
+
+  case object From1stPLot extends CardDrawSource {
+    override def name = "First Plot box"
+    override def contains(cardNum: Int) = game.firstPlotCard.contains(cardNum)
+  }
+
+  // Used for adjustments
+  case object FromRemoved extends CardDrawSource {
+    override def name = "Removed pile"
+    override def contains(cardNum: Int) = game.cardsRemoved.contains(cardNum)
+  }
+
+// We do keep track of the specific cards in the deck
+  // or in players hands.  To draw from either of these
+  // the card cannot be anywhere else.
+  case object FromDeck extends CardDrawSource {
+    override
+    def name = "Deck"
+
+    override
+    def contains(cardNum: Int): Boolean = {
+      val accountedFor = List(FromDiscard, FromLapsing, From1stPLot, FromRemoved)
+
+      game.cardsInUse.contains(cardNum) && !accountedFor.exists(_.contains(cardNum))
     }
+  }
 
-    def testResponse(response: Option[String]): Option[Int] = {
-      def outOfPlay(x: String): Boolean = {
-        val num  = x.trim.toInt
-        val name = cardNumAndName(num)
-        removedLapsingOK match {
-          case false if game.cardRemoved(num) =>
-            println(s"$name has been removed from the game")
-            true
-          case false if game.cardLapsing(num) =>
-            println(s"$name is currently lapsing")
-            true
-          case false if game.isFirstPlot(num) =>
-            println(s"$name is currently the first plot card")
-            true
-          case _ => false
+  case class FromRole(role: Role) extends CardDrawSource {
+    override def name = if (isHuman(role))
+      s"$role Player hand"
+      else
+      s"$role Bot hand"
+
+    // Currently we do not track specific cards in the player/bot
+    // hand.  We treat them the same is any card that is not currently
+    // discarded/removed/lapsing/first-plot
+    override def contains(cardNum: Int) = FromDeck.contains(cardNum)
+  }
+
+  case object FromAnywhere extends CardDrawSource {
+    override def name = "Anywhere"
+    override def contains(cardNum: Int) = game.cardsInUse.contains(cardNum)
+  }
+
+
+  def cardFoundIn(sources: List[CardDrawSource], cardNum: Int) =
+    sources.exists(_.contains(cardNum))
+
+  def cardLocation(cardNum: Int): Option[CardDrawSource] = {
+    val sources = List(
+      FromDiscard, FromLapsing, From1stPLot, FromRemoved, FromDeck
+    )
+    sources.find(_.contains(cardNum))
+  }
+
+  // Ask the use for a card number
+  def askCardNumber(
+    sources: List[CardDrawSource],
+    prompt: String,
+    initial: Option[String] = None,
+    allowNone: Boolean = true,
+    opsRequired: Option[Int] = None): Option[Int] = {
+
+    def validCardNumber(num: Int) = {
+
+      var isValid = false
+      def display = deck(num).numAndName
+
+      if (!deck.isValidCardNumber(num))
+        println(s"$num is not a valid card number for any of the scenario decks.")
+      else if (!game.cardsInUse.contains(num) && game.campaign)
+        println(s"$display is not a valid card for the current campaign scenario.")
+      else if (!game.cardsInUse.contains(num))
+        println(s"$display is not a valid card for the current scenario.")
+      else if (!cardFoundIn(sources, num)) {
+        println(s"$display is not in the ${orList(sources.map(_.name))}")
+        cardLocation(num).foreach { location =>
+          println(s"It is in the ${location.name}")
         }
       }
+      else
+        isValid = true
 
-      response.filter(checkNumber) match {
+      isValid
+    }
+
+    // Test the reponse and prompt again if necessary
+    def testResponse(response: Option[String]): Option[Int] = {
+      response match {
         case None =>
           readLine(prompt) match {
             case null | "" if allowNone => None
-            case null | ""              => testResponse(None)
-            case input                  => testResponse(Some(input))
+            case null | "" => testResponse(None)
+            case input => testResponse(Some(input))
           }
-        case Some(n) if outOfPlay(n) =>
-          if (askYorN("Play it anyway (y/n)? ")) Some(n.trim.toInt) else None
-        case n => n map (_.trim.toInt)
+
+        case Some(INTEGER(input)) =>
+          val num = input.toInt
+          if (validCardNumber(num))
+            Some(num)
+          else
+            testResponse(None)
+
+          case Some(input) =>
+            println(s"$input is not a valid card number.")
+            testResponse(None)
       }
     }
 
@@ -2445,15 +2516,8 @@ object LabyrinthAwakening {
   val CriticalMiddle   = 200
   val AvengerCard      = 242
 
-  sealed trait CardDrawSource
-  case object FromDeck extends CardDrawSource
-  case object FromDiscard extends CardDrawSource
-  case object FromLapsing extends CardDrawSource  // Card removed from play
-  case object From1stPLot extends CardDrawSource  // Card removed from play
-  case object FromOpponent extends CardDrawSource
-
   // Returns true if the card was discarded (eg. Avenger)
-  def askCardsDrawn(role: Role, numDrawn: Int, source: CardDrawSource, optPrompt: Option[String] = None): Unit = {
+  def askCardsDrawn(role: Role, numDrawn: Int, sources: List[CardDrawSource], optPrompt: Option[String] = None): Unit = {
     for (num <- (1 to numDrawn)) {
       val prompt = optPrompt match {
         case Some(prompt) =>
@@ -2464,12 +2528,13 @@ object LabyrinthAwakening {
           s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: (blank if none) "
       }
 
-      askCardNumber(prompt) match {
+      askCardNumber(sources, prompt) match {
         case None =>
           return
         case Some(cardNum) =>
           log(s"${deck(cardNum)} is drawn", Color.Event)
-          source match {
+
+          sources.find(_.contains(cardNum)).get match {
             case FromDeck =>
               // We don't keep track of cards in the deck
             case FromDiscard =>
@@ -2478,8 +2543,10 @@ object LabyrinthAwakening {
               cardDrawnFromDiscardPile(cardNum)
             case From1stPLot =>
               cardDrawnFromFirstPlotBox(cardNum)
-            case FromOpponent =>
-              decreaseCardsInHand(oppositeRole(role), 1)
+            case FromRole(from) =>
+              decreaseCardsInHand(from, 1)
+            case other =>
+              throw new IllegalStateException(s"askCardsDrawn() cannot use this source: ${other.name}")
           }
 
           // Avenger event triggers and is placed in the
@@ -2499,48 +2566,36 @@ object LabyrinthAwakening {
   // This method manages that process.
   // The caller should display a message about which cards should be prohibited.
   def askCardDrawnFromDiscardOrBox(role: Role, prohibited: Set[Int]): Unit = {
-    val boxChoice = (num : Int, plot: Boolean) => {
-      val box = if (plot) "First Plot box" else "Lapsing box"
-      (num -> s"${deck(num).numAndName} from the $box")
-    }
-    val lapsingChoices = game.cardsLapsing map (boxChoice(_, false))
-    val plotChoices    = game.firstPlotCard.toList map (boxChoice(_, true))
-    val boxChoices = lapsingChoices ::: plotChoices filterNot { case (num, _) => prohibited(num) }
-    val sources = new ListBuffer[String]()
+    val sources = new ListBuffer[CardDrawSource]()
     if (game.cardsDiscarded.nonEmpty)
-      sources += "Discard pile"
+      sources += FromDiscard
     if (game.cardsLapsing.nonEmpty)
-      sources += "Lapsing box"
+      sources += FromLapsing
     if (game.firstPlotCard.nonEmpty)
-      sources += "First plot box"
+      sources += From1stPLot
 
     if (sources.isEmpty)
       log("\nThere are no cards in the Discard pile, Lapsing box, or First Plot box.", Color.Event)
     else {
-      displayLine(s"\nSelect a card from ${orList(sources.toList)} and add it to your hand.")
+      displayLine(s"\nSelect a card from the ${orList(sources.map(_.name).toList)} and add it to your hand.")
 
       def askForCard(): Unit = {
-        askCardNumber("\nWhat is the card# of the card that was drawn: (blank if none) ") match {
+        askCardNumber(sources.toList, "\nWhat is the card# of the card that was drawn: (blank if none) ") match {
           case None =>
           case Some(num) if prohibited(num) =>
             displayLine(s"You cannot select ${deck(num).numAndName}")
             askForCard()
           case Some(num) =>
-            if (game.cardsDiscarded.contains(num))
-              cardDrawnFromDiscardPile(num)
-            else if (game.cardsLapsing.contains(num))
-              cardDrawnFromLapsingBox(num)
-            else if (game.firstPlotCard.contains(num))
-              cardDrawnFromFirstPlotBox(num)
-            else {
-              displayLine(s"${deck(num).numAndName} is not in the ${orList(sources.toList)}")
-              askForCard()
+            sources.find(_.contains(num)).get match {
+              case FromDiscard => cardDrawnFromDiscardPile(num)
+              case FromLapsing => cardDrawnFromLapsingBox(num)
+              case _ => cardDrawnFromFirstPlotBox(num)
             }
 
-          if (num == AvengerCard)
-            avengerCardDrawn()
-          else
-            increaseCardsInHand(role, 1)
+            if (num == AvengerCard)
+              avengerCardDrawn()
+            else
+              increaseCardsInHand(role, 1)
         }
       }
     }
@@ -2575,40 +2630,30 @@ object LabyrinthAwakening {
   }
 
   // Return card number that was discarded, or None.
-  def askDiscardedCard(
+  def askCardBeingDiscarded(
     role: Role,
     prompt: String,
     triggerRole: Option[Role] = None,
     opsRequired: Option[Int] = None,
     allowNone: Boolean = true): Option[Int] = {
 
-    def display(cardNum: Int) = deck(cardNum).numAndName
-    
+    def opsOk(cardNum: Int) = opsRequired match {
+      case None => true
+      case Some(ops) => deck(cardNum).printedOps == ops
+    }
+
     def askForCard(): Option[Int] = {
-      askCardNumber(prompt, opsRequired = opsRequired, allowNone = allowNone) match {
-        case None =>
-          None
-
-        case Some(cardNum) if game.cardsDiscarded.contains(cardNum) =>
-          displayLine(s"${display(cardNum)} is already in the discard pile.")
-          askForCard()
-
-        case Some(cardNum) if game.cardsRemoved.contains(cardNum) =>
-          displayLine(s"${display(cardNum)} has already been removed from the game.")
-          askForCard()
-
-        case Some(cardNum) if game.cardsLapsing.contains(cardNum) =>
-          displayLine(s"${display(cardNum)} is in the Lapsing box.")
-          askForCard()
-
-        case Some(cardNum) if game.firstPlotCard.contains(cardNum) =>
-          displayLine(s"${display(cardNum)} is in the First Plot box.")
-          askForCard()
-
-        case Some(cardNum) =>
+      askCardNumber(FromRole(role)::Nil, prompt, allowNone = allowNone) match {
+        case None => None
+        case Some(cardNum) if opsOk(cardNum) =>
           decreaseCardsInHand(role, 1)
           processDiscardedCard(cardNum, triggerRole)
           Some(cardNum)
+        case Some(cardNum) =>
+          val card = deck(cardNum).toString
+          val ops = opsRequired.get
+          displayLine(s"$card is not a ${amountOf(ops, "Op")} card.")
+          askForCard()
       }
     }
 
@@ -2624,7 +2669,7 @@ object LabyrinthAwakening {
           s"\nWhat is the card# of the $role card being discarded: (blank if none) "
         else
           s"\nWhat is the card# of the ${ordinal(currentNum)} $role card being discarded: (blank if none) "
-        askDiscardedCard(role, prompt, triggerRole) match {
+        askCardBeingDiscarded(role, prompt, triggerRole) match {
           case None =>
           case Some(_) => nextCard(currentNum + 1)
         }
@@ -2641,7 +2686,7 @@ object LabyrinthAwakening {
       if (accumulatedOps < totalOps) {
         val prompt =
           s"\nWhat is the card# of the ${ordinal(currentNum)} $role card being discarded: (blank if none) "
-        askDiscardedCard(role, prompt, triggerRole) match {
+        askCardBeingDiscarded(role, prompt, triggerRole) match {
           case None =>
           case Some(cardNum) =>
             nextCard(currentNum + 1, accumulatedOps + deck(cardNum).printedOps)
@@ -7059,7 +7104,7 @@ object LabyrinthAwakening {
   // Process all top level user commands.
   @tailrec def commandLoop(): Unit = {
     checkAutomaticVictory() // Will Exit game if auto victory has been achieved
-    
+
     val cardsPlayed     = (game.plays map (_.numCards)).sum
     val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved])
                                       map (_.numCards)).sum
@@ -7379,7 +7424,7 @@ object LabyrinthAwakening {
       )
     }
 
-    askCardNumber("Card # ", param) foreach { cardNumber =>
+    askCardNumber(FromRole(US)::Nil, "Card # ", param) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
 
@@ -7483,7 +7528,7 @@ object LabyrinthAwakening {
 
         case Reassess =>
           println("You must play a second 3 Ops card")
-          askCardNumber("Card # ", None, true, opsRequired = Some(3)) match {
+          askCardNumber(FromRole(US)::Nil, "Card # ", allowNone = true, opsRequired = Some(3)) match {
             case None => throw AbortAction
             case Some(cardNum) =>
               val card2 = deck(cardNum)
@@ -7797,7 +7842,7 @@ object LabyrinthAwakening {
         targetsThisPhase = PhaseTargets()
       )
     }
-    askCardNumber("Card # ", param) foreach { cardNumber =>
+    askCardNumber(FromRole(Jihadist)::Nil, "Card # ", param) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
 
@@ -7832,7 +7877,7 @@ object LabyrinthAwakening {
             !game.firstPlotCard.contains(cardNumber) &&
             !ignoreEndOfTurnDiscard)
           addCardToDiscardPile(cardNumber)
-        
+
         ignoreEndOfTurnDiscard = false  // Reset for next turn
 
         if (game.botRole == Jihadist && game.botEnhancements)
@@ -8492,7 +8537,7 @@ object LabyrinthAwakening {
       wrap("Removed: ", outOfPlay.sorted map cardNumAndName) foreach println
       println()
       println("Enter a card number to move it between removed and not removed.")
-      askCardNumber("Card #: ", removedLapsingOK = true) match {
+      askCardNumber(FromDeck::FromRemoved::Nil, "Card #: ") match {
         case None =>
         case Some(num) if outOfPlay contains num =>
           outOfPlay = outOfPlay filterNot(_ == num)
@@ -8516,7 +8561,7 @@ object LabyrinthAwakening {
     println(s"Current first plot card: ${inPlay map cardNumAndName getOrElse "none"}")
     println()
     println("Enter a card number to add or remove it as the first plot card.")
-    askCardNumber("Card #: ", removedLapsingOK = true) foreach {
+    askCardNumber(FromDeck::From1stPLot::Nil, "Card #: ") foreach {
       case num if inPlay.exists(_ == num) => inPlay = None
       case num                            => inPlay = Some(num)
     }

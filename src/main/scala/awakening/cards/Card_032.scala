@@ -85,7 +85,7 @@ object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoA
     val prompt = s"\nYou must discard card with Ops value: $ops"
 
     printSummary(game.countrySummary(name))
-    askDiscardedCard(role, prompt, opsRequired = Some(ops), allowNone = false)
+    askCardBeingDiscarded(role, prompt, opsRequired = Some(ops), allowNone = false)
     println()
     addEventTarget(name)
     setAlignment(name, Neutral)
