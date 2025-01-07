@@ -63,29 +63,9 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
   override
   def eventConditionsMet(role: Role) = game.caliphateDeclared
 
-  def muslimCandidates() = countryNames(game.muslims)
-
   def cellSources(target: String) = countryNames(
     game.countries.filter(c => c.name != target && c.cells > 0)
   )
-
-  def jihadistBotTarget = JihadistBot.cachedTarget("gulmurod-target") {
-    val withCells = countryNames(game.muslims.filter(_.totalCells > 0))
-    val mjp = if (game.botEnhancements)
-      JihadistBot.majorJihadPriorityCountry
-    else
-      None
-    val target = mjp.getOrElse(JihadistBot.majorJihadTarget(muslimCandidates()).get)
-
-    val travelers = cellSources(target).map { name =>
-      JihadistBot.numCellsForTravel(game.getCountry(name), target, Nil, placement = true)
-    }.sum
-
-    if (game.cellsAvailable + travelers > 0 || game.getMuslim(target).totalCells > 0)
-      target
-    else
-      JihadistBot.majorJihadTarget(withCells).get
-  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -112,8 +92,10 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
         val cells = askCellsFromAnywhere(2, true, cellSources(name), sleeperFocus = false)
         (name, cells)
       }
-      else
-        (jihadistBotTarget, JihadistBot.selecCellsToPlace(jihadistBotTarget, cellSources(jihadistBotTarget), 2))
+      else {
+        val target = JihadistBot.cellPlacementPriority(false)(candidates).get
+        (target, JihadistBot.selecCellsToPlace(target, cellSources(target), 2))
+      }
             
       addEventTarget(target)
       testCountry(target)
