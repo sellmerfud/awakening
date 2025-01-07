@@ -2016,7 +2016,7 @@ object LabyrinthAwakening {
   // If num is 1 use the name as is
   // otherwise either use the plural if given or add an 's' to the name.
   def amountOf(num: Int, name: String, plural: Option[String] = None) =
-    (num, plural) match {
+    (num.abs, plural) match {
       case (1, _)            => s"$num $name"
       case (_, Some(plural)) => s"$num $plural"
       case _                 => s"$num ${name}s"
@@ -3456,7 +3456,7 @@ object LabyrinthAwakening {
     }
   }
 
-  def saveGameState(desc: Option[String] = None): Unit = {
+  def saveGameState(desc: Option[String] = None, suppressCardsPlayed: Boolean = false): Unit = {
     assert(gameName.nonEmpty, "saveGameState(): called with gameName not set!")
 
     val save_number = game.history.size
@@ -3474,6 +3474,9 @@ object LabyrinthAwakening {
       case Some(PlayedCard(_, _, _)) =>
         s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card this turn)"
 
+      case _ if suppressCardsPlayed =>
+        ""
+
       case _ =>
         s"(turn ${game.turn} - ${amountOf(cardsPlayed, "card")} played)"
     }
@@ -3482,8 +3485,8 @@ object LabyrinthAwakening {
       s"playing: ${game.humanRole}",
       s"last action: $segmentDesc",
       turnInfo
-    ).mkString(", ")
-    val segment = GameSegment(save_number, Seq(segmentDesc, turnInfo))
+    ).filterNot(_.isEmpty).mkString(", ")
+    val segment = GameSegment(save_number, Seq(segmentDesc, turnInfo).filterNot(_.isEmpty))
 
     // Make sure that the game directory exists
     save_path.dirname.mkpath()
@@ -3586,7 +3589,7 @@ object LabyrinthAwakening {
 
         val current = game.history.last
         println()
-        wrap(s"Current save point: ${current.save_number} ", current.summary) foreach (l => println(l))
+        wrap(s"Current save point ${current.save_number}: ", current.summary) foreach (l => println(l))
         println("\nRollback to the beginning of a previous save point.")
         println("The save points are displayed with the most recent first.")
 
@@ -6121,7 +6124,20 @@ object LabyrinthAwakening {
 
       checkAutomaticVictory() // Will Exit game if auto victory has been achieved
 
-      val extraUSCards      = if (lapsingEventInPlay(FullyResourcedCOIN)) 2 else 0
+      val usCardMods = new ListBuffer[(String, Int)]()
+      if (lapsingEventInPlay(FullyResourcedCOIN))
+        usCardMods.append((deck(FullyResourcedCOIN).name, 2))
+      if (globalEventInPlay(USChinaTradeWar)) {
+        val modifier = game.worldPosture match {
+          case Even => 0
+          case world if world == game.usPosture => 1
+          case _ => -1
+        }
+        usCardMods.append((USChinaTradeWar, modifier))        
+      }
+
+      val extraUSMaxName = usCardMods.map(_._1.length).max
+      val extraUSCards = usCardMods.map(_._2).sum
       val endSouthChinaSeasCrisis = globalEventInPlay(SouthChinaSeaCrisis) &&
                                     game.usPosture == game.getNonMuslim(China).posture
       val lapsingCards = game.cardsLapsing
@@ -6148,6 +6164,8 @@ object LabyrinthAwakening {
       log("Draw Cards")
       log(separator())
       log(s"$US player will draw $usCards cards", Color.Info)
+      for ((name, mod) <- usCardMods)
+        log(f"  ${padLeft(name, extraUSMaxName)}: $mod%+2d")
       log(s"Jihadist player will draw $jihadistCards cards", Color.Info)
 
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
@@ -6177,9 +6195,10 @@ object LabyrinthAwakening {
       }
 
       // Reset history list of plays. They are not stored in turn files.
+      val turnNum = game.turn
       game = game.copy(plays = Nil)
       game = game.copy(turn = game.turn + 1)
-      saveGameState()
+      saveGameState(Some(s"End of turn $turnNum"), suppressCardsPlayed = true)
     }
   }
 
