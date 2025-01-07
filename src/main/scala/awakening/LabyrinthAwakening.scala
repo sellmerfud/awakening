@@ -1949,11 +1949,19 @@ object LabyrinthAwakening {
       b.toList
     }
 
+    def discardedCardsSummary: Seq[String] = {
+      val b = new ListBuffer[String]
+      b += "Cards in the discard pile"
+      b += separator(char = '=')
+      wrap("", game.cardsDiscarded.map(deck(_).numAndName)).foreach(l => b += l)
+      b.toList
+    }
+
     def removedCardsSummary: Seq[String] = {
       val b = new ListBuffer[String]
       b += "Cards removed from the game"
       b += separator(char = '=')
-      wrap("", game.cardsRemoved map (deck(_).numAndName)) foreach (l => b += l)
+      wrap("", game.cardsRemoved.map(deck(_).numAndName)).foreach(l => b += l)
       b.toList
     }
 
@@ -7130,12 +7138,15 @@ object LabyrinthAwakening {
       .map(_.numCards)
       .sum
 
-    val plots = numUnresolvedPlots
-    val plotDisp = if (plots == 0) "" else s", ${amountOf(plots, "unresolved plot")}"
+    val info = List(
+      s"${amountOf(numPlayed, "card")} played",
+      s"${amountOf(numCardsInHand(activeRole), "card")} in hand",
+      if (numUnresolvedPlots == 0) "" else s"${amountOf(numUnresolvedPlots, "unresolved plot")}"
+    ).filterNot(_.isEmpty).mkString(", ")
     val prompt = {
       s"""|
           |
-          |>>> $activeRole action phase (${amountOf(numPlayed, "card")} played$plotDisp) <<<
+          |>>> $activeRole action phase ($info) <<<
           |${separator()}
           |Command: """.stripMargin
     }
@@ -7180,7 +7191,8 @@ object LabyrinthAwakening {
                  |  show plays         - cards played during the current turn
                  |  show summary       - game summary including score
                  |  show scenario      - scenario and difficulty level
-                 |  show removed cards - cards that have been removed from the game
+                 |  show discards      - cards in the discard pile
+                 |  show removed       - cards that have been removed from the game
                  |  show caliphate     - countries making up the Caliphate
                  |  show civil wars    - countries in civil war
                  |  show <country>     - state of a single country""".stripMargin),
@@ -7292,19 +7304,20 @@ object LabyrinthAwakening {
 
   def showCommand(param: Option[String]): Unit = {
     val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" ::
-                  "civil wars" :: "removed cards" :: countryNames(game.countries)
+                  "civil wars" :: "discards" :: "removed" :: countryNames(game.countries)
     val opts = if (game.useExpansionRules) options
                else options filterNot(o => o == "caliphate" || o == "civil wars")
 
     askOneOf("Show: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
-      case "plays"         => printSummary(game.playSummary)
-      case "summary"       => printSummary(game.scoringSummary); printSummary(game.statusSummary)
-      case "scenario"      => printSummary(game.scenarioSummary)
-      case "caliphate"     => printSummary(game.caliphateSummary)
-      case "civil wars"    => printSummary(game.civilWarSummary)
-      case "removed cards" => printSummary(game.removedCardsSummary)
-      case "all"           => printGameState()
-      case name            => printSummary(game.countrySummary(name))
+      case "plays"      => printSummary(game.playSummary)
+      case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
+      case "scenario"   => printSummary(game.scenarioSummary)
+      case "caliphate"  => printSummary(game.caliphateSummary)
+      case "civil wars" => printSummary(game.civilWarSummary)
+      case "discards"   => printSummary(game.discardedCardsSummary)
+      case "removed"    => printSummary(game.removedCardsSummary)
+      case "all"        => printGameState()
+      case name         => printSummary(game.countrySummary(name))
     }
   }
 
