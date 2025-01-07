@@ -185,14 +185,19 @@ object JihadistBot extends BotHelpers {
           _ => true),
       )
 
+      botLog("Selecting Auto Recruit Priority...", Color.Debug)
+      botLog("Start with Auto-recruit Muslim countries worse than Fair")
       val target = game.muslims.filter(m => m.autoRecruit && !m.isFair) match {
-        case Nil => None
-        case candidates => topPriority(candidates, priorities, allowBotLog = false).map(_.name)
+        case Nil =>
+          botLog("None found")
+          None
+        case candidates =>
+          topPriority(candidates, priorities, allowBotLog = true).map(_.name)
       }
 
       PriorityCountries.autoRecruitPriority = target
       PriorityCountries.autoRecruitPrioritySet = true
-
+      botLog(s"Auto Recruit Priority: ${target.getOrElse("None")}", Color.Debug)
     }
 
     PriorityCountries.autoRecruitPriority
@@ -230,12 +235,18 @@ object JihadistBot extends BotHelpers {
     // We only selecte the priority country once per play
     if (PriorityCountries.majorJihadPrioritySet == false) {
       val possibilities = game.muslims.filter(m => majorJihadSuccessPossible(m) && m.totalTroopsAndMilitia < 7)
-      val target = selectCandidates(possibilities, TravelToFlowchart, allowBotLog = false) match {
-        case Nil => None
-        case candidates => topPriority(candidates, recruitAndTravelToPriorities, allowBotLog = false).map(_.name)
+      botLog(s"Selecting Major Jihad Priority...", Color.Debug)
+      botLog("Start with Muslim countries with < 7 TandM and Major jihad possible.")
+      val target = selectCandidates(possibilities, TravelToFlowchart, allowBotLog = true) match {
+        case Nil =>
+          botLog("None found")
+          None
+        case candidates =>
+          topPriority(candidates, recruitAndTravelToPriorities, allowBotLog = true).map(_.name)
       }
       PriorityCountries.majorJihadPriority = target
       PriorityCountries.majorJihadPrioritySet = true
+      botLog(s"Major Jihad Priority: ${target.getOrElse("None")}", Color.Debug)
     }
 
     PriorityCountries.majorJihadPriority
