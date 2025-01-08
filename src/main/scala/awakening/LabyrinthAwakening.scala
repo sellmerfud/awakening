@@ -1953,7 +1953,9 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += "Cards in the discard pile"
       b += separator(char = '=')
-      wrap("", game.cardsDiscarded.map(deck(_).numAndName)).foreach(l => b += l)
+      wrapInColumns("", game.cardsDiscarded.map(deck(_).numAndName)).foreach(l => b += l)
+
+
       b.toList
     }
 
@@ -1961,7 +1963,7 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += "Cards removed from the game"
       b += separator(char = '=')
-      wrap("", game.cardsRemoved.map(deck(_).numAndName)).foreach(l => b += l)
+      wrapInColumns("", game.cardsRemoved.map(deck(_).numAndName)).foreach(l => b += l)
       b.toList
     }
 
@@ -2410,7 +2412,7 @@ object LabyrinthAwakening {
     override def contains(cardNum: Int) = game.cardsLapsing.contains(cardNum)
   }
 
-  case object From1stPLot extends CardDrawSource {
+  case object From1stPlot extends CardDrawSource {
     override def name = "First Plot box"
     override def contains(cardNum: Int) = game.firstPlotCard.contains(cardNum)
   }
@@ -2430,7 +2432,7 @@ object LabyrinthAwakening {
 
     override
     def contains(cardNum: Int): Boolean = {
-      val accountedFor = List(FromDiscard, FromLapsing, From1stPLot, FromRemoved)
+      val accountedFor = List(FromDiscard, FromLapsing, From1stPlot, FromRemoved)
 
       game.cardsInUse.contains(cardNum) && !accountedFor.exists(_.contains(cardNum))
     }
@@ -2448,21 +2450,45 @@ object LabyrinthAwakening {
     override def contains(cardNum: Int) = FromDeck.contains(cardNum)
   }
 
-  case object FromAnywhere extends CardDrawSource {
-    override def name = "Anywhere"
-    override def contains(cardNum: Int) = game.cardsInUse.contains(cardNum)
-  }
-
-
   def cardFoundIn(sources: List[CardDrawSource], cardNum: Int) =
     sources.exists(_.contains(cardNum))
 
   def cardLocation(cardNum: Int): Option[CardDrawSource] = {
     val sources = List(
-      FromDiscard, FromLapsing, From1stPLot, FromRemoved, FromDeck
+      FromDiscard, FromLapsing, From1stPlot, FromRemoved, FromDeck
     )
     sources.find(_.contains(cardNum))
   }
+
+  def cardsInSource(source: CardDrawSource): List[Int] = {
+    source match {
+      case FromDeck|FromRole(_) => cardsInDeckOrHands()
+      case FromDiscard => game.cardsDiscarded
+      case FromLapsing => game.cardsLapsing
+      case FromRemoved => game.cardsRemoved
+      case From1stPlot => game.firstPlotCard.toList
+    }
+  }
+
+  // Cards not in Discard, Lapsing, 1stPlot, Removed
+  // This includes cards potentially in player hands
+  def cardsInDeckOrHands(): List[Int] = {
+    val notInDeck =
+      game.cardsDiscarded.toSet ++
+      game.cardsLapsing.toSet ++
+      game.firstPlotCard.toSet ++
+      game.cardsRemoved.toSet
+
+    game.cardsInUse
+      .toSet
+      .diff(notInDeck)
+      .toList
+      .sorted
+  }
+
+  // The number of cards currently in the deck.
+  def numCardsInDeck(): Int =
+    cardsInDeckOrHands().size - game.cardsInHand.us - game.cardsInHand.jihadist
 
   // Ask the use for a card number
   def askCardNumber(
@@ -2475,7 +2501,7 @@ object LabyrinthAwakening {
     def validCardNumber(num: Int) = {
 
       var isValid = false
-      def display = deck(num).numAndName
+      def display = s"[${cardNumAndName(num)}]"
 
       if (!deck.isValidCardNumber(num))
         println(s"$num is not a valid card number for any of the scenario decks.")
@@ -2549,7 +2575,7 @@ object LabyrinthAwakening {
               cardDrawnFromDiscardPile(cardNum)
             case FromLapsing =>
               cardDrawnFromDiscardPile(cardNum)
-            case From1stPLot =>
+            case From1stPlot =>
               cardDrawnFromFirstPlotBox(cardNum)
             case FromRole(from) =>
               decreaseCardsInHand(from, 1)
@@ -2580,7 +2606,7 @@ object LabyrinthAwakening {
     if (game.cardsLapsing.nonEmpty)
       sources += FromLapsing
     if (game.firstPlotCard.nonEmpty)
-      sources += From1stPLot
+      sources += From1stPlot
 
     if (sources.isEmpty)
       log("\nThere are no cards in the Discard pile, Lapsing box, or First Plot box.", Color.Event)
@@ -3403,9 +3429,9 @@ object LabyrinthAwakening {
   }
 
   // Format the given sequence of strings in a comma separated list
-  // such that we do not exceed the given number of columns.
-  def wrap[T](prefix: String, values: Seq[T], columns: Int = 100, showNone: Boolean = true): Seq[String] = {
-    val stringValues = values map (_.toString)
+  // such that we do not exceed the given maxWith.
+  def wrap[T](prefix: String, values: Seq[T], maxWidth: Int = 100, showNone: Boolean = true): Seq[String] = {
+    val stringValues = values.map(_.toString)
     val b = new ListBuffer[String]
     val s = new StringBuilder(prefix)
     var first = true
@@ -3418,7 +3444,7 @@ object LabyrinthAwakening {
       s.append(stringValues.head)
       for (v <- stringValues.tail) {
         s.append(", ")
-        if (s.length + v.length < columns)
+        if (s.length + v.length < maxWidth)
           s.append(v)
         else {
           b += s.toString
@@ -3431,6 +3457,34 @@ object LabyrinthAwakening {
     b.toList
   }
 
+  def wrapInColumns[T](prefix: String, values: Seq[T], maxWidth: Int = 100, showNone: Boolean = true): Seq[String] = {
+    val stringValues = values.map(_.toString)
+    val width = if (stringValues.isEmpty) 0 else stringValues.map(_.length).max
+    val columnValues = stringValues.map(padLeft(_, width))
+    val b = new ListBuffer[String]
+    val s = new StringBuilder(prefix)
+    var first = true
+    if (columnValues.isEmpty) {
+      if (showNone)
+        s.append("none")
+    }
+    else {
+      val margin = " " * prefix.length
+      s.append(columnValues.head)
+      for (v <- columnValues.tail) {
+        s.append("  ")
+        if (s.length + v.length < maxWidth)
+          s.append(v)
+        else {
+          b += s.toString
+          s.clear()
+          s.append(margin).append(v)
+        }
+      }
+    }
+    b += s.toString
+    b.toList
+  }
 
   //  Return true if the user enters skip.
   //  This is a hidden feature to skip future pauses when showing
@@ -3441,7 +3495,7 @@ object LabyrinthAwakening {
       (Console.GREEN, Console.RESET)
     else
       ("", "")
-    
+
     readLine(s"\n${color}>>>>> [ $prompt ] <<<<<${reset}") == "skip"
   }
 
@@ -3463,6 +3517,9 @@ object LabyrinthAwakening {
 
   def debug(line: String, color: Option[Color] = None): Unit =
     log(s"DEBUG: $line", color.orElse(Color.Debug))
+  def logAdjustment(name: String): Unit = {
+    log(s"$name adjusted.")
+  }
 
   def inspect[T](name: String, value: T): T = {
     debug(s"$name == ${value.toString}")
@@ -6389,7 +6446,7 @@ object LabyrinthAwakening {
           case world if world == game.usPosture => 1
           case _ => -1
         }
-        usCardMods.append((USChinaTradeWar, modifier))        
+        usCardMods.append((USChinaTradeWar, modifier))
       }
 
       val extraUSMaxName = usCardMods match {
@@ -6467,7 +6524,7 @@ object LabyrinthAwakening {
 
       val endSouthChinaSeasCrisis = globalEventInPlay(SouthChinaSeaCrisis) &&
                                     game.usPosture == game.getNonMuslim(China).posture
-                                    
+
       // Calculate number of cards drawn
       drawCardsForTurn()
 
@@ -7191,7 +7248,7 @@ object LabyrinthAwakening {
                  |  show plays         - cards played during the current turn
                  |  show summary       - game summary including score
                  |  show scenario      - scenario and difficulty level
-                 |  show discards      - cards in the discard pile
+                 |  show discarded     - cards in the discard pile
                  |  show removed       - cards that have been removed from the game
                  |  show caliphate     - countries making up the Caliphate
                  |  show civil wars    - countries in civil war
@@ -7205,7 +7262,7 @@ object LabyrinthAwakening {
                  |  adjust difficulty       - Jihadist ideology/US resolve
                  |  adjust lapsing cards    - Current lapsing cards
                  |  adjust removed cards    - Cards removed from the game
-                 |  adjust first plot       - Current first plot card
+                 |  adjust card locations   - Move cards between deck/discard/lapsing/1st plot/removed
                  |  adjust markers          - Current global event markers
                  |  adjust reserves         - US and/or Jihadist reserves
                  |  adjust plots            - Available/resolved plots
@@ -7304,7 +7361,7 @@ object LabyrinthAwakening {
 
   def showCommand(param: Option[String]): Unit = {
     val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" ::
-                  "civil wars" :: "discards" :: "removed" :: countryNames(game.countries)
+                  "civil wars" :: "discarded" :: "removed" :: countryNames(game.countries)
     val opts = if (game.useExpansionRules) options
                else options filterNot(o => o == "caliphate" || o == "civil wars")
 
@@ -7314,7 +7371,7 @@ object LabyrinthAwakening {
       case "scenario"   => printSummary(game.scenarioSummary)
       case "caliphate"  => printSummary(game.caliphateSummary)
       case "civil wars" => printSummary(game.civilWarSummary)
-      case "discards"   => printSummary(game.discardedCardsSummary)
+      case "discarded"  => printSummary(game.discardedCardsSummary)
       case "removed"    => printSummary(game.removedCardsSummary)
       case "all"        => printGameState()
       case name         => printSummary(game.countrySummary(name))
@@ -8334,8 +8391,8 @@ object LabyrinthAwakening {
 
   def adjustSettings(param: Option[String]): Unit = {
     val options = List(
-      "prestige", "funding", "difficulty", "lapsing cards",
-      "removed cards", "first plot", "markers" , "reserves",
+      "prestige", "funding", "difficulty", "card locations",
+      "markers" , "reserves",
       "plots", "offmap troops", "posture", "auto roll",
       "bot logging", "bot enhancements", "manual die rolls", "color",
       "resolved plot countries", "exit after win"
@@ -8378,9 +8435,7 @@ object LabyrinthAwakening {
       case "bot enhancements"        => adjustBotEnhancements()
       case "manual die rolls"        => adjustBotManualDieRolls()
       case "color"                   => adjustShowColor()
-      case "lapsing cards"           => adjustLapsingCards()
-      case "removed cards"           => adjustRemovedCards()
-      case "first plot"              => adjustFirstPlot()
+      case "card locations"          => adjustCardLocations()
       case "markers"                 => adjustMarkers()
       case "reserves"                => adjustReserves()
       case "plots"                   => adjustPlots()
@@ -8492,10 +8547,45 @@ object LabyrinthAwakening {
     saveAdjustment("Manual die rolls")
   }
 
-  def adjustLapsingCards(): Unit = {
+  // This is a helper function for adjustCardLocations()
+  // For a card in the first plot box there is no need to
+  // prompt.
+  // For the others we present a menu if the number of availble
+  // cards is less than 25,
+  // otherwise we prompt for the card number.
+  // Returns None if the use changes their mind.
+  private def getCardToMove(source: CardDrawSource): Option[Int] = {
+    source match {
+      case From1stPlot => game.firstPlotCard
+      case source =>
+        val candidates = cardsInSource(source)
+        candidates.size match {
+          case 0 => None
+          case 1 => candidates.headOption
+          case n if n < 25 =>
+            val choices = candidates.sorted.map(n => Some(n) -> cardNumAndName(n)) :+
+              (None -> "Do not select a card.")
+            askMenu(s"Move which card in the ${source.name}:", choices).head
+          case _ =>
+            println(s"\nThese cards are in the ${source.name}:")
+            println(separator())
+            wrapInColumns("", candidates.sorted.map(cardNumAndName))
+              .foreach(println)
+            askCardNumber(source::Nil, s"Enter # of card in the ${source.name} (blank for none): ")
+        }
+    }
+  }
+
+  // This function allows the user to move a card between one of the
+  // following locations:
+  // the deck, the discard pile, lapsing box, 1st plot box, or removed
+  // Note: Currently we do not track the card numbers of cards in hand
+  // (we only track the number of cards in hand)
+  def adjustCardLocations(): Unit = {
+    // Some lapsing cards affect the number of out of play troops that can be on the map.
     case class OopTroops(cardNum: Int, numTroops: Int)
     val OutOfPlayTroops = List(OopTroops(KoreanCrisis, 2), OopTroops(EbolaScare, 1), OopTroops(USBorderCrisis, 1))
-    def countOopTrrops(lapsingCards: List[Int]): Int =
+    def countOopTroops(lapsingCards: List[Int]): Int =
       lapsingCards.foldLeft(0) { (sum, cardNum) =>
         sum + OutOfPlayTroops
           .find(_.cardNum == cardNum)
@@ -8503,33 +8593,77 @@ object LabyrinthAwakening {
           .getOrElse(0)
       }
 
-    var lapsing = game.cardsLapsing
+    val sources = FromDeck::FromDiscard::FromLapsing::From1stPlot::FromRemoved::Nil
+    val movedCards = new ListBuffer[Int]()
+    val saved = game
+
     @tailrec def getNextResponse(): Unit = {
-      val notLapsing = LapsingCards filterNot lapsing.contains
-      println()
-      wrap("Lapsing    : ", lapsing.sorted map cardNumAndName) foreach println
-      println()
-      wrap("Not Lapsing: ", notLapsing.sorted map cardNumAndName) foreach println
-      println()
-      println("Enter a card number to move it between lapsing and not lapsing.")
-      askOneOf("Card #: ", LapsingCards, allowNone = true, allowAbort = false).map(_.toInt) match {
-        case None =>
-        case Some(num) if lapsing contains num =>
-          // Remove the card from the lapsing list
-          lapsing = lapsing filterNot(_ == num)
-          getNextResponse()
-        case Some(num) =>
-          // Add the card to the lapsing list
-          lapsing = num :: lapsing
-          getNextResponse()
+      val choices = List(
+        choice(cardsInSource(FromDeck).nonEmpty,    Some(FromDeck), "The deck or a player's/bot's hand"),
+        choice(cardsInSource(FromDiscard).nonEmpty, Some(FromDiscard), "The discard pile"),
+        choice(cardsInSource(FromLapsing).nonEmpty, Some(FromLapsing), "The lapsing box"),
+        choice(cardsInSource(From1stPlot).nonEmpty, Some(From1stPlot), "The 1st plot box"),
+        choice(cardsInSource(FromRemoved).nonEmpty,  Some(FromRemoved), "The removed cards"),
+        choice(true, None, "Finished moving cards"),
+      ).flatten
+
+      askMenu("Choose location of card to move:", choices, allowAbort = false).head match {
+        case None => // Exit function
+        case Some(from) =>
+          getCardToMove(from) match {
+          case None =>
+            getNextResponse()
+          case Some(cardNum) =>
+            val canLapse = deck(cardNum).lapsing != NoLapsing
+            val canRemove = deck(cardNum).remove != NoRemove
+            val destChoices = sources
+              .filter { s =>
+                s != from &&
+                (s != FromLapsing || canLapse) &&
+                (s != From1stPlot || game.firstPlotCard.isEmpty) &&
+                (s != FromRemoved || canRemove)
+              }
+              .map(s => s -> s.name) :+ (from -> "Do not move the card")
+            val to = askMenu(s"Choose new location for [${cardNumAndName(cardNum)}]:", destChoices).head
+            if (from != to) {
+              movedCards += cardNum
+              // Remove the card from its current location
+              from match {
+                case FromDiscard =>
+                  game = game.copy(cardsDiscarded = game.cardsDiscarded.filterNot(_ == cardNum))
+                case FromLapsing =>
+                  game = game.copy(cardsLapsing = game.cardsLapsing.filterNot(_ == cardNum))
+                case From1stPlot =>
+                  game = game.copy(firstPlotCard = None)
+                case FromRemoved =>
+                  game = game.copy(cardsRemoved = game.cardsRemoved.filterNot(_ == cardNum))
+                case _ => // FromDeck nothing to do
+              }
+              // Put it in its new location.
+              to match {
+                case FromDiscard =>
+                  game = game.copy(cardsDiscarded = cardNum::game.cardsDiscarded)
+                case FromLapsing =>
+                  game = game.copy(cardsLapsing = cardNum::game.cardsLapsing)
+                case From1stPlot =>
+                  game = game.copy(firstPlotCard = Some(cardNum))
+                case FromRemoved =>
+                  game = game.copy(cardsRemoved = cardNum::game.cardsRemoved)
+                case _ => // FromDeck nothing to do
+              }
+            }
+            getNextResponse()
+        }
       }
     }
+
     getNextResponse()
-    if (lapsing.toSet != game.cardsLapsing.toSet) {
-      logAdjustment("Lapsing Events", cardNumsAndNames(game.cardsLapsing), cardNumsAndNames(lapsing))
+
+    if (movedCards.nonEmpty) {
+      logAdjustment(s"Location of cards [${movedCards.sorted.mkString(", ")}]")
       // Check to see if we need to move troops to/from the out of play box
-      val oldOop = countOopTrrops(game.cardsLapsing)
-      val newOop = countOopTrrops(lapsing)
+      val oldOop = countOopTroops(saved.cardsLapsing)
+      val newOop = countOopTroops(game.cardsLapsing)
       if (oldOop > newOop)
         moveOfMapTroopsToTrack(oldOop - newOop)
       else if (newOop > oldOop) {
@@ -8537,55 +8671,9 @@ object LabyrinthAwakening {
         for (MapItem(name, num) <- items)
           putTroopsInOffMapBox(name, num)
       }
-
-      game = game.copy(cardsLapsing = lapsing)
-      saveAdjustment("Lapsing Events")
+      saveAdjustment("Adjusted card locations")
     }
   }
-
-  def adjustRemovedCards(): Unit = {
-    var outOfPlay = game.cardsRemoved
-    @tailrec def getNextResponse(): Unit = {
-      println()
-      wrap("Removed: ", outOfPlay.sorted map cardNumAndName) foreach println
-      println()
-      println("Enter a card number to move it between removed and not removed.")
-      askCardNumber(FromDeck::FromRemoved::Nil, "Card #: ") match {
-        case None =>
-        case Some(num) if outOfPlay contains num =>
-          outOfPlay = outOfPlay filterNot(_ == num)
-          getNextResponse()
-        case Some(num) =>
-          outOfPlay = num :: outOfPlay
-          getNextResponse()
-      }
-    }
-    getNextResponse()
-    if (outOfPlay.toSet != game.cardsRemoved.toSet) {
-      logAdjustment("Removed Cards", cardNumsAndNames(game.cardsRemoved), cardNumsAndNames(outOfPlay))
-      game = game.copy(cardsRemoved = outOfPlay)
-      saveAdjustment("Removed Cards")
-    }
-  }
-
-  def adjustFirstPlot(): Unit = {
-    var inPlay = game.firstPlotCard
-    println()
-    println(s"Current first plot card: ${inPlay map cardNumAndName getOrElse "none"}")
-    println()
-    println("Enter a card number to add or remove it as the first plot card.")
-    askCardNumber(FromDeck::From1stPLot::Nil, "Card #: ") foreach {
-      case num if inPlay.exists(_ == num) => inPlay = None
-      case num                            => inPlay = Some(num)
-    }
-
-    if (inPlay != game.firstPlotCard) {
-      logAdjustment("First plot", game.firstPlotCard map cardNumAndName, inPlay map cardNumAndName)
-      game = game.copy(firstPlotCard = inPlay)
-      saveAdjustment("First plot")
-    }
-  }
-
 
   def adjustMarkers(): Unit = {
     case class OopTroops(marker: String, numTroops: Int)
