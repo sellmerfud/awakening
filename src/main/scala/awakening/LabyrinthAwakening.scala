@@ -109,19 +109,19 @@ object LabyrinthAwakening {
   case object LabyrinthMode  extends GameMode {
     val orderValue = 1
     override def toString() = "Labyrinth"
-    val cardRange = Range.inclusive(1, 120)
+    val cardRange: Range = Range.inclusive(1, 120)
   }
 
   case object AwakeningMode  extends GameMode {
     val orderValue = 2
     override def toString() = "Awakening"
-    val cardRange = Range.inclusive(121, 240)
+    val cardRange: Range = Range.inclusive(121, 240)
   }
 
   case object ForeverWarMode extends GameMode {
     val orderValue = 3
     override def toString() = "Forever War"
-    val cardRange = Range.inclusive(241, 360)
+    val cardRange: Range = Range.inclusive(241, 360)
   }
 
   object GameMode {
@@ -1949,13 +1949,19 @@ object LabyrinthAwakening {
       b.toList
     }
 
+    def deckSummary: Seq[String] = {
+      val b = new ListBuffer[String]
+      b += "Cards in the deck (or in player/bot hand)"
+      b += separator(char = '=')
+      wrapInColumns("", cardsInDeckOrHands().map(deck(_).numAndName)).foreach(l => b += l)
+      b.toList
+    }
+
     def discardedCardsSummary: Seq[String] = {
       val b = new ListBuffer[String]
       b += "Cards in the discard pile"
       b += separator(char = '=')
       wrapInColumns("", game.cardsDiscarded.map(deck(_).numAndName)).foreach(l => b += l)
-
-
       b.toList
     }
 
@@ -6377,7 +6383,7 @@ object LabyrinthAwakening {
     }
 
     log()
-    log("The Awakening cards were added to the deck.", Color.Info)
+    log("Add the Awakening cards to the deck.", Color.Info)
     log("The Awakening expansion rules are now in effect.", Color.Info)
     log("The Bot will now use the Awakening priorities.", Color.Info)
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
@@ -6430,7 +6436,7 @@ object LabyrinthAwakening {
             cardsInUse = Range.inclusive(game.cardsInUse.head, ForeverWarMode.cardRange.last)
       )
     log()
-    log("The Forever War cards were added to the deck.", Color.Info)
+    log("Add Forever War cards to the deck.", Color.Info)
     log("The Bot will now use the Forever War priorities.", Color.Info)
   }
 
@@ -6456,6 +6462,12 @@ object LabyrinthAwakening {
       val extraUSCards = usCardMods.map(_._2).sum
       val usCards       = USCardDraw(game.troopCommitment) + extraUSCards
       val jihadistCards = JihadistCardDraw(game.fundingLevel)
+
+      // Need to handle shuffling cards or adding cards from next deck
+      // in a campaing game.
+      // Although, this could happend during a turn when and event
+      // calls for drawing a card.  !!! Ugh.
+
       increaseCardsInHand(US, usCards)
       increaseCardsInHand(Jihadist, jihadistCards)
       log()
@@ -7160,9 +7172,11 @@ object LabyrinthAwakening {
 
   def numUnresolvedPlots: Int = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
 
-  def getCardPlays(): List[CardPlay] = game.plays
-    .takeWhile(_.isInstanceOf[CardPlay])
-    .map(_.asInstanceOf[CardPlay])
+  def getCardPlays(): List[CardPlay] =
+    game.plays
+      .dropWhile(_.isInstanceOf[AdjustmentMade])
+      .takeWhile(_.isInstanceOf[CardPlay])
+      .map(_.asInstanceOf[CardPlay])
 
 
   // ---------------------------------------------
@@ -7248,6 +7262,7 @@ object LabyrinthAwakening {
                  |  show plays         - cards played during the current turn
                  |  show summary       - game summary including score
                  |  show scenario      - scenario and difficulty level
+                 |  show deck          - cards in the deck
                  |  show discarded     - cards in the discard pile
                  |  show removed       - cards that have been removed from the game
                  |  show caliphate     - countries making up the Caliphate
@@ -7360,8 +7375,8 @@ object LabyrinthAwakening {
 
 
   def showCommand(param: Option[String]): Unit = {
-    val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" ::
-                  "civil wars" :: "discarded" :: "removed" :: countryNames(game.countries)
+    val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" :: "civil wars" ::
+      "deck" :: "discarded" :: "removed" :: countryNames(game.countries)
     val opts = if (game.useExpansionRules) options
                else options filterNot(o => o == "caliphate" || o == "civil wars")
 
@@ -7371,6 +7386,7 @@ object LabyrinthAwakening {
       case "scenario"   => printSummary(game.scenarioSummary)
       case "caliphate"  => printSummary(game.caliphateSummary)
       case "civil wars" => printSummary(game.civilWarSummary)
+      case "deck"       => printSummary(game.deckSummary)
       case "discarded"  => printSummary(game.discardedCardsSummary)
       case "removed"    => printSummary(game.removedCardsSummary)
       case "all"        => printGameState()
