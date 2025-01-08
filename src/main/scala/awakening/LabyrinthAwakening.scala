@@ -1143,9 +1143,9 @@ object LabyrinthAwakening {
     override def isMuslim: Boolean = true
 
     override def isUntested = governance == GovernanceUntested
-    def isAlly      = alignment == Ally
-    def isNeutral   = alignment == Neutral
-    def isAdversary = alignment == Adversary
+    def isAlly      = !isUntested && alignment == Ally
+    def isNeutral   = !isUntested && alignment == Neutral
+    def isAdversary = !isUntested && alignment == Adversary
 
     def canExportOil = oilExporter && !hasMarker(TradeEmbargoJihadist)
     def resourceValue = {
