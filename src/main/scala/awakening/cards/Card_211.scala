@@ -103,11 +103,11 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
           (addReactionMarker _, JihadistBot.markerTarget(getCandidates()).get)
       }
 
-      addEventTarget(name)
+      addEventTarget(target)
       if (role == Jihadist)
-        placementAction(name, 1)
+        placementAction(target, 1)
       else
-        placementAction(name, 1)
+        placementAction(target, 1)
     }
 
     removeGlobalEventMarker(Censorship)
