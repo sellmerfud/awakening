@@ -3159,11 +3159,6 @@ object LabyrinthAwakening {
     }
   }
 
-  def inspect[T](name: String, value: T): T = {
-    println(s"DEBUG: $name == ${value.toString}")
-    value
-  }
-
   // Format the given sequence of strings in a comma separated list
   // such that we do not exceed the given number of columns.
   def wrap[T](prefix: String, values: Seq[T], columns: Int = 100, showNone: Boolean = true): Seq[String] = {
@@ -3223,7 +3218,14 @@ object LabyrinthAwakening {
       game = game.copy(log = game.log :+ LogEntry(line, color))
   }
 
+  def debug(line: String, color: Option[Color] = None): Unit =
+    log(s"DEBUG: $line", color.orElse(Color.Debug))
 
+  def inspect[T](name: String, value: T): T = {
+    debug(s"$name == ${value.toString}")
+    value
+  }
+  
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
     def normalize(value: Any) = value match {
       case None                       => "none"
