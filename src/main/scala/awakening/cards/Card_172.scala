@@ -60,7 +60,8 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val possibleCounries = List(Somalia, Sudan, KenyaTanzania).sorted
+  // Somalia and adjacent African countries
+  val PossibleCountries = Somalia::getAdjacent(Somalia).filter(African.contains).sorted
 
   val canPlaceReaction = (c: Country) =>
     lapsingEventNotInPlay(ArabWinter) &&
@@ -75,17 +76,13 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
     game.cellsAvailable > 0 ||
     game.availablePlots.exists(p => p == Plot1 || p == Plot2) ||
     canPlaceBesiegedRegime(c) ||
-    canPlaceBesiegedRegime(c)
+    canPlaceReaction(c)
 
-  def getCandidates() = countryNames(game.countries.filter(isCandidate))
+  def getCandidates() = PossibleCountries.filter(name => isCandidate(game.getCountry(name)))
 
-  def getReactionCandidates() = countryNames(
-    game.countries.filter(c => isCandidate(c) && canPlaceReaction(c))
-  )
+  def getReactionCandidates() = getCandidates().filter(name => canPlaceReaction(game.getCountry(name)))
 
-  def getBesiegeCandidates() = countryNames(
-    game.countries.filter(c => isCandidate(c) && canPlaceBesiegedRegime(c))
-  )
+  def getBesiegeCandidates() = getCandidates().filter(name => canPlaceBesiegedRegime(game.getCountry(name)))
 
   // Returns true if the printed conditions of the event are satisfied
   override
