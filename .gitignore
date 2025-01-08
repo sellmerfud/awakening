@@ -2,6 +2,7 @@ test_config
 target/
 games/
 NOTES.txt
+NOTES.md
 test_config
 project/project/
 project/metals.sbt
