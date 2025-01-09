@@ -84,7 +84,7 @@ object TrumpTakesCommand extends Scenario {
     val second = getAwakeningTarget(Some(first))
     
     
-    log("As part of setup we place an Awakening marker in two different random Muslim countries")
+    log("\nAs part of setup we place an Awakening marker in two different random Muslim countries")
     log(separator())
     for (name <- List(first, second)) {
       testCountry(name)

@@ -1,4 +1,4 @@
-
+ 
 //  _          _                _       _   _
 // | |    __ _| |__  _   _ _ __(_)_ __ | |_| |__
 // | |   / _` | '_ \| | | | '__| | '_ \| __| '_ \
@@ -131,6 +131,10 @@ object LabyrinthAwakening {
       case "forever war" => ForeverWarMode
       case _ => throw new IllegalArgumentException(s"Invalid game mode name: $name")
     }
+
+    val ALL = List(LabyrinthMode, AwakeningMode, ForeverWarMode)
+    
+    def next(current: GameMode): Option[GameMode] = ALL.dropWhile(_ != current).headOption
   }
 
   implicit val GameModeOrdering: Ordering[GameMode] = Ordering.by { m: GameMode => m.orderValue }
@@ -1370,10 +1374,12 @@ object LabyrinthAwakening {
 
   case class GameState(
     scenarioName: String,
-    startingMode: GameMode,
-    campaign: Boolean,
     scenarioNotes: Seq[String],
-    currentMode: GameMode,
+    startingMode: GameMode,  // Labyrinth, Awakening, Forever War
+    gameLength: Int,   // Max number of "decks" in game
+    deckNumber: Int,  // 1 to gameLength
+    campaign: Boolean,
+    currentMode: GameMode,  // May switch when playing a campaign game
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
@@ -1403,7 +1409,8 @@ object LabyrinthAwakening {
     history: Vector[GameSegment]         = Vector.empty,
     description: String                  = "",
     showColor: Boolean                   = !scala.util.Properties.isWin, // Default true except on Windows
-    log: Vector[LogEntry]                = Vector.empty) {  // Log of the cuurent game segment
+    log: Vector[LogEntry]                = Vector.empty, // Log of the cuurent game segment
+    name: String                         = "") {         // The name is not saved to disk it is set when the game is loaded
 
     def useExpansionRules   = currentMode == AwakeningMode || currentMode == ForeverWarMode
     def scenarioNameDisplay = if (campaign) s"$scenarioName -- Campaign" else scenarioName
@@ -1787,16 +1794,21 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += s"Scenario: ${scenarioNameDisplay}"
       b += separator(char = '=')
+      b += s"Name: ${game.name}"
+      b += separator()
       b += s"The Bot is playing the $botRole"
       b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
+
       for (difficulty <- botDifficulties)
         b += s"  $difficulty"
+
       if (scenarioNotes.nonEmpty) {
         b += ""
         b += "Scenario Notes:"
         b += separator()
         scenarioNotes foreach (line => b += line)
       }
+
       b += ""
       b += "Options:"
       b += separator()
@@ -2038,7 +2050,9 @@ object LabyrinthAwakening {
   }
 
   def initialGameState(
+    name: String,
     scenario: Scenario,
+    gameLength: Int,
     campaign: Boolean,
     humanRole: Role,
     humanAutoRoll: Boolean,
@@ -2056,10 +2070,12 @@ object LabyrinthAwakening {
 
     GameState(
       scenario.name,
-      scenario.startingMode,
-      campaign,
       scenario.notes,
       scenario.startingMode,
+      gameLength,
+      1,      // deck number alwasy starts at 1
+      campaign,
+      scenario.startingMode,  // current game mode
       humanRole,
       humanAutoRoll,
       botDifficulties,
@@ -2074,12 +2090,13 @@ object LabyrinthAwakening {
       cardsInUse = scenario.startingMode.cardRange,
       cardsRemoved = scenario.cardsRemoved,
       showColor = showColor,
-      offMapTroops = scenario.offMapTroops)
+      offMapTroops = scenario.offMapTroops,
+      name = name)
   }
 
 
   // Global variables
-  var game = initialGameState(Awakening, false, US, true, Muddled :: Nil, !scala.util.Properties.isWin)
+  var game = initialGameState("no-name", Awakening, 1, false, US, true, Muddled :: Nil, !scala.util.Properties.isWin)
 
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -2588,10 +2605,51 @@ object LabyrinthAwakening {
     testResponse(initial)
   }
 
+  // This function is called when a card must be drawn from the
+  // draw pile and the draw pile is empty.
+  // There are several outcomes given this situation depending
+  // on the type of game that is being played.
+  //
+  // Single scenario game (1, 2, or 3 decks)
+  // ---------------------------------------------------------------------
+  // If we just exhausted the final deck, then the game ends immediately
+  // otherwise, any lapsing cards and any first plot card are discared
+  // and replaced with markers (the lapsing event are still in effect),
+  // then the discards are suffled and added to the draw pile and the game
+  // continues.
+  //
+  // Campaign game
+  // ---------------------------------------------------------------------
+  // If we just exhausted the final deck, the the game ends immediately
+  // otherwise, any lapsing cards and any first plot card are discared
+  // and replaced with markers (the lapsing event are still in effect),
+  // then the new deck associated with the next expansion is added to
+  // the draw pile and the game continues.  All rules associated with
+  // the next expansion are now in effect.
+
+  def handleEmptyDrawPile(): Unit = {
+
+    log("\nThe draw pile is empty and a card must be drawn", Color.Info)
+
+
+  }
+
+  // These cards require special handling in some of the 
+  // card draw/discard function.
   val CriticalMiddle   = 200
   val AvengerCard      = 242
 
-  // Returns true if the card was discarded (eg. Avenger)
+  // Ask for the cards drawn form the given sources during the exeuction of
+  // an event and increase the hand count o the given role.
+  // -- This is NOT used for cards drawn at the beginning of the turn.
+  // -- This function handles triggering the Avenger event if it is drawn. 
+  // -- If the only source is the Draw Pile and there are not enough cards in 
+  //    the draw pile to satisfy the request:
+  //        -- For a non campaign game add the (shuffled) discards 
+  //           to the draw pile and increasing the deck count or end the game.
+  //        -- For a campign game we handle adding the next deck to the draw pile
+  //           and updating the current game mode, or ending the game.
+  //   
   def askCardsDrawn(role: Role, numDrawn: Int, sources: List[CardDrawSource], optPrompt: Option[String] = None): Unit = {
     for (num <- (1 to numDrawn)) {
       val prompt = optPrompt match {
@@ -2602,6 +2660,10 @@ object LabyrinthAwakening {
         case None =>
           s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: (blank if none) "
       }
+
+      // If only source is the draw pile and the draw pile is empty...
+      if (sources == List(FromDrawPile) && numCardsInDrawPile() == 0)
+        handleEmptyDrawPile()
 
       askCardNumber(sources, prompt) match {
         case None =>
@@ -2851,8 +2913,8 @@ object LabyrinthAwakening {
   // Caller should println() a brief description of what is being chosen.
   // items is a list of (key -> display) for each item in the menu.
   def askMenuWithWrap[T](
-    items: List[(T, (String, Seq[String]))],
     menuPrompt: String = "",
+    items: List[(T, (String, Seq[String]))],
     numChoices: Int = 1,
     repeatsOK: Boolean = false,
     allowAbort: Boolean = true): List[T] = {
@@ -3693,7 +3755,7 @@ object LabyrinthAwakening {
       def printSegment(save_number: Int, last_save_number: Int, path: Option[Pathname]): Unit = {
         if (save_number <= last_save_number) {
           val header   = s"\n>>> History of save point $save_number <<<"
-          val log_path = gamesDir/gameName.get/getLogName(save_number)
+          val log_path = gamesDir/game.name/getLogName(save_number)
 
           val entries = if (log_path.exists)
             SavedGame.loadLog(log_path)
@@ -3771,10 +3833,9 @@ object LabyrinthAwakening {
 
 
   // Save a brief description of the game.
-  // The descriptions are used by the askWhichGame() function.
-  def saveGameDescription(desc: String): Unit = {
-    assert(gameName.nonEmpty, "saveGameDescription(): called with gameName not set!")
-    val path = gamesDir/gameName.get/"description"
+  // The descriptions are used when showing current games
+  def saveGameDescription(name: String, desc: String): Unit = {
+    val path = gamesDir/name/"description"
     path.writeFile(desc)
   }
 
@@ -3799,11 +3860,9 @@ object LabyrinthAwakening {
   }
 
   def saveGameState(desc: Option[String] = None, suppressCardsPlayed: Boolean = false): Unit = {
-    assert(gameName.nonEmpty, "saveGameState(): called with gameName not set!")
-
     val save_number = game.history.size
-    val save_path   = gamesDir/gameName.get/getSaveName(save_number)
-    val log_path    = gamesDir/gameName.get/getLogName(save_number)
+    val save_path   = gamesDir/game.name/getSaveName(save_number)
+    val log_path    = gamesDir/game.name/getLogName(save_number)
     val segmentDesc = desc orElse game.plays.headOption.map(_.toString) getOrElse ""
     val cardsPlayed = game.plays.map(_.numCards).sum
     val turnInfo = game.plays.headOption match {
@@ -3839,13 +3898,14 @@ object LabyrinthAwakening {
       log = Vector.empty,
     )
     SavedGame.save(save_path, game)
-    saveGameDescription(gameDesc)
+    saveGameDescription(game.name, gameDesc)
   }
 
-  def loadGameState(name: String, save_number: Int): Unit = {
+  def loadGameState(name: String, save_number: Int): GameState = {
     val save_path = gamesDir/name/getSaveName(save_number)
-    gameName = Some(name)
-    game = SavedGame.load(save_path).copy(log = Vector.empty)
+    SavedGame.load(save_path).copy(
+      name = name,         // Set the game name, it could change if the directory was renamed
+      log = Vector.empty)  // Start with an empty log for the current save point
   }
 
   // Given a directory for a saved game finds the most recent save file.
@@ -3862,14 +3922,14 @@ object LabyrinthAwakening {
       None
   }
 
-  def loadMostRecent(name: String): Unit = {
+  def loadMostRecent(name: String): GameState = {
     val save_number = mostRecentSaveNumber(name) getOrElse {
       throw new IllegalStateException(s"No saved file found for game '$name'")
     }
     loadGameState(name, save_number)
   }
     // Return the list of saved games
-  def savedGames: List[String] = {
+  def savedGames(): List[String] = {
     gamesDir.children(withDirectory = false).toList map (_.toString) filter { name =>
       mostRecentSaveNumber(name).nonEmpty
     }
@@ -3882,31 +3942,35 @@ object LabyrinthAwakening {
 
 
   val VALID_NAME = """([-A-Za-z0-9_ ]+)""".r
-  var gameName: Option[String] = None // The name of sub-directory containing the game files
 
   // Ask the user for a name for their new game.
-  def askGameName(prompt: String): String = {
-    def getName: String = {
+  def askGameName(prompt: String): Option[String] = {
+    def getName(): Option[String] = {
       readLine(prompt) match {
-        case null => getName
+        case null => None
+        case x if x.trim.length == 0 => None
+        case VALID_NAME(name) if name.length > 55 =>
+          println("Game names must 55 characters or less")
+          getName()
+
         case VALID_NAME(name) =>
           if ((gamesDir/name).exists) {
-            println(s"A game called '$name' already exists.")
+            println(s"\nA game called '$name' already exists.")
             if (askYorN(s"Do you want to overwrite the existing game (y/n)? ")) {
               (gamesDir/name).rmtree()
-              name
+              Some(name)
             }
             else
-              getName
+              getName()
           }
           else
-            name
+            Some(name)
         case name =>
           println("Game names must consist of one or more letters, numbers, spaces, dashes or underscores")
-          getName
+          getName()
       }
     }
-    getName
+    getName()
   }
 
   // Allows the user to roll back to the beginning of any turn.
@@ -3935,7 +3999,7 @@ object LabyrinthAwakening {
         println("\nRollback to the beginning of a previous save point.")
         println("The save points are displayed with the most recent first.")
 
-        askMenuWithWrap(saveChoices:::otherChoices, "Choose a save point:").head match {
+        askMenuWithWrap("Choose a save point:", saveChoices:::otherChoices).head match {
           case CANCEL      =>
           case PAGE_UP     => showPage(pageNum - 1)
           case PAGE_DOWN   => showPage(pageNum + 1)
@@ -3944,15 +4008,14 @@ object LabyrinthAwakening {
               // Games are saved at the end of the turn, so we actually want
               // to load the file with turnNumber -1.
               val target       = save_number - 1
-              val name         = gameName.get
               val oldGameState = game
-              loadGameState(name, target)
-              saveGameDescription(game.description)  // Update the description file
+              game = loadGameState(game.name, target)
+              saveGameDescription(game.name, game.description)  // Update the description file
 
               // Remove all safe files that succeed this one.
               // We are exploring anew
-              removeSaveFiles(name, target + 1)
-              removeLogFiles(name, target + 1)
+              removeSaveFiles(game.name, target + 1)
+              removeLogFiles(game.name, target + 1)
               displayGameStateDifferences(oldGameState, game)
             }
             else
@@ -6162,7 +6225,7 @@ object LabyrinthAwakening {
 
       if (askExitAfterWin()) {
         saveGameState(Some("Game Over - Jihadist automatic victory!"))
-        throw ExitGame
+        throw QuitGame
       }
       else {
         game = game.copy(ignoreVictory = true)
@@ -6771,60 +6834,180 @@ object LabyrinthAwakening {
     // "Surge"               -> Surge,
   )
 
-  def askScenarioName() = {
+  def askScenarioName(): Option[String] = {
     val gameChoices = List(
       Some(LabyrinthMode)  -> "Labyrinth: The War on Terror, 2001 - ?",
       Some(AwakeningMode)  -> "Labyrinth The Awakening, 2010 - ?",
       Some(ForeverWarMode) -> "Labyrinth The Forever War, 2015 - ?",
-      None                 -> "Quit"
+      None                 -> "Cancel"
     )
 
-    val gameMode = askMenu("Play a scenario from which game:", gameChoices, allowAbort = false).head match {
-      case Some(mode) => mode
-      case None   => throw ExitGame
+    askMenu("Play a scenario from which game:", gameChoices, allowAbort = false).head.flatMap { mode =>
+      val scenarioChoices = scenarios.toList
+        .filter(_._2.startingMode == mode)
+        .map { case (key, scenario) => Some(key) -> scenario.name }
+      val choices = scenarioChoices :+ (None -> "Cancel")
+
+      askMenu("Choose a scenario:", choices, allowAbort = false).head
     }
-
-    val scenarioChoices = scenarios.toList
-      .filter(_._2.startingMode == gameMode)
-      .map { case (key, scenario) => key -> scenario.name }
-
-    val choices = scenarioChoices :+ ("quit" -> "Quit")
-
-    askMenu("Choose a scenario:", choices, allowAbort = false).head match {
-        case "quit"   => throw ExitGame
-        case scenario => scenario
-      }
   }
   // Case sensitive
   def isValidScenario(name: String) = scenarios contains name
 
+  // Returns (gameLength, campaign)
+  def askGameStyle(scenario: Scenario): Option[(Int, Boolean)] = {
+    val campLen = (scenario.allowsCampaign, scenario.startingMode) match {
+      case (true, LabyrinthMode) => 3
+      case (true, AwakeningMode) => 2
+      case _ => 0
+    }
+
+    val choices = List(
+      choice(true,        Some(1 -> false),        "Single scenario (1 deck)"),
+      choice(true,        Some(2 -> false),        "Single scenario (2 decks)"),
+      choice(true,        Some(3 -> false),        "Single scenario (3 decks)"),
+      choice(campLen > 0, Some(campLen -> true),  s"Campaign game   ($campLen decks)"),
+      choice(true,        None,                    "Cancel"),
+    ).flatten
+    
+    askMenu("Choose game style:", choices, allowAbort = false).head
+  }
+
+  // ask which side the user wishes to play
+  def askHumanSide(): Option[Role] = {
+    val choices = List(
+      Some(US)       -> "Play as US",
+      Some(Jihadist) -> "Play as Jihadist",
+      None           -> "Cancel")
+    askMenu("Choose a side:", choices, allowAbort = false).head
+  }
+
+
+  def programMainMenu(params: UserParams): Unit = {
+
+    def gameChoices(games: List[String]): List[(Option[String], (String, Seq[String]))] = {
+      val width = if (games.nonEmpty) games.map(_.length).max else 0
+      def display(str: String) = s"${padLeft(str, width)} -"
+      val choices = games
+        .toList
+        .map { name =>
+          val summary = loadGameDescription(name)
+            .split(",")
+            .toSeq
+            .map(_.trim)
+            .dropWhile(_ == "")
+          Some(name) -> (display(name), summary)
+        }
+      choices :+ (None -> ("Cancel", Seq.empty))
+    }
+
+    val games = savedGames()
+    val choices = List(
+      choice(true, "new", "Start a new game"),
+      choice(games.nonEmpty, "resume", "Play a saved game"),
+      choice(games.nonEmpty, "delete", "Delete a saved game"),
+      choice(true, "exit", "Exit the program"),
+    ).flatten
+
+    displayVersion()
+
+    askMenu("Choose one:", choices).head match {
+      case "new" =>
+        startNewGame(params)
+        programMainMenu(params)
+
+      case "resume" =>
+        askMenuWithWrap("Play which game:", gameChoices(games), allowAbort = false).head.foreach { name =>
+          game = loadMostRecent(name)
+          printSummary(game.playSummary)
+          playGame()
+        }
+        programMainMenu(params)
+
+      case "delete" =>
+        askMenuWithWrap("Delete which game:", gameChoices(games), allowAbort = false).head.foreach { name =>
+          (gamesDir/name).rmtree()
+        }
+        programMainMenu(params)
+
+      case _ =>
+        throw ExitProgram
+    }
+  }
+
+  // Prompt user for needed info and begin a new game.
+  def startNewGame(params: UserParams): Unit = {
+    case object CancelNewGame  extends Exception
+    try {
+      val scenarioName = params.scenarioName
+            .orElse(askScenarioName())
+            .getOrElse(throw CancelNewGame)
+      val scenario = scenarios(scenarioName)
+      val (gameLength, campaign) = askGameStyle(scenario)
+        .getOrElse(throw CancelNewGame)
+      val humanRole = params.side 
+        .orElse(askHumanSide())
+        .getOrElse(throw CancelNewGame)
+      val difficulties = if (humanRole == US)
+        params.jihadistBotDifficulties
+          .getOrElse(askDifficulties(Jihadist))
+      else
+        params.usBotDifficulties
+          .getOrElse(askDifficulties(US))
+      val humanAutoRoll = params.autoDice
+        .getOrElse(!askYorN("\nDo you wish to roll your own dice (y/n)? "))
+
+      val gameName = askGameName("\nEnter a name for your new game (blank to Exit): ")
+        .getOrElse(throw CancelNewGame)
+
+      val showColor = params.showColor
+        .getOrElse(!scala.util.Properties.isWin)
+
+      game = initialGameState(gameName, scenario, gameLength, campaign, humanRole, humanAutoRoll, difficulties, showColor)
+
+      logSummary(game.scenarioSummary)
+      printSummary(game.scoringSummary)
+
+      if (scenario.cardsRemoved.nonEmpty) {
+        log()
+        log("The following cards are removed for this scenario")
+        log(separator())
+        scenario.cardsRemoved map (deck(_).toString) foreach (log(_))
+      }
+
+      scenario.additionalSetup()
+      game = game.copy(turn = 1)
+      drawCardsForTurn()  // Display and save card draw for first turn
+      saveGameState(Some("Beginning of game"))
+      playGame()      
+    }
+    catch {
+      case CancelNewGame =>
+    }
+  }
+
   val AbortCard = "abort card"
-  case object ExitGame    extends Exception
+  case object ExitProgram extends Exception
+  case object QuitGame    extends Exception
   case object AbortAction extends Exception
-  case object Adjustment  extends Exception
+
+  def versionString = {
+    val versionSuffix  = if (SOFTWARE_VERSION.startsWith("0")) " - BETA" else ""
+    s"Labyrinth Awakening: Bot Software (version $SOFTWARE_VERSION$versionSuffix)"
+  }
+  def displayVersion() = displayLine(s"\n$versionString", Color.Info)
 
   // def doWarOfIdeas(country: Country)
   def main(args: Array[String]): Unit = {
     try {
-      gamesDir.mkpath()
-      val versionSuffix  = if (SOFTWARE_VERSION.startsWith("0")) " - BETA" else ""
-      val versionDisplay = s"Labyrinth Awakening: Bot Software (version $SOFTWARE_VERSION$versionSuffix)"
+      
+      gamesDir.mkpath()  // Make sure the /games directory exists
       var configParams   = loadParamsFile(UserParams())
-      var cmdLineParams  = parseCommandLine(args.toIndexedSeq, UserParams(), versionDisplay)
+      var cmdLineParams  = parseCommandLine(args.toIndexedSeq, configParams)
 
-      println()
-      println(versionDisplay)
-
-      // If the user gave an explicit file name we must assign the gama a name.
-      // This is mostly used for loading someone else's file for testing.
-      if (cmdLineParams.gameFile.nonEmpty) {
-        println()
-        gameName = Some(askGameName("\nEnter a name for the game: "))
-        game = SavedGame.load(Pathname(cmdLineParams.gameFile.get))
-        printSummary(game.playSummary)
-      }
-      else if (cmdLineParams.listGames) {
-        val saved = savedGames
+      if (cmdLineParams.listGames) {
+        // List the saved games to the console and exit
+        val saved = savedGames()
         if (saved.isEmpty)
           println("You do not have any saved games")
         else {
@@ -6832,105 +7015,27 @@ object LabyrinthAwakening {
           for (s <- saved)
             println(fmt.format(s, loadGameDescription(s)))
         }
-        throw ExitGame
       }
-      else if (cmdLineParams.gameName.nonEmpty) {
-        val gameName = cmdLineParams.gameName.get
-        if (cmdLineParams.deleteGame) {
-          (gamesDir/gameName).rmtree()
-          throw ExitGame
-        }
-        else {
-          loadMostRecent(gameName)
-          printSummary(game.playSummary)
-        }
+      else if (cmdLineParams.resumeName.nonEmpty) {
+        game = loadMostRecent(cmdLineParams.resumeName.get)
+        printSummary(game.playSummary)
+        playGame()
       }
-      else {
-        val existingGame = if (cmdLineParams.anyNewGameParams) None
-                           else askWhichGame()
-        existingGame match {
-          case Some(name) =>
-            loadMostRecent(name)
-            printSummary(game.playSummary)
-
-          case None => // Start a new game
-            val scenarioName =
-              cmdLineParams.scenarioName orElse
-              configParams.scenarioName getOrElse
-              askScenarioName()
-
-            val scenario = scenarios(scenarioName)
-            //  campaign always false when starting with a scenario in the
-            //  latest expansion
-            val campaign = if (scenario.allowsCampaign) {
-              cmdLineParams.campaign orElse configParams.campaign getOrElse {
-                 val choices = List(
-                   "single"   -> "Play single scenario",
-                   "campaign" -> "Play a campaign game",
-                   "quit"     -> "Quit")
-                 askMenu("Choose one:", choices, allowAbort = false).head match {
-                   case "quit"   => throw ExitGame
-                   case "single" => false
-                   case _        => true
-                 }
-              }
-            }
-            else
-              false
-
-            val humanRole = cmdLineParams.side orElse
-                            configParams.side getOrElse {
-              // ask which side the user wishes to play
-              val choices = List(
-                "US"       -> "Play as US",
-                "Jihadist" -> "Play as Jihadist",
-                "quit"     -> "Quit")
-              askMenu("Choose one:", choices, allowAbort = false).head match {
-                case "quit"   => throw ExitGame
-                case side     => Role(side)
-              }
-            }
-            val difficulties = if (humanRole == US)
-              cmdLineParams.jihadistBotDifficulties orElse
-              configParams.jihadistBotDifficulties getOrElse askDifficulties(Jihadist)
-            else
-              cmdLineParams.usBotDifficulties orElse
-              configParams.usBotDifficulties getOrElse askDifficulties(US)
-            val humanAutoRoll = cmdLineParams.autoDice orElse
-                                configParams.autoDice getOrElse
-                                !askYorN("\nDo you wish to roll your own dice (y/n)? ")
-
-            gameName = Some(askGameName("\nEnter a name for your new game: "))
-
-            val showColor = cmdLineParams.showColor orElse configParams.showColor getOrElse !scala.util.Properties.isWin
-            game = initialGameState(scenario, campaign, humanRole, humanAutoRoll, difficulties, showColor)
-            logSummary(game.scenarioSummary)
-            printSummary(game.scoringSummary)
-            if (scenario.cardsRemoved.nonEmpty) {
-              log()
-              log("The following cards are removed for this scenario")
-              log(separator())
-              scenario.cardsRemoved map (deck(_).toString) foreach (log(_))
-            }
-            log()
-            scenario.additionalSetup()
-            game = game.copy(turn = 1)
-            drawCardsForTurn()  // Display and save card draw for first turn
-            saveGameState(Some("Beginning of game"))
-        }
+      else if (cmdLineParams.deleteName.nonEmpty) {
+        (gamesDir/cmdLineParams.deleteName.get).rmtree()
       }
-
-      commandLoop()
+      else
+        programMainMenu(cmdLineParams)
     }
     catch {
-      case ExitGame =>
+      case ExitProgram =>
       case t: Throwable =>
         System.err.println(t.stackTrace)
         pause(Some("Press Enter to exit the program..."))
     }
   }
 
-  def parseCommandLine(args: Seq[String], userParams: UserParams, versionDisplay: String): UserParams = {
+  def parseCommandLine(args: Seq[String], userParams: UserParams): UserParams = {
     import org.sellmerfud.optparse._
     def diffHelp(diffs: Seq[BotDifficulty]): Seq[String] = {
       val maxLen = (diffs map (_.name.length)).max
@@ -6945,42 +7050,39 @@ object LabyrinthAwakening {
           if (isValidIdeology(arg))
             JihadDiff(BotDifficulty(arg))
           else
-            throw new InvalidArgumentException(s"Invalid Jihadist ideology value '$arg'")
+            throw new InvalidArgumentException(s"  Invalid Jihadist ideology value '$arg'")
         }
         addArgumentParser[USDiff] { arg =>
           if (isValidUsResolve(arg))
             USDiff(BotDifficulty(arg))
           else
-            throw new InvalidArgumentException(s"Invalid US resolve value '$arg'")
+            throw new InvalidArgumentException(s"  Invalid US resolve value '$arg'")
         }
-        banner = "awakening [options]"
+        banner = "usage: awakening [options]"
         this.separator("")
         this.separator("Options:")
-        val saved = savedGames
+        val saved = savedGames()
         if (saved.isEmpty)
           reqd[String]("-g", "--game=name", "Resume a game in progress")
-            { (v, c) => throw new InvalidArgumentException("You do not have any saved games") }
+            { (v, c) => throw new InvalidArgumentException("  You do not have any saved games") }
         else
           reqd[String]("-g", "--game=name", saved, "Resume a game in progress")
-            { (v, c) => c.copy(gameName = Some(v)) }
+            { (v, c) => c.copy(resumeName = Some(v)) }
 
         flag("-l", "--list", "Display a list of saved games")
           { (c) => c.copy(listGames = true) }
 
         if (saved.isEmpty)
           reqd[String]("", "--delete=name", "Delete a game in progress")
-            { (v, c) => throw new InvalidArgumentException("You do not have any saved games") }
+            { (v, c) => throw new InvalidArgumentException("  You do not have any saved games") }
         else
           reqd[String]("", "--delete=name", saved, "Delete a game in progress")
-            { (v, c) => c.copy(gameName = Some(v), deleteGame = true) }
+            { (v, c) => c.copy(deleteName = Some(v)) }
 
         val scenarioHelp = "Select a scenario" +: scenarios.keys.toSeq
         reqd[String]("", "--scenario=name", scenarios.keys.toSeq, scenarioHelp: _*)
           { (v, c) => c.copy(scenarioName = Some(v)) }
-
-        reqd[String]("", "--campaign=yes|no", Seq("yes","no"), "Play a campaign game from selected scenario")
-          { (v, c) => c.copy(campaign = Some(v == "yes")) }
-
+  
         reqd[String]("", "--side=us|jihadist", Seq("us","jihadist"), "Select a side to play")
           { (v, c) => c.copy(side = Some(if (v == "us") US else Jihadist)) }
 
@@ -7006,58 +7108,32 @@ object LabyrinthAwakening {
         }
         bool("", "--color", "Show colored log messages")
           { (v, c) => c.copy(showColor = Some(v)) }
-        reqd[String]("", "--file=path", "Path to a saved game file")
-          { (v, c) => c.copy(gameFile = Some(v)) }
         flag("-v", "--version", "Display program version and exit") { (c) =>
-          println(versionDisplay)
+          println(versionString)
           System.exit(0)
           c // To keep compiler happy
         }
-
       }.parse(args, userParams)
     }
     catch { case e: OptionParserException => println(e.getMessage); sys.exit(1) }
   }
 
-  // Ask which saved game the user wants to load.
-  // Return None if they with to start a new game.
-  // previously saved game.
-  def askWhichGame(): Option[String] = {
-    val games = savedGames
-    if (games.isEmpty)
-      None
-    else {
-      val gameChoices = games.toList map { name =>
-        val desc = loadGameDescription(name)
-        val descParts = if (desc == "")
-          Seq(s""""$name"""")
-        else
-          s""""$name"""" +: desc.split(",").toSeq.map(_.trim)
-        val suffix = if (desc == "") "" else s", $desc"
-        name -> ("Resume", descParts)
-      }
-      val choices = ("--new-game--" -> ("Start a new game", Seq.empty)) :: gameChoices ::: List("--quit-game--" -> ("Quit", Seq.empty))
-      askMenuWithWrap(choices, "Which game would you like to play:", allowAbort = false).head match {
-        case "--new-game--"  => None
-        case "--quit-game--" => throw ExitGame
-        case name            => Some(name)
-      }
-    }
-  }
+
 
   case class UserParams(
-    val gameName: Option[String] = None,
-    val deleteGame: Boolean = false,
+    val resumeName: Option[String] = None,
+    val deleteName: Option[String] = None,
     val listGames: Boolean = false,
     val scenarioName: Option[String] = None,
     val campaign: Option[Boolean] = None,
+    val gameLength: Int = 1,
     val side: Option[Role] = None,
     val level: Option[Int] = None,
     val autoDice: Option[Boolean] = None,
     val ideology: List[BotDifficulty] = Nil,
     val usResolve: List[BotDifficulty] = Nil,
     val showColor: Option[Boolean] = None,
-    val gameFile: Option[String] = None) {
+  ) {
 
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
       case Nil => level map (AllJihadistLevels take _)
@@ -7068,10 +7144,6 @@ object LabyrinthAwakening {
       case Nil => level map (AllUSLevels take _)
       case xs  => Some(xs)
     }
-
-    def anyNewGameParams =
-      (scenarioName orElse campaign orElse side orElse level orElse autoDice).nonEmpty ||
-      ideology.nonEmpty || usResolve.nonEmpty
   }
 
   def loadParamsFile(initialParams: UserParams): UserParams = {
@@ -7094,14 +7166,6 @@ object LabyrinthAwakening {
             params = params.copy(scenarioName = Some(value))
           else
             println(s"Ignoring invalid scenario name ($value) in awakening_config file")
-        }
-
-        propValue("campaign") foreach { value =>
-          value.toLowerCase match {
-            case "yes" => params = params.copy(campaign = Some(true))
-            case "no"  => params = params.copy(campaign = Some(false))
-            case _ => println(s"Ignoring invalid campaign value ($value) in awakening_config file")
-          }
         }
 
         propValue("side") foreach { value =>
@@ -7201,7 +7265,7 @@ object LabyrinthAwakening {
     JihadistLevels.keys exists (_.toLowerCase == name.toLowerCase)
 
   def isValidUsResolve(name: String) =
-    JihadistLevels.keys exists (_.toLowerCase == name.toLowerCase)
+    USLevels.keys exists (_.toLowerCase == name.toLowerCase)
 
 
   // Check to see if any automatic victory condition has been met.
@@ -7217,7 +7281,7 @@ object LabyrinthAwakening {
       if (askExitAfterWin()) {
         game = game.copy(plays = Nil)
         saveGameState(Some(summary))
-        throw ExitGame
+        throw QuitGame
       }
       else {
         game = game.copy(ignoreVictory = true)
@@ -7256,57 +7320,69 @@ object LabyrinthAwakening {
       .map(_.asInstanceOf[CardPlay])
 
 
-  // ---------------------------------------------
-  // Process all top level user commands.
-  @tailrec def commandLoop(): Unit = {
-    checkAutomaticVictory() // Will Exit game if auto victory has been achieved
+  // Assumes the global `game` variable has been initialized!
+  def playGame(): Unit = {
 
-    val cardsPlayed     = (game.plays map (_.numCards)).sum
-    val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved])
-                                      map (_.numCards)).sum
+    // ---------------------------------------------
+    // Process all top level user commands.
+    @tailrec def commandLoop(): Unit = {
+      checkAutomaticVictory() // Will Exit game if auto victory has been achieved
 
-    if (cardsSincePlots > 0 && cardsSincePlots % 4 == 0) {
-      // If there are plots on the map call it to the users attention,
-      // otherwise just do the resolvePlots() so that it is added to the log.
-      if (numUnresolvedPlots > 0) {
-        println()
-        println(separator())
-        println("4 cards have been played and there are unresolved plots on the map")
-        pause()
+      val cardsPlayed     = (game.plays map (_.numCards)).sum
+      val cardsSincePlots = (game.plays takeWhile (!_.isInstanceOf[PlotsResolved])
+                                        map (_.numCards)).sum
+
+      if (cardsSincePlots > 0 && cardsSincePlots % 4 == 0) {
+        // If there are plots on the map call it to the users attention,
+        // otherwise just do the resolvePlots() so that it is added to the log.
+        if (numUnresolvedPlots > 0) {
+          println()
+          println(separator())
+          println("4 cards have been played and there are unresolved plots on the map")
+          pause()
+        }
+        resolvePlots()
       }
-      resolvePlots()
+
+      val activeRole = getCardPlays()
+        .headOption
+        .map(_.role)
+        .getOrElse(Jihadist)
+      val numPlayed = getCardPlays()
+        .takeWhile(_.role == activeRole)
+        .map(_.numCards)
+        .sum
+
+      val info = List(
+        s"${amountOf(numPlayed, "card")} played",
+        s"${amountOf(numCardsInHand(activeRole), "card")} in hand",
+        if (numUnresolvedPlots == 0) "" else s"${amountOf(numUnresolvedPlots, "unresolved plot")}"
+      ).filterNot(_.isEmpty).mkString(", ")
+      val prompt = {
+        s"""|
+            |
+            |>>> $activeRole action phase ($info) <<<
+            |${separator()}
+            |Command: """.stripMargin
+      }
+
+      readLine(prompt) match {
+        case null =>
+          println()
+          commandLoop()
+        case cmd =>
+          doCommand(cmd.trim)
+          commandLoop()
+      }
     }
 
-    val activeRole = getCardPlays()
-      .headOption
-      .map(_.role)
-      .getOrElse(Jihadist)
-    val numPlayed = getCardPlays()
-      .takeWhile(_.role == activeRole)
-      .map(_.numCards)
-      .sum
-
-    val info = List(
-      s"${amountOf(numPlayed, "card")} played",
-      s"${amountOf(numCardsInHand(activeRole), "card")} in hand",
-      if (numUnresolvedPlots == 0) "" else s"${amountOf(numUnresolvedPlots, "unresolved plot")}"
-    ).filterNot(_.isEmpty).mkString(", ")
-    val prompt = {
-      s"""|
-          |
-          |>>> $activeRole action phase ($info) <<<
-          |${separator()}
-          |Command: """.stripMargin
-    }
-    readLine(prompt) match {
-      case null =>
-        println()
-        commandLoop()
-      case cmd =>
-        doCommand(cmd.trim)
-        commandLoop()
-    }
+    try commandLoop()
+    catch {
+      case QuitGame =>
+    }    
   }
+
+
 
 
   // Parse the top level input and execute the appropriate command.
@@ -7387,7 +7463,7 @@ object LabyrinthAwakening {
       Command("help", """List available commands"""),
       Command("quit", """Quit the game.  All plays for the current turn will be saved.""")
     ) filter {
-      case Command("rollback", _)            => mostRecentSaveNumber(gameName.get).getOrElse(0) > 0
+      case Command("rollback", _)            => mostRecentSaveNumber(game.name).getOrElse(0) > 0
       case Command("remove cadre", _)        => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
       case Command("add awakening cards", _) => game.currentMode == LabyrinthMode && game.campaign
       case Command("add forever cards", _)   => game.currentMode == AwakeningMode && game.campaign
@@ -7419,7 +7495,7 @@ object LabyrinthAwakening {
         case "adjust"                => adjustSettings(param)
         case "history"               => showHistory(param)
         case "rollback"              => rollback(param)
-        case "quit"                  => if (askYorN("Really quit (y/n)? ")) throw ExitGame
+        case "quit"                  => if (askYorN("Really quit (y/n)? ")) throw QuitGame
         case "help" if param.isEmpty =>
           println("Available commands: (type help <command> for more detail)")
           println(orList(CmdNames))

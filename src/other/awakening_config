@@ -63,13 +63,6 @@ us-resolve =
 # of each die roll during your turn.
 dice =
 
-
-# Set to yes/no to determine if the program will terminate
-# as soon as one side has achieved victory.
-# Setting this to no will allow you to continue to further
-# explore the scenario.
-exit-after-win = 
-
 # By default color is logged on non-Windows systems.
 # The Windows command console on older (Pre Windows 10) versions
 # of Windows does not support color, so color is disabled by default

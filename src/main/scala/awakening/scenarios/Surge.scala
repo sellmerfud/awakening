@@ -104,6 +104,7 @@ object Surge extends Scenario {
 
   override
   val additionalSetup = () => {
+    log()
     addEventMarkersToCountry(Iraq, Sadr)
     addGlobalEventMarker(AlAnbar)
     addEventMarkersToCountry(Pakistan, FATA)

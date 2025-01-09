@@ -322,9 +322,11 @@ object SavedGame {
   private def gameStateToMap(gameState: GameState) = {
     Map(
       "scenarioName"        -> gameState.scenarioName,
-      "startingMode"        -> gameState.startingMode,
-      "campaign"            -> gameState.campaign,
       "scenarioNotes"       -> gameState.scenarioNotes,
+      "startingMode"        -> gameState.startingMode,
+      "gameLength"          -> gameState.gameLength,
+      "deckNumber"          -> gameState.deckNumber,
+      "campaign"            -> gameState.campaign,
       "currentMode"         -> gameState.currentMode,
       "humanRole"           -> gameState.humanRole.toString,
       "humanAutoRoll"       -> gameState.humanAutoRoll,
@@ -380,9 +382,11 @@ object SavedGame {
 
     GameState(
       asString(data("scenarioName")),
-      GameMode(asString(data("startingMode"))),
-      asBoolean(data("campaign")),
       asList(data("scenarioNotes")).map(asString),
+      GameMode(asString(data("startingMode"))),
+      asInt(data("gameLength")),
+      asInt(data("deckNumber")),
+      asBoolean(data("campaign")),
       GameMode(asString(data("currentMode"))),
       Role(asString(data("humanRole"))),
       asBoolean(data("humanAutoRoll")),

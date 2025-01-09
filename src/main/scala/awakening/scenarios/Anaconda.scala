@@ -71,8 +71,9 @@ object Anaconda extends Scenario {
     // The Jihadist player places one cell in each of three different
     // countries. (Not the United States)
     val candidates = countryNames(game.countries) filterNot (_ == UnitedStates)
+    log()
     val targets = if (game.humanRole == Jihadist) {
-      println("\nChoose three countries where you would like to place a sleeper cell:")
+      println("Choose three countries where you would like to place a sleeper cell:")
       askCountries(3, candidates)
     }
     else
