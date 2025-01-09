@@ -88,7 +88,7 @@ object Card_348 extends Card(348, "Travel Ban", Unassociated, 2, NoRemove, NoLap
       removeGlobalEventMarker(TravelBan)
       List(PatriotAct, BREXIT)
         .foreach(removeCountryEventMarkerAnywhere)
-      removeLapsingCards(List(Biometrics, IslamicMaghreb))
+      removeLapsingEvents(List(Biometrics, IslamicMaghreb))
       val candidates = countryNames(game.muslims.filter(_.awakening > 0))
       if (candidates.nonEmpty) {
         val target = if (role == game.humanRole)

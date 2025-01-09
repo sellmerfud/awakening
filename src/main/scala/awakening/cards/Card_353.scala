@@ -62,7 +62,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   def bowlingGreenTargetEventInPlay(): Boolean =
     game.markers.nonEmpty ||
     game.countries.exists(c => c.markers.nonEmpty && !game.isCaliphateMember(c.name)) ||
-    game.cardsLapsing.nonEmpty
+    game.eventsLapsing.nonEmpty
 
   def bowlingGreenBotMarkers(role: Role): List[String] = {
     val opponent = oppositeRole(role)
@@ -77,12 +77,13 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   }
 
   def bowlingGreenBotLapsing(role: Role): List[Int] =
-    game.cardsLapsing
-      .filter { num =>
-        val card = deck(num)
+    game.eventsLapsing
+      .filter { event =>
+        val card = deck(event.cardNumber)
         (role == US && card.association == Jihadist || card.lapsing == JihadistLapsing) ||
         (role == Jihadist && card.association == US || card.lapsing == USLapsing)
       }
+      .map(_.cardNumber)
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -107,8 +108,8 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
       .sorted
       .distinct
       .map(m => m -> m)
-    val lapsingChoices = game.cardsLapsing
-      .map(n => n -> deck(n).numAndName)
+    val lapsingChoices = game.eventsLapsing
+      .map(event => event.cardNumber -> deck(event.cardNumber).numAndName)
     val eventTypechoices = List(
       choice(markerChoices.nonEmpty, "marker",  "Remove an event marker"),
       choice(lapsingChoices.nonEmpty, "lapsing", "Remove a lapsing card")
@@ -147,13 +148,13 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
         removeEventMarkersFromCountry(target, marker)
 
       case Right(lapsingCardNum) =>
-        removeLapsingCards(lapsingCardNum::Nil)
+        removeLapsingEvent(lapsingCardNum)
     }
 
     if (isHuman(role))
       log(s"\nDraw a card and add it to your ($role) hand.", Color.Event)
     else
       log(s"\nPut the top card of the draw deck on top of the $role Bot's hand of cards.", Color.Event)
-    askCardsDrawn(role, 1, FromDeck::Nil)
+    askCardsDrawn(role, 1, FromDrawPile::Nil)
   }
 }

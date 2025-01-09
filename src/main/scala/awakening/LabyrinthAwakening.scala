@@ -1172,10 +1172,10 @@ object LabyrinthAwakening {
     def canExportOil = oilExporter && !hasMarker(TradeEmbargoJihadist)
     def resourceValue = {
       val corridorPlus = if (name == Iran && hasMarker(TehranBeirutLandCorridor)) 1 else 0
-      val opecCutMinus = if (canExportOil && game.cardLapsing(OPECProductionCut)) 1 else 0
+      val opecCutMinus = if (canExportOil && game.eventIsLapsing(OPECProductionCut)) 1 else 0
       val spikePlus    = if (canExportOil) (game.oilPriceSpikes) else 0
-      val hormuzPlus   = if (game.cardLapsing(StraitofHormuz) && isNonPersionGulflExporter(name)) 1 else 0
-      val hormuzMinus  = if (game.cardLapsing(StraitofHormuz) && isPersionGulflExporter(name)) 1 else 0
+      val hormuzPlus   = if (game.eventIsLapsing(StraitofHormuz) && isNonPersionGulflExporter(name)) 1 else 0
+      val hormuzMinus  = if (game.eventIsLapsing(StraitofHormuz) && isPersionGulflExporter(name)) 1 else 0
       printedRsources + corridorPlus + spikePlus + hormuzPlus - hormuzMinus - opecCutMinus
     }
 
@@ -1339,6 +1339,30 @@ object LabyrinthAwakening {
 
   case class LogEntry(text: String, color: Option[Color])
 
+  // For the lapsing and first plot card, it is possible for'
+  // the physical card to be removed by either an event such
+  // as Oil Price Spike, or by the draw pile being empty when
+  // and event has a side draw a card. (when this happens all
+  // lapsing/first plot cards are added to the discard pile before
+  // it is reshuffled)
+  // When one of these cards is removed during a turn, the
+  // Lapsing event is still in effect even though the card
+  // has been discarded, and no card can be put in the
+  // first plot box.
+  // We use this class to keep track of this.
+
+  case class LapsingEntry(cardNumber: Int, discarded: Boolean = false) {
+    override def toString() = (cardNumber, discarded) match {
+      case (0, discarded) => "(marker)" // Zero card number for 1st Plot box marker
+      case (n, discarded) => s"${cardNumAndName(n)} (marker)"
+      case _ => cardNumAndName(cardNumber)
+    }
+  }
+
+  implicit val LapsingEventOrdering: Ordering[LapsingEntry] =
+    Ordering.by { e: LapsingEntry => e.cardNumber }
+
+
   // A game segment containing a file name for the segment,
   // a short description and the log messages that were generated
   // during the game segment.
@@ -1360,26 +1384,26 @@ object LabyrinthAwakening {
     countries: List[Country],
     markers: List[String],
     plotData: PlotData,
-    sequestrationTroops: Boolean   = false,  // true if 3 troops off map due to Sequestration event
-    offMapTroops: Int              = 0,
-    reserves: Reserves             = Reserves(0, 0),
-    cardsInUse: Range              = Range.inclusive(0, 0),  // Range of cards in use (although some may have been removed)
-    cardsInHand: CardsInHand       = CardsInHand(0, 0),
-    plays: List[Play]              = Nil,               // Cards plays/plot resolutions during current turn (most recent first).
-    firstPlotCard: Option[Int]     = None,     // Card number
-    cardsLapsing: List[Int]        = Nil,         // Card numbers currently lapsing
-    cardsDiscarded: List[Int]      = Nil,
-    cardsRemoved: List[Int]        = Nil,         // Card numbers removed from the game.
-    targetsThisPhase: PhaseTargets = PhaseTargets(),
-    targetsLastPhase: PhaseTargets = PhaseTargets(),
-    botLogging: Boolean            = false,
-    ignoreVictory: Boolean         = false,
-    botEnhancements: Boolean       = true, // Use enhancements to official Awakening bot algorithms
-    manualDieRolls: Boolean        = false,  // Overrides humanAutoRoll
-    history: Vector[GameSegment]   = Vector.empty,
-    description: String            = "",
-    showColor: Boolean             = !scala.util.Properties.isWin, // Default true except on Windows
-    log: Vector[LogEntry]          = Vector.empty) {  // Log of the cuurent game segment
+    sequestrationTroops: Boolean         = false,  // true if 3 troops off map due to Sequestration event
+    offMapTroops: Int                    = 0,
+    reserves: Reserves                   = Reserves(0, 0),
+    cardsInUse: Range                    = Range.inclusive(0, 0),  // Range of cards in use (although some may have been removed)
+    cardsInHand: CardsInHand             = CardsInHand(0, 0),
+    plays: List[Play]                    = Nil,               // Cards plays/plot resolutions during current turn (most recent first).
+    firstPlotEntry: Option[LapsingEntry] = None,     // Card number
+    eventsLapsing: List[LapsingEntry]    = Nil,         // Card numbers currently lapsing
+    cardsDiscarded: List[Int]            = Nil,
+    cardsRemoved: List[Int]              = Nil,         // Card numbers removed from the game.
+    targetsThisPhase: PhaseTargets       = PhaseTargets(),
+    targetsLastPhase: PhaseTargets       = PhaseTargets(),
+    botLogging: Boolean                  = false,
+    ignoreVictory: Boolean               = false,
+    botEnhancements: Boolean             = true, // Use enhancements to official Awakening bot algorithms
+    manualDieRolls: Boolean              = false,  // Overrides humanAutoRoll
+    history: Vector[GameSegment]         = Vector.empty,
+    description: String                  = "",
+    showColor: Boolean                   = !scala.util.Properties.isWin, // Default true except on Windows
+    log: Vector[LogEntry]                = Vector.empty) {  // Log of the cuurent game segment
 
     def useExpansionRules   = currentMode == AwakeningMode || currentMode == ForeverWarMode
     def scenarioNameDisplay = if (campaign) s"$scenarioName -- Campaign" else scenarioName
@@ -1389,11 +1413,14 @@ object LabyrinthAwakening {
     def usResolve(name: BotDifficulty) = botRole == US && (botDifficulties contains name)
     def jihadistIdeology(name: BotDifficulty) = botRole == Jihadist && (botDifficulties contains name)
 
+    // This includes lapsing events whose card is still in the lapsing box
+    def cardsLapsing() = eventsLapsing.filterNot(_.discarded).map(_.cardNumber)
     def cardDiscarded(num: Int) = cardsDiscarded.contains(num)
     def cardRemoved(num: Int) = cardsRemoved.contains(num)
-    def cardLapsing(num: Int) = cardsLapsing.contains(num)
+    def eventIsLapsing(num: Int) = eventsLapsing.exists(_.cardNumber == num)
 
-    def isFirstPlot(num: Int) = firstPlotCard == Some(num)
+    def firstPlotCard(): Option[Int] = firstPlotEntry.filterNot(_.discarded).map(_.cardNumber)
+    def isFirstPlot(num: Int) = firstPlotEntry.exists(_.cardNumber == num)
     def muslims: List[MuslimCountry] = countries.collect {
       case m: MuslimCountry => m
     }
@@ -1603,7 +1630,7 @@ object LabyrinthAwakening {
     def numGoodOrFair    = muslims count (c => c.isGood || c.isFair)
     def numPoorOrIslamic = muslims count (c => c.isPoor || c.isIslamistRule)
     def numIslamistRule  = muslims count (c => c.isIslamistRule)
-    def oilPriceSpikes   = cardsLapsing count OilSpikeCards.contains
+    def oilPriceSpikes   = eventsLapsing.count(e => OilSpikeCards(e.cardNumber))
     def goodResources =
       muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resourceValue }
     def islamistResources =
@@ -1843,12 +1870,14 @@ object LabyrinthAwakening {
         b += f"Available       : ${extraCellsAvailable}%2d   | Capacity          : ${extraCellCapacity}%2d"
         b += f"On map          : ${extraOnMap}%2d"
       }
-      val ms = markers ::: (for (c <- countries; m <- c.markers) yield (s"$m (${c.name})"))
       b += separator()
-      wrap( "Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist)) foreach (l => b += l)
+      wrap( "Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist))
+        .foreach(l => b += l)
       if (game.useExpansionRules)
-        wrap( "Resolved plots  : ", plotsToStrings(resolvedPlots)) foreach (l => b += l)
-      wrap( "Removed plots   : ", plotsToStrings(removedPlots)) foreach (l => b += l)
+        wrap( "Resolved plots  : ", plotsToStrings(resolvedPlots))
+          .foreach(l => b += l)
+      wrap( "Removed plots   : ", plotsToStrings(removedPlots))
+        .foreach (l => b += l)
       if (activePlotCountries.isEmpty)
         b += s"Active plots    : none"
       else {
@@ -1859,9 +1888,15 @@ object LabyrinthAwakening {
           b += fmt.format(c.name, mapPlotsDisplay(c.plots, visible))
         }
       }
-      wrap( "Markers         : ", ms) foreach (l => b += l)
-      wrap( "Lapsing         : ", cardsLapsing.sorted map cardNumAndName) foreach (l => b += l)
-      b += s"1st plot        : ${firstPlotCard map cardNumAndName getOrElse "none"}"
+      val countryMarkers = for (c <- countries; m <- c.markers)
+        yield (s"$m (${c.name})")
+      wrap( "Markers         : ", markers ::: countryMarkers)
+        .foreach(l => b += l)
+      val lapsing = eventsLapsing
+        .sorted
+      wrap( "Lapsing         : ", lapsing)
+        .foreach(l => b += l)
+      b += s"1st plot        : ${firstPlotEntry.map(_.toString).getOrElse("none")}"
       b.toList
     }
 
@@ -1953,7 +1988,7 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += "Cards in the deck (or in player/bot hand)"
       b += separator(char = '=')
-      wrapInColumns("", cardsInDeckOrHands().map(deck(_).numAndName)).foreach(l => b += l)
+      wrapInColumns("", cardsInDrawPileOrHands().map(deck(_).numAndName)).foreach(l => b += l)
       b.toList
     }
 
@@ -2415,12 +2450,12 @@ object LabyrinthAwakening {
 
   case object FromLapsing extends CardDrawSource {
     override def name = "Lapsing box"
-    override def contains(cardNum: Int) = game.cardsLapsing.contains(cardNum)
+    override def contains(cardNum: Int) = game.cardsLapsing().contains(cardNum)
   }
 
   case object From1stPlot extends CardDrawSource {
     override def name = "First Plot box"
-    override def contains(cardNum: Int) = game.firstPlotCard.contains(cardNum)
+    override def contains(cardNum: Int) = game.isFirstPlot(cardNum)
   }
 
   // Used for adjustments
@@ -2432,9 +2467,9 @@ object LabyrinthAwakening {
 // We do keep track of the specific cards in the deck
   // or in players hands.  To draw from either of these
   // the card cannot be anywhere else.
-  case object FromDeck extends CardDrawSource {
+  case object FromDrawPile extends CardDrawSource {
     override
-    def name = "Deck"
+    def name = "Draw pile"
 
     override
     def contains(cardNum: Int): Boolean = {
@@ -2453,7 +2488,7 @@ object LabyrinthAwakening {
     // Currently we do not track specific cards in the player/bot
     // hand.  We treat them the same is any card that is not currently
     // discarded/removed/lapsing/first-plot
-    override def contains(cardNum: Int) = FromDeck.contains(cardNum)
+    override def contains(cardNum: Int) = FromDrawPile.contains(cardNum)
   }
 
   def cardFoundIn(sources: List[CardDrawSource], cardNum: Int) =
@@ -2461,40 +2496,40 @@ object LabyrinthAwakening {
 
   def cardLocation(cardNum: Int): Option[CardDrawSource] = {
     val sources = List(
-      FromDiscard, FromLapsing, From1stPlot, FromRemoved, FromDeck
+      FromDiscard, FromLapsing, From1stPlot, FromRemoved, FromDrawPile
     )
     sources.find(_.contains(cardNum))
   }
 
   def cardsInSource(source: CardDrawSource): List[Int] = {
     source match {
-      case FromDeck|FromRole(_) => cardsInDeckOrHands()
+      case FromDrawPile|FromRole(_) => cardsInDrawPileOrHands()
       case FromDiscard => game.cardsDiscarded
-      case FromLapsing => game.cardsLapsing
+      case FromLapsing => game.cardsLapsing()
       case FromRemoved => game.cardsRemoved
-      case From1stPlot => game.firstPlotCard.toList
+      case From1stPlot => game.firstPlotCard().toList
     }
   }
 
   // Cards not in Discard, Lapsing, 1stPlot, Removed
   // This includes cards potentially in player hands
-  def cardsInDeckOrHands(): List[Int] = {
-    val notInDeck =
+  def cardsInDrawPileOrHands(): List[Int] = {
+    val notInDrawPile =
       game.cardsDiscarded.toSet ++
-      game.cardsLapsing.toSet ++
-      game.firstPlotCard.toSet ++
+      game.cardsLapsing().toSet ++
+      game.firstPlotCard().toSet ++
       game.cardsRemoved.toSet
 
     game.cardsInUse
       .toSet
-      .diff(notInDeck)
+      .diff(notInDrawPile)
       .toList
       .sorted
   }
 
   // The number of cards currently in the deck.
-  def numCardsInDeck(): Int =
-    cardsInDeckOrHands().size - game.cardsInHand.us - game.cardsInHand.jihadist
+  def numCardsInDrawPile(): Int =
+    cardsInDrawPileOrHands().size - game.cardsInHand.us - game.cardsInHand.jihadist
 
   // Ask the use for a card number
   def askCardNumber(
@@ -2575,7 +2610,7 @@ object LabyrinthAwakening {
           log(s"${deck(cardNum)} is drawn", Color.Event)
 
           sources.find(_.contains(cardNum)).get match {
-            case FromDeck =>
+            case FromDrawPile =>
               // We don't keep track of cards in the deck
             case FromDiscard =>
               cardDrawnFromDiscardPile(cardNum)
@@ -2609,9 +2644,9 @@ object LabyrinthAwakening {
     val sources = new ListBuffer[CardDrawSource]()
     if (game.cardsDiscarded.nonEmpty)
       sources += FromDiscard
-    if (game.cardsLapsing.nonEmpty)
+    if (game.cardsLapsing().nonEmpty)
       sources += FromLapsing
-    if (game.firstPlotCard.nonEmpty)
+    if (game.firstPlotCard().nonEmpty)
       sources += From1stPlot
 
     if (sources.isEmpty)
@@ -3523,15 +3558,16 @@ object LabyrinthAwakening {
 
   def debug(line: String, color: Option[Color] = None): Unit =
     log(s"DEBUG: $line", color.orElse(Color.Debug))
+
   def logAdjustment(name: String): Unit = {
-    log(s"$name adjusted.")
+    log(s"\n$name adjusted.", Color.Info)
   }
 
   def inspect[T](name: String, value: T): T = {
     debug(s"$name == ${value.toString}")
     value
   }
-  
+
   def logAdjustment(name: String, oldValue: Any, newValue: Any): Unit = {
     def normalize(value: Any) = value match {
       case None                       => "none"
@@ -3543,7 +3579,7 @@ object LabyrinthAwakening {
       case x if x.toString.trim == "" => "none"
       case x                          => x.toString.trim
     }
-    log(s"$name adjusted from [${normalize(oldValue)}] to [${normalize(newValue)}]")
+    log(s"\n$name adjusted from [${normalize(oldValue)}] to [${normalize(newValue)}]", Color.Info)
   }
 
   def logAdjustment(countryName: String, attributeName: String, oldValue: Any, newValue: Any): Unit =
@@ -3995,23 +4031,33 @@ object LabyrinthAwakening {
           s"Set available plots to ${plotsDisplay(to.availablePlots, to.humanRole == Jihadist)}")
     show(from.markers.sorted,  to.markers.sorted,
             s"Set global event markers to: ${markersString(to.markers)}" )
-    (from.firstPlotCard, to.firstPlotCard) match {
+    (from.firstPlotEntry, to.firstPlotEntry) match {
       case (x, y) if x == y =>  // No change
-      case (_, Some(c))     => b += s"Set ${cardNumAndName(c)} as the first plot card"
-      case (_, None)        => b += "There should be no first plot card"
+      case (_, Some(event)) =>
+        b += s"Place $event int the first plot box"
+      case (_, None) =>
+        b += "There should be no first plot card or marker"
     }
-    if (from.cardsLapsing.sorted != to.cardsLapsing.sorted) {
-      b += "The following cards are lapsing:"
-        to.cardsLapsing.sorted foreach (c => b += s"  ${cardNumAndName(c)}")
+    if (from.eventsLapsing.sorted != to.eventsLapsing.sorted) {
+      b += "The following events are lapsing:"
+      if (to.eventsLapsing.isEmpty)
+        b += "  None"      
+      to.eventsLapsing
+        .sorted
+        .foreach(event => b += s"  $event")
     }
     if (from.cardsRemoved.sorted != to.cardsRemoved.sorted) {
       b += "The following cards have been removed from play:"
-      to.cardsRemoved.sorted foreach (c => b += s"  ${cardNumAndName(c)}")
+      if (to.cardsRemoved.isEmpty)
+        b += "  None"      
+      to.cardsRemoved
+        .sorted
+        .foreach(c => b += s"  ${cardNumAndName(c)}")
     }
 
     if (b.nonEmpty) {
       showHeader()
-      b foreach println
+      b.foreach(println)
     }
 
     def showChange(value: Any, desc: String) = value match {
@@ -4919,7 +4965,7 @@ object LabyrinthAwakening {
   def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Unit = {
     if (!card.autoTrigger && lapsingEventInPlay(FakeNews)) {
       log("\n%s event \"%s\" is cancelled by \"Fake News\"".format(card.association, card.cardName), Color.Event)
-      removeLapsingCards(FakeNews::Nil)
+      removeLapsingEvent(FakeNews)
     }
     else {
       if (card.autoTrigger)
@@ -4967,17 +5013,24 @@ object LabyrinthAwakening {
 
   def putCardInLapsingBox(cardNumber: Int): Unit = {
     log("Put %s in the lapsing box".format(deck(cardNumber).numAndName), Color.Event)
-    game = game.copy(cardsLapsing = cardNumber :: game.cardsLapsing)
+    game = game.copy(eventsLapsing = LapsingEntry(cardNumber) :: game.eventsLapsing)
   }
 
   def cardDrawnFromLapsingBox(cardNumber: Int): Unit = {
     log("%s drawn from the lapsing box".format(deck(cardNumber).numAndName), Color.Event)
-    game = game.copy(cardsLapsing = game.cardsLapsing.filterNot(_ == cardNumber))
+    log("Mark the event as still lapsing.", Color.Event)
+    val newLapsing = game.eventsLapsing.map {
+      case LapsingEntry(`cardNumber`, _) => LapsingEntry(cardNumber, discarded = true)
+      case other => other
+    }
+    game = game.copy(eventsLapsing = newLapsing)
   }
 
   def cardDrawnFromFirstPlotBox(cardNumber: Int): Unit = {
     log("%s drawn from the 1st Plot box".format(deck(cardNumber).numAndName), Color.Event)
-    game = game.copy(firstPlotCard = None)
+    log("Place an inuse marker in the first plot box.", Color.Event)
+    // Card number of zero used for 1st Plot marker
+    game = game.copy(firstPlotEntry = Some(LapsingEntry(0, discarded = true)))
   }
 
   // Prestige roll used
@@ -5278,7 +5331,7 @@ object LabyrinthAwakening {
 
   def globalEventInPlay(name: String)     = game.markers contains name
   def globalEventNotInPlay(name: String)  = !globalEventInPlay(name)
-  def lapsingEventInPlay(cardNum: Int)    = game.cardsLapsing contains cardNum
+  def lapsingEventInPlay(cardNum: Int)    = game.eventIsLapsing(cardNum)
   def lapsingEventNotInPlay(cardNum: Int) = !lapsingEventInPlay(cardNum)
 
   def addGlobalEventMarker(marker: String): Unit = {
@@ -6540,22 +6593,33 @@ object LabyrinthAwakening {
       // Calculate number of cards drawn
       drawCardsForTurn()
 
-      val lapsingCards = game.cardsLapsing
+      val savedEventsLapsing = game.eventsLapsing
 
-      if (game.cardsLapsing.nonEmpty) {
+      if (game.eventsLapsing.nonEmpty) {
         log()
         log("Lapsing Cards")
         log(separator())
-        removeLapsingCards(game.cardsLapsing, endOfTurn = true)
+        removeLapsingEvents(game.eventsLapsing.map(_.cardNumber), endOfTurn = true)
       }
 
-      game.firstPlotCard foreach { num =>
-        log()
-        log("First Plot Card")
-        log(separator())
-        log(s"Discard : ${cardNumAndName(num)}")
-        game = game
-          .copy(firstPlotCard = None, cardsDiscarded = num :: game.cardsDiscarded)
+      game.firstPlotEntry foreach {
+        case LapsingEntry(num, discarded) =>
+          log()
+          log("First Plot Card")
+          log(separator())
+          val newDiscards = if (discarded) {
+            log(s"Remove first plot marker")
+            game.cardsDiscarded
+          }
+          else  {
+            log(s"Discard : ${cardNumAndName(num)}")
+            num :: game.cardsDiscarded
+          }
+          game = game
+            .copy(
+              firstPlotEntry = None,
+              cardsDiscarded = newDiscards
+            )
       }
 
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
@@ -6576,8 +6640,8 @@ object LabyrinthAwakening {
       // For each lapsing card that was removed that affects
       // off map troops, the troops now must be returned to the
       // troops track.
-      for (card <- lapsingCards)
-        returnOffMapTroopsForLapsingCard(card)
+      for (event <- savedEventsLapsing)
+        returnOffMapTroopsForLapsingCard(event.cardNumber)
 
       for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
         game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
@@ -6642,40 +6706,53 @@ object LabyrinthAwakening {
   //  When called by the end of turn code, this should be false because the timing of the
   //  removal affects the US card draw and so the troop restoration must be deferred until
   // after the card draw.
-  def removeLapsingCards(targets: List[Int], endOfTurn: Boolean = false): Unit = {
-    val lapsing = game.cardsLapsing filter targets.contains
-    val (remove, discard) = lapsing.partition(deck(_).remove != NoRemove)
+  def removeLapsingEvents(targets: List[Int], endOfTurn: Boolean = false): Unit = {
+    val candidates = game.eventsLapsing
+      .filter(e => targets.contains(e.cardNumber))
+    val (remove, discard) = candidates
+      .partition(e => !e.discarded && deck(e.cardNumber).remove != NoRemove)
+
+    def eventNames(events: List[LapsingEntry]) = events
+      .sorted
+      .map(e => cardNumAndName(e.cardNumber))
+
     if (remove.nonEmpty) {
-      val cards = if (remove.size == 1) "card" else "cards"
-      wrap(s"Remove lapsing $cards from the game: ", remove.sorted map cardNumAndName) foreach { line =>
-        log(line, Color.Event)
-      }
+      val display = if (remove.size == 1) "card" else "cards"
+      wrap(s"Remove lapsing $display from the game: ", remove)
+        .foreach(line => log(line, Color.Event))
     }
+
     if (discard.nonEmpty) {
-      val cards = if (discard.size == 1) "card" else "cards"
-      wrap(s"Discard lapsing $cards: ", discard.sorted map cardNumAndName) foreach { line =>
-        log(line, Color.Event)
-      }
+        wrap(s"Discard lapsing events: ", discard)
+          .foreach(line => log(line, Color.Event))
     }
 
     if (!endOfTurn)
-      for (card <- targets)
-        card match {
+      for (cardNum <- targets)
+        cardNum match {
           case TheDoorOfItjihad =>
             if (game.humanRole == Jihadist)
               log(s"\nThe $Jihadist player no longer plays cards at random.", Color.Event)
               else
               log(s"\nThe $Jihadist Bot may again play Non-US associated events.", Color.Event)
           case _  =>
-            returnOffMapTroopsForLapsingCard(card)
+            returnOffMapTroopsForLapsingCard(cardNum)
         }
 
+    val candidateSet = candidates.map(_.cardNumber).toSet
+    val toDiscarded = discard.filterNot(_.discarded).map(_.cardNumber)
+    val toRemoved = remove.map(_.cardNumber)
     game = game.copy(
-      cardsLapsing = game.cardsLapsing filterNot (x => remove.contains(x) || discard.contains(x)),
-      cardsDiscarded = discard ::: game.cardsDiscarded,
-      cardsRemoved = remove ::: game.cardsRemoved
+      eventsLapsing = game.eventsLapsing.filterNot(e => candidateSet(e.cardNumber)),
+      cardsDiscarded = toDiscarded ::: game.cardsDiscarded,
+      cardsRemoved = toRemoved ::: game.cardsRemoved
     )
   }
+
+  // Remove a single lapsing event
+  def removeLapsingEvent(target: Int): Unit =
+    removeLapsingEvents(target::Nil)
+
 
   val scenarios = ListMap[String, Scenario](
     "LetsRoll"            -> LetsRoll,
@@ -7275,8 +7352,7 @@ object LabyrinthAwakening {
                  |  adjust funding          - Jihadist funding level
                  |  adjust offmap troops    - Adjust the number of troops in the offmap box
                  |  adjust difficulty       - Jihadist ideology/US resolve
-                 |  adjust lapsing cards    - Current lapsing cards
-                 |  adjust removed cards    - Cards removed from the game
+                 |  adjust lapsing marker   - Markers for removed lapsing/1st plot cards
                  |  adjust card locations   - Move cards between deck/discard/lapsing/1st plot/removed
                  |  adjust markers          - Current global event markers
                  |  adjust reserves         - US and/or Jihadist reserves
@@ -7535,7 +7611,7 @@ object LabyrinthAwakening {
 
           log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
           addCardToDiscardPile(card.number)
-          removeLapsingCards(Ferguson::Nil)
+          removeLapsingEvent(Ferguson)
         }
         else
           game.humanRole match {
@@ -7544,8 +7620,8 @@ object LabyrinthAwakening {
           }
 
         if (!game.cardsRemoved.contains(cardNumber) &&
-            !game.cardsLapsing.contains(cardNumber) &&
-            !game.firstPlotCard.contains(cardNumber) &&
+            !game.cardsLapsing().contains(cardNumber) &&
+            !game.isFirstPlot(cardNumber) &&
             !ignoreEndOfTurnDiscard)
           addCardToDiscardPile(cardNumber)
 
@@ -7950,7 +8026,7 @@ object LabyrinthAwakening {
             game.humanRole == Jihadist      &&
             askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
           log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
-          removeLapsingCards(Ferguson::Nil)
+          removeLapsingEvent(Ferguson)
         }
         else
           game.humanRole match {
@@ -7959,8 +8035,8 @@ object LabyrinthAwakening {
           }
 
         if (!game.cardsRemoved.contains(cardNumber) &&
-            !game.cardsLapsing.contains(cardNumber) &&
-            !game.firstPlotCard.contains(cardNumber) &&
+            !game.cardsLapsing().contains(cardNumber) &&
+            !game.isFirstPlot(cardNumber) &&
             !ignoreEndOfTurnDiscard)
           addCardToDiscardPile(cardNumber)
 
@@ -8044,14 +8120,14 @@ object LabyrinthAwakening {
       if (!game.usResolve(Ruthless)       &&
           card.association == US          &&
           game.plotPossible(1)            &&
-          game.firstPlotCard.isEmpty)
+          game.firstPlotEntry.isEmpty)
         firstPlot = askYorN(s"\nDo you wish to use your First Plot option to cancel the $US event (y/n)? ")
 
       if (firstPlot) {
         println()
         println(separator())
         log(s"Place the $card card in the first plot box", Color.Info)
-        game = game.copy(firstPlotCard = Some(card.number))
+        game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
         firstPlot = true
       }
       else
@@ -8408,7 +8484,7 @@ object LabyrinthAwakening {
   def adjustSettings(param: Option[String]): Unit = {
     val options = List(
       "prestige", "funding", "difficulty", "card locations",
-      "markers" , "reserves",
+      "lapsing marker", "markers" , "reserves",
       "plots", "offmap troops", "posture", "auto roll",
       "bot logging", "bot enhancements", "manual die rolls", "color",
       "resolved plot countries", "exit after win"
@@ -8452,6 +8528,7 @@ object LabyrinthAwakening {
       case "manual die rolls"        => adjustBotManualDieRolls()
       case "color"                   => adjustShowColor()
       case "card locations"          => adjustCardLocations()
+      case "lapsing marker"          => adjustLapsingMarkers()
       case "markers"                 => adjustMarkers()
       case "reserves"                => adjustReserves()
       case "plots"                   => adjustPlots()
@@ -8572,7 +8649,7 @@ object LabyrinthAwakening {
   // Returns None if the use changes their mind.
   private def getCardToMove(source: CardDrawSource): Option[Int] = {
     source match {
-      case From1stPlot => game.firstPlotCard
+      case From1stPlot => game.firstPlotEntry.map(_.cardNumber)
       case source =>
         val candidates = cardsInSource(source)
         candidates.size match {
@@ -8581,7 +8658,7 @@ object LabyrinthAwakening {
           case n if n < 25 =>
             val choices = candidates.sorted.map(n => Some(n) -> cardNumAndName(n)) :+
               (None -> "Do not select a card.")
-            askMenu(s"Move which card in the ${source.name}:", choices).head
+            askMenu(s"Select which card in the ${source.name}:", choices).head
           case _ =>
             println(s"\nThese cards are in the ${source.name}:")
             println(separator())
@@ -8592,6 +8669,13 @@ object LabyrinthAwakening {
     }
   }
 
+  val OutOfPlayTroopsLapsingEvents = Map(
+    KoreanCrisis -> 2, EbolaScare -> 1, USBorderCrisis -> 1
+  ).withDefaultValue(0)
+
+  def countLapsingOopTroops(lapsingEvents: List[LapsingEntry]): Int =
+    lapsingEvents.foldLeft(0)((sum, e) => sum + OutOfPlayTroopsLapsingEvents(e.cardNumber))
+
   // This function allows the user to move a card between one of the
   // following locations:
   // the deck, the discard pile, lapsing box, 1st plot box, or removed
@@ -8599,23 +8683,13 @@ object LabyrinthAwakening {
   // (we only track the number of cards in hand)
   def adjustCardLocations(): Unit = {
     // Some lapsing cards affect the number of out of play troops that can be on the map.
-    case class OopTroops(cardNum: Int, numTroops: Int)
-    val OutOfPlayTroops = List(OopTroops(KoreanCrisis, 2), OopTroops(EbolaScare, 1), OopTroops(USBorderCrisis, 1))
-    def countOopTroops(lapsingCards: List[Int]): Int =
-      lapsingCards.foldLeft(0) { (sum, cardNum) =>
-        sum + OutOfPlayTroops
-          .find(_.cardNum == cardNum)
-          .map(_.numTroops)
-          .getOrElse(0)
-      }
-
-    val sources = FromDeck::FromDiscard::FromLapsing::From1stPlot::FromRemoved::Nil
+    val sources = FromDrawPile::FromDiscard::FromLapsing::From1stPlot::FromRemoved::Nil
     val movedCards = new ListBuffer[Int]()
-    val saved = game
+    val origOopTroops = countLapsingOopTroops(game.eventsLapsing)
 
-    @tailrec def getNextResponse(): Unit = {
+    def nextAdjustment(): Unit = {
       val choices = List(
-        choice(cardsInSource(FromDeck).nonEmpty,    Some(FromDeck), "The deck or a player's/bot's hand"),
+        choice(cardsInSource(FromDrawPile).nonEmpty,    Some(FromDrawPile), "The deck or a player's/bot's hand"),
         choice(cardsInSource(FromDiscard).nonEmpty, Some(FromDiscard), "The discard pile"),
         choice(cardsInSource(FromLapsing).nonEmpty, Some(FromLapsing), "The lapsing box"),
         choice(cardsInSource(From1stPlot).nonEmpty, Some(From1stPlot), "The 1st plot box"),
@@ -8628,7 +8702,7 @@ object LabyrinthAwakening {
         case Some(from) =>
           getCardToMove(from) match {
           case None =>
-            getNextResponse()
+            nextAdjustment()
           case Some(cardNum) =>
             val canLapse = deck(cardNum).lapsing != NoLapsing
             val canRemove = deck(cardNum).remove != NoRemove
@@ -8636,7 +8710,7 @@ object LabyrinthAwakening {
               .filter { s =>
                 s != from &&
                 (s != FromLapsing || canLapse) &&
-                (s != From1stPlot || game.firstPlotCard.isEmpty) &&
+                (s != From1stPlot || game.firstPlotEntry.isEmpty) &&
                 (s != FromRemoved || canRemove)
               }
               .map(s => s -> s.name) :+ (from -> "Do not move the card")
@@ -8648,46 +8722,150 @@ object LabyrinthAwakening {
                 case FromDiscard =>
                   game = game.copy(cardsDiscarded = game.cardsDiscarded.filterNot(_ == cardNum))
                 case FromLapsing =>
-                  game = game.copy(cardsLapsing = game.cardsLapsing.filterNot(_ == cardNum))
+                  val newLapsing = game.eventsLapsing.filterNot(_.cardNumber == cardNum)
+                  game = game.copy(eventsLapsing = newLapsing)
                 case From1stPlot =>
-                  game = game.copy(firstPlotCard = None)
+                  game = game.copy(firstPlotEntry = None)
                 case FromRemoved =>
                   game = game.copy(cardsRemoved = game.cardsRemoved.filterNot(_ == cardNum))
-                case _ => // FromDeck nothing to do
+                case _ => // FromDrawPile nothing to do
               }
               // Put it in its new location.
               to match {
                 case FromDiscard =>
                   game = game.copy(cardsDiscarded = cardNum::game.cardsDiscarded)
                 case FromLapsing =>
-                  game = game.copy(cardsLapsing = cardNum::game.cardsLapsing)
+                  game = game.copy(eventsLapsing = LapsingEntry(cardNum)::game.eventsLapsing)
                 case From1stPlot =>
-                  game = game.copy(firstPlotCard = Some(cardNum))
+                  game = game.copy(firstPlotEntry = Some(LapsingEntry(cardNum)))
                 case FromRemoved =>
                   game = game.copy(cardsRemoved = cardNum::game.cardsRemoved)
-                case _ => // FromDeck nothing to do
+                case _ => // FromDrawPile nothing to do
               }
             }
-            getNextResponse()
+            nextAdjustment()
         }
       }
     }
 
-    getNextResponse()
+    nextAdjustment()
 
-    if (movedCards.nonEmpty) {
-      logAdjustment(s"Location of cards [${movedCards.sorted.mkString(", ")}]")
+    val moved = movedCards.sorted.distinct
+    if (moved.nonEmpty) {
+      logAdjustment(s"Location of cards [${moved.map(cardNumAndName).mkString(", ")}]")
       // Check to see if we need to move troops to/from the out of play box
-      val oldOop = countOopTroops(saved.cardsLapsing)
-      val newOop = countOopTroops(game.cardsLapsing)
-      if (oldOop > newOop)
-        moveOfMapTroopsToTrack(oldOop - newOop)
-      else if (newOop > oldOop) {
-        val items = selectTroopsToPutOffMap(newOop - oldOop)
+      val newOopTroops = countLapsingOopTroops(game.eventsLapsing)
+      val delta = newOopTroops - origOopTroops 
+      if (delta > 0) {
+        val items = selectTroopsToPutOffMap(newOopTroops - newOopTroops)
         for (MapItem(name, num) <- items)
           putTroopsInOffMapBox(name, num)
       }
+      else if (delta < 0)
+        moveOfMapTroopsToTrack(newOopTroops - newOopTroops)
       saveAdjustment("Adjusted card locations")
+    }
+  }
+
+
+  // Lapsing cards and the first plot card can be removed by events.
+  // When this happens, the lapsing event/first plot is marked because
+  // its effect remains until the end of the current turn.
+  def adjustLapsingMarkers(): Unit = {
+    val movedLapsing = new ListBuffer[Int]()
+    val canChangeFirstPlot = game.firstPlotEntry.map(_.discarded).getOrElse(true)
+    val origFirstPlot = game.firstPlotEntry
+    val origOopTroops = countLapsingOopTroops(game.eventsLapsing)
+
+    def nextAdjustment(): Unit = {
+      val (lapsing, notLapsing) = LapsingCards
+        .filter(n =>
+            game.cardsInUse.contains(n) &&
+            !game.isFirstPlot(n) &&
+            !game.cardsRemoved.contains(n)
+        )
+        .partition(lapsingEventInPlay)
+      val canAdd1stPlot = canChangeFirstPlot && game.firstPlotEntry.isEmpty
+      val canRemove1stPlot = canChangeFirstPlot && game.firstPlotEntry.nonEmpty
+      val choices = List(
+        choice(notLapsing.nonEmpty, "add-lapsing",     "Add lapsing marker"),
+        choice(lapsing.nonEmpty,    "remove-lapsing",  "Remove lapsing marker"),
+        choice(canAdd1stPlot,       "add-1st-plot",    "Add 1st plot marker"),
+        choice(canRemove1stPlot,    "remove-1st-plot", "Remove 1st plot marker"),
+        choice(true,                "finished",        "Finished adjusting lapsing/1st plot markers")
+      ).flatten
+
+      askMenu("\nChoose one:", choices).head match {
+        case "add-lapsing" =>
+          val choices = notLapsing.map(n => n -> cardNumAndName(n)) :+
+            (0 -> "Do not add a lapsing marker")
+
+          askMenu("Chose the card associated with the marker to add:", choices).head match {
+            case 0 =>
+            case n =>
+              movedLapsing += n
+              val marker = LapsingEntry(n, true)
+              game = game.copy(eventsLapsing = marker::game.eventsLapsing)
+              displayLine(s"\n$marker added", Color.Info)
+          }
+          nextAdjustment()
+
+        case "remove-lapsing" =>
+          val choices = lapsing.map(n => n -> cardNumAndName(n)) :+
+            (0 -> "Do not remove a lapsing marker")
+          askMenu("\nChose the card associated with the marker to remove:", choices).head match {
+            case 0 =>
+            case n =>
+              movedLapsing += n
+              val marker = LapsingEntry(n, true)
+              game = game.copy(eventsLapsing = game.eventsLapsing.filterNot(_ == marker))
+              displayLine(s"\n$marker removed", Color.Info)
+          }
+          nextAdjustment()
+
+        case "add-1st-plot" =>
+          // The card number is irrelevant
+            // Card number of zero used for 1st Plot marker
+            game = game.copy(firstPlotEntry = Some(LapsingEntry(0, true)))
+            displayLine(s"\nFirst plot marker added", Color.Info)
+            nextAdjustment()
+
+        case "remove-1st-plot" =>
+            game = game.copy(firstPlotEntry = None)
+            displayLine(s"\nFirst plot marker removed", Color.Info)
+            nextAdjustment()
+
+        case _ =>
+      }
+    }
+
+    displayLine("\nAdjust which event markers are in lapsing boxes and whether or not", Color.Info)
+    displayLine("there is a marker in the 1st plot box.", Color.Info)
+    displayLine("\nIf you want to place/remove the actual cards in these boxes then", Color.Info)
+    displayLine("you should use the 'adjust cards' command.", Color.Info)
+    
+    nextAdjustment()
+
+    val firstPlotChanged = canChangeFirstPlot && origFirstPlot.isEmpty != game.firstPlotEntry.isEmpty
+    val moved = movedLapsing.sorted.distinct
+
+    if (firstPlotChanged || moved.nonEmpty) {
+      if (firstPlotChanged)
+        logAdjustment(s"1st plot marker")
+      if (moved.nonEmpty) {
+        logAdjustment(s"Location of lapsing/1st plot markers for cards [${moved.map(cardNumAndName).mkString(", ")}]")
+        // Check to see if we need to move troops to/from the out of play box
+        val newOopTroops = countLapsingOopTroops(game.eventsLapsing)
+        val delta = newOopTroops - origOopTroops 
+        if (delta > 0) {
+          val items = selectTroopsToPutOffMap(delta)
+          for (MapItem(name, num) <- items)
+            putTroopsInOffMapBox(name, num)
+        }
+        else if (delta < 0)
+          moveOfMapTroopsToTrack(delta.abs)
+      }
+      saveAdjustment("Adjusted lapsing/1st plot markers")
     }
   }
 

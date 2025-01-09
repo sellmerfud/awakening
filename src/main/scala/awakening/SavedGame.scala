@@ -155,6 +155,13 @@ object SavedGame {
   private def reservesFromMap(data: Map[String, Any]): Reserves =
     Reserves(asInt(data("us")), asInt(data("jihadist")))
 
+  private def lapsingEventToMap(data: LapsingEntry): Map[String, Any] =
+    Map("cardNumber" -> data.cardNumber, "discarded" -> data.discarded)
+
+  private def lapsingEventFromMap(data: Map[String, Any]): LapsingEntry =
+    LapsingEntry(asInt(data("cardNumber")), asBoolean(data("discarded")))
+
+
   private def cardsInUseToMap(data: Range): Map[String, Any] =
     Map("min" -> data.head, "max" -> data.last)
 
@@ -321,12 +328,12 @@ object SavedGame {
       "currentMode"         -> gameState.currentMode,
       "humanRole"           -> gameState.humanRole.toString,
       "humanAutoRoll"       -> gameState.humanAutoRoll,
-      "botDifficulties"     -> (gameState.botDifficulties map (_.name)),
+      "botDifficulties"     -> gameState.botDifficulties.map(_.name),
       "turn"                -> gameState.turn,
       "prestige"            -> gameState.prestige,
       "usPosture"           -> gameState.usPosture,
       "funding"             -> gameState.funding,
-      "countries"           -> (gameState.countries map countryToMap),
+      "countries"           -> gameState.countries.map(countryToMap),
       "markers"             -> gameState.markers,
       "plotData"            -> plotDataToMap(gameState.plotData),
       "sequestrationTroops" -> gameState.sequestrationTroops,
@@ -335,9 +342,9 @@ object SavedGame {
       "reserves"            -> reservesToMap(gameState.reserves),
       "cardsInUse"          -> cardsInUseToMap(gameState.cardsInUse),
       "cardsInHand"         -> cardsInHandToMap(gameState.cardsInHand),
-      "plays"               -> (gameState.plays map playToMap),
-      "firstPlotCard"       -> (gameState.firstPlotCard getOrElse null),
-      "cardsLapsing"        -> gameState.cardsLapsing,
+      "plays"               -> gameState.plays.map(playToMap),
+      "firstPlotEntry"      -> gameState.firstPlotEntry.map(lapsingEventToMap).getOrElse(null),
+      "eventsLapsing"       -> gameState.eventsLapsing.map(lapsingEventToMap),
       "cardsDiscarded"      -> gameState.cardsDiscarded,
       "cardsRemoved"        -> gameState.cardsRemoved,
       "targetsThisPhase"    -> phaseTargetsToMap(gameState.targetsThisPhase),
@@ -346,7 +353,7 @@ object SavedGame {
       "botLogging"          -> gameState.botLogging,
       "botEnhancements"     -> gameState.botEnhancements,
       "manualDieRolls"      -> gameState.manualDieRolls,
-      "history"             -> (gameState.history map gameSegmentToMap),
+      "history"             -> gameState.history.map(gameSegmentToMap),
       "description"         -> gameState.description,
       "showColor"           -> gameState.showColor
       )
@@ -366,6 +373,11 @@ object SavedGame {
   }
   // Note: We no longer support save file versions less than 3.
   private def gameFromCurrentVersion(data: Map[String, Any]): GameState = {
+    val firstPlotEntry = if (data("firstPlotEntry") == null)
+      None
+    else
+      Some(lapsingEventFromMap(asMap(data("firstPlotEntry"))))
+
     GameState(
       asString(data("scenarioName")),
       GameMode(asString(data("startingMode"))),
@@ -388,17 +400,17 @@ object SavedGame {
       cardsInUseFromMap(asMap(data("cardsInUse"))),
       cardsInHandFromMap(asMap(data("cardsInHand"))),
       asList(data("plays")).map(p => playFromMap(asMap(p))),
-      if (data("firstPlotCard") == null) None else Some(asInt(data("firstPlotCard"))),
-      asList(data("cardsLapsing")).map(asInt),
+      firstPlotEntry,
+      asList(data("eventsLapsing")).map(e => lapsingEventFromMap(asMap(e))),
       asList(data("cardsDiscarded")).map(asInt),
       asList(data("cardsRemoved")).map(asInt),
       phaseTargetsFromMap(asMap(data("targetsThisPhase"))),
       phaseTargetsFromMap(asMap(data("targetsLastPhase"))),
       asBoolean(data("botLogging")),
-      asBoolean(data.get("exitAfterWin").map(_ => "false").orElse(data.get("ignoreVictory")).getOrElse("false")),
+      data.get("ignoreVictory").map(asBoolean).getOrElse(false),
       data.get("botEnhancements").map(asBoolean).getOrElse(false),
       data.get("manualDieRolls").map(asBoolean).getOrElse(false),
-      (asList(data("history")).map(s => gameSegmentFromMap(asMap(s)))).toVector,
+      asList(data("history")).map(s => gameSegmentFromMap(asMap(s))).toVector,
       asString(data("description")),
       asBoolean(data.get("showColor").getOrElse(true))
     )

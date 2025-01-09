@@ -62,7 +62,7 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
   def eventConditionsMet(role: Role) = true
 
   def candidateCards(role: Role): List[Card] =
-    (game.cardsDiscarded ::: game.cardsLapsing ::: game.firstPlotCard.toList)
+    (game.cardsDiscarded ::: game.cardsLapsing() ::: game.firstPlotCard().toList)
       .map(deck.apply)
       .filter(_.association == role)
 
@@ -75,7 +75,7 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
 
     val source = if (game.cardsDiscarded.contains(cardNum))
       cardDrawnFromDiscardPile(cardNum)
-    else if (game.cardsLapsing.contains(cardNum))
+    else if (game.cardsLapsing().contains(cardNum))
       cardDrawnFromLapsingBox(cardNum)
     else
       cardDrawnFromFirstPlotBox(cardNum)
