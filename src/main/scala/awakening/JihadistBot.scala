@@ -150,25 +150,25 @@ object JihadistBot extends BotHelpers {
         new HighestScoreNode(
           "Poor Regime change w/ highest resource value",
           muslimTest(m => m.isPoor && m.inRegimeChange),
-          muslimScore(m => m.resources)),
+          muslimScore(m => m.resourceValue)),
         new CriteriaFilter("Poor Caliphate Capital",
           muslimTest(m => m.isPoor && m.caliphateCapital)),
         new HighestScoreNode(
           "Poor Caliphate country w/ highest resource value",
           muslimTest(m => m.isPoor && game.isCaliphateMember(m.name)),
-          muslimScore(m => m.resources)),
+          muslimScore(m => m.resourceValue)),
         new CriteriaFilter("Poor country w/ Training Camps",
           muslimTest(m => m.isPoor && m.hasMarker(TrainingCamps))),
         new HighestScoreNode(
           "Poor Civil War country w/ highest resource value",
           muslimTest(m => m.isPoor && m.civilWar),
-          muslimScore(m => m.resources)),
+          muslimScore(m => m.resourceValue)),
         new CriteriaFilter("Islamist Rule Caliphate Capital",
           muslimTest(m => m.isIslamistRule && m.caliphateCapital)),
         new HighestScoreNode(
           "Islamist Rule country w/ highest resource value",
           muslimTest(m => m.isIslamistRule),
-          muslimScore(m => m.resources)),
+          muslimScore(m => m.resourceValue)),
         BestJihadDRMPriority(false),
         HighestCellsMinusTandM,
         LowestTandM,
@@ -884,14 +884,14 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Regime Change", muslimTest(_.inRegimeChange)),
       new CriteriaFilter("Poor", _.isPoor),
       new HighestScorePriority("Most cells", _.totalCells),
-      new LowestScorePriority("Lowest Resource Value", muslimScore(_.resources, nonMuslimScore = 100)),
+      new LowestScorePriority("Lowest Resource Value", muslimScore(_.resourceValue, nonMuslimScore = 100)),
     )
     val muslimPriorities = List(
       new CriteriaFilter("Poor", _.isPoor),
       new CriteriaFilter("Fair", _.isPoor),
       new CriteriaFilter("Good", _.isPoor),
       new LowestScorePriority("Worst JRM", muslimScore(c => c.reaction - c.awakening)),
-      new LowestScorePriority("Lowest Resource Value", muslimScore(_.resources, nonMuslimScore = 100)),
+      new LowestScorePriority("Lowest Resource Value", muslimScore(_.resourceValue, nonMuslimScore = 100)),
       new HighestScorePriority("Most cells", _.totalCells),
     )
     val nonMuslimPriorities = List(
@@ -973,27 +973,27 @@ object JihadistBot extends BotHelpers {
       new HighestScoreNode(
         "Adjacent to Poor Muslim with 1-4 more cells than TandM and Major JSP",
         hasAdjacent(_, muslimTest(poorMuslimNeedsCellsForMajorJihad)),
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
       new HighestScoreNode(
         "Adjacent to Poor Muslim where Major JSP",
         hasAdjacent(_, muslimTest(poorMuslimWhereMajorJihadPossible)),
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
       new HighestScoreNode(
         "Adjacent to Untested Muslim where Major JSP",
         hasAdjacent(_, muslimTest(poorOrUnmarkedMuslimWhereMajorJihadPossible)),
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
       new HighestScoreNode(
         "Adjacent to Fair Muslim where Major JSP and no TandM",
         hasAdjacent(_, muslimTest(m => fairMuslimWhereMajorJihadPossible(m) && m.totalTroopsAndMilitia == 0)),
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
       new HighestScoreNode(
         "Adjacent to Fair Muslim where JSP",
         hasAdjacent(_, muslimTest(m => m.isFair && minorJihadSuccessPossible(m))),
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
       new HighestScoreNode(
         "Adjacent to Good Muslim where JSP",
         hasAdjacent(_, muslimTest(m => m.isGood && minorJihadSuccessPossible(m))),
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
     )
 
     game.muslims.filter(m => m.isIslamistRule &&  m.totalCells > 2) match {
@@ -1558,15 +1558,15 @@ object JihadistBot extends BotHelpers {
       new HighestScoreNode(
         "IR w/ highest resource value",
         _.isIslamistRule,
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
       new HighestScoreNode(
         "Poor Civil War w/ highest resource value",
         muslimTest(m => m.isPoor && m.civilWar),
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
       new HighestScoreNode(
         "Poor Regime Change w/ highest resource value",
         muslimTest(m => m.isPoor && m.inRegimeChange),
-        muslimScore(m => m.resources)),
+        muslimScore(m => m.resourceValue)),
     )
 
     if (game.caliphateDeclared)
