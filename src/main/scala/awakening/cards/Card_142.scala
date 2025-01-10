@@ -80,10 +80,7 @@ object Card_142 extends Card(142, "Militia", US, 2, NoRemove, NoLapsing, NoAutoT
     else
       USBot.deployToPriority(getCandidates()).get
 
-    // We use country.resources here rather than country.resourceValue because
-    // we want the printed resource value and not the "current" resource value that
-    // may be modified by Oil Price Spike, etc.
-    val num = game.getMuslim(target).resources min game.militiaAvailable
+    val num = game.getMuslim(target).printedRsources min game.militiaAvailable
 
     if (num > 0) {
       println()

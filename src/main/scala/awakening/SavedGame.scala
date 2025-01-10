@@ -244,7 +244,7 @@ object SavedGame {
           "plots"            -> (m.plots map plotOnMapToMap),
           "markers"          -> m.markers,
           "isSunni"          -> m.isSunni,
-          "resources"        -> m.resources,
+          "resources"        -> m.printedRsources,
           "alignment"        -> m.alignment,
           "troops"           -> m.troops,
           "militia"          -> m.militia,

@@ -342,30 +342,30 @@ object LabyrinthAwakening {
   val DefaultIran              = NonMuslimCountry(Iran, governance = Fair, iranSpecialCase = true)
   val DefaultNigeria           = NonMuslimCountry(Nigeria, governance = Poor, recruitOverride = 3)
 
-  val DefaultMuslimIran        = MuslimCountry(Iran, isSunni = false, resources = 2, oilExporter = true,
+  val DefaultMuslimIran        = MuslimCountry(Iran, isSunni = false, printedRsources = 2, oilExporter = true,
                                                 governance = Fair, alignment = Adversary)
-  val DefaultMuslimNigeria     = MuslimCountry(Nigeria, isSunni = true, resources = 2, oilExporter = true,
+  val DefaultMuslimNigeria     = MuslimCountry(Nigeria, isSunni = true, printedRsources = 2, oilExporter = true,
                                                governance = Poor, alignment = Neutral)
 
-  val DefaultMorocco           = MuslimCountry(Morocco, resources = 2)
-  val DefaultAlgeriaTunisia    = MuslimCountry(AlgeriaTunisia, resources = 2, oilExporter = true)
-  val DefaultLibya             = MuslimCountry(Libya, resources = 1, oilExporter = true)
-  val DefaultEgypt             = MuslimCountry(Egypt, resources = 3)
-  val DefaultSudan             = MuslimCountry(Sudan, resources = 1, oilExporter = true)
-  val DefaultSomalia           = MuslimCountry(Somalia, resources = 1)
-  val DefaultJordan            = MuslimCountry(Jordan, resources = 1)
-  val DefaultSyria             = MuslimCountry(Syria, resources = 2)
-  val DefaultCentralAsia       = MuslimCountry(CentralAsia, resources = 2)
-  val DefaultTurkey            = MuslimCountry(Turkey, isSunni = false, resources = 2)
-  val DefaultLebanon           = MuslimCountry(Lebanon, isSunni = false, resources = 1)
-  val DefaultYemen             = MuslimCountry(Yemen, isSunni = false, resources = 1)
-  val DefaultIraq              = MuslimCountry(Iraq, isSunni = false, resources = 3, oilExporter = true)
-  val DefaultSaudiArabia       = MuslimCountry(SaudiArabia, isSunni = false, resources = 3, oilExporter = true)
-  val DefaultGulfStates        = MuslimCountry(GulfStates, isSunni = false, resources = 3, oilExporter = true)
-  val DefaultPakistan          = MuslimCountry(Pakistan, isSunni = false, resources = 2, wmdCache = 3)
-  val DefaultAfghanistan       = MuslimCountry(Afghanistan, isSunni = false, resources = 1)
-  val DefaultIndonesiaMalaysia = MuslimCountry(IndonesiaMalaysia, resources = 3, oilExporter = true)
-  val DefaultMali              = MuslimCountry(Mali, resources = 1)
+  val DefaultMorocco           = MuslimCountry(Morocco, printedRsources = 2)
+  val DefaultAlgeriaTunisia    = MuslimCountry(AlgeriaTunisia, printedRsources = 2, oilExporter = true)
+  val DefaultLibya             = MuslimCountry(Libya, printedRsources = 1, oilExporter = true)
+  val DefaultEgypt             = MuslimCountry(Egypt, printedRsources = 3)
+  val DefaultSudan             = MuslimCountry(Sudan, printedRsources = 1, oilExporter = true)
+  val DefaultSomalia           = MuslimCountry(Somalia, printedRsources = 1)
+  val DefaultJordan            = MuslimCountry(Jordan, printedRsources = 1)
+  val DefaultSyria             = MuslimCountry(Syria, printedRsources = 2)
+  val DefaultCentralAsia       = MuslimCountry(CentralAsia, printedRsources = 2)
+  val DefaultTurkey            = MuslimCountry(Turkey, isSunni = false, printedRsources = 2)
+  val DefaultLebanon           = MuslimCountry(Lebanon, isSunni = false, printedRsources = 1)
+  val DefaultYemen             = MuslimCountry(Yemen, isSunni = false, printedRsources = 1)
+  val DefaultIraq              = MuslimCountry(Iraq, isSunni = false, printedRsources = 3, oilExporter = true)
+  val DefaultSaudiArabia       = MuslimCountry(SaudiArabia, isSunni = false, printedRsources = 3, oilExporter = true)
+  val DefaultGulfStates        = MuslimCountry(GulfStates, isSunni = false, printedRsources = 3, oilExporter = true)
+  val DefaultPakistan          = MuslimCountry(Pakistan, isSunni = false, printedRsources = 2, wmdCache = 3)
+  val DefaultAfghanistan       = MuslimCountry(Afghanistan, isSunni = false, printedRsources = 1)
+  val DefaultIndonesiaMalaysia = MuslimCountry(IndonesiaMalaysia, printedRsources = 3, oilExporter = true)
+  val DefaultMali              = MuslimCountry(Mali, printedRsources = 1)
 
   val LabyrinthDefaultCountries: List[Country] = List(
     DefaultCanada,
@@ -1125,7 +1125,7 @@ object LabyrinthAwakening {
     plots: List[PlotOnMap] = Nil,
     markers: List[String]      = Nil,
     isSunni: Boolean           = true,
-    resources: Int             = 0,
+    printedRsources: Int       = 0,
     alignment: String          = Neutral,
     troops: Int                = 0,
     militia: Int               = 0,
@@ -1154,7 +1154,7 @@ object LabyrinthAwakening {
       val spikePlus    = if (canExportOil) (game.oilPriceSpikes) else 0
       val hormuzPlus   = if (game.cardLapsing(StraitofHormuz) && isNonPersionGulflExporter(name)) 1 else 0
       val hormuzMinus  = if (game.cardLapsing(StraitofHormuz) && isPersionGulflExporter(name)) 1 else 0
-      resources + corridorPlus + spikePlus + hormuzPlus - hormuzMinus - opecCutMinus
+      printedRsources + corridorPlus + spikePlus + hormuzPlus - hormuzMinus - opecCutMinus
     }
 
     def isShiaMix = !isSunni
