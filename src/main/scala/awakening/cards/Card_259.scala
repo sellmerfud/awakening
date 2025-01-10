@@ -182,7 +182,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
         val starting = reposCandidates.map { name =>
           MilitiaCountry(name, game.getMuslim(name).militia)
         }
-        val width = reposCandidates.map(_.length).max
+        val width = longestString(reposCandidates)
         println(s"\nThere are a total of $totalMilitia militia in the target countries.")
         println(separator())
         for (MilitiaCountry(name, numMilita) <- starting)

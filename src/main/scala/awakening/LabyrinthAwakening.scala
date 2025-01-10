@@ -134,7 +134,7 @@ object LabyrinthAwakening {
 
     val ALL = List(LabyrinthMode, AwakeningMode, ForeverWarMode)
     
-    def next(current: GameMode): Option[GameMode] = ALL.dropWhile(_ != current).headOption
+    def next(current: GameMode) = ALL.dropWhile(_ != current).headOption
   }
 
   implicit val GameModeOrdering: Ordering[GameMode] = Ordering.by { m: GameMode => m.orderValue }
@@ -1357,8 +1357,8 @@ object LabyrinthAwakening {
 
   case class LapsingEntry(cardNumber: Int, discarded: Boolean = false) {
     override def toString() = (cardNumber, discarded) match {
-      case (0, discarded) => "(marker)" // Zero card number for 1st Plot box marker
-      case (n, discarded) => s"${cardNumAndName(n)} (marker)"
+      case (0, true) => "(marker)" // Zero card number for 1st Plot box marker
+      case (n, true) => s"${cardNumAndName(n)} (marker)"
       case _ => cardNumAndName(cardNumber)
     }
   }
@@ -1402,15 +1402,16 @@ object LabyrinthAwakening {
     cardsRemoved: List[Int]              = Nil,         // Card numbers removed from the game.
     targetsThisPhase: PhaseTargets       = PhaseTargets(),
     targetsLastPhase: PhaseTargets       = PhaseTargets(),
-    botLogging: Boolean                  = false,
+    wmdAlertedOrResolved: Boolean        = false,     // Used by the Trump Take Command scenario final scoring
     ignoreVictory: Boolean               = false,
+    botLogging: Boolean                  = false,
     botEnhancements: Boolean             = true, // Use enhancements to official Awakening bot algorithms
     manualDieRolls: Boolean              = false,  // Overrides humanAutoRoll
     history: Vector[GameSegment]         = Vector.empty,
     description: String                  = "",
     showColor: Boolean                   = !scala.util.Properties.isWin, // Default true except on Windows
     log: Vector[LogEntry]                = Vector.empty, // Log of the cuurent game segment
-    name: String                         = "") {         // The name is not saved to disk it is set when the game is loaded
+    saveName: String                     = "") {         // The name is not saved to disk it is set when the game is loaded
 
     def useExpansionRules   = currentMode == AwakeningMode || currentMode == ForeverWarMode
     def scenarioNameDisplay = if (campaign) s"$scenarioName -- Campaign" else scenarioName
@@ -1639,9 +1640,9 @@ object LabyrinthAwakening {
     def numIslamistRule  = muslims count (c => c.isIslamistRule)
     def oilPriceSpikes   = eventsLapsing.count(e => OilSpikeCards(e.cardNumber))
     def goodResources =
-      muslims.filter(_.isGood).foldLeft(0) { (a, c) => a + c.resourceValue }
+      muslims.filter(_.isGood).map(_.resourceValue).sum
     def islamistResources =
-      muslims.filter(_.isIslamistRule).foldLeft(0) { (a, c) => a + c.resourceValue } + (if (caliphateDeclared) 1 else 0)
+      muslims.filter(_.isIslamistRule).map(_.resourceValue).sum + (if (caliphateDeclared) 1 else 0)
     // Return true if any two Islamist Rule countries are adjacent.
     def islamistAdjacency: Boolean =
       muslims.filter(_.isIslamistRule).combinations(2).exists (xs => areAdjacent(xs.head.name, xs.last.name))
@@ -1794,7 +1795,8 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += s"Scenario: ${scenarioNameDisplay}"
       b += separator(char = '=')
-      b += s"Name: ${game.name}"
+      b += s"Game length : ${amountOf(game.gameLength, "deck")}"
+      b += s"Game name   : ${saveName}"
       b += separator()
       b += s"The Bot is playing the $botRole"
       b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
@@ -1818,6 +1820,7 @@ object LabyrinthAwakening {
       else
         b += s"Human auto roll        : ${if (humanAutoRoll) "yes" else "no"}"
       b += s"Bot logging            : ${if (botLogging) "yes" else "no"}"
+      b += s"Ignore instant vicory  : ${if (ignoreVictory) "yes" else "no"}"
       b.toList
     }
 
@@ -1845,14 +1848,15 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += s"Status"
       b += separator(char = '=')
-      b += s"Game Mode       : ${game.currentMode}"
+      b += s"Game Mode       : $currentMode"
+      b += s"Deck            : ${ordinal(deckNumber)} of $gameLength"
       b += separator()
       b += f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}  (GWOT penalty $gwotPenalty)"
       b += f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d"
       b += f"US reserves     : ${reserves.us}%2d   | Jihadist reserves : ${reserves.jihadist}%2d"
-      b += f"US cards        : ${game.cardsInHand.us}%2d   | Jihadist cards    : ${game.cardsInHand.jihadist}%2d"
+      b += f"US cards        : ${cardsInHand.us}%2d   | Jihadist cards    : ${cardsInHand.jihadist}%2d"
       b += separator()
-      if (game.useExpansionRules) {
+      if (useExpansionRules) {
         b += f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"
         b += s"Troop commitment: $troopCommitment"
         b += separator()
@@ -1864,13 +1868,13 @@ object LabyrinthAwakening {
         b += f"Cells on track  : $cellsOnTrack%2d"
       }
       b += f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}"
-      if (game.useExpansionRules) {
-        val albaghdadi = (globalEventInPlay(AlBaghdadi), game.caliphateDeclared) match {
+      if (useExpansionRules) {
+        val albaghdadi = (globalEventInPlay(AlBaghdadi), caliphateDeclared) match {
           case (true, true) => Some(s"$AlBaghdadi with Caliphate")
           case (true, false) => Some(s"$AlBaghdadi without Caliphate")
           case (false, _) => None
         }
-        val camp = game.trainingCamp.map(name => s"$TrainingCamps in $name")
+        val camp = trainingCamp.map(name => s"$TrainingCamps in $name")
         val events = albaghdadi.toList ::: camp.toList
         val eventDisplay = events match {
           case Nil => ""
@@ -1885,7 +1889,7 @@ object LabyrinthAwakening {
       b += separator()
       wrap( "Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist))
         .foreach(l => b += l)
-      if (game.useExpansionRules)
+      if (useExpansionRules)
         wrap( "Resolved plots  : ", plotsToStrings(resolvedPlots))
           .foreach(l => b += l)
       wrap( "Removed plots   : ", plotsToStrings(removedPlots))
@@ -1894,7 +1898,7 @@ object LabyrinthAwakening {
         b += s"Active plots    : none"
       else {
         b += s"Active plots"
-        val fmt = "  %%-%ds : %%s".format(activePlotCountries.map(_.name.length).max)
+        val fmt = "  %%-%ds : %%s".format(longestString(activePlotCountries.map(_.name)))
         for (c <- activePlotCountries) {
           val visible = humanRole == Jihadist || (c.name == UnitedStates && c.hasMarker(NEST))
           b += fmt.format(c.name, mapPlotsDisplay(c.plots, visible))
@@ -2008,7 +2012,7 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += "Cards in the discard pile"
       b += separator(char = '=')
-      wrapInColumns("", game.cardsDiscarded.map(deck(_).numAndName)).foreach(l => b += l)
+      wrapInColumns("", cardsDiscarded.map(deck(_).numAndName)).foreach(l => b += l)
       b.toList
     }
 
@@ -2016,7 +2020,7 @@ object LabyrinthAwakening {
       val b = new ListBuffer[String]
       b += "Cards removed from the game"
       b += separator(char = '=')
-      wrapInColumns("", game.cardsRemoved.map(deck(_).numAndName)).foreach(l => b += l)
+      wrapInColumns("", cardsRemoved.map(deck(_).numAndName)).foreach(l => b += l)
       b.toList
     }
 
@@ -2050,7 +2054,7 @@ object LabyrinthAwakening {
   }
 
   def initialGameState(
-    name: String,
+    saveName: String,
     scenario: Scenario,
     gameLength: Int,
     campaign: Boolean,
@@ -2091,7 +2095,7 @@ object LabyrinthAwakening {
       cardsRemoved = scenario.cardsRemoved,
       showColor = showColor,
       offMapTroops = scenario.offMapTroops,
-      name = name)
+      saveName = saveName)
   }
 
 
@@ -2605,10 +2609,148 @@ object LabyrinthAwakening {
     testResponse(initial)
   }
 
+  // At the end of a game the US wins if it has more than twice as many
+  // Resources at Good governance than the Jihadist has Resources at
+  // Islamist Rule.  Otherwise, the Jiahdist wins.
+  // Any country with a Green regime change marker is counted as
+  // Islamist Rule.
+  // 
+  def logEndGameScoring(): Unit = {
+    val caliphateResource = (if (game.caliphateDeclared) 1 else 0)
+    val isTrumpScenario = game.scenarioName == TrumpTakesCommand.name
+    val noWmdUsedResource = if (isTrumpScenario && !game.wmdAlertedOrResolved) 1 else 0
+    val goodResources =
+      game.muslims
+        .filter(m => m.isGood && m.regimeChange != GreenRegimeChange)
+        .map(_.resourceValue)
+        .sum
+    val irResources =
+      game.muslims
+        .filter(m => m.isIslamistRule || m.regimeChange == GreenRegimeChange)
+        .map(_.resourceValue)
+        .sum
+
+    val usScore = goodResources
+    val jihadistScore = irResources + caliphateResource + noWmdUsedResource
+    def res(num: Int) = num match {
+      case 1 => " 1 resource"
+      case n => f"$n%2d resources"
+    }
+
+    log()
+    log("Game Over", Color.Info)
+    log(separator(char = '='), Color.Info)
+    log(s"${res(goodResources)} at Good governance (excluding green regime change)", Color.Info)
+    log(s"${res(irResources)} at IR governance (or with green regime change)", Color.Info)
+    if (game.useExpansionRules)
+      log(s"${res(caliphateResource)} for Caliphate capital marker", Color.Info)
+    if (isTrumpScenario)
+      log(s"${res(noWmdUsedResource)} for no WMD used or alerted", Color.Info)
+    log()
+    if (usScore > jihadistScore * 2) {
+      log("US Victory!", Color.Info)
+      log(s"US score ($usScore) is greater than twice Jihadist score ($jihadistScore)", Color.Info)
+    }
+    else {
+      log("Jihadist Victory!", Color.Info)
+      log(s"US score ($usScore) is not greater than twice Jihadist score ($jihadistScore)", Color.Info)
+    }
+    pause()
+  }
+
+  // This is used when playing a campaign scenario.
+  // When the Awakening cards are added we must:
+  // Change Syria to Shia-Mix
+  // Add WMD cache to Syria(2) and Iran (1)
+  // update the currentMode
+  // Test Algeria and add an awakening marker
+  // (if possible, otherwise a random muslim country - From Forever War rules)
+  def addAwakeningCards(): Unit = {
+    val syria         = game.getMuslim(Syria)
+    val iran          = game.getNonMuslim(Iran)
+    val algeria       = game.getMuslim(AlgeriaTunisia)
+    @tailrec def randomAwakeTarget: String = {
+        randomMuslimCountry match {
+          case m if m.canTakeAwakeningOrReactionMarker => m.name
+          case _ => randomAwakeTarget
+        }
+    }
+
+    log()
+    log("Add the Awakening cards to the deck.", Color.Info)
+    log("The Awakening expansion rules are now in effect.", Color.Info)
+    log("The Bot will now use the Awakening priorities.", Color.Info)
+    // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
+    val (updatedPlots, syriaCache) = if (syria.isIslamistRule)
+      (game.plotData.copy(availablePlots = PlotWMD :: PlotWMD :: game.availablePlots), 0)
+    else
+      (game.plotData, 2)
+
+    game = game
+      .updateCountry(syria.copy(isSunni = false, wmdCache = syriaCache))
+      .updateCountry(iran.copy(wmdCache = 1))
+      .copy(
+        plotData = updatedPlots,
+        currentMode = AwakeningMode,
+        deckNumber = game.deckNumber + 1,
+        cardsInUse = Range.inclusive(game.cardsInUse.head, AwakeningMode.cardRange.last)
+      )
+    log()
+    if (syria.isIslamistRule) {
+      log("Syria is now Shia-Mix country, place the Syria country mat on the board.", Color.Info)
+      log("Because Syria is under Islamist Rule, add the two WMD plots", Color.Info)
+      log("from the Syria cache to the available plots box.", Color.Info)
+    }
+    else {
+      log("Syria is now Shia-Mix country, place the Syria country mat on the board.", Color.Info)
+      log("Place two unavailable WMD plots in Syria.", Color.Info)
+    }
+    log("Iran now contains 1 unavailable WMD plot", Color.Info)
+
+    //  Place an awakening marker in Algeria/Tunisia if possible
+    //  otherwise in a random muslim country
+    val awakeningTarget = if (algeria.canTakeAwakeningOrReactionMarker)
+      AlgeriaTunisia
+    else {
+      log(s"$AlgeriaTunisia cannot take an awakening marker.", Color.Info)
+      log("An awakening marker will be added to a random Muslim country.", Color.Info)
+      randomAwakeTarget
+    }
+
+    testCountry(awakeningTarget)
+    addAwakeningMarker(awakeningTarget)
+  }
+
+  // This is used when playing a campaign scenario.
+  // When the Forever War cards are added we must:
+  // update the currentMode
+  // This mainly affects restrictions on Regime Change in Iran.
+  // See rule 15.2.2.1 in the Forever War Rulebook
+  def addForeverWarCards(): Unit = {
+    game = game
+      .copy(
+        currentMode = ForeverWarMode,
+        deckNumber = game.deckNumber + 1,
+        cardsInUse = Range.inclusive(game.cardsInUse.head, ForeverWarMode.cardRange.last)
+      )
+    log()
+    log("Add Forever War cards to the deck.", Color.Info)
+    log("The Bot will now use the Forever War priorities.", Color.Info)
+  }
+
   // This function is called when a card must be drawn from the
   // draw pile and the draw pile is empty.
   // There are several outcomes given this situation depending
   // on the type of game that is being played.
+  //
+  // Campaign game (2, 3 decks)
+  // ---------------------------------------------------------------------
+  // If we just exhausted the final deck, the the game ends immediately
+  // otherwise, any lapsing cards and any first plot card are discared
+  // and replaced with markers (the lapsing event are still in effect),
+  // then the new deck associated with the next expansion is added to
+  // the draw pile and the game continues.  All rules associated with
+  // the next expansion are now in effect.
   //
   // Single scenario game (1, 2, or 3 decks)
   // ---------------------------------------------------------------------
@@ -2617,21 +2759,35 @@ object LabyrinthAwakening {
   // and replaced with markers (the lapsing event are still in effect),
   // then the discards are suffled and added to the draw pile and the game
   // continues.
-  //
-  // Campaign game
-  // ---------------------------------------------------------------------
-  // If we just exhausted the final deck, the the game ends immediately
-  // otherwise, any lapsing cards and any first plot card are discared
-  // and replaced with markers (the lapsing event are still in effect),
-  // then the new deck associated with the next expansion is added to
-  // the draw pile and the game continues.  All rules associated with
-  // the next expansion are now in effect.
-
+  
   def handleEmptyDrawPile(): Unit = {
+    // Lapsing events, notably Oil Price Spike, are removed
+    // before any new cards are added and before end game
+    // scoring if this was the last deck.
+    removeLapsingAnd1stPLot()
 
-    log("\nThe draw pile is empty and a card must be drawn", Color.Info)
-
-
+    if (game.deckNumber == game.gameLength) {
+      logEndGameScoring()
+      saveGameState(Some("Game Over"), true)
+      throw QuitGame
+    }
+    else if (game.campaign) {
+      GameMode.next(game.currentMode) match {
+        case Some(AwakeningMode) => addAwakeningCards()
+        case Some(ForeverWarMode) => addForeverWarCards()
+        case _ =>
+      }
+    }
+    else {
+      // Single scenario game
+      game = game.copy(
+        deckNumber = game.deckNumber + 1,
+        cardsDiscarded = Nil
+      )
+      log("\nShuffle the discard pile to form a new draw pile.", Color.Info)
+      log(s"This begins the ${ordinal(game.deckNumber)} deck of ${game.gameLength}.", Color.Info)
+      log("Move the deck marker one space to the right.", Color.Info)
+    }
   }
 
   // These cards require special handling in some of the 
@@ -2662,8 +2818,10 @@ object LabyrinthAwakening {
       }
 
       // If only source is the draw pile and the draw pile is empty...
-      if (sources == List(FromDrawPile) && numCardsInDrawPile() == 0)
+      if (sources == List(FromDrawPile) && numCardsInDrawPile() == 0) {
+        log("\nThe draw pile is empty and a card must be drawn.", Color.Info)
         handleEmptyDrawPile()
+      }
 
       askCardNumber(sources, prompt) match {
         case None =>
@@ -2964,7 +3122,7 @@ object LabyrinthAwakening {
       case _  if numItems == 0 => Nil  // The required number have been selected
       case target :: Nil       => MapItem(target.country, numItems) :: Nil // Last country remaining
       case _ =>
-        val maxLen = (targets map (_.country.length)).max
+        val maxLen = longestString(targets.map(_.country))
         val fmt = "%%-%ds  (%%s)".format(maxLen)
         def disp(t: MapItem) = {fmt.format(t.country, amountOf(t.num, name))}
         val choices = targets.map(t => t.country -> disp(t))
@@ -2993,7 +3151,7 @@ object LabyrinthAwakening {
         if (numRemaining == 0 || sources.isEmpty)
           Nil
         else {
-          val len = (sources map (_.name.length)).max
+          val len = longestString(sources.map(_.name))
           val fmttrk = "%%-%ds  (contains %%d cells)".format(len)
           val fmt    = "%%-%ds  (contains %%d active and %%d sleeper)".format(len)
           def disp(i: CellsItem) = if (i.name == "track")
@@ -3562,7 +3720,7 @@ object LabyrinthAwakening {
 
   def wrapInColumns[T](prefix: String, values: Seq[T], maxWidth: Int = 100, showNone: Boolean = true): Seq[String] = {
     val stringValues = values.map(_.toString)
-    val width = if (stringValues.isEmpty) 0 else stringValues.map(_.length).max
+    val width = longestString(stringValues)
     val columnValues = stringValues.map(padLeft(_, width))
     val b = new ListBuffer[String]
     val s = new StringBuilder(prefix)
@@ -3682,6 +3840,11 @@ object LabyrinthAwakening {
     case x => s"${x}th"
   }
 
+  def longestString(strings: Seq[String]): Int =
+    if (strings.isEmpty)
+      0
+    else
+      strings.map(_.length).max
 
   def padLeft(s: String, width: Int) = s + (" " * (width - s.length))
 
@@ -3755,7 +3918,7 @@ object LabyrinthAwakening {
       def printSegment(save_number: Int, last_save_number: Int, path: Option[Pathname]): Unit = {
         if (save_number <= last_save_number) {
           val header   = s"\n>>> History of save point $save_number <<<"
-          val log_path = gamesDir/game.name/getLogName(save_number)
+          val log_path = gamesDir/game.saveName/getLogName(save_number)
 
           val entries = if (log_path.exists)
             SavedGame.loadLog(log_path)
@@ -3861,8 +4024,8 @@ object LabyrinthAwakening {
 
   def saveGameState(desc: Option[String] = None, suppressCardsPlayed: Boolean = false): Unit = {
     val save_number = game.history.size
-    val save_path   = gamesDir/game.name/getSaveName(save_number)
-    val log_path    = gamesDir/game.name/getLogName(save_number)
+    val save_path   = gamesDir/game.saveName/getSaveName(save_number)
+    val log_path    = gamesDir/game.saveName/getLogName(save_number)
     val segmentDesc = desc orElse game.plays.headOption.map(_.toString) getOrElse ""
     val cardsPlayed = game.plays.map(_.numCards).sum
     val turnInfo = game.plays.headOption match {
@@ -3898,13 +4061,13 @@ object LabyrinthAwakening {
       log = Vector.empty,
     )
     SavedGame.save(save_path, game)
-    saveGameDescription(game.name, gameDesc)
+    saveGameDescription(game.saveName, gameDesc)
   }
 
   def loadGameState(name: String, save_number: Int): GameState = {
     val save_path = gamesDir/name/getSaveName(save_number)
     SavedGame.load(save_path).copy(
-      name = name,         // Set the game name, it could change if the directory was renamed
+      saveName = name,         // Set the game name, it could change if the directory was renamed
       log = Vector.empty)  // Start with an empty log for the current save point
   }
 
@@ -3955,7 +4118,7 @@ object LabyrinthAwakening {
 
         case VALID_NAME(name) =>
           if ((gamesDir/name).exists) {
-            println(s"\nA game called '$name' already exists.")
+            displayLine(s"\nA game called '$name' already exists.", Color.Info)
             if (askYorN(s"Do you want to overwrite the existing game (y/n)? ")) {
               (gamesDir/name).rmtree()
               Some(name)
@@ -4009,13 +4172,13 @@ object LabyrinthAwakening {
               // to load the file with turnNumber -1.
               val target       = save_number - 1
               val oldGameState = game
-              game = loadGameState(game.name, target)
-              saveGameDescription(game.name, game.description)  // Update the description file
+              game = loadGameState(game.saveName, target)
+              saveGameDescription(game.saveName, game.description)  // Update the description file
 
               // Remove all safe files that succeed this one.
               // We are exploring anew
-              removeSaveFiles(game.name, target + 1)
-              removeLogFiles(game.name, target + 1)
+              removeSaveFiles(game.saveName, target + 1)
+              removeLogFiles(game.saveName, target + 1)
               displayGameStateDifferences(oldGameState, game)
             }
             else
@@ -4785,7 +4948,7 @@ object LabyrinthAwakening {
         throw new IllegalStateException(s"performDisrupt(): $target has no cells or cadre")
     }
     if (bumpPrestige && game.usResolve(Adept)) {
-      log(s"$US Bot with Adept resolve alerts increases prestige by +2", Color.MapMarker)
+      log(s"$US Bot with Adept resolve disrupt increases prestige by +2", Color.MapMarker)
       increasePrestige(2)
     }
     else if (bumpPrestige)
@@ -4808,7 +4971,7 @@ object LabyrinthAwakening {
     }
     if (plot == PlotWMD) {
       val updatedPlots = game.plotData.copy(removedPlots = plot :: game.removedPlots)
-      game = game.copy(plotData = updatedPlots)
+      game = game.copy(plotData = updatedPlots, wmdAlertedOrResolved = true)
       log(s"$plot alerted in $countryName, remove it from the game.", Color.MapPieces)
       if (game.useExpansionRules) {
         game = game.adjustPrestige(1)
@@ -6245,6 +6408,8 @@ object LabyrinthAwakening {
         val country = game.getCountry(name)
         log(separator())
         log(s"Unblocked $mapPlot in $name", Color.Info)
+        if (mapPlot.plot == PlotWMD)
+          game = game.copy(wmdAlertedOrResolved = true)
         if (name == Israel)
           removeGlobalEventMarker("Abbas")
         if (name == India)
@@ -6480,122 +6645,134 @@ object LabyrinthAwakening {
     .map(game.getMuslim)
     .exists(m => (m.isPoor && m.isAdversary) || m.isIslamistRule)
 
-  // This is used when playing a campaign scenario.
-  // When the Awakening cards are added we must:
-  // Change Syria to Shia-Mix
-  // Add WMD cache to Syria(2) and Iran (1)
-  // update the currentMode
-  // Test Algeria and add an awakening marker
-  // (if possible, otherwise a random muslim country - From Forever War rules)
-  def addAwakeningCards(): Unit = {
-    val syria         = game.getMuslim(Syria)
-    val iran          = game.getNonMuslim(Iran)
-    val algeria       = game.getMuslim(AlgeriaTunisia)
-    @tailrec def randomAwakeTarget: String = {
-        randomMuslimCountry match {
-          case m if m.canTakeAwakeningOrReactionMarker => m.name
-          case _ => randomAwakeTarget
-        }
-    }
-
-    log()
-    log("Add the Awakening cards to the deck.", Color.Info)
-    log("The Awakening expansion rules are now in effect.", Color.Info)
-    log("The Bot will now use the Awakening priorities.", Color.Info)
-    // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
-    val (updatedPlots, syriaCache) = if (syria.isIslamistRule)
-      (game.plotData.copy(availablePlots = PlotWMD :: PlotWMD :: game.availablePlots), 0)
-    else
-      (game.plotData, 2)
-
-    game = game
-      .updateCountry(syria.copy(isSunni = false, wmdCache = syriaCache))
-      .updateCountry(iran.copy(wmdCache = 1))
-      .copy(plotData = updatedPlots,
-            currentMode = AwakeningMode,
-            cardsInUse = Range.inclusive(game.cardsInUse.head, AwakeningMode.cardRange.last)
-      )
-    log()
-    if (syria.isIslamistRule) {
-      log("Syria is now Shia-Mix country, place the Syria country mat on the board.", Color.Info)
-      log("Because Syria is under Islamist Rule, add the two WMD plots", Color.Info)
-      log("from the Syria cache to the available plots box.", Color.Info)
-    }
-    else {
-      log("Syria is now Shia-Mix country, place the Syria country mat on the board.", Color.Info)
-      log("Place two unavailable WMD plots in Syria.", Color.Info)
-    }
-    log("Iran now contains 1 unavailable WMD plot", Color.Info)
-
-    //  Place an awakening marker in Algeria/Tunisia if possible
-    //  otherwise in a random muslim country
-    val awakeningTarget = if (algeria.canTakeAwakeningOrReactionMarker)
-      AlgeriaTunisia
-    else {
-      log(s"$AlgeriaTunisia cannot take an awakening marker.", Color.Info)
-      log("An awakening marker will be added to a random Muslim country.", Color.Info)
-      randomAwakeTarget
-    }
-
-    testCountry(awakeningTarget)
-    addAwakeningMarker(awakeningTarget)
-  }
-
-  // This is used when playing a campaign scenario.
-  // When the Forever War cards are added we must:
-  // update the currentMode
-  // This mainly affects restrictions on Regime Change in Iran.
-  // See rule 15.2.2.1 in the Forever War Rulebook
-  def addForeverWarCards(): Unit = {
-    game = game
-      .copy(currentMode = ForeverWarMode,
-            cardsInUse = Range.inclusive(game.cardsInUse.head, ForeverWarMode.cardRange.last)
-      )
-    log()
-    log("Add Forever War cards to the deck.", Color.Info)
-    log("The Bot will now use the Forever War priorities.", Color.Info)
-  }
 
   // Calculate and display the number of cards
   // each side will draw for the turn.
   def drawCardsForTurn(): Unit = {
-      val usCardMods = new ListBuffer[(String, Int)]()
+
+    // The number of cards drawn by the US player
+    // can be affected by several events.
+    val usCardMods = {
+      val mods = new ListBuffer[(String, Int)]()
       if (lapsingEventInPlay(FullyResourcedCOIN))
-        usCardMods.append((deck(FullyResourcedCOIN).cardName, 2))
+        mods.append((deck(FullyResourcedCOIN).name, 2))
       if (globalEventInPlay(USChinaTradeWar)) {
         val modifier = game.worldPosture match {
           case Even => 0
           case world if world == game.usPosture => 1
           case _ => -1
         }
-        usCardMods.append((USChinaTradeWar, modifier))
+        mods.append((USChinaTradeWar, modifier))
       }
+      mods.toList
+    }
 
-      val extraUSMaxName = usCardMods match {
-        case Nil => 0
-        case mods => mods.map(_._1.length).max
+    val extraUSWidth = longestString(usCardMods.map(_._1))
+    val extraUSCards = usCardMods.map(_._2).sum
+    val usCards       = USCardDraw(game.troopCommitment) + extraUSCards
+    val jihadistCards = JihadistCardDraw(game.fundingLevel)
+    val totalCards    = usCards + jihadistCards
+
+    log()
+    log("Draw Cards")
+    log(separator())
+    log(s"$US player will draw $usCards cards", Color.Info)
+    for ((name, mod) <- usCardMods)
+    log(f"  ${padLeft(name, extraUSWidth)}: $mod%+2d")
+    log(s"Jihadist player will draw $jihadistCards cards", Color.Info)
+
+    // Check to see if we have reached the end of the current draw pile
+    if (numCardsInDrawPile() < totalCards) {
+      log("\nThere are not enough cards in the draw pile.", Color.Info)
+      (game.deckNumber < game.gameLength, numCardsInDrawPile()) match {
+        case (false, _) =>
+        case (true, 0) => 
+        case (true, 1) =>
+          log(s"Draw the last card into the $Jihadist hand.", Color.Info)
+        case (true, n) =>
+          log(s"Draw the last $n cards alternately into each hand starting with the $Jihadist hand.", Color.Info)
       }
-      val extraUSCards = usCardMods.map(_._2).sum
-      val usCards       = USCardDraw(game.troopCommitment) + extraUSCards
-      val jihadistCards = JihadistCardDraw(game.fundingLevel)
+      handleEmptyDrawPile()
+      log("\nContinue drawing cards alternately to fill each hand.", Color.Info)
+    }
+    else
+      log(s"\nDraw the next $totalCards cards alternately into each hand starting with the $Jihadist hand.", Color.Info)
 
-      // Need to handle shuffling cards or adding cards from next deck
-      // in a campaing game.
-      // Although, this could happend during a turn when and event
-      // calls for drawing a card.  !!! Ugh.
-
-      increaseCardsInHand(US, usCards)
-      increaseCardsInHand(Jihadist, jihadistCards)
-      log()
-      log("Draw Cards")
-      log(separator())
-      log(s"$US player will draw $usCards cards", Color.Info)
-      for ((name, mod) <- usCardMods)
-        log(f"  ${padLeft(name, extraUSMaxName)}: $mod%+2d")
-      log(s"Jihadist player will draw $jihadistCards cards", Color.Info)
+    increaseCardsInHand(US, usCards)
+    increaseCardsInHand(Jihadist, jihadistCards)
   }
 
+  def removeLapsingAnd1stPLot(): Unit = {
+    game.firstPlotEntry foreach {
+      case LapsingEntry(num, discarded) =>
+        log("\nFirst Plot")
+        log(separator())
+        if (discarded) {
+          log(s"Remove first plot marker", Color.Event)
+          game = game.copy(firstPlotEntry = None)
+        }
+        else  {
+          log(s"Discard ${cardNumAndName(num)}", Color.Event)            
+          game = game.copy(firstPlotEntry = None, cardsDiscarded = num :: game.cardsDiscarded)
+        }
+    }
+
+    if (game.eventsLapsing.nonEmpty) {
+      log()
+      log("Lapsing Events")
+      log(separator())
+      removeLapsingEvents(game.eventsLapsing.map(_.cardNumber), endOfTurn = true)
+    }
+  }
+
+
+  // Note that the end of turn sequence is different depending on whether
+  // or not the Awakening expansion rules are in effect.
   def endTurn(): Unit = {
+    def returnUsedPlotsToAvailable(): Unit = {
+      if (game.resolvedPlots.nonEmpty) {
+        val num = game.resolvedPlots.size
+        val updatedPlots = game.plotData.copy(
+          resolvedPlots  = Nil,
+          availablePlots = game.availablePlots ::: game.resolvedPlots)
+        game = game.copy(plotData = updatedPlots)
+        log()
+        log(s"Return ${amountOf(num, "resolved plot")} to the available plots box", Color.MapPieces)
+      }
+    }
+
+    def flipGreenRegimeChangeMarkers(): Unit = {
+      for (rc <- game.muslims if rc.regimeChange == GreenRegimeChange) {
+        game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
+        log(s"\nFlip green regime change marker in ${rc.name} to its tan side", Color.FlipPieces)
+      }
+    }
+
+    // Check active Gobal events that affect off map troops
+    // Troops affected by Lapsing events will have already been
+    // taken care of when the Lapsing event were removed.
+    def returnOffMapTroopsToTrack(): Unit = {
+      // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
+      // then return the troops to available.
+      if (game.sequestrationTroops) {
+        game.muslims
+          .find(m => m.resourceValue >= 3 && m.isIslamistRule)
+          .map(_.name)
+          .foreach { name =>
+            log(s"\nThere is a 3 Resource Muslim country at Islamist Rule ($name)", Color.Event)
+            removeGlobalEventMarker(Sequestration)
+          }
+      }
+
+      if (globalEventInPlay(SouthChinaSeaCrisis) && game.usPosture == game.getNonMuslim(China).posture) {
+        log("\nChina and the US have the same Posture", Color.Event)
+        removeGlobalEventMarker(SouthChinaSeaCrisis)
+      }
+    }
+
+    val labyrinthOrder = !game.useExpansionRules
+    val awakeningOrder = game.useExpansionRules
+    
     if (askYorN("Really end the turn (y/n)? ")) {
       if (numUnresolvedPlots > 0)
         resolvePlots()
@@ -6630,85 +6807,26 @@ object LabyrinthAwakening {
         log(s"US prestige increases +1 to ${game.prestige}", Color.MapMarker)
       }
 
-      // The Bot's reserves are not cleared
-      clearReserves(game.humanRole)
-
-      if (game.resolvedPlots.nonEmpty) {
-        val num = game.resolvedPlots.size
-        val updatedPlots = game.plotData.copy(
-          resolvedPlots  = Nil,
-          availablePlots = game.availablePlots ::: game.resolvedPlots)
-        game = game.copy(plotData = updatedPlots)
-        log()
-        log(s"Return ${amountOf(num, "resolved plot")} to the available plots box", Color.MapPieces)
-      }
-
       if (game.useExpansionRules) {
+        // Awakening Rule End of Turn order
+        clearReserves(game.humanRole)  // The Bot's reserves are not cleared
+        returnUsedPlotsToAvailable()
         polarization()
         endTurnCivilWarAttrition()
+        // Polarization/Attrition could affect the score
+        // Will Exit game if auto victory has been achieved
+        checkAutomaticVictory()
+        drawCardsForTurn()
+        removeLapsingAnd1stPLot()
+        returnOffMapTroopsToTrack()
+        flipGreenRegimeChangeMarkers()
       }
-
-      checkAutomaticVictory() // Will Exit game if auto victory has been achieved
-
-      val endSouthChinaSeasCrisis = globalEventInPlay(SouthChinaSeaCrisis) &&
-                                    game.usPosture == game.getNonMuslim(China).posture
-
-      // Calculate number of cards drawn
-      drawCardsForTurn()
-
-      val savedEventsLapsing = game.eventsLapsing
-
-      if (game.eventsLapsing.nonEmpty) {
-        log()
-        log("Lapsing Cards")
-        log(separator())
-        removeLapsingEvents(game.eventsLapsing.map(_.cardNumber), endOfTurn = true)
-      }
-
-      game.firstPlotEntry foreach {
-        case LapsingEntry(num, discarded) =>
-          log()
-          log("First Plot Card")
-          log(separator())
-          val newDiscards = if (discarded) {
-            log(s"Remove first plot marker")
-            game.cardsDiscarded
-          }
-          else  {
-            log(s"Discard : ${cardNumAndName(num)}")
-            num :: game.cardsDiscarded
-          }
-          game = game
-            .copy(
-              firstPlotEntry = None,
-              cardsDiscarded = newDiscards
-            )
-      }
-
-      // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
-      // then return the troops to available.
-      val threeResIR = (game.muslims find (m => m.resourceValue >= 3 && m.isIslamistRule))
-      (game.sequestrationTroops, threeResIR) match {
-        case (true, Some(m)) =>
-          log(s"\nThere is a 3 Resource Muslim country at Islamist Rule (${m.name})", Color.Event)
-          removeGlobalEventMarker(Sequestration)
-        case _ =>
-      }
-
-      if (endSouthChinaSeasCrisis) {
-        log("\nChina and the US have the same Posture", Color.Event)
-        removeGlobalEventMarker(SouthChinaSeaCrisis)
-      }
-
-      // For each lapsing card that was removed that affects
-      // off map troops, the troops now must be returned to the
-      // troops track.
-      for (event <- savedEventsLapsing)
-        returnOffMapTroopsForLapsingCard(event.cardNumber)
-
-      for (rc <- game.muslims filter (_.regimeChange == GreenRegimeChange)) {
-        game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
-        log(s"\nFlip green regime change marker in ${rc.name} to its tan side", Color.FlipPieces)
+      else {
+        // Labyrinth rule end of turn order
+        removeLapsingAnd1stPLot()
+        clearReserves(game.humanRole)  // The Bot's reserves are not cleared
+        drawCardsForTurn()
+        flipGreenRegimeChangeMarkers()
       }
 
       // Reset history list of plays. They are not stored in turn files.
@@ -6772,38 +6890,42 @@ object LabyrinthAwakening {
   def removeLapsingEvents(targets: List[Int], endOfTurn: Boolean = false): Unit = {
     val candidates = game.eventsLapsing
       .filter(e => targets.contains(e.cardNumber))
-    val (remove, discard) = candidates
-      .partition(e => !e.discarded && deck(e.cardNumber).remove != NoRemove)
+    val (remove, discards) = candidates
+      .partition(e => deck(e.cardNumber).remove != NoRemove)
 
     def eventNames(events: List[LapsingEntry]) = events
       .sorted
       .map(e => cardNumAndName(e.cardNumber))
 
-    if (remove.nonEmpty) {
-      val display = if (remove.size == 1) "card" else "cards"
-      wrap(s"Remove lapsing $display from the game: ", remove)
+    if (remove.nonEmpty)
+      wrap(s"Remove lapsing cards from the game: ", remove)
         .foreach(line => log(line, Color.Event))
-    }
 
-    if (discard.nonEmpty) {
-        wrap(s"Discard lapsing events: ", discard)
+    if (discards.nonEmpty) {
+      val (markers, cards) = discards.partition(_.discarded)
+      if (cards.nonEmpty)
+        wrap(s"Discard lapsing cards: ", cards)
+          .foreach(line => log(line, Color.Event))
+
+      if (markers.nonEmpty)
+        wrap(s"Remove lapsing markers: ", markers)
           .foreach(line => log(line, Color.Event))
     }
 
-    if (!endOfTurn)
-      for (cardNum <- targets)
-        cardNum match {
-          case TheDoorOfItjihad =>
-            if (game.humanRole == Jihadist)
-              log(s"\nThe $Jihadist player no longer plays cards at random.", Color.Event)
-              else
-              log(s"\nThe $Jihadist Bot may again play Non-US associated events.", Color.Event)
-          case _  =>
-            returnOffMapTroopsForLapsingCard(cardNum)
-        }
+    for (cardNum <- targets)
+      cardNum match {
+        case TheDoorOfItjihad if !endOfTurn =>
+          if (game.humanRole == Jihadist)
+            log(s"\nThe $Jihadist player no longer plays cards at random.", Color.Event)
+          else
+            log(s"\nThe $Jihadist Bot may again play Non-US associated events.", Color.Event)
+
+        case _ =>
+          returnOffMapTroopsForLapsingCard(cardNum)
+      }
 
     val candidateSet = candidates.map(_.cardNumber).toSet
-    val toDiscarded = discard.filterNot(_.discarded).map(_.cardNumber)
+    val toDiscarded = discards.filterNot(_.discarded).map(_.cardNumber)
     val toRemoved = remove.map(_.cardNumber)
     game = game.copy(
       eventsLapsing = game.eventsLapsing.filterNot(e => candidateSet(e.cardNumber)),
@@ -6886,7 +7008,7 @@ object LabyrinthAwakening {
   def programMainMenu(params: UserParams): Unit = {
 
     def gameChoices(games: List[String]): List[(Option[String], (String, Seq[String]))] = {
-      val width = if (games.nonEmpty) games.map(_.length).max else 0
+      val width = longestString(games)
       def display(str: String) = s"${padLeft(str, width)} -"
       val choices = games
         .toList
@@ -6904,7 +7026,7 @@ object LabyrinthAwakening {
     val games = savedGames()
     val choices = List(
       choice(true, "new", "Start a new game"),
-      choice(games.nonEmpty, "resume", "Play a saved game"),
+      choice(games.nonEmpty, "resume", "Resume a saved game"),
       choice(games.nonEmpty, "delete", "Delete a saved game"),
       choice(true, "exit", "Exit the program"),
     ).flatten
@@ -6917,7 +7039,7 @@ object LabyrinthAwakening {
         programMainMenu(params)
 
       case "resume" =>
-        askMenuWithWrap("Play which game:", gameChoices(games), allowAbort = false).head.foreach { name =>
+        askMenuWithWrap("Resume which game:", gameChoices(games), allowAbort = false).head.foreach { name =>
           game = loadMostRecent(name)
           printSummary(game.playSummary)
           playGame()
@@ -6957,13 +7079,13 @@ object LabyrinthAwakening {
       val humanAutoRoll = params.autoDice
         .getOrElse(!askYorN("\nDo you wish to roll your own dice (y/n)? "))
 
-      val gameName = askGameName("\nEnter a name for your new game (blank to Exit): ")
+      val saveName = askGameName("\nEnter a name for your new game (blank to cancel): ")
         .getOrElse(throw CancelNewGame)
 
       val showColor = params.showColor
         .getOrElse(!scala.util.Properties.isWin)
 
-      game = initialGameState(gameName, scenario, gameLength, campaign, humanRole, humanAutoRoll, difficulties, showColor)
+      game = initialGameState(saveName, scenario, gameLength, campaign, humanRole, humanAutoRoll, difficulties, showColor)
 
       logSummary(game.scenarioSummary)
       printSummary(game.scoringSummary)
@@ -6976,6 +7098,18 @@ object LabyrinthAwakening {
       }
 
       scenario.additionalSetup()
+
+      // CWS DEBUG ======================
+      // game = game.copy(
+      //   eventsLapsing = LapsingEntry(117)::LapsingEntry(114, true)::Nil,
+      //   firstPlotEntry = Some(LapsingEntry(32)),
+      //   cardsDiscarded = cardsInSource(FromDrawPile)
+      //     .filter(n => n != 117 && n != 32)
+      //     .drop(8),
+      //   cardsInHand = CardsInHand(us = 1, jihadist = 0)
+      // )
+      // CWS DEBUG ======================
+      
       game = game.copy(turn = 1)
       drawCardsForTurn()  // Display and save card draw for first turn
       saveGameState(Some("Beginning of game"))
@@ -6983,6 +7117,7 @@ object LabyrinthAwakening {
     }
     catch {
       case CancelNewGame =>
+      // case QuitGame => // CWS DEBUG
     }
   }
 
@@ -7011,7 +7146,7 @@ object LabyrinthAwakening {
         if (saved.isEmpty)
           println("You do not have any saved games")
         else {
-          val fmt = "%%-%ds - %%s".format((saved map (_.length)).max)
+          val fmt = "%%-%ds - %%s".format(longestString(saved))
           for (s <- saved)
             println(fmt.format(s, loadGameDescription(s)))
         }
@@ -7038,9 +7173,9 @@ object LabyrinthAwakening {
   def parseCommandLine(args: Seq[String], userParams: UserParams): UserParams = {
     import org.sellmerfud.optparse._
     def diffHelp(diffs: Seq[BotDifficulty]): Seq[String] = {
-      val maxLen = (diffs map (_.name.length)).max
+      val maxLen = longestString(diffs.map(_.name))
       val fmt = "%%-%ds - %%s".format(maxLen)
-      diffs map (d => fmt.format(d.name, d.description))
+      diffs.map(d => fmt.format(d.name, d.description))
     }
     case class JihadDiff(diff: BotDifficulty)
     case class USDiff(diff: BotDifficulty)
@@ -7247,7 +7382,7 @@ object LabyrinthAwakening {
 
   def askDifficulties(botRole: Role): List[BotDifficulty] = {
     val levels = if (botRole == US) AllUSLevels else AllJihadistLevels
-    val fmt = "%%-%ds".format((levels map (_.name.length)).max)
+    val fmt = "%%-%ds".format(longestString(levels.map(_.name)))
 
     def nextChoice(num: Int, prev: Option[BotDifficulty], levels: List[BotDifficulty]): List[(String, String)] =
       (prev, levels) match {
@@ -7463,7 +7598,7 @@ object LabyrinthAwakening {
       Command("help", """List available commands"""),
       Command("quit", """Quit the game.  All plays for the current turn will be saved.""")
     ) filter {
-      case Command("rollback", _)            => mostRecentSaveNumber(game.name).getOrElse(0) > 0
+      case Command("rollback", _)            => mostRecentSaveNumber(game.saveName).getOrElse(0) > 0
       case Command("remove cadre", _)        => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
       case Command("add awakening cards", _) => game.currentMode == LabyrinthMode && game.campaign
       case Command("add forever cards", _)   => game.currentMode == AwakeningMode && game.campaign
@@ -8765,17 +8900,19 @@ object LabyrinthAwakening {
 
     def nextAdjustment(): Unit = {
       val choices = List(
-        choice(cardsInSource(FromDrawPile).nonEmpty,    Some(FromDrawPile), "The deck or a player's/bot's hand"),
-        choice(cardsInSource(FromDiscard).nonEmpty, Some(FromDiscard), "The discard pile"),
-        choice(cardsInSource(FromLapsing).nonEmpty, Some(FromLapsing), "The lapsing box"),
-        choice(cardsInSource(From1stPlot).nonEmpty, Some(From1stPlot), "The 1st plot box"),
-        choice(cardsInSource(FromRemoved).nonEmpty,  Some(FromRemoved), "The removed cards"),
+        choice(cardsInSource(FromDrawPile).nonEmpty, Some(Left(FromDrawPile)), "The deck or a player's/bot's hand"),
+        choice(true,                                 Some(Right(US)),          "Number of cards in US hand"),
+        choice(true,                                 Some(Right(Jihadist)),    "Number of cards in Jihadist hand"),
+        choice(cardsInSource(FromDiscard).nonEmpty,  Some(Left(FromDiscard)),  "The discard pile"),
+        choice(cardsInSource(FromLapsing).nonEmpty,  Some(Left(FromLapsing)),  "The lapsing box"),
+        choice(cardsInSource(From1stPlot).nonEmpty,  Some(Left(From1stPlot)),  "The 1st plot box"),
+        choice(cardsInSource(FromRemoved).nonEmpty,  Some(Left(FromRemoved)),  "The removed cards"),
         choice(true, None, "Finished moving cards"),
       ).flatten
 
       askMenu("Choose location of card to move:", choices, allowAbort = false).head match {
         case None => // Exit function
-        case Some(from) =>
+        case Some(Left(from)) =>
           getCardToMove(from) match {
           case None =>
             nextAdjustment()
@@ -8821,7 +8958,22 @@ object LabyrinthAwakening {
             }
             nextAdjustment()
         }
-      }
+
+      case Some(Right(US)) =>
+        val maximum = 20 min (numCardsInDrawPile() + game.cardsInHand.us)
+        displayLine(s"\nCards in US hand: ${game.cardsInHand.us}, Cards in Draw pile: ${numCardsInDrawPile()}")
+        val newNum = askInt("\nNew number of cards in hand: ", 0, maximum)
+        game = game.copy(cardsInHand = game.cardsInHand.copy(us = newNum))
+        nextAdjustment()
+
+      case Some(Right(Jihadist)) =>
+        val maximum = 20 min (numCardsInDrawPile() + game.cardsInHand.jihadist)
+        displayLine(s"\nCards in Jihadist hand: ${game.cardsInHand.jihadist}, Cards in Draw pile: ${numCardsInDrawPile()}")
+        val newNum = askInt("\nNew number of cards in hand: ", 0, maximum)
+        game = game.copy(cardsInHand = game.cardsInHand.copy(jihadist = newNum))
+        nextAdjustment()
+    }
+
     }
 
     nextAdjustment()
