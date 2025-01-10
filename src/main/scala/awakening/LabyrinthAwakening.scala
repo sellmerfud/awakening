@@ -4044,10 +4044,14 @@ object LabyrinthAwakening {
       case _ =>
         s"(turn ${game.turn} - ${amountOf(cardsPlayed, "card")} played)"
     }
+    val scName = if (game.campaign)
+      s"${game.scenarioName} campaign"
+    else
+      game.scenarioName
     val gameDesc    = Seq(
-      s"scenario: ${game.scenarioName}",
+      s"scenario: $scName",
       s"playing: ${game.humanRole}",
-      s"last action: $segmentDesc",
+      s"latest: $segmentDesc",
       turnInfo
     ).filterNot(_.isEmpty).mkString(", ")
     val segment = GameSegment(save_number, Seq(segmentDesc, turnInfo).filterNot(_.isEmpty))
@@ -7048,7 +7052,8 @@ object LabyrinthAwakening {
 
       case "delete" =>
         askMenuWithWrap("Delete which game:", gameChoices(games), allowAbort = false).head.foreach { name =>
-          (gamesDir/name).rmtree()
+          if (askYorN(s"\nReally delete game [$name] (y/n)? "))
+            (gamesDir/name).rmtree()
         }
         programMainMenu(params)
 
