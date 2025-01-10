@@ -1960,7 +1960,10 @@ object JihadistBot extends BotHelpers {
             game.getCountry(toName).activeCells > 0
           val inplaceSource = if (inplaceOK) List(toName) else Nil
           // When Biometrics is in play, travelSources() will only return adjacent countries
-          val candidates = (travelSources(toName, attempts):::inplaceSource).filterNot(alreadyTried.contains)
+          val candidates = if (adjacentOnly)  
+            (adjacentTravelSources(toName, attempts):::inplaceSource).filterNot(alreadyTried)
+          else
+           (travelSources(toName, attempts):::inplaceSource).filterNot(alreadyTried)
 
           travelFromTarget(toName, candidates) match {
             case None => attempts  // No more viable countries to travel from
@@ -2075,22 +2078,8 @@ object JihadistBot extends BotHelpers {
         if (remaining == 0)
           attempts  // We've used all available Ops
         else {
-          val canTravelFrom = (c: Country) =>
-            !alreadyTried(c.name) &&
-            hasCellForTravelWithPrevious(c, toName, attempts)
-          val canTravelInPlace =
-            !game.botEnhancements &&
-            !alreadyTried(toName) &&
-            game.getCountry(toName).activeCells > 0
-          val candidates = if (lapsingEventInPlay(Biometrics)) {
-            val toCountry = if (canTravelInPlace)
-              List(game.getCountry(toName))
-            else
-              Nil
-            countryNames((game.adjacentCountries(toName) filter canTravelFrom) ::: toCountry)
-          }
-          else
-            countryNames(game.countries filter canTravelFrom)
+
+          val candidates = travelSources(toName, attempts).filterNot(alreadyTried)          
 
           travelFromTarget(toName, candidates) match {
             case None => attempts  // No more viable countries to travel from
