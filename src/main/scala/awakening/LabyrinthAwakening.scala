@@ -3740,7 +3740,7 @@ object LabyrinthAwakening {
 
       if (toN.nonEmpty)
         b += s"Flip the country mat to the non-Muslim side"
-      showC(fromM, toM orElse toN, _.governance, "governance")
+      showC(fromM, toM orElse toN, m => govToString(m.governance), "governance")
       showM(fromM, toM, _.alignment, "alignment")
       showC(fromM, toM orElse toN, _.sleeperCells, "sleeper cells")
       showC(fromM, toM orElse toN, _.activeCells, "active cells")
