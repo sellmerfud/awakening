@@ -61,7 +61,7 @@ object Card_252 extends Card(252, "Trump Tweets", US, 1, NoRemove, NoLapsing, No
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = botWillPlayEvent(role)
+  def botWillPlayEvent(role: Role): Boolean = Card_251.botWillPlayEvent(role)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
