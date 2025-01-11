@@ -128,6 +128,8 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
       }
       else {
         addEventTarget(name)
+        if (game.getCountry(name).isMuslim && lapsingEventInPlay(ArabWinter))
+          displayLine("\nCannot place awakening/reaction markers. [Arab Winter]", Color.Info)
         askMenu("Choose one:", choices).head match {
           case "+aid" => addAidMarker(name)
           case "-aid" => removeAidMarker(name)

@@ -78,16 +78,20 @@ object Card_157 extends Card(157, "Limited Deployment", US, 3, NoRemove, NoLapsi
   override
   def executeEvent(role: Role): Unit = {
     val (target, adjacent) = if (isHuman(role)) {
-      val t = askCountry("Select country: ", getCandidates())
-      awakeningCandidates(t) match {
-        case Nil =>
-          log("\nThere are no adjacent countries that can take an awakening marker.", Color.Event)
-          (t, None)
-        case _ if lapsingEventInPlay(ArabWinter) =>
-          (t, None)
-        case candidates =>
-          (t, Some(askCountry("Place awakening marker in which adjacent country: ", candidates)))
+      val target = askCountry("Select country: ", getCandidates())
+      val adjacent = if( lapsingEventInPlay(ArabWinter)) {
+        log("\nAwakening markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
+        None
       }
+      else 
+        awakeningCandidates(target) match {
+          case Nil =>
+            log("\nThere are no adjacent countries that can take an awakening marker.", Color.Event)
+            None
+          case candidates =>
+            Some(askCountry("Place awakening marker in which adjacent country: ", candidates))
+        }
+      (target, adjacent)
     }
     else {
       val t = USBot.deployToPriority(USBot.highestCellsMinusTandM(getCandidates())).get
@@ -97,9 +101,6 @@ object Card_157 extends Card(157, "Limited Deployment", US, 3, NoRemove, NoLapsi
     addEventTarget(target)
     moveTroops("track", target, 2 min game.troopsAvailable)
     addAidMarker(target)
-    if (lapsingEventInPlay(ArabWinter))
-      log("\nAwakening markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
-    else
-      adjacent foreach { name => addAwakeningMarker(name) }
+    adjacent foreach { name => addAwakeningMarker(name) }
   }
 }

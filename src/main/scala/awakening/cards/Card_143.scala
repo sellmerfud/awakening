@@ -87,7 +87,7 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
-  def awakeingCandidates = if (lapsingEventNotInPlay(ArabWinter))
+  def awakeingCandidates = if (lapsingEventInPlay(ArabWinter))
     Nil
   else
     countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
@@ -115,6 +115,8 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
         choice(true,               "posture",   "Select posture of 1 Schengen country"),
         choice(true,               "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
       ).flatten
+
+      displayLine("\nCannot place awakening markers. [Arab Winter]", Color.Info)
 
       askMenu(s"Do any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
         println()
