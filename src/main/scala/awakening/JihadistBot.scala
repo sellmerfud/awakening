@@ -1710,8 +1710,8 @@ object JihadistBot extends BotHelpers {
   // - In Philippines (to prevent disrupt if Abu Sayyaf marker is or becomes present).
   // - US, UK, Canada (unless Wiretapping has been blocked by Leak)
   // Note: Abu Sayyaf and Wiretapping are only available in Labyrinth games / campaigns.
-
-  def voluntaryCadreRemoval(): Unit = {
+  // Returns true if at least one cadres is removed
+  def voluntaryCadreRemoval(): Boolean = {
     val isCandidate = (c: Country) => {
       val WireTapping = Set(UnitedStates, UnitedKingdom, Canada)
       c match {
@@ -1735,10 +1735,13 @@ object JihadistBot extends BotHelpers {
 
     game.countries.filter(c=> c.hasCadre && isCadreRemovalCandidate(c)) match {
       case Nil =>
+        false
       case candidates =>
         log(s"\nThe $Jihadist Bot chooses to voluntarily remove ${amountOf(candidates.size, "cadre")}", Color.Info)
         for (country <- candidates)
           removeCadreFromCountry(country.name)
+        game = game.copy(plays = VoluntaryCadreRemoval(candidates.size)::game.plays)
+        true
     }
   }
 

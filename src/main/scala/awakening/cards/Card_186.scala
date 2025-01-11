@@ -135,7 +135,7 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
       log("non-US associated 3 Ops card", Color.Event)
       if (askYorN("\nDo you wish to discard a non-US associated 3 Ops card? (y/n) ")) {
         askCardsDiscarded(Jihadist, 1)   // Will decrease cards in hand by 1
-        ignoreDiscardAtEndOfTurn()
+        setIgnoreDiscardAtEndOfTurn(true)
       }
     }
     else

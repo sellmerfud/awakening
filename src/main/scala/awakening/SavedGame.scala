@@ -200,6 +200,8 @@ object SavedGame {
         Map("role" -> role.toString, "cardNum" -> cardNum, "additionalCardNum" -> card2)
       case PlayedReassement(card1, card2) =>
         Map("card1" -> card1, "card2"   -> card2)
+      case VoluntaryCadreRemoval(num) =>
+        Map("num" -> num)
       case PlotsResolved(num) =>
         Map("num" -> num)
       case AdjustmentMade(desc) =>
@@ -220,6 +222,8 @@ object SavedGame {
       // Account for misspelling in earlier versions
       case "PlayedReassessment" | "PlayedReassement" =>
         PlayedReassement(asInt(params("card1")), asInt(params("card2")))
+      case "VoluntaryCadreRemoval" =>
+        VoluntaryCadreRemoval(asInt(params("num")))
       case "PlotsResolved" =>
         PlotsResolved(asInt(params("num")))
       case "AdjustmentMade" =>
@@ -342,6 +346,7 @@ object SavedGame {
       "history"              -> gameState.history,
       "offMapTroops"         -> gameState.offMapTroops,
       "reserves"             -> reservesToMap(gameState.reserves),
+      "activeRole"           -> gameState.activeRole.toString,
       "cardsInUse"           -> cardsInUseToMap(gameState.cardsInUse),
       "cardsInHand"          -> cardsInHandToMap(gameState.cardsInHand),
       "plays"                -> gameState.plays.map(playToMap),
@@ -402,6 +407,7 @@ object SavedGame {
       asBoolean(data("sequestrationTroops")),
       asInt(data("offMapTroops")),
       reservesFromMap(asMap(data("reserves"))),
+      Role(asString(data("activeRole"))),
       cardsInUseFromMap(asMap(data("cardsInUse"))),
       cardsInHandFromMap(asMap(data("cardsInHand"))),
       asList(data("plays")).map(p => playFromMap(asMap(p))),
