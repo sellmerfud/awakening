@@ -107,7 +107,7 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
       // to travel a cell that it normally would not use
       val allTravellers = countryNames(game.countries.filter(c => JihadistBot.unusedCells(c) > 0))
       if (numDestinations < 2) {
-        val candidates = Schengen.filter(namem => !alreadyTried(name) && JihadistBot.canTravelTo(name))
+        val candidates = Schengen.filter(name => !alreadyTried(name) && JihadistBot.canTravelTo(name))
         val to   = JihadistBot.posturePriority(candidates).get
         val preferredTravellers = countryNames(game.countries.filter(JihadistBot.hasCellForTravel(_, to)))
         val from = JihadistBot.travelFromTarget(to, preferredTravellers.filterNot(_ == to)) orElse {
