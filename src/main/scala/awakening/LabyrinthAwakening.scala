@@ -3959,6 +3959,33 @@ object LabyrinthAwakening {
       log(text, color)
   }
 
+  def printHistorySegment(save_number: Int, last_save_number: Int, optWriter: Option[java.io.Writer]): Unit = {
+    if (save_number <= last_save_number) {
+      val header   = s"\n>>> History of save point $save_number <<<"
+      val log_path = gamesDir/game.saveName/getLogName(save_number)
+
+      val entries = if (log_path.exists)
+        SavedGame.loadLog(log_path)
+      else
+        Vector.empty
+
+      optWriter match {
+        case None =>
+          displayLine(header, Some(Color.Green))
+          displayLine(separator(char = '='), Some(Color.Green))
+          for (LogEntry(line, color) <- entries)
+            displayLine(line, color)
+
+        case Some(stream) =>
+          stream.write(header + lineSeparator)
+          stream.write(separator() + lineSeparator)
+          for (LogEntry(line, _) <- entries)
+            stream.write(line + lineSeparator)
+      }
+      printHistorySegment(save_number + 1, last_save_number, optWriter)
+    }
+  }
+  
   // Display some or all of the game log.
   // usage:
   // history            - Shows the log starting from the most recent save point (Same as history -1)
@@ -3968,7 +3995,7 @@ object LabyrinthAwakening {
   // history -n num     - Shows num log entries starting from the nth most recent save point
   // history all        - Shows the entire log (Same as history 0)
   // You may add >file to the end of any history command to write the history to disk.""".stripMargin
-  def showHistory(input: Option[String]): Unit = {
+  def historyCommand(input: Option[String]): Unit = {
     case class Error(msg: String) extends Exception
     try {
       def redirect(tokens: List[String]): Option[Pathname] = {
@@ -3981,34 +4008,7 @@ object LabyrinthAwakening {
         }
       }
 
-      def printSegment(save_number: Int, last_save_number: Int, path: Option[Pathname]): Unit = {
-        if (save_number <= last_save_number) {
-          val header   = s"\n>>> History of save point $save_number <<<"
-          val log_path = gamesDir/game.saveName/getLogName(save_number)
 
-          val entries = if (log_path.exists)
-            SavedGame.loadLog(log_path)
-          else
-            Vector.empty
-
-          path match {
-            case None =>
-              displayLine(header, Some(Color.Green))
-              displayLine(separator(char = '='), Some(Color.Green))
-              for (LogEntry(line, color) <- entries)
-                displayLine(line, color)
-
-            case Some(path) =>
-              path.appender { stream =>
-                stream.write(header + lineSeparator)
-                stream.write(separator() + lineSeparator)
-                for (LogEntry(line, _) <- entries)
-                  stream.write(line + lineSeparator)
-              }
-          }
-          printSegment(save_number + 1, last_save_number, path)
-        }
-      }
 
       val maxIndex = game.history.size - 1
       val NUM      = """(-?\d+)""".r
@@ -4034,17 +4034,17 @@ object LabyrinthAwakening {
         case c          => (startIndex + (c - 1)) min maxIndex
       }
 
-      // Delete any previous file before we start appending to it.
-      redirect_path foreach { p =>
-        if (p.isDirectory)
-          throw new IllegalArgumentException(s"Cannot redirect to a directory ($p)!")
-        p.delete()
-      }
+      redirect_path match {
+        case None =>
+          printHistorySegment(startIndex, endIndex, None)
 
-      printSegment(startIndex, endIndex, redirect_path)
-
-      redirect_path foreach { p =>
-        println(s"\nHistory was written to file: $p")
+        case Some(path) =>
+          if (path.isDirectory)
+            throw new Error(s"Cannot redirect to a directory ($path)!")
+          path.writer { stream =>
+            printHistorySegment(startIndex, endIndex, Some(stream))
+          }
+          println(s"\nHistory was written to file: $path")
       }
     }
     catch {
@@ -7584,7 +7584,7 @@ object LabyrinthAwakening {
 
   case object History extends UserAction {
     override def perform(args: Option[String]): Unit = {
-      showHistory(args)
+      historyCommand(args)
     }
   }
 
