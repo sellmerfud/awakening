@@ -3874,7 +3874,7 @@ object LabyrinthAwakening {
     if (card.autoTrigger)
       log(s"- The ${card.association} event will automatically trigger")
     else if ((card.association == player || card.association == Unassociated) && playable && !secondCard)
-      log(s"- The ${card.association} event is playable)$fakeNews")
+      log(s"- The ${card.association} event is playable$fakeNews")
     else if ((card.association == player || card.association == Unassociated) && !playable && !secondCard)
       log(s"- The ${card.association} event is not playable")
   }
@@ -4233,7 +4233,7 @@ object LabyrinthAwakening {
           case save_number =>
             if (askYorN(s"Are you sure you want to rollback to this save point? (y/n) ")) {
               // Games are saved at the end of the turn, so we actually want
-              // to load the file with turnNumber -1.
+              // to load the file with save_number -1.
               val target       = save_number - 1
               val oldGameState = game
               game = loadGameState(game.saveName, target)
@@ -7549,6 +7549,8 @@ object LabyrinthAwakening {
       }
 
       game = game.copy(activeRole = oppositeRole(activeRole))
+      saveGameState(Some(s"End of $activeRole action phase"))
+
       if (activeRole == US || endOfTurn)
         resolvePlots()
       if (endOfTurn)
@@ -7597,14 +7599,15 @@ object LabyrinthAwakening {
 
   def getCurrentPhaseCardPlays(): List[CardPlay] =
     game.turnActions
-      .dropWhile(_.isInstanceOf[AdjustmentMade])
+      .dropWhile(a => !a.isInstanceOf[CardPlay])
       .takeWhile(_.isInstanceOf[CardPlay])
       .map(_.asInstanceOf[CardPlay])
 
-  def numCardsPlayedInCurrentPhase() = getCurrentPhaseCardPlays()
-    .takeWhile(_.role == game.activeRole)
-    .map(_.numCards)
-    .sum
+  def numCardsPlayedInCurrentPhase() =
+    getCurrentPhaseCardPlays()
+      .takeWhile(_.role == game.activeRole)
+      .map(_.numCards)
+      .sum
 
   // ---------------------------------------------------
   // This is the main prompt for taking an action during
