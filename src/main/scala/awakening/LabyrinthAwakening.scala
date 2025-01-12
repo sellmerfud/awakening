@@ -1816,8 +1816,8 @@ object LabyrinthAwakening {
       val summary = new Summary
       summary.add(s"Scenario: ${scenarioNameDisplay}", Color.Info)
       summary.add(separator(char = '='), Color.Info)
-      summary.add(s"Game length : ${amountOf(game.gameLength, "deck")}")
       summary.add(s"Game name   : ${saveName}")
+      summary.add(s"Game length : ${amountOf(game.gameLength, "deck")}")
       summary.add(separator())
       summary.add(s"The Bot is playing the $botRole")
       summary.add((if (botRole == US) "US Resolve" else "Jihadist Ideology"))
@@ -3872,11 +3872,11 @@ object LabyrinthAwakening {
     val second = if (secondCard) " [2nd card play]" else ""
     log(s"$player plays $card$second", Color.Other)
     if (card.autoTrigger)
-      log(s"- The ${card.association} event will automatically trigger")
+      log(s"The ${card.association} event will automatically trigger", Color.Other)
     else if ((card.association == player || card.association == Unassociated) && playable && !secondCard)
-      log(s"- The ${card.association} event is playable$fakeNews")
+      log(s"The ${card.association} event is playable$fakeNews", Color.Other)
     else if ((card.association == player || card.association == Unassociated) && !playable && !secondCard)
-      log(s"- The ${card.association} event is not playable")
+      log(s"The ${card.association} event is not playable", Color.Other)
   }
 
   def separator(length: Int = 72, char: Char = '-'): String = char.toString * length
@@ -8230,7 +8230,7 @@ object LabyrinthAwakening {
 
   def humanDeploy(ops: Int): Unit = {
     log()
-    log(s"$US performs a Deploy operation")
+    log(s"\n$US performs a Deploy operation")
     log(separator())
     // If the only
     val (from, to) = game.deployTargets(ops).get
@@ -8292,8 +8292,7 @@ object LabyrinthAwakening {
   }
 
   def humanRegimeChange(): Unit = {
-    log()
-    log(s"$US performs a Regime Change operation")
+    log(s"\n$US performs a Regime Change operation")
     log(separator())
     val dest      = askCountry("Regime change in which country: ", game.regimeChangeTargets)
     val source    = askCountry("Deploy troops from: ", game.regimeChangeSourcesFor(dest))
@@ -8305,8 +8304,7 @@ object LabyrinthAwakening {
   }
 
   def humanWithdraw(): Unit = {
-    log()
-    log(s"$US performs a Withdraw operation")
+    log(s"\n$US performs a Withdraw operation")
     log(separator())
     val source = askCountry("Withdraw troops from which country: ", game.withdrawFromTargets)
     val dest   = askCountry("Deploy withdrawn troops to: ", (game.withdrawToTargets filter (_ != source)))
@@ -8316,8 +8314,7 @@ object LabyrinthAwakening {
   }
 
   def humanDisrupt(ops: Int): Unit = {
-    log()
-    log(s"$US performs a Disrupt operation")
+    log(s"\n$US performs a Disrupt operation")
     log(separator())
     val target = askCountry("Disrupt in which country: ", game.disruptTargets(ops))
     addOpsTarget(target)
@@ -8336,8 +8333,7 @@ object LabyrinthAwakening {
   }
 
   def humanAlert(): Unit = {
-    log()
-    log(s"$US performs an Alert operation")
+    log(s"\n$US performs an Alert operation")
     log(separator())
     val name = askCountry("Alert plot in which country: ", game.alertTargets)
     addOpsTarget(name)
@@ -8345,8 +8341,7 @@ object LabyrinthAwakening {
   }
 
   def humanReassess(): Unit = {
-    log()
-    log(s"$US performs a Reassessment operation")
+    log(s"\n$US performs a Reassessment operation")
     log(separator())
 
     setUSPosture(oppositePosture(game.usPosture))
@@ -8521,8 +8516,7 @@ object LabyrinthAwakening {
 
   def humanRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
     val recruitCells = if (ignoreFunding) game.cellsAvailable else game.cellsToRecruit
-    log()
-    log(s"$Jihadist performs a Recruit operation with ${opsString(ops)}")
+    log(s"\n$Jihadist performs a Recruit operation with ${opsString(ops)}")
     log(separator())
     if (recruitCells == 1)
       log(s"There is 1 cell available for recruitment")
@@ -8610,8 +8604,7 @@ object LabyrinthAwakening {
   }
 
   def humanTravel(ops: Int): Unit = {
-    log()
-    log(s"$Jihadist performs a Travel operation with ${opsString(ops)}")
+    log(s"\n$Jihadist performs a Travel operation with ${opsString(ops)}")
     log(separator())
     log(s"There are ${{amountOf(game.cellsOnMap, "cell")}} on the map")
     val maxRolls    = ops min game.cellsOnMap
@@ -8707,8 +8700,7 @@ object LabyrinthAwakening {
   // ask the user if they want to do Major Jihad.
   def humanJihad(ops: Int): Unit = {
     val Active  = true
-    log()
-    log(s"$Jihadist performs a Jihad operation with ${opsString(ops)}")
+    log(s"\n$Jihadist performs a Jihad operation with ${opsString(ops)}")
     log(separator())
     val jihadCountries = game.muslims filter (_.jihadOK)
     val maxDice = ops min jihadCountries.map (_.totalCells).sum
@@ -8725,8 +8717,7 @@ object LabyrinthAwakening {
     val numPlots = game.plotsAvailableWith(ops).size
     val maxCells = (game.plotTargets map (name => game.getCountry(name).totalCells)).sum
     val maxRolls = ops min maxCells
-    log()
-    log(s"$Jihadist performs a Plot operation with ${opsString(ops)}")
+    log(s"\n$Jihadist performs a Plot operation with ${opsString(ops)}")
     log(separator())
     val cellDisp = if (maxCells == 1) "There is one cell on the map that can plot"
                    else              s"There are $maxCells cells on the map that can plot"

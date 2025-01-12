@@ -1119,8 +1119,7 @@ object USBot extends BotHelpers {
       assert(game.reserves.us >= ops,
          s"expendBotReserves($ops): Only ${opsString(game.reserves.us)} in reserve")
      game = game.copy(reserves = game.reserves.copy(us = game.reserves.us - ops))
-     log()
-     log(s"$US expends ${opsString(ops)} from reserves.  Reserves now ${opsString(game.reserves.us)}")
+     log(s"\n$US expends ${opsString(ops)} from reserves.  Reserves now ${opsString(game.reserves.us)}")
     }
   }
   
@@ -1247,8 +1246,7 @@ object USBot extends BotHelpers {
   
   // Alert the given plot
   def alertPlot(card: Card, plot: PlotInCountry): Unit = {
-    log()
-    log(s"$US performs an Alert operation")
+    log(s"\n$US performs an Alert operation")
     log(separator())
     assert(maxOpsPlusReserves(card) >= 3, "Not enough Ops for Alert")
     if (3 > card.ops)
@@ -1289,7 +1287,8 @@ object USBot extends BotHelpers {
             performCardEvent(card2, US)
 
           expendBotReserves(6 - card.ops - card2.ops)
-          log(s"$US performs a Reassessment operation")
+          log(s"\n$US performs a Reassessment operation")
+          log(separator())
           setUSPosture(newPosture)
           true
         }
@@ -1372,12 +1371,14 @@ object USBot extends BotHelpers {
       expendBotReserves(opsUsed - card.ops)
 
     if (withdraw) {
-      log(s"$US performs a Withdraw operation")
+      log(s"\n$US performs a Withdraw operation")
+      log(separator())
       addOpsTarget(from)
       performWithdraw(from, to, numTroops)
     }
     else {
-      log(s"$US performs a Deploy operation")
+      log(s"\n$US performs a Deploy operation")
+      log(separator())
       addOpsTarget(to)
       moveTroops(from, to, numTroops)
     }
@@ -1390,7 +1391,8 @@ object USBot extends BotHelpers {
     val opsUsed = (game getMuslim target).governance
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
-    log(s"$US performs a Disrupt operation in $target")
+    log(s"\n$US performs a Disrupt operation in $target")
+    log(separator())
     addOpsTarget(target)
     performDisrupt(target)
     opsUsed
@@ -1420,7 +1422,8 @@ object USBot extends BotHelpers {
     val (target, source)  = getTarget(game.regimeChangeTargets)
     if (opsUsed > card.ops)
       expendBotReserves(opsUsed - card.ops)
-    log(s"$US performs a Regime Change operation in $target")
+    log(s"\n$US performs a Regime Change operation in $target")
+    log(separator())
     addOpsTarget(target)
     performRegimeChange(source, target, 6) // Bot always uses exactly 6 troops
     opsUsed
@@ -1480,8 +1483,7 @@ object USBot extends BotHelpers {
       val maxRadOps  = unusedOps + game.reserves.us
       val unusedDisp = amountOf(unusedOps, "unused Op")
       val resDisp    = amountOf(game.reserves.us,"reserve")
-      log()
-      log(s"$US performs Homeland Security with ${unusedDisp} (${resDisp})")
+      log(s"\n$US performs Homeland Security with ${unusedDisp} (${resDisp})")
       log(separator())
       
       def nextAction(completed: Int): Unit = {

@@ -1754,8 +1754,7 @@ object JihadistBot extends BotHelpers {
       assert(game.reserves.jihadist >= ops,
          s"expendBotReserves($ops): Only ${opsString(game.reserves.jihadist)} in reserve")
      game = game.copy(reserves = game.reserves.copy(jihadist = game.reserves.jihadist - ops))
-     log()
-     log(s"$Jihadist expends ${opsString(ops)} from reserves.  Reserves now ${opsString(game.reserves.jihadist)}")
+     log(s"\n$Jihadist expends ${opsString(ops)} from reserves.  Reserves now ${opsString(game.reserves.jihadist)}")
     }
   }
 
@@ -1855,8 +1854,7 @@ object JihadistBot extends BotHelpers {
   def recruitOperation(card: Card, optTarget: Option[String]): Int = {
     if (botRecruitPossible(muslimWithCadreOnly = false)) {
       val recruitOps = game.cellsToRecruit min maxOpsPlusReserves(card)
-      log()
-      log(s"$Jihadist performs a Recruit operation")
+      log(s"\n$Jihadist performs a Recruit operation")
       log(separator())
       if (recruitOps > card.ops)
         expendBotReserves(recruitOps - card.ops)
@@ -2135,12 +2133,10 @@ object JihadistBot extends BotHelpers {
       opsUsed
     }
 
-    log()
     if (adjacentOnly)
-      log(s"$Jihadist performs a Travel operation (from adjacent countries)")
+      log(s"\n$Jihadist performs a Travel operation (from adjacent countries)")
     else
-      log(s"$Jihadist performs a Travel operation")
-
+      log(s"\n$Jihadist performs a Travel operation")
     log(separator())
 
     // If Biometrics is in effect only adjacent travel is allowed.
@@ -2240,8 +2236,7 @@ object JihadistBot extends BotHelpers {
       opsUsed
     }
 
-    log()
-    log(s"$Jihadist performs a Travel operation to Poor/Unmarked Muslim countries")
+    log(s"\n$Jihadist performs a Travel operation to Poor/Unmarked Muslim countries")
     log("where Major Jihad success is possible and with no Troops or Militia")
     log(separator())
 
@@ -2256,8 +2251,7 @@ object JihadistBot extends BotHelpers {
   def plotOperation(card: Card, prestigeFocus: Boolean): Int = {
     val maxCells = (game.plotTargets map game.getCountry map unusedCells).sum
     val maxAttempts = maxOpsPlusReserves(card) min maxCells
-    log()
-    log(s"$Jihadist performs a Plot operation")
+    log(s"\n$Jihadist performs a Plot operation")
     log(separator())
 
     // Return the number of attempts made.
@@ -2316,8 +2310,7 @@ object JihadistBot extends BotHelpers {
   // If ops left over, repeat
   // Returns the number of Ops used.
   def minorJihadOperation(card: Card): Int = {
-    log()
-    log(s"$Jihadist performs a Minor Jihad operation")
+    log(s"\n$Jihadist performs a Minor Jihad operation")
     log(separator())
     val maxJihad = maxOpsPlusReserves(card)
     def nextJihadTarget(completed: Int, alreadyTried: Set[String]): List[JihadTarget] = {
@@ -2361,8 +2354,7 @@ object JihadistBot extends BotHelpers {
 
   // Returns the number of Ops used.
   def majorJihadOperation(card: Card, designatedTarget: Option[String]): Int = {
-    log()
-    log(s"$Jihadist performs a Major Jihad operation")
+    log(s"\n$Jihadist performs a Major Jihad operation")
     log(separator())
     val opsUsed = maxOpsPlusReserves(card)
     val isCandidate = (m: MuslimCountry) =>
