@@ -190,8 +190,8 @@ object SavedGame {
       (asList(data("event")) map asString).toSet
     )
 
-  private def playToMap(play: Play): Map[String, Any] = {
-    val params = play match {
+  private def turnActionToMap(turnAction: TurnAction): Map[String, Any] = {
+    val params = turnAction match {
       case PlayedCard(role, cardNum, None) =>
         Map("role" -> role.toString, "cardNum" -> cardNum)
       case PlayedCard(role, cardNum, Some(SecondCard(card2))) =>
@@ -207,12 +207,12 @@ object SavedGame {
       case AdjustmentMade(desc) =>
         Map("desc" -> desc)
     }
-    Map("playType" -> play.name, "params" -> params)
+    Map("actionType" -> turnAction.name, "params" -> params)
   }
 
-  private def playFromMap(data: Map[String, Any]): Play = {
+  private def turnActionFromMap(data: Map[String, Any]): TurnAction = {
     val params = asMap(data("params"))
-    asString(data("playType")) match {
+    asString(data("actionType")) match {
       case "PlayedCard" if params.contains("secondCardNum") && params("secondCardNum") != null =>
         PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(SecondCard(asInt(params("secondCardNum")))))
       case "PlayedCard" if params.contains("additionalCardNum") && params("additionalCardNum") != null =>
@@ -349,7 +349,7 @@ object SavedGame {
       "activeRole"           -> gameState.activeRole.toString,
       "cardsInUse"           -> cardsInUseToMap(gameState.cardsInUse),
       "cardsInHand"          -> cardsInHandToMap(gameState.cardsInHand),
-      "plays"                -> gameState.plays.map(playToMap),
+      "turnActions"          -> gameState.turnActions.map(turnActionToMap),
       "firstPlotEntry"       -> gameState.firstPlotEntry.map(lapsingEventToMap).getOrElse(null),
       "eventsLapsing"        -> gameState.eventsLapsing.map(lapsingEventToMap),
       "cardsDiscarded"       -> gameState.cardsDiscarded,
@@ -410,7 +410,7 @@ object SavedGame {
       Role(asString(data("activeRole"))),
       cardsInUseFromMap(asMap(data("cardsInUse"))),
       cardsInHandFromMap(asMap(data("cardsInHand"))),
-      asList(data("plays")).map(p => playFromMap(asMap(p))),
+      asList(data("turnActions")).map(p => turnActionFromMap(asMap(p))),
       firstPlotEntry,
       asList(data("eventsLapsing")).map(e => lapsingEventFromMap(asMap(e))),
       asList(data("cardsDiscarded")).map(asInt),

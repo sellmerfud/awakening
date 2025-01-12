@@ -1277,7 +1277,7 @@ object USBot extends BotHelpers {
         val card2 = deck(cardNum)
         if (card2.ops >= opsNeeded) {
           // Replace the head card play with a reassessment 
-          game = game.copy(plays = PlayedReassement(card.number, card2.number) :: game.plays.tail)
+          game = game.copy(turnActions = PlayedReassement(card.number, card2.number) :: game.turnActions.tail)
           logCardPlay(US, card2, false)
           // Check to see if either of the cards played has an auto trigger event.
           // If so the event happens first.

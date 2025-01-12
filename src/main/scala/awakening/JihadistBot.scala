@@ -1740,7 +1740,7 @@ object JihadistBot extends BotHelpers {
         log(s"\nThe $Jihadist Bot chooses to voluntarily remove ${amountOf(candidates.size, "cadre")}", Color.Info)
         for (country <- candidates)
           removeCadreFromCountry(country.name)
-        game = game.copy(plays = VoluntaryCadreRemoval(candidates.size)::game.plays)
+        game = game.copy(turnActions = VoluntaryCadreRemoval(candidates.size)::game.turnActions)
         true
     }
   }

@@ -838,10 +838,10 @@ object LabyrinthAwakening {
     def compare(x: Card, y: Card) = x.number compare y.number
   }
 
-  sealed trait Play {
+  sealed trait TurnAction {
     def name: String  // Used for quantifying type in save game files
   }
-  sealed trait CardPlay extends Play {
+  sealed trait CardPlay extends TurnAction {
     val role: Role
     def numCards: Int
   }
@@ -879,17 +879,17 @@ object LabyrinthAwakening {
     override def numCards = 2
     override def toString() = s"$role played ${cardNumAndName(card1)} and ${cardNumAndName(card2)}"
   }
-  case class PlotsResolved(num: Int) extends Play {
+  case class PlotsResolved(num: Int) extends TurnAction {
     override def name = "PlotsResolved"
     override def toString() = s"$num Plots were resolved"
   }
 
-  case class VoluntaryCadreRemoval(num: Int) extends Play {
+  case class VoluntaryCadreRemoval(num: Int) extends TurnAction {
     override def name = "VoluntaryCadreRemoval"
     override def toString() = s"Jihadist removed ${amountOf(num, "cadre")}"
   }
 
-  case class AdjustmentMade(desc: String) extends Play {
+  case class AdjustmentMade(desc: String) extends TurnAction {
     override def name = "AdjustmentMade"
     override def toString() = s"Adjustment made: $desc"
   }
@@ -985,14 +985,14 @@ object LabyrinthAwakening {
 
   // Add a Played Card to the list of plays
   def addPlayedCard(role: Role, cardNum: Int): Unit ={
-    game = game.copy(plays = PlayedCard(role, cardNum, None) :: game.plays)
+    game = game.copy(turnActions = PlayedCard(role, cardNum, None) :: game.turnActions)
   }
 
   // Add a second card to the most recent Played Card
   // in the list of plays.  The will be done by events
   // and the card counts as the 2nd card of the action phase
   def addSecondCardToPlayedCard(cardNum: Int): Unit = {
-    val newPlays = game.plays match {
+    val newActions = game.turnActions match {
       case PlayedCard(role, firstCard, None) :: others =>
         PlayedCard(role, firstCard, Some(SecondCard(cardNum))) :: others
       case PlayedCard(role, firstCard, Some(_)) :: others =>
@@ -1000,7 +1000,7 @@ object LabyrinthAwakening {
       case _ =>
         throw new IllegalStateException("Cannot add second card here.")
     }
-    game = game.copy(plays = newPlays)
+    game = game.copy(turnActions = newActions)
   }
 
   // Add an additional card to the most recent Played Card
@@ -1008,7 +1008,7 @@ object LabyrinthAwakening {
   // and the card does not count one of the cards oof the
   // current action phase
   def addAdditionalCardToPlayedCard(cardNum: Int): Unit = {
-    val newPlays = game.plays match {
+    val newActions = game.turnActions match {
       case PlayedCard(role, firstCard, None) :: others =>
         PlayedCard(role, firstCard, Some(AdditionalCard(cardNum))) :: others
       case PlayedCard(role, firstCard, Some(_)) :: others =>
@@ -1016,7 +1016,7 @@ object LabyrinthAwakening {
       case _ =>
         throw new IllegalStateException("Cannot add additional card here.")
     }
-    game = game.copy(plays = newPlays)
+    game = game.copy(turnActions = newActions)
   }
 
 
@@ -1372,6 +1372,21 @@ object LabyrinthAwakening {
     Ordering.by { e: LapsingEntry => e.cardNumber }
 
 
+  case class SummaryEntry(text: String, color: Option[Color])
+
+  class Summary {
+    private val _entries = new ListBuffer[SummaryEntry]
+
+    def entries = _entries.toList
+
+    def add(text: String, color: Option[Color] = None): Unit =
+      _entries += SummaryEntry(text, color)
+
+    def addSeq(list: Seq[String]): Unit =
+      list.foreach(text => this.add(text, None))
+  }
+
+
   // A game segment containing a file name for the segment,
   // a short description and the log messages that were generated
   // during the game segment.
@@ -1401,7 +1416,7 @@ object LabyrinthAwakening {
     activeRole: Role                     = Jihadist,
     cardsInUse: Range                    = Range.inclusive(0, 0),  // Range of cards in use (although some may have been removed)
     cardsInHand: CardsInHand             = CardsInHand(0, 0),
-    plays: List[Play]                    = Nil,               // Cards plays/plot resolutions during current turn (most recent first).
+    turnActions: List[TurnAction]       = Nil,      // Cards plays/plot resolutions/adjustments etc. (most recent first).
     firstPlotEntry: Option[LapsingEntry] = None,     // Card number
     eventsLapsing: List[LapsingEntry]    = Nil,         // Card numbers currently lapsing
     cardsDiscarded: List[Int]            = Nil,
@@ -1786,61 +1801,61 @@ object LabyrinthAwakening {
     def plotPossible(ops: Int) = plotsAvailableWith(ops).nonEmpty && plotTargets.nonEmpty
 
     // --- Summaries --------------------------------------
-    def playSummary: Seq[String] = {
-      val b = new ListBuffer[String]
-      b += s"Plays so far this turn"
-      b += separator(char = '=')
-      if (plays.isEmpty)
-        b += "none"
+    def actionSummary: Summary = {
+      val summary = new Summary
+      summary.add(s"Actions this turn", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      if (turnActions.isEmpty)
+        summary.add("none")
       else
-        b ++= plays.reverse map (_.toString)
-      b.toList
+        summary.addSeq(turnActions.reverse.map(_.toString))
+      summary
     }
 
-    def scenarioSummary: Seq[String] = {
-      val b = new ListBuffer[String]
-      b += s"Scenario: ${scenarioNameDisplay}"
-      b += separator(char = '=')
-      b += s"Game length : ${amountOf(game.gameLength, "deck")}"
-      b += s"Game name   : ${saveName}"
-      b += separator()
-      b += s"The Bot is playing the $botRole"
-      b += (if (botRole == US) "US Resolve" else "Jihadist Ideology")
+    def scenarioSummary: Summary = {
+      val summary = new Summary
+      summary.add(s"Scenario: ${scenarioNameDisplay}", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      summary.add(s"Game length : ${amountOf(game.gameLength, "deck")}")
+      summary.add(s"Game name   : ${saveName}")
+      summary.add(separator())
+      summary.add(s"The Bot is playing the $botRole")
+      summary.add((if (botRole == US) "US Resolve" else "Jihadist Ideology"))
 
       for (difficulty <- botDifficulties)
-        b += s"  $difficulty"
+        summary.add(s"  $difficulty")
 
       if (scenarioNotes.nonEmpty) {
-        b += ""
-        b += "Scenario Notes:"
-        b += separator()
-        scenarioNotes foreach (line => b += line)
+        summary.add("")
+        summary.add("Scenario Notes:")
+        summary.add(separator())
+        summary.addSeq(scenarioNotes)
       }
 
-      b += ""
-      b += "Options:"
-      b += separator()
-      b += s"Use Bot enhancments    : ${if (botEnhancements) "yes" else "no"}"
+      summary.add("")
+      summary.add("Options:")
+      summary.add(separator())
+      summary.add(s"Use Bot enhancments    : ${if (botEnhancements) "yes" else "no"}")
       if (manualDieRolls)
-        b += s"Manual die rolls       : ${if (manualDieRolls) "yes" else "no"}"
+        summary.add(s"Manual die rolls       : ${if (manualDieRolls) "yes" else "no"}")
       else
-        b += s"Human auto roll        : ${if (humanAutoRoll) "yes" else "no"}"
-      b += s"Bot logging            : ${if (botLogging) "yes" else "no"}"
-      b += s"Ignore instant vicory  : ${if (ignoreVictory) "yes" else "no"}"
-      b.toList
+        summary.add(s"Human auto roll        : ${if (humanAutoRoll) "yes" else "no"}")
+      summary.add(s"Bot logging            : ${if (botLogging) "yes" else "no"}")
+      summary.add(s"Ignore instant vicory  : ${if (ignoreVictory) "yes" else "no"}")
+      summary
     }
 
-    def scoringSummary: Seq[String] = {
-      val b = new ListBuffer[String]
+    def scoringSummary: Summary = {
+      val summary = new Summary
       val adjacency = humanRole match {
         case Jihadist => if (islamistAdjacency) "with adjacency" else "without adjacency"
         case US       => "adjacency not necessary"
       }
-      b += "Current Score"
-      b += separator(char = '=')
-      b += f"Good/Fair Countries   : $numGoodOrFair%2d | Good Resources   : $goodResources%2d"
-      b += f"Poor/Islamic Countries: $numPoorOrIslamic%2d | Islamic Resources: $islamistResources%2d  ($adjacency)"
-      b.toList
+      summary.add("Current Score", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      summary.add(f"Good/Fair Countries   : $numGoodOrFair%2d | Good Resources   : $goodResources%2d")
+      summary.add(f"Poor/Islamic Countries: $numPoorOrIslamic%2d | Islamic Resources: $islamistResources%2d  ($adjacency)")
+      summary
     }
 
     def worldPostureDisplay = {
@@ -1849,31 +1864,31 @@ object LabyrinthAwakening {
       s"$worldPosture $levelDisp"
     }
 
-    def statusSummary: Seq[String] = {
-      val activePlotCountries = countries filter (_.hasPlots)
-      val b = new ListBuffer[String]
-      b += s"Status"
-      b += separator(char = '=')
-      b += s"Game Mode       : $currentMode"
-      b += s"Deck            : ${ordinal(deckNumber)} of $gameLength"
-      b += separator()
-      b += f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}  (GWOT penalty $gwotPenalty)"
-      b += f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d"
-      b += f"US reserves     : ${reserves.us}%2d   | Jihadist reserves : ${reserves.jihadist}%2d"
-      b += f"US cards        : ${cardsInHand.us}%2d   | Jihadist cards    : ${cardsInHand.jihadist}%2d"
-      b += separator()
+    def statusSummary: Summary = {
+      val activePlotCountries = countries.filter(_.hasPlots)
+      val summary = new Summary
+      summary.add(s"Status", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      summary.add(s"Game Mode       : $currentMode")
+      summary.add(s"Deck            : ${ordinal(deckNumber)} of $gameLength  (${amountOf(numCardsInDrawPile(), "card")} remaining)")
+      summary.add(separator())
+      summary.add(f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}  (GWOT penalty $gwotPenalty)")
+      summary.add(f"US prestige     : $prestige%2d   | Jihadist funding  : $funding%2d")
+      summary.add(f"US reserves     : ${reserves.us}%2d   | Jihadist reserves : ${reserves.jihadist}%2d")
+      summary.add(f"US cards        : ${cardsInHand.us}%2d   | Jihadist cards    : ${cardsInHand.jihadist}%2d")
+      summary.add(separator())
       if (useExpansionRules) {
-        b += f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d"
-        b += s"Troop commitment: $troopCommitment"
-        b += separator()
-        b += f"Cells on track  : $cellsOnTrack%2d   | Militia on track  : $militiaAvailable%2d"
+        summary.add(f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d")
+        summary.add(s"Troop commitment: $troopCommitment")
+        summary.add(separator())
+        summary.add(f"Cells on track  : $cellsOnTrack%2d   | Militia on track  : $militiaAvailable%2d")
       }
       else {
-        b += f"Troops on track : $troopsAvailable%2d   | Troop commitment  : $troopCommitment"
-        b += separator()
-        b += f"Cells on track  : $cellsOnTrack%2d"
+        summary.add(f"Troops on track : $troopsAvailable%2d   | Troop commitment  : $troopCommitment")
+        summary.add(separator())
+        summary.add(f"Cells on track  : $cellsOnTrack%2d")
       }
-      b += f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}"
+      summary.add(f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}")
       if (useExpansionRules) {
         val albaghdadi = (globalEventInPlay(AlBaghdadi), caliphateDeclared) match {
           case (true, true) => Some(s"$AlBaghdadi with Caliphate")
@@ -1886,73 +1901,70 @@ object LabyrinthAwakening {
           case Nil => ""
           case xs  => xs.mkString(" (", ", ", ")")
         }
-        b += separator()
-        b += s"Extra cells$eventDisplay"
+        summary.add(separator())
+        summary.add(s"Extra cells$eventDisplay")
         val extraOnMap = (cellsOnMap - 15) max 0
-        b += f"Available       : ${extraCellsAvailable}%2d   | Capacity          : ${extraCellCapacity}%2d"
-        b += f"On map          : ${extraOnMap}%2d"
+        summary.add(f"Available       : ${extraCellsAvailable}%2d   | Capacity          : ${extraCellCapacity}%2d")
+        summary.add(f"On map          : ${extraOnMap}%2d")
       }
-      b += separator()
-      wrap( "Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist))
-        .foreach(l => b += l)
+      summary.add(separator())
+      summary.addSeq(wrap("Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist)))
       if (useExpansionRules)
-        wrap( "Resolved plots  : ", plotsToStrings(resolvedPlots))
-          .foreach(l => b += l)
-      wrap( "Removed plots   : ", plotsToStrings(removedPlots))
-        .foreach (l => b += l)
+        summary.addSeq(wrap( "Resolved plots  : ", plotsToStrings(resolvedPlots)))
+      summary.addSeq(wrap( "Removed plots   : ", plotsToStrings(removedPlots)))
       if (activePlotCountries.isEmpty)
-        b += s"Active plots    : none"
+        summary.add(s"Active plots    : none")
       else {
-        b += s"Active plots"
+        summary.add(s"Active plots")
         val fmt = "  %%-%ds : %%s".format(longestString(activePlotCountries.map(_.name)))
         for (c <- activePlotCountries) {
           val visible = humanRole == Jihadist || (c.name == UnitedStates && c.hasMarker(NEST))
-          b += fmt.format(c.name, mapPlotsDisplay(c.plots, visible))
+          summary.add(fmt.format(c.name, mapPlotsDisplay(c.plots, visible)))
         }
       }
       val countryMarkers = for (c <- countries; m <- c.markers)
         yield (s"$m (${c.name})")
-      wrap( "Markers         : ", markers ::: countryMarkers)
-        .foreach(l => b += l)
-      val lapsing = eventsLapsing
-        .sorted
-      wrap( "Lapsing         : ", lapsing)
-        .foreach(l => b += l)
-      b += s"1st plot        : ${firstPlotEntry.map(_.toString).getOrElse("none")}"
-      b.toList
+      summary.addSeq(wrap("Markers         : ", markers ::: countryMarkers))
+      summary.addSeq(wrap("Lapsing         : ", eventsLapsing.sorted))
+      summary.add(s"1st plot        : ${firstPlotEntry.map(_.toString).getOrElse("none")}")
+      summary
     }
 
     // If show all is false, then some attributes will not be displayed
     // if they have value of zero.
-    def countrySummary(name: String, showAll: Boolean = false): Seq[String] = {
-      val b = new ListBuffer[String]
+    def countrySummary(name: String): Summary = {
+      val summary = new Summary
       val items = new ListBuffer[String]
-      def item(num: Int, label: String, pluralLabel: Option[String] = None): Unit = {
-        if (showAll || num > 0)
+      def item(str: String): Unit =
+        items += str
+      def numItem(num: Int, label: String, pluralLabel: Option[String] = None): Unit = {
+        if (num > 0)
           items += amountOf(num, label, pluralLabel)
       }
-      def addItems(): Unit = if (items.nonEmpty) b += s"  ${items mkString ", "}"
+      def addItems(): Unit = if (items.nonEmpty)
+        summary.add(s"${items.mkString(", ")}")
 
       getCountry(name) match {
         case n: NonMuslimCountry =>
           val posture = if (n.iranSpecialCase) "(Special Case)" else n.posture
-          b += s"$name -- ${govToString(n.governance)}, $posture, Recruit ${n.recruitNumber}"
-          item(n.activeCells, "Active cell")
-          item(n.sleeperCells, "Sleeper cell")
+          summary.add("")
+          summary.add(s"$name  (Non-Muslim)")
+          summary.add(separator(length = 54))
+          summary.add(s"${govToString(n.governance)}, $posture, Recruit ${n.recruitNumber}")
+          numItem(n.activeCells, "Active cell")
+          numItem(n.sleeperCells, "Sleeper cell")
           if (n.hasCadre)
-            items += "Cadre marker"
-          else if (showAll)
-            items += "No Cadre marker"
-          item(n.troops, "Troop")
+            item("Cadre marker")
+          numItem(n.troops, "Troop")
           addItems()
-          if (showAll || n.hasPlots) {
+          if (n.hasPlots) {
             val visible = humanRole == Jihadist || (name == UnitedStates && n.hasMarker(NEST))
-            b += s"  Plots: ${mapPlotsDisplay(n.plots, visible)}"
+            summary.add(s"Plots: ${mapPlotsDisplay(n.plots, visible)}")
           }
-          if (showAll || n.markers.size > 0)
-            b += s"  Markers: ${markersString(n.markers)}"
+          if (n.markers.size > 0)
+            summary.add(s"Markers: ${markersString(n.markers)}")
           if (n.wmdCache > 0)
-            b += s"  WMD cache: ${amountOf(n.wmdCache, "WMD plot")}"
+            summary.add(s"WMD cache: ${amountOf(n.wmdCache, "WMD plot")}")
 
 
         case m: MuslimCountry =>
@@ -1961,101 +1973,96 @@ object LabyrinthAwakening {
           val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) List("Oil exporter") else Nil
           val autoRecruit = if (m.autoRecruit) List("Auto-Recruit") else Nil
           val desc = (gov :: res :: oil ::: autoRecruit).mkString(", ")
-          b += s"$name -- $desc"
-          item(m.activeCells, "Active cell")
-          item(m.sleeperCells, "Sleeper cell")
+          summary.add("")
+          summary.add(s"$name  (Muslim)")
+          summary.add(separator(length = 54))
+          summary.add(desc)
+          numItem(m.activeCells, "Active cell")
+          numItem(m.sleeperCells, "Sleeper cell")
           if (m.hasCadre)
-            items += "Cadre marker"
-          else if (showAll)
-            items += "No Cadre marker"
-          item(m.troops, "Troop")
-          item(m.militia, "Militia", Some("Militia"))
+            item("Cadre marker")
+          numItem(m.troops, "Troop")
+          numItem(m.militia, "Militia", Some("Militia"))
           addItems()
 
           items.clear()
-          item(m.aidMarkers, "Aid marker")
-          item(m.awakening, "Awakening marker")
-          item(m.reaction, "Reaction marker")
+          numItem(m.aidMarkers, "Aid marker")
+          numItem(m.awakening, "Awakening marker")
+          numItem(m.reaction, "Reaction marker")
           if (m.besiegedRegime)
-            items += "Besieged regime"
-          else if (showAll)
-            items += "No Besieged regime"
+            item("Besieged regime")
           addItems()
 
           items.clear()
-          if (showAll || m.inRegimeChange)
-            items += s"Regime Change (${m.regimeChange})"
+          if (m.inRegimeChange)
+            item(s"Regime Change (${m.regimeChange})")
           if (m.civilWar)
-            items += "Civil War"
-          else if (showAll)
-            items += "No Civil War"
+            item("Civil War")
           if (m.caliphateCapital)
-            items += "Caliphate Capital"
+            item("Caliphate Capital")
           else if (isCaliphateMember(m.name))
-            items += "Caliphate member"
-          else if (showAll)
-            items += "Not Caliphate member"
+            item("Caliphate member")
           addItems()
-          if (showAll || m.hasPlots)
-            b += s"  Plots: ${mapPlotsDisplay(m.plots, humanRole == Jihadist)}"
-          if (showAll || m.markers.size > 0)
-            b += s"  Markers: ${markersString(m.markers)}"
+          if (m.hasPlots)
+            summary.add(s"Plots: ${mapPlotsDisplay(m.plots, humanRole == Jihadist)}")
+          if (m.markers.size > 0)
+            summary.add(s"Markers: ${markersString(m.markers)}")
           if (m.wmdCache > 0)
-            b += s"  WMD cache: ${amountOf(m.wmdCache, "WMD plot")}"
+            summary.add(s"WMD cache: ${amountOf(m.wmdCache, "WMD plot")}")
       }
-      b.toList
+      summary
     }
 
-    def deckSummary: Seq[String] = {
-      val b = new ListBuffer[String]
-      b += "Cards in the deck (or in player/bot hand)"
-      b += separator(char = '=')
-      wrapInColumns("", cardsInDrawPileOrHands().map(deck(_).numAndName)).foreach(l => b += l)
-      b.toList
+    def deckSummary: Summary = {
+      val summary = new Summary
+      summary.add("Cards in the deck (or in player/bot hand)", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      summary.addSeq(wrapInColumns("", cardsInDrawPileOrHands().map(deck(_).numAndName)))
+      summary
     }
 
-    def discardedCardsSummary: Seq[String] = {
-      val b = new ListBuffer[String]
-      b += "Cards in the discard pile"
-      b += separator(char = '=')
-      wrapInColumns("", cardsDiscarded.map(deck(_).numAndName)).foreach(l => b += l)
-      b.toList
+    def discardedCardsSummary: Summary = {
+      val summary = new Summary
+      summary.add("Cards in the discard pile", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      summary.addSeq(wrapInColumns("", cardsDiscarded.map(deck(_).numAndName)))
+      summary
     }
 
-    def removedCardsSummary: Seq[String] = {
-      val b = new ListBuffer[String]
-      b += "Cards removed from the game"
-      b += separator(char = '=')
-      wrapInColumns("", cardsRemoved.map(deck(_).numAndName)).foreach(l => b += l)
-      b.toList
+    def removedCardsSummary: Summary = {
+      val summary = new Summary
+      summary.add("Cards removed from the game", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      summary.addSeq(wrapInColumns("", cardsRemoved.map(deck(_).numAndName)))
+      summary
     }
 
-    def caliphateSummary: Seq[String] = {
-      val b = new ListBuffer[String]
-      b += "Caliphate"
-      b += separator(char = '=')
+    def caliphateSummary: Summary = {
+      val summary = new Summary
+      summary.add("Caliphate", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
       caliphateCapital match {
         case Some(capital) =>
           // Add the capital first
-          b += s"${capital}  (Capital)"
+          summary.add(s"${capital}  (Capital)")
           for (member <- caliphateDaisyChain(capital).sorted.filterNot(_ == capital))
-            b += member
+            summary.add(member)
         case None =>
-          b += "There is no Caliphate declared"
+          summary.add("There is no Caliphate declared")
       }
-      b.toList
+      summary
     }
 
-    def civilWarSummary: Seq[String] = {
-      val b = new ListBuffer[String]
-      b += "Civil Wars"
-      b += separator(char = '=')
-      val civilWars = (muslims filter (_.civilWar)).toList
+    def civilWarSummary: Summary = {
+      val summary = new Summary
+      summary.add("Civil Wars", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      val civilWars = muslims.filter(_.civilWar)
       if (civilWars.isEmpty)
-        b += "There are no counties in civil war"
+        summary.add("There are no counties in civil war")
       else
-        b += civilWars map (_.name) mkString ", "
-      b.toList
+        summary.add(civilWars.map(_.name).mkString(", "))
+      summary
     }
   }
 
@@ -2168,6 +2175,7 @@ object LabyrinthAwakening {
     options: Seq[String],
     abbreviations: Map[String, String] = Map.empty,
     allowAbort: Boolean = false): Option[String] = {
+    val trimmed = input.trim
     // Filter out any abbreviations that do not have a match with one of the options.
     val abbr = abbreviations.filter { case (_, name) => options contains name }
     // When showing the list of options to the user, we want to group
@@ -2181,21 +2189,23 @@ object LabyrinthAwakening {
         case o => o
       }
     }
-    if (input == "?") {
+    if (trimmed.isEmpty)
+      None
+    else if (trimmed == "?") {
       println(s"Enter one of:\n${orList(displayList)}")
       None
     }
     else {
-      val lowerInput = input.toLowerCase
+      val lowerInput = trimmed.toLowerCase
       val allOptions = (options ++ abbr.keys).distinct
       val paired = allOptions.map(name => name -> name.toLowerCase)
       val normalized = allOptions.map(_.toLowerCase)
       val normalizedAbbreviations = for ((a, v) <- abbr) yield (a.toLowerCase, v)
       val matches = paired.filter{ case (_, lower) => lower.startsWith(lowerInput) }
-      // val matches = normalized.distinct.filter(_ startsWith input.toLowerCase)
+      // val matches = normalized.distinct.filter(_ startsWith trimmed.toLowerCase)
       matches match {
         case Seq() =>
-          println(s"'$input' is not valid. Must be one of:\n${orList(displayList)}")
+          println(s"'$trimmed' is not valid. Must be one of:\n${orList(displayList)}")
           None
         case Seq((value, _))  =>
           abbr.get(value) match {
@@ -2222,7 +2232,7 @@ object LabyrinthAwakening {
             .sorted
             .distinct
             .map(x => Some(x) -> x)
-          val prompt = s"'$input' is ambiguous.  Choose one:"
+          val prompt = s"'$trimmed' is ambiguous.  Choose one:"
           askMenu(prompt, choices :+ (None -> "None of the above"), allowAbort = allowAbort).head
 
           // println(s"'$input' is ambiguous. (${orList(ambiguous)})")
@@ -2313,7 +2323,7 @@ object LabyrinthAwakening {
       println(s"$prompt ${candidates.head}")
       candidates.head
     }
-    else if (candidates.size < 10) {
+    else if (candidates.size < 25) {
       askSimpleMenu(prompt, candidates, allowAbort = allowAbort)
     }
     else
@@ -3126,19 +3136,21 @@ object LabyrinthAwakening {
   // Char   - the characters used to select the item
   // String - the text displayed for the item
   //
-  def argMenu[T](prompt: String, items: List[(T, Char, String)]): (T, Option[String]) = {
+  def argMenu[T](prompt: String, items: List[(T, Char, String)], allowNone: Boolean = true): Option[(T, Option[String])] = {
     if (items.isEmpty)
       throw new IllegalArgumentException("argMenu() passed an empty item list")
     val itemMap = items.map(i => i._2 -> i._1).toMap
     val validOptions = orList(items.map(_._2))
 
-    val VALID = raw"\s*(.)(?: (.*))?".r
-    def getInput(): (T, Option[String]) = {
+    val VALID = raw"\s*(.)(?:\s(.*))?".r
+    def getInput(): Option[(T, Option[String])] = {
       readLine(prompt) match {
-        case null | "" =>
+        case x if (x == null || x.trim == "") && allowNone =>
+          None
+        case x if (x == null || x.trim == "") =>
           getInput()
         case VALID(char, args) if itemMap.contains(char(0)) =>
-          (itemMap(char(0)), Option(args).map(_.trim))
+          Some((itemMap(char(0)), Option(args).map(_.trim)))
         case _ =>
           println(s"Not valid. Enter one of: $validOptions")
           getInput()
@@ -3928,14 +3940,16 @@ object LabyrinthAwakening {
   }
 
 
-  def printSummary(summary: Seq[String]): Unit = {
+  def printSummary(summary: Summary): Unit = {
     println()
-    summary foreach println
+    for (SummaryEntry(text, color) <- summary.entries)
+      displayLine(text, color)
   }
 
-  def logSummary(summary: Seq[String]): Unit = {
+  def logSummary(summary: Summary): Unit = {
     log()
-    summary foreach (log(_))
+    for (SummaryEntry(text, color) <- summary.entries)
+      log(text, color)
   }
 
   // Display some or all of the game log.
@@ -4071,12 +4085,12 @@ object LabyrinthAwakening {
     val save_number = game.history.size
     val save_path   = gamesDir/game.saveName/getSaveName(save_number)
     val log_path    = gamesDir/game.saveName/getLogName(save_number)
-    val segmentDesc = desc.orElse(game.plays.headOption.map(_.toString))getOrElse("")
-    val cardsPlayed = game.plays
+    val segmentDesc = desc.orElse(game.turnActions.headOption.map(_.toString))getOrElse("")
+    val cardsPlayed = game.turnActions
       .filter(_.isInstanceOf[CardPlay])
       .map(_.asInstanceOf[CardPlay].numCards)
       .sum
-    val turnInfo = game.plays.headOption match {
+    val turnInfo = game.turnActions.headOption match {
       case Some(_: PlayedReassement) =>
         s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} cards this turn)"
 
@@ -4200,7 +4214,7 @@ object LabyrinthAwakening {
 
       def showPage(pageNum: Int): Unit = {
         val saveChoices: List[(Int, (String, Seq[String]))] = pages(pageNum).toList map {
-          case GameSegment(save_number, summary) => save_number -> (s"Save point ${save_number}:", summary)
+          case GameSegment(save_number, summary) => save_number -> (s"Save point ${save_number} ", summary)
         }
         val otherChoices: List[(Int, (String, Seq[String]))] = List(
           choice(pageNum > firstPage, PAGE_UP,   "Page up, show newer save points ", Seq.empty),
@@ -4209,10 +4223,8 @@ object LabyrinthAwakening {
         ).flatten
 
         val current = game.history.last
-        println()
-        wrap(s"Current save point ${current.save_number}: ", current.summary) foreach (l => println(l))
-        println("\nRollback to the beginning of a previous save point.")
-        println("The save points are displayed with the most recent first.")
+        displayLine("\nRollback to the beginning of a previous save point.", Color.Info)
+        displayLine("The save points are displayed with the most recent first.", Color.Info)
 
         askMenuWithWrap("Choose a save point:", saveChoices:::otherChoices).head match {
           case CANCEL      =>
@@ -5269,7 +5281,7 @@ object LabyrinthAwakening {
   }
 
   def ignoreDiscardAtEndOfTurn() = _ignoreDiscardAtEndOfTurn
-  
+
   def addCardToDiscardPile(cardNumber: Int): Unit = {
     if (cardNumber == CriticalMiddle) {
       log("\nIMPORTANT!", Color.Event)
@@ -6684,7 +6696,7 @@ object LabyrinthAwakening {
         resolvedTargets       = targets,
         resolvedInGreenOnBlue = greenOnBlue
       ),
-      plays = PlotsResolved(unblocked.size) :: game.plays
+      turnActions = PlotsResolved(unblocked.size) :: game.turnActions
     )
     saveGameState()
   }
@@ -6827,68 +6839,67 @@ object LabyrinthAwakening {
     val labyrinthOrder = !game.useExpansionRules
     val awakeningOrder = game.useExpansionRules
 
-    if (askYorN("Really end the turn (y/n)? ")) {
-      if (numUnresolvedPlots > 0)
-        resolvePlots()
+    if (numUnresolvedPlots > 0)
+      resolvePlots()
 
-      log()
-      log("End of turn")
-      log(separator(char='='))
+    log()
+    log("End of turn")
+    log(separator(char='='))
 
-      if ((globalEventInPlay(Pirates1) && pirates1ConditionsInEffect) ||
-          (globalEventInPlay(Pirates2) && pirates2ConditionsInEffect)) {
-        log("No funding drop because Pirates is in effect", Color.Info)
-      }
-      else {
-        game = game.adjustFunding(-1)
-        log(s"Jihadist funding drops -1 to ${game.funding}", Color.MapMarker)
-      }
-      if (globalEventInPlay(Fracking)) {
-        game = game.adjustFunding(-1)
-        log(s"Jihadist funding drops -1 to ${game.funding} because Fracking is in effect", Color.MapMarker)
-      }
-      if (game.numIslamistRule > 0) {
-        game = game.adjustPrestige(-1)
-        log(s"US prestige drops -1 to ${game.prestige} (At least 1 country is under Islamist Rule)", Color.MapMarker)
-      }
-      else
-        log(s"US prestige stays at ${game.prestige} (No countries under Islamist Rule)", Color.Info)
-
-      val (worldPosture, level) = game.gwot
-      if (game.usPosture == worldPosture && level == 3) {
-        game = game.adjustPrestige(1)
-        log(s"World posture is $worldPosture $level and US posture is ${game.usPosture}", Color.MapMarker)
-        log(s"US prestige increases +1 to ${game.prestige}", Color.MapMarker)
-      }
-
-      if (game.useExpansionRules) {
-        // Awakening Rule End of Turn order
-        clearReserves(game.humanRole)  // The Bot's reserves are not cleared
-        returnUsedPlotsToAvailable()
-        polarization()
-        endTurnCivilWarAttrition()
-        // Polarization/Attrition could affect the score
-        // Will Exit game if auto victory has been achieved
-        checkAutomaticVictory()
-        drawCardsForTurn()
-        removeLapsingAnd1stPLot()
-        returnOffMapTroopsToTrack()
-        flipGreenRegimeChangeMarkers()
-      }
-      else {
-        // Labyrinth rule end of turn order
-        removeLapsingAnd1stPLot()
-        clearReserves(game.humanRole)  // The Bot's reserves are not cleared
-        drawCardsForTurn()
-        flipGreenRegimeChangeMarkers()
-      }
-
-      // Reset history list of plays. They are not stored in turn files.
-      val turnNum = game.turn
-      game = game.copy(plays = Nil)
-      game = game.copy(turn = game.turn + 1)
-      saveGameState(Some(s"End of turn $turnNum"), suppressCardsPlayed = true)
+    if ((globalEventInPlay(Pirates1) && pirates1ConditionsInEffect) ||
+        (globalEventInPlay(Pirates2) && pirates2ConditionsInEffect)) {
+      log("No funding drop because Pirates is in effect", Color.Info)
     }
+    else {
+      game = game.adjustFunding(-1)
+      log(s"Jihadist funding drops -1 to ${game.funding}", Color.MapMarker)
+    }
+    if (globalEventInPlay(Fracking)) {
+      game = game.adjustFunding(-1)
+      log(s"Jihadist funding drops -1 to ${game.funding} because Fracking is in effect", Color.MapMarker)
+    }
+    if (game.numIslamistRule > 0) {
+      game = game.adjustPrestige(-1)
+      log(s"US prestige drops -1 to ${game.prestige} (At least 1 country is under Islamist Rule)", Color.MapMarker)
+    }
+    else
+      log(s"US prestige stays at ${game.prestige} (No countries under Islamist Rule)", Color.Info)
+
+    val (worldPosture, level) = game.gwot
+    if (game.usPosture == worldPosture && level == 3) {
+      game = game.adjustPrestige(1)
+      log(s"World posture is $worldPosture $level and US posture is ${game.usPosture}", Color.MapMarker)
+      log(s"US prestige increases +1 to ${game.prestige}", Color.MapMarker)
+    }
+
+    if (game.useExpansionRules) {
+      // Awakening Rule End of Turn order
+      clearReserves(game.humanRole)  // The Bot's reserves are not cleared
+      returnUsedPlotsToAvailable()
+      polarization()
+      endTurnCivilWarAttrition()
+      // Polarization/Attrition could affect the score
+      // Will Exit game if auto victory has been achieved
+      checkAutomaticVictory()
+      drawCardsForTurn()
+      removeLapsingAnd1stPLot()
+      returnOffMapTroopsToTrack()
+      flipGreenRegimeChangeMarkers()
+    }
+    else {
+      // Labyrinth rule end of turn order
+      removeLapsingAnd1stPLot()
+      clearReserves(game.humanRole)  // The Bot's reserves are not cleared
+      drawCardsForTurn()
+      flipGreenRegimeChangeMarkers()
+    }
+
+    // Reset history list of plays. They are not stored in turn files.
+    val turnNum = game.turn
+    game = game.copy(turnActions = Nil)
+    game = game.copy(turn = game.turn + 1)
+    saveGameState(Some(s"End of turn $turnNum"), suppressCardsPlayed = true)
+    pause()
   }
 
   // Take troops from available if possible, otherwise we must
@@ -7095,7 +7106,7 @@ object LabyrinthAwakening {
       case "resume" =>
         askMenuWithWrap("Resume which game:", gameChoices(games), allowAbort = false).head.foreach { name =>
           game = loadMostRecent(name)
-          printSummary(game.playSummary)
+          printSummary(game.actionSummary)
           playGame()
         }
         programMainMenu(params)
@@ -7209,7 +7220,7 @@ object LabyrinthAwakening {
       }
       else if (cmdLineParams.resumeName.nonEmpty) {
         game = loadMostRecent(cmdLineParams.resumeName.get)
-        printSummary(game.playSummary)
+        printSummary(game.actionSummary)
         playGame()
       }
       else if (cmdLineParams.deleteName.nonEmpty) {
@@ -7470,7 +7481,7 @@ object LabyrinthAwakening {
       log(reason, Color.Info)
 
       if (askExitAfterWin()) {
-        game = game.copy(plays = Nil)
+        game = game.copy(turnActions = Nil)
         saveGameState(Some(summary))
         throw QuitGame
       }
@@ -7505,11 +7516,11 @@ object LabyrinthAwakening {
   def numUnresolvedPlots: Int = game.countries.foldLeft(0) { (sum, c) => sum + c.plots.size }
 
 
-  sealed trait Action {
+  sealed trait UserAction {
     def perform(args: Option[String]): Unit
   }
 
-  case object PlayCard extends Action {
+  case object PlayCard extends UserAction {
     override def perform(args: Option[String]): Unit =
       game.activeRole match {
         case US => usCardPlay(args)
@@ -7518,7 +7529,7 @@ object LabyrinthAwakening {
   }
 
   // This action is only take by the Human US player
-  case object DiscardLast extends Action {
+  case object DiscardLast extends UserAction {
     override def perform(args: Option[String]): Unit = {
       askCardNumber(FromRole(US)::Nil, "Card # to discard (blank to cancel): ", args)
         .foreach { cardNumber =>
@@ -7528,8 +7539,8 @@ object LabyrinthAwakening {
       }
     }
   }
-  
-  case object EndPhase extends Action {
+
+  case object EndPhase extends UserAction {
     override def perform(args: Option[String]): Unit = {
       val activeRole = game.activeRole
       val endOfTurn = activeRole match {
@@ -7544,48 +7555,48 @@ object LabyrinthAwakening {
         endTurn()
     }
   }
-  
-  case object RemoveCadre extends Action {
+
+  case object RemoveCadre extends UserAction {
     override def perform(args: Option[String]): Unit = {
       val numRemoved = humanVoluntarilyRemoveCadre()
       if (numRemoved > 0) {
-        game = game.copy(plays = VoluntaryCadreRemoval(numRemoved)::game.plays)
+        game = game.copy(turnActions = VoluntaryCadreRemoval(numRemoved)::game.turnActions)
         saveGameState()
       }
     }
   }
-  
-  case object ShowState extends Action {
+
+  case object ShowState extends UserAction {
     override def perform(args: Option[String]): Unit = {
       showCommand(args)
     }
   }
-  
-  case object History extends Action {
+
+  case object History extends UserAction {
     override def perform(args: Option[String]): Unit = {
       showHistory(args)
     }
   }
-  
-  case object Rollback extends Action {
+
+  case object Rollback extends UserAction {
     override def perform(args: Option[String]): Unit = {
       rollback()
     }
   }
-  
-  case object Adjust extends Action {
+
+  case object Adjust extends UserAction {
     override def perform(args: Option[String]): Unit = {
       adjustSettings(args)
     }
   }
-  
-  case object Quit extends Action {
+
+  case object Quit extends UserAction {
     override def perform(args: Option[String]): Unit =
       throw QuitGame
   }
-  
+
   def getCurrentPhaseCardPlays(): List[CardPlay] =
-    game.plays
+    game.turnActions
       .dropWhile(_.isInstanceOf[AdjustmentMade])
       .takeWhile(_.isInstanceOf[CardPlay])
       .map(_.asInstanceOf[CardPlay])
@@ -7598,7 +7609,7 @@ object LabyrinthAwakening {
   // ---------------------------------------------------
   // This is the main prompt for taking an action during
   // the game.
-  def actionPhasePrompt(): (Action, Option[String]) = {
+  def actionPhasePrompt(): (UserAction, Option[String]) = {
 
     val activeRole = game.activeRole
     val numCardsPlayed = numCardsPlayedInCurrentPhase()
@@ -7641,7 +7652,10 @@ object LabyrinthAwakening {
     displayLine(line1, Color.Info)
     displayLine(line2, Color.Info)
     displayLine("======================================================", Color.Info)
-    argMenu("Action: ", choices)
+    argMenu("Action: ", choices) match {
+      case Some(result) => result
+      case None => actionPhasePrompt()
+    }
   }
 
   // ---------------------------------------------
@@ -7663,10 +7677,6 @@ object LabyrinthAwakening {
       // Expected exception, all others bubble up
       case QuitGame =>
     }
-  }
-
-  def doAction(action: Action, args: Option[String]): Unit = {
-
   }
 
   // Parse the top level input and execute the appropriate command.
@@ -7822,24 +7832,85 @@ object LabyrinthAwakening {
     }
   }
 
+  // If there are args, then we process the args and return.
+  // If there are no args, then we loop showing a menu of options
+  // until the user exits the menu with no action.
+  def showCommand(args: Option[String]): Unit = {
+    val exp = game.useExpansionRules
+    val allOptions = List(
+      "all", "actions", "summary", "scenario", "caliphate", "civil wars",
+      "deck", "discarded", "removed"
+    ) ::: countryNames(game.countries)
+    val options = allOptions.filter(o => exp || (o != "caliphate" && o != "civil wars"))
+    val menuChoices = List(
+      choice(true, Some("summary"),    "Game summary and score"),
+      choice(true, Some("scenario"),   "Scenario information"),
+      choice(true, Some("country"),    "Countries"),
+      choice(true, Some("actions"),    "Actions this turn"),
+      choice(exp,  Some("caliphate"),  "Calipate countries"),
+      choice(exp,  Some("civil wars"), "Countries in Civil War"),
+      choice(true, Some("deck"),       "Cards in draw pile (or hands)"),
+      choice(true, Some("discarded"),  "Cards in discard pile"),
+      choice(true, Some("removed"),    "Cards removed from the game"),
+      choice(true, Some("all"),        "Entire game state"),
+      choice(true, None,               "Finished"),
+    ).flatten
 
-  def showCommand(param: Option[String]): Unit = {
-    val options = "all" :: "plays" :: "summary" :: "scenario" :: "caliphate" :: "civil wars" ::
-      "deck" :: "discarded" :: "removed" :: countryNames(game.countries)
-    val opts = if (game.useExpansionRules) options
-               else options filterNot(o => o == "caliphate" || o == "civil wars")
+    // This function assumes entity is valid!
+    def showEntity(entity: String): Unit = {
+      entity match {
+        case "actions"    => printSummary(game.actionSummary)
+        case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
+        case "scenario"   => printSummary(game.scenarioSummary)
+        case "caliphate"  => printSummary(game.caliphateSummary)
+        case "civil wars" => printSummary(game.civilWarSummary)
+        case "deck"       => printSummary(game.deckSummary)
+        case "discarded"  => printSummary(game.discardedCardsSummary)
+        case "removed"    => printSummary(game.removedCardsSummary)
+        case "all"        => printGameState()
+        case name         => printSummary(game.countrySummary(name))
+      }
+    }
 
-    askOneOf("Show: ", options, param, allowNone = true, abbr = CountryAbbreviations, allowAbort = false) foreach {
-      case "plays"      => printSummary(game.playSummary)
-      case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
-      case "scenario"   => printSummary(game.scenarioSummary)
-      case "caliphate"  => printSummary(game.caliphateSummary)
-      case "civil wars" => printSummary(game.civilWarSummary)
-      case "deck"       => printSummary(game.deckSummary)
-      case "discarded"  => printSummary(game.discardedCardsSummary)
-      case "removed"    => printSummary(game.removedCardsSummary)
-      case "all"        => printGameState()
-      case name         => printSummary(game.countrySummary(name))
+    def showCountries(): Unit = {
+      val prompt = "\nShow which country (blank to cancel): "
+      val candidates = countryNames(game.countries)
+      askOneOf(prompt, candidates, allowNone = true, allowAbort = false, abbr = CountryAbbreviations) match {
+        case Some(name) =>
+          printSummary(game.countrySummary(name))
+          showCountries()
+
+        case None =>
+      }
+    }
+
+
+    def showMenu(): Unit = {
+      askMenu("Show Game Information", menuChoices, allowAbort = false).head match {
+        case Some("country") =>
+          showCountries()
+          showMenu()
+
+        case Some(option) =>
+          showEntity(option)
+          pause()
+          showMenu()
+
+        case None =>
+      }
+    }
+
+
+    args.map(_.trim) match {
+      case Some(param) if param != "" =>
+        askOneOf("Show: ", options, Some(param), allowNone = true, abbr = CountryAbbreviations, allowAbort = false)
+          .foreach{ entity =>
+            showEntity(entity)
+            pause()
+          }
+
+      case _ =>
+        showMenu()
     }
   }
 
@@ -7847,13 +7918,13 @@ object LabyrinthAwakening {
   def printGameState(): Unit = {
     def printCountries(title: String, countries: List[String]): Unit = {
       println()
-      println(title)
-      println(separator())
+      displayLine(title, Color.Info)
+      displayLine(separator(char = '='), Color.Info)
       if (countries.isEmpty)
         println("none")
       else
-        for (name <- countries; line <- game.countrySummary(name))
-          println(line)
+        for (name <- countries; SummaryEntry(text, color) <- game.countrySummary(name).entries)
+          displayLine(text, color)
     }
 
     printSummary(game.scenarioSummary)
@@ -8044,7 +8115,7 @@ object LabyrinthAwakening {
             case Some(cardNum) =>
               val card2 = deck(cardNum)
               // Replace the head card play with a reassessment
-              game = game.copy(plays = PlayedReassement(card.number, card2.number) :: game.plays.tail)
+              game = game.copy(turnActions = PlayedReassement(card.number, card2.number) :: game.turnActions.tail)
               secondCard = Some(card2)
               logCardPlay(US, card2, card2.eventIsPlayable(US), true)
               Reassess
@@ -8753,11 +8824,11 @@ object LabyrinthAwakening {
      (isBot(Jihadist)   && JihadistBot.willDeclareCaliphate(countryName)))
 
   def saveAdjustment(desc: String): Unit = {
-    game = game.copy(plays = AdjustmentMade(desc) :: game.plays)
+    game = game.copy(turnActions = AdjustmentMade(desc) :: game.turnActions)
     saveGameState()
   }
   def saveAdjustment(country: String, desc: String): Unit = {
-    game = game.copy(plays = AdjustmentMade(s"$country -> $desc") :: game.plays)
+    game = game.copy(turnActions = AdjustmentMade(s"$country -> $desc") :: game.turnActions)
     saveGameState()
   }
 
@@ -8970,17 +9041,17 @@ object LabyrinthAwakening {
 
     def nextAdjustment(): Unit = {
       val choices = List(
-        choice(cardsInSource(FromDrawPile).nonEmpty, Some(Left(FromDrawPile)), "The deck or a player's/bot's hand"),
-        choice(true,                                 Some(Right(US)),          "Number of cards in US hand"),
-        choice(true,                                 Some(Right(Jihadist)),    "Number of cards in Jihadist hand"),
-        choice(cardsInSource(FromDiscard).nonEmpty,  Some(Left(FromDiscard)),  "The discard pile"),
-        choice(cardsInSource(FromLapsing).nonEmpty,  Some(Left(FromLapsing)),  "The lapsing box"),
-        choice(cardsInSource(From1stPlot).nonEmpty,  Some(Left(From1stPlot)),  "The 1st plot box"),
-        choice(cardsInSource(FromRemoved).nonEmpty,  Some(Left(FromRemoved)),  "The removed cards"),
+        choice(cardsInSource(FromDrawPile).nonEmpty, Some(Left(FromDrawPile)), "Move card from the draw pile"),
+        choice(cardsInSource(FromDiscard).nonEmpty,  Some(Left(FromDiscard)),  "Move card from the discard pile"),
+        choice(cardsInSource(FromLapsing).nonEmpty,  Some(Left(FromLapsing)),  "Move card from the lapsing box"),
+        choice(cardsInSource(From1stPlot).nonEmpty,  Some(Left(From1stPlot)),  "Move card from the 1st plot box"),
+        choice(cardsInSource(FromRemoved).nonEmpty,  Some(Left(FromRemoved)),  "Move card from the removed pile"),
+        choice(true,                                 Some(Right(US)),          "Change # of cards in US hand"),
+        choice(true,                                 Some(Right(Jihadist)),    "Change # of cards in Jihadist hand"),
         choice(true, None, "Finished moving cards"),
       ).flatten
 
-      askMenu("Choose location of card to move:", choices, allowAbort = false).head match {
+      askMenu("Adjust cards:", choices, allowAbort = false).head match {
         case None => // Exit function
         case Some(Left(from)) =>
           getCardToMove(from) match {
@@ -9367,10 +9438,11 @@ object LabyrinthAwakening {
 
   def adjustCountry(name: String): Unit = {
     @tailrec def getNextResponse(): Unit = {
-      println()
-      println(separator())
-      game.countrySummary(name) foreach println
-      println()
+      displayLine()
+      displayLine(separator())
+      for (SummaryEntry(text, color) <- game.countrySummary(name).entries)
+        displayLine(text, color)
+      displayLine()
 
       if (game.isMuslim(name)) {
         val flip = if (name == Iran || name == Nigeria) List("flip to non-Muslim") else Nil
