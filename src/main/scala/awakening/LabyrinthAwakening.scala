@@ -9122,8 +9122,20 @@ object LabyrinthAwakening {
     nextAdjustment()
 
     val moved = movedCards.sorted.distinct
-    if (moved.nonEmpty || game.cardsInHand != origCardsInHand) {
-      logAdjustment(s"Location of cards [${moved.map(cardNumAndName).mkString(", ")}]")
+    if (moved.nonEmpty || origCardsInHand != game.cardsInHand) {
+      val desc = new ListBuffer[String]
+      if (moved.nonEmpty) {
+        logAdjustment(s"Location of cards [${moved.map(cardNumAndName).mkString(", ")}]")
+        desc += "card locations"
+      }
+      if (origCardsInHand.us != game.cardsInHand.us) {
+        logAdjustment(s"Number of cards in US hand changed from ${origCardsInHand.us} to ${game.cardsInHand.us}")
+        desc += "cards in US hand"
+      }
+      if (origCardsInHand.jihadist != game.cardsInHand.jihadist) {
+        logAdjustment(s"Number of cards in Jihadist hand changed from ${origCardsInHand.jihadist} to ${game.cardsInHand.jihadist}")
+        desc += "cards in Jihadist hand"
+      }
       // Check to see if we need to move troops to/from the out of play box
       val newOopTroops = countLapsingOopTroops(game.eventsLapsing)
       val delta = newOopTroops - origOopTroops
@@ -9134,7 +9146,7 @@ object LabyrinthAwakening {
       }
       else if (delta < 0)
         moveOfMapTroopsToTrack(newOopTroops - newOopTroops)
-      saveAdjustment("Adjusted card locations")
+      saveAdjustment(desc.toList.mkString(", "))
     }
   }
 
@@ -9236,7 +9248,7 @@ object LabyrinthAwakening {
         else if (delta < 0)
           moveOfMapTroopsToTrack(delta.abs)
       }
-      saveAdjustment("Adjusted lapsing/1st plot markers")
+      saveAdjustment("lapsing/1st plot markers")
     }
   }
 
