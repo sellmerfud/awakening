@@ -80,7 +80,6 @@ object Card_281 extends Card(281, "Drone Swarms", Jihadist, 1, NoRemove, NoLapsi
         JihadistBot.plotPriority(getCandidates()).get
 
       addEventTarget(target)
-      testCountry(target)
       addAvailablePlotToCountry(target, Plot1, visible = true)
     }
     else

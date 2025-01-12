@@ -91,7 +91,6 @@ object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRe
       case 2 =>
         if (game.availablePlots.contains(Plot1)) {
           val target = randomSchengenCountry.name
-          testCountry(target)
           addEventTarget(target)
           addAvailablePlotToCountry(target, Plot1, visible = true)
         }

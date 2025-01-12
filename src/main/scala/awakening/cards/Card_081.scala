@@ -89,10 +89,8 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
     addEventTarget(target)
     val m = game.getMuslim(target)
     val numCells = 5 min game.cellsAvailable
-    if (numCells > 0) {
-      testCountry(target)
+    if (numCells > 0)
       addSleeperCellsToCountry(target, numCells)
-    }
     else
       log(s"There are no cells available to place in $target")
 
@@ -118,10 +116,8 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
 
     addEventTarget(target)
     val m = game.getMuslim(target)
-    if (numCells > 0) {
-      testCountry(target)
+    if (numCells > 0)
       addSleeperCellsToCountry(target, numCells)
-    }
     else
       log(s"There are no cells available to place in $target")
 

@@ -106,9 +106,7 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
     playExtraCellsEvent(TrainingCamps, target)
 
     val cellsToAdd = game.cellsAvailable min 2
-    if (cellsToAdd > 0) {
-      testCountry(target)
+    if (cellsToAdd > 0)
       addSleeperCellsToCountry(target, cellsToAdd)
-    }
   }
 }

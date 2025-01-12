@@ -116,7 +116,6 @@ object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemo
         case Some(_) =>
           val target = askCountry("Place cell in which country: ", getCellCandidates())
           addEventTarget(target)
-          testCountry(target)
           addSleeperCellsToCountry(target, 1)
 
         case None =>
@@ -139,7 +138,6 @@ object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemo
       else {
         val target = JihadistBot.cellPlacementPriority(false)(getCellCandidates()).get
         addEventTarget(target)
-        testCountry(target)
         addSleeperCellsToCountry(target, 1)
       }
     }

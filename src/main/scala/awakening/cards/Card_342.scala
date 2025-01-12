@@ -98,7 +98,6 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
       }
             
       addEventTarget(target)
-      testCountry(target)
       moveCellsToTarget(target, cells)
       
       val m = game.getMuslim(target)

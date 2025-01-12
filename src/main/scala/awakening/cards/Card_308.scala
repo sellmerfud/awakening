@@ -82,7 +82,6 @@ object Card_308 extends Card(308, "Battle of Marawi City", Jihadist, 3, Remove, 
       Some(JihadistBot.preparePlots(game.availablePlots).head)
 
     println()
-    testCountry(Philippines)
     if (game.cellsAvailable > 0)
       addActiveCellsToCountry(Philippines, 1)
     else

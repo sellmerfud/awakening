@@ -83,7 +83,6 @@ object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLa
       else
         JihadistBot.cellPlacementPriority(false)(getCandidates()).get
       addEventTarget(name)
-      testCountry(name)
       addSleeperCellsToCountry(name, 1)
     }
     else

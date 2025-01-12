@@ -127,17 +127,14 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
           case "cell" =>
             val target = askCountry("Place a cell in which country: ", getCandidates())
             addEventTarget(target)
-            testCountry(target)
             addSleeperCellsToCountry(target, 1)
           case "plot1" =>
             val target = askCountry("Place a level 1 plot in which country: ", getCandidates())
             addEventTarget(target)
-            testCountry(target)
             addAvailablePlotToCountry(target, Plot1)
           case "plot2" =>
             val target = askCountry("Place a level 2 plot in which country: ", getCandidates())
             addEventTarget(target)
-            testCountry(target)
             addAvailablePlotToCountry(target, Plot2)
           case "besiege"  =>
             val target = askCountry("Place besieged regime marker in which country: ", getBesiegeCandidates())
@@ -178,7 +175,6 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
             addBesiegedRegimeMarker(besiegeTarget.get)
           case "cell" =>
             addEventTarget(cellTarget.get)
-            testCountry(cellTarget.get)
             addSleeperCellsToCountry(cellTarget.get, 1)
           case "reaction" =>
             addEventTarget(reactionTarget.get)
@@ -186,7 +182,6 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
           case "plot" =>
             val plot = (game.availablePlots.sorted dropWhile (p => p != Plot1 && p != Plot2)).head
             addEventTarget(plotTarget.get)
-            testCountry(plotTarget.get)
             addAvailablePlotToCountry(plotTarget.get, plot)
           case _ =>
             log("\nSelect Pirates, Boko Haram, or Islamic Maghreb randomly from the discard pile", Color.Event)

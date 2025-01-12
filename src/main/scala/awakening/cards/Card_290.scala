@@ -82,7 +82,6 @@ object Card_290 extends Card(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoL
 
       case 3 | 4 =>
         if (game.cellsAvailable > 0) {
-          testCountry(China)
           addEventTarget(China)
           addSleeperCellsToCountry(China, 1)
         }
@@ -91,7 +90,6 @@ object Card_290 extends Card(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoL
 
       case _ => // 5 | 6
         if (game.availablePlots.contains(Plot1)) {
-          testCountry(China)
           addEventTarget(China)
           addAvailablePlotToCountry(China, Plot1, visible = true)
         }

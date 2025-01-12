@@ -90,8 +90,6 @@ object Card_312 extends Card(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLap
 
     addEventTarget(target)
     println()
-    if (game.cellsAvailable > 0)
-      testCountry(target)
     addSleeperCellsToCountry(target, 2 min game.cellsAvailable)
 
     val caliphateCapital = game.getMuslim(target).caliphateCapital

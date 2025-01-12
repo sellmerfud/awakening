@@ -86,14 +86,12 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
       for (a <- 1 to actives) {
         val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
         addEventTarget(to)
-        testCountry(to)
         moveCellsBetweenCountries(from, to, 1, true, forTravel = true)
         i += 1
       }
       for (a <- 1 to sleepers) {
         val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
         addEventTarget(to)
-        testCountry(to)
         moveCellsBetweenCountries(from, to, 1, false, forTravel = true)
         i += 1
       }

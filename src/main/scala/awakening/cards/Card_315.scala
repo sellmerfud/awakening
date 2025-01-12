@@ -74,9 +74,9 @@ object Card_315 extends Card(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     addEventTarget(Turkey)
-    testCountry(Turkey)
+    testCountry(Turkey) // Event specifically says to test
     addEventTarget(SaudiArabia)
-    testCountry(SaudiArabia)
+    testCountry(SaudiArabia) // Event specifically says to test
 
     if (isHuman(role)) {
       val choices = List(

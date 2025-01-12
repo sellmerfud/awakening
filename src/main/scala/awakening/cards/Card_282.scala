@@ -83,7 +83,6 @@ object Card_282 extends Card(282, "Executive Order 13492", Jihadist, 1, Remove, 
         JihadistBot.cellPlacementPriority(false)(countryNames(game.countries)).get
 
       addEventTarget(target)
-      testCountry(target)
       addSleeperCellsToCountry(target, 1)
     }
     else

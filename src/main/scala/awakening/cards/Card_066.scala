@@ -70,7 +70,6 @@ object Card_066 extends Card(66, "Homegrown", Jihadist, 2, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     addEventTarget(UnitedKingdom)
-    testCountry(UnitedKingdom)
     addSleeperCellsToCountry(UnitedKingdom, 1)
   }
 }

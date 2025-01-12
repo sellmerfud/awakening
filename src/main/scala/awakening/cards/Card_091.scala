@@ -100,7 +100,6 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
 
     for (Target(name, num) <- getTargets(game.cellsAvailable, getCandidates(), Vector.empty)) {
       addEventTarget(name)
-      testCountry(name)
       addSleeperCellsToCountry(name, num)
     }
   }

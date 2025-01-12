@@ -78,8 +78,6 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
   def executeEvent(role: Role): Unit = {
     addEventTarget(Nigeria)
     if (havePlots || haveCells) {
-      testCountry(Nigeria)
-
       if (isHuman(role)) {
         val choices = List(
           choice(havePlots, "plot",  "Place a level 2 or level 3 Plot in Nigeria"),

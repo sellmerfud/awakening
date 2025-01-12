@@ -128,7 +128,6 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
 
       addEventTarget(name)
       startCivilWar(name)
-      testCountry(name)
       val numCells = if (name == Mali) 2 else 1
       addSleeperCellsToCountry(name, numCells min game.cellsAvailable)
     }

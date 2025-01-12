@@ -85,7 +85,6 @@ object Card_291 extends Card(291, "Vehicle-ramming Attacks", Jihadist, 1, NoRemo
         JihadistBot.plotPriority(getCandidates()).get
 
       addEventTarget(target)
-      testCountry(target)
       addAvailablePlotToCountry(target, Plot1, visible = true)
     }
     else

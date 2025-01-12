@@ -105,10 +105,7 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
     if (plots.isEmpty)
       log(s"\nThere are no available non-WMD plots to place in $target.", Color.Event)
     else
-      plots foreach { p =>
-        testCountry(target)
-        addAvailablePlotToCountry(target, p)
-      }
+      plots.foreach(p => addAvailablePlotToCountry(target, p))
 
     // It is possible that the country is no longer a Muslim country.
     // For example: Target is Nigeria and we jsut removed the last cell (rule 11.3.3.3)

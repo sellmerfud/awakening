@@ -90,7 +90,6 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
         (JihadistBot.plotPriority(getCandidates()).get, maxPlots)
 
       addEventTarget(target)
-      testCountry(target)
       for (i <- 1 to numPlots)
         addAvailablePlotToCountry(target, Plot1, visible = true)
     }

@@ -98,8 +98,6 @@ object Card_316 extends Card(316, "Martyrdom Operation", Jihadist, 3, NoRemove, 
 
     addEventTarget(target)
     removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
-    if (plots.nonEmpty)
-      testCountry(target)
     for (plot <- plots)
       addAvailablePlotToCountry(target, plot)
   }

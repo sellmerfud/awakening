@@ -106,7 +106,6 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
 
       for (target <- List(goodTarget, fairTarget).flatten) {
         addEventTarget(target)
-        testCountry(target)
         addSleeperCellsToCountry(target, 1)
       }
     }

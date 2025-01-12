@@ -125,7 +125,6 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
         (JihadistBot.cellPlacementPriority(false)(getCandidates()).get, "cell")
 
       addEventTarget(target)
-      testCountry(target)
       if (action == "plot")
         addAvailablePlotToCountry(target, Plot1, visible = true)
       else

@@ -75,10 +75,8 @@ object Card_057 extends Card(57, "Abu Sayyaf", Jihadist, 2, Remove, NoLapsing, N
     addEventTarget(Philippines)
     addEventMarkersToCountry(Philippines, AbuSayyaf)
     
-    if (game.cellsAvailable > 0) {
-      testCountry(Philippines)
+    if (game.cellsAvailable > 0)
       addSleeperCellsToCountry(Philippines, 1)
-    }
     else
       log(s"\nThere are no cells available to place in $Philippines", Color.Event)
   }

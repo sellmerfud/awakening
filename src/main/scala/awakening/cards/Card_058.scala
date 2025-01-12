@@ -74,10 +74,8 @@ object Card_058 extends Card(58, "Al-Anbar", Jihadist, 2, Remove, NoLapsing, NoA
   def executeEvent(role: Role): Unit = {
     addEventTarget(Iraq)
     addGlobalEventMarker(AlAnbar)
-    if (game.cellsAvailable > 0) {
-      testCountry(Iraq)
+    if (game.cellsAvailable > 0)
       addSleeperCellsToCountry(Iraq, 1)
-    }
     else
       log(s"\nThere are no cells available to place in $Iraq", Color.Event)
   }

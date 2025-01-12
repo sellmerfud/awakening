@@ -5285,7 +5285,8 @@ object LabyrinthAwakening {
 
       val fromTrack = num min game.cellsOnTrack  // Take as many as possible from the track first
       val fromCamp  = num - fromTrack            // Any left over come from the camp
-
+      
+      testCountry(name)
       val updated = game.getCountry(name) match {
         case m: MuslimCountry    if isActive => m.copy(activeCells  = m.activeCells  + num)
         case m: MuslimCountry                => m.copy(sleeperCells = m.sleeperCells + num)
@@ -5393,6 +5394,7 @@ object LabyrinthAwakening {
       else
         assert(from.sleeperCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num sleeper cells")
 
+      testCountry(toName)
       if (fromName == toName)
         num match {
           case 1 => log(s"1 $fromType in $fromName travels in place and becomes $toType1", Color.MapPieces)
@@ -5469,6 +5471,7 @@ object LabyrinthAwakening {
   }
 
   def addCadreToCountry(name: String): Unit = {
+    testCountry(name)
     val c = game.getCountry(name)
     if (c.hasCadre)
       log(s"$name already has a cadre marker")
@@ -7927,6 +7930,7 @@ object LabyrinthAwakening {
     val updatedPlots = game.plotData.copy(
       availablePlots = game.availablePlots.take(index) ::: game.availablePlots.drop(index + 1)
     )
+    testCountry(name)
     game = game.copy(plotData = updatedPlots)
     game.getCountry(name) match {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(plot) :: m.plots))

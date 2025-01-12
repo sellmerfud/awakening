@@ -80,7 +80,7 @@ object Card_113 extends Card(113, "Darfur", Unassociated, 3, NoRemove, NoLapsing
   override
   def executeEvent(role: Role): Unit = {
     addEventTarget(Sudan)
-    testCountry(Sudan)
+    testCountry(Sudan)  // Must be tested to allow shift
     if (game.prestigeLevel == High || game.prestigeLevel == VeryHigh) {
       addAidMarker(Sudan)
       shiftAlignmentLeft(Sudan)

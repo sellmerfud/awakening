@@ -94,7 +94,6 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
       if (isHuman(role)) {
         val name = askCountry("Select country: ", countryNames(game.nonMuslims))
         addEventTarget(name)
-        testCountry(name)
         val choices = List(
           choice(game.cellsAvailable > 0,            "cell", "Place an active cell"),
           choice(game.availablePlots contains Plot1, "plot", "Place a levle 1 plot")

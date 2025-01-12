@@ -91,8 +91,6 @@ object Card_341 extends Card(341, "Gulen Movement", Unassociated, 2, NoRemove, N
         askInt("Place how many cells", 0, maxNum, Some(maxNum))
       else
         maxNum
-      if (num > 0)
-        testCountry(Turkey)
       addSleeperCellsToCountry(Turkey, num)
     }
     else

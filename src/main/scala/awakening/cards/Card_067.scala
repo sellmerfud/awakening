@@ -86,10 +86,8 @@ object Card_067 extends Card(67, "Islamic Jihad Union", Jihadist, 2, Remove, NoL
     addEventTarget(Afghanistan)
 
     if (targets.nonEmpty)
-      for (name <- targets) {
-        testCountry(name)
+      for (name <- targets)
         addSleeperCellsToCountry(name, 1)
-      }
     else
       log(s"\nThere are no available cells. The event has no effect.", Color.Event)
   }

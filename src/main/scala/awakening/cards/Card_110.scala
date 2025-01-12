@@ -98,14 +98,11 @@ object Card_110 extends Card(110, "Zarqawi", Unassociated, 2, USRemove, NoLapsin
 
       addEventTarget(name)
       val num = 3 min game.cellsAvailable
-      testCountry(name)
       addSleeperCellsToCountry(name, num)
       if (jihadistChoosesToDeclareCaliphate(name, num))
         declareCaliphate(name)
 
-      if (game.availablePlots.contains(Plot2)) {
-        testCountry(name)
+      if (game.availablePlots.contains(Plot2))
         addAvailablePlotToCountry(name, Plot2, visible = true)
-      }
     }
 }

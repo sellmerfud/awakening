@@ -94,10 +94,8 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
 
       addEventTarget(target)
       removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
-      for (plot <- plots) {
-        testCountry(target)
+      for (plot <- plots)
         addAvailablePlotToCountry(target, plot)
-      }
     }
     else
         log("\nThere are no available plots.  The event has no effect.", Color.Event)

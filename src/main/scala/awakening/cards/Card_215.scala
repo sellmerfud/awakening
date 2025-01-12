@@ -116,7 +116,6 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         val targets = List((Syria, inSyria),(Iraq, inIraq)).filterNot(_._2 == 0)
         for ((target, num) <- targets) {
           addEventTarget(target)
-          testCountry(target)
           val withCells = countryNames(game.countries.filter(c => c.name != target && c.cells > 0))
           println(s"\nChoose ${amountOf(num, "cell")} to place in $target")
           val sources = askCellsFromAnywhere(num, trackOK = true, withCells, sleeperFocus = false)
@@ -139,7 +138,6 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
           case "cell" =>
             val schengen = randomSchengenCountry
             addEventTarget(schengen.name)
-            testCountry(schengen.name)
             addSleeperCellsToCountry(schengen.name, 1)
         }
       }
@@ -149,7 +147,6 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         val target = JihadistBot.cellPlacementPriority(true)(Syria::Iraq::Nil).get
         val sourceCountries = countryNames(game.countries.filter(c => JihadistBot.hasCellForTravel(c, target, placement = true)))
         addEventTarget(target)
-        testCountry(target)
 
         val placements = JihadistBot.selecCellsToPlace(target, sourceCountries, 3)
         val totalPlaced = placements.map(_.total).sum
@@ -163,14 +160,12 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         else if (game.cellsAvailable > 0) {
           val schengen = randomSchengenCountry
           addEventTarget(schengen.name)
-          testCountry(schengen.name)
           addSleeperCellsToCountry(schengen.name, 1)
         }
       }
       else {
         val target = JihadistBot.cellPlacementPriority(true)(Syria::Iraq::Nil).get
         addEventTarget(target)
-        testCountry(target)
         val num = 3 min game.cellsAvailable
         addSleeperCellsToCountry(target, num)
         if (jihadistChoosesToDeclareCaliphate(target, num))
@@ -181,7 +176,6 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         else if (game.cellsAvailable > 0) {
           val schengen = randomSchengenCountry
           addEventTarget(schengen.name)
-          testCountry(schengen.name)
           addSleeperCellsToCountry(schengen.name, 1)
         }
       }

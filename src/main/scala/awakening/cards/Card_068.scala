@@ -71,7 +71,6 @@ object Card_068 extends Card(68, "Jemaah Islamiya", Jihadist, 2, NoRemove, NoLap
   def executeEvent(role: Role): Unit = {
     if (game.cellsAvailable > 0) {
       addEventTarget(IndonesiaMalaysia)
-      testCountry(IndonesiaMalaysia)
       addSleeperCellsToCountry(IndonesiaMalaysia, 2 min game.cellsAvailable)
     }
     else

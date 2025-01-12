@@ -116,9 +116,7 @@ object Card_335 extends Card(335, "Rohingya Genocide", Unassociated, 1, NoRemove
     addEventTarget(target)
     if (action == "posture")
       setCountryPosture(target, posture)
-    else {
-      testCountry(target)
+    else
       addSleeperCellsToCountry(target, 1)
-    }
   }
 }

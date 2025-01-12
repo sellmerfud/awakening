@@ -69,13 +69,9 @@ object Card_049 extends Card(49, "Al-Ittihad al-Islami", Jihadist, 1, Remove, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit =
-    if (game.cellsAvailable > 0) {
-      addEventTarget(Somalia)
-      testCountry(Somalia)
+    addEventTarget(Somalia)
+    if (game.cellsAvailable > 0)
       addSleeperCellsToCountry(Somalia, 1)
-    }
-    else {
-      addEventTarget(Somalia)
+    else
       log(s"\nThere are no cells available to place in $Somalia.", Color.Event)
-    }
 }

@@ -87,7 +87,6 @@ object Card_313 extends Card(313, "Hayat Tahir al-Sham", Jihadist, 3, Remove, No
     val mapCells     = ((3 - trackCells) min numAdjacentCells) max 0
 
     addEventTarget(Syria)
-    testCountry(Syria)
     addSleeperCellsToCountry(Syria, trackCells)
 
     // If there were not enough cells on the track

@@ -90,20 +90,16 @@ object Card_093 extends Card(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, No
       if (game.cellsAvailable == 0)
         log("\nNo cells available for placement", Color.Event)
       else if (game.cellsAvailable > 1) {
-        testCountry(Afghanistan)
         addSleeperCellsToCountry(Afghanistan, 1)
-        testCountry(Pakistan)
         addSleeperCellsToCountry(Pakistan, 1)
       }
       else if (isHuman(role)) {
         displayLine("There is only 1 cell available for placement", Color.Event)
         val name = askCountry("Place a cell in which country: ", Afghanistan::Pakistan::Nil)
-        testCountry(name)
         addSleeperCellsToCountry(name, 1)
       }
       else {
         val name = JihadistBot.cellPlacementPriority(false)(Afghanistan::Pakistan::Nil).get
-        testCountry(name)
         addSleeperCellsToCountry(name, 1)
       }
 

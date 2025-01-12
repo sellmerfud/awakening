@@ -99,7 +99,7 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
         else
           USBot.markerAlignGovTarget(getAlignmentCandidates()).get
         addEventTarget(target)
-        testCountry(target)
+        testCountry(target)  // Must be tested in order to shift
         shiftAlignmentLeft(target)
 
       case _ =>

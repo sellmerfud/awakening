@@ -127,7 +127,6 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
 
       case "cells" =>
         addEventTarget(target)
-        testCountry(target)
         addSleeperCellsToCountry(target, number(target) min game.cellsAvailable)
 
       case _ =>

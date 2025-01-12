@@ -112,7 +112,6 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
       }
 
       addEventTarget(name)
-      testCountry(name)
       addAvailablePlotToCountry(name, plot)
 
     case Jihadist =>

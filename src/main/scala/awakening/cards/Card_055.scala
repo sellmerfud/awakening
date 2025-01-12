@@ -78,7 +78,6 @@ object Card_055 extends Card(55, "Uyghur Jihad", Jihadist, 1, Remove, NoLapsing,
           addSleeperCellsToCountry(China, 1)
         else {
           addEventTarget(CentralAsia)
-          testCountry(CentralAsia)
           addSleeperCellsToCountry(CentralAsia, 1)
         }
       }

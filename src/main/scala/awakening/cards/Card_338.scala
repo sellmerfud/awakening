@@ -120,7 +120,6 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
         (JihadistBot.cellPlacementPriority(false)(placeCellCandidates()).get, maxCells)
 
       addEventTarget(target)
-      testCountry(target)
       addSleeperCellsToCountry(target, num)
       if (jihadistChoosesToDeclareCaliphate(target, num))
         declareCaliphate(target)

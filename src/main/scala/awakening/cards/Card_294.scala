@@ -81,7 +81,7 @@ object Card_294 extends Card(294, "Barcelona Bombs", Jihadist, 2, Remove, NoLaps
       else
         askInt(s"Place how many Level 1 plots in $Spain", 1, maxPlots, Some(maxPlots))
 
-      testCountry(Spain)
+      testCountry(Spain) // Event specifically says to test
       for (i <- 1 to numPlots)
         addAvailablePlotToCountry(Spain, Plot1, visible = true)
     }

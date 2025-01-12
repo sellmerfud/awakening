@@ -170,7 +170,6 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       if (numToPlace > 0) {
         val name = askCountry(s"Select country to place ${amountOf(numToPlace, "cell")}: ", getCandidates())
         addEventTarget(name)
-        testCountry(name)
         addSleeperCellsToCountry(name, numToPlace)
         if (jihadistChoosesToDeclareCaliphate(name, numToPlace))
           declareCaliphate(name)
@@ -202,7 +201,6 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       }
 
       addEventTarget(target)
-      testCountry(target)
       addSleeperCellsToCountry(target, countries.size)
       if (jihadistChoosesToDeclareCaliphate(target, countries.size))
         declareCaliphate(target)
@@ -250,7 +248,6 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       val toPlace = (reactionCountries.size + cellCountries.size) min game.cellsAvailable
       if (toPlace > 0) {
         addEventTarget(target)
-        testCountry(target)
         addSleeperCellsToCountry(target, toPlace)
       }
       else

@@ -100,7 +100,7 @@ object Card_189 extends Card(189, "Jihadist Videos", Jihadist, 3, NoRemove, NoLa
       addEventTarget(target)
       log(s"\nRecruit attempt in $target")
       log(separator())
-      testCountry(target)
+      testCountry(target)  // Event specifically say to test
       val c = game.getCountry(target)  // Get country after testing!
 
       if (game.cellsAvailable > 0) {

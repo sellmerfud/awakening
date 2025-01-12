@@ -86,7 +86,6 @@ object Card_086 extends Card(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing
         JihadistBot.cellPlacementPriority(false)(candidates).get
 
       addEventTarget(name)
-      testCountry(name)
       addSleeperCellsToCountry(name, 1)
     }
     else

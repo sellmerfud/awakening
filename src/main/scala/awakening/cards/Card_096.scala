@@ -103,7 +103,6 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
         JihadistBot.plotPriority(candidates).get
 
       addEventTarget(name)
-      testCountry(name)
       addAvailablePlotToCountry(name, plot)
     }
     else if (game.numIslamistRule == 0)

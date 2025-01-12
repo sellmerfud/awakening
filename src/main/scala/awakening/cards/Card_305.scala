@@ -77,7 +77,7 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    testCountry(Caucasus)
+    testCountry(Caucasus) // Event specifically says to test
     val result = game.prestigeModifier - game.gwotPenalty
     val opPoints = -result
 

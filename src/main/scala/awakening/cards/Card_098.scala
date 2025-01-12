@@ -81,7 +81,6 @@ object Card_098 extends Card(98, "Gaza Withdrawal", Unassociated, 1, Remove, NoL
     else {
       addEventTarget(Israel)
       if (game.cellsAvailable > 0) {
-        testCountry(Israel)
         addSleeperCellsToCountry(Israel, 1)
       }
       else

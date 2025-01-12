@@ -96,7 +96,6 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
           JihadistBot.recruitTravelToPriority(candidates).get
 
         addEventTarget(target)
-        testCountry(target)
         addCadreToCountry(target)
         nextCadre(num + 1, candidates filterNot (_ == target))
       }

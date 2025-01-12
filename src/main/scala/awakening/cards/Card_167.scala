@@ -79,7 +79,6 @@ object Card_167 extends Card(167, "Houthi Rebels", Jihadist, 1, Remove, NoLapsin
     addEventTarget(Yemen)
     if (!game.getMuslim(Yemen).civilWar || game.cellsAvailable > 0) {
       if (game.cellsAvailable > 0) {
-        testCountry(Yemen)
         addSleeperCellsToCountry(Yemen, 2 min game.cellsAvailable)
       }
       else

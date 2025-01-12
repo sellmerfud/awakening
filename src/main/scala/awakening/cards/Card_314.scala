@@ -133,12 +133,10 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
       actions foreach {
         case Action(name, Left(_)) =>
           addEventTarget(name)
-          testCountry(name)
           addSleeperCellsToCountry(name, 1)
 
         case Action(name, Right(plot)) =>
           addEventTarget(name)
-          testCountry(name)
           addAvailablePlotToCountry(name, plot)
       }
     }

@@ -137,7 +137,6 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
       }
     }
     else {
-        testCountry(target)
         addSleeperCellsToCountry(target, 1)
         if (game.isMuslim(target) && game.getMuslim(target).militia > 0)
           removeMilitiaFromCountry(target, 1)

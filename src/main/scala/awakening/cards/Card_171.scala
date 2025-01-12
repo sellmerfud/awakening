@@ -76,7 +76,6 @@ object Card_171 extends Card(171, "Abu Ghraib Jail Break", Jihadist, 2, Remove, 
   def executeEvent(role: Role): Unit = {
     addEventTarget(Iraq)
     if (game.cellsAvailable > 0) {
-      testCountry(Iraq)
       addActiveCellsToCountry(Iraq, 1)
     }
     else

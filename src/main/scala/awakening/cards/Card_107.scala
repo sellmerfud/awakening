@@ -87,7 +87,7 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
     }
     else { // Jihadist
       addEventTarget(Turkey)
-      testCountry(Turkey)
+      testCountry(Turkey)  // Specifically called for by event
       val candidates = countryNames(List(Turkey, Iraq)
                             map game.getMuslim
                             filter (m => !(m.isPoor || m.isIslamistRule)))
@@ -99,6 +99,7 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
           JihadistBot.alignGovTarget(getJihadistCandidates()).get
 
         addEventTarget(name)
+        testCountry(name)  // If Iraq it may not have been tested
         worsenGovernance(name, 1, canShiftToIR = false)
       }
       else

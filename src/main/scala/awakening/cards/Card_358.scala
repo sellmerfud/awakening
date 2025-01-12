@@ -130,7 +130,6 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
           JihadistBot.cellPlacementPriority(false)(sunniCandidates).get
 
         addEventTarget(target)
-        testCountry(target)
         addSleeperCellsToCountry(target, 1)
       }
 
@@ -141,7 +140,6 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
           JihadistBot.cellPlacementPriority(false)(shiaCandidates).get
 
         addEventTarget(target)
-        testCountry(target)
         addSleeperCellsToCountry(target, 1)
       }
 

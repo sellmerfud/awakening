@@ -141,9 +141,7 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
           case "-rea" => removeReactionMarker(name)
           case "+mil" => addMilitiaToCountry(name, 2 min game.militiaAvailable)
           case "-mil" => removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
-          case "+cel" =>
-            testCountry(name)
-            addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
+          case "+cel" => addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
           case "-cel" =>
             val (actives, sleepers, sadr) = askCells(name, 2, role == US)
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
@@ -159,7 +157,6 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
       if (game.cellsAvailable > 0) {
         val name = JihadistBot.cellPlacementPriority(false)(CandidateCountries).get
         addEventTarget(name)
-        testCountry(name)
         addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
       }
       else {

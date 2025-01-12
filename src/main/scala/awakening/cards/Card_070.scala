@@ -86,7 +86,6 @@ object Card_070 extends Card(70, "Lashkar-e-Tayyiba", Jihadist, 2, NoRemove, NoL
     if (targets.nonEmpty)
       for (name <- targets) {
         addEventTarget(name)
-        testCountry(name)
         addSleeperCellsToCountry(name, 1)
       }
     else

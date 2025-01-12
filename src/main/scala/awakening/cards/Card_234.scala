@@ -106,8 +106,6 @@ object Card_234 extends Card(234, "Free Syrian Army", Unassociated, 3, Remove, N
       case Jihadist => (2, 1)
     }
 
-    if (game.cellsAvailable > 0)
-      testCountry(Syria)
     addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
     addMilitiaToCountry(Syria, militia min game.militiaAvailable)
     addEventTarget(Turkey)

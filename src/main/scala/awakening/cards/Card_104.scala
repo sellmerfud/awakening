@@ -95,7 +95,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
       val target = askCountry("Select a Shia-Mix country: ", countryNames(game.muslims.filter(_.isShiaMix)))
       val targetHasCell = game.getCountry(target).totalCells > 0
       addEventTarget(target)
-      testCountry(target)
+      testCountry(target)  // Event specifically says to test
       val removeCellFrom = (iranHasCell, targetHasCell) match {
         case (true, false) => Iran
         case (false, true) => target
@@ -116,7 +116,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
         val name = USBot.disruptPriority(getBotCellCandidates()).get
         val (active, sleeper, sadr) = USBot.chooseCellsToRemove(name, 1)
         addEventTarget(name)
-        testCountry(name)
+        testCountry(name) // Event specifically says to test
         removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
 
     case US => // Should never get here!
@@ -129,7 +129,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
         JihadistBot.iranTarget(getBotJihadCandidates()).get
 
       addEventTarget(name)
-      testCountry(name)
+      testCountry(name) // Event specifically says to test
       performJihads(JihadTarget(name, 2, 0, false, major = false)::Nil, ignoreFailures = true)
   }
 }

@@ -104,7 +104,6 @@ object Card_187 extends Card(187, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
         addBesiegedRegimeMarker(target)
 
       if (numCells > 0) {
-        testCountry(target)
         addSleeperCellsToCountry(target, numCells)
         if (jihadistChoosesToDeclareCaliphate(target, numCells))
           declareCaliphate(target)

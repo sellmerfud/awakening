@@ -84,7 +84,7 @@ object Card_220 extends Card(220, "Daraa", Unassociated, 2, Remove, NoLapsing, N
   def executeEvent(role: Role): Unit = {
     val syria = game.getMuslim(Syria)
     addEventTarget(Syria)
-    testCountry(Syria)
+    testCountry(Syria)  // Event specifially says to test
     role match {
       case _ if !isEffective(role) =>
         log("\nThe event has no effect.", Color.Event)

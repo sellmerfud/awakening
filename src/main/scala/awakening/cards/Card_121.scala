@@ -90,7 +90,6 @@ object Card_121 extends Card(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAuto
       USBot.deployToPriority(getCandidates()).get
     println()
     addEventTarget(target)
-    testCountry(target)
     addAdvisorsToCountry(target)
   }
 }

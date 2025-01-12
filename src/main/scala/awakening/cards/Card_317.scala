@@ -77,7 +77,7 @@ object Card_317 extends Card(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsin
   override
   def executeEvent(role: Role): Unit = {
     addEventTarget(GulfStates)
-    testCountry(GulfStates)
+    testCountry(GulfStates) // Event specifically says to test
     val m = game.getMuslim(GulfStates)
     if (m.isGood || m.isFair || !m.isAdversary) {
       if (isHuman(role)) {

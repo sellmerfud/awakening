@@ -75,10 +75,8 @@ object Card_177 extends Card(177, "Gaza Rockets", Jihadist, 2, NoRemove, NoLapsi
     if (game.availablePlots.contains(Plot1) || game.funding > 1) {
       // See Event Instructions table
       val num = 2 min game.availablePlots.count(_ == Plot1)
-      for (i <- 1 to num) {
-        testCountry(Israel)
+      for (i <- 1 to num)
         addAvailablePlotToCountry(Israel, Plot1, visible = true)
-      }
       decreaseFunding(1)
     }
     else

@@ -81,10 +81,8 @@ object Card_050 extends Card(50, "Ansar al-Islam", Jihadist, 1, Remove, NoLapsin
       JihadistBot.cellPlacementPriority(false)(candidates).get
 
     addEventTarget(name)
-    if (game.cellsAvailable > 0) {
-      testCountry(name)
+    if (game.cellsAvailable > 0)
       addSleeperCellsToCountry(name, 1)
-    }
     else
       log(s"\nThere are no cells available to place in $name.", Color.Event)
   }

@@ -92,7 +92,6 @@ object Card_321 extends Card(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, No
         (JihadistBot.cellPlacementPriority(false)(getCandidates()).get, game.cellsAvailable min 3)
 
       addEventTarget(target)
-      testCountry(target)
       addSleeperCellsToCountry(target, num)
 
       if (jihadistChoosesToDeclareCaliphate(target, num))

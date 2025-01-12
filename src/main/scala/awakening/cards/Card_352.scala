@@ -108,8 +108,6 @@ object Card_352 extends Card(352, "al-Baghdadi", Unassociated, 3, USRemove, NoLa
 
         val cellsToAdd = game.cellsAvailable min 3
         addEventTarget(target)
-        if (cellsToAdd > 0)
-          testCountry(target)
         addSleeperCellsToCountry(target, cellsToAdd)
 
         if (jihadistChoosesToDeclareCaliphate(target, cellsToAdd))

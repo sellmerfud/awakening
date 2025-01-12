@@ -85,7 +85,6 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
       for (a <- 1 to actives) {
         val to = askCountry(s"Select destination country for active cell in $from: ", Schengen)
         addEventTarget(to)
-        testCountry(to)
         if (from == to)
           hideActiveCells(to, 1)
         else
@@ -96,7 +95,6 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
       for (a <- 1 to sleepers) {
         val to = askCountry(s"Select destination country for sleeper cell in $from: ", Schengen.filterNot(_ == from))
         addEventTarget(to)
-        testCountry(to)
         moveCellsBetweenCountries(from, to, 1, false, forTravel = true)
         i += 1
       }
@@ -120,7 +118,6 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
             val fromCountry = game.getCountry(from)
             val active = JihadistBot.activeCells(fromCountry) > 0
             addEventTarget(to)
-            testCountry(to)
             moveCellsBetweenCountries(from, to, 1, active, forTravel = true)
             JihadistBot.usedCells(to).addSleepers(1)
             nextTravel(numDestinations + 1, alreadyTried + to)

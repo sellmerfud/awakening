@@ -130,10 +130,8 @@ object Card_193 extends Card(193, "Regional al-Qaeda", Jihadist, 3, NoRemove, No
 
     for (Target(name, num) <- targets) {
       addEventTarget(name)
-      if (num > 0) {
-        testCountry(name)
+      if (num > 0)
         addSleeperCellsToCountry(name, num)
-      }
       else
         log(s"\nNo cells available to place in $name.", Color.Event)
     }
