@@ -1351,8 +1351,7 @@ object JihadistBot extends BotHelpers {
       def yesPath = PlotOpFunding
       def noPath  = PrestigeAboveLowAndActiveCellWithTroopsDecision
       def condition(ops: Int) =
-        game.funding == 7 &&
-        !askYorN(s"\nDoes the $Jihadist have any more cards in hand? (y/n) ")
+        game.funding == 7 && numCardsInHand(Jihadist) == 0
     }
 
     // This is starts the last decsion tree for the Enhanced EvO

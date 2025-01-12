@@ -867,9 +867,9 @@ object LabyrinthAwakening {
     }
 
     override def toString() = addedCard match {
-      case None => s"$role played ${cardNumAndName(cardNum)}"
-      case Some(SecondCard(num)) => s"$role played ${cardNumAndName(cardNum)} and ${cardNumAndName(num)}"
-      case Some(AdditionalCard(num)) => s"$role played ${cardNumAndName(cardNum)} with addtional ${cardNumAndName(num)}"
+      case None => s"$role plays ${cardNumAndName(cardNum)}"
+      case Some(SecondCard(num)) => s"$role plays ${cardNumAndName(cardNum)} and ${cardNumAndName(num)}"
+      case Some(AdditionalCard(num)) => s"$role plays ${cardNumAndName(cardNum)} with addtional ${cardNumAndName(num)}"
     }
   }
 
@@ -877,21 +877,28 @@ object LabyrinthAwakening {
     val role = US
     override def name = "PlayedReassessment"
     override def numCards = 2
-    override def toString() = s"$role played ${cardNumAndName(card1)} and ${cardNumAndName(card2)}"
+    override def toString() = s"$role plays ${cardNumAndName(card1)} and ${cardNumAndName(card2)} for reassessment"
   }
+
+  case class USDiscardedLastCard(cardNumber: Int) extends TurnAction {
+    val role = US
+    override def name = "USDiscardedLastCard"
+    override def toString() = s"$US discards last card ${cardNumAndName(cardNumber)}"
+  }
+
   case class PlotsResolved(num: Int) extends TurnAction {
     override def name = "PlotsResolved"
-    override def toString() = s"$num Plots were resolved"
+    override def toString() = s"$num Plots resolved"
   }
 
   case class VoluntaryCadreRemoval(num: Int) extends TurnAction {
     override def name = "VoluntaryCadreRemoval"
-    override def toString() = s"Jihadist removed ${amountOf(num, "cadre")}"
+    override def toString() = s"Jihadist removes ${amountOf(num, "cadre")}"
   }
 
   case class AdjustmentMade(desc: String) extends TurnAction {
     override def name = "AdjustmentMade"
-    override def toString() = s"Adjustment made: $desc"
+    override def toString() = s"Adjustment: $desc"
   }
 
   object deck {
@@ -7535,6 +7542,7 @@ object LabyrinthAwakening {
         .foreach { cardNumber =>
           decreaseCardsInHand(US, 1)
           addCardToDiscardPile(cardNumber)
+          game = game.copy(turnActions = USDiscardedLastCard(cardNumber)::game.turnActions)
           saveGameState(Some(s"US player discards last card [${cardNumAndName(cardNumber)}]"))
       }
     }

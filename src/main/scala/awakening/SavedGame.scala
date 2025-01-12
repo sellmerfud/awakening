@@ -202,6 +202,8 @@ object SavedGame {
         Map("card1" -> card1, "card2"   -> card2)
       case VoluntaryCadreRemoval(num) =>
         Map("num" -> num)
+      case USDiscardedLastCard(cardNum) =>
+        Map("cardNum" -> cardNum)
       case PlotsResolved(num) =>
         Map("num" -> num)
       case AdjustmentMade(desc) =>
@@ -224,6 +226,8 @@ object SavedGame {
         PlayedReassement(asInt(params("card1")), asInt(params("card2")))
       case "VoluntaryCadreRemoval" =>
         VoluntaryCadreRemoval(asInt(params("num")))
+      case "USDiscardedLastCard" =>
+        USDiscardedLastCard(asInt(params("cardNum")))
       case "PlotsResolved" =>
         PlotsResolved(asInt(params("num")))
       case "AdjustmentMade" =>
