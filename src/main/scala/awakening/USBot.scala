@@ -1084,7 +1084,7 @@ object USBot extends BotHelpers {
   
   def revolutionTarget(names: List[String]): Option[String] = {
     val priorities = List(
-      new HighestScorePriority("Highest reaction - awakening", muslimScore(m => m.reaction - m.awakening)),
+      new HighestScorePriority("Highest reaction - awakening", muslimScore(_.reactionDelta)),
       HighestResourcePriority)
       
     botLog("Find \"Revolution\" target", Color.Debug)

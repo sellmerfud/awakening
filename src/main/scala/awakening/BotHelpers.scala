@@ -57,7 +57,7 @@ trait BotHelpers {
     else if (game.jihadistIdeology(Coherent) && !major)
       -m.reaction // Ignore awakening if Coherent and minor jihads
     else
-      m.awakening - m.reaction
+      -m.reactionDelta
 
 
   def benazirBhuttoPreventsJihad(m: MuslimCountry) =

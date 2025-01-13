@@ -467,7 +467,7 @@ object JihadistBot extends BotHelpers {
   val GoodMuslimWithAdjacentCellsFilter =
     new CriteriaFilter(
       "Good Muslim w/ adjacent cells",
-      muslimTest(m => m.isGood && m.hasAdjacent(c => hasCellForTravel(c, m.name)) && m.awakening - m.reaction < 1))
+      muslimTest(m => m.isGood && m.hasAdjacent(c => hasCellForTravel(c, m.name)) && m.reactionDelta > 1))
   val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
 
   // Used with botEnhancements
@@ -491,14 +491,14 @@ object JihadistBot extends BotHelpers {
 
   val EnhRecruitPoorCadreNoTandMMajorJihadPossible =
     new CriteriaFilter(
-      "Poor Muslim, w/ cadre and no TandM and (awakening - reaction < 2) and JSP",
+      "Poor Muslim, w/ cadre and no TandM and (reaction - awakening > 2) and JSP",
       muslimTest(m =>
         (poorMuslimWhereMajorJihadPossible(m) && poorMuslimWithCadreAnNoTroopsOrMilitia(m))
       ))
 
   val EnhTravelPoorNeedCellsforMajorJihad =
     new CriteriaFilter(
-      "Poor, 1-4 more cells than TandM and (awakening - reaction < 2) and JSP",
+      "Poor, 1-4 more cells than TandM and (reaction - awakening > 2) and JSP",
       muslimTest(m =>
         poorMuslimNeedsCellsForMajorJihad(m)
       ))
@@ -517,12 +517,12 @@ object JihadistBot extends BotHelpers {
   // where Jihad is possible unless there is a cell in an adjacent country so that
   // the travel will succeed  without a die roll
   val EnhTravelFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode(
-    "Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM w/ Adjacent cells",
-    muslimTest(m => m.isFair && m.hasAdjacent(c => hasCellForTravel(c, m.name)) && m.awakening - m.reaction < 1),
+    "Fair Muslim and (reaction - awakening > 1) w/ best Jihad DRM w/ Adjacent cells",
+    muslimTest(m => m.isFair && m.hasAdjacent(c => hasCellForTravel(c, m.name)) && m.reactionDelta > 1),
     muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
   val EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells = new LowestScoreNode(
-    "Fair Muslim and (awakening - reaction < 1) w/ best Jihad DRM",
-    muslimTest(m => m.isFair && m.awakening - m.reaction < 1),
+    "Fair Muslim and (reaction - awakening > 1) w/ best Jihad DRM",
+    muslimTest(m => m.isFair && m.reactionDelta > 1),
     muslimScore(m => jihadDRM(m, false), nonMuslimScore = 100))
   val PoorMuslimWhereMajorJSPBestJihadDRM = new LowestScoreNode(
     "Poor Muslim w/ best Jihad DRM",
@@ -890,7 +890,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Poor", _.isPoor),
       new CriteriaFilter("Fair", _.isPoor),
       new CriteriaFilter("Good", _.isPoor),
-      new LowestScorePriority("Worst JRM", muslimScore(c => c.reaction - c.awakening)),
+      new LowestScorePriority("Worst DRM", muslimScore(m => jihadDRM(m, false).abs)), // Favorable DRM is negative, to take the absolute value
       new LowestScorePriority("Lowest Resource Value", muslimScore(_.resourceValue, nonMuslimScore = 100)),
       new HighestScorePriority("Most cells", _.totalCells),
     )
@@ -1043,15 +1043,16 @@ object JihadistBot extends BotHelpers {
 
   // Jihadist Operations Flowchart definitions.
   sealed trait Operation       extends OpFlowchartNode
-  case class RecruitOp(target: Option[String]) extends Operation
-  case class TravelOp(target: Option[String], adjacentOnly: Boolean) extends Operation
+  case class  RecruitOp(target: Option[String]) extends Operation
+  case class  TravelOp(target: Option[String], adjacentOnly: Boolean) extends Operation
   case object PlotOpFunding    extends Operation // plot with focus on raising funding
   case object PlotOpPrestige   extends Operation // plot with focus on hammering US prestige
   case object MinorJihadOp     extends Operation
-  case object MajorJihadOp     extends Operation
+  case class  MajorJihadOp(target: Option[String]) extends Operation
   case object PlaceRandomCells extends Operation  // Used only by Enhanced Bot
   case object EnhancedTravelOp extends Operation  // Used only by Enhanced Bot
   case object Radicalization   extends Operation
+  case object AddToReservesOp  extends Operation  // Used only by Enhanced Bot
 
 
   // ------------------------------------------------------
@@ -1061,7 +1062,7 @@ object JihadistBot extends BotHelpers {
     // This is the starting point of the Operations Flowchart
     object MajorJihadDecision extends OperationDecision {
       def desc = "Major Jihad Success possible at Poor?"
-      def yesPath = MajorJihadOp
+      def yesPath = MajorJihadOp(None)
       def noPath  = FundingTightDecision
       def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
         m.isPoor &&
@@ -1167,19 +1168,54 @@ object JihadistBot extends BotHelpers {
     object NoCellsOnMapDecision extends OperationDecision {
       def desc = "No cells on the map?"
       def yesPath = PlaceRandomCells
-      def noPath  = MajorJihadDecision
+      def noPath  = MajorJihadInPoorDecision
       def condition(ops: Int) = game.totalCellsOnMap == 0
     }
 
 
-    object MajorJihadDecision extends OperationDecision {
+    object MajorJihadInPoorDecision extends OperationDecision {
       def desc = "Major Jihad Success possible at Poor?"
-      def yesPath = MajorJihadOp
+      def yesPath = MajorJihadInPoorDesireableDecision
       def noPath  = CellInGoodFairWhereJSP
-      def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
-        m.isPoor &&
-        totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
-        majorJihadSuccessPossible(m)
+      def condition(ops: Int) =  {
+        game.majorJihadTargets(ops)
+          .map(game.getMuslim)
+          .exists { m =>
+            m.isPoor &&
+            totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
+            majorJihadSuccessPossible(m)
+          }
+      }
+    }
+
+    object MajorJihadInPoorDesireableDecision extends OperationDecision {
+      // To ensure that majorJihadOperation() chooses the same target
+      // we pass along the target that we used to determine that the
+      // condition was met.
+      var designateddTarget: Option[String] = None
+      def desc = "Major Jihad Success possible at Poor (besieged regime or sufficient Ops)?"
+      def yesPath = MajorJihadOp(designateddTarget)
+      def noPath  = AddToReservesOp
+      // Note: ops already accounts for any availabe reserves
+      def condition(ops: Int) =  {
+        val validTarget = (muslim: MuslimCountry) =>
+          muslim.besiegedRegime || (ops >= 3) || (ops >= 2 && muslim.jihadDRM < 0)
+
+        val candidates = game.majorJihadTargets(ops)
+          .map(game.getMuslim)
+          .filter { m =>
+            m.isPoor &&
+            totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
+            majorJihadSuccessPossible(m)
+          }
+          .map(_.name)
+        majorJihadTarget(candidates).map(game.getMuslim) match {
+          case Some(muslim) if validTarget(muslim) =>
+            designateddTarget = Some(muslim.name)
+            true
+          case _ =>
+            false
+        }
       }
     }
 
@@ -1373,6 +1409,7 @@ object JihadistBot extends BotHelpers {
       EnhancedEvoTable.NoCellsOnMapDecision
     else
       StandardEvoTable.MajorJihadDecision
+    botLog(s"Evaluate EvO Flowchart using $ops available Ops", Color.Debug)      
     evaluateNode(startingNode)
   }
 
@@ -1484,7 +1521,7 @@ object JihadistBot extends BotHelpers {
 
   def revolutionTarget(names: List[String]): Option[String] = {
     val priorities = List(
-      new HighestScorePriority("Highest awakening - reaction", muslimScore(m => m.awakening - m.reaction)),
+      new HighestScorePriority("Highest awakening - reaction", muslimScore(_.awakeningDelta)),
       HighestResourcePriority)
 
     botLog("Find \"Revolution\" target", Color.Debug)
@@ -1727,9 +1764,10 @@ object JihadistBot extends BotHelpers {
           case PlotOpFunding             => plotOperation(card, prestigeFocus = false)
           case PlotOpPrestige            => plotOperation(card, prestigeFocus = true)
           case MinorJihadOp              => minorJihadOperation(card)
-          case MajorJihadOp              => majorJihadOperation(card)
+          case MajorJihadOp(target)      => majorJihadOperation(card, target)
           case PlaceRandomCells          => placeRandomCellsOnMap(card)   // Enhanced bot only
           case EnhancedTravelOp          => enhancedTravelOperation(card) // Enhanced bot only
+          case AddToReservesOp           => addToReservesOperation(card)  // Enhanced bot only
           case Radicalization            => 0 // Enhanced bot only
         }
 
@@ -1737,6 +1775,14 @@ object JihadistBot extends BotHelpers {
           radicalization(card, opsUsed)
       }
     }
+  }
+
+  def addToReservesOperation(card: Card): Int = {
+    log()
+    log(s"$Jihadist adds Ops to reserves")
+    val opsAdded = card.ops min (2 - game.reserves.jihadist)
+    addToReserves(Jihadist, opsAdded)
+    opsAdded
   }
 
   // Attempt to recruit as many times as possible up to 3
@@ -1960,7 +2006,7 @@ object JihadistBot extends BotHelpers {
             game.getCountry(toName).activeCells > 0
           val inplaceSource = if (inplaceOK) List(toName) else Nil
           // When Biometrics is in play, travelSources() will only return adjacent countries
-          val candidates = if (adjacentOnly)  
+          val candidates = if (adjacentOnly)
             (adjacentTravelSources(toName, attempts):::inplaceSource).filterNot(alreadyTried)
           else
            (travelSources(toName, attempts):::inplaceSource).filterNot(alreadyTried)
@@ -2079,7 +2125,7 @@ object JihadistBot extends BotHelpers {
           attempts  // We've used all available Ops
         else {
 
-          val candidates = travelSources(toName, attempts).filterNot(alreadyTried)          
+          val candidates = travelSources(toName, attempts).filterNot(alreadyTried)
 
           travelFromTarget(toName, candidates) match {
             case None => attempts  // No more viable countries to travel from
@@ -2252,45 +2298,30 @@ object JihadistBot extends BotHelpers {
   }
 
   // Returns the number of Ops used.
-  def majorJihadOperation(card: Card): Int = {
+  def majorJihadOperation(card: Card, designatedTarget: Option[String]): Int = {
     log()
     log(s"$Jihadist performs a Major Jihad operation")
     log(separator())
-    val maxJihad = maxOpsPlusReserves(card)
-    def nextJihadTarget(completed: Int, alreadyTried: Set[String]): List[JihadTarget] = {
-      val remaining = maxJihad - completed
-      if (remaining == 0)
-        Nil  // We've used all available Ops
-      else {
-        // The Bot will only conduct major Jihad in a countries with Poor governance.
-        val canJihad = (m: MuslimCountry) => !alreadyTried(m.name) &&
-                                             majorJihadSuccessPossible(m) &&
-                                             m.isPoor &&
-                                             totalUnused(m) - m.totalTroopsAndMilitia >= 5
-        val candidates = countryNames(game.majorJihadTargets(3) map game.getMuslim filter canJihad)
-        majorJihadTarget(candidates) match {
-          case None => Nil   // No more candidates
-          case Some(name) =>
-            val m = game.getMuslim(name)
-            val numAttempts = remaining
-            // Sadr never used to roll a die in Major Jihad
-            // There are alway at least 4 other cells in the country.
-            val target = JihadTarget(name, numAttempts, 0, false, major = true)
-            target :: nextJihadTarget(completed + numAttempts, alreadyTried + name)
-        }
+    val opsUsed = maxOpsPlusReserves(card)
+    val isCandidate = (m: MuslimCountry) =>
+      majorJihadSuccessPossible(m) &&
+      m.isPoor &&
+      totalUnused(m) - m.totalTroopsAndMilitia >= 5
+    val candidates = game.majorJihadTargets(opsUsed)
+      .map(game.getMuslim)
+      .filter(isCandidate)
+
+    (designatedTarget orElse majorJihadTarget(countryNames(candidates)))
+      .map { name =>
+        if (card.ops < opsUsed)
+          expendBotReserves(opsUsed - card.ops)
+        addOpsTarget(name)
+        val target = JihadTarget(name, opsUsed, 0, false, major = true)
+        for ((_, successes, _) <- performJihads(target::Nil))
+              usedCells(name).addActives(successes)
+        opsUsed
       }
-    }
-
-    val targets = nextJihadTarget(0, Set.empty)
-    val opsUsed = (for (JihadTarget(_, a, s, _, _) <- targets) yield(a + s)).sum
-    if (card.ops < opsUsed)
-      expendBotReserves(opsUsed - card.ops)
-    for (t <- targets)
-      addOpsTarget(t.name)
-    for ((name, successes, _) <- performJihads(targets))
-      usedCells(name).addActives(successes)
-
-    opsUsed
+      .getOrElse(0) // No Ops spent if no target found.  Should not happen!
   }
 
   // Returns the number of Ops used.

@@ -1160,6 +1160,9 @@ object LabyrinthAwakening {
     def isShiaMix = !isSunni
     def inRegimeChange = regimeChange != NoRegimeChange
 
+    def awakeningDelta = awakening - reaction
+    def reactionDelta = reaction - awakening
+
     // If a muslim country is untest, then it is valid a WoI target.
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) =
       !isIslamistRule  &&
@@ -1196,7 +1199,7 @@ object LabyrinthAwakening {
     else
       totalDeployableTroops
 
-    def jihadDRM = awakening - reaction
+    def jihadDRM = -reactionDelta
     def jihadOK = !isIslamistRule && totalCells > 0 && !(name == Pakistan && hasMarker(BenazirBhutto))
     def majorJihadOK(ops: Int) =
       !(name == Pakistan && hasMarker(BenazirBhutto)) &&
@@ -3845,7 +3848,7 @@ object LabyrinthAwakening {
   }
 
   def polarization(): Unit = {
-    val candidates = game.muslims filter (m => (m.awakening - m.reaction).abs > 1)
+    val candidates = game.muslims filter (m => m.awakeningDelta.abs > 1)
     log()
     log("Polarization")
     log(separator())
@@ -3871,7 +3874,7 @@ object LabyrinthAwakening {
       // end so it does not affect the polarization in progress.
       var convergers = List.empty[Converger]
       for (name <- names; m = game.getMuslim(name)) {
-        (m.awakening - m.reaction) match {
+        m.awakeningDelta match {
           case 0  =>  // Nothing happens
           case 2  => addAwakeningMarker(name)
           case -2 => addReactionMarker(name)
@@ -4680,7 +4683,7 @@ object LabyrinthAwakening {
           if (m.awakening > 0)
             log(s"Remove ${amountOf(delta min m.awakening, "awakening marker")} from $name", Color.MapPieces)
           val improved = m.copy(governance = newGov,
-                 awakening  = (m.awakening - delta) max 0) // One awakening for each level actually improved
+                 awakening  = (m.awakening - delta) max 0) // Rempove one awakening for each level actually improved
           game = game.updateCountry(improved)
         }
         if (newGov == Good || newGov == Fair)
