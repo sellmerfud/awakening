@@ -3149,7 +3149,6 @@ object JihadistBot extends BotHelpers {
         addAction(true, EnhancedRadicalizationActions.PlotWMDInUS),
         addAction(!biometrics, EnhancedRadicalizationActions.TravelToUSForWMD),
         addAction(!biometrics, EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims),
-        addAction(true, EnhancedRadicalizationActions.TravelToUntestedNonMuslim),
         addAction(true, EnhancedRadicalizationActions.Recruit),
         addAction(true, EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry),
         addAction(true, EnhancedRadicalizationActions.AddToReserves),
