@@ -1470,17 +1470,20 @@ object LabyrinthAwakening {
       case _           =>  2
     }
 
+    // Hard Non-Muslims - Soft Non-Muslims
+    def hardSoftDelta = game.nonMuslims.filterNot(_.name == UnitedStates).foldLeft(0) {
+      case (v, c) if c.isHard => v + 1
+      case (v, c) if c.isSoft => v - 1
+      case (v, _) => v // Untested
+    }
+
     // Returns the current GWOT
     // posture (Soft, Even, Hard)
     // value 0, 1, 2, 3
     def gwot: (String, Int) = {
-      val value = (nonMuslims.filterNot(_.name == UnitedStates).foldLeft(0) {
-        case (v, c) if c.isHard => v + 1
-        case (v, c) if c.isSoft => v - 1
-        case (v, _) => v // Untested
-      })
-      val posture = if (value == 0) Even else if (value < 0) Soft else Hard
-      (posture, value.abs min 3)
+      val delta = hardSoftDelta
+      val posture = if (delta == 0) Even else if (delta < 0) Soft else Hard
+      (posture, delta.abs min 3)
     }
 
     def worldPosture = gwot._1
