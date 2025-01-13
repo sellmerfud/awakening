@@ -866,10 +866,12 @@ object LabyrinthAwakening {
       case _ => 1
     }
 
-    override def toString() = addedCard match {
-      case None => s"$role plays ${cardNumAndName(cardNum)}"
-      case Some(SecondCard(num)) => s"$role plays ${cardNumAndName(cardNum)} and ${cardNumAndName(num)}"
-      case Some(AdditionalCard(num)) => s"$role plays ${cardNumAndName(cardNum)} with addtional ${cardNumAndName(num)}"
+    override def toString() = {
+        addedCard match {
+        case None => s"$role plays ${cardNumAndName(cardNum)}"
+        case Some(SecondCard(num)) => s"$role plays ${cardNumAndName(cardNum)} and ${cardNumAndName(num)}"
+        case Some(AdditionalCard(num)) => s"$role plays ${cardNumAndName(cardNum)} with addtional ${cardNumAndName(num)}"
+      }
     }
   }
 
@@ -987,7 +989,9 @@ object LabyrinthAwakening {
 
   }
 
-  def cardNumAndName(number: Int): String = deck(number).numAndName
+  def cardNumAndName(number: Int): String = {
+    deck(number).numAndName
+  }
   def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
 
   // Add a Played Card to the list of plays
@@ -1394,9 +1398,8 @@ object LabyrinthAwakening {
   }
 
 
-  // A game segment containing a file name for the segment,
-  // a short description and the log messages that were generated
-  // during the game segment.
+  // A game segment containing the save point number for the segment,
+  // and a summary of the segment.
   case class GameSegment(save_number: Int, summary: Seq[String])
 
   case class GameState(
@@ -1438,7 +1441,7 @@ object LabyrinthAwakening {
     history: Vector[GameSegment]         = Vector.empty,
     description: String                  = "",
     showColor: Boolean                   = !scala.util.Properties.isWin, // Default true except on Windows
-    log: Vector[LogEntry]                = Vector.empty, // Log of the cuurent game segment
+    log: Vector[LogEntry]                = Vector.empty, // Log of the current game segment
     saveName: String                     = "") {         // The name is not saved to disk it is set when the game is loaded
 
     def useExpansionRules   = currentMode == AwakeningMode || currentMode == ForeverWarMode
@@ -1814,8 +1817,9 @@ object LabyrinthAwakening {
       summary.add(separator(char = '='), Color.Info)
       if (turnActions.isEmpty)
         summary.add("none")
-      else
+      else {
         summary.addSeq(turnActions.reverse.map(_.toString))
+      }
       summary
     }
 
@@ -3156,8 +3160,8 @@ object LabyrinthAwakening {
           None
         case x if (x == null || x.trim == "") =>
           getInput()
-        case VALID(char, args) if itemMap.contains(char(0)) =>
-          Some((itemMap(char(0)), Option(args).map(_.trim)))
+        case VALID(char, param) if itemMap.contains(char(0)) =>
+          Some((itemMap(char(0)), Option(param).map(_.trim)))
         case _ =>
           println(s"Not valid. Enter one of: $validOptions")
           getInput()
@@ -3811,17 +3815,16 @@ object LabyrinthAwakening {
     b.toList
   }
 
-  //  Return true if the user enters skip.
-  //  This is a hidden feature to skip future pauses when showing
-  //  game state differences.
+  //  Return true  if the user enters skip.
+  //  This allows the caller to discontinue calling pause.
   def pause(optPrompt: Option[String] = None): Boolean = {
-    val prompt = optPrompt.getOrElse("Press Enter to continue...")
+    val prompt = optPrompt.getOrElse("Press Enter to continue")
     val (color, reset) = if (game.showColor)
       (Console.GREEN, Console.RESET)
     else
       ("", "")
 
-    readLine(s"\n${color}>>>>> [ $prompt ] <<<<<${reset}") == "skip"
+    readLine(s"\n${color}>>>>> [$prompt] ${reset}") == "skip"
   }
 
   def displayLine(text: String = "", color: Option[Color] = None): Unit = {
@@ -3959,15 +3962,12 @@ object LabyrinthAwakening {
       log(text, color)
   }
 
-  def printHistorySegment(save_number: Int, last_save_number: Int, optWriter: Option[java.io.Writer]): Unit = {
+  def printHistorySegment(save_number: Int, last_save_number: Int, pauseAfter: Boolean, optWriter: Option[java.io.Writer] = None): Unit = {
+    val prompt = "Press Enter to continue (or 'skip' to skip these prompts)"
+    var pauseNext = pauseAfter
     if (save_number <= last_save_number) {
       val header   = s"\n>>> History of save point $save_number <<<"
-      val log_path = gamesDir/game.saveName/getLogName(save_number)
-
-      val entries = if (log_path.exists)
-        SavedGame.loadLog(log_path)
-      else
-        Vector.empty
+      val entries = loadSavedLog(game.saveName, save_number)
 
       optWriter match {
         case None =>
@@ -3975,6 +3975,8 @@ object LabyrinthAwakening {
           displayLine(separator(char = '='), Some(Color.Green))
           for (LogEntry(line, color) <- entries)
             displayLine(line, color)
+            if (pauseAfter)
+              pauseNext = !pause(Some(prompt)) // Keep pausing unless user enters skip
 
         case Some(stream) =>
           stream.write(header + lineSeparator)
@@ -3982,10 +3984,10 @@ object LabyrinthAwakening {
           for (LogEntry(line, _) <- entries)
             stream.write(line + lineSeparator)
       }
-      printHistorySegment(save_number + 1, last_save_number, optWriter)
+      printHistorySegment(save_number + 1, last_save_number, pauseNext, optWriter)
     }
   }
-  
+
   // Display some or all of the game log.
   // usage:
   // history            - Shows the log starting from the most recent save point (Same as history -1)
@@ -3995,26 +3997,41 @@ object LabyrinthAwakening {
   // history -n num     - Shows num log entries starting from the nth most recent save point
   // history all        - Shows the entire log (Same as history 0)
   // You may add >file to the end of any history command to write the history to disk.""".stripMargin
-  def historyCommand(input: Option[String]): Unit = {
-    case class Error(msg: String) extends Exception
+  def historyCommand(param: Option[String]): Unit = {
+
+    param.map(_.trim) match {
+      case Some(param) if param != "" =>
+        historyCommandLine(param)
+      case _ =>
+        historyMenu()
+    }
+  }
+
+  // cmdline:  one or more arguments separated by spaces
+  def historyCommandLine(cmdline: String): Unit = {
+    case class HistoryError(msg: String) extends Exception
     try {
       def redirect(tokens: List[String]): Option[Pathname] = {
         tokens match {
           case Nil => None
           case x::_  if !(x startsWith ">") => None
-          case ">":: Nil => throw Error("No filename specified after '>'")
+          case ">":: Nil => throw HistoryError("No filename specified after '>'")
           case ">"::file::_ => Some(Pathname(file))
           case file::_ => Some(Pathname(file drop 1))
         }
       }
 
-
-
+      val lastAction = mostRecentSaveNumber(game.saveName).get
       val maxIndex = game.history.size - 1
       val NUM      = """(-?\d+)""".r
-      val ALL      = """al{0,2}""".r
+      val HELP     = """(?:\?|(?:--)?(?i:help)|-h)""".r
+      val WORD     = """([a-z]+)""".r
       val REDIR    = """>.*""".r
-      val tokens   = (input getOrElse "" split "\\s+").toList map (_.toLowerCase) dropWhile (_ == "")
+      val tokens   = cmdline
+        .split("\\s+")
+        .toList
+        .map(_.toLowerCase)
+        .dropWhile(_ == "")
 
       def indexVal(str: String): Int = str.toInt match {
         case x if x < 0 => (game.history.size + x) max 0
@@ -4022,34 +4039,163 @@ object LabyrinthAwakening {
       }
 
       val (startIndex, count, redirect_path) = tokens match {
-        case Nil                => (maxIndex, 0, None)
-        case NUM(x)::NUM(y)::xs => (indexVal(x), y.toInt, redirect(xs))
-        case NUM(x)::xs         => (indexVal(x), 0, redirect(xs))
-        case ALL()::xs          => (0, 0, redirect(xs))
-        case REDIR()::_         => (maxIndex, 0, redirect(tokens))
-        case p::_               => throw Error(s"Invalid parameter: $p")
+        case HELP()::_ =>
+          (-1, -1, None)
+        case NUM(x)::NUM(y)::xs =>
+          (indexVal(x), y.toInt, redirect(xs))
+        case NUM(x)::xs =>
+          (indexVal(x), 0, redirect(xs))
+        case WORD(w)::xs if "last".startsWith(w) =>
+          (lastAction, lastAction, redirect(xs))
+        case WORD(w)::xs if "turn".startsWith(w) =>
+          (findFirstSavePointOfTurn(game.turn).get, lastAction, redirect(xs))
+        case WORD(w)::xs if "prev".startsWith(w) && game.turn > 1 =>
+          (findFirstSavePointOfTurn(game.turn - 1).get, findFirstSavePointOfTurn(game.turn).get, redirect(xs))
+        case WORD(w)::xs if "all".startsWith(w) =>
+          (0, 0, redirect(xs))
+        case Nil =>
+          // Should not get here, but need to avoid compiler match not exhaustive warning
+          (maxIndex, 0, None)
+        case p::_ =>
+          throw HistoryError(s"Invalid input: $cmdline\nType h ? for help.")
       }
       val endIndex = count match {
+        case -1         => -1
         case c if c < 1 => maxIndex
         case c          => (startIndex + (c - 1)) min maxIndex
       }
 
-      redirect_path match {
-        case None =>
-          printHistorySegment(startIndex, endIndex, None)
-
-        case Some(path) =>
-          if (path.isDirectory)
-            throw new Error(s"Cannot redirect to a directory ($path)!")
-          path.writer { stream =>
-            printHistorySegment(startIndex, endIndex, Some(stream))
-          }
-          println(s"\nHistory was written to file: $path")
+      if (count == -1) {
+        val help = """|
+                      |History command help
+                      |--------------------------------
+                      |If you enter the 'h' command with no arguments you will see a menu.
+                      |
+                      |You can bypass the menu by following the command with arguments.
+                      |h last   -- Show the history of the last action
+                      |h turn   -- Show the history of the current turn
+                      |h prev   -- Show the history of the previous turn
+                      |h all    -- Show the entire history (same as h 0)
+                      |
+                      |To show the history of a specific save point or range of save points you can
+                      |follow the h command with a starting point and an optional number of entries.
+                      |Save point numbers start a zero.
+                      |h -1     -- Show history of the most recent save point
+                      |h -n     -- Show all history starting with the nth most recent save point
+                      |h -n num -- Show history of num save points starting with the nth most recent
+                      |h n      -- Show all history starting with the nth save point
+                      |h n num  -- Show history of num save points starting with the nth save point
+                      |
+                      |Finally, any of the above commands can be followed by a redirect argument
+                      |to save the requested histor in a file instead of printing it to the screen.
+                      |h all >/tmp/game_history
+                      """.stripMargin
+        displayLine(help)
+        pause()
       }
+      else
+        redirect_path match {
+          case None =>
+            printHistorySegment(startIndex, endIndex, true, None)
+
+          case Some(path) =>
+            if (path.isDirectory)
+              throw new HistoryError(s"Cannot redirect to a directory ($path)!")
+            path.writer { stream =>
+              printHistorySegment(startIndex, endIndex, false, Some(stream))
+            }
+            println(s"\nHistory was written to file: $path")
+        }
     }
     catch {
       case e: IOException => println(s"IOException: ${e.getMessage}")
-      case Error(msg) => println(msg)
+      case HistoryError(msg) => println(msg)
+    }
+  }
+
+    // Turn 1 starts a save point 1
+  // For the later turns we must find the save point containing the
+  // log entry for the end of the previous turn.
+  def findFirstSavePointOfTurn(turnNumber: Int): Option[Int] = {
+    import scala.util.matching.Regex
+    val lastAction = mostRecentSaveNumber(game.saveName).get
+    val endOfTurnRE = new Regex(s"^End of turn ${turnNumber - 1}$$")
+
+    def findGameSegment(saveNumber: Int): Option[Int] = {
+      if (saveNumber > lastAction)
+        None
+      else {
+        val found = loadSavedLog(game.saveName, saveNumber)
+          .exists(entry => endOfTurnRE.matches(entry.text))
+
+        if (found)
+          Some(saveNumber + 1)
+        else
+          findGameSegment(saveNumber + 1)
+      }
+    }
+
+    if (turnNumber == 1)
+      return Some(1)
+    else
+      findGameSegment(1)
+  }
+
+
+  def historyMenu(): Unit = {
+    val lastAction = mostRecentSaveNumber(game.saveName).get
+    val choices = List(
+      choice(true, "last", "Last action"),
+      choice(true, "turn", "Current turn actions"),
+      choice(game.turn > 1, "prev", "Previous turn actions"),
+      choice(game.turn > 1, "chosen-turn", "Choosen turn actions"),
+      choice(true, "all", "Entire history"),
+      choice(true, "", "Finished"),
+    ).flatten
+
+    askMenu("Show history of:", choices).head match {
+      case "last" =>
+        printHistorySegment(lastAction, lastAction, false)
+
+      case "turn" =>
+        findFirstSavePointOfTurn(game.turn) match {
+          case Some(start) if start == game.history.size =>
+            displayLine("\nNo actions yet in the current turn.", Color.Event)
+          case Some(start) =>
+            printHistorySegment(start, lastAction, true)
+          case None =>
+            displayLine("\nCould not determine save point.", Color.Event)
+        }
+
+      case "prev" =>
+        (findFirstSavePointOfTurn(game.turn - 1), findFirstSavePointOfTurn(game.turn)) match {
+          case (Some(start), Some(next)) =>
+            printHistorySegment(start, next - 1, true)
+          case _ =>
+            displayLine("\nCould not determine save point.", Color.Event)
+        }
+
+      case "chosen-turn" =>
+        val turn = askInt("Show history of which turn", 1, game.turn)
+        findFirstSavePointOfTurn(turn) match {
+          case Some(start) if start == game.history.size =>
+            displayLine("\nNo actions yet in the current turn.", Color.Event)
+          case Some(start) if turn == game.turn =>
+            printHistorySegment(start, lastAction, true)
+          case Some(start) =>
+            findFirstSavePointOfTurn(turn + 1) match {
+              case Some(next) =>
+                printHistorySegment(start, next - 1, true)
+              case None =>
+                displayLine("\nCould not determine save point.", Color.Event)
+            }
+          case None =>
+            displayLine("\nCould not determine save point.", Color.Event)
+        }
+
+      case "all" =>
+        printHistorySegment(0, lastAction, true)
+      case _ =>
     }
   }
 
@@ -4169,6 +4315,16 @@ object LabyrinthAwakening {
     gamesDir.children(withDirectory = false).toList map (_.toString) filter { name =>
       mostRecentSaveNumber(name).nonEmpty
     }
+  }
+
+  def loadSavedLog(name: String, save_number: Int): Vector[LogEntry] = {
+
+    val log_path = gamesDir/name/getLogName(save_number)
+    if (log_path.exists) {
+      SavedGame.loadLog(log_path)
+    }
+    else
+      Vector.empty
   }
 
   sealed trait GameFile
@@ -5998,7 +6154,7 @@ object LabyrinthAwakening {
 
       val fromTrack = num min game.cellsOnTrack  // Take as many as possible from the track first
       val fromCamp  = num - fromTrack            // Any left over come from the camp
-      
+
       testCountry(name)
       val updated = game.getCountry(name) match {
         case m: MuslimCountry    if isActive => m.copy(activeCells  = m.activeCells  + num)
@@ -6470,10 +6626,10 @@ object LabyrinthAwakening {
     }
 
     log()
-    log(separator(char='='))
-    log("Resolve plots")
+    log(separator(char='='), Color.Info)
+    log("Resolve plots", Color.Info)
     if (unblocked.isEmpty) {
-      log(separator())
+      log()
       log("There are no unblocked plots on the map", Color.Info)
     }
     else {
@@ -6850,8 +7006,8 @@ object LabyrinthAwakening {
       resolvePlots()
 
     log()
-    log("End of turn")
-    log(separator(char='='))
+    log(s"End of turn ${game.turn}", Color.Info)
+    log(separator(char='='), Color.Info)
 
     if ((globalEventInPlay(Pirates1) && pirates1ConditionsInEffect) ||
         (globalEventInPlay(Pirates2) && pirates2ConditionsInEffect)) {
@@ -7094,7 +7250,6 @@ object LabyrinthAwakening {
         }
       choices :+ (None -> ("Cancel", Seq.empty))
     }
-
     val games = savedGames()
     val choices = List(
       choice(true, "new", "Start a new game"),
@@ -7172,17 +7327,6 @@ object LabyrinthAwakening {
 
       scenario.additionalSetup()
 
-      // CWS DEBUG ======================
-      // game = game.copy(
-      //   eventsLapsing = LapsingEntry(117)::LapsingEntry(114, true)::Nil,
-      //   firstPlotEntry = Some(LapsingEntry(32)),
-      //   cardsDiscarded = cardsInSource(FromDrawPile)
-      //     .filter(n => n != 117 && n != 32)
-      //     .drop(8),
-      //   cardsInHand = CardsInHand(us = 1, jihadist = 0)
-      // )
-      // CWS DEBUG ======================
-
       game = game.copy(turn = 1)
       drawCardsForTurn()  // Display and save card draw for first turn
       saveGameState(Some("Beginning of game"))
@@ -7191,7 +7335,6 @@ object LabyrinthAwakening {
     }
     catch {
       case CancelNewGame =>
-      // case QuitGame => // CWS DEBUG
     }
   }
 
@@ -7524,21 +7667,21 @@ object LabyrinthAwakening {
 
 
   sealed trait UserAction {
-    def perform(args: Option[String]): Unit
+    def perform(param: Option[String]): Unit
   }
 
   case object PlayCard extends UserAction {
-    override def perform(args: Option[String]): Unit =
+    override def perform(param: Option[String]): Unit =
       game.activeRole match {
-        case US => usCardPlay(args)
-        case Jihadist => jihadistCardPlay(args)
+        case US => usCardPlay(param)
+        case Jihadist => jihadistCardPlay(param)
       }
   }
 
   // This action is only take by the Human US player
   case object DiscardLast extends UserAction {
-    override def perform(args: Option[String]): Unit = {
-      askCardNumber(FromRole(US)::Nil, "Card # to discard (blank to cancel): ", args)
+    override def perform(param: Option[String]): Unit = {
+      askCardNumber(FromRole(US)::Nil, "Card # to discard (blank to cancel): ", param)
         .foreach { cardNumber =>
           decreaseCardsInHand(US, 1)
           addCardToDiscardPile(cardNumber)
@@ -7549,7 +7692,7 @@ object LabyrinthAwakening {
   }
 
   case object EndPhase extends UserAction {
-    override def perform(args: Option[String]): Unit = {
+    override def perform(param: Option[String]): Unit = {
       val activeRole = game.activeRole
       val endOfTurn = activeRole match {
         case US  => numCardsInHand(US) < 2 && numCardsInHand(Jihadist) == 0
@@ -7567,7 +7710,7 @@ object LabyrinthAwakening {
   }
 
   case object RemoveCadre extends UserAction {
-    override def perform(args: Option[String]): Unit = {
+    override def perform(param: Option[String]): Unit = {
       val numRemoved = humanVoluntarilyRemoveCadre()
       if (numRemoved > 0) {
         game = game.copy(turnActions = VoluntaryCadreRemoval(numRemoved)::game.turnActions)
@@ -7577,31 +7720,31 @@ object LabyrinthAwakening {
   }
 
   case object ShowState extends UserAction {
-    override def perform(args: Option[String]): Unit = {
-      showCommand(args)
+    override def perform(param: Option[String]): Unit = {
+      showCommand(param)
     }
   }
 
   case object History extends UserAction {
-    override def perform(args: Option[String]): Unit = {
-      historyCommand(args)
+    override def perform(param: Option[String]): Unit = {
+      historyCommand(param)
     }
   }
 
   case object Rollback extends UserAction {
-    override def perform(args: Option[String]): Unit = {
+    override def perform(param: Option[String]): Unit = {
       rollback()
     }
   }
 
   case object Adjust extends UserAction {
-    override def perform(args: Option[String]): Unit = {
-      adjustSettings(args)
+    override def perform(param: Option[String]): Unit = {
+      adjustSettings(param)
     }
   }
 
   case object Quit extends UserAction {
-    override def perform(args: Option[String]): Unit =
+    override def perform(param: Option[String]): Unit =
       throw QuitGame
   }
 
@@ -7678,8 +7821,8 @@ object LabyrinthAwakening {
       if (game.activeRole == Jihadist && isBot(Jihadist) && game.botEnhancements)
         if (JihadistBot.voluntaryCadreRemoval())
           saveGameState()
-      val (action, args) = actionPhasePrompt()
-      action.perform(args)
+      val (action, param) = actionPhasePrompt()
+      action.perform(param)
       actionLoop()
     }
 
@@ -7843,10 +7986,10 @@ object LabyrinthAwakening {
     }
   }
 
-  // If there are args, then we process the args and return.
-  // If there are no args, then we loop showing a menu of options
+  // If there is a param, then we process the param and return.
+  // If there is no param, then we loop showing a menu of options
   // until the user exits the menu with no action.
-  def showCommand(args: Option[String]): Unit = {
+  def showCommand(param: Option[String]): Unit = {
     val exp = game.useExpansionRules
     val allOptions = List(
       "all", "actions", "summary", "scenario", "caliphate", "civil wars",
@@ -7912,7 +8055,7 @@ object LabyrinthAwakening {
     }
 
 
-    args.map(_.trim) match {
+    param.map(_.trim) match {
       case Some(param) if param != "" =>
         askOneOf("Show: ", options, Some(param), allowNone = true, abbr = CountryAbbreviations, allowAbort = false)
           .foreach{ entity =>
