@@ -68,10 +68,11 @@ object Card_049 extends Card(49, "Al-Ittihad al-Islami", Jihadist, 1, Remove, No
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit =
+  def executeEvent(role: Role): Unit = {
     addEventTarget(Somalia)
     if (game.cellsAvailable > 0)
       addSleeperCellsToCountry(Somalia, 1)
     else
       log(s"\nThere are no cells available to place in $Somalia.", Color.Event)
+  }
 }
