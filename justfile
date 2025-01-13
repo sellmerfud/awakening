@@ -20,7 +20,7 @@ to_florian:
   else
     sbt stage
     rm target/awakening-5.6-florian/commit_*
-    COMMIT=$(cat .git/refs/heads/florian)
+    COMMIT=$(cat .git/refs/heads/florian | head -c 10)
     COMMIT_FILE="target/awakening-5.6-florian/commit_$COMMIT"
     echo "$COMMIT" > "$COMMIT_FILE"
     zip -j target/awakening-5.6-florian.zip "$COMMIT_FILE"
