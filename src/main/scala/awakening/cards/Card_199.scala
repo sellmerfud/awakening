@@ -73,11 +73,15 @@ object Card_199 extends Card(199, "US Consulate Attacked", Jihadist, 3, NoRemove
   def executeEvent(role: Role): Unit = {
     decreasePrestige(2)
 
-    if (isHuman(role))
-      log(s"\nDiscard the top card of the $US hand.", Color.Event)
+    if (hasCardInHand(US)) {
+      if (isHuman(role))
+        log(s"\nDiscard the top card of the $US hand.", Color.Event)
+      else
+        log(s"\nYou ($US) must discard one random card.", Color.Event)
+      askCardsDiscarded(US, 1)
+    }
     else
-      log(s"\nYou ($US) must discard one random card.", Color.Event)
-    askCardsDiscarded(US, 1)
+      log(s"\nThe $US does not have a card to discard.", Color.Event)
 
     log("\nIf US Elections is played later this turn, US Posture switches automatically", Color.Event)
   }

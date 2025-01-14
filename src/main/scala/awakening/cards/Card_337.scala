@@ -98,10 +98,14 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
   else { // Jihadist
     setTrumpTweetsOFF()
 
-    if (isHuman(role))
-      log(s"\nDiscard top card of the $US Bot's hand", Color.Event)
+    if (hasCardInHand(US)) {
+      if (isHuman(US))
+        log(s"\nYou ($US) must discard one random card.", Color.Event)
+      else
+        log(s"\nDiscard top card of the $US Bot's hand", Color.Event)
+      askCardsDiscarded(US, 1)
+    }
     else
-      log(s"\nYou ($US) must discard one random card.", Color.Event)
-    askCardsDiscarded(US, 1)
+      log(s"\nThe $US does not have a card to discard.", Color.Event)
   }
 }

@@ -38,6 +38,8 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.USBot
+import awakening.USBot.PlotInCountry
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -68,61 +70,85 @@ object Card_135 extends Card(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, N
     game.availablePlots.contains(PlotWMD) ||
     hasCardInHand(Jihadist)
 
+  def canRevealPlots = 
+    game.availablePlots.contains(PlotWMD) ||
+    game.hasCountry(_.plots.nonEmpty)
 
+  def canDraw = hasCardInHand(Jihadist)
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role)) {
-      val choices = List(
-        "reveal" -> "Reveal all WMD plots and remove one",
-        "draw"   -> "Randomly draw 1 card from the Jihadist hand")
+    if (canRevealPlots || canDraw) {
+      if (isHuman(role)) {
+        val choices = List(
+          choice(canRevealPlots, "reveal", "Reveal all WMD plots and remove one"),
+          choice(canDraw,        "draw"  , "Randomly draw 1 card from the Jihadist hand")
+        ).flatten
 
-      askMenu("Choose one:", choices).head match {
-        case "draw" =>
-          log("\nDraw the top card in the Jihadist Bot's hand", Color.Event)
-          askCardsDrawn(US, 1, FromRole(game.botRole)::Nil)
+        askMenu("Choose one:", choices).head match {
+          case "draw" =>
+            log("\nDraw the top card in the Jihadist Bot's hand", Color.Event)
+            askCardsDrawn(US, 1, FromRole(game.botRole)::Nil)
 
-        case _ =>
-          val Available = "Available Plots box"
-          val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
-            yield c.name
-          val wmdAvailable = game.availablePlots.sorted.takeWhile(_ == PlotWMD)
-          if (wmdOnMap.isEmpty && wmdAvailable.isEmpty)
+          case _ =>
+            val Available = "Available Plots box"
+            val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
+              yield c.name
+            val wmdAvailable = game.availablePlots.sorted.takeWhile(_ == PlotWMD)
+            if (wmdOnMap.isEmpty && wmdAvailable.isEmpty)
+              log("\nThere are no WMD plots on the map or in the available plots box.", Color.Event)
+            else {
+              log(s"\nWMD plots in the available plots box: ${wmdAvailable.size}")
+              val onMapDisplay = if (wmdOnMap.isEmpty) "none" else wmdOnMap.mkString(", ")
+              log(s"WMD plots on the map: " + onMapDisplay)
+              val target = if (wmdOnMap.isEmpty)
+                Available
+              else if (wmdAvailable.isEmpty)
+                askCountry("Select country with WMD: ", wmdOnMap)
+              else {
+                val choices = (Available :: wmdOnMap).map(n => n -> s"Remove WMD plot in $n")
+                askMenu("Choose one", choices).head
+              }
+
+              if (target == Available)
+                removeAvailableWMD(1)
+              else {
+                addEventTarget(target)
+                removePlacedWMD(target, 1)
+              }
+            }
+        }
+      }
+      else {
+        // See Event Instructions table
+        // If there are any WMD plots in the available box, the bot
+        // will remove one. Otherwise take a US player's random card.
+        if (game.availablePlots.contains(PlotWMD))
+          removeAvailableWMD(1)
+        else if (hasCardInHand(Jihadist)) {
+          log(s"\nYou ($Jihadist) must place one random card on top of the $US hand", Color.Event)
+          askCardsDrawn(US, 1, FromRole(game.humanRole)::Nil)
+        }
+        else {
+          val plots = for {
+            country <- game.countries
+            plot <- country.plots
+            if plot.plot == PlotWMD
+          } yield PlotInCountry(plot, country)
+
+          if (plots.isEmpty)
             log("\nThere are no WMD plots on the map or in the available plots box.", Color.Event)
           else {
-            log(s"\nWMD plots in the available plots box: ${wmdAvailable.size}")
-            val onMapDisplay = if (wmdOnMap.isEmpty) "none" else wmdOnMap.mkString(", ")
-            log(s"WMD plots on the map: " + onMapDisplay)
-            val target = if (wmdOnMap.isEmpty)
-              Available
-            else if (wmdAvailable.isEmpty)
-              askCountry("Select country with WMD: ", wmdOnMap)
-            else {
-              val choices = (Available :: wmdOnMap).map(n => n -> s"Remove WMD plot in $n")
-              askMenu("Choose one", choices).head
-            }
-
-            if (target == Available)
-              removeAvailableWMD(1)
-            else {
-              addEventTarget(target)
-              removePlacedWMD(target, 1)
-            }
+            val target = USBot.priorityPlot(plots).country.name
+            addEventTarget(target)
+            removePlacedWMD(target, 1)
           }
+        }
       }
     }
-    else {
-      // See Event Instructions table
-      // If there are any WMD plots in the available box, the bot
-      // will remove one. Otherwise take a US player's random card.
-      if (game.availablePlots.contains(PlotWMD))
-        removeAvailableWMD(1)
-      else {
-        log(s"\nYou ($Jihadist) must place one random card on top of the $US hand", Color.Event)
-        askCardsDrawn(US, 1, FromRole(game.humanRole)::Nil)
-      }
-    }
+    else
+      log("\nThe event has no effect.", Color.Event)
   }
 }

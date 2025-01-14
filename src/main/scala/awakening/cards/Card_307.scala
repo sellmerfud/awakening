@@ -73,10 +73,14 @@ object Card_307 extends Card(307, "Russian Subterfuge", Jihadist, 2, NoRemove, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role))
-      log(s"\nDiscard the top card of the $US Bot's hand.", Color.Event)
+    if (hasCardInHand(US)) {
+      if (isHuman(role))
+        log(s"\nDiscard the top card of the $US Bot's hand.", Color.Event)
+      else
+        log(s"\nYou ($US) must discard a random card.", Color.Event)
+      askCardsDiscarded(US, 1)
+    }
     else
-      log(s"\nYou ($US) must discard a random card.", Color.Event)
-    askCardsDiscarded(US, 1)
+      log("\nThe US does not have a card to discard.", Color.Event)
   }
 }

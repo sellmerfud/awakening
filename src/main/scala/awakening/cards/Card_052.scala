@@ -76,6 +76,9 @@ object Card_052 extends Card(52, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAut
       log(s"\nDiscard the top card of the $US Bot's hand", Color.Event)
     else
       log(s"\nYou ($US) must randomly discard one card", Color.Event)
-    askCardsDiscarded(US, 1)
+    if (hasCardInHand(US))
+      askCardsDiscarded(US, 1)
+    else
+      log(s"\nThe US does not have any cards to discard.", Color.Event)
   }
 }

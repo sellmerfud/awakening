@@ -131,14 +131,44 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
       log(s"No available $Plot2, $Plot3, or cells.  The event has no effect. ", Color.Event)
 
     if (isHuman(role)) {
-      log("\nJihadist player may return Boko Haram to hand by discarding a", Color.Event)
-      log("non-US associated 3 Ops card", Color.Event)
-      if (askYorN("\nDo you wish to discard a non-US associated 3 Ops card? (y/n) ")) {
-        askCardsDiscarded(Jihadist, 1)   // Will decrease cards in hand by 1
-        setIgnoreDiscardAtEndOfTurn(true)
+      if (hasCardInHand(Jihadist)) {
+        log("\nJihadist player may return Boko Haram to hand by discarding a", Color.Event)
+        log("non-US associated 3 Ops card", Color.Event)
+        if (askYorN("\nDo you wish to discard a non-US associated 3 Ops card? (y/n) ")) {
+          if (getDiscard())   // Will decrease cards in hand by 1 if card was discarded
+            setIgnoreDiscardAtEndOfTurn(true)
+        }
       }
+      log("\nThe Jihadist player does not have a card to discard")
     }
     else
       log("\nThe Jihadist Bot does not return the Boko Haram card to hand.", Color.Event)
+  }
+
+  // The discarded card must be a non-US associated 3 Ops card
+  def getDiscard(): Boolean = {
+    val prompt = s"\nWhat is the card# of non-US associated 3 Ops card being discarded: (blank if none) "
+
+    def cardIsValid(cardNum: Int) = {
+      val card = deck(cardNum)
+      card.association != US && card.printedOps == 3
+    }
+
+    def askForCard(): Boolean = {
+      askCardNumber(FromRole(Jihadist)::Nil, prompt) match {
+        case None =>
+          false
+        case Some(cardNum) if cardIsValid(cardNum) =>
+          decreaseCardsInHand(Jihadist, 1)
+          processDiscardedCard(cardNum)
+          true
+        case Some(cardNum) =>
+          val card = deck(cardNum).toString
+          displayLine(s"$card is not a valid discard.")
+          askForCard()
+      }
+    }
+
+    askForCard()
   }
 }

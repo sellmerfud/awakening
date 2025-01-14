@@ -74,11 +74,17 @@ object Card_099 extends Card(99, "HAMAS Elected", Unassociated, 1, Remove, NoLap
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(US))
-      log(s"\nYou ($US) must select and discard one card if you have any", Color.Event)
+    if (hasCardInHand(US)) {
+      if (isHuman(US))
+        log(s"\nYou ($US) must select and discard one card.", Color.Event)
+      else
+        log(s"\nDiscard the top card of the $US Bot's hand.", Color.Event)
+
+      askCardsDiscarded(US, 1)
+    }
     else
-      log(s"\nDiscard the top card of the $US Bot's hand", Color.Event)
-    askCardsDiscarded(US, 1)
+      log(s"\nThe $US does not have a card to discard.", Color.Event)
+      
     decreasePrestige(1)
     decreaseFunding(1)
   }

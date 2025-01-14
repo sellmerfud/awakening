@@ -2833,15 +2833,24 @@ object LabyrinthAwakening {
   //        -- For a campign game we handle adding the next deck to the draw pile
   //           and updating the current game mode, or ending the game.
   //
-  def askCardsDrawn(role: Role, numDrawn: Int, sources: List[CardDrawSource], optPrompt: Option[String] = None): Unit = {
+  def askCardsDrawn(
+    role: Role,
+    numDrawn: Int,
+    sources: List[CardDrawSource],
+    lessOk: Boolean = false,
+    optPrompt: Option[String] = None): Unit = {
+    val blankIfNone = if (lessOk)
+       "(blank if none) "
+    else
+      ""
     for (num <- (1 to numDrawn)) {
       val prompt = optPrompt match {
         case Some(prompt) =>
           prompt
         case None if numDrawn == 1 =>
-          "\nWhat is the card# of the card that was drawn: (blank if none) "
+          s"\nWhat is the card# of the card that was drawn: $blankIfNone"
         case None =>
-          s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: (blank if none) "
+          s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: $blankIfNone"
       }
 
       // If only source is the draw pile and the draw pile is empty...
@@ -2850,7 +2859,7 @@ object LabyrinthAwakening {
         handleEmptyDrawPile()
       }
 
-      askCardNumber(sources, prompt) match {
+      askCardNumber(sources, prompt, allowNone = lessOk) match {
         case None =>
           return
         case Some(cardNum) =>
@@ -2957,7 +2966,7 @@ object LabyrinthAwakening {
     prompt: String,
     triggerRole: Option[Role] = None,
     opsRequired: Option[Int] = None,
-    allowNone: Boolean = true): Option[Int] = {
+    allowNone: Boolean = false): Option[Int] = {
 
     def opsOk(cardNum: Int) = opsRequired match {
       case None => true
@@ -2983,19 +2992,25 @@ object LabyrinthAwakening {
   }
 
   // Convience method for discarding by number of cards
-  def askCardsDiscarded(role: Role, numCards: Int, triggerRole: Option[Role] = None) = {
-
-    def nextCard(currentNum: Int): Unit = {
+  def askCardsDiscarded(role: Role, numCards: Int, lessOk: Boolean = false, triggerRole: Option[Role] = None): List[Int] = {
+    val blankIfNone = if (lessOk)
+       "(blank if none) "
+    else
+      ""
+    def nextCard(currentNum: Int): List[Int] = {
       if (currentNum <= numCards) {
         val prompt = if (numCards == 1)
-          s"\nWhat is the card# of the $role card being discarded: (blank if none) "
+          s"\nWhat is the card# of the $role card being discarded: $blankIfNone"
         else
-          s"\nWhat is the card# of the ${ordinal(currentNum)} $role card being discarded: (blank if none) "
-        askCardBeingDiscarded(role, prompt, triggerRole) match {
+          s"\nWhat is the card# of the ${ordinal(currentNum)} $role card being discarded: "
+        askCardBeingDiscarded(role, prompt, triggerRole = triggerRole, allowNone = lessOk) match {
           case None =>
-          case Some(_) => nextCard(currentNum + 1)
+            Nil
+          case Some(cardNum) =>
+            cardNum :: nextCard(currentNum + 1)
         }
       }
+      Nil
     }
 
     nextCard(1)
@@ -3005,9 +3020,11 @@ object LabyrinthAwakening {
   def askCardsDiscardedByOps(role: Role, totalOps: Int, triggerRole: Option[Role] = None) = {
 
     def nextCard(currentNum: Int, accumulatedOps: Int): Unit = {
-      if (accumulatedOps < totalOps) {
+      if (accumulatedOps < totalOps && hasCardInHand(role)) {
         val prompt =
           s"\nWhat is the card# of the ${ordinal(currentNum)} $role card being discarded: (blank if none) "
+          
+        displayLine(s"\n${amountOf(accumulatedOps, "Op")} of $totalOps have been accounted for.", Color.Info)
         askCardBeingDiscarded(role, prompt, triggerRole) match {
           case None =>
           case Some(cardNum) =>

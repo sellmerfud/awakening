@@ -74,17 +74,36 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role)) {
-      log(s"\nDiscard the top two cards of the $US Bot's hand.", Color.Event)
-      log(s"$Jihadist associated events will not be triggered.", Color.Event)
-      askCardsDiscarded(US, 2, None)
-    }
-    else {
-      log(s"\nYou ($US) must randomly discard two cards", Color.Event)
-      log("Playable Jihadist events on the discards are triggered", Color.Event)
-      askCardsDiscarded(US, 2, Some(Jihadist))
+    import scala.collection.mutable.ListBuffer
+    val msgs = new ListBuffer[String]
+    val numCards = numCardsInHand(US) min 2
+    msgs += "" // Blank line spacer
+    (numCards, isHuman(US)) match {
+      case (0, _) => msgs += s"The $US does not have any cards to discard."
+      case (1, true) => msgs += s"You ($US) must discard your last card."
+      case (1, false) => msgs += s"Discard the last card in the $US Bot's hand."
+      case (2, true) => msgs += s"You ($US) must discard your last 2 cards."
+      case (2, false) => msgs += s"Discard the last 2 cards in the $US Bot's hand."
+      case (_, true) => msgs += s"You ($US) must randomly discard two cards."
+      case (_, false) => msgs += s"Discard the top two cards of the $US Bot's hand."
     }
 
+    if (numCards > 0)
+      if (isHuman(Jihadist))
+        msgs += s"Playable $Jihadist events on the discards are triggered."
+      else
+        msgs += s"$Jihadist associated events are not triggered."
+        
+    for (msg <- msgs)
+      log(msg, Color.Event)
+
+    if (numCards > 0) {
+      if (isHuman(Jihadist))
+        askCardsDiscarded(US, numCards, triggerRole = Some(Jihadist))
+      else
+        askCardsDiscarded(US, numCards)
+    }
+  
     if (game.usPosture != Soft) {
       log(s"\nThe Quagmire event affects the $US posture.", Color.Event)
       setUSPosture(Soft)

@@ -71,11 +71,13 @@ object Card_078 extends Card(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsin
   override
   def executeEvent(role: Role): Unit = {
     if (isHuman(role))
-      log(s"\nThe $US Bot does NOT dicard any cards", Color.Event)
-    else {
+      log(s"\nThe $US Bot does NOT discard any cards", Color.Event)
+    else if (hasCardInHand(US)) {
       log(s"\nYou ($US) must discard any of Iran, Hizballah, or Jaysh al-Mahdi", Color.Event)
-      askCardsDiscarded(US, 1)
+      askCardsDiscarded(US, 1, lessOk = true)
     }
+    else
+      log(s"\nThe $US does not have a card to discard.", Color.Event)
 
     setUSPosture(Hard)
     rollPrestige()

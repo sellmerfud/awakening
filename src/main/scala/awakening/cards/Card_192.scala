@@ -39,56 +39,33 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 
-// Card Text:
-// ------------------------------------------------------------------
-// Play if Prestige Medium or Low and a Regime Change country has a Cell.
-// US randomly discards 2 cards.
-// Playable events on them happen.
-// US Posture to Soft.
-// ------------------------------------------------------------------
+// -------------------------------------
+// This card is a duplicate of Card 90
+// -------------------------------------
 object Card_192 extends Card(192, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
-  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = Card_090.eventAlertsPlot(countryName, plot)
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = false
+  def eventRemovesLastCell(): Boolean = Card_090.eventRemovesLastCell()
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    (game.prestigeLevel == Medium || game.prestigeLevel == Low) &&
-    game.hasMuslim (m => m.inRegimeChange && m.totalCells > 0)
+  def eventConditionsMet(role: Role) = Card_090.eventConditionsMet(role)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = Card_090.botWillPlayEvent(role)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit = {
-    if (isHuman(role)) {
-      log(s"\nDiscard the top two cards of the $US Bot's hand.", Color.Event)
-      log(s"$Jihadist associated events will not be triggered.", Color.Event)
-      askCardsDiscarded(US, 2, None)
-    }
-    else {
-      // Bot
-      log(s"\nYou ($US) must randomly discard two cards", Color.Event)
-      log("Playable Jihadist events on the discards are triggered", Color.Event)
-      askCardsDiscarded(US, 2, Some(Jihadist))
-    }
-
-    if (game.usPosture != Soft) {
-      log(s"\nThe Quagmire event affects the $US posture.", Color.Event)
-      setUSPosture(Soft)
-    }
-  }
+  def executeEvent(role: Role): Unit = Card_090.executeEvent(role)
 }

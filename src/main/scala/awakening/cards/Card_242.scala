@@ -68,6 +68,9 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
 
   def getBotPreferred() = countryNames(game.muslims.filter(m => m.totalCells - m.totalTroopsAndMilitia > 4))
 
+  def eventEffective =
+    getCandidates().nonEmpty || hasCardInHand(Jihadist)
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -76,20 +79,21 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
   // Otherwise, the bot will only remove cells if there is a country where cells outnumber
   // troops and miliia by 5 or more, or if the Jihadist has no cards in hand.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    game.hasMuslim(_.totalCells > 0) || hasCardInHand(Jihadist)
-
+  def botWillPlayEvent(role: Role): Boolean = eventEffective
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit =
-    if (isHuman(role)) {
+  def executeEvent(role: Role): Unit = {
+    if (!eventEffective) {
+      log("\nThe event has no effect.", Color.Event)
+    }
+    else if (isHuman(role)) {
       val choices = List(
-        "remove" -> "Remove up to 2 cells in any one Muslim country",
-        "discard" -> s"Discard top card of the $Jihadist hand",
-      )
+        choice(getCandidates().nonEmpty ,"remove", "Remove up to 2 cells in any one Muslim country"),
+        choice( hasCardInHand(Jihadist) ,"discard", s"Discard top card of the $Jihadist hand"),
+      ).flatten
       askMenu("Choose one:", choices).head match {
         case "discard" =>
           println()
@@ -132,4 +136,5 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
           removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
       }
     }
+  }
 }

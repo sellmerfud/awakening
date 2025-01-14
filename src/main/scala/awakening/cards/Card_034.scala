@@ -79,15 +79,23 @@ object Card_034 extends Card(34, "Enhanced Measures", US, 3, NoRemove, NoLapsing
     if (isHuman(role)) {
       humanDisrupt(3)
       addGlobalEventMarker(EnhancedMeasures)
-      log(s"Take the top card of the $Jihadist Bot's hand")
-      askCardsDrawn(US, 1, FromRole(game.botRole)::Nil)
+      if (hasCardInHand(Jihadist)) {
+        log(s"Take the top card of the $Jihadist Bot's hand", Color.Event)
+        askCardsDrawn(US, 1, FromRole(game.botRole)::Nil)
+      }
+      else
+        log(s"The $Jihadist Bot's hand is empty so no card is drawn.", Color.Event)
     }
     else {
       val target  = USBot.disruptTarget(game disruptTargets 3).get
       log(s"$US performs a Disrupt operation in $target")
       performDisrupt(target)
       addGlobalEventMarker(EnhancedMeasures)
-      log(s"$Jihadist (you) must put a random card from your hand on top card of the $US Bot's hand")
-      askCardsDrawn(US, 1, FromRole(game.humanRole)::Nil)
+      if (hasCardInHand(Jihadist)) {
+        log(s"$Jihadist (you) must put a random card from your hand on top card of the $US Bot's hand")
+        askCardsDrawn(US, 1, FromRole(game.humanRole)::Nil)
+      }
+      else
+        log(s"The $Jihadist Players's hand is empty so no card is drawn.", Color.Event)
     }    
 }

@@ -77,52 +77,56 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role)) {
-      val choices = List(
-        choice(getCandidates().nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),
-        choice(condition = true,         "discard", "Discard 1 card from the Jihadist hand")
-      ).flatten
-      askMenu("Choose one:", choices).head match {
-        case "discard" =>
-          log("\nDiscard the top card in the Jihadist hand", Color.Event)
-          askCardsDiscarded(Jihadist, 1)
+    if (getCandidates().nonEmpty || hasCardInHand(Jihadist)) {
+      if (isHuman(role)) {
+        val choices = List(
+          choice(getCandidates().nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),
+          choice(hasCardInHand(Jihadist),  "discard", "Discard 1 card from the Jihadist hand")
+        ).flatten
+        askMenu("Choose one:", choices).head match {
+          case "discard" =>
+            log("\nDiscard the top card in the Jihadist hand", Color.Event)
+            askCardsDiscarded(Jihadist, 1)
 
-        case _ =>
-          val target = askCountry("Remove 2 cells in which country? ", getCandidates())
-          val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
-          addEventTarget(target)
-          println()
-          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
-      }
-    }
-    else {
-      // First remove cells if it would remove last cell on the map
-      val candidates = getCandidates()
-      if (candidates.size == 1 && USBot.wouldRemoveLastCell(candidates.head, 2)) {
-        val target = candidates.head
-        addEventTarget(target)
-        val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
-        println()
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          case _ =>
+            val target = askCountry("Remove 2 cells in which country? ", getCandidates())
+            val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
+            addEventTarget(target)
+            println()
+            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        }
       }
       else {
-        val nonIRWith5Cells = countryNames(game.muslims.filter(m => !m.isIslamistRule && m.totalCells >= 5))
-        if (nonIRWith5Cells.isEmpty && hasCardInHand(Jihadist)) {
-          println()
-          log(s"\nYou ($Jihadist) must discard one random card", Color.Event)
-          askCardsDiscarded(Jihadist, 1)
-        }
-        else {
-          val target = if (nonIRWith5Cells.nonEmpty)
-            USBot.disruptPriority(nonIRWith5Cells).get
-          else
-            USBot.disruptPriority(candidates).get
+        // First remove cells if it would remove last cell on the map
+        val candidates = getCandidates()
+        if (candidates.size == 1 && USBot.wouldRemoveLastCell(candidates.head, 2)) {
+          val target = candidates.head
           addEventTarget(target)
           val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
           println()
           removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
         }
+        else {
+          val nonIRWith5Cells = countryNames(game.muslims.filter(m => !m.isIslamistRule && m.totalCells >= 5))
+          if (nonIRWith5Cells.isEmpty && hasCardInHand(Jihadist)) {
+            println()
+            log(s"\nYou ($Jihadist) must discard one random card", Color.Event)
+            askCardsDiscarded(Jihadist, 1)
+          }
+          else {
+            val target = if (nonIRWith5Cells.nonEmpty)
+              USBot.disruptPriority(nonIRWith5Cells).get
+            else
+              USBot.disruptPriority(candidates).get
+            addEventTarget(target)
+            val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
+            println()
+            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          }
+        }
       }
     }
+    else
+      log(s"\nThe event has no effect.", Color.Event)
   }
 }

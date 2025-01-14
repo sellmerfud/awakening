@@ -79,10 +79,14 @@ object Card_168 extends Card(168, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAu
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(US))
-      log(s"\nYou ($US) must randomly discard one card", Color.Event)
+    if (hasCardInHand(US)) {
+      if (isHuman(US))
+        log(s"\nYou ($US) must randomly discard one card", Color.Event)
+      else
+        log(s"\nDiscard the top card of the $US hand", Color.Event)
+      askCardsDiscarded(US, 1)
+    }
     else
-      log(s"\nDiscard the top card of the $US hand", Color.Event)
-    askCardsDiscarded(US, 1)
+      log(s"\nThe $US does not have a card to discard.")
   }
 }

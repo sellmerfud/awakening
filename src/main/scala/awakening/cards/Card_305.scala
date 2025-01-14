@@ -85,7 +85,7 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
     log(separator(), Color.Event)
     if (result >= 0)
       log("There is no effect.", Color.Event)
-    else {
+    else if (hasCardInHand(US)) {
       println()
       if (isHuman(role)) {
         log(s"Discard from the top of the $US Bot's hand until the combined")
@@ -97,5 +97,7 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
       }
       askCardsDiscardedByOps(US, opsPoints) 
     }
+    else
+      log(s"\nThe $US has not cards to discard.", Color.Event)
   }
 }
