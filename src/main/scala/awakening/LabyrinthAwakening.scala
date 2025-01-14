@@ -1426,7 +1426,7 @@ object LabyrinthAwakening {
     activeRole: Role                     = Jihadist,
     cardsInUse: Range                    = Range.inclusive(0, 0),  // Range of cards in use (although some may have been removed)
     cardsInHand: CardsInHand             = CardsInHand(0, 0),
-    turnActions: List[TurnAction]       = Nil,      // Cards plays/plot resolutions/adjustments etc. (most recent first).
+    turnActions: List[TurnAction]        = Nil,      // Cards plays/plot resolutions/adjustments etc. (most recent first).
     firstPlotEntry: Option[LapsingEntry] = None,     // Card number
     eventsLapsing: List[LapsingEntry]    = Nil,         // Card numbers currently lapsing
     cardsDiscarded: List[Int]            = Nil,
@@ -7865,126 +7865,6 @@ object LabyrinthAwakening {
       case QuitGame =>
     }
   }
-
-  // Parse the top level input and execute the appropriate command.
-  // def doCommand(input: String): Unit = {
-  //   val cardsPlayed = game.plays.filter(_.isInstanceOf[CardPlay]).map(_.numCards).sum
-  //   case class Command(val name: String, val help: String)
-  //   val Commands = List(
-  //     Command("us",
-  //             """Enter a card number for a US card play"""),
-  //     Command("jihadist",
-  //             """Enter a card number for a Jihadist card play"""),
-  //     Command("remove cadre",
-  //             """Voluntarily remove a cadre from the map"""),
-  //     Command("resolve plots",
-  //             """Resolve any unblocked plots on the map"""),
-  //     Command("end turn",
-  //             """|End the current turn.
-  //                |This should be done after the last US card play.
-  //                |Any plots will be resolved and the end of turn
-  //                |actions will be conducted.""".stripMargin),
-  //     Command("add awakening cards",
-  //             """|Add the Awakening cards to the draw deck and
-  //                |begin using the Awakening expansion rules.""".stripMargin),
-  //     Command("add forever cards",
-  //             """|Add the Forever War cards to the draw deck and
-  //                |begin using the Forever War expansion rules.""".stripMargin),
-  //     Command("show",
-  //             """|Display the current game state
-  //                |  show all           - entire game state
-  //                |  show plays         - cards played during the current turn
-  //                |  show summary       - game summary including score
-  //                |  show scenario      - scenario and difficulty level
-  //                |  show deck          - cards in the deck
-  //                |  show discarded     - cards in the discard pile
-  //                |  show removed       - cards that have been removed from the game
-  //                |  show caliphate     - countries making up the Caliphate
-  //                |  show civil wars    - countries in civil war
-  //                |  show <country>     - state of a single country""".stripMargin),
-  //     Command("adjust",
-  //             """|Adjust game settings  (Minimal rule checking is applied)
-  //                |  adjust prestige         - US prestige level
-  //                |  adjust posture          - US posture
-  //                |  adjust funding          - Jihadist funding level
-  //                |  adjust offmap troops    - Adjust the number of troops in the offmap box
-  //                |  adjust difficulty       - Jihadist ideology/US resolve
-  //                |  adjust lapsing marker   - Markers for removed lapsing/1st plot cards
-  //                |  adjust card locations   - Move cards between deck/discard/lapsing/1st plot/removed
-  //                |  adjust markers          - Current global event markers
-  //                |  adjust reserves         - US and/or Jihadist reserves
-  //                |  adjust plots            - Available/resolved plots
-  //                |  adjust resolved plot countries - countries where a plot was resolved
-  //                |                                   in the last resolve plots phase
-  //                |  adjust offmap troops    - Number of troops in off map box
-  //                |  adjust color            - Toggle use of color in log ouput
-  //                |                            (Does not work on Windows 10.0 or older)
-  //                |  adjust exit after win   - Toggle whether the game will exit as soon
-  //                |                            as one side has achieved victory
-  //                |  adjust auto roll        - Auto roll for human operations
-  //                |  adjust bot logging      - Toggle Bot debug logging on/off
-  //                |  adjust bot enhancements - Toggle Bot enhancements on/off
-  //                |                            (currently only implemented for Jihadist Bot)
-  //                |  adjust manual die rolls - Toggle manual die rolls (for testing)
-  //                |  adjust <country>        - Country specific settings""".stripMargin),
-  //     Command("history",
-  //             """|Display game history
-  //                |  history        - Shows the log starting from the most recent save point (Same as history -1)
-  //                |  history -1     - Shows the log starting from the most recent save point
-  //                |  history -n     - Shows the log starting from the nth most recent save point
-  //                |  history n      - Shows the log starting from the nth save point
-  //                |  history n num  - Shows num log entries starting from the nth save point
-  //                |  history -n num - Shows num log entries starting from the nth most recent save point
-  //                |  history all    - Shows the entire log
-  //                |  Any of the above commands may be followed by >filename
-  //                |  to save the history in a file instead of echoing it to the console""".stripMargin),
-  //     Command("rollback",
-  //             """|Roll back card plays in the current turn or
-  //                |roll back to the start of any previous turn""".stripMargin),
-  //     Command("help", """List available commands"""),
-  //     Command("quit", """Quit the game.  All plays for the current turn will be saved.""")
-  //   ) filter {
-  //     case Command("rollback", _)            => mostRecentSaveNumber(game.saveName).getOrElse(0) > 0
-  //     case Command("remove cadre", _)        => game.humanRole == Jihadist && (game.countries exists (_.hasCadre))
-  //     case Command("add awakening cards", _) => game.currentMode == LabyrinthMode && game.campaign
-  //     case Command("add forever cards", _)   => game.currentMode == AwakeningMode && game.campaign
-  //     case _                                 => true
-  //   }
-
-  //   val CmdNames = (Commands map (_.name))
-
-  //   def showCommandHelp(cmd: String) = Commands find (_.name == cmd) foreach (c => println(c.help))
-
-  //   // If the user type "u123" or "j345" then
-  //   // treat it as "u" "123" or  "j" "345"
-  //   val JoinedCardNum = raw"([Uu]|[Jj])(\d+)".r
-  //   val tokens = input.split("\\s+").toList.dropWhile(_ == "") match {
-  //     case JoinedCardNum(cmd, num) :: Nil => cmd :: num :: Nil
-  //     case tokens => tokens
-  //   }
-  //   tokens.headOption foreach { verb =>
-  //     val param = if (tokens.tail.nonEmpty) Some(tokens.tail.mkString(" ")) else None
-  //     matchOne(verb, CmdNames) foreach {
-  //       case "us"                    => usCardPlay(param)
-  //       case "jihadist"              => jihadistCardPlay(param)
-  //       case "remove cadre"          => humanVoluntarilyRemoveCadre()
-  //       case "resolve plots"         => resolvePlots()
-  //       case "end turn"              => endTurn()
-  //       case "add awakening cards"   => addAwakeningCards()
-  //       case "add forever cards"     => addForeverWarCards()
-  //       case "show"                  => showCommand(param)
-  //       case "adjust"                => adjustCommand(param)
-  //       case "history"               => showHistory(param)
-  //       case "rollback"              => rollback()
-  //       case "quit"                  => if (askYorN("Really quit (y/n)? ")) throw QuitGame
-  //       case "help" if param.isEmpty =>
-  //         println("Available commands: (type help <command> for more detail)")
-  //         println(orList(CmdNames))
-  //       case "help"     => matchOne(param.get, CmdNames) foreach showCommandHelp
-  //       case cmd        => println(s"Internal error: Command '$cmd' is not valid")
-  //     }
-  //   }
-  // }
 
   // The Jihadist play can voluntarily remove cadre markers on the map
   // (To avoid giving the US an easy prestige bump)
