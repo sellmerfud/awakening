@@ -2787,33 +2787,38 @@ object LabyrinthAwakening {
   // then the discards are suffled and added to the draw pile and the game
   // continues.
 
-  def handleEmptyDrawPile(): Unit = {
-    // Lapsing events, notably Oil Price Spike, are removed
-    // before any new cards are added and before end game
-    // scoring if this was the last deck.
-    removeLapsingAnd1stPLot()
-
+  def handleEmptyDrawPile(atEndOfTurn: Boolean): Unit = {
     if (game.deckNumber == game.gameLength) {
+      // The game ends immediately.
+      // Lapsing cards are not discarded.
       logEndGameScoring()
       saveGameState(Some("Game Over"), true)
       throw QuitGame
     }
-    else if (game.campaign) {
-      GameMode.next(game.currentMode) match {
-        case Some(AwakeningMode) => addAwakeningCards()
-        case Some(ForeverWarMode) => addForeverWarCards()
-        case _ =>
-      }
-    }
     else {
-      // Single scenario game
-      game = game.copy(
-        deckNumber = game.deckNumber + 1,
-        cardsDiscarded = Nil
-      )
-      log("\nShuffle the discard pile to form a new draw pile.", Color.Info)
-      log(s"This begins the ${ordinal(game.deckNumber)} deck of ${game.gameLength}.", Color.Info)
-      log("Move the deck marker one space to the right.", Color.Info)
+      // Lapsing events, and any 1st Plot card are discarded
+      // and replace with markers to so show that the events
+      // are still in effect until the end of turn, and
+      // no card may be placed in the 1st plot box.
+      removeLapsingAnd1stPLot()
+
+      if (game.campaign) {
+        GameMode.next(game.currentMode) match {
+          case Some(AwakeningMode) => addAwakeningCards()
+          case Some(ForeverWarMode) => addForeverWarCards()
+          case _ =>
+        }
+      }
+      else {
+        // Single scenario game
+        game = game.copy(
+          deckNumber = game.deckNumber + 1,
+          cardsDiscarded = Nil
+        )
+        log("\nShuffle the discard pile to form a new draw pile.", Color.Info)
+        log(s"This begins the ${ordinal(game.deckNumber)} deck of ${game.gameLength}.", Color.Info)
+        log("Move the deck marker one space to the right.", Color.Info)
+      }
     }
   }
 
@@ -2856,7 +2861,7 @@ object LabyrinthAwakening {
       // If only source is the draw pile and the draw pile is empty...
       if (sources == List(FromDrawPile) && numCardsInDrawPile() == 0) {
         log("\nThe draw pile is empty and a card must be drawn.", Color.Info)
-        handleEmptyDrawPile()
+        handleEmptyDrawPile(atEndOfTurn = false)
       }
 
       askCardNumber(sources, prompt, allowNone = lessOk) match {
@@ -3023,7 +3028,7 @@ object LabyrinthAwakening {
       if (accumulatedOps < totalOps && hasCardInHand(role)) {
         val prompt =
           s"\nWhat is the card# of the ${ordinal(currentNum)} $role card being discarded: (blank if none) "
-          
+
         displayLine(s"\n${amountOf(accumulatedOps, "Op")} of $totalOps have been accounted for.", Color.Info)
         askCardBeingDiscarded(role, prompt, triggerRole) match {
           case None =>
@@ -6931,14 +6936,14 @@ object LabyrinthAwakening {
     if (numCardsInDrawPile() < totalCards) {
       log("\nThere are not enough cards in the draw pile.", Color.Info)
       (game.deckNumber < game.gameLength, numCardsInDrawPile()) match {
-        case (false, _) =>
         case (true, 0) =>
         case (true, 1) =>
           log(s"Draw the last card into the $Jihadist hand.", Color.Info)
         case (true, n) =>
           log(s"Draw the last $n cards alternately into each hand starting with the $Jihadist hand.", Color.Info)
+        case (false, _) =>  // End of game
       }
-      handleEmptyDrawPile()
+      handleEmptyDrawPile(atEndOfTurn = true)
       log("\nContinue drawing cards alternately to fill each hand.", Color.Info)
     }
     else
