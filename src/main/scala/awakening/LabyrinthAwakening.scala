@@ -5483,28 +5483,28 @@ object LabyrinthAwakening {
       log("Place the \"Critical Middle\" card in the approximate middle of the draw pile.", Color.Event)
     }
     else {
-      log("Put %s in the discard pile".format(deck(cardNumber).numAndName), Color.Event)
+      log("\nPut %s in the discard pile".format(deck(cardNumber).numAndName), Color.Event)
       game = game.copy(cardsDiscarded = cardNumber :: game.cardsDiscarded)
     }
   }
 
   def cardDrawnFromDiscardPile(cardNumber: Int): Unit = {
-    log("%s drawn from the discard pile".format(deck(cardNumber).numAndName), Color.Event)
+    log("\n%s drawn from the discard pile".format(deck(cardNumber).numAndName), Color.Event)
     game = game.copy(cardsDiscarded = game.cardsDiscarded.filterNot(_ == cardNumber))
   }
 
   def removeCardFromGame(cardNumber: Int): Unit = {
-    log("Remove %s from the game".format(deck(cardNumber).numAndName), Color.Event)
+    log("\nRemove %s from the game".format(deck(cardNumber).numAndName), Color.Event)
     game = game.copy(cardsRemoved = cardNumber :: game.cardsRemoved)
   }
 
   def putCardInLapsingBox(cardNumber: Int): Unit = {
-    log("Put %s in the lapsing box".format(deck(cardNumber).numAndName), Color.Event)
+    log("\nPut %s in the lapsing box".format(deck(cardNumber).numAndName), Color.Event)
     game = game.copy(eventsLapsing = LapsingEntry(cardNumber) :: game.eventsLapsing)
   }
 
   def cardDrawnFromLapsingBox(cardNumber: Int): Unit = {
-    log("%s drawn from the lapsing box".format(deck(cardNumber).numAndName), Color.Event)
+    log("\n%s drawn from the lapsing box".format(deck(cardNumber).numAndName), Color.Event)
     log("Mark the event as still lapsing.", Color.Event)
     val newLapsing = game.eventsLapsing.map {
       case LapsingEntry(`cardNumber`, _) => LapsingEntry(cardNumber, discarded = true)
@@ -5514,7 +5514,7 @@ object LabyrinthAwakening {
   }
 
   def cardDrawnFromFirstPlotBox(cardNumber: Int): Unit = {
-    log("%s drawn from the 1st Plot box".format(deck(cardNumber).numAndName), Color.Event)
+    log("\n%s drawn from the 1st Plot box".format(deck(cardNumber).numAndName), Color.Event)
     log("Place an inuse marker in the first plot box.", Color.Event)
     // Card number of zero used for 1st Plot marker
     game = game.copy(firstPlotEntry = Some(LapsingEntry(0, discarded = true)))
@@ -8257,6 +8257,7 @@ object LabyrinthAwakening {
           throw AbortAction
         case TriggeredEvent(c) :: _ =>
           attemptTriggeredEvent(Jihadist, c)
+          pause()
           List(Ops)
         case _ =>
           card1EventValid = true
@@ -8281,7 +8282,7 @@ object LabyrinthAwakening {
         actionOrder
     }
 
-    finalOrder foreach {
+    def doActivity(activity: CardAction): Unit = activity match {
       case TriggeredEvent(c) =>
         attemptTriggeredEvent(Jihadist, c)
 
@@ -8298,6 +8299,11 @@ object LabyrinthAwakening {
           case Reassess     => humanReassess()
           case _ => throw new IllegalStateException(s"Invalid US action: $action")
         }
+    }
+
+    for (activity <- finalOrder) {
+      doActivity(activity)
+      pause()
     }
   }
 
@@ -8575,7 +8581,7 @@ object LabyrinthAwakening {
     }
 
     // If the the event is US elections or is associated with the US
-    // Ask if user want so resolve event or operation first
+    // Ask if user wants so resolve event or operation first
     if (card.autoTrigger || card.association == US) {
       // Allow the user to use the first plot option to cancel the event.
       // The Ruthless US bot resolve does not allow this.
@@ -8598,6 +8604,7 @@ object LabyrinthAwakening {
             throw AbortAction
           case TriggeredEvent(c) :: _ =>
             attemptTriggeredEvent(US, c)
+            pause()
             opponentEventResolved = true;
           case _ => // Ops selected, fall through
         }
@@ -8614,16 +8621,20 @@ object LabyrinthAwakening {
       case PlotAction   => humanPlot(opsAvailable)
       case _ => throw new IllegalStateException(s"Invalid Jihadist action: $action")
     }
+    pause()
 
     // If the opponent event was not triggered before the operation
     // See if it will be triggered now.
-    if (card.autoTrigger && !opponentEventResolved)
-      attemptTriggeredEvent(US, card);
+    if (card.autoTrigger && !opponentEventResolved) {
+      attemptTriggeredEvent(US, card)
+      pause()
+    }
     else if (card.association == US && !opponentEventResolved) {
       if (firstPlot)
         log("\nFirst plot prevents the %s event \"%s\" from triggering".format(US, card.cardName), Color.Event)
       else
         attemptTriggeredEvent(US, card)
+      pause()
     }
   }
 
