@@ -62,7 +62,7 @@ object TrumpTakesCommand extends Scenario {
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 2, militia = 1, sleeperCells = 1, reaction = 1),
     DefaultPakistan.copy(militia = 2),
     DefaultYemen.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 1, sleeperCells = 2),
-    DefaultKenyaTanzania.copy(postureValue = Hard, hasCadre = true))
+    DefaultKenyaTanzania.copy(postureValue = Hard, cadres = 1))
   val markersInPlay = List(TrumpTweetsON)
   val cardsRemoved = List(303, 340, 343)
   val offMapTroops = 0

@@ -1453,11 +1453,11 @@ object USBot extends BotHelpers {
     val canDisruptNonMuslim = game.disruptNonMuslimTargets(maxOps).nonEmpty
     // The following can only use cardOps (no reserves)
     val canAddToReserves = cardOps > 0 && game.reserves.us < 2
-    val canDisruptMuslimCadre = game.disruptMuslimTargets(cardOps) map game.getMuslim exists (_.hasCadre)
+    val canDisruptMuslimCadre = game.disruptMuslimTargets(cardOps).map(game.getMuslim).exists(_.hasCadre)
     val canWoINonMuslimOpposite = 
-      game.warOfIdeasNonMuslimTargets(cardOps) map game.getNonMuslim exists (_.isOppositeUsPosture)
+      game.warOfIdeasNonMuslimTargets(cardOps).map(game.getNonMuslim).exists(_.isOppositeUsPosture)
     val canWoINonMuslimUntested = 
-      game.warOfIdeasNonMuslimTargets(cardOps) map game.getNonMuslim exists (_.isUntested)
+      game.warOfIdeasNonMuslimTargets(cardOps).map(game.getNonMuslim).exists(_.isUntested)
     
     if      (canDisruptUS)            Some(DisruptUS)
     else if (canWoiSoftNonMuslim)     Some(WoiSoftNonMuslim)

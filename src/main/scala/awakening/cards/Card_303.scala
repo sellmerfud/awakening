@@ -90,7 +90,7 @@ object Card_303 extends Card(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, N
         game = game.updateCountry(DefaultMuslimIran.copy(
           sleeperCells = iran.sleeperCells,
           activeCells  = iran.activeCells,
-          hasCadre     = iran.hasCadre,
+          cadres       = iran.cadres,
           plots        = iran.plots,
           markers      = iran.markers,
           wmdCache     = iran.wmdCache

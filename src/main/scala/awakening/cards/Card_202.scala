@@ -125,7 +125,7 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
           val candidates = countryNames(game.countries.filter(c => c.hasCadre ))
           val name = askCountry("Remove cadre from which country? ", candidates)
           addEventTarget(name)
-          removeCadreFromCountry(name)
+          removeCadresFromCountry(name, 1)
       }
     }
     else {

@@ -1711,35 +1711,15 @@ object JihadistBot extends BotHelpers {
   // Note: Abu Sayyaf and Wiretapping are only available in Labyrinth games / campaigns.
   // Returns true if at least one cadres is removed
   def voluntaryCadreRemoval(): Boolean = {
-    val isCandidate = (c: Country) => {
-      val WireTapping = Set(UnitedStates, UnitedKingdom, Canada)
-      c match {
-        case m: MuslimCountry =>
-          m.hasCadre && !m.autoRecruit && (m.isGood || m.isFair)
-
-        case n: NonMuslimCountry if n.hasCadre && game.startingMode == LabyrinthMode =>
-          n.name match {
-            case Philippines =>
-              true
-            case name if WireTapping(name) && globalEventNotInPlay(LeakWiretapping) =>
-              true
-            case _ =>
-              false
-          }
-
-        case _ =>
-          false
-      }
-    }
-
     game.countries.filter(c=> c.hasCadre && isCadreRemovalCandidate(c)) match {
       case Nil =>
         false
       case candidates =>
-        log(s"\nThe $Jihadist Bot chooses to voluntarily remove ${amountOf(candidates.size, "cadre")}", Color.Info)
+        log(s"\n$Jihadist voluntarily cadre removal.", Color.Info)
+        val total = candidates.map(_.cadres).sum
         for (country <- candidates)
-          removeCadreFromCountry(country.name)
-        game = game.copy(turnActions = VoluntaryCadreRemoval(candidates.size)::game.turnActions)
+          removeCadresFromCountry(country.name, country.cadres)
+        game = game.copy(turnActions = VoluntaryCadreRemoval(total)::game.turnActions)
         true
     }
   }

@@ -138,7 +138,7 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
 
           case "cadre" =>
-            removeCadreFromCountry(name)
+            removeCadresFromCountry(name, 1)
           case _ =>
             performAlert(name, humanPickPlotToAlert(name))
         }
@@ -165,7 +165,7 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
           }
           else
-            removeCadreFromCountry(name)
+            removeCadresFromCountry(name, 1)
 
         }
       }

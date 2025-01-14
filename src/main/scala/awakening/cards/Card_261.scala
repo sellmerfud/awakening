@@ -78,7 +78,7 @@ object Card_261 extends Card(261, "Intel Community", US, 2, NoRemove, NoLapsing,
       case candidates =>
         val target = askCountry("Select country with cadre: ", candidates)
         addEventTarget(target)
-        removeCadreFromCountry(target)
+        removeCadresFromCountry(target, 1)
     }
 
     // US player conducts a 1 Op operations.
