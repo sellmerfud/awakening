@@ -4103,7 +4103,7 @@ object LabyrinthAwakening {
       if (count == -1) {
         val help = """|
           |History command help
-          |--------------------------------
+          |-----------------------------------------------------------------------------
           |If you enter the 'h' command with no arguments you will see a menu.
           |
           |You can bypass the menu by following the command with arguments.
@@ -4125,6 +4125,7 @@ object LabyrinthAwakening {
           |Finally, any of the above commands can be followed by a redirect argument
           |to save the requested histor in a file instead of printing it to the screen.
           |h all >/tmp/game_history
+          |-----------------------------------------------------------------------------
           """.stripMargin
         displayLine(help)
         pause()
@@ -7780,6 +7781,34 @@ object LabyrinthAwakening {
       throw QuitGame
   }
 
+  case object Help extends UserAction {
+    override def perform(param: Option[String]): Unit = {
+      val help = """|
+        |Action prompt help
+        |-----------------------------------------------------------------------------
+        |Enter the menu character corresponding to an action.
+        |You will be prompted for the necessary input.
+        |
+        |There are some shortcuts available to reduce typing.
+        |For example when playing a card you can supply the card number
+        |as an argument to avoid being prompted for it:
+        |p 35<enter>
+        |
+        |And because playing a card is the most common action, you can simply
+        |enter the card number:
+        |35<enter>
+        |
+        |The s, a, and h commands without an argument will show a menu.
+        |You can provide an argument to these commands to avoid going through the menu.
+        |Use the argument 'help' or '?' to see detailed help for the specific command:
+        |s help<enter>
+        |h ?<enter>
+        |-----------------------------------------------------------------------------
+        """.stripMargin
+      displayLine(help)
+    }
+  }
+
   def getCurrentPhaseCardPlays(): List[CardPlay] =
     game.turnActions
       .dropWhile(a => !a.isInstanceOf[CardPlay])
@@ -7821,6 +7850,7 @@ object LabyrinthAwakening {
       choice(true,        History,     'h', "History"),
       choice(canRoll,     Rollback,    'r', "Rollback"),
       choice(true,        Adjust,      'a', "Adjust game state"),
+      choice(true,        Help,        '?', "Help"),
       choice(true,        Quit,        'q', "Quit game"),
     ).flatten
 
@@ -7907,29 +7937,30 @@ object LabyrinthAwakening {
   // until the user exits the menu with no action.
   def showCommand(param: Option[String]): Unit = {
     def displayHelp(): Unit = {
-        val help = """|
-          |Show command help
-          |--------------------------------
-          |If you enter the 's' command with no arguments you will see a menu.
-          |
-          |You can bypass the menu by following the command with arguments.
-          |The argument can be shortend to it a unique prefix of the argument.
-          |For example: 's sum'  is equivalent to 's summary'
-          |
-          |s summary   -- Game summary including score
-          |s <country> -- Show status of a the named country
-          |s scenario  -- Scenario information and difficulty level
-          |s actions   -- The list of actions for the current turn
-          |s caliphate -- Countries that are part of the caliphate (not in Labyrinth scenarios)
-          |s civil war -- Countries in civil war (not in Labyrinth scenarios)
-          |s draw pile -- Cards in the draw (or in player/bot hand)
-          |s discarded -- Cards in the discard pile
-          |s removed   -- Cards removed from the game
-          |s all       -- Entire game state
-          |s help      -- Show this help message
-          """.stripMargin
-        displayLine(help)
-    }
+      val help = """|
+        |Show command help
+        |-----------------------------------------------------------------------------
+        |If you enter the 's' command with no arguments you will see a menu.
+        |
+        |You can bypass the menu by following the command with arguments.
+        |The argument can be shortend to it a unique prefix of the argument.
+        |For example: 's sum'  is equivalent to 's summary'
+        |
+        |s summary   -- Game summary including score
+        |s <country> -- Show status of a the named country
+        |s scenario  -- Scenario information and difficulty level
+        |s actions   -- The list of actions for the current turn
+        |s caliphate -- Countries that are part of the caliphate
+        |s civil war -- Countries in civil war
+        |s draw pile -- Cards in the draw (or in US/Jihadist hand)
+        |s discarded -- Cards in the discard pile
+        |s removed   -- Cards removed from the game
+        |s all       -- Entire game state
+        |s help      -- Show this help message
+        |-----------------------------------------------------------------------------
+      """.stripMargin
+      displayLine(help)
+  }
 
     val options = List(
       "all", "actions", "summary", "scenario", "caliphate", "civil war",
@@ -8919,7 +8950,7 @@ object LabyrinthAwakening {
     def displayHelp(): Unit = {
       val help = """|
         |Adjust command help
-        |--------------------------------
+        |-----------------------------------------------------------------------------
         |There is no menu for the adjust command.
         |
         |To adjust some state within the game the 'a' command followed by
@@ -8947,6 +8978,7 @@ object LabyrinthAwakening {
         |a manual roll -- Toggle manual dice rolls for all rolls
         |a bot log     -- Toggle bot log entries for debugging
         |a help        -- Show this help message
+        |-----------------------------------------------------------------------------
         """.stripMargin
       displayLine(help)
     }
