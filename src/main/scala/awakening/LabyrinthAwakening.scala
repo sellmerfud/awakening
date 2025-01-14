@@ -888,11 +888,6 @@ object LabyrinthAwakening {
     override def toString() = s"$US discards last card ${cardNumAndName(cardNumber)}"
   }
 
-  case class PlotsResolved(num: Int) extends TurnAction {
-    override def name = "PlotsResolved"
-    override def toString() = s"$num Plots resolved"
-  }
-
   case class VoluntaryCadreRemoval(num: Int) extends TurnAction {
     override def name = "VoluntaryCadreRemoval"
     override def toString() = s"Jihadist removes ${amountOf(num, "cadre")}"
@@ -6653,8 +6648,8 @@ object LabyrinthAwakening {
         throw QuitGame
       }
       else {
+        log("Ignoring instant victory conditions.", Color.Info)
         game = game.copy(ignoreVictory = true)
-        saveGameState(Some("Ignore Jihadist Auto Victory"))
       }
     }
 
@@ -6891,10 +6886,8 @@ object LabyrinthAwakening {
       plotData = game.plotData.copy(
         resolvedTargets       = targets,
         resolvedInGreenOnBlue = greenOnBlue
-      ),
-      turnActions = PlotsResolved(unblocked.size) :: game.turnActions
+      )
     )
-    saveGameState()
   }
 
   // Pirates from the base game
@@ -7034,9 +7027,6 @@ object LabyrinthAwakening {
 
     val labyrinthOrder = !game.useExpansionRules
     val awakeningOrder = game.useExpansionRules
-
-    if (numUnresolvedPlots > 0)
-      resolvePlots()
 
     log()
     log(s"End of turn ${game.turn}", Color.Info)
@@ -7732,11 +7722,14 @@ object LabyrinthAwakening {
         case Jihadist => numCardsInHand(US) == 0 && numCardsInHand(Jihadist) == 0
       }
 
-      game = game.copy(activeRole = oppositeRole(activeRole))
-      saveGameState(Some(s"End of $activeRole action phase"))
+      log(s"\nEnd of $activeRole action phase", Color.Info)
 
       if (activeRole == US || endOfTurn)
         resolvePlots()
+
+      game = game.copy(activeRole = oppositeRole(activeRole))
+      saveGameState(Some(s"End of $activeRole action phase"))
+
       if (endOfTurn)
         endTurn()
     }
