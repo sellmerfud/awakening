@@ -57,7 +57,7 @@ object Card_208 extends Card(208, "Kinder - Gentler", Unassociated, 1, NoRemove,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = game.troopCommitment != War
 
 
   // Returns true if the Bot associated with the given role will execute the event
