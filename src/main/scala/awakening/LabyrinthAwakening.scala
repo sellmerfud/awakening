@@ -102,6 +102,9 @@ object LabyrinthAwakening {
     case _ => false
   }
 
+  val MaxPrestige = 12
+  val MaxFunding = 9
+
   sealed trait GameMode {
     val orderValue: Int
     val cardRange: Range
@@ -1539,9 +1542,6 @@ object LabyrinthAwakening {
       this.copy(countries = countries map (c => updates.getOrElse(c.name, c)))
     }
 
-    def adjustPrestige(amt: Int): GameState = this.copy(prestige = (prestige + amt) max 1 min 12)
-    def adjustFunding(amt: Int): GameState  = this.copy(funding = (funding + amt) max 1 min 9)
-
     def addMarker(name: String): GameState = this.copy(markers = name :: markers)
     def removeMarker(name: String): GameState = this.copy(markers = markers filterNot (_ == name))
 
@@ -2927,6 +2927,7 @@ object LabyrinthAwakening {
               increaseCardsInHand(role, 1)
         }
       }
+      askForCard()
     }
   }
 
@@ -2964,6 +2965,7 @@ object LabyrinthAwakening {
     prompt: String,
     triggerRole: Option[Role] = None,
     opsRequired: Option[Int] = None,
+    assocRequired: Option[CardAssociation] = None,
     allowNone: Boolean = false): Option[Int] = {
 
     def opsOk(cardNum: Int) = opsRequired match {
@@ -2971,18 +2973,33 @@ object LabyrinthAwakening {
       case Some(ops) => deck(cardNum).printedOps == ops
     }
 
+    def assocOk(cardNum: Int) = assocRequired match {
+      case None => true
+      case Some(assoc) => deck(cardNum).association == assoc
+    }
+
     def askForCard(): Option[Int] = {
       askCardNumber(FromRole(role)::Nil, prompt, allowNone = allowNone) match {
         case None => None
-        case Some(cardNum) if opsOk(cardNum) =>
-          decreaseCardsInHand(role, 1)
-          processDiscardedCard(cardNum, triggerRole)
-          Some(cardNum)
-        case Some(cardNum) =>
+        case Some(cardNum) if !opsOk(cardNum) =>
           val card = deck(cardNum).toString
           val ops = opsRequired.get
           displayLine(s"$card is not a ${amountOf(ops, "Op")} card.")
           askForCard()
+
+        case Some(cardNum) if !assocOk(cardNum) =>
+          val card = deck(cardNum).toString
+          val assoc = assocRequired.get match {
+            case Unassociated => "an Unassociated"
+            case role => s"a $role-Associated"
+          }
+          displayLine(s"$card is not $assoc card.")
+          askForCard()
+
+        case Some(cardNum) =>
+          decreaseCardsInHand(role, 1)
+          processDiscardedCard(cardNum, triggerRole)
+          Some(cardNum)
       }
     }
 
@@ -3996,21 +4013,21 @@ object LabyrinthAwakening {
     val prompt = "Press Enter to continue (or 'skip' to skip these prompts)"
     var pauseNext = pauseAfter
     if (save_number <= last_save_number) {
-      val header   = s"\n>>> History of save point $save_number <<<"
+      val header   = s">>> History of save point $save_number <<<\n"
       val entries = loadSavedLog(game.saveName, save_number)
 
       optWriter match {
         case None =>
-          displayLine(header, Some(Color.Green))
           displayLine(separator(char = '='), Some(Color.Green))
+          displayLine(header, Some(Color.Green))
           for (LogEntry(line, color) <- entries)
             displayLine(line, color)
             if (pauseAfter)
               pauseNext = !pause(Some(prompt)) // Keep pausing unless user enters skip
 
         case Some(stream) =>
-          stream.write(header + lineSeparator)
           stream.write(separator() + lineSeparator)
+          stream.write(header + lineSeparator)
           for (LogEntry(line, _) <- entries)
             stream.write(line + lineSeparator)
       }
@@ -5122,8 +5139,8 @@ object LabyrinthAwakening {
         else
           log(s"Change posture of $name from ${n.posture} to $newPosture", Color.MapPieces)
         if (newPosture == game.usPosture && game.prestige < 12) {
-          game = game.adjustPrestige(1)
-          log(s"New posture matches US posture, increase US prestige by +1 to ${game.prestige}", Color.MapMarker)
+          log(s"Increase US prestige by 1 (New posture matches US posture)")
+          increasePrestige(1)
         }
         logWorldPosture()
     }
@@ -5207,7 +5224,7 @@ object LabyrinthAwakening {
         throw new IllegalStateException(s"performDisrupt(): $target has no cells or cadre")
     }
     if (bumpPrestige && game.usResolve(Adept)) {
-      log(s"$US Bot with Adept resolve disrupt increases prestige by +2", Color.MapMarker)
+      log(s"$US Bot with Adept resolve disrupt increases prestige by 2")
       increasePrestige(2)
     }
     else if (bumpPrestige)
@@ -5233,8 +5250,8 @@ object LabyrinthAwakening {
       game = game.copy(plotData = updatedPlots, wmdAlertedOrResolved = true)
       log(s"$plot alerted in $countryName, remove it from the game.", Color.MapPieces)
       if (game.useExpansionRules) {
-        game = game.adjustPrestige(1)
-        log(s"Increase prestige by +1 to ${game.prestige} for alerting a WMD plot", Color.MapMarker)
+        log(s"Increase prestige 1 (alerting WMD plot)")
+        increasePrestige(1)
       }
     }
     else if (game.useExpansionRules) {
@@ -5523,16 +5540,16 @@ object LabyrinthAwakening {
   // Prestige roll used
   //   After regime change, withdraw, unblocked plot in the US, or by event.
   def rollPrestige(): Unit = {
-    log("Roll Prestige...")
+    log("\nRoll Prestige...", Color.Info)
+    log(separator(), Color.Info)
     val dirDie = getDieRoll(s"Enter die roll for prestige change direction: ")
     val shiftDice   = List(
       getDieRoll(s"Enter 1st die roll for prestige change value: "),
       getDieRoll(s"Enter 2nd die roll for prestige change value: ")
     )
-    val shiftAmount = if (dirDie + (if (game.gwotPenalty > 0) -1 else 0) < 5)
-       -shiftDice.min
-    else
-      shiftDice.min
+    val shiftAmount = shiftDice.min
+    val drm = if (game.gwotPenalty > 0) -1 else 0
+    val increase = (dirDie + drm >= 5)
 
     log(s"Direction roll: $dirDie")
     if (game.gwotPenalty > 0) {
@@ -5540,9 +5557,10 @@ object LabyrinthAwakening {
       log(s"Modified roll: ${dirDie - 1}")
     }
     log(s"Rolls for shift amount: ${shiftDice.head} and ${shiftDice.last} (lowest value is used)")
-    game = game.adjustPrestige(shiftAmount)
-    val desc = if (shiftAmount < 0) "drops" else "rises"
-    log(s"$US prestige $desc by $shiftAmount to ${game.prestige}", Color.MapMarker)
+    if (increase)
+      increasePrestige(shiftAmount)
+    else
+      decreasePrestige(shiftAmount)
   }
 
   // Note: The caller is responsible for handling convergence and the possible
@@ -6524,8 +6542,8 @@ object LabyrinthAwakening {
 
     log(s"Permanently remove ${amountOf(num, "unavailable WMD plot")} from $name", Color.MapPieces)
     if (bumpPrestige) {
-      game = game.adjustPrestige(num)
-      log(s"Increase prestige by +$num to ${game.prestige} for removing WMD plots", Color.MapMarker)
+      log(s"Increase prestige for removing WMD plots")
+      increasePrestige(num)
     }
   }
 
@@ -6544,8 +6562,8 @@ object LabyrinthAwakening {
     game = game.copy(plotData = updatedPlots)
 
     if (bumpPrestige) {
-      game = game.adjustPrestige(num)
-      log(s"Increase prestige by +$num to ${game.prestige} for removing WMD plots", Color.MapMarker)
+      log(s"Increase prestige for removing WMD plots")
+      increasePrestige(num)
     }
   }
 
@@ -6559,36 +6577,44 @@ object LabyrinthAwakening {
     )
     game = game.copy(plotData = updatedPlots)
     if (bumpPrestige) {
-      game = game.adjustPrestige(num)
-      log(s"Increase prestige by +$num to ${game.prestige} for removing WMD plots", Color.MapMarker)
+      log(s"Increase prestige for removing WMD plots")
+      increasePrestige(num)
     }
   }
 
   def increaseFunding(amount: Int): Unit = {
     if (amount > 0) {
-      game = game.adjustFunding(amount)
-      log(s"Increase funding by +$amount to ${game.funding}", Color.MapMarker)
+      val newValue = (game.funding + amount) min MaxFunding
+      val prefix = if (newValue == game.funding) s"remains at" else s"now"      
+      game = game.copy(funding = newValue)
+      log(s"+$amount to funding ($prefix $newValue)", Color.MapMarker)
     }
   }
 
   def decreaseFunding(amount: Int): Unit = {
     if (amount > 0) {
-      game = game.adjustFunding(-amount)
-      log(s"Decrease funding by -$amount to ${game.funding}", Color.MapMarker)
+      val newValue = (game.funding - amount) max 1
+      val prefix = if (newValue == game.funding) s"remains at" else s"now"      
+      game = game.copy(funding = newValue)
+      log(s"-$amount to funding ($prefix $newValue)", Color.MapMarker)
     }
   }
 
   def increasePrestige(amount: Int): Unit = {
     if (amount > 0) {
-      game = game.adjustPrestige(amount)
-      log(s"Increase prestige by +$amount to ${game.prestige}", Color.MapMarker)
+      val newValue = (game.prestige + amount) min MaxPrestige
+      val prefix = if (newValue == game.prestige) s"remains at" else s"now"      
+      game = game.copy(prestige = newValue)
+      log(s"+$amount to prestige ($prefix $newValue)", Color.MapMarker)
     }
   }
 
   def decreasePrestige(amount: Int): Unit = {
     if (amount > 0) {
-      game = game.adjustPrestige(-amount)
-      log(s"Decrease prestige by -$amount to ${game.prestige}", Color.MapMarker)
+      val newValue = (game.prestige - amount) max 1
+      val prefix = if (newValue == game.prestige) s"remains at" else s"now"      
+      game = game.copy(prestige = newValue)
+      log(s"-$amount to prestige ($prefix $newValue)", Color.MapMarker)
     }
   }
 
@@ -6626,6 +6652,13 @@ object LabyrinthAwakening {
   def resolvePlots(): Unit = {
     case class Unblocked(name: String, isMuslim: Boolean, mapPlot: PlotOnMap)
     def chng(amt: Int) = if (amt > 0) "Increase" else "Decrease"
+
+    def adjustFundingByDelta(delta: Int): Unit =
+      if (delta > 0)
+        increaseFunding(delta)
+      else
+        decreaseFunding(delta)
+
     val unblocked = for (c <- game.countries.filter(_.hasPlots); p <- c.plots)
       yield Unblocked(c.name, c.isMuslim, p)
     val greenOnBlue = game.muslims.exists { m =>
@@ -6683,17 +6716,13 @@ object LabyrinthAwakening {
             }
             else if (m.isGood) {
               val delta = if (mapPlot.backlashed) -2 else 2
-              game = game.adjustFunding(delta)
-              log(
-                f"${chng(delta)} funding by $delta%+d to ${game.funding} (Muslim country at Good governance)",
-                Color.MapMarker)
+              log(s"${chng(delta)} funding by ${delta.abs} (Muslim country at Good governance)")
+              adjustFundingByDelta(delta)
             }
             else {
               val delta = if (mapPlot.backlashed) -1 else 1
-              game = game.adjustFunding(delta)
-              log(
-                f"${chng(delta)} funding by $delta%+d to ${game.funding} (Muslim country at worse than Good governance)",
-                Color.MapMarker)
+              log(s"${chng(delta)} funding by ${delta.abs} (Muslim country at worse than Good governance)")
+              adjustFundingByDelta(delta)
             }
             // Prestige
             if (m.totalTroopsThatAffectPrestige > 0 && mapPlot.plot == PlotWMD) {
@@ -6701,8 +6730,8 @@ object LabyrinthAwakening {
               log(s"Set prestige to 1 (Troops present with WMD)", Color.MapMarker)
             }
             else if (m.totalTroopsThatAffectPrestige > 0) {
-              game = game.adjustPrestige(-1)
-              log(s"Decrease prestige by -1 to ${game.prestige} (Troops present)", Color.MapMarker)
+              log(s"Decrease prestige by -1 (Troops present)")
+              decreasePrestige(1)
             }
             // Sequestration
             if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
@@ -6761,8 +6790,8 @@ object LabyrinthAwakening {
 
             // Funding
             if (n.iranSpecialCase) {
-              game = game.adjustFunding(1)
-              log(s"Increase funding by +1 to ${game.funding} (Iran at Fair governance)", Color.MapMarker)
+              log(s"Increase funding by 1 (Iran at Fair governance)")
+              increaseFunding(1)
             }
             else if (name == UnitedStates) {
               game = game.copy(funding = 9)
@@ -6774,15 +6803,13 @@ object LabyrinthAwakening {
             }
             else if (n.isGood) {
               val delta = mapPlot.plot.number * 2
-              game = game.adjustFunding(delta)
-              log(
-                s"Increase funding by +$delta to ${game.funding} (Plot number times 2, non-Muslim Good country)",
-                Color.MapMarker)
+              log(s"Increase funding by $delta (Plot number times 2, non-Muslim Good country)")
+              increaseFunding(delta)
             }
             else {
               val delta = mapPlot.plot.number
-              game = game.adjustFunding(delta)
-              log(s"Increase funding by +$delta to ${game.funding} (Plot number, non-Muslim country)", Color.MapMarker)
+              log(s"Increase funding by $delta (Plot number, non-Muslim country)")
+              increaseFunding(delta)
             }
 
             // Posture
@@ -7034,28 +7061,28 @@ object LabyrinthAwakening {
 
     if ((globalEventInPlay(Pirates1) && pirates1ConditionsInEffect) ||
         (globalEventInPlay(Pirates2) && pirates2ConditionsInEffect)) {
-      log("No funding drop because Pirates is in effect", Color.Info)
+      log("No funding drop because Pirates is in effect")
     }
     else {
-      game = game.adjustFunding(-1)
-      log(s"Jihadist funding drops -1 to ${game.funding}", Color.MapMarker)
+      log("Jihadist funding drops by 1")
+      decreaseFunding(1)
     }
     if (globalEventInPlay(Fracking)) {
-      game = game.adjustFunding(-1)
-      log(s"Jihadist funding drops -1 to ${game.funding} because Fracking is in effect", Color.MapMarker)
+      log(s"Jihadist funding drops by 1 because Fracking is in effect")
+      decreaseFunding(1)
     }
     if (game.numIslamistRule > 0) {
-      game = game.adjustPrestige(-1)
-      log(s"US prestige drops -1 to ${game.prestige} (At least 1 country is under Islamist Rule)", Color.MapMarker)
+      log(s"US prestige drops buy 1 (At least 1 country is under Islamist Rule)")
+      decreasePrestige(1)
     }
     else
-      log(s"US prestige stays at ${game.prestige} (No countries under Islamist Rule)", Color.Info)
+      log(s"US prestige stays at ${game.prestige} (No countries under Islamist Rule)", Color.MapMarker)
 
     val (worldPosture, level) = game.gwot
     if (game.usPosture == worldPosture && level == 3) {
-      game = game.adjustPrestige(1)
-      log(s"World posture is $worldPosture $level and US posture is ${game.usPosture}", Color.MapMarker)
-      log(s"US prestige increases +1 to ${game.prestige}", Color.MapMarker)
+      log(s"World posture is $worldPosture $level and US posture is ${game.usPosture}")
+      log(s"US prestige increases by 1")
+      increasePrestige(1)
     }
 
     if (game.useExpansionRules) {
@@ -8071,17 +8098,31 @@ object LabyrinthAwakening {
   // Return a list of actions.
   // card2 is only used for US reassessment
   def getActionOrder(cards: List[Card], opponent: Role): List[CardAction] = {
+
+    def askOrder(prompt: String, choices: List[(String, String)]): String = {
+      val allChoices = choices :+ ("abort", "Abort card")
+      askMenu(prompt, allChoices, allowAbort = false).head match {
+        case "abort" =>
+          if (askYorN("Really abort (y/n)? "))
+            throw AbortAction
+          else
+            askOrder(prompt, choices)
+        case result => result
+      }
+    }
+
     val triggeredCards = cards filter (c => c.autoTrigger || c.association == opponent)
     triggeredCards match {
       case c :: Nil =>
         val choices = List(
           "operations" -> "Operations",
-          "event"      -> s"Event: ${c.cardName}")
+          "event"      -> s"Event: ${c.cardName}"
+        )
         val prompt = if (c.association == opponent)
           s"$opponent associated event, which should happen first?"
         else
           s"The event will trigger, which should happen first?"
-        askMenu(prompt, choices).head  match {
+        askOrder(prompt, choices)  match {
           case "event" => List(TriggeredEvent(c), Ops)
           case _       => List(Ops, TriggeredEvent(c))
         }
@@ -8091,10 +8132,10 @@ object LabyrinthAwakening {
           "operations" -> "Operations",
           "1st event"  -> s"Event: ${c1.cardName}",
           "2nd event"  -> s"Event: ${c2.cardName}")
-        val first  = askMenu("Which should happen first?", choices).head
-        val second = askMenu("Which should happen second?", choices filterNot (_._1 == first)).head
-        val third  = (choices map (_._1) filterNot (k => k == first || k == second)).head
-        List(first, second, third) map {
+        val first  = askOrder("Which should happen first?", choices)
+        val second = askOrder("Which should happen second?", choices.filterNot(_._1 == first))
+        val third  = choices.map(_._1).filterNot(k => k == first || k == second).head
+        List(first, second, third).map {
           case "1st event" => TriggeredEvent(c1)
           case "2nd event" => TriggeredEvent(c2)
           case _           => Ops
@@ -8907,8 +8948,8 @@ object LabyrinthAwakening {
     if (name == Philippines && countryEventInPlay(Philippines, AbuSayyaf)) {
       val p = game getNonMuslim Philippines
       if (p.totalCells >= p.totalTroops) {
-        game = game.adjustPrestige(-1)
-        log(s"Decrease prestige by -1 to ${game.prestige} because Abu Sayyaf is in effect", Color.MapMarker)
+        log(s"Decrease prestige by 1 because Abu Sayyaf is in effect", Color.Event)
+        decreasePrestige(1)
       }
     }
   }
@@ -8997,9 +9038,9 @@ object LabyrinthAwakening {
 
     def adjustEntity(entity: String): Unit = {
       entity match {
-        case "prestige"    => adjustPrestigeLevel()
+        case "prestige"    => adjustPrestige()
         case "posture"     => adjustUsPosture()
-        case "funding"     => adjustFundingLevel()
+        case "funding"     => adjustFunding()
         case "troops"      => adjustOffmapTroops()
         case "auto roll"   => adjustAutoRoll()
         case "resolved"    => adjustPlotTargets()
@@ -9045,7 +9086,7 @@ object LabyrinthAwakening {
     getResponse()
   }
 
-  def adjustPrestigeLevel(): Unit = {
+  def adjustPrestige(): Unit = {
     adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
       logAdjustment("Prestige", game.prestige, value)
       game = game.copy(prestige = value)
@@ -9060,7 +9101,7 @@ object LabyrinthAwakening {
     saveAdjustment("US posture")
   }
 
-  def adjustFundingLevel(): Unit = {
+  def adjustFunding(): Unit = {
     adjustInt("Funding", game.funding, 1 to 9) foreach { value =>
       logAdjustment("Funding", game.funding, value)
       game = game.copy(funding = value)
