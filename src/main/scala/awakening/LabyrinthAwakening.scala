@@ -3164,26 +3164,41 @@ object LabyrinthAwakening {
   // the corresponding item is returned.  If there are other
   // characters on the line entered they are returned in as and optional
   // argument.
+  //
+  // If the `numericItem` parameter is not None, then entering
+  // a number instead of one of the letters will return the 
+  // associated item with the numeric value as he argument.
+  //
   // Each item tupel contains:
   // T      - the item value returned
   // Char   - the characters used to select the item
   // String - the text displayed for the item
   //
-  def argMenu[T](prompt: String, items: List[(T, Char, String)], allowNone: Boolean = true): Option[(T, Option[String])] = {
+  def argMenu[T](prompt: String, items: List[(T, Char, String)], numericItem: Option[T] = None, allowNone: Boolean = true): Option[(T, Option[String])] = {
     if (items.isEmpty)
       throw new IllegalArgumentException("argMenu() passed an empty item list")
     val itemMap = items.map(i => i._2 -> i._1).toMap
     val validOptions = orList(items.map(_._2))
 
-    val VALID = raw"\s*(.)(?:\s(.*))?".r
+    val NUMBER = raw"(\d+)".r
+    val VALID = raw"([^\s]+)(?:\s(.*))?".r
     def getInput(): Option[(T, Option[String])] = {
-      readLine(prompt) match {
-        case x if (x == null || x.trim == "") && allowNone =>
+      val input = readLine(prompt) match {
+        case null => ""
+        case i    => i.trim
+      }
+      input match {
+        case "" if allowNone =>
           None
-        case x if (x == null || x.trim == "") =>
+        case "" =>
           getInput()
-        case VALID(char, param) if itemMap.contains(char(0)) =>
-          Some((itemMap(char(0)), Option(param).map(_.trim)))
+
+        case NUMBER(num) if numericItem.nonEmpty =>
+          Some((numericItem.get, Some(num)))
+
+        case VALID(action, param) if itemMap.contains(action(0)) =>
+          Some((itemMap(action(0)), Option(param).map(_.trim)))
+
         case _ =>
           println(s"Not valid. Enter one of: $validOptions")
           getInput()
@@ -7829,7 +7844,8 @@ object LabyrinthAwakening {
     displayLine(line1, Color.Info)
     displayLine(line2, Color.Info)
     displayLine("======================================================", Color.Info)
-    argMenu("Action: ", choices) match {
+    val numericItem = if (canPlay) Some(PlayCard) else None
+    argMenu("Action: ", choices, numericItem) match {
       case Some(result) => result
       case None => actionPhasePrompt()
     }
