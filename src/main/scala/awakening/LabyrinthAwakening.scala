@@ -2028,7 +2028,7 @@ object LabyrinthAwakening {
       val summary = new Summary
       summary.add("Cards in the deck (or in player/bot hand)", Color.Info)
       summary.add(separator(char = '='), Color.Info)
-      summary.addSeq(wrapInColumns("", cardsInDrawPileOrHands().map(deck(_).numAndName)))
+      summary.addSeq(wrapInColumns("", cardsInDrawPileOrHands().map(deck(_).numAndName), maxWidth = 120))
       summary
     }
 
@@ -2036,7 +2036,7 @@ object LabyrinthAwakening {
       val summary = new Summary
       summary.add("Cards in the discard pile", Color.Info)
       summary.add(separator(char = '='), Color.Info)
-      summary.addSeq(wrapInColumns("", cardsDiscarded.map(deck(_).numAndName)))
+      summary.addSeq(wrapInColumns("", cardsDiscarded.map(deck(_).numAndName), maxWidth = 120))
       summary
     }
 
@@ -2044,7 +2044,7 @@ object LabyrinthAwakening {
       val summary = new Summary
       summary.add("Cards removed from the game", Color.Info)
       summary.add(separator(char = '='), Color.Info)
-      summary.addSeq(wrapInColumns("", cardsRemoved.map(deck(_).numAndName)))
+      summary.addSeq(wrapInColumns("", cardsRemoved.map(deck(_).numAndName), maxWidth = 120))
       summary
     }
 
@@ -2070,7 +2070,7 @@ object LabyrinthAwakening {
       summary.add(separator(char = '='), Color.Info)
       val civilWars = muslims.filter(_.civilWar)
       if (civilWars.isEmpty)
-        summary.add("There are no counties in civil war")
+        summary.add("There are no countries in civil war")
       else
         summary.add(civilWars.map(_.name).mkString(", "))
       summary
@@ -4089,29 +4089,30 @@ object LabyrinthAwakening {
 
       if (count == -1) {
         val help = """|
-                      |History command help
-                      |--------------------------------
-                      |If you enter the 'h' command with no arguments you will see a menu.
-                      |
-                      |You can bypass the menu by following the command with arguments.
-                      |h last   -- Show the history of the last action
-                      |h turn   -- Show the history of the current turn
-                      |h prev   -- Show the history of the previous turn
-                      |h all    -- Show the entire history (same as h 0)
-                      |
-                      |To show the history of a specific save point or range of save points you can
-                      |follow the h command with a starting point and an optional number of entries.
-                      |Save point numbers start a zero.
-                      |h -1     -- Show history of the most recent save point
-                      |h -n     -- Show all history starting with the nth most recent save point
-                      |h -n num -- Show history of num save points starting with the nth most recent
-                      |h n      -- Show all history starting with the nth save point
-                      |h n num  -- Show history of num save points starting with the nth save point
-                      |
-                      |Finally, any of the above commands can be followed by a redirect argument
-                      |to save the requested histor in a file instead of printing it to the screen.
-                      |h all >/tmp/game_history
-                      """.stripMargin
+          |History command help
+          |--------------------------------
+          |If you enter the 'h' command with no arguments you will see a menu.
+          |
+          |You can bypass the menu by following the command with arguments.
+          |h last   -- Show the history of the last action
+          |h turn   -- Show the history of the current turn
+          |h prev   -- Show the history of the previous turn
+          |h all    -- Show the entire history (same as h 0)
+          |h help   -- Show this help message
+          |
+          |To show the history of a specific save point or range of save points you can
+          |follow the h command with a starting point and an optional number of entries.
+          |Save point numbers start a zero.
+          |h -1     -- Show history of the most recent save point
+          |h -n     -- Show all history starting with the nth most recent save point
+          |h -n num -- Show history of num save points starting with the nth most recent
+          |h n      -- Show all history starting with the nth save point
+          |h n num  -- Show history of num save points starting with the nth save point
+          |
+          |Finally, any of the above commands can be followed by a redirect argument
+          |to save the requested histor in a file instead of printing it to the screen.
+          |h all >/tmp/game_history
+          """.stripMargin
         displayLine(help)
         pause()
       }
@@ -7761,7 +7762,7 @@ object LabyrinthAwakening {
 
   case object Adjust extends UserAction {
     override def perform(param: Option[String]): Unit = {
-      adjustSettings(param)
+      adjustCommand(param)
     }
   }
 
@@ -7962,7 +7963,7 @@ object LabyrinthAwakening {
   //       case "add awakening cards"   => addAwakeningCards()
   //       case "add forever cards"     => addForeverWarCards()
   //       case "show"                  => showCommand(param)
-  //       case "adjust"                => adjustSettings(param)
+  //       case "adjust"                => adjustCommand(param)
   //       case "history"               => showHistory(param)
   //       case "rollback"              => rollback()
   //       case "quit"                  => if (askYorN("Really quit (y/n)? ")) throw QuitGame
@@ -8012,20 +8013,43 @@ object LabyrinthAwakening {
   // If there is no param, then we loop showing a menu of options
   // until the user exits the menu with no action.
   def showCommand(param: Option[String]): Unit = {
-    val exp = game.useExpansionRules
-    val allOptions = List(
-      "all", "actions", "summary", "scenario", "caliphate", "civil wars",
-      "deck", "discarded", "removed"
+    def displayHelp(): Unit = {
+        val help = """|
+          |Show command help
+          |--------------------------------
+          |If you enter the 's' command with no arguments you will see a menu.
+          |
+          |You can bypass the menu by following the command with arguments.
+          |The argument can be shortend to it a unique prefix of the argument.
+          |For example: 's sum'  is equivalent to 's summary'
+          |
+          |s summary   -- Game summary including score
+          |s <country> -- Show status of a the named country
+          |s scenario  -- Scenario information and difficulty level
+          |s actions   -- The list of actions for the current turn
+          |s caliphate -- Countries that are part of the caliphate (not in Labyrinth scenarios)
+          |s civil war -- Countries in civil war (not in Labyrinth scenarios)
+          |s draw pile -- Cards in the draw (or in player/bot hand)
+          |s discarded -- Cards in the discard pile
+          |s removed   -- Cards removed from the game
+          |s all       -- Entire game state
+          |s help      -- Show this help message
+          """.stripMargin
+        displayLine(help)
+    }
+
+    val options = List(
+      "all", "actions", "summary", "scenario", "caliphate", "civil war",
+      "draw pile", "discarded", "removed", "help"
     ) ::: countryNames(game.countries)
-    val options = allOptions.filter(o => exp || (o != "caliphate" && o != "civil wars"))
     val menuChoices = List(
       choice(true, Some("summary"),    "Game summary and score"),
       choice(true, Some("scenario"),   "Scenario information"),
       choice(true, Some("country"),    "Countries"),
       choice(true, Some("actions"),    "Actions this turn"),
-      choice(exp,  Some("caliphate"),  "Calipate countries"),
-      choice(exp,  Some("civil wars"), "Countries in Civil War"),
-      choice(true, Some("deck"),       "Cards in draw pile (or hands)"),
+      choice(true, Some("caliphate"),  "Calipate countries"),
+      choice(true, Some("civil war"),  "Countries in Civil War"),
+      choice(true, Some("draw pile"),  "Cards in draw pile (or hands)"),
       choice(true, Some("discarded"),  "Cards in discard pile"),
       choice(true, Some("removed"),    "Cards removed from the game"),
       choice(true, Some("all"),        "Entire game state"),
@@ -8039,11 +8063,12 @@ object LabyrinthAwakening {
         case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
         case "scenario"   => printSummary(game.scenarioSummary)
         case "caliphate"  => printSummary(game.caliphateSummary)
-        case "civil wars" => printSummary(game.civilWarSummary)
-        case "deck"       => printSummary(game.deckSummary)
+        case "civil war"  => printSummary(game.civilWarSummary)
+        case "draw pile"  => printSummary(game.deckSummary)
         case "discarded"  => printSummary(game.discardedCardsSummary)
         case "removed"    => printSummary(game.removedCardsSummary)
         case "all"        => printGameState()
+        case "help"       => displayHelp()
         case name         => printSummary(game.countrySummary(name))
       }
     }
@@ -8051,13 +8076,11 @@ object LabyrinthAwakening {
     def showCountries(): Unit = {
       val prompt = "\nShow which country (blank to cancel): "
       val candidates = countryNames(game.countries)
-      askOneOf(prompt, candidates, allowNone = true, allowAbort = false, abbr = CountryAbbreviations) match {
-        case Some(name) =>
+      askOneOf(prompt, candidates, None, true, false, CountryAbbreviations)
+        .foreach { name =>
           printSummary(game.countrySummary(name))
           showCountries()
-
-        case None =>
-      }
+        }
     }
 
 
@@ -8076,14 +8099,14 @@ object LabyrinthAwakening {
       }
     }
 
-
+    val HELP  = """(?:\?|--help|-h)""".r
     param.map(_.trim) match {
+      case Some(param) if HELP.matches(param) =>
+        showEntity("help")
+
       case Some(param) if param != "" =>
-        askOneOf("Show: ", options, Some(param), allowNone = true, abbr = CountryAbbreviations, allowAbort = false)
-          .foreach{ entity =>
-            showEntity(entity)
-            pause()
-          }
+        askOneOf("Show: ", options, Some(param), true, false, CountryAbbreviations)
+          .foreach(showEntity)
 
       case _ =>
         showMenu()
@@ -8999,58 +9022,84 @@ object LabyrinthAwakening {
     saveGameState()
   }
 
-  def adjustSettings(param: Option[String]): Unit = {
+  def adjustCommand(param: Option[String]): Unit = {
+    def displayHelp(): Unit = {
+      val help = """|
+        |Adjust command help
+        |--------------------------------
+        |There is no menu for the adjust command.
+        |
+        |To adjust some state within the game the 'a' command followed by
+        |a argument specifying what you want to adjust.
+        |The argument can be shortend to it a unique prefix of the argument.
+        |For example: 'a pre'  is equivalent to 's prestige'
+        |
+        |a <country>   -- Settings for the named country
+        |a prestige    -- US prestige level
+        |a posture     -- US posture
+        |a funding     -- Jihadist funding level
+        |a reserves    -- US/Jihadist reserves
+        |a cards       -- Move cards between draw pile/discard/removed
+        |                 and the number of cards in player/bot hand
+        |a troops      -- Number of troops in the Offmap box
+        |a plots       -- Available/resolved plots
+        |a resolved    -- Countries where a plot was resolved in the plot resolution
+        |a events      -- Global events that are in play
+        |a markers     -- Marker for discarded Lapsing event/1st plot
+        |a difficulty  -- Jihadist ideology/US resolve
+        |a color       -- Toggle color in logs
+        |                 (Does not work with Windows 10.0 or older)
+        |a enhanced    -- Toggle enhanced Bot implementation (Jihadist Bot only)
+        |a auto roll   -- Toggle auto rolling for Player dice rolls
+        |a manual roll -- Toggle manual dice rolls for all rolls
+        |a bot log     -- Toggle bot log entries for debugging
+        |a help        -- Show this help message
+        """.stripMargin
+      displayLine(help)
+    }    
+    
     val options = List(
-      "prestige", "funding", "difficulty", "card locations",
-      "lapsing marker", "markers" , "reserves",
-      "plots", "offmap troops", "posture", "auto roll",
-      "bot logging", "bot enhancements", "manual die rolls", "color",
-      "resolved plot countries", "exit after win"
+      "prestige", "funding", "difficulty", "cards",
+      "markers", "events" , "reserves",
+      "plots", "troops", "posture", "auto roll",
+      "bot logging", "enhanced", "manual roll", "color",
+      "resolved", "help"
     ).sorted :::countryNames(game.countries).sorted
-    val choice = askOneOf("[Adjust] (? for list): ", options, param, allowNone = true,
-                           abbr = CountryAbbreviations, allowAbort = false)
-    choice foreach {
-      case "prestige" =>
-        adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
-          logAdjustment("Prestige", game.prestige, value)
-          game = game.copy(prestige = value)
-          saveAdjustment("Prestige")
-        }
-      case "posture" =>
-        val newValue = oppositePosture(game.usPosture)
-        logAdjustment("US posture", game.usPosture, newValue)
-        game = game.copy(usPosture = newValue)
-        saveAdjustment("US posture")
 
-      case "funding" =>
-        adjustInt("Funding", game.funding, 1 to 9) foreach { value =>
-          logAdjustment("Funding", game.funding, value)
-          game = game.copy(funding = value)
-          saveAdjustment("Funding")
-        }
-      case "offmap troops" =>
-        adjustInt("Offmap troops", game.offMapTroops, 0 to (game.offMapTroops + game.troopsAvailable)) foreach { value =>
-          logAdjustment("Offmap troops", game.offMapTroops, value)
-          game = game.copy(offMapTroops = value)
-          saveAdjustment("Offmap troops")
-        }
-      case "auto roll" =>
-        logAdjustment("Human auto roll", game.humanAutoRoll, !game.humanAutoRoll)
-        game = game.copy(humanAutoRoll = !game.humanAutoRoll)
-        saveAdjustment("Human auto roll")
+    def adjustEntity(entity: String): Unit = {
+      entity match {
+        case "prestige"    => adjustPrestigeLevel()
+        case "posture"     => adjustUsPosture()
+        case "funding"     => adjustFundingLevel()
+        case "troops"      => adjustOffmapTroops()
+        case "auto roll"   => adjustAutoRoll()
+        case "resolved"    => adjustPlotTargets()
+        case "difficulty"  => adjustDifficulty()
+        case "bot logging" => adjustBotLogging()
+        case "enhanced"    => adjustBotEnhancements()
+        case "manual roll" => adjustBotManualDieRolls()
+        case "color"       => adjustShowColor()
+        case "cards"       => adjustCardLocations()
+        case "markers"     => adjustLapsingMarkers()
+        case "events"      => adjustEventMarkers()
+        case "reserves"    => adjustReserves()
+        case "plots"       => adjustPlots()
+        case "help" =>
+          displayHelp()
+          adjustCommand(None)
+        case name          => adjustCountry(name)
+      }
+    }
 
-      case "resolved plot countries" => adjustPlotTargets()
-      case "difficulty"              => adjustDifficulty()
-      case "bot logging"             => adjustBotLogging()
-      case "bot enhancements"        => adjustBotEnhancements()
-      case "manual die rolls"        => adjustBotManualDieRolls()
-      case "color"                   => adjustShowColor()
-      case "card locations"          => adjustCardLocations()
-      case "lapsing marker"          => adjustLapsingMarkers()
-      case "markers"                 => adjustMarkers()
-      case "reserves"                => adjustReserves()
-      case "plots"                   => adjustPlots()
-      case name                      => adjustCountry(name)
+    val prompt = "[Adjust] (h for help, blank to cancel): "
+    val HELP  = """(?:\?|--help|-h)""".r
+    param.map(_.trim) match {
+      case Some(param) if HELP.matches(param) =>
+        displayHelp()
+
+      case _ =>
+        askOneOf(prompt, options, param, true, false, CountryAbbreviations)
+          .foreach(adjustEntity)
     }
   }
 
@@ -9065,6 +9114,43 @@ object LabyrinthAwakening {
           getResponse()
       }
     getResponse()
+  }
+
+  def adjustPrestigeLevel(): Unit = {
+    adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
+      logAdjustment("Prestige", game.prestige, value)
+      game = game.copy(prestige = value)
+      saveAdjustment("Prestige")
+    }
+  }
+
+  def adjustUsPosture(): Unit = {
+    val newValue = oppositePosture(game.usPosture)
+    logAdjustment("US posture", game.usPosture, newValue)
+    game = game.copy(usPosture = newValue)
+    saveAdjustment("US posture")
+  }
+
+  def adjustFundingLevel(): Unit = {
+    adjustInt("Funding", game.funding, 1 to 9) foreach { value =>
+      logAdjustment("Funding", game.funding, value)
+      game = game.copy(funding = value)
+      saveAdjustment("Funding")
+    }
+  }
+
+  def adjustOffmapTroops(): Unit = {
+    adjustInt("Offmap troops", game.offMapTroops, 0 to (game.offMapTroops + game.troopsAvailable)) foreach { value =>
+      logAdjustment("Offmap troops", game.offMapTroops, value)
+      game = game.copy(offMapTroops = value)
+      saveAdjustment("Offmap troops")
+    }
+  }
+
+  def adjustAutoRoll(): Unit = {
+    logAdjustment("Human auto roll", game.humanAutoRoll, !game.humanAutoRoll)
+    game = game.copy(humanAutoRoll = !game.humanAutoRoll)
+    saveAdjustment("Human auto roll")
   }
 
   def adjustReserves(): Unit = {
@@ -9417,7 +9503,7 @@ object LabyrinthAwakening {
     }
   }
 
-  def adjustMarkers(): Unit = {
+  def adjustEventMarkers(): Unit = {
     case class OopTroops(marker: String, numTroops: Int)
     val OutOfPlayTroops = List(OopTroops(Sequestration, 3), OopTroops(SouthChinaSeaCrisis, 2))
     def countOopTrrops(inplayMarkers: List[String]): Int =
@@ -9671,7 +9757,7 @@ object LabyrinthAwakening {
           case None        =>
           case Some(attribute) =>
             attribute match {
-              case "posture"        => adjustPosture(name)
+              case "posture"        => adjustCountryPosture(name)
               case "active cells"   => adjustActiveCells(name)
               case "sleeper cells"  => adjustSleeperCells(name)
               case "cadre"          => adjustCadre(name)
@@ -9688,7 +9774,7 @@ object LabyrinthAwakening {
   }
 
 
-  def adjustPosture(name: String): Unit = {
+  def adjustCountryPosture(name: String): Unit = {
     game.getCountry(name) match {
       case _: MuslimCountry =>
         throw new IllegalArgumentException(s"Cannot set posture of Muslim country: $name")
