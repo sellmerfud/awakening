@@ -7911,8 +7911,24 @@ object LabyrinthAwakening {
       if (getActiveRole() == Jihadist && isBot(Jihadist) && game.botEnhancements)
         if (JihadistBot.voluntaryCadreRemoval())
           saveGameState()
-      val (action, param) = actionPhasePrompt()
-      action.perform(param)
+
+
+    // If we are at the end of the action phase allow the user
+    // to bypass the menu
+    val activeRole = getActiveRole()
+    val numCardsPlayed = numCardsPlayedInCurrentPhase()
+    val numInHand = numCardsInHand(activeRole)
+    val isUSHuman = activeRole == US && isHuman(US)
+    val canEndPhase = numCardsPlayed == 2 || numInHand == 0 || (isUSHuman && numInHand == 1)
+    val endActionPhase = canEndPhase &&
+      askYorN(s"\nDo you want to end the current $activeRole action phase? (y/n) ")
+
+      if (endActionPhase)
+        EndPhase.perform(None)
+      else {
+        val (action, param) = actionPhasePrompt()
+        action.perform(param)
+      }
       actionLoop()
     }
 
