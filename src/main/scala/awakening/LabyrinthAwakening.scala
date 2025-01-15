@@ -6936,7 +6936,7 @@ object LabyrinthAwakening {
     val usCardMods = {
       val mods = new ListBuffer[(String, Int)]()
       if (lapsingEventInPlay(FullyResourcedCOIN))
-        mods.append((deck(FullyResourcedCOIN).name, 2))
+        mods.append((deck(FullyResourcedCOIN).cardName, 2))
       if (globalEventInPlay(USChinaTradeWar)) {
         val modifier = game.worldPosture match {
           case Even => 0
@@ -7848,6 +7848,14 @@ object LabyrinthAwakening {
       .sum
   }
 
+  def actionPhaseCount(role: Role) = {
+    game.turnActions
+      .count {
+        case EndOfActionPhase(`role`) => true
+        case _ => false
+      }
+  }
+
   // ---------------------------------------------------
   // This is the main prompt for taking an action during
   // the game.
@@ -7881,19 +7889,22 @@ object LabyrinthAwakening {
       choice(true,        Quit,        'q', "Quit game"),
     ).flatten
 
+    val phaseNum = actionPhaseCount(activeRole) + 1
     val roleType = if (isHuman(activeRole)) "Player's" else "Bot's"
-    val phase = s"$activeRole $roleType action phase"
+    val phase = s"$activeRole $roleType ${ordinal(phaseNum)} action phase"
     val turn = s"Turn ${game.turn}"
     val played = s"${amountOf(numCardsPlayed, "card")} played"
+    val drawPile = s"${numCardsInDrawPile()} in draw pile"
     val inHand = s"$numInHand in hand"
-    val line1 = f"| $phase%-30s$turn%20s |"
+    val line1 = f"| $phase%-36s$turn%14s |"
     val line2 = f"| $played%-30s$inHand%20s |"
-
+    val line3 = f"| $drawPile%50s |"
 
     displayLine()
     displayLine("======================================================", Color.Info)
     displayLine(line1, Color.Info)
     displayLine(line2, Color.Info)
+    displayLine(line3, Color.Info)
     displayLine("======================================================", Color.Info)
     val numericItem = if (canPlay) Some(PlayCard) else None
     argMenu("Action: ", choices, numericItem) match {
