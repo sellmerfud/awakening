@@ -6575,7 +6575,7 @@ object LabyrinthAwakening {
   def increaseFunding(amount: Int): Unit = {
     if (amount > 0) {
       val newValue = (game.funding + amount) min MaxFunding
-      val prefix = if (newValue == game.funding) s"remains at" else s"now"      
+      val prefix = if (newValue == game.funding) s"remains" else s"now"      
       game = game.copy(funding = newValue)
       log(s"+$amount to funding ($prefix $newValue)", Color.MapMarker)
     }
@@ -6584,7 +6584,7 @@ object LabyrinthAwakening {
   def decreaseFunding(amount: Int): Unit = {
     if (amount > 0) {
       val newValue = (game.funding - amount) max 1
-      val prefix = if (newValue == game.funding) s"remains at" else s"now"      
+      val prefix = if (newValue == game.funding) s"remains" else s"now"      
       game = game.copy(funding = newValue)
       log(s"-$amount to funding ($prefix $newValue)", Color.MapMarker)
     }
@@ -6593,7 +6593,7 @@ object LabyrinthAwakening {
   def increasePrestige(amount: Int): Unit = {
     if (amount > 0) {
       val newValue = (game.prestige + amount) min MaxPrestige
-      val prefix = if (newValue == game.prestige) s"remains at" else s"now"      
+      val prefix = if (newValue == game.prestige) s"remains" else s"now"      
       game = game.copy(prestige = newValue)
       log(s"+$amount to prestige ($prefix $newValue)", Color.MapMarker)
     }
@@ -6602,7 +6602,7 @@ object LabyrinthAwakening {
   def decreasePrestige(amount: Int): Unit = {
     if (amount > 0) {
       val newValue = (game.prestige - amount) max 1
-      val prefix = if (newValue == game.prestige) s"remains at" else s"now"      
+      val prefix = if (newValue == game.prestige) s"remains" else s"now"      
       game = game.copy(prestige = newValue)
       log(s"-$amount to prestige ($prefix $newValue)", Color.MapMarker)
     }
