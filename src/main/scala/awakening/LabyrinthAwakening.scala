@@ -7756,8 +7756,11 @@ object LabyrinthAwakening {
       game = game.copy(turnActions = EndOfActionPhase(activeRole)::game.turnActions)
       saveGameState(Some(s"End of $activeRole action phase"))
 
-      if (endOfTurn)
+      if (endOfTurn) {
+        pause()  // So the user can see the plot resolution results
         endTurn()
+      }
+
     }
   }
 
@@ -7917,7 +7920,8 @@ object LabyrinthAwakening {
   // Process user actions until the user quits the game
   // Assumes the global `game` variable has been initialized!
   def playGame(): Unit = {
-    @tailrec def actionLoop(): Unit = {
+
+    @tailrec def actionLoop(lastAction: Option[UserAction]): Unit = {
       checkAutomaticVictory() // Will Exit game if auto victory has been achieved
       if (getActiveRole() == Jihadist && isBot(Jihadist) && game.botEnhancements)
         if (JihadistBot.voluntaryCadreRemoval())
@@ -7929,21 +7933,34 @@ object LabyrinthAwakening {
     val activeRole = getActiveRole()
     val numCardsPlayed = numCardsPlayedInCurrentPhase()
     val numInHand = numCardsInHand(activeRole)
+    val owner = if (isHuman(activeRole))
+      "your"
+    else
+      s"$activeRole Bot's"
     val isUSHuman = activeRole == US && isHuman(US)
     val canEndPhase = numCardsPlayed == 2 || numInHand == 0 || (isUSHuman && numInHand == 1)
-    val endActionPhase = canEndPhase &&
-      askYorN(s"\nDo you want to end the current $activeRole action phase? (y/n) ")
+    val endPrompt = if (numCardsPlayed == 2)
+        s"""|
+            |Two cards have been played.
+            |Do you want to end the current $activeRole action phase? (y/n) """.stripMargin
+      else
+        s"""|
+            |${amountOf(numInHand,"card")} remaining in $owner hand.
+            |Do you want to end the current $activeRole action phase? (y/n) """.stripMargin
+    val endActionPhase = lastAction == Some(PlayCard) && canEndPhase && askYorN(endPrompt)
 
-      if (endActionPhase)
+      if (endActionPhase) {
         EndPhase.perform(None)
+        actionLoop(None)
+      }
       else {
         val (action, param) = actionPhasePrompt()
         action.perform(param)
+        actionLoop(Some(action))
       }
-      actionLoop()
     }
 
-    try actionLoop()
+    try actionLoop(None)
     catch {
       // Expected exception, all others bubble up
       case QuitGame =>
