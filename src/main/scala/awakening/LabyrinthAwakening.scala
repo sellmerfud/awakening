@@ -896,6 +896,11 @@ object LabyrinthAwakening {
     override def toString() = s"Jihadist removes ${amountOf(num, "cadre")}"
   }
 
+  case class EndOfActionPhase(role: Role) extends TurnAction {
+    override def name = "EndOfActionPhase"
+    override def toString() = s"End of $role action phase"
+  }
+
   case class AdjustmentMade(desc: String) extends TurnAction {
     override def name = "AdjustmentMade"
     override def toString() = s"Adjustment: $desc"
@@ -1398,7 +1403,7 @@ object LabyrinthAwakening {
 
   // A game segment containing the save point number for the segment,
   // and a summary of the segment.
-  case class GameSegment(save_number: Int, summary: Seq[String])
+  case class GameSegment(saveNumber: Int, endOfTurn: Boolean, summary: Seq[String])
 
   case class GameState(
     scenarioName: String,
@@ -1421,7 +1426,6 @@ object LabyrinthAwakening {
     sequestrationTroops: Boolean         = false,  // true if 3 troops off map due to Sequestration event
     offMapTroops: Int                    = 0,
     reserves: Reserves                   = Reserves(0, 0),
-    activeRole: Role                     = Jihadist,
     cardsInUse: Range                    = Range.inclusive(0, 0),  // Range of cards in use (although some may have been removed)
     cardsInHand: CardsInHand             = CardsInHand(0, 0),
     turnActions: List[TurnAction]        = Nil,      // Cards plays/plot resolutions/adjustments etc. (most recent first).
@@ -4009,12 +4013,12 @@ object LabyrinthAwakening {
       log(text, color)
   }
 
-  def printHistorySegment(save_number: Int, last_save_number: Int, pauseAfter: Boolean, optWriter: Option[java.io.Writer] = None): Unit = {
+  def printHistorySegment(saveNumber: Int, lastSaveNumber: Int, pauseAfter: Boolean, optWriter: Option[java.io.Writer] = None): Unit = {
     val prompt = "Press Enter to continue (or 'skip' to skip these prompts)"
     var pauseNext = pauseAfter
-    if (save_number <= last_save_number) {
-      val header   = s">>> History of save point $save_number <<<\n"
-      val entries = loadSavedLog(game.saveName, save_number)
+    if (saveNumber <= lastSaveNumber) {
+      val header   = s">>> History of save point $saveNumber <<<\n"
+      val entries = loadSavedLog(game.saveName, saveNumber)
 
       optWriter match {
         case None =>
@@ -4031,7 +4035,7 @@ object LabyrinthAwakening {
           for (LogEntry(line, _) <- entries)
             stream.write(line + lineSeparator)
       }
-      printHistorySegment(save_number + 1, last_save_number, pauseNext, optWriter)
+      printHistorySegment(saveNumber + 1, lastSaveNumber, pauseNext, optWriter)
     }
   }
 
@@ -4271,9 +4275,9 @@ object LabyrinthAwakening {
       ""
   }
 
-  def getSaveName(save_number: Int) = f"save-$save_number%03d"
+  def getSaveName(saveNumber: Int) = f"save-$saveNumber%03d"
 
-  def getLogName(save_number: Int)  = f"log-$save_number%03d"
+  def getLogName(saveNumber: Int)  = f"log-$saveNumber%03d"
 
   def getSaveFileNumber(filename: Pathname): Option[Int] = {
     val SAVE_FILE = """(?:save|log)-(\d+)""".r
@@ -4283,10 +4287,10 @@ object LabyrinthAwakening {
     }
   }
 
-  def saveGameState(desc: Option[String] = None, suppressCardsPlayed: Boolean = false): Unit = {
-    val save_number = game.history.size
-    val save_path   = gamesDir/game.saveName/getSaveName(save_number)
-    val log_path    = gamesDir/game.saveName/getLogName(save_number)
+  def saveGameState(desc: Option[String] = None, endOfTurn: Boolean = false): Unit = {
+    val saveNumber  = game.history.size
+    val save_path   = gamesDir/game.saveName/getSaveName(saveNumber)
+    val log_path    = gamesDir/game.saveName/getLogName(saveNumber)
     val segmentDesc = desc.orElse(game.turnActions.headOption.map(_.toString))getOrElse("")
     val cardsPlayed = game.turnActions
       .filter(_.isInstanceOf[CardPlay])
@@ -4302,7 +4306,7 @@ object LabyrinthAwakening {
       case Some(PlayedCard(_, _, _)) =>
         s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card this turn)"
 
-      case _ if suppressCardsPlayed =>
+      case _ if endOfTurn =>
         ""
 
       case _ =>
@@ -4318,7 +4322,7 @@ object LabyrinthAwakening {
       s"latest: $segmentDesc",
       turnInfo
     ).filterNot(_.isEmpty).mkString(", ")
-    val segment = GameSegment(save_number, Seq(segmentDesc, turnInfo).filterNot(_.isEmpty))
+    val segment = GameSegment(saveNumber, endOfTurn, Seq(segmentDesc, turnInfo).filterNot(_.isEmpty))
 
     // Make sure that the game directory exists
     save_path.dirname.mkpath()
@@ -4332,8 +4336,8 @@ object LabyrinthAwakening {
     saveGameDescription(game.saveName, gameDesc)
   }
 
-  def loadGameState(name: String, save_number: Int): GameState = {
-    val save_path = gamesDir/name/getSaveName(save_number)
+  def loadGameState(name: String, saveNumber: Int): GameState = {
+    val save_path = gamesDir/name/getSaveName(saveNumber)
     SavedGame.load(save_path).copy(
       saveName = name,         // Set the game name, it could change if the directory was renamed
       log = Vector.empty)  // Start with an empty log for the current save point
@@ -4354,10 +4358,10 @@ object LabyrinthAwakening {
   }
 
   def loadMostRecent(name: String): GameState = {
-    val save_number = mostRecentSaveNumber(name) getOrElse {
+    val saveNumber = mostRecentSaveNumber(name) getOrElse {
       throw new IllegalStateException(s"No saved file found for game '$name'")
     }
-    loadGameState(name, save_number)
+    loadGameState(name, saveNumber)
   }
     // Return the list of saved games
   def savedGames(): List[String] = {
@@ -4366,9 +4370,9 @@ object LabyrinthAwakening {
     }
   }
 
-  def loadSavedLog(name: String, save_number: Int): Vector[LogEntry] = {
+  def loadSavedLog(name: String, saveNumber: Int): Vector[LogEntry] = {
 
-    val log_path = gamesDir/name/getLogName(save_number)
+    val log_path = gamesDir/name/getLogName(saveNumber)
     if (log_path.exists) {
       SavedGame.loadLog(log_path)
     }
@@ -4425,9 +4429,13 @@ object LabyrinthAwakening {
       val CANCEL    = -3
 
       def showPage(pageNum: Int): Unit = {
-        val saveChoices: List[(Int, (String, Seq[String]))] = pages(pageNum).toList map {
-          case GameSegment(save_number, summary) => save_number -> (s"Save point ${save_number} ", summary)
-        }
+        val saveChoices: List[(Int, (String, Seq[String]))] = pages(pageNum)
+          .toList
+          .filterNot(_.endOfTurn)   // Don't allow rollback to end of turn
+          .map {
+            case GameSegment(saveNumber, endOfTurn, summary) =>
+              saveNumber -> (s"Save point ${saveNumber} ", summary)
+          }
         val otherChoices: List[(Int, (String, Seq[String]))] = List(
           choice(pageNum > firstPage, PAGE_UP,   "Page up, show newer save points ", Seq.empty),
           choice(pageNum < lastPage,  PAGE_DOWN, "Page down, show older save points ", Seq.empty),
@@ -4442,11 +4450,11 @@ object LabyrinthAwakening {
           case CANCEL      =>
           case PAGE_UP     => showPage(pageNum - 1)
           case PAGE_DOWN   => showPage(pageNum + 1)
-          case save_number =>
+          case saveNumber =>
             if (askYorN(s"Are you sure you want to rollback to this save point? (y/n) ")) {
               // Games are saved at the end of the turn, so we actually want
-              // to load the file with save_number -1.
-              val target       = save_number - 1
+              // to load the file with saveNumber -1.
+              val target       = saveNumber - 1
               val oldGameState = game
               game = loadGameState(game.saveName, target)
               saveGameDescription(game.saveName, game.description)  // Update the description file
@@ -7111,7 +7119,7 @@ object LabyrinthAwakening {
     val turnNum = game.turn
     game = game.copy(turnActions = Nil)
     game = game.copy(turn = game.turn + 1)
-    saveGameState(Some(s"End of turn $turnNum"), suppressCardsPlayed = true)
+    saveGameState(Some(s"End of turn $turnNum"), endOfTurn = true)
     pause()
   }
 
@@ -7722,7 +7730,7 @@ object LabyrinthAwakening {
 
   case object PlayCard extends UserAction {
     override def perform(param: Option[String]): Unit =
-      game.activeRole match {
+      getActiveRole() match {
         case US => usCardPlay(param)
         case Jihadist => jihadistCardPlay(param)
       }
@@ -7743,7 +7751,7 @@ object LabyrinthAwakening {
 
   case object EndPhase extends UserAction {
     override def perform(param: Option[String]): Unit = {
-      val activeRole = game.activeRole
+      val activeRole = getActiveRole()
       val endOfTurn = activeRole match {
         case US  => numCardsInHand(US) < 2 && numCardsInHand(Jihadist) == 0
         case Jihadist => numCardsInHand(US) == 0 && numCardsInHand(Jihadist) == 0
@@ -7754,7 +7762,7 @@ object LabyrinthAwakening {
       if (activeRole == US || endOfTurn)
         resolvePlots()
 
-      game = game.copy(activeRole = oppositeRole(activeRole))
+      game = game.copy(turnActions = EndOfActionPhase(activeRole)::game.turnActions)
       saveGameState(Some(s"End of $activeRole action phase"))
 
       if (endOfTurn)
@@ -7829,24 +7837,32 @@ object LabyrinthAwakening {
     }
   }
 
+  def getActiveRole(): Role = {
+    game.turnActions
+      .find(_.isInstanceOf[EndOfActionPhase])
+      .map(a => oppositeRole(a.asInstanceOf[EndOfActionPhase].role))
+      .getOrElse(Jihadist)
+  }
   def getCurrentPhaseCardPlays(): List[CardPlay] =
     game.turnActions
       .dropWhile(a => !a.isInstanceOf[CardPlay])
       .takeWhile(_.isInstanceOf[CardPlay])
       .map(_.asInstanceOf[CardPlay])
 
-  def numCardsPlayedInCurrentPhase() =
+  def numCardsPlayedInCurrentPhase() = {
+    val activeRole = getActiveRole()
     getCurrentPhaseCardPlays()
-      .takeWhile(_.role == game.activeRole)
+      .takeWhile(_.role == activeRole)
       .map(_.numCards)
       .sum
+  }
 
   // ---------------------------------------------------
   // This is the main prompt for taking an action during
   // the game.
   def actionPhasePrompt(): (UserAction, Option[String]) = {
 
-    val activeRole = game.activeRole
+    val activeRole = getActiveRole()
     val numCardsPlayed = numCardsPlayedInCurrentPhase()
     val numInHand = numCardsInHand(activeRole)
     val isUSHuman = activeRole == US && isHuman(US)
@@ -7901,7 +7917,7 @@ object LabyrinthAwakening {
   def playGame(): Unit = {
     @tailrec def actionLoop(): Unit = {
       checkAutomaticVictory() // Will Exit game if auto victory has been achieved
-      if (game.activeRole == Jihadist && isBot(Jihadist) && game.botEnhancements)
+      if (getActiveRole() == Jihadist && isBot(Jihadist) && game.botEnhancements)
         if (JihadistBot.voluntaryCadreRemoval())
           saveGameState()
       val (action, param) = actionPhasePrompt()
@@ -8512,7 +8528,7 @@ object LabyrinthAwakening {
   // IMPORTANT: This function assumes that the current card has already been added to
   //            the list of plays for the turn.
   def firstCardOfPhase(role: Role): Boolean =
-    role == game.activeRole && numCardsPlayedInCurrentPhase() == 1
+    role == getActiveRole() && numCardsPlayedInCurrentPhase() == 1
 
   def jihadistCardPlay(param: Option[String]): Unit = {
 

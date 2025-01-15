@@ -204,6 +204,8 @@ object SavedGame {
         Map("num" -> num)
       case USDiscardedLastCard(cardNum) =>
         Map("cardNum" -> cardNum)
+      case EndOfActionPhase(role) =>
+        Map("role" -> role.toString)
       case AdjustmentMade(desc) =>
         Map("desc" -> desc)
     }
@@ -226,6 +228,8 @@ object SavedGame {
         VoluntaryCadreRemoval(asInt(params("num")))
       case "USDiscardedLastCard" =>
         USDiscardedLastCard(asInt(params("cardNum")))
+      case "EndOfActionPhase" =>
+        EndOfActionPhase(Role(asString(params("role"))))
       case "AdjustmentMade" =>
         AdjustmentMade(asString(params("desc")))
     }
@@ -346,7 +350,6 @@ object SavedGame {
       "history"              -> gameState.history,
       "offMapTroops"         -> gameState.offMapTroops,
       "reserves"             -> reservesToMap(gameState.reserves),
-      "activeRole"           -> gameState.activeRole.toString,
       "cardsInUse"           -> cardsInUseToMap(gameState.cardsInUse),
       "cardsInHand"          -> cardsInHandToMap(gameState.cardsInHand),
       "turnActions"          -> gameState.turnActions.map(turnActionToMap),
@@ -369,13 +372,15 @@ object SavedGame {
   
   private def gameSegmentToMap(seg: GameSegment): Map[String, Any] =
     Map(
-      "save_number" -> seg.save_number,
-      "summary"     -> seg.summary
+      "saveNumber" -> seg.saveNumber,
+      "endOfTurn"  -> seg.endOfTurn,
+      "summary"    -> seg.summary
     )
 
   private def gameSegmentFromMap(data: Map[String, Any]): GameSegment = {
     GameSegment(
-      asInt(data("save_number")),
+      asInt(data("saveNumber")),
+      asBoolean(data("endOfTurn")),
       asList(data("summary")) map (_.toString)
     )
   }
@@ -407,7 +412,6 @@ object SavedGame {
       asBoolean(data("sequestrationTroops")),
       asInt(data("offMapTroops")),
       reservesFromMap(asMap(data("reserves"))),
-      Role(asString(data("activeRole"))),
       cardsInUseFromMap(asMap(data("cardsInUse"))),
       cardsInHandFromMap(asMap(data("cardsInHand"))),
       asList(data("turnActions")).map(p => turnActionFromMap(asMap(p))),
