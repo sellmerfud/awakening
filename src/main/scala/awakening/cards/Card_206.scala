@@ -117,7 +117,7 @@ object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, 
         (JihadistBot.markerTarget(getReactCandidates()).get, addReactionMarker _)
     }
 
-    addEventTarget(name)
-    placmentAction(name, 1)
+    addEventTarget(target)
+    placmentAction(target, 1)
   }
 }
