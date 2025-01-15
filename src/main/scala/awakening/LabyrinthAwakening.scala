@@ -4439,7 +4439,7 @@ object LabyrinthAwakening {
         displayLine("\nRollback to the beginning of a previous save point.", Color.Info)
         displayLine("The save points are displayed with the most recent first.", Color.Info)
 
-        askMenuWithWrap("Choose a save point:", saveChoices:::otherChoices).head match {
+        askMenuWithWrap("Roll back to replay starting at which save point:", saveChoices:::otherChoices).head match {
           case CANCEL      =>
           case PAGE_UP     => showPage(pageNum - 1)
           case PAGE_DOWN   => showPage(pageNum + 1)
@@ -9586,93 +9586,88 @@ object LabyrinthAwakening {
   }
 
   def adjustPlots(): Unit = {
-    var available = game.availablePlots.toVector
-    var resolved  = game.resolvedPlots.toVector
-    var outOfPlay = game.removedPlots.toVector
+    class Location(val name: String, var plots: Vector[Plot])
+
+    val Avail = new Location("Available Box", game.availablePlots.toVector)
+    val Resolved = new Location("Resolved Box", game.resolvedPlots.toVector)
+    val Removed = new Location("Removed WMD", game.removedPlots.toVector)
+    val locations = List(Avail, Resolved, Removed)
 
     def showAll(): Unit = {
+      val width = longestString(locations.map(_.name))
       println()
-      println("Available  : " + plotsDisplay(available.toList))
-      println("Resolved   : " + plotsDisplay(resolved.toList))
-      println("Out of play: " + plotsDisplay(outOfPlay.toList))
+      for (loc <- locations)
+        println(s"${padLeft(loc.name,  width)}: ${plotsDisplay(loc.plots.toList)}")
     }
 
-    def doMove(spec: String): Unit = {
-      val src = spec take 1
-      val dest = spec drop 2
-      val list = (if (src == "a") available else if (src == "r") resolved else outOfPlay).toList
-      val plot = askPlots(list, 1, allowAbort = false).head
-      val index = list.indexOf(plot)
-      src match {
-        case "a" => available = available.patch(index, Vector.empty, 1)
-        case "r" => resolved  = resolved.patch(index, Vector.empty, 1)
-        case _   => outOfPlay = outOfPlay.patch(index, Vector.empty, 1)
+    def askPlot(source: Location): Option[Plot] =
+      source.plots match {
+        case Nil => None
+        case _ =>
+          val choices = source.plots.toList.sorted.map(p => Some(p) -> p.toString) :+
+            (None, "Cancel")
+          askMenu(s"Move which plot:", choices, allowAbort = false).head
       }
-      dest match {
-        case "a" => available = available :+ plot
-        case "r" => resolved  = resolved :+ plot
-        case _   => outOfPlay = outOfPlay :+ plot
+
+    def moveFrom(source: Location): Unit = {
+      askPlot(source) match {
+        case None =>
+        case Some(plot) =>
+          val dests = if (plot == PlotWMD)
+            List(Avail, Removed).filter(l => l != source)
+          else
+            List(Avail, Resolved).filter(l => l != source)
+          val locChoices = dests.map(l => Some(l) -> l.name)
+          val choices = locChoices ::: List(None ->"Cancel")
+          askMenu(s"Move $plot to: ", choices, allowAbort = false).head match {
+            case None =>
+            case Some(dest) =>
+              val index = source.plots.indexOf(plot)
+              source.plots = source.plots.patch(index, Vector.empty, 1)
+              dest.plots = dest.plots :+ plot
+          }
       }
     }
 
-    def addNewPlot(): Unit = {
-      val choices = List(
-        "1"    -> "Add new Plot 1 to the available box",
-        "2"    -> "Add new Plot 2 to the available box",
-        "3"    -> "Add new Plot 3 to the available box",
-        "wmd"  -> "Add new WMD Plot to the available box",
-        "none" -> "Do not add a new plot to the available box"
-      )
-      askMenu("Choose one: ", choices, allowAbort = false).head  match {
-        case "1"   => available = available :+ Plot1
-        case "2"   => available = available :+ Plot2
-        case "3"   => available = available :+ Plot3
-        case "wmd" => available = available :+ PlotWMD
-        case _     =>
-      }
-    }
 
     def nextAction(): Unit = {
-      val choices = List(
-        choice(available.nonEmpty, "a-r",  "Move available plot to the resolved box"),
-        choice(available.nonEmpty, "a-o",  "Move available plot to out of play"),
-        choice(resolved.nonEmpty,  "r-a",  "Move resolved plot to the available box"),
-        choice(resolved.nonEmpty,  "r-o",  "Move resolved plot to out of play"),
-        choice(outOfPlay.nonEmpty, "o-a",  "Move out of play plot to the available box"),
-        choice(outOfPlay.nonEmpty, "o-a",  "Move out of play plot to the resolved box"),
-        choice(true,               "new",  "Add a new plot to the available box"),
-        choice(true,               "done", "Finished")
-      ).flatten
+      val locChoices = locations
+        .filter(_.plots.nonEmpty)
+        .map(l => Some(l) -> l.name)
+      val choices = locChoices ::: List(None ->"Finished")
 
       showAll()
-      askMenu("Choose one: ", choices, allowAbort = false).head match {
-        case "done" =>
-        case "new"  => addNewPlot(); nextAction()
-        case spec   => doMove(spec); nextAction()
+      askMenu("Move a plot from: ", choices, allowAbort = false).head match {
+        case None =>
+        case Some(source)  =>
+          moveFrom(source)
+          nextAction()
       }
     }
 
-    if (available.isEmpty && resolved.isEmpty && outOfPlay.isEmpty)
+    if (locations.map(_.plots.size).sum == 0)
       println("Nothing to adjust, all plots are on the map")
     else {
       nextAction()
-      val availableChanged = available.toList.sorted != game.plotData.availablePlots.sorted
-      val resolvedChanged = resolved.toList.sorted != game.plotData.resolvedPlots.sorted
-      val outOfPlayChanged = outOfPlay.toList.sorted != game.plotData.removedPlots.sorted
-      if (availableChanged || resolvedChanged || outOfPlayChanged) {
+
+      val availableChanged = Avail.plots.toList.sorted != game.plotData.availablePlots.sorted
+      val resolvedChanged = Resolved.plots.toList.sorted != game.plotData.resolvedPlots.sorted
+      val removedChanged = Removed.plots.toList.sorted != game.plotData.removedPlots.sorted
+
+      if (availableChanged || resolvedChanged || removedChanged) {
         if (availableChanged)
-          logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(available.toList))
+          logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(Avail.plots.toList))
         if (resolvedChanged)
-          logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(resolved.toList))
-        if (outOfPlayChanged)
-          logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(outOfPlay.toList))
+          logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(Resolved.plots.toList))
+        if (removedChanged)
+          logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(Removed.plots.toList))
 
         val updatedPlots = game.plotData.copy(
-         availablePlots = available.toList,
-         resolvedPlots  = resolved.toList,
-         removedPlots   = outOfPlay.toList)
+         availablePlots = Avail.plots.toList,
+         resolvedPlots  = Resolved.plots.toList,
+         removedPlots   = Removed.plots.toList)
         game = game.copy(plotData = updatedPlots)
-        saveAdjustment("Available, resolved, out of play plots")
+        saveAdjustment("Available, resolved, removed plots")
       }
     }
   }
