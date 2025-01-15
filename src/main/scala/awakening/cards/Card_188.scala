@@ -87,8 +87,8 @@ object Card_188 extends Card(188, "ISIL", Jihadist, 3, Remove, NoLapsing, NoAuto
       log("The event has no effect.", Color.Event)
     else {
       for (target <- getCandidates()) {
-        addEventTarget(name)
-        startCivilWar(name)
+        addEventTarget(target)
+        startCivilWar(target)
       }
       decreasePrestige(1)
     }

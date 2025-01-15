@@ -110,7 +110,7 @@ object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing
       List(TriggerAction, RecruitAction)
     else if (card.autoTrigger) {
       println()
-      displayLine(s"""The "${card.name}" event will autonmatically trigger""", Color.Event)
+      displayLine(s"""The "${card.cardName}" event will autonmatically trigger""", Color.Event)
 
       val choices = List(
         List(RecruitAction, TriggerAction) -> "Recruit before triggering the event",
@@ -125,7 +125,7 @@ object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing
       action match {
         case TriggerAction =>
           log()
-          log(s"""The "${card.name}" event triggers""", Color.Event)
+          log(s"""The "${card.cardName}" event triggers""", Color.Event)
           log(separator())
           card.executeEvent(US)  // Role does not matter for auto-trigger events
         case RecruitAction =>

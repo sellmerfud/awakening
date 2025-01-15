@@ -83,7 +83,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
 
     val cardNum = askCardNumber(s"Card # of the card taken: ", allowNone = false).get
     val card = deck(cardNum)
-    val cardDisplay = s""""${card.name}""""
+    val cardDisplay = s""""${card.cardName}""""
 
     // Clear this in case it is need by the event that was drawn.
     cachedEventPlayableAnswer = None

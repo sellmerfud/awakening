@@ -95,11 +95,11 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
               else if (card.autoTrigger)
                 autoTriggerCardDiscarded(cardNum)
               else if (card.eventWillTrigger(Jihadist)) {
-                log(s"""The "${card.name}" event is triggered.""")
+                log(s"""The "${card.cardName}" event is triggered.""")
                 performCardEvent(card, Jihadist, triggered = true)
               }
               else {
-                log(s"""The "${card.name}" event does not trigger.""")
+                log(s"""The "${card.cardName}" event does not trigger.""")
                 if (cardNum == CriticalMiddle)
                   criticalMiddleReminder()
               }

@@ -749,7 +749,7 @@ object LabyrinthAwakening {
 
   class Card(
     val number: Int,
-    val name: String,
+    val cardName: String,
     val association: CardAssociation,
     val printedOps: Int,
     val remove: CardRemoval,
@@ -779,7 +779,7 @@ object LabyrinthAwakening {
 
     def ops: Int = printedOps
 
-    def numAndName = s"#$number $name"
+    def numAndName = s"#$number $cardName"
 
     override def toString() = s"${numAndName} (${opsString(ops)})"
 
@@ -2455,7 +2455,7 @@ object LabyrinthAwakening {
   // triggers whenever it is randomly drawn or discared.
   def avengerCardDrawn(discarded: Boolean): Unit = {
     val card = deck(AvengerCard)
-    val name = card.name
+    val name = card.cardName
     val action = if (discarded) "discarded" else "randomly drawn"
 
     log()
@@ -2469,7 +2469,7 @@ object LabyrinthAwakening {
   // When discared, auto trigger events are carried out
   def autoTriggerCardDiscarded(cardNum: Int): Unit = {
     val card = deck(cardNum)
-    val name = card.name
+    val name = card.cardName
     log()
     log(s"""The "$name" card was discared, so the event triggers""", Color.Event)
     log(separator())
@@ -4595,16 +4595,16 @@ object LabyrinthAwakening {
 
   def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Unit = {
     if (!card.autoTrigger && lapsingEventInPlay(FakeNews)) {
-      log("\n%s event \"%s\" is cancelled by \"Fake News\"".format(card.association, card.name), Color.Event)
+      log("\n%s event \"%s\" is cancelled by \"Fake News\"".format(card.association, card.cardName), Color.Event)
       removeLapsingCards(FakeNews::Nil)
     }
     else {
       if (card.autoTrigger)
-        log("\n%s automatic event \"%s\" triggers".format(card.association, card.name))
+        log("\n%s automatic event \"%s\" triggers".format(card.association, card.cardName))
       else if (triggered)
-        log("\n%s event \"%s\" triggers".format(card.association, card.name))
+        log("\n%s event \"%s\" triggers".format(card.association, card.cardName))
       else
-        log("\n%s executes the \"%s\" event".format(role, card.name))
+        log("\n%s executes the \"%s\" event".format(role, card.cardName))
       log(separator())
       card.executeEvent(role)
 
@@ -4616,12 +4616,12 @@ object LabyrinthAwakening {
   }
 
   def removeCardFromGame(cardNumber: Int): Unit = {
-    log("Remove the \"%s\" card from the game".format(deck(cardNumber).name), Color.Event)
+    log("Remove the \"%s\" card from the game".format(deck(cardNumber).cardName), Color.Event)
     game = game.copy(cardsRemoved = cardNumber :: game.cardsRemoved)
   }
 
   def markCardAsLapsing(cardNumber: Int): Unit = {
-    log("Mark the \"%s\" card as lapsing".format(deck(cardNumber).name), Color.Event)
+    log("Mark the \"%s\" card as lapsing".format(deck(cardNumber).cardName), Color.Event)
     game = game.copy(cardsLapsing = cardNumber :: game.cardsLapsing)
   }
 
@@ -6083,7 +6083,7 @@ object LabyrinthAwakening {
   def drawCardsForTurn(): Unit = {
       val usCardMods = new ListBuffer[(String, Int)]()
       if (lapsingEventInPlay(FullyResourcedCOIN))
-        usCardMods.append((deck(FullyResourcedCOIN).name, 2))
+        usCardMods.append((deck(FullyResourcedCOIN).cardName, 2))
       if (globalEventInPlay(USChinaTradeWar)) {
         val modifier = game.worldPosture match {
           case Even => 0
@@ -7044,7 +7044,7 @@ object LabyrinthAwakening {
       case c :: Nil =>
         val choices = List(
           "operations" -> "Operations",
-          "event"      -> s"Event: ${c.name}")
+          "event"      -> s"Event: ${c.cardName}")
         val prompt = if (c.association == opponent)
           s"$opponent associated event, which should happen first?"
         else
@@ -7057,8 +7057,8 @@ object LabyrinthAwakening {
       case c1 :: c2 :: Nil =>
         val choices = List(
           "operations" -> "Operations",
-          "1st event"  -> s"Event: ${c1.name}",
-          "2nd event"  -> s"Event: ${c2.name}")
+          "1st event"  -> s"Event: ${c1.cardName}",
+          "2nd event"  -> s"Event: ${c2.cardName}")
         val first  = askMenu("Which should happen first?", choices).head
         val second = askMenu("Which should happen second?", choices filterNot (_._1 == first)).head
         val third  = (choices map (_._1) filterNot (k => k == first || k == second)).head
@@ -7083,7 +7083,7 @@ object LabyrinthAwakening {
         case US       => USBot.performTriggeredEvent(card)
       }
     else
-      log("\n%s event \"%s\" has no effect".format(card.association, card.name), Color.Event)
+      log("\n%s event \"%s\" has no effect".format(card.association, card.cardName), Color.Event)
   }
 
   // The Intel Community event allows the US to play an additional card during
@@ -7673,7 +7673,7 @@ object LabyrinthAwakening {
       attemptTriggeredEvent(US, card);
     else if (card.association == US && !opponentEventResolved) {
       if (firstPlot)
-        log("\nFirst plot prevents the %s event \"%s\" from triggering".format(US, card.name), Color.Event)
+        log("\nFirst plot prevents the %s event \"%s\" from triggering".format(US, card.cardName), Color.Event)
       else
         attemptTriggeredEvent(US, card)
     }
