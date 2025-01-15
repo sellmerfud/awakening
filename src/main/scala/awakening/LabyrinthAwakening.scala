@@ -4292,37 +4292,19 @@ object LabyrinthAwakening {
     val save_path   = gamesDir/game.saveName/getSaveName(saveNumber)
     val log_path    = gamesDir/game.saveName/getLogName(saveNumber)
     val segmentDesc = desc.orElse(game.turnActions.headOption.map(_.toString))getOrElse("")
-    val cardsPlayed = game.turnActions
-      .filter(_.isInstanceOf[CardPlay])
-      .map(_.asInstanceOf[CardPlay].numCards)
-      .sum
-    val turnInfo = game.turnActions.headOption match {
-      case Some(_: PlayedReassement) =>
-        s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} cards this turn)"
+    val cardsThisPhase = numCardsPlayedInCurrentPhase()
 
-      case Some(PlayedCard(_, _, Some(SecondCard(num2)))) =>
-        s"(turn ${game.turn} - ${ordinal(cardsPlayed - 1)} & ${ordinal(cardsPlayed)} cards this turn)"
-
-      case Some(PlayedCard(_, _, _)) =>
-        s"(turn ${game.turn} - ${ordinal(cardsPlayed)} card this turn)"
-
-      case _ if endOfTurn =>
-        ""
-
-      case _ =>
-        s"(turn ${game.turn} - ${amountOf(cardsPlayed, "card")} played)"
-    }
     val scName = if (game.campaign)
       s"${game.scenarioName} campaign"
     else
       game.scenarioName
     val gameDesc    = Seq(
       s"scenario: $scName",
-      s"playing: ${game.humanRole}",
-      s"latest: $segmentDesc",
-      turnInfo
+      s"playing ${game.humanRole}",
+      if (endOfTurn) "" else s"turn ${game.turn}",
+      segmentDesc,
     ).filterNot(_.isEmpty).mkString(", ")
-    val segment = GameSegment(saveNumber, endOfTurn, Seq(segmentDesc, turnInfo).filterNot(_.isEmpty))
+    val segment = GameSegment(saveNumber, endOfTurn, Seq(segmentDesc).filterNot(_.isEmpty))
 
     // Make sure that the game directory exists
     save_path.dirname.mkpath()
