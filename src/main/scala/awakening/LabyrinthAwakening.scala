@@ -1435,7 +1435,6 @@ object LabyrinthAwakening {
     cardsRemoved: List[Int]              = Nil,         // Card numbers removed from the game.
     targetsThisPhase: PhaseTargets       = PhaseTargets(),
     targetsLastPhase: PhaseTargets       = PhaseTargets(),
-    wmdAlertedOrResolved: Boolean        = false,     // Used by the Trump Take Command scenario final scoring
     ignoreVictory: Boolean               = false,
     botLogging: Boolean                  = false,
     botEnhancements: Boolean             = true, // Use enhancements to official Awakening bot algorithms
@@ -2640,45 +2639,57 @@ object LabyrinthAwakening {
   // Islamist Rule.
   //
   def logEndGameScoring(): Unit = {
-    val caliphateResource = (if (game.caliphateDeclared) 1 else 0)
-    val isTrumpScenario = game.scenarioName == TrumpTakesCommand.name
-    val noWmdUsedResource = if (isTrumpScenario && !game.wmdAlertedOrResolved) 1 else 0
-    val goodResources =
-      game.muslims
-        .filter(m => m.isGood && m.regimeChange != GreenRegimeChange)
-        .map(_.resourceValue)
-        .sum
-    val irResources =
-      game.muslims
-        .filter(m => m.isIslamistRule || m.regimeChange == GreenRegimeChange)
-        .map(_.resourceValue)
-        .sum
-
-    val usScore = goodResources
-    val jihadistScore = irResources + caliphateResource + noWmdUsedResource
-    def res(num: Int) = num match {
-      case 1 => " 1 resource"
-      case n => f"$n%2d resources"
+    case class ScoreEntry(name: String, resources: Int, empty: Boolean = false) {
+      override def toString() = if (empty)
+        " " * 26
+      else
+        f"$name%-18s      $resources%2d"
     }
+    val emptyEntry = ScoreEntry("", -1, true)
+
+    val jihadistBonus = new ListBuffer[ScoreEntry]
+    val goodMuslims = game.muslims.filter(m => m.isGood && m.regimeChange != GreenRegimeChange)
+    val irMuslims = game.muslims.filter(m => m.isIslamistRule || m.regimeChange == GreenRegimeChange)
+    val anyGreenRC = game.hasMuslim(_.regimeChange == GreenRegimeChange)
+    if (game.caliphateDeclared)
+      jihadistBonus += ScoreEntry("Caliphate Capital", 1)
+    // The  Trump Takes command scenario starts with one WMD plot removed.
+    // If any other WMD was used/alerted then there will be at least 2 removed
+    if (game.scenarioName == TrumpTakesCommand.name && game.plotData.removedPlots.size == 1)
+      jihadistBonus += ScoreEntry("No WMD used", 1)
+    
+    val noEntries = List(ScoreEntry("None", 0))
+    val goodResources = goodMuslims.map(c => ScoreEntry(c.name, c.resourceValue))
+    val goodEntries = if (goodResources.nonEmpty) goodResources else noEntries
+    val irResources = irMuslims.map(c => ScoreEntry(c.name, c.resourceValue)):::jihadistBonus.toList
+    val irEntries = if (irResources.nonEmpty) irResources else noEntries
+    val usScore = goodResources.map(_.resources).sum
+    val jihadistScore = irResources.map(_.resources).sum
+    val winner = if (usScore > jihadistScore * 2) US else Jihadist
+    val scoreEntries = goodEntries.zipAll(irEntries, emptyEntry, emptyEntry)
+    val header  = "Good Resources              Islamist Rule Resources"
+    val header2 = "(No green regime change)    (Plus green regime change)"
+    val divider = "--------------------------  --------------------------"
 
     log()
-    log("Game Over", Color.Info)
+    log("Game Over after exhausting the final deck", Color.Info)
     log(separator(char = '='), Color.Info)
-    log(s"${res(goodResources)} at Good governance (excluding green regime change)", Color.Info)
-    log(s"${res(irResources)} at IR governance (or with green regime change)", Color.Info)
-    if (game.useExpansionRules)
-      log(s"${res(caliphateResource)} for Caliphate capital marker", Color.Info)
-    if (isTrumpScenario)
-      log(s"${res(noWmdUsedResource)} for no WMD used or alerted", Color.Info)
+    log(s"$winner victory!")
     log()
-    if (usScore > jihadistScore * 2) {
-      log("US Victory!", Color.Info)
-      log(s"US score ($usScore) is greater than twice Jihadist score ($jihadistScore)", Color.Info)
-    }
-    else {
-      log("Jihadist Victory!", Color.Info)
-      log(s"US score ($usScore) is not greater than twice Jihadist score ($jihadistScore)", Color.Info)
-    }
+    log(header)
+    if (anyGreenRC)
+      log(header2)
+    log(divider)
+    for ((us, jihadist) <- scoreEntries)
+      log(s"$us  $jihadist")
+    log(divider)
+    log(s"${ScoreEntry("", usScore)}  ${ScoreEntry("", jihadistScore)}")
+    log()
+
+    if (winner == US)
+      log(s"The US score is more than twice the Jihadist score.")
+    else
+      log(s"The US score is not more than twice the Jihadist score.")
     pause()
   }
 
@@ -5237,7 +5248,7 @@ object LabyrinthAwakening {
     }
     if (plot == PlotWMD) {
       val updatedPlots = game.plotData.copy(removedPlots = plot :: game.removedPlots)
-      game = game.copy(plotData = updatedPlots, wmdAlertedOrResolved = true)
+      game = game.copy(plotData = updatedPlots)
       log(s"$plot alerted in $countryName, remove it from the game.", Color.MapPieces)
       if (game.useExpansionRules) {
         log(s"Increase prestige 1 (alerting WMD plot)")
@@ -6688,8 +6699,6 @@ object LabyrinthAwakening {
         val country = game.getCountry(name)
         log(separator())
         log(s"Unblocked $mapPlot in $name", Color.Info)
-        if (mapPlot.plot == PlotWMD)
-          game = game.copy(wmdAlertedOrResolved = true)
         if (name == Israel)
           removeGlobalEventMarker("Abbas")
         if (name == India)
