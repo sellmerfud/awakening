@@ -7917,8 +7917,9 @@ object LabyrinthAwakening {
     val isUSHuman = activeRole == US && isHuman(US)
     val isJihadistHuman = activeRole == Jihadist && isHuman(Jihadist)
     val canPlay = numCardsPlayed < 2 && numInHand > 0
-    val canDiscard = isUSHuman && numInHand == 1
-    val canEndPhase = numCardsPlayed == 2 || numInHand == 0 || (isUSHuman && numInHand == 1)
+    val canDiscard = isUSHuman && numInHand == 1 && !game.jihadistIdeology(Infectious)
+    val canEndPhase = numCardsPlayed == 2 || numInHand == 0 || 
+      (isUSHuman && numInHand == 1 && !game.jihadistIdeology(Infectious))
     val canCadre = isJihadistHuman && game.hasCountry(_.hasCadre)
     val canRoll = mostRecentSaveNumber(game.saveName).getOrElse(0) > 0
 
@@ -7985,16 +7986,19 @@ object LabyrinthAwakening {
     else
       s"$activeRole Bot's"
     val isUSHuman = activeRole == US && isHuman(US)
-    val canEndPhase = numCardsPlayed == 2 || numInHand == 0 || (isUSHuman && numInHand == 1)
+    val canEndPhase = numCardsPlayed == 2 || numInHand == 0
     val endPrompt = if (numCardsPlayed == 2)
         s"""|
             |Two cards have been played.
             |Do you want to end the current $activeRole action phase? (y/n) """.stripMargin
       else
         s"""|
-            |${amountOf(numInHand,"card")} remaining in $owner hand.
+            |No cards remaining in $owner hand.
             |Do you want to end the current $activeRole action phase? (y/n) """.stripMargin
-    val endActionPhase = lastAction == Some(PlayCard) && canEndPhase && askYorN(endPrompt)
+    val endActionPhase =
+      (lastAction == Some(PlayCard) || lastAction == Some(DiscardLast)) &&
+      canEndPhase &&
+      askYorN(endPrompt)
 
       if (endActionPhase) {
         EndPhase.perform(None)
