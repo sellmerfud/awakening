@@ -1878,7 +1878,7 @@ object LabyrinthAwakening {
       val summary = new Summary
       summary.add(s"Status", Color.Info)
       summary.add(separator(char = '='), Color.Info)
-      summary.add(s"Game Mode       : $currentMode")
+      summary.add(s"Game mode       : $currentMode")
       summary.add(s"Deck            : ${ordinal(deckNumber)} of $gameLength  (${amountOf(numCardsInDrawPile(), "card")} remaining)")
       summary.add(separator())
       summary.add(f"US posture      : $usPosture | World posture     : ${worldPostureDisplay}  (GWOT penalty $gwotPenalty)")
@@ -1887,16 +1887,13 @@ object LabyrinthAwakening {
       summary.add(f"US cards        : ${cardsInHand.us}%2d   | Jihadist cards    : ${cardsInHand.jihadist}%2d")
       summary.add(separator())
       if (useExpansionRules) {
-        summary.add(f"Troops on track : $troopsAvailable%2d   | Troops off map    : $offMapTroops%2d")
-        summary.add(s"Troop commitment: $troopCommitment")
-        summary.add(separator())
-        summary.add(f"Cells on track  : $cellsOnTrack%2d   | Militia on track  : $militiaAvailable%2d")
+        summary.add(f"Troops on track : $troopsAvailable%2d   | Troop commitment: $troopCommitment")
+        summary.add(f"Militia on track: $militiaAvailable%2d   | Troops off map    : $offMapTroops%2d")
       }
-      else {
+      else
         summary.add(f"Troops on track : $troopsAvailable%2d   | Troop commitment  : $troopCommitment")
-        summary.add(separator())
-        summary.add(f"Cells on track  : $cellsOnTrack%2d")
-      }
+      summary.add(separator())
+      summary.add(f"Cells on track  : $cellsOnTrack%2d   |")
       summary.add(f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}")
       if (useExpansionRules) {
         val albaghdadi = (globalEventInPlay(AlBaghdadi), caliphateDeclared) match {
@@ -1907,14 +1904,14 @@ object LabyrinthAwakening {
         val camp = trainingCamp.map(name => s"$TrainingCamps in $name")
         val events = albaghdadi.toList ::: camp.toList
         val eventDisplay = events match {
-          case Nil => ""
+          case Nil => " (none)     |"
           case xs  => xs.mkString(" (", ", ", ")")
         }
         summary.add(separator())
         summary.add(s"Extra cells$eventDisplay")
         val extraOnMap = (cellsOnMap - 15) max 0
         summary.add(f"Available       : ${extraCellsAvailable}%2d   | Capacity          : ${extraCellCapacity}%2d")
-        summary.add(f"On map          : ${extraOnMap}%2d")
+        summary.add(f"On map          : ${extraOnMap}%2d   |")
       }
       summary.add(separator())
       summary.addSeq(wrap("Available plots : ", plotsToStrings(availablePlots, humanRole == Jihadist)))
