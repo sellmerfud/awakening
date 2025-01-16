@@ -4150,7 +4150,7 @@ object LabyrinthAwakening {
           |h n num  -- Show history of num save points starting with the nth save point
           |
           |Finally, any of the above commands can be followed by a redirect argument
-          |to save the requested histor in a file instead of printing it to the screen.
+          |to save the requested history in a file instead of printing it to the screen.
           |h all >/tmp/game_history
           |-----------------------------------------------------------------------------
           """.stripMargin
@@ -8023,7 +8023,7 @@ object LabyrinthAwakening {
         |s actions   -- The list of actions for the current turn
         |s caliphate -- Countries that are part of the caliphate
         |s civil war -- Countries in civil war
-        |s draw pile -- Cards in the draw (or in US/Jihadist hand)
+        |s draw pile -- Cards in the draw pile (or in US/Jihadist hand)
         |s discarded -- Cards in the discard pile
         |s removed   -- Cards removed from the game
         |s all       -- Entire game state
