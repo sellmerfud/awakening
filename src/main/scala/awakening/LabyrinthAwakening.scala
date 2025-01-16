@@ -7839,14 +7839,12 @@ object LabyrinthAwakening {
   }
   def getCurrentPhaseCardPlays(): List[CardPlay] =
     game.turnActions
-      .dropWhile(a => !a.isInstanceOf[CardPlay])
-      .takeWhile(_.isInstanceOf[CardPlay])
+      .takeWhile(a => !a.isInstanceOf[EndOfActionPhase])
+      .filter(_.isInstanceOf[CardPlay])
       .map(_.asInstanceOf[CardPlay])
 
   def numCardsPlayedInCurrentPhase() = {
-    val activeRole = getActiveRole()
     getCurrentPhaseCardPlays()
-      .takeWhile(_.role == activeRole)
       .map(_.numCards)
       .sum
   }
