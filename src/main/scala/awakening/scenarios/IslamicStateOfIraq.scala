@@ -48,7 +48,7 @@ object IslamicStateOfIraq extends Scenario {
   val usPosture      = Hard
   val funding        = 7
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(5)(PlotWMD)  // 2 removed from Syria and 3 extra
   val countries = List(
     DefaultSyria.copy(isSunni = false, governance = Fair, alignment = Neutral, civilWar = true, 
                       militia = 3, caliphateCapital = true, activeCells = 4, wmdCache = 0),

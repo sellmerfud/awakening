@@ -49,7 +49,7 @@ object MissionAccomplished extends Scenario {
   val usPosture      = Hard
   val funding        = 5
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(6)(PlotWMD)  // 3 extra to accomodate Awakening expansion
   val countries = List(
     DefaultLibya.copy(governance = Poor, alignment = Adversary),
     DefaultSyria.copy(governance = Fair, alignment = Adversary, sleeperCells = 1),

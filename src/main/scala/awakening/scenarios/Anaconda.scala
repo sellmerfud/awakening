@@ -49,7 +49,7 @@ object Anaconda extends Scenario {
   val usPosture      = Hard
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(6)(PlotWMD)  // 3 unused until events and 3 extra
   val countries = List(
     DefaultLibya.copy(governance = Poor, alignment = Adversary),
     DefaultSyria.copy(governance = Fair, alignment = Adversary),

@@ -86,9 +86,8 @@ object Card_069 extends Card(69, "Kazakh Strain", Jihadist, 2, Remove, NoLapsing
     }
 
     if (success) {
-      log(s"\nMove the Kazakh Strain WMD plot marker to the available plots box", Color.Event)
-      val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
-      game = game.copy(plotData = updatedPlots)
+      log(s"\nThe Kazakh Strain WMD plot is now available", Color.Event)
+      addRemovedWMDToAvailable(1)
     }
     else {
       val (active, sleeper, sadr) = if (isHuman(role)) {

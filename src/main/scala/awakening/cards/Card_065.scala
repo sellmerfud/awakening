@@ -100,9 +100,8 @@ object Card_065 extends Card(65, "HEU", Jihadist, 2, Remove, NoLapsing, NoAutoTr
     }
 
     if (success) {
-      log(s"\nMove the HEU WMD plot marker to the available plots box", Color.Event)
-      val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
-      game = game.copy(plotData = updatedPlots)
+      log(s"\nThe HEU WMD plot is now available", Color.Event)
+      addRemovedWMDToAvailable(1)
     }
     else {
       val (active, sleeper, sadr) = if (isHuman(role)) {

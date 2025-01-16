@@ -85,14 +85,8 @@ object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, No
   def executeEvent(role: Role): Unit = {
     if (role == US) {
       val iran = game.getCountry(Iran)
-      if (iran.wmdCache > 0) {
-        log("\nRemove the Iranian WMD from the game.", Color.Event)
-        increasePrestige(iran.wmdCache)
-        iran match {
-          case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = 0))
-          case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = 0))
-        }
-      }
+      if (iran.wmdCache > 0)
+        removePlacedWMD(Iran, iran.wmdCache, bumpPrestige = game.useExpansionRules)
       addEventTarget(Iran)
       if (iran.hasMarker(TradeEmbargoJihadist)) {
         removeEventMarkersFromCountry(Iran, TradeEmbargoJihadist)

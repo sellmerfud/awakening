@@ -49,7 +49,7 @@ object TrumpTakesCommand extends Scenario {
   val usPosture      = Hard
   val funding        = 4
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::PlotWMD::Nil
-  val removedPlots   = PlotWMD::Nil
+  val removedPlots   = List.fill(4)(PlotWMD)  // 1 per scenario rules plus 3 extra
   val countries = List(
     DefaultNigeria.copy(postureValue = Soft, sleeperCells = 1),
     DefaultAlgeriaTunisia.copy(governance = Good, alignment = Neutral),

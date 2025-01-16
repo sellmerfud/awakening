@@ -1326,7 +1326,10 @@ object LabyrinthAwakening {
     removedPlots: List[Plot]         = Nil,
     resolvedTargets: Set[PlotTarget] = Set.empty,
     resolvedInGreenOnBlue: Boolean   = false // See Forever War card #301
-  )
+  ) {
+    def numAvailWMD = availablePlots.count(_ == PlotWMD)
+    def numRemovedWMD = removedPlots.size
+  }
 
   sealed trait Color {
     val name: String
@@ -2373,7 +2376,7 @@ object LabyrinthAwakening {
 
   // Ask the user to select a number of available plots
   def askAvailablePlots(num: Int, ops: Int): List[Plot] = {
-    askPlots(game.availablePlots filter (p => ops >= p.opsToPlace), num)
+    askPlots(game.availablePlots.filter(p => ops >= p.opsToPlace), num)
   }
 
   // Return true for Awakening Marker, false for Reaction Marker
@@ -2652,9 +2655,9 @@ object LabyrinthAwakening {
       jihadistBonus += ScoreEntry("Caliphate Capital", 1)
     // The  Trump Takes command scenario starts with one WMD plot removed.
     // If any other WMD was used/alerted then there will be at least 2 removed
-    if (game.scenarioName == TrumpTakesCommand.name && game.plotData.removedPlots.size == 1)
+    if (game.scenarioName == TrumpTakesCommand.name && game.plotData.numRemovedWMD == 1)
       jihadistBonus += ScoreEntry("No WMD used", 1)
-    
+
     val noEntries = List(ScoreEntry("None", 0))
     val goodResources = goodMuslims.map(c => ScoreEntry(c.name, c.resourceValue))
     val goodEntries = if (goodResources.nonEmpty) goodResources else noEntries
@@ -2701,43 +2704,41 @@ object LabyrinthAwakening {
     val syria         = game.getMuslim(Syria)
     val iran          = game.getNonMuslim(Iran)
     val algeria       = game.getMuslim(AlgeriaTunisia)
-    @tailrec def randomAwakeTarget: String = {
+    @tailrec def randomAwakeTarget(): String = {
         randomMuslimCountry match {
           case m if m.canTakeAwakeningOrReactionMarker => m.name
-          case _ => randomAwakeTarget
+          case _ => randomAwakeTarget()
         }
     }
+
+    game = game
+      .updateCountry(syria.copy(isSunni = false))
+      .copy(
+        currentMode = AwakeningMode,
+        deckNumber = game.deckNumber + 1,
+        cardsInUse = Range.inclusive(game.cardsInUse.head, AwakeningMode.cardRange.last)
+      )
 
     log()
     log("Add the Awakening cards to the deck.", Color.Info)
     log("The Awakening expansion rules are now in effect.", Color.Info)
     log("The Bot will now use the Awakening priorities.", Color.Info)
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
-    val (updatedPlots, syriaCache) = if (syria.isIslamistRule)
-      (game.plotData.copy(availablePlots = PlotWMD :: PlotWMD :: game.availablePlots), 0)
-    else
-      (game.plotData, 2)
-
-    game = game
-      .updateCountry(syria.copy(isSunni = false, wmdCache = syriaCache))
-      .updateCountry(iran.copy(wmdCache = 1))
-      .copy(
-        plotData = updatedPlots,
-        currentMode = AwakeningMode,
-        deckNumber = game.deckNumber + 1,
-        cardsInUse = Range.inclusive(game.cardsInUse.head, AwakeningMode.cardRange.last)
-      )
     log()
     if (syria.isIslamistRule) {
       log("Syria is now Shia-Mix country, place the Syria country mat on the board.", Color.Info)
       log("Because Syria is under Islamist Rule, add the two WMD plots", Color.Info)
       log("from the Syria cache to the available plots box.", Color.Info)
+      addRemovedWMDToAvailable(2)
     }
     else {
       log("Syria is now Shia-Mix country, place the Syria country mat on the board.", Color.Info)
-      log("Place two unavailable WMD plots in Syria.", Color.Info)
+      addRemovedWMDToCache(Syria, 2)
     }
-    log("Iran now contains 1 unavailable WMD plot", Color.Info)
+    log()
+    // Add WMD to Iran cache
+    addRemovedWMDToCache(Iran, 1)
+
 
     //  Place an awakening marker in Algeria/Tunisia if possible
     //  otherwise in a random muslim country
@@ -2746,7 +2747,7 @@ object LabyrinthAwakening {
     else {
       log(s"$AlgeriaTunisia cannot take an awakening marker.", Color.Info)
       log("An awakening marker will be added to a random Muslim country.", Color.Info)
-      randomAwakeTarget
+      randomAwakeTarget()
     }
 
     testCountry(awakeningTarget)
@@ -6528,62 +6529,113 @@ object LabyrinthAwakening {
     }
   }
 
-  def removeCachedWMD(name: String, num: Int, bumpPrestige: Boolean = true): Unit = {
-    val c = game.getCountry(name)
-    assert(c.wmdCache >= num, s"removeCachedWMD(): not enough WMD in $name")
-    c match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = m.wmdCache - num))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = n.wmdCache - num))
-    }
-    val updatedPlots = game.plotData.copy(removedPlots = List.fill(num)(PlotWMD) ::: game.removedPlots)
-    game = game.copy(plotData = updatedPlots)
+  def addAvailableWMDToCache(name: String, num: Int): Unit = {
+    if (num > 0) {
+      assert(num <= game.plotData.numAvailWMD, s"addAvailableWMDToCache($name, $num): not enough available WMD")
+      val c = game.getCountry(name)
 
-    log(s"Permanently remove ${amountOf(num, "unavailable WMD plot")} from $name", Color.MapPieces)
-    if (bumpPrestige) {
-      log(s"Increase prestige for removing WMD plots")
-      increasePrestige(num)
+      // Sorting the plot ensures the PlotWMDs come first.
+      game = game.copy(
+        plotData = game.plotData.copy(removedPlots = game.plotData.availablePlots.sorted.drop(num))
+      )
+
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = m.wmdCache + num))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = n.wmdCache + num))
+      }
+      log(s"Add ${amountOf(num, "out of play WMD plot")} to the cache in $name", Color.MapPieces)
+    }
+  }
+
+  def removeCachedWMD(name: String, num: Int, bumpPrestige: Boolean = true): Unit = {
+    if (num > 0) {
+      val c = game.getCountry(name)
+      assert(c.wmdCache >= num, s"removeCachedWMD($name, $num): not enough WMD in $name")
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = m.wmdCache - num))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = n.wmdCache - num))
+      }
+      game = game.copy(
+        plotData = game.plotData.copy(removedPlots = List.fill(num)(PlotWMD) ::: game.removedPlots)
+      )
+      log(s"Remove ${amountOf(num, "WMD plot")} from the cache in $name", Color.MapPieces)
+      if (bumpPrestige) {
+        log(s"Increase prestige for removing WMD plots")
+        increasePrestige(num)
+      }
     }
   }
 
   def removePlacedWMD(name: String, num: Int, bumpPrestige: Boolean = true): Unit = {
-    val c = game.getCountry(name)
-    val wmd = (c.plots.sorted takeWhile (_.plot == PlotWMD)).size
-    assert(wmd >= num, s"removePlacedWMD(): not enough WMD in $name")
-    log(s"Remove ${amountOf(num, "placed WMD plot")} from $name", Color.MapPieces)
+    if (num > 0) {
+      val c = game.getCountry(name)
+      val wmd = c.plots.count(_.plot == PlotWMD)
+      assert(wmd >= num, s"removePlacedWMD($name, $num): not enough WMD in $name")
+      log(s"Remove ${amountOf(num, "placed WMD plot")} from $name", Color.MapPieces)
 
-    c match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = m.plots.sorted drop num))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = n.plots.sorted drop num))
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = m.plots.sorted drop num))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = n.plots.sorted drop num))
+      }
+      game = game.copy(
+        plotData = game.plotData.copy(removedPlots = List.fill(num)(PlotWMD) ::: game.removedPlots)
+      )
+
+      if (bumpPrestige) {
+        log(s"Increase prestige for removing WMD plots")
+        increasePrestige(num)
+      }
     }
+  }
 
-    val updatedPlots = game.plotData.copy(removedPlots = List.fill(num)(PlotWMD) ::: game.removedPlots)
-    game = game.copy(plotData = updatedPlots)
+  def addRemovedWMDToCache(name: String, num: Int): Unit = {
+    if (num > 0) {
+      assert(game.plotData.numRemovedWMD >= num, s"addRemovedWMDToCache($name, $num): not enough removed WMD")
+      val c = game.getCountry(name)
+      game = game.copy(
+        plotData = game.plotData.copy(removedPlots = game.plotData.removedPlots.drop(num))
+      )
+      c match {
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(wmdCache = m.wmdCache + num))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(wmdCache = n.wmdCache + num))
+      }
+      log(s"Add ${amountOf(num, "out of play WMD plot")} to the cache in $name", Color.MapPieces)
+    }
+  }
 
-    if (bumpPrestige) {
-      log(s"Increase prestige for removing WMD plots")
-      increasePrestige(num)
+  def addRemovedWMDToAvailable(num: Int): Unit = {
+    if (num > 0) {
+      assert(game.plotData.numRemovedWMD >= num, s"addRemovedWMDToAvailable($num): not enough removed WMD")
+      game = game.copy(
+        plotData = game.plotData.copy(
+          removedPlots = game.plotData.removedPlots.drop(num),
+          availablePlots = List.fill(num)(PlotWMD) ::: game.plotData.availablePlots
+        )
+      )
+      log(s"Add ${amountOf(num, "out of play WMD plot")} to the available box", Color.MapPieces)
     }
   }
 
   def removeAvailableWMD(num: Int, bumpPrestige: Boolean = true): Unit = {
-    val wmd = (game.availablePlots.sorted takeWhile (_ == PlotWMD)).size
-    assert(wmd >= num, "removeAvailableWMD(): not enough WMD plots available")
-    log(s"Permanently remove ${amountOf(num, "WMD plot")} from the available plots box", Color.MapPieces)
-    val updatedPlots = game.plotData.copy(
-      availablePlots = game.availablePlots.sorted drop num,
-      removedPlots   = (game.availablePlots.sorted take num) ::: game.removedPlots
-    )
-    game = game.copy(plotData = updatedPlots)
-    if (bumpPrestige) {
-      log(s"Increase prestige for removing WMD plots")
-      increasePrestige(num)
+    if (num > 0) {
+      assert(game.plotData.numAvailWMD >= num, s"removeAvailableWMD($num): not enough WMD plots available")
+      val updatedPlots = game.plotData.copy(
+        availablePlots = game.availablePlots.sorted.drop(num),
+        removedPlots   = List.fill(num)(PlotWMD) ::: game.removedPlots
+      )
+      game = game.copy(plotData = updatedPlots)
+      log(s"Remove ${amountOf(num, "WMD plot")} from the available plots box", Color.MapPieces)
+      if (bumpPrestige) {
+        log(s"Increase prestige for removing WMD plots")
+        increasePrestige(num)
+      }
     }
   }
 
   def increaseFunding(amount: Int): Unit = {
     if (amount > 0) {
       val newValue = (game.funding + amount) min MaxFunding
-      val prefix = if (newValue == game.funding) s"remains" else s"now"      
+      val prefix = if (newValue == game.funding) s"remains" else s"now"
       game = game.copy(funding = newValue)
       log(s"+$amount to funding ($prefix $newValue)", Color.MapMarker)
     }
@@ -6592,7 +6644,7 @@ object LabyrinthAwakening {
   def decreaseFunding(amount: Int): Unit = {
     if (amount > 0) {
       val newValue = (game.funding - amount) max 1
-      val prefix = if (newValue == game.funding) s"remains" else s"now"      
+      val prefix = if (newValue == game.funding) s"remains" else s"now"
       game = game.copy(funding = newValue)
       log(s"-$amount to funding ($prefix $newValue)", Color.MapMarker)
     }
@@ -6601,7 +6653,7 @@ object LabyrinthAwakening {
   def increasePrestige(amount: Int): Unit = {
     if (amount > 0) {
       val newValue = (game.prestige + amount) min MaxPrestige
-      val prefix = if (newValue == game.prestige) s"remains" else s"now"      
+      val prefix = if (newValue == game.prestige) s"remains" else s"now"
       game = game.copy(prestige = newValue)
       log(s"+$amount to prestige ($prefix $newValue)", Color.MapMarker)
     }
@@ -6610,7 +6662,7 @@ object LabyrinthAwakening {
   def decreasePrestige(amount: Int): Unit = {
     if (amount > 0) {
       val newValue = (game.prestige - amount) max 1
-      val prefix = if (newValue == game.prestige) s"remains" else s"now"      
+      val prefix = if (newValue == game.prestige) s"remains" else s"now"
       game = game.copy(prestige = newValue)
       log(s"-$amount to prestige ($prefix $newValue)", Color.MapMarker)
     }
@@ -8972,7 +9024,7 @@ object LabyrinthAwakening {
     performPlots(ops, attempts)
   }
 
-  def addAvailablePlotToCountry(name: String, plot: Plot, visible: Boolean = false): Unit = {
+  def addAvailablePlotToCountry(name: String, plot: Plot, visible: Boolean = false, ignoreAbuSayyaf: Boolean = false): Unit = {
     val index = game.availablePlots.indexOf(plot)
     assert(index >= 0, s"addAvailablePlotToCountry(): $plot is not available")
     val updatedPlots = game.plotData.copy(
@@ -8991,7 +9043,7 @@ object LabyrinthAwakening {
     else
       log(s"Add a hidden plot to $name", Color.MapPieces)
 
-    if (name == Philippines && countryEventInPlay(Philippines, AbuSayyaf)) {
+    if (!ignoreAbuSayyaf && name == Philippines && countryEventInPlay(Philippines, AbuSayyaf)) {
       val p = game getNonMuslim Philippines
       if (p.totalCells >= p.totalTroops) {
         log(s"Decrease prestige by 1 because Abu Sayyaf is in effect", Color.Event)
@@ -9000,6 +9052,45 @@ object LabyrinthAwakening {
     }
   }
 
+  // For adjustment only
+  def addResolvledPlotToCountry(name: String, plot: Plot): Unit = {
+    val index = game.resolvedPlots.indexOf(plot)
+    assert(index >= 0, s"addResolvledPlotToCountry(): $plot is not in the resolved box")
+    val updatedPlots = game.plotData.copy(
+      resolvedPlots = game.resolvedPlots.take(index) ::: game.resolvedPlots.drop(index + 1)
+    )
+    testCountry(name)
+    game = game.copy(plotData = updatedPlots)
+    game.getCountry(name) match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(plot) :: m.plots))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = PlotOnMap(plot) :: n.plots))
+    }
+    if (game.humanRole == Jihadist ||
+       (name == UnitedStates && (game getCountry UnitedStates).hasMarker(NEST)))
+      log(s"Add $plot to $name", Color.MapPieces)
+    else
+      log(s"Add a $plot to $name (hidden)", Color.MapPieces)
+  }
+
+  // For adjustment only
+  def addRemovedPlotToCountry(name: String, plot: Plot): Unit = {
+    val index = game.removedPlots.indexOf(plot)
+    assert(game.removedPlots.nonEmpty, s"addRemovedPlotToCountry(): $plot is not in the removed box")
+    val updatedPlots = game.plotData.copy(
+      removedPlots = game.removedPlots.tail
+    )
+    testCountry(name)
+    game = game.copy(plotData = updatedPlots)
+    game.getCountry(name) match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = PlotOnMap(plot) :: m.plots))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = PlotOnMap(plot) :: n.plots))
+    }
+    if (game.humanRole == Jihadist ||
+       (name == UnitedStates && (game getCountry UnitedStates).hasMarker(NEST)))
+      log(s"Add $plot to $name", Color.MapPieces)
+    else
+      log(s"Add a $plot to $name (hidden)", Color.MapPieces)
+  }
   // The plot will be moved to the resolved plots box unless toAvailable is true
   def removePlotFromCountry(name: String, mapPlot: PlotOnMap, toAvailable: Boolean = false): Unit = {
     val c = game.getCountry(name)
@@ -9020,6 +9111,22 @@ object LabyrinthAwakening {
       game = game.copy(plotData = updatedPlots)
       log(s"Move $mapPlot from $name to the resolved plots box", Color.MapPieces)
     }
+  }
+
+    // For adjustment only
+  def removeWMDPlotFromCountry(name: String, mapPlot: PlotOnMap): Unit = {
+    val c = game.getCountry(name)
+    val index = c.plots.indexOf(mapPlot)
+    assert(index >= 0, s"removeWMDPlotFromCountry(): $mapPlot is not present in $name")
+    val newPlots = c.plots.take(index) ::: c.plots.drop(index + 1)
+    c match {
+      case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = newPlots))
+      case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = newPlots))
+    }
+
+    val updatedPlots = game.plotData.copy(removedPlots = mapPlot.plot :: game.removedPlots)
+    game = game.copy(plotData = updatedPlots)
+    log(s"Move $mapPlot from $name to out of play", Color.MapPieces)
   }
 
   def jihadistChoosesToDeclareCaliphate(countryName: String, numCells: Int): Boolean =
@@ -9714,73 +9821,68 @@ object LabyrinthAwakening {
 
   def adjustCountry(name: String): Unit = {
     @tailrec def getNextResponse(): Unit = {
-      displayLine()
-      displayLine(separator())
+      val (actions, choices) = if (game.isMuslim(name)) {
+        val actions = ListMap(
+          "active cells"       -> adjustActiveCells _,
+          "advisors"           -> adjustCountryAdvisors _,
+          "aid"                -> adjustAid _,
+          "awakening"          -> adjustAwakening _,
+          "alignment"          -> adjustAlignment _,
+          "besieged regime"    -> adjustBesiegedRegime _,
+          "cadre"              -> adjustCadres _,
+          "caliphate capital"  -> adjustCaliphateCapital _,
+          "civil war"          -> adjustCivilWar _,
+          "flip to non-Muslim" -> adjustToNonMuslim _,
+          "governance"         -> adjustGovernance _,
+          "markers"            -> adjustCountryMarkers _,
+          "militia"            -> adjustMilitia _,
+          "plots"              -> adJustCountryPlots _,
+          "reaction"           -> adjustReaction _,
+          "regime change"      -> adjustRegimeChange _,
+          "sleeper cells"      -> adjustSleeperCells _,
+          "troops"             -> adjustTroops _,
+          "wmd cache"          -> adjustCountryWMDCache _,
+        )
+        var choices = actions.keysIterator.toList
+          .filter {
+            case "flip to non-Muslim" => (name == Iran || name == Nigeria)
+            case _ => true
+          }
+        (actions, choices)
+      }
+      else {
+        val actions = ListMap(
+          "active cells"   -> adjustActiveCells _,
+          "cadre"          -> adjustCadres _,
+          "flip to muslim" -> adjustToMuslim _,
+          "markers"        -> adjustCountryMarkers _,
+          "plots"          -> adJustCountryPlots _,
+          "posture"        -> adjustCountryPosture _,
+          "sleeper cells"  -> adjustSleeperCells _,
+          "troops"         -> adjustTroops _, // Valid in Philippines if Abu Sayyaf
+        )
+        var choices = actions.keysIterator.toList
+          .filter {
+            case "posture" => !List(UnitedStates, Israel, Iran).contains(name)
+            case "flip to muslim" => (name == Iran || name == Nigeria)
+            case _ => true
+          }
+        (actions, choices)
+      }
+
       for (SummaryEntry(text, color) <- game.countrySummary(name).entries)
         displayLine(text, color)
-      displayLine()
+      displayLine(separator(54))
 
-      if (game.isMuslim(name)) {
-        val flip = if (name == Iran || name == Nigeria) List("flip to non-Muslim") else Nil
-        val choices = (flip ::: List(
-          "alignment", "governance", "active cells", "sleeper cells", "regime change",
-          "cadre", "troops", "militia", "aid", "awakening", "reaction", "wmd cache",
-          "besieged regime", "civil war", "caliphate capital", "plots", "markers", "advisors"
-        )).sorted
-        askOneOf(s"[$name attribute] (? for list): ", choices, allowNone = true, allowAbort = false) match {
-          case None        =>
-          case Some(attribute) =>
-            attribute match {
-              case "alignment"          => adjustAlignment(name)
-              case "governance"         => adjustGovernance(name)
-              case "active cells"       => adjustActiveCells(name)
-              case "sleeper cells"      => adjustSleeperCells(name)
-              case "cadre"              => adjustCadres(name)
-              case "troops"             => adjustTroops(name)
-              case "militia"            => adjustMilitia(name)
-              case "aid"                => adjustAid(name)
-              case "awakening"          => adjustAwakening(name)
-              case "reaction"           => adjustReaction(name)
-              case "besieged regime"    => adjustBesiegedRegime(name)
-              case "regime change"      => adjustRegimeChange(name)
-              case "civil war"          => adjustCivilWar(name)
-              case "caliphate capital"  => adjustCaliphateCapital(name)
-              case "plots"              => adJustCountryPlots(name)
-              case "markers"            => adjustCountryMarkers(name)
-              case "advisors"           => adjustCountryAdvisors(name)
-              case "wmd cache"          => adjustCountryWMDCache(name)
-              case "flip to non-Muslim" => adjustToNonMuslim(name)
-            }
-            getNextResponse()
-        }
+      askOneOf(s"[$name attribute] (? for list): ", choices, allowNone = true, allowAbort = false) match {
+        case None        =>
+        case Some(selected) =>
+          actions(selected)(name)
+          getNextResponse()
       }
-      else { // Nonmuslim
-        val flip = if (name == Iran || name == Nigeria) List("flip to muslim") else Nil
-        val choices = {
-          var xs = (flip :::List("posture", "active cells", "sleeper cells",
-                              "cadre", "plots", "markers", "troops")).sorted
-          if (name == UnitedStates || name == Israel || name == Iran)
-            xs filterNot (_ == "posture")
-          else
-            xs
-        }
-        askOneOf(s"[$name attribute] (? for list): ", choices, allowNone = true, allowAbort = false) match {
-          case None        =>
-          case Some(attribute) =>
-            attribute match {
-              case "posture"        => adjustCountryPosture(name)
-              case "active cells"   => adjustActiveCells(name)
-              case "sleeper cells"  => adjustSleeperCells(name)
-              case "cadre"          => adjustCadres(name)
-              case "plots"          => adJustCountryPlots(name)
-              case "markers"        => adjustCountryMarkers(name)
-              case "flip to muslim" => adjustToMuslim(name)
-              case "troops"         => adjustTroops(name) // Valid in Philippines if Abu Sayyaf
-            }
-            getNextResponse()
-        }
-      }
+
     }
+    // Start response loop
     getNextResponse()
   }
 
@@ -10153,93 +10255,113 @@ object LabyrinthAwakening {
 
   // Move plots between country and available/resolved
   def adJustCountryPlots(name: String): Unit = {
-    val c = game getCountry name
-    var country   = c.plots.toVector
-    var available = game.availablePlots.toVector
-    var resolved  = game.resolvedPlots.toVector
-    var outOfPlay = game.removedPlots.toVector
-
-    def showAll(): Unit = {
-      val fmt = "%%-%ds: ".format(11 max name.length)
-      def label(s: String) = fmt.format(s)
-      println()
-      println(label(name)          + mapPlotsDisplay(country.toList))
-      println(label("Available")   + plotsDisplay(available.toList))
-      println(label("Resolved")    + plotsDisplay(resolved.toList))
-      println(label("Out of play") + plotsDisplay(outOfPlay.toList))
+    sealed trait Action {
+      def perform(): Unit
     }
-
-    def doMove(spec: String): Unit = {
-      val src = spec take 1
-      val dest = spec drop 2
-      if (src == "c") {
-        val onMap = askMapPlots(country.toList, 1, allowAbort = false).head
-        val index = country.indexOf(onMap)
-        country = country.patch(index, Vector.empty, 1)
-        dest match {
-          case "a" => available = available :+ onMap.plot
-          case "r" => resolved  = resolved :+ onMap.plot
-          case _   => outOfPlay = outOfPlay :+ onMap.plot
-        }
+    sealed trait AddAction extends Action {
+      def candidates: List[Plot]
+      def ok = candidates.nonEmpty
+    }
+    sealed trait RemoveAction extends Action {
+      def candidates: List[PlotOnMap]
+      def ok = candidates.nonEmpty
+    }
+    case object FromAvail extends AddAction {
+      def candidates = game.availablePlots.sorted
+      def perform(): Unit = {
+        val plot = askPlots(candidates, 1, allowAbort = false).head
+        addAvailablePlotToCountry(name, plot, ignoreAbuSayyaf = true)
       }
-      else {
-        val list = (if (src == "a") available else if (src == "r") resolved else outOfPlay).toList
-        val plot = askPlots(list, 1, allowAbort = false).head
-        val index = list.indexOf(plot)
-        src match {
-          case "a" => available = available.patch(index, Vector.empty, 1)
-          case "r" => resolved  = resolved.patch(index, Vector.empty, 1)
-          case _   => outOfPlay = outOfPlay.patch(index, Vector.empty, 1)
-        }
-        country = country :+ PlotOnMap(plot)
+    }
+    case object FromResolved extends AddAction {
+      def candidates = game.resolvedPlots.sorted
+      def perform(): Unit = {
+        val plot = askPlots(candidates, 1, allowAbort = false).head
+        addResolvledPlotToCountry(name, plot)
+      }
+    }
+    case object FromRemoved extends AddAction {
+      def candidates = game.removedPlots.sorted
+      def perform(): Unit = {
+        addRemovedPlotToCountry(name, PlotWMD)
+      }
+    }
+    case object ToAvail extends RemoveAction {
+      def candidates = game.getCountry(name).plots.sorted
+      def perform(): Unit = {
+        val plot = askMapPlots(candidates, 1, allowAbort = false).head
+        removePlotFromCountry(name, plot, toAvailable = true)
+      }
+    }
+    case object ToResolved extends RemoveAction {
+      def candidates = game.getCountry(name).plots.filter(_.plot != PlotWMD).sorted
+      def perform(): Unit = {
+        val plot = askMapPlots(candidates, 1, allowAbort = false).head
+        removePlotFromCountry(name, plot, toAvailable = false)
+      }
+    }
+    case object ToRemoved extends RemoveAction {
+      def candidates = game.getCountry(name).plots.filter(_.plot == PlotWMD).sorted
+      def perform(): Unit = {
+        // Unless one is backlashed, then all WMD are identical
+        val plot = if (candidates.forall(_ == candidates.head))
+          candidates.head
+        else
+          askMapPlots(candidates, 1, allowAbort = false).head
+        removeWMDPlotFromCountry(name, plot)
       }
     }
 
     def nextAction(): Unit = {
       val choices = List(
-        choice(country.nonEmpty,   "c-a",  s"Move plot from $name to the available box"),
-        choice(country.nonEmpty,   "c-r",  s"Move plot from $name to the resolved box"),
-        choice(country.nonEmpty,   "c-o",  s"Move plot from $name to out of play"),
-        choice(available.nonEmpty, "a-c",  s"Move available plot to $name"),
-        choice(resolved.nonEmpty,  "r-c",  s"Move resolved plot to $name"),
-        choice(outOfPlay.nonEmpty, "o-c",  s"Move out of play plot to $name"),
-        choice(true,               "done", "Finished")
+        choice(ToAvail.ok,      Some(ToAvail),   s"Remove to available"),
+        choice(ToResolved.ok,   Some(ToResolved), s"Remove to resolved"),
+        choice(ToRemoved.ok,    Some(ToRemoved),  s"Remove WMD to out of play"),
+        choice(FromAvail.ok,    Some(FromAvail),  s"Add from available"),
+        choice(FromResolved.ok, Some(FromResolved),  s"Add from resolved"),
+        choice(FromRemoved.ok,  Some(FromRemoved),  s"Add WMD from out of play"),
+        choice(true,            None, "Finished")
       ).flatten
 
-      showAll()
-      askMenu("Choose one: ", choices, allowAbort = false).head  match {
-        case "done" =>
-        case spec   => doMove(spec); nextAction()
+      displayLine(s"\n$name")
+      displayLine(separator())
+      displayLine(s"In country   : ${mapPlotsDisplay(ToAvail.candidates)}")
+      displayLine(s"Available box: ${plotsDisplay(FromAvail.candidates)}")
+      displayLine(s"Resolved box : ${plotsDisplay(FromResolved.candidates)}")
+      displayLine(s"Out of play  : ${plotsDisplay(FromRemoved.candidates)}")
+
+      askMenu("Choose plot adjustment: ", choices, allowAbort = false).head  match {
+        case Some(action) =>
+          action.perform()
+          nextAction()
+        case None =>
       }
     }
 
-    if (country.isEmpty && available.isEmpty && resolved.isEmpty && outOfPlay.isEmpty)
-      println("Nothing to adjust, there are no plots") // Should never happen!
+    val origCountry  = ToAvail.candidates
+    val origAvail    = FromAvail.candidates
+    val origResolved = FromResolved.candidates
+    val origRemoved  = FromRemoved.candidates
+
+    if (origCountry.isEmpty && origAvail.isEmpty && origResolved.isEmpty && origRemoved.isEmpty)
+      displayLine("Nothing to adjust, there are no plots", Color.Info) // Should never happen!
     else {
       nextAction()
-      val countryChanged = country.toList.sorted != c.plots.sorted
-      val availableChanged = available.toList.sorted != game.plotData.availablePlots.sorted
-      val resolvedChanged = resolved.toList.sorted != game.plotData.resolvedPlots.sorted
-      val outOfPlayChanged = outOfPlay.toList.sorted != game.plotData.removedPlots.sorted
-      if (countryChanged || availableChanged || resolvedChanged || outOfPlayChanged) {
-        if (countryChanged)
-          logAdjustment(name, "plots", mapPlotsDisplay(c.plots), mapPlotsDisplay(country.toList))
-        if (availableChanged)
-          logAdjustment("Available plots", plotsDisplay(game.availablePlots), plotsDisplay(available.toList))
-        if (resolvedChanged)
-          logAdjustment("Resolved plots", plotsDisplay(game.resolvedPlots), plotsDisplay(resolved.toList))
-        if (outOfPlayChanged)
-          logAdjustment("Removed plots", plotsDisplay(game.removedPlots), plotsDisplay(outOfPlay.toList))
 
-        val updatedPlots = game.plotData.copy(
-         availablePlots = available.toList,
-         resolvedPlots  = resolved.toList,
-         removedPlots   = outOfPlay.toList)
-        game = game.copy(plotData = updatedPlots)
-        c match {
-          case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = country.toList))
-          case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = country.toList))
-        }
+      val countryChanged = origCountry != ToAvail.candidates
+      val availableChanged = origAvail != FromAvail.candidates
+      val resolvedChanged = origResolved != ToResolved.candidates
+      val removedChanged = origRemoved != ToRemoved.candidates
+      if (countryChanged || availableChanged || resolvedChanged || removedChanged) {
+        if (countryChanged)
+          logAdjustment(name, "plots", mapPlotsDisplay(origCountry), mapPlotsDisplay(ToAvail.candidates))
+        if (availableChanged)
+          logAdjustment("Available plots", plotsDisplay(origAvail), plotsDisplay(FromAvail.candidates))
+        if (resolvedChanged)
+          logAdjustment("Resolved plots", plotsDisplay(origResolved), plotsDisplay(FromResolved.candidates))
+        if (removedChanged)
+          logAdjustment("Removed plots", plotsDisplay(origRemoved), plotsDisplay(FromRemoved.candidates))
+
         saveAdjustment(name, "Plots")
       }
     }
@@ -10339,19 +10461,63 @@ object LabyrinthAwakening {
   }
 
   def adjustCountryWMDCache(name: String): Unit = {
-    game.getCountry(name) match {
-      case n: NonMuslimCountry =>
-        adjustInt("WMD cache", n.wmdCache, 0 to 3) foreach { value =>
-          logAdjustment(name, "WMD cache", n.wmdCache, value)
-          game = game.updateCountry(n.copy(wmdCache = value))
-          saveAdjustment(name, "WMD cache")
-        }
-      case m: MuslimCountry =>
-        adjustInt("WMD cache", m.wmdCache, 0 to 3) foreach { value =>
-          logAdjustment(name, "WMD cache", m.wmdCache, value)
-          game = game.updateCountry(m.copy(wmdCache = value))
-          saveAdjustment(name, "WMD cache")
-        }
+    val origCache = game.getCountry(name).wmdCache
+    val origAvail = game.plotData.numAvailWMD
+    val origRemoved = game.plotData.numRemovedWMD
+
+    def nextAction(): Unit = {
+      val numCache = game.getCountry(name).wmdCache
+      val numAvail = game.plotData.numAvailWMD
+      val numRemoved = game.plotData.numRemovedWMD
+
+      val choices = List(
+        choice(numCache > 0,  "delAvail",   "Remove to available box"),
+        choice(numCache > 0,  "delRemoved", "Remove out of the game"),
+        choice(numAvail > 0,  "addAvail",   "Add from available box"),
+        choice(numRemoved > 0,"addRemoved", "Add from out of play"),
+        choice(true,          "done",       "Finished")
+      ).flatten
+
+      displayLine(s"\n$name")
+      displayLine(separator())
+      displayLine(s"WMD Cache   : $numCache")
+      displayLine(s"Available   : $numAvail")
+      displayLine(s"Out of play : $numRemoved")
+      askMenu(s"Adjust WMD cache in $name:", choices).head match {
+        case "delAvail"   =>
+          val num = askInt("\nRemove how many to available?", 0, numCache)
+          moveWMDCacheToAvailable(name, num)
+          nextAction()
+        case "delRemoved" =>
+          val num = askInt("\nRemove how many out of the game?", 0, numCache)
+          removeCachedWMD(name, num, bumpPrestige = false)
+          nextAction()
+        case "addAvail"   =>
+          val num = askInt("\nAdd how many from available?", 0, numAvail)
+          addAvailableWMDToCache(name, num)
+          nextAction()
+        case "addRemoved" =>
+          val num = askInt("\nAdd how many from out of play?", 0, numRemoved)
+          addRemovedWMDToCache(name, num)
+          nextAction()
+        case _ =>
+      }
+    }
+
+    nextAction()
+
+    val cacheChanged = origCache != game.getCountry(name).wmdCache
+    val availChanged = origAvail != game.plotData.numAvailWMD
+    val removedChanged = origRemoved != game.plotData.numRemovedWMD
+
+    if (cacheChanged || availChanged || removedChanged) {
+      if (cacheChanged)
+        logAdjustment(name, "WMD cache", origCache, game.getCountry(name).wmdCache)
+      if (availChanged)
+        logAdjustment(name, "Available WMD", origAvail, game.plotData.numAvailWMD)
+      if (removedChanged)
+        logAdjustment(name, "Removed WMD", removedChanged, game.plotData.numRemovedWMD)
+      saveAdjustment(name, "WMD cache")
     }
   }
 

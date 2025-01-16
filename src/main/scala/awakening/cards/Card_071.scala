@@ -80,9 +80,8 @@ object Card_071 extends Card(71, "Loose Nuke", Jihadist, 2, Remove, NoLapsing, N
     val success = die <= (game getCountry Russia).governance
     log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
     if (success) {
-      log(s"Move the Loose Nuke WMD plot marker to the available plots box")
-      val updatedPlots = game.plotData.copy(availablePlots = PlotWMD :: game.availablePlots)
-      game = game.copy(plotData = updatedPlots)
+      log(s"The Loose Nukes WMD plot is now available")
+      addRemovedWMDToAvailable(1)
     }
     else {
       val (active, sleeper, sadr) = if (isHuman(role)) {
