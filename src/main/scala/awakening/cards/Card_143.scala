@@ -116,8 +116,6 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
         choice(true,               "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
       ).flatten
 
-      displayLine("\nCannot place awakening markers. [Arab Winter]", Color.Info)
-
       askMenu(s"Do any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
         println()
         action match {
