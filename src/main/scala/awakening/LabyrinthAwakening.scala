@@ -2882,7 +2882,7 @@ object LabyrinthAwakening {
             case FromDiscard =>
               cardDrawnFromDiscardPile(cardNum)
             case FromLapsing =>
-              cardDrawnFromDiscardPile(cardNum)
+              cardDrawnFromLapsingBox(cardNum)
             case From1stPlot =>
               cardDrawnFromFirstPlotBox(cardNum)
             case FromRole(from) =>

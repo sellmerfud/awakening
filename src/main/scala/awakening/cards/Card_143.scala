@@ -95,6 +95,10 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
   def canPlaceAwakening = awakeingCandidates.nonEmpty
 
   def aidCandidates = countryNames(game.muslims)
+  
+  val DiscardTargets = Set(121, 126, 127, 128, 144)
+  def cardDrawCandidates = game.cardsDiscarded
+    .filter(DiscardTargets.contains)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -105,46 +109,62 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
       3
     else
       2
+    val canDraw = cardDrawCandidates.nonEmpty
 
     if (isHuman(role)) {
-      val choices = List(
-        choice(canPlaceAwakening,  "awakening", "Place 1 Awakening marker"),
-        choice(true,               "aid",       "Place 1 Aid marker"),
-        choice(game.prestige < 12, "prestige",  "+1 Prestige"),
-        choice(game.funding > 1,   "funding",   "-1 Funding"),
-        choice(true,               "posture",   "Select posture of 1 Schengen country"),
-        choice(true,               "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
-      ).flatten
 
-      askMenu(s"Do any $numActions of the following:", choices, numActions, repeatsOK = false) foreach { action =>
-        println()
+      def nextAction(actionNum: Int, used: Set[String]): Unit = if (actionNum <= numActions) {
+        val choices = List(
+          choice(canPlaceAwakening && !used("awakening"), "awakening", "Place 1 Awakening marker"),
+          choice(!used("aid"),               "aid",       "Place 1 Aid marker"),
+          choice(game.prestige < 12 && !used("prestige"), "prestige",  "+1 Prestige"),
+          choice(game.funding > 1 && !used("funding"),    "funding",   "-1 Funding"),
+          choice(!used("posture"),                        "posture",   "Select posture of 1 Schengen country"),
+          choice(canDraw && !used("draw"),                "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
+        ).flatten
+
+        if (cardDrawCandidates.isEmpty)
+          displayLine("None of Reaper, Operation New Dawn, or Advisors is in the discard pile.", Color.Info)
+
+        val action = askMenu(s"Choose ${ordinal(actionNum)} of $numActions actions:", choices).head
+
         action match {
           case "awakening" =>
-            val target = askCountry("Place awakening marker in which country: ", awakeingCandidates)
+            val target = askCountry("\nPlace awakening marker in which country: ", awakeingCandidates)
             addEventTarget(target)
             addAwakeningMarker(target)
 
           case "aid" =>
-            val target = askCountry("Place aid marker in which country: ", aidCandidates)
+            val target = askCountry("\nPlace aid marker in which country: ", aidCandidates)
             addEventTarget(target)
             addAidMarker(target)
 
           case "prestige" =>
+            println()
             increasePrestige(1)
 
           case "funding"  =>
+            println()
             decreaseFunding(1)
 
           case "posture" =>
-            val target  = askCountry("Select posture of which Schengen country: ", Schengen)
+            val target  = askCountry("\nSelect posture of which Schengen country: ", Schengen)
             val posture = askPosture(target)
             addEventTarget(target)
             setCountryPosture(target, posture)
 
           case _ =>
-            log("\nSelect Reaper, Operation New Dawn, or Advisors from discard pile", Color.Event)
+              val choices = cardDrawCandidates.map(n => n -> cardNumAndName(n))
+              askMenu("\nChoose card from discard pile:", choices)
+                .foreach { cardNum =>
+                  cardDrawnFromDiscardPile(cardNum)
+                  increaseCardsInHand(role, 1)
+                }
         }
+        nextAction(actionNum + 1, used + action)
       }
+
+      nextAction(1, Set.empty)
     }
     else {
       // See Event Instructions table
