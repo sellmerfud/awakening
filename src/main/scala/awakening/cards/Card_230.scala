@@ -74,7 +74,7 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -112,10 +112,17 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
         (name, cells, action)
 
       case _ => // Jihadist Bot
+        // If funding < 9 then there may not be a preferred candidate
+        val possibleCandidates = getJihadistBotCandidates() match {
+          case Nil => getCandidates()
+          case cs => cs
+        }
         val name = if (game.funding == 9)
-          JihadistBot.alignGovTarget(getJihadistBotCandidates()).get
+          JihadistBot.alignGovTarget(possibleCandidates).get
         else {
-          val candidates = game.getMuslims(getJihadistBotCandidates()).sortBy(-_.totalCells)
+          val candidates = game.getMuslims(possibleCandidates).sortBy(-_.totalCells)
+          inspect("candidates", candidates.map(_.name))
+          inspect("preferred", candidates.takeWhile(_.totalCells == candidates.head.totalCells).map(_.name))
           shuffle(candidates.takeWhile(_.totalCells == candidates.head.totalCells)).head.name
         }
         val m = game.getMuslim(name)
