@@ -2555,6 +2555,20 @@ object LabyrinthAwakening {
     }
   }
 
+  // The cards that are being used in the current action phase
+  def cardsInPlay(): Set[Int] = {
+    game.turnActions match {
+      case PlayedCard(role, firstCard, None) :: _ =>
+        Set(firstCard)
+      case PlayedCard(role, firstCard, Some(SecondCard(secondCard))) :: _ =>
+        Set(firstCard, secondCard)
+      case PlayedCard(role, firstCard, Some(AdditionalCard(additionalCard))) :: _ =>
+        Set(firstCard, additionalCard)
+      case _ =>
+        throw new IllegalStateException("cardsInPlay(): called when current action is not PlayedCard.")
+    }
+  }
+
   // Cards not in Discard, Lapsing, 1stPlot, Removed
   // This includes cards potentially in player hands
   def cardsInDrawPileOrHands(): List[Int] = {
@@ -2562,7 +2576,8 @@ object LabyrinthAwakening {
       game.cardsDiscarded.toSet ++
       game.cardsLapsing().toSet ++
       game.firstPlotCard().toSet ++
-      game.cardsRemoved.toSet
+      game.cardsRemoved.toSet ++
+      cardsInPlay()
 
     game.cardsInUse
       .toSet
