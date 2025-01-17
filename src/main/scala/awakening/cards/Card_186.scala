@@ -132,14 +132,16 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
 
     if (isHuman(role)) {
       if (hasCardInHand(Jihadist)) {
-        log("\nJihadist player may return Boko Haram to hand by discarding a", Color.Event)
-        log("non-US associated 3 Ops card", Color.Event)
+        log("\nJihadist player may return Boko Haram to hand by discarding", Color.Event)
+        log("a non-US associated 3 Ops card", Color.Event)
         if (askYorN("\nDo you wish to discard a non-US associated 3 Ops card? (y/n) ")) {
-          if (getDiscard())   // Will decrease cards in hand by 1 if card was discarded
+          // getDiscard() will decrease cards in hand by 1 if card was discarded
+          if (getDiscard())
             setIgnoreDiscardAtEndOfTurn(true)
         }
       }
-      log("\nThe Jihadist player does not have a card to discard")
+      else
+        log("\nThe Jihadist player does not have a card to discard")
     }
     else
       log("\nThe Jihadist Bot does not return the Boko Haram card to hand.", Color.Event)
