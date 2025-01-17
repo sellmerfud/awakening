@@ -896,9 +896,15 @@ object LabyrinthAwakening {
     override def toString() = s"Jihadist removes ${amountOf(num, "cadre")}"
   }
 
-  case class EndOfActionPhase(role: Role) extends TurnAction {
+  case class EndOfActionPhase(role: Role, phaseNum: Int, numPlots: Int) extends TurnAction {
     override def name = "EndOfActionPhase"
-    override def toString() = s"End of $role action phase"
+    override def toString() = {
+      val suffix = role match {
+        case US => s", ${amountOf(numPlots, "unblocked plot")} resolved"
+        case _ => ""
+      }
+      s"End of ${ordinal(phaseNum)} $role action phase$suffix"
+    }
   }
 
   case class AdjustmentMade(desc: String) extends TurnAction {
@@ -6733,7 +6739,8 @@ object LabyrinthAwakening {
     }
   }
 
-  def resolvePlots(): Unit = {
+  // Returns the number of unblock plots that are resolved
+  def resolvePlots(): Int = {
     case class Unblocked(name: String, isMuslim: Boolean, mapPlot: PlotOnMap)
     def chng(amt: Int) = if (amt > 0) "Increase" else "Decrease"
 
@@ -6997,6 +7004,7 @@ object LabyrinthAwakening {
         resolvedInGreenOnBlue = greenOnBlue
       )
     )
+    return unblocked.size
   }
 
   // Pirates from the base game
@@ -7834,15 +7842,19 @@ object LabyrinthAwakening {
       val endMsg = s"End of ${ordinal(phaseNum)} $activeRole action phase"
       log(s"\n$endMsg", Color.Info)
 
-      if (activeRole == US || endOfTurn)
+      val numPlots = if (activeRole == US || endOfTurn)
         resolvePlots()
+      else
+        0
 
+      val endPhase = EndOfActionPhase(activeRole, phaseNum, numPlots)
       game = game.copy(
         targetsLastPhase = game.targetsThisPhase,
         targetsThisPhase = PhaseTargets(),
-        turnActions = EndOfActionPhase(activeRole)::game.turnActions
+        turnActions = endPhase::game.turnActions
       )
-      saveGameState(Some(endMsg))
+
+      saveGameState(Some(endPhase.toString))
 
       if (endOfTurn) {
         pause()  // So the user can see the plot resolution results
@@ -7940,7 +7952,7 @@ object LabyrinthAwakening {
   def actionPhaseCount(role: Role) = {
     game.turnActions
       .count {
-        case EndOfActionPhase(`role`) => true
+        case EndOfActionPhase(`role`, _, _) => true
         case _ => false
       }
   }

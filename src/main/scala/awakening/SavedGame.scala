@@ -204,8 +204,8 @@ object SavedGame {
         Map("num" -> num)
       case USDiscardedLastCard(cardNum) =>
         Map("cardNum" -> cardNum)
-      case EndOfActionPhase(role) =>
-        Map("role" -> role.toString)
+      case EndOfActionPhase(role, phaseNum, numPlots) =>
+        Map("role" -> role.toString, "phaseNum" -> phaseNum, "numPlots" -> numPlots)
       case AdjustmentMade(desc) =>
         Map("desc" -> desc)
     }
@@ -229,7 +229,11 @@ object SavedGame {
       case "USDiscardedLastCard" =>
         USDiscardedLastCard(asInt(params("cardNum")))
       case "EndOfActionPhase" =>
-        EndOfActionPhase(Role(asString(params("role"))))
+        EndOfActionPhase(
+          Role(asString(params("role"))),
+          asInt(params("phaseNum")),
+          asInt(params("numPlots"))
+        )
       case "AdjustmentMade" =>
         AdjustmentMade(asString(params("desc")))
     }
