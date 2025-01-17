@@ -7826,12 +7826,13 @@ object LabyrinthAwakening {
   case object EndPhase extends UserAction {
     override def perform(param: Option[String]): Unit = {
       val activeRole = getActiveRole()
+      val phaseNum = actionPhaseCount(activeRole) + 1
       val endOfTurn = activeRole match {
         case US  => numCardsInHand(US) < 2 && numCardsInHand(Jihadist) == 0
         case Jihadist => numCardsInHand(US) == 0 && numCardsInHand(Jihadist) == 0
       }
-
-      log(s"\nEnd of $activeRole action phase", Color.Info)
+      val endMsg = s"End of ${ordinal(phaseNum)} $activeRole action phase"
+      log(s"\n$endMsg", Color.Info)
 
       if (activeRole == US || endOfTurn)
         resolvePlots()
@@ -7841,7 +7842,7 @@ object LabyrinthAwakening {
         targetsThisPhase = PhaseTargets(),
         turnActions = EndOfActionPhase(activeRole)::game.turnActions
       )
-      saveGameState(Some(s"End of $activeRole action phase"))
+      saveGameState(Some(endMsg))
 
       if (endOfTurn) {
         pause()  // So the user can see the plot resolution results
