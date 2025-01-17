@@ -65,8 +65,9 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
   def getCandidates() = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
+  // Always can play to allow facebook (event if smartphones is already in effect)
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -76,8 +77,8 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
   // Jihad Bot will only play if it can place a marker.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => globalEventNotInPlay(Smartphones) || (lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty)
-    case Jihadist => lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty
+    case US => globalEventNotInPlay(Smartphones) || lapsingEventNotInPlay(ArabWinter)
+    case Jihadist => lapsingEventNotInPlay(ArabWinter)
   }
 
   // Carry out the event for the given role.
