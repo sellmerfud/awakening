@@ -2581,12 +2581,26 @@ object LabyrinthAwakening {
     prompt: String,
     initial: Option[String] = None,
     allowNone: Boolean = true,
-    opsRequired: Option[Int] = None): Option[Int] = {
+    opsRequired: Option[Int] = None,
+    assocRequired: Option[CardAssociation] = None
+    ): Option[Int] = {
 
     def validCardNumber(num: Int) = {
 
       var isValid = false
       def display = s"[${cardNumAndName(num)}]"
+
+      def opsOk(cardNum: Int) = opsRequired match {
+        case None => true
+        case Some(ops) => deck(cardNum).printedOps == ops
+      }
+
+      def assocOk(cardNum: Int) = assocRequired match {
+        case None => true
+        case Some(assoc) => deck(cardNum).association == assoc
+        }
+
+
 
       if (!deck.isValidCardNumber(num))
         println(s"$num is not a valid card number for any of the scenario decks.")
@@ -2599,6 +2613,15 @@ object LabyrinthAwakening {
         cardLocation(num).foreach { location =>
           println(s"It is in the ${location.name}")
         }
+      }
+      else if (!opsOk(num))
+        println(s"${cardNumAndName(num)} is not a ${amountOf(opsRequired.get, "Op")} card.")
+      else if (!assocOk(num)) {
+        val assoc = assocRequired.get match {
+          case Unassociated => "an Unassociated"
+          case role => s"a $role-Associated"
+        }
+        println(s"${cardNumAndName(num)} is not $assoc card.")
       }
       else
         isValid = true
@@ -2981,34 +3004,17 @@ object LabyrinthAwakening {
     assocRequired: Option[CardAssociation] = None,
     allowNone: Boolean = false): Option[Int] = {
 
-    def opsOk(cardNum: Int) = opsRequired match {
-      case None => true
-      case Some(ops) => deck(cardNum).printedOps == ops
-    }
-
-    def assocOk(cardNum: Int) = assocRequired match {
-      case None => true
-      case Some(assoc) => deck(cardNum).association == assoc
-    }
-
     def askForCard(): Option[Int] = {
-      askCardNumber(FromRole(role)::Nil, prompt, allowNone = allowNone) match {
-        case None => None
-        case Some(cardNum) if !opsOk(cardNum) =>
-          val card = deck(cardNum).toString
-          val ops = opsRequired.get
-          displayLine(s"$card is not a ${amountOf(ops, "Op")} card.")
-          askForCard()
+      val response = askCardNumber(
+        FromRole(role)::Nil,
+        prompt,
+        allowNone = allowNone,
+        opsRequired = opsRequired,
+        assocRequired = assocRequired)
 
-        case Some(cardNum) if !assocOk(cardNum) =>
-          val card = deck(cardNum).toString
-          val assoc = assocRequired.get match {
-            case Unassociated => "an Unassociated"
-            case role => s"a $role-Associated"
-          }
-          displayLine(s"$card is not $assoc card.")
-          askForCard()
-
+      response match {
+        case None =>
+          None
         case Some(cardNum) =>
           decreaseCardsInHand(role, 1)
           processDiscardedCard(cardNum, triggerRole)
@@ -7922,7 +7928,7 @@ object LabyrinthAwakening {
     val isJihadistHuman = activeRole == Jihadist && isHuman(Jihadist)
     val canPlay = numCardsPlayed < 2 && numInHand > 0
     val canDiscard = isUSHuman && numInHand == 1 && !game.jihadistIdeology(Infectious)
-    val canEndPhase = numCardsPlayed == 2 || numInHand == 0 || 
+    val canEndPhase = numCardsPlayed == 2 || numInHand == 0 ||
       (isUSHuman && numInHand == 1 && !game.jihadistIdeology(Infectious))
     val canCadre = isJihadistHuman && game.hasCountry(_.hasCadre)
     val canRoll = mostRecentSaveNumber(game.saveName).getOrElse(0) > 0
