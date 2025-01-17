@@ -2556,16 +2556,20 @@ object LabyrinthAwakening {
   }
 
   // The cards that are being used in the current action phase
-  def cardsInPlay(): Set[Int] = {
+  def cardsInPlay(ignoreAdditional: Boolean): List[Int] = {
     game.turnActions match {
       case PlayedCard(role, firstCard, None) :: _ =>
-        Set(firstCard)
+        List(firstCard)
       case PlayedCard(role, firstCard, Some(SecondCard(secondCard))) :: _ =>
-        Set(firstCard, secondCard)
+        List(firstCard, secondCard)
+      case PlayedReassement(firstCard, secondCard) :: _ =>
+        List(firstCard, secondCard)
+      case PlayedCard(role, firstCard, Some(AdditionalCard(_))) :: _  if ignoreAdditional =>
+        List(firstCard)
       case PlayedCard(role, firstCard, Some(AdditionalCard(additionalCard))) :: _ =>
-        Set(firstCard, additionalCard)
+        List(firstCard, additionalCard)
       case _ =>
-        throw new IllegalStateException("cardsInPlay(): called when current action is not PlayedCard.")
+        Nil  // For other actions there are no cards in play
     }
   }
 
@@ -2577,7 +2581,7 @@ object LabyrinthAwakening {
       game.cardsLapsing().toSet ++
       game.firstPlotCard().toSet ++
       game.cardsRemoved.toSet ++
-      cardsInPlay()
+      cardsInPlay(ignoreAdditional = false).toSet
 
     game.cardsInUse
       .toSet
@@ -8304,7 +8308,6 @@ object LabyrinthAwakening {
 
       logCardPlay(US, card, card.eventIsPlayable(US))
       try {
-
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
         // If the JihadistBot is playing it will cancel the next one played by the US.
@@ -8323,14 +8326,41 @@ object LabyrinthAwakening {
             case _  => USBot.cardPlay(card, ignoreEvent = false)
           }
 
-        if (!game.cardsRemoved.contains(cardNumber) &&
-            !game.cardsLapsing().contains(cardNumber) &&
-            !game.isFirstPlot(cardNumber) &&
-            !ignoreDiscardAtEndOfTurn())  // Not currently possible for US
-          addCardToDiscardPile(cardNumber)
+        // Note: There currently no events that allow the US player to return
+        // the card to hand. But we account for this in case it becomes
+        //  possible in future expansion
+        if (ignoreDiscardAtEndOfTurn()) {
+          increaseCardsInHand(US, 1)
+        }
+        else {
+          // The discard process is a bit complicated because
+          // some when an event is played the card may have been removed from the game
+          // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
+          if (!game.cardsRemoved.contains(cardNumber) &&
+              !game.cardsLapsing().contains(cardNumber) &&
+              !game.isFirstPlot(cardNumber)) {
+            // If Reassessment was done, or if a seond card was used by the evnet
+            // then there is a second card to discard.
+            // Note: A second card being used by an event is NOT the same
+            // as an event allowing an additional card to be played.
+            // An additional card will come through here on its own and be
+            // discarded at that time.
+            // If we are processing an "additional" card then there will
+            // never be another card to discard.
+            val toDiscard = if (additional)
+              List(cardNumber)
+            else
+              cardsInPlay(ignoreAdditional = true)
+
+            for (n <- toDiscard)
+              addCardToDiscardPile(n)
+          }
+        }
+
 
         setIgnoreDiscardAtEndOfTurn(false)  // Reset for next turn
-
+        // When an additional card is played it will be saved as part
+        // of the primary card play.
         if (!additional)
           saveGameState()
       }
@@ -8673,12 +8703,28 @@ object LabyrinthAwakening {
             case _        => JihadistBot.cardPlay(card, ignoreEvent = false)
           }
 
-        if (!game.cardsRemoved.contains(cardNumber) &&
-            !game.cardsLapsing().contains(cardNumber) &&
-            !game.isFirstPlot(cardNumber) &&
-            !ignoreDiscardAtEndOfTurn())  // Boko Haram
-          addCardToDiscardPile(cardNumber)
-
+        // Boko Haram allows the card to be returned to hand
+        if (ignoreDiscardAtEndOfTurn()) {
+          increaseCardsInHand(Jihadist, 1)
+        }
+        else {
+          // The discard process is a bit complicated because
+          // some when an event is played the card may have been removed from the game
+          // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
+          if (!game.cardsRemoved.contains(cardNumber) &&
+              !game.cardsLapsing().contains(cardNumber) &&
+              !game.isFirstPlot(cardNumber)) {
+                // There may be a second card to discard be cause
+                // some eventa allow the use of a second card
+                // so we discard all cards in play for the current action
+                // rather than just use the `cardNumber` variable.
+                // Note: A `second` card is not the same as an `additional` card.
+                //        Curently no event playablle by the Jihadist allows 
+                //        for an `additional` card to be played.
+                for (n <- cardsInPlay(ignoreAdditional = true))
+                  addCardToDiscardPile(n)
+              }
+        }
         setIgnoreDiscardAtEndOfTurn(false)  // Reset for next turn
         saveGameState()
       }
