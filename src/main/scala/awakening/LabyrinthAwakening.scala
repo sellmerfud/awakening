@@ -2927,6 +2927,8 @@ object LabyrinthAwakening {
               cardDrawnFromLapsingBox(cardNum)
             case From1stPlot =>
               cardDrawnFromFirstPlotBox(cardNum)
+            case FromRemoved =>
+              cardDrawnFromRemovedPile(cardNum)
             case FromRole(from) =>
               decreaseCardsInHand(from, 1)
             case other =>
@@ -5532,6 +5534,11 @@ object LabyrinthAwakening {
   def cardDrawnFromDiscardPile(cardNumber: Int): Unit = {
     log("\n%s drawn from the discard pile".format(deck(cardNumber).numAndName), Color.Event)
     game = game.copy(cardsDiscarded = game.cardsDiscarded.filterNot(_ == cardNumber))
+  }
+
+    def cardDrawnFromRemovedPile(cardNumber: Int): Unit = {
+    log("\n%s drawn from the removed pile".format(deck(cardNumber).numAndName), Color.Event)
+    game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNumber))
   }
 
   def removeCardFromGame(cardNumber: Int): Unit = {

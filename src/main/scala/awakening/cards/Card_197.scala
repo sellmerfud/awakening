@@ -83,15 +83,18 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
     }
     else {
       if (getCandidates().nonEmpty) {
-        val choices = getCandidates().map(n => n -> deck(n).numAndName)
-        val prompt = if (isHuman(role))
-          "\nWhich card did you select from the removed cards pile:"
-        else
-          s"\nThe $Jihadist Bot draws the card nearest the top of the removed cards pile:"
-
-        val cardNum = askMenu(prompt, choices).head
-        game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
-        log(s"\nThe $Jihadist draws the ${deck(cardNum).numAndName} from the removed cards pile.", Color.Event)
+        if (isHuman(role)) {
+          val choices = getCandidates().sorted.map(n => n -> deck(n).numAndName)
+          val prompt = "\nWhich card did you select from the removed pile:"
+          val cardNum = askMenu(prompt, choices).head
+          cardDrawnFromRemovedPile(cardNum)
+          increaseCardsInHand(role, 1)
+        }
+        else {
+          // Bot takes the card closest to the top of the removed pile.
+          cardDrawnFromRemovedPile(getCandidates().head)
+          increaseCardsInHand(role, 1)
+        }
       }
       else
         log("\nNone of the listed cards is in the removed cards pile.", Color.Event)
