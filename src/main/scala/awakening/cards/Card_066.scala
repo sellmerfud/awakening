@@ -69,7 +69,11 @@ object Card_066 extends Card(66, "Homegrown", Jihadist, 2, NoRemove, NoLapsing, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    addEventTarget(UnitedKingdom)
-    addSleeperCellsToCountry(UnitedKingdom, 1)
+    if (game.cellsAvailable > 0) {
+      addEventTarget(UnitedKingdom)
+      addSleeperCellsToCountry(UnitedKingdom, 1)
+    }
+    else
+      log(s"\nThere are no available cells on the track.  The event has no effect.", Color.Event)
   }
 }
