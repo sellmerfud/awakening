@@ -1309,10 +1309,10 @@ object LabyrinthAwakening {
     testedOrImprovedToFairOrGood: Set[String] = Set.empty,
     event:                        Set[String] = Set.empty
   ) {
-    def wasOpsTarget(name: String)        = ops contains name
-    def wasEventTarget(name: String)      = event contains name
+    def wasOpsTarget(name: String)        = ops(name)
+    def wasEventTarget(name: String)      = event(name)
     def wasOpsOrEventTarget(name: String) = wasOpsTarget(name) || wasEventTarget(name)
-    def wasTestedOrImprovedToFairOrGood(name: String) = testedOrImprovedToFairOrGood contains name
+    def wasTestedOrImprovedToFairOrGood(name: String) = testedOrImprovedToFairOrGood(name)
   }
 
   case class PlotTarget(name: String, isMuslim: Boolean)
@@ -7802,7 +7802,11 @@ object LabyrinthAwakening {
       if (activeRole == US || endOfTurn)
         resolvePlots()
 
-      game = game.copy(turnActions = EndOfActionPhase(activeRole)::game.turnActions)
+      game = game.copy(
+        targetsLastPhase = game.targetsThisPhase,
+        targetsThisPhase = PhaseTargets(),
+        turnActions = EndOfActionPhase(activeRole)::game.turnActions
+      )
       saveGameState(Some(s"End of $activeRole action phase"))
 
       if (endOfTurn) {
