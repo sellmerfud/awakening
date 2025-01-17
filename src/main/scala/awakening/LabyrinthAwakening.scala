@@ -3175,38 +3175,40 @@ object LabyrinthAwakening {
   def askMenuWithWrap[T](
     menuPrompt: String = "",
     items: List[(T, (String, Seq[String]))],
-    numChoices: Int = 1,
-    repeatsOK: Boolean = false,
-    allowAbort: Boolean = true): List[T] = {
+    sameLine: Boolean = true,
+    allowAbort: Boolean = true): T = {
+    
+    assert(items.nonEmpty, "askMenuWithWrap() called with empty items list")
+    if (items.size == 1)
+      items.head._1
+    else {
+      val itemMap = ListMap(items:_*)
 
-    def nextChoice(num: Int, itemsRemaining: ListMap[T, (String, Seq[String])]): List[T] = {
-      if (itemsRemaining.isEmpty || num > numChoices)
-        Nil
-      else if (itemsRemaining.size == 1)
-        itemsRemaining.keys.head :: Nil
-      else {
-        val width = itemsRemaining.size.toString.size
-        println()
-        println(menuPrompt)
-        println(separator(char = '='))
-        val indexMap = (itemsRemaining.keys.zipWithIndex map (_.swap)).toMap
-        for ((key, i) <- itemsRemaining.keysIterator.zipWithIndex) {
-          val number = String.format(s"%${width}d: ", i+1)
-          val (desc, detail) = itemsRemaining(key)
-          val prefix = s"${number}${desc} "
-          wrap(prefix, detail, showNone = false) foreach println
+      val numWidth = itemMap.size.toString.size
+      println()
+      println(menuPrompt)
+      println(separator(char = '='))
+
+      val indexMap = (itemMap.keys.zipWithIndex map (_.swap)).toMap
+      
+      for ((key, i) <- itemMap.keysIterator.zipWithIndex) {
+        val number = String.format(s"%${numWidth}d: ", i+1)
+        val (name, detail) = itemMap(key)
+        if (sameLine) {
+          val prefix = s"${number}${name} "
+          wrap(prefix, detail, showNone = false).foreach(println)
         }
-        val prompt = if (numChoices > 1) s"${ordinal(num)} Selection: "
-        else "Selection: "
-        println(separator())
-        val choice = askOneOf(prompt, 1 to itemsRemaining.size, allowAbort = allowAbort).get.toInt
-        val index  = choice - 1
-        val key    = indexMap(index)
-        val remain = if (repeatsOK) itemsRemaining else itemsRemaining - key
-        indexMap(index) :: nextChoice(num + 1, remain)
+        else {
+          val offset = " " * (numWidth + 2)
+          println(s"${number}${name}")
+          if (detail.nonEmpty)
+            wrap(offset, detail, showNone = false).foreach(println)
+        }
       }
+      println(separator())
+      val choice = askOneOf("Selection: ", 1 to itemMap.size, allowAbort = allowAbort).get.toInt
+      indexMap(choice - 1) // convert back to zero based
     }
-    nextChoice(1, ListMap(items:_*))
   }
 
   // Present a list of choices where each choice is associated with
@@ -4464,7 +4466,7 @@ object LabyrinthAwakening {
         displayLine("\nRollback to the beginning of a previous save point.", Color.Info)
         displayLine("The save points are displayed with the most recent first.", Color.Info)
 
-        askMenuWithWrap("Roll back to replay starting at which save point:", saveChoices:::otherChoices).head match {
+        askMenuWithWrap("Roll back to replay starting at which save point:", saveChoices:::otherChoices) match {
           case CANCEL      =>
           case PAGE_UP     => showPage(pageNum - 1)
           case PAGE_DOWN   => showPage(pageNum + 1)
@@ -7366,8 +7368,6 @@ object LabyrinthAwakening {
   def programMainMenu(params: UserParams): Unit = {
 
     def gameChoices(games: List[String]): List[(Option[String], (String, Seq[String]))] = {
-      val width = longestString(games)
-      def display(str: String) = s"${padLeft(str, width)} -"
       val choices = games
         .toList
         .map { name =>
@@ -7376,7 +7376,7 @@ object LabyrinthAwakening {
             .toSeq
             .map(_.trim)
             .dropWhile(_ == "")
-          Some(name) -> (display(name), summary)
+          Some(name) -> (name, summary)
         }
       choices :+ (None -> ("Cancel", Seq.empty))
     }
@@ -7396,18 +7396,20 @@ object LabyrinthAwakening {
         programMainMenu(params)
 
       case "resume" =>
-        askMenuWithWrap("Resume which game:", gameChoices(games), allowAbort = false).head.foreach { name =>
-          game = loadMostRecent(name)
-          printSummary(game.actionSummary)
-          playGame()
-        }
+        askMenuWithWrap("Resume which game:", gameChoices(games), sameLine = false, allowAbort = false)
+          .foreach { name =>
+            game = loadMostRecent(name)
+            printSummary(game.actionSummary)
+            playGame()
+          }
         programMainMenu(params)
 
       case "delete" =>
-        askMenuWithWrap("Delete which game:", gameChoices(games), allowAbort = false).head.foreach { name =>
-          if (askYorN(s"\nReally delete game [$name] (y/n)? "))
-            (gamesDir/name).rmtree()
-        }
+        askMenuWithWrap("Delete which game:", gameChoices(games), sameLine = false, allowAbort = false)
+          .foreach { name =>
+            if (askYorN(s"\nReally delete game [$name] (y/n)? "))
+              (gamesDir/name).rmtree()
+          }
         programMainMenu(params)
 
       case _ =>
