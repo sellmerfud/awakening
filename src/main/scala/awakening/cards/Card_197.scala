@@ -88,11 +88,14 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
           val prompt = "\nWhich card did you select from the removed pile:"
           val cardNum = askMenu(prompt, choices).head
           cardDrawnFromRemovedPile(cardNum)
+          log(s"Add ${cardNumAndName(cardNum)} to your hand.", Color.Event)
           increaseCardsInHand(role, 1)
         }
         else {
           // Bot takes the card closest to the top of the removed pile.
-          cardDrawnFromRemovedPile(getCandidates().head)
+          val cardNum = getCandidates().head
+          cardDrawnFromRemovedPile(cardNum)
+          log(s"Add ${cardNumAndName(cardNum)} to the top of the Bot's hand.", Color.Event)
           increaseCardsInHand(role, 1)
         }
       }
