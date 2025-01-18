@@ -1277,6 +1277,8 @@ object USBot extends BotHelpers {
           // Replace the head card play with a reassessment 
           game = game.copy(turnActions = PlayedReassement(card.number, card2.number) :: game.turnActions.tail)
           logCardPlay(US, card2, false)
+          decreaseCardsInHand(US, 1)
+
           // Check to see if either of the cards played has an auto trigger event.
           // If so the event happens first.
           // Calculate the new Posture before any change caused by the Elections.

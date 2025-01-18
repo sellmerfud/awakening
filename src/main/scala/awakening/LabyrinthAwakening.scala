@@ -8469,6 +8469,7 @@ object LabyrinthAwakening {
             case None => throw AbortAction
             case Some(cardNum) =>
               val card2 = deck(cardNum)
+              decreaseCardsInHand(US, 1)
               // Replace the head card play with a reassessment
               game = game.copy(turnActions = PlayedReassement(card.number, card2.number) :: game.turnActions.tail)
               secondCard = Some(card2)
