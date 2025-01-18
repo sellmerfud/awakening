@@ -8435,8 +8435,14 @@ object LabyrinthAwakening {
     var secondCard: Option[Card] = None   // For reassessment only
     def opsAvailable = (card.ops + reservesUsed) min 3
 
-    @tailrec def getAction(): String = {
-      val canReassess = firstCardOfPhase(US) && card.ops == 3 && reservesUsed == 0
+    @tailrec def getAction(eventTriggered: Boolean): String = {
+      // The US must announce reassessment before triggering an event
+      // so if the event was triggered then reassessment is not allowed.
+      val canReassess =
+        firstCardOfPhase(US) &&
+        card.ops == 3 &&
+        reservesUsed == 0 &&
+        !eventTriggered
       val actions = List(
         choice(eventPlayable && reservesUsed == 0,         ExecuteEvent, ExecuteEvent),
         choice(true,                                       WarOfIdeas, WarOfIdeas),
@@ -8458,7 +8464,7 @@ object LabyrinthAwakening {
           reservesUsed = inReserve
           log(s"$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
           game = game.copy(reserves = game.reserves.copy(us = 0))
-          getAction()
+          getAction(eventTriggered)
 
         case Reassess =>
           println("You must play a second 3 Ops card")
@@ -8476,7 +8482,7 @@ object LabyrinthAwakening {
             if (askYorN("Really abort (y/n)? "))
               throw AbortAction
             else
-              getAction()
+              getAction(eventTriggered)
 
         case action => action
       }
@@ -8487,23 +8493,23 @@ object LabyrinthAwakening {
     // If they choose to resolve the event first, do so before
     // prompting for the action because the ramifications of the event
     // may affect what actions are possible.
-    val actionOrder = if (card.autoTrigger || card.association == Jihadist) {
+    val (actionOrder, eventTriggered) = if (card.autoTrigger || card.association == Jihadist) {
       getActionOrder(card :: Nil, opponent = Jihadist) match {
         case Nil =>
           throw AbortAction
         case TriggeredEvent(c) :: _ =>
           attemptTriggeredEvent(Jihadist, c)
           pause()
-          List(Ops)
+          (List(Ops), true)
         case _ =>
           card1EventValid = true
-          List(Ops, TriggeredEvent(card))
+          (List(Ops, TriggeredEvent(card)), false)
       }
     }
     else
-      List(Ops)
+      (List(Ops), false)
 
-    val action = getAction();
+    val action = getAction(eventTriggered);
 
     // There will only be a second card if the reassessment action was chosen.
     // If so we must check to see if the event on the second card will trigger
