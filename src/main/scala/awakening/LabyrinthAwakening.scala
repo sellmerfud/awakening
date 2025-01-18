@@ -2336,9 +2336,6 @@ object LabyrinthAwakening {
       println(s"$prompt ${candidates.head}")
       candidates.head
     }
-    else if (candidates.size < 8) {
-      askSimpleMenu(prompt, candidates, allowAbort = allowAbort)
-    }
     else
       askOneOf(prompt, candidates, allowAbort = allowAbort, abbr = CountryAbbreviations).get
   }
