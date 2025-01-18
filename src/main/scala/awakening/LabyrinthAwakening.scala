@@ -8038,6 +8038,11 @@ object LabyrinthAwakening {
       s"$activeRole Bot's"
     val isUSHuman = activeRole == US && isHuman(US)
     val canEndPhase = numCardsPlayed == 2 || numInHand == 0
+    val promptCanFollowAction =
+      lastAction == Some(PlayCard) ||
+      lastAction == Some(DiscardLast) ||
+      lastAction == Some(EndPhase)
+
     val endPrompt = if (numCardsPlayed == 2)
         s"""|
             |Two cards have been played.
@@ -8046,14 +8051,10 @@ object LabyrinthAwakening {
         s"""|
             |No cards remaining in $owner hand.
             |Do you want to end the current $activeRole action phase? (y/n) """.stripMargin
-    val endActionPhase =
-      (lastAction == Some(PlayCard) || lastAction == Some(DiscardLast)) &&
-      canEndPhase &&
-      askYorN(endPrompt)
 
-      if (endActionPhase) {
+      if (canEndPhase && promptCanFollowAction && askYorN(endPrompt)) {
         EndPhase.perform(None)
-        actionLoop(None)
+        actionLoop(Some(EndPhase))
       }
       else {
         val (action, param) = actionPhasePrompt()
