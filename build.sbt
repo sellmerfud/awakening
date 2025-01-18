@@ -4,7 +4,7 @@ import java.nio.file.attribute.PosixFilePermissions
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
-  version      := "5.6-prompt",
+  version      := "6.0",
   scalaVersion := "2.13.14",
   javacOptions        ++= Seq("-source", "8", "-target",  "8"),
   scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
