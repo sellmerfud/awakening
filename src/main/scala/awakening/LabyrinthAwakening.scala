@@ -2768,8 +2768,11 @@ object LabyrinthAwakening {
       )
 
     log()
-    log("Add the Awakening cards to the deck.", Color.Info)
-    log("The Awakening expansion rules are now in effect.", Color.Info)
+    if (numCardsInDrawPile() == 0)
+      log("Shuffle the Awakening cards to form a new draw pile.", Color.Info)
+    else
+      log("Shuffle the Awakening cards and place them beneath the existing draw pile.", Color.Info)
+    log("\nThe Awakening expansion rules are now in effect.", Color.Info)
     log("The Bot will now use the Awakening priorities.", Color.Info)
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
     log()
@@ -2815,8 +2818,12 @@ object LabyrinthAwakening {
         cardsInUse = Range.inclusive(game.cardsInUse.head, ForeverWarMode.cardRange.last)
       )
     log()
-    log("Add Forever War cards to the deck.", Color.Info)
-    log("The Bot will now use the Forever War priorities.", Color.Info)
+    if (numCardsInDrawPile() == 0)
+      log("Shuffle the Forever War cards to form a new draw pile.", Color.Info)
+    else
+      log("Shuffle the Forever War cards and place them beneath the existing draw pile.", Color.Info)
+
+    log("\nThe Bot will now use the Forever War priorities.", Color.Info)
   }
 
   // This function is called when a card must be drawn from the
@@ -2865,13 +2872,16 @@ object LabyrinthAwakening {
       }
       else {
         // Single scenario game
+        if (numCardsInDrawPile() == 0)
+          log("\nShuffle the discard pile to form a new draw pile.", Color.Info)
+        else
+          log("\nShuffle the discard pile and place it beneath the existing draw pile.", Color.Info)
+        log(s"This begins the ${ordinal(game.deckNumber)} deck of ${game.gameLength}.", Color.Info)
+        log("Move the deck marker one space to the right.", Color.Info)
         game = game.copy(
           deckNumber = game.deckNumber + 1,
           cardsDiscarded = Nil
         )
-        log("\nShuffle the discard pile to form a new draw pile.", Color.Info)
-        log(s"This begins the ${ordinal(game.deckNumber)} deck of ${game.gameLength}.", Color.Info)
-        log("Move the deck marker one space to the right.", Color.Info)
       }
     }
   }
@@ -3183,7 +3193,7 @@ object LabyrinthAwakening {
     items: List[(T, (String, Seq[String]))],
     sameLine: Boolean = true,
     allowAbort: Boolean = true): T = {
-    
+
     assert(items.nonEmpty, "askMenuWithWrap() called with empty items list")
     if (items.size == 1)
       items.head._1
@@ -3196,7 +3206,7 @@ object LabyrinthAwakening {
       println(separator(char = '='))
 
       val indexMap = (itemMap.keys.zipWithIndex map (_.swap)).toMap
-      
+
       for ((key, i) <- itemMap.keysIterator.zipWithIndex) {
         val number = String.format(s"%${numWidth}d: ", i+1)
         val (name, detail) = itemMap(key)
@@ -7021,57 +7031,58 @@ object LabyrinthAwakening {
   // Calculate and display the number of cards
   // each side will draw for the turn.
   def drawCardsForTurn(): Unit = {
+    val jihadistCards = new ListBuffer[(String, Int)]()
+    val usCards = new ListBuffer[(String, Int)]()
+
+    jihadistCards.append((s"Funding level is ${game.fundingLevel}", JihadistCardDraw(game.fundingLevel)))
+
+    usCards.append((s"Troop commitment is ${game.troopCommitment}", USCardDraw(game.troopCommitment)))
 
     // The number of cards drawn by the US player
     // can be affected by several events.
-    val usCardMods = {
-      val mods = new ListBuffer[(String, Int)]()
-      if (lapsingEventInPlay(FullyResourcedCOIN))
-        mods.append((deck(FullyResourcedCOIN).cardName, 2))
-      if (globalEventInPlay(USChinaTradeWar)) {
-        val modifier = game.worldPosture match {
-          case Even => 0
-          case world if world == game.usPosture => 1
-          case _ => -1
-        }
-        mods.append((USChinaTradeWar, modifier))
+    if (lapsingEventInPlay(FullyResourcedCOIN))
+      usCards.append((deck(FullyResourcedCOIN).cardName, 2))
+
+    if (globalEventInPlay(USChinaTradeWar)) {
+      val modifier = game.worldPosture match {
+        case Even => 0
+        case world if world == game.usPosture => 1
+        case _ => -1
       }
-      mods.toList
+      usCards.append((USChinaTradeWar, modifier))
     }
 
-    val extraUSWidth = longestString(usCardMods.map(_._1))
-    val extraUSCards = usCardMods.map(_._2).sum
-    val usCards       = USCardDraw(game.troopCommitment) + extraUSCards
-    val jihadistCards = JihadistCardDraw(game.fundingLevel)
-    val totalCards    = usCards + jihadistCards
+    val jihadistNum = jihadistCards.map(_._2).sum
+    val usNum = usCards.map(_._2).sum
+    val totalCards = jihadistNum + usNum
 
     log()
-    log("Draw Cards")
-    log(separator())
-    log(s"$US player will draw $usCards cards", Color.Info)
-    for ((name, mod) <- usCardMods)
-    log(f"  ${padLeft(name, extraUSWidth)}: $mod%+2d")
-    log(s"Jihadist player will draw $jihadistCards cards", Color.Info)
+    log("Draw Cards", Color.Info)
+    log(separator(char = '='), Color.Info)
 
     // Check to see if we have reached the end of the current draw pile
     if (numCardsInDrawPile() < totalCards) {
-      log("\nThere are not enough cards in the draw pile.", Color.Info)
-      (game.deckNumber < game.gameLength, numCardsInDrawPile()) match {
-        case (true, 0) =>
-        case (true, 1) =>
-          log(s"Draw the last card into the $Jihadist hand.", Color.Info)
-        case (true, n) =>
-          log(s"Draw the last $n cards alternately into each hand starting with the $Jihadist hand.", Color.Info)
-        case (false, _) =>  // End of game
-      }
+      log("There are not enough cards in the draw pile to fill both hands.", Color.Info)
       handleEmptyDrawPile(atEndOfTurn = true)
-      log("\nContinue drawing cards alternately to fill each hand.", Color.Info)
+      log()
     }
-    else
-      log(s"\nDraw the next $totalCards cards alternately into each hand starting with the $Jihadist hand.", Color.Info)
 
-    increaseCardsInHand(US, usCards)
-    increaseCardsInHand(Jihadist, jihadistCards)
+    // for ((role, cardDraw) <- List((Jihadist, jihadistCards, US, usCards)))
+    log(Jihadist.toString)
+    log(separator(length = 40))
+    for ((name, amt) <- jihadistCards)
+      log(f"$amt%2d - $name")
+    log()
+    log(US.toString)
+    log(separator(length = 40))
+    for ((name, amt) <- usCards)
+      log(f"$amt%2d - $name")
+
+    log(s"\nDraw cards alternately into the $Jihadist and $US hands", Color.Info)
+    log(s"upto $jihadistNum cards and $usNum cards respectively.", Color.Info)
+
+    increaseCardsInHand(Jihadist, jihadistNum)
+    increaseCardsInHand(US, usNum)
   }
 
   def removeLapsingAnd1stPLot(): Unit = {
@@ -8742,7 +8753,7 @@ object LabyrinthAwakening {
                 // so we discard all cards in play for the current action
                 // rather than just use the `cardNumber` variable.
                 // Note: A `second` card is not the same as an `additional` card.
-                //        Curently no event playablle by the Jihadist allows 
+                //        Curently no event playablle by the Jihadist allows
                 //        for an `additional` card to be played.
                 for (n <- cardsInPlay(ignoreAdditional = true))
                   addCardToDiscardPile(n)
