@@ -74,7 +74,7 @@ object Card_059 extends Card(59, "Amerithrax", Jihadist, 2, NoRemove, NoLapsing,
   def executeEvent(role: Role): Unit = {
     log(s"\nYou ($US) must discard your highest-value US associated card (if any)", Color.Event)
     
-    val prompt = "Enter card # begin discarded (blank if none): "
+    val prompt = "Enter card # being discarded (blank if none): "
     if (askCardBeingDiscarded(US, prompt, assocRequired = Some(US), allowNone = true).isEmpty)
       log("\nThe US player did not have a US-associated card.", Color.Event)
   }
