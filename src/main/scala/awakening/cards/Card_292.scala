@@ -65,7 +65,7 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
       (c: Country) => !c.hasCadre && c.totalCells == 0 && !JihadistBot.isCadreRemovalCandidate(c)
     else
       (c: Country) => !c.hasCadre && c.totalCells == 0
-    game.countries.filter(isCandidate)
+    countryNames(game.countries.filter(isCandidate))
   }
 
   // Returns true if the printed conditions of the event are satisfied
@@ -106,14 +106,11 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
       new JihadistBot.CriteriaFilter("No cells present", _.totalCells == 0)
     )
 
-    val candidates = if (isHuman(role))
-      getCandidates()
-    else if (getBotCandidates().nonEmpty)
-      countryNames(getBotCandidates())
-    else
-      countryNames(JihadistBot.selectCandidates(getBotCandidates(), botCriteria))
-
-
-    nextCadre(1, candidates)
+    if (isHuman(role))
+      nextCadre(1, getCandidates())
+      else if (getBotCandidates().nonEmpty)
+        nextCadre(1, getBotCandidates())
+      else
+        log(s"\nThe Jihadist Bot chooses to not place any cadres.", Color.Event)
   }
 }
