@@ -8002,6 +8002,10 @@ object LabyrinthAwakening {
       choice(true,        Quit,        'q', "Quit game"),
     ).flatten
 
+    val reserves = if (activeRole == Jihadist)
+      s"${amountOf(game.reserves.jihadist, "op")} in reserve"
+    else
+        s"${amountOf(game.reserves.us, "op")} in reserve"      
     val phaseNum = actionPhaseCount(activeRole) + 1
     val roleType = if (isHuman(activeRole)) "Player's" else "Bot's"
     val phase = s"$activeRole $roleType ${ordinal(phaseNum)} action phase"
@@ -8011,7 +8015,7 @@ object LabyrinthAwakening {
     val inHand = s"$numInHand in hand"
     val line1 = f"| $phase%-36s$turn%14s |"
     val line2 = f"| $played%-30s$inHand%20s |"
-    val line3 = f"| $drawPile%50s |"
+    val line3 = f"| $reserves%-25s$drawPile%25s |"
 
     displayLine()
     displayLine("======================================================", Color.Info)
