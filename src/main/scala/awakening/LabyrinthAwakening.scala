@@ -7950,18 +7950,21 @@ object LabyrinthAwakening {
     }
   }
 
-  case object EndPhase extends UserAction {
+  case class EndPhase(holdLastCard: Boolean) extends UserAction {
     override def perform(param: Option[String]): Unit = {
       val activeRole = getActiveRole()
       val phaseNum = actionPhaseCount(activeRole) + 1
-      val endOfTurn = activeRole match {
-        case US  => numCardsInHand(US) < 2 && numCardsInHand(Jihadist) == 0
-        case Jihadist => numCardsInHand(US) == 0 && numCardsInHand(Jihadist) == 0
-      }
-      val endMsg = s"End of ${ordinal(phaseNum)} $activeRole action phase"
+      val bothHandsEmpty = numCardsInHand(US) == 0 && numCardsInHand(Jihadist) == 0
+      val holdMsg = if (holdLastCard)
+        ", holding last card"
+      else
+        ""
+      val endMsg = s"End of ${ordinal(phaseNum)} $activeRole action phase$holdMsg"
+      
       log(s"\n$endMsg", Color.Info)
-
-      val numPlots = if (activeRole == US || endOfTurn)
+      // We resolve plots at the end of Jihadist action phase 
+      // only if both players have no cards left
+      val numPlots = if (activeRole == US || bothHandsEmpty)
         resolvePlots()
       else
         0
@@ -7972,14 +7975,13 @@ object LabyrinthAwakening {
         targetsThisPhase = PhaseTargets(),
         turnActions = endPhase::game.turnActions
       )
-
       saveGameState(Some(endPhase.toString))
 
-      if (endOfTurn) {
+
+      if (bothHandsEmpty || (numCardsInHand(Jihadist) == 0 && holdLastCard)) {
         pause()  // So the user can see the plot resolution results
         endTurn()
       }
-
     }
   }
 
@@ -8093,21 +8095,21 @@ object LabyrinthAwakening {
     val canCadre = isJihadistHuman && game.hasCountry(_.hasCadre)
     val canRoll = mostRecentSaveNumber(game.saveName).getOrElse(0) > 0
 
-    val holdLast = if (isUSHuman && numInHand == 1)
-      " (holding last card)"
+    val (holdLast, holdMsg) = if (isUSHuman && numInHand == 1)
+      (true, " (holding last card)")
     else
-      ""
+      (false, "")
     val choices = List(
-      choice(canPlay,     PlayCard,    'p', "Play a card"),
-      choice(canDiscard,  DiscardLast, 'd', "Discard last card"),
-      choice(canEndPhase, EndPhase,    'e', s"End action phase$holdLast"),
-      choice(canCadre,    RemoveCadre, 'v', "Volunatary cadre removal"),
-      choice(true,        ShowState,   's', "Show game state"),
-      choice(true,        History,     'h', "History"),
-      choice(canRoll,     Rollback,    'r', "Rollback"),
-      choice(true,        Adjust,      'a', "Adjust game state"),
-      choice(true,        Help,        '?', "Help"),
-      choice(true,        Quit,        'q', "Quit game"),
+      choice(canPlay,     PlayCard,           'p', "Play a card"),
+      choice(canDiscard,  DiscardLast,        'd', "Discard last card"),
+      choice(canEndPhase, EndPhase(holdLast), 'e', s"End action phase$holdMsg"),
+      choice(canCadre,    RemoveCadre,        'v', "Volunatary cadre removal"),
+      choice(true,        ShowState,          's', "Show game state"),
+      choice(true,        History,            'h', "History"),
+      choice(canRoll,     Rollback,           'r', "Rollback"),
+      choice(true,        Adjust,             'a', "Adjust game state"),
+      choice(true,        Help,               '?', "Help"),
+      choice(true,        Quit,               'q', "Quit game"),
     ).flatten
 
     val reserves = if (activeRole == Jihadist)
@@ -8164,7 +8166,7 @@ object LabyrinthAwakening {
     val promptCanFollowAction =
       lastAction == Some(PlayCard) ||
       lastAction == Some(DiscardLast) ||
-      lastAction == Some(EndPhase)
+      lastAction == Some(EndPhase(false))
 
     val endPrompt = if (numCardsPlayed == 2)
         s"""|
@@ -8176,8 +8178,9 @@ object LabyrinthAwakening {
             |Do you want to end the current $activeRole action phase? (y/n) """.stripMargin
 
       if (canEndPhase && promptCanFollowAction && askYorN(endPrompt)) {
-        EndPhase.perform(None)
-        actionLoop(Some(EndPhase))
+        val action = EndPhase(false)
+        action.perform(None)
+        actionLoop(Some(action))
       }
       else {
         val (action, param) = actionPhasePrompt()
