@@ -102,11 +102,11 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   }
   else {
     // Bot
-    def nextTravel(numDestinations: Int, alreadyTried: Set[String]): Int = {
+    def nextTravel(destNum: Int, alreadyTried: Set[String]): Int = {
       // If the event was triggered during US turn then the Bot may be forced
       // to travel a cell that it normally would not use
       val allTravellers = countryNames(game.countries.filter(c => JihadistBot.unusedCells(c) > 0))
-      if (numDestinations < 2) {
+      if (destNum < 2) {
         val candidates = Schengen.filter(name => !alreadyTried(name) && JihadistBot.canTravelTo(name))
         val to   = JihadistBot.posturePriority(candidates).get
         val preferredTravellers = countryNames(game.countries.filter(JihadistBot.hasCellForTravel(_, to)))
@@ -120,13 +120,13 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
             addEventTarget(to)
             moveCellsBetweenCountries(from, to, 1, active, forTravel = true)
             JihadistBot.usedCells(to).addSleepers(1)
-            nextTravel(numDestinations + 1, alreadyTried + to)
+            nextTravel(destNum + 1, alreadyTried + to)
           case None =>
-            nextTravel(numDestinations, alreadyTried + to)
+            nextTravel(destNum, alreadyTried + to)
         }
       }
       else
-        numDestinations
+        destNum
     }
 
     if (nextTravel(0, Set.empty) == 0)
