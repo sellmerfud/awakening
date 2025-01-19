@@ -8719,28 +8719,28 @@ object LabyrinthAwakening {
     // If the only
     val (from, to) = game.deployTargets(ops).get
     val source     = askCountry("Deploy troops from: ", from)
-    val maxCanLeave = if (source == "track")
-      game.troopsAvailable
+    val (maxCanLeave, troopCubesPresent) = if (source == "track")
+      (game.troopsAvailable, game.troopsAvailable)
     else
-      (game getCountry source).maxDeployFrom
+      (game.getCountry(source).maxDeployFrom, game.getCountry(source).troops)
 
     // If th NATO or NATO-2 marker is present, the player has the option
     // of deploying it out of the country and removing it from the game.
     val (markersRemoved, markersValue): (List[String], Int) = if (source == "track")
       (Nil, 0)
     else {
-      val src = game getCountry source
-      val markers = src.troopsMarkers filter (m => m.canDeploy)
+      val src = game.getCountry(source)
+      val markers = src.troopsMarkers.filter(m => m.canDeploy)
       // If the source is in regime change then we must take care not to allow too many
       // markers to be removed so that we do not leave enough troops/militia behind.
-      val regimeChange = (game isMuslim source) && (game getMuslim source).inRegimeChange
+      val regimeChange = game.isMuslim(source) && game.getMuslim(source).inRegimeChange
       val canRemoveAll: List[TroopsMarker] => Boolean = if (regimeChange)
-        markerList => (markerList map (_.num)).sum <= maxCanLeave
+        markerList => markerList.map(_.num).sum <= maxCanLeave
       else
         _ => true  // Always possible if not in regime change
 
       val combos = for {
-        i     <- 1 to markers.size
+        i <- 1 to markers.size
         combo <- markers.combinations(i).toList if canRemoveAll(combo)
         names = combo map (_.name)
       } yield (names.mkString(",") -> andList(names))
@@ -8749,23 +8749,22 @@ object LabyrinthAwakening {
         (Nil, 0)
       else {
         val choices = ("none" -> "Do not deploy any markers") :: combos.toList
-        val markerNames = askMenu(s"Which troops markers will deploy out of $source", choices).head match {
+        val markerNames = askMenu(s"Which troop markers will deploy out of $source", choices).head match {
           case "none" => Nil
           case str    => str.split(",").toList
         }
-        val value = markerNames.foldLeft(0) { (sum, name) =>
-          sum + (markers find (_.name == name) map (_.num) getOrElse 0)
-        }
+        val value = markerNames
+          .foldLeft(0) { (sum, name) =>
+            sum + markers.find(_.name == name).map(_.num).getOrElse(0)
+          }
         (markerNames, value)
       }
     }
 
-    val maxTroops  = maxCanLeave - markersValue
-    val minTroops  = if (markersRemoved.isEmpty) 1 else 0
-    val numTroops  = if (maxTroops > 0)  // Could be zero if only markers could deploy out
-      askInt("Deploy how many troops: ", minTroops, maxTroops)
-    else
-      0
+    val maxTroops  = (maxCanLeave - markersValue) min troopCubesPresent
+    val minTroops  = if (markersRemoved.isEmpty) 1 min maxTroops else 0
+    val numTroops  = askInt("Deploy how many troops: ", minTroops, maxTroops)
+
     if (numTroops > 0) {
       val dest = askCountry("Deploy troops to: ", to filterNot (_ == source))
       addOpsTarget(dest)
