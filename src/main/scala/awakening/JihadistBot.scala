@@ -484,6 +484,8 @@ object JihadistBot extends BotHelpers {
                   muslimTest(m => m.isPoor && (m.totalCells - m.totalTroopsAndMilitia) > 2))
   val PoorAutoRecruit = new CriteriaFilter("Poor, Auto-recruit Muslim country",
                   muslimTest(m => m.isPoor && m.autoRecruit))
+  val PoorAutoRecruitNoTandM = new CriteriaFilter("Poor, Auto-recruit Muslim country without TandM",
+                  muslimTest(m => m.isPoor && m.autoRecruit && m.totalTroopsAndMilitia == 0))
   val PoorOrUnmarkedMuslim = new CriteriaFilter("Poor or Unmarked Muslim country",
                   muslimTest(m => m.isPoor || m.isUntested))
   val AutoRecruitPriorityCountry = new CriteriaFilter("Auto-recruit priority country",
@@ -719,17 +721,11 @@ object JihadistBot extends BotHelpers {
 
   def RecruitFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
-         PoorAutoRecruit,
+         PoorAutoRecruitNoTandM,
          PoorMuslimFilter,
          AutoRecruitPriorityCountry,
          IslamistRulePriority
     )
-    // List(PoorNeedCellsforMajorJihad,
-    //      EnhRecruitPoorCadreNoTandMMajorJihadPossible,
-    //      AutoRecruitBestJihadDRM,
-    //      GoodMuslimFilter,
-    //      EnhRecruitFairMuslimBestJihadDRMWithAdjacentCells,
-    //      PoorMuslimWhereMajorJSPBestJihadDRM)
   else
     List(PoorNeedCellsforMajorJihad,
          AutoRecruitBestJihadDRM,
@@ -740,13 +736,8 @@ object JihadistBot extends BotHelpers {
 
   def TravelToFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
-         PoorAutoRecruit,
+         PoorAutoRecruitNoTandM,
          PoorOrUnmarkedMuslim)
-    // List(EnhTravelPoorNeedCellsforMajorJihad,
-    //      GoodMuslimWithAdjacentCellsFilter,
-    //      EnhTravelFairMuslimBestJihadDRMWithAdjacentCells,
-    //      PoorMuslimWhereMajorJSPBestJihadDRM,
-    //      NonMuslimFilter)
   else
     List(PoorNeedCellsforMajorJihad,
          GoodMuslimFilter,
