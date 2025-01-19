@@ -1953,7 +1953,7 @@ object LabyrinthAwakening {
       }
       val countryMarkers = for (c <- countries; m <- c.markers)
         yield (s"$m (${c.name})")
-      summary.addSeq(wrap("Markers         : ", markers ::: countryMarkers))
+      summary.addSeq(wrap("Event markers   : ", markers ::: countryMarkers))
       summary.addSeq(wrap("Lapsing         : ", eventsLapsing.sorted))
       summary.add(s"1st plot        : ${firstPlotEntry.map(_.toString).getOrElse("none")}")
       summary
@@ -2039,6 +2039,37 @@ object LabyrinthAwakening {
       }
       summary
     }
+
+    def targetSummary: Summary = {
+      val summary = new Summary
+      val thisPhase = List(
+        ("Ops", targetsThisPhase.ops),
+        ("Event", targetsThisPhase.event),
+        ("Disrupted", targetsThisPhase.disrupted),
+        ("To fair/good", targetsThisPhase.testedOrImprovedToFairOrGood),
+      )
+      val lastPhase = List(
+        ("Ops", targetsLastPhase.ops),
+        ("Event", targetsLastPhase.event),
+        ("Disrupted", targetsLastPhase.disrupted),
+        ("To fair/good", targetsLastPhase.testedOrImprovedToFairOrGood),
+      )
+      def addEntries(entries: List[(String, Set[String])]): Unit = {
+        val width = longestString(entries.map(_._1))
+        for ((name, targets) <- entries)
+          summary.addSeq(wrap(s"${padLeft(name, width)}: ", targets.toSeq.sorted))
+      }
+
+      summary.add(s"\nTargets this action phase", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      addEntries(thisPhase)
+      summary.add(s"\nTargets last action phase", Color.Info)
+      summary.add(separator(char = '='), Color.Info)
+      addEntries(lastPhase)
+
+      summary
+    }
+
 
     def deckSummary: Summary = {
       val summary = new Summary
@@ -8214,10 +8245,11 @@ object LabyrinthAwakening {
         |
         |s summary   -- Game summary including score
         |s <country> -- Show status of a the named country
-        |s scenario  -- Scenario information and difficulty level
         |s actions   -- The list of actions for the current turn
+        |s scenario  -- Scenario information and difficulty level
         |s caliphate -- Countries that are part of the caliphate
         |s civil war -- Countries in civil war
+        |s targets   -- Countries targeted this/last action phase
         |s draw pile -- Cards in the draw pile (or in US/Jihadist hand)
         |s discarded -- Cards in the discard pile
         |s removed   -- Cards removed from the game
@@ -8230,15 +8262,16 @@ object LabyrinthAwakening {
 
     val options = List(
       "all", "actions", "summary", "scenario", "caliphate", "civil war",
-      "draw pile", "discarded", "removed", "help"
+      "targets", "draw pile", "discarded", "removed", "help"
     ) ::: countryNames(game.countries)
     val menuChoices = List(
       choice(true, Some("summary"),    "Game summary and score"),
-      choice(true, Some("scenario"),   "Scenario information"),
       choice(true, Some("country"),    "Countries"),
       choice(true, Some("actions"),    "Actions this turn"),
+      choice(true, Some("scenario"),   "Scenario information"),
       choice(true, Some("caliphate"),  "Calipate countries"),
       choice(true, Some("civil war"),  "Countries in Civil War"),
+      choice(true, Some("targets"),    "Countries targeted this/last action phase"),
       choice(true, Some("draw pile"),  "Cards in draw pile (or hands)"),
       choice(true, Some("discarded"),  "Cards in discard pile"),
       choice(true, Some("removed"),    "Cards removed from the game"),
@@ -8249,11 +8282,12 @@ object LabyrinthAwakening {
     // This function assumes entity is valid!
     def showEntity(entity: String): Unit = {
       entity match {
-        case "actions"    => printSummary(game.actionSummary)
         case "summary"    => printSummary(game.scoringSummary); printSummary(game.statusSummary)
+        case "actions"    => printSummary(game.actionSummary)
         case "scenario"   => printSummary(game.scenarioSummary)
         case "caliphate"  => printSummary(game.caliphateSummary)
         case "civil war"  => printSummary(game.civilWarSummary)
+        case "targets"     => printSummary(game.targetSummary)
         case "draw pile"  => printSummary(game.deckSummary)
         case "discarded"  => printSummary(game.discardedCardsSummary)
         case "removed"    => printSummary(game.removedCardsSummary)
@@ -8330,11 +8364,13 @@ object LabyrinthAwakening {
       printCountries("Iran Special Case", iranSpecial.toList)
     printSummary(game.scoringSummary)
     printSummary(game.statusSummary)
+    printSummary(game.targetSummary)
     printSummary(game.removedCardsSummary)
     if (game.useExpansionRules) {
       printSummary(game.civilWarSummary)
       printSummary(game.caliphateSummary)
     }
+    printSummary(game.removedCardsSummary)
   }
 
   sealed trait CardAction
