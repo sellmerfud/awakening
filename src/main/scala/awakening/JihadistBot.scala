@@ -1765,7 +1765,9 @@ object JihadistBot extends BotHelpers {
     if (eventPlayable) {
       performCardEvent(card, Jihadist)
       // If the card event is Unassociated add ops to the Bot's reserves.
-      if (card.association == Unassociated)
+      // Note: The Enhanced Jihadist bot does not add to reserves
+      // after playing an Unassociated event.
+      if (card.association == Unassociated && !game.botEnhancements)
         addToReserves(Jihadist, card.ops)
     }
     else {
