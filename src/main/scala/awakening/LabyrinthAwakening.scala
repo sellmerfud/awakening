@@ -7187,7 +7187,7 @@ object LabyrinthAwakening {
       log(f"$amt%2d - $name")
 
     log(s"\nDraw cards alternately into the $Jihadist and $US hands", Color.Info)
-    log(s"upto $jihadistNum cards and $usNum cards respectively.", Color.Info)
+    log(s"up to $jihadistNum cards and $usNum cards respectively.", Color.Info)
 
     increaseCardsInHand(Jihadist, jihadistNum)
     increaseCardsInHand(US, usNum)
