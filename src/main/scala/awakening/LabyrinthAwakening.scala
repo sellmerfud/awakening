@@ -6458,6 +6458,7 @@ object LabyrinthAwakening {
     active: Boolean,
     forTravel: Boolean): Unit = {
     if (num > 0) {
+      testCountry(toName)
       val makeActive =
         game.isCaliphateMember(toName) ||
         (forTravel && toName == UnitedStates && globalEventInPlay(TravelBan))
@@ -6470,7 +6471,6 @@ object LabyrinthAwakening {
       else
         assert(from.sleeperCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num sleeper cells")
 
-      testCountry(toName)
       if (fromName == toName)
         num match {
           case 1 => log(s"1 $fromType in $fromName travels in place and becomes $toType1", Color.MapPieces)
