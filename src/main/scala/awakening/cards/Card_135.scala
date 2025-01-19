@@ -90,7 +90,7 @@ object Card_135 extends Card(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, N
         askMenu("Choose one:", choices).head match {
           case "draw" =>
             log("\nDraw the top card in the Jihadist Bot's hand", Color.Event)
-            askCardsDrawn(US, 1, FromRole(game.botRole)::Nil)
+            askCardDrawnFromOpponent(role)
 
           case _ =>
             val Available = "Available Plots box"
@@ -129,7 +129,7 @@ object Card_135 extends Card(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, N
           removeAvailableWMD(1)
         else if (hasCardInHand(Jihadist)) {
           log(s"\nYou ($Jihadist) must place one random card on top of the $US hand", Color.Event)
-          askCardsDrawn(US, 1, FromRole(game.humanRole)::Nil)
+          askCardDrawnFromOpponent(role, optPrompt = Some(s"What is the card # of card given to the $US: "))
         }
         else {
           val plots = for {

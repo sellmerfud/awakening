@@ -47,6 +47,8 @@ import awakening.LabyrinthAwakening._
 // Tweets is ON.
 // ------------------------------------------------------------------
 object Card_266 extends Card(266, "Presidential Reality Show", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+  val TargetCards = List(251, 252, 253, 254, 272, 297, 305, 326, 336, 337, 348, 355, 360)
+
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -60,41 +62,37 @@ object Card_266 extends Card(266, "Presidential Reality Show", US, 2, NoRemove, 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    !(game.hasMuslim(m => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange)))
+    !(game.hasMuslim(m => m.totalTroops > 0 && (m.civilWar || m.inRegimeChange))) &&
+    candidateCards().nonEmpty
+
 
   def candidateCards() = {
-    val targets = List(251, 252, 253, 254, 272, 297, 305, 326, 336, 337, 348, 355, 360)
-    targets.filter(game.cardsDiscarded.contains)
+    game.cardsDiscarded.filter(TargetCards.contains)
   }
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = candidateCards().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val cardNum = if (isHuman(role)) {
-      val choices = candidateCards().map(n => n -> deck(n).numAndName)
-      askMenu("Select which card from the discard pile:", choices).head
-    }
+    if (isHuman(role))
+      askCardDrawnFromDiscardPile(role, only = candidateCards().toSet)
     else {
       // If Trump Tweet is of the Bot will take the Trump Tweets card closest
-      // to the bottom of the pile if possible,  otherise it will take any 
+      // to the bottom of the pile if possible,  otherise it will take any
       // candidate card closeest to the bottom.
       val AllCandidates = candidateCards().toSet
       val TrumpTweetsCandidates = Set(251, 252, 253).intersect(AllCandidates)
-      if (!trumpTweetsON && TrumpTweetsCandidates.nonEmpty)
+      val cardNum = if (!trumpTweetsON && TrumpTweetsCandidates.nonEmpty)
         game.cardsDiscarded.reverse.find(TrumpTweetsCandidates.contains).get
       else
         game.cardsDiscarded.reverse.find(AllCandidates.contains).get
+      processCardDrawn(role, cardNum, FromDiscard)
     }
-
-    log(s"\nThe US selects ${deck(cardNum).numAndName}", Color.Event)
-    cardDrawnFromDiscardPile(cardNum)
-    increaseCardsInHand(US, 1)
   }
 }

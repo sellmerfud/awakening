@@ -74,7 +74,7 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
     if (isHuman(role)) {
       log(s"\nTake the top two cards from the $Jihadist hand.", Color.Event)
       log(s"Keep one and return the other to the top of the $Jihadist hand.")
-      askCardsDrawn(US, 1, FromRole(Jihadist)::Nil, optPrompt = Some("What is the card# of the card that you kept? "))
+      askCardDrawnFromOpponent(US, optPrompt = Some("What is the card# of the card that you kept: "))
     }
     else {
       log(s"\nYou ($Jihadist) must randomly discard one card.", Color.Event)

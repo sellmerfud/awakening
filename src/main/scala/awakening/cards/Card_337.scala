@@ -93,7 +93,7 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
     putTroopsInOffMapBox(source, 1)
 
     log(s"\n$US player draws 1 card", Color.Event)
-    askCardsDrawn(US, 1, FromDrawPile::Nil)
+    askCardDrawnFromDrawPile(US)
   }
   else { // Jihadist
     setTrumpTweetsOFF()

@@ -97,7 +97,7 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
           performAlert(name, plot)
       }
       log("\nThe US player draws 2 cards", Color.Event)
-      askCardsDrawn(US, 2, FromDrawPile::Nil)
+      askMultipleCardsDrawnFromDrawPile(role, 2)
 
     case Jihadist if game.availablePlots.nonEmpty =>
       val (name, plot) = if (isHuman(role)) {

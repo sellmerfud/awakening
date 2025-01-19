@@ -131,13 +131,13 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
       log(s"No available $Plot2, $Plot3, or cells.  The event has no effect. ", Color.Event)
 
     if (isHuman(role)) {
-      if (hasCardInHand(Jihadist)) {
+      if (hasCardInHand(role)) {
         log("\nJihadist player may return Boko Haram to hand by discarding", Color.Event)
         log("a non-US associated 3 Ops card", Color.Event)
-        if (askYorN("\nDo you wish to discard a non-US associated 3 Ops card? (y/n) ")) {
-          // getDiscard() will decrease cards in hand by 1 if card was discarded
-          if (getDiscard())
-            setIgnoreDiscardAtEndOfTurn(true)
+          if (askYorN("\nDo you wish to discard a non-US associated 3 Ops card? (y/n) ")) {
+          if (askCardsDrawnFull(
+            role, 1, List(FromDiscard), lessOk = true, opsRequired = Set(3), assocRequired = Set(Jihadist, Unassociated)).nonEmpty)
+              setIgnoreDiscardAtEndOfTurn(true)
         }
       }
       else
@@ -145,32 +145,5 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
     }
     else
       log("\nThe Jihadist Bot does not return the Boko Haram card to hand.", Color.Event)
-  }
-
-  // The discarded card must be a non-US associated 3 Ops card
-  def getDiscard(): Boolean = {
-    val prompt = s"\nWhat is the card# of non-US associated 3 Ops card being discarded: (blank if none) "
-
-    def cardIsValid(cardNum: Int) = {
-      val card = deck(cardNum)
-      card.association != US && card.printedOps == 3
-    }
-
-    def askForCard(): Boolean = {
-      askCardNumber(FromRole(Jihadist)::Nil, prompt) match {
-        case None =>
-          false
-        case Some(cardNum) if cardIsValid(cardNum) =>
-          decreaseCardsInHand(Jihadist, 1)
-          processDiscardedCard(cardNum)
-          true
-        case Some(cardNum) =>
-          val card = deck(cardNum).toString
-          displayLine(s"$card is not a valid discard.")
-          askForCard()
-      }
-    }
-
-    askForCard()
   }
 }

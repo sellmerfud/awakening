@@ -154,12 +154,7 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
             setCountryPosture(target, posture)
 
           case _ =>
-              val choices = cardDrawCandidates.map(n => n -> cardNumAndName(n))
-              askMenu("\nChoose card from discard pile:", choices)
-                .foreach { cardNum =>
-                  cardDrawnFromDiscardPile(cardNum)
-                  increaseCardsInHand(role, 1)
-                }
+              askCardDrawnFromDiscardPile(role, only = cardDrawCandidates.toSet)
         }
         nextAction(actionNum + 1, used + action)
       }

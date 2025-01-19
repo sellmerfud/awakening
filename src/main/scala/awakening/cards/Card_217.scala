@@ -47,23 +47,9 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
-  def cardCandidates() = {
-    val labCards = if (GameModeOrdering.lt(game.startingMode, AwakeningMode))
-      List(37, 39)
-    else
-      Nil
-    val awakeCards = if (GameModeOrdering.lt(game.startingMode, ForeverWarMode))
-      List(165, 188, 234, 133, 226, 238, 167, 152)
-    else
-      Nil
-    val foreverCards = if (GameModeOrdering.gt(game.currentMode, AwakeningMode))
-      List(272, 277, 293)
-    else
-      Nil
+  val ValidCards = List(37, 39, 165, 188, 234, 133, 226, 238, 167, 152, 272, 277, 293)
 
-    val allCards = labCards ::: awakeCards ::: foreverCards
-    allCards.sorted.filter(game.cardsDiscarded.contains)
-  }
+  def cardCandidates() = game.cardsDiscarded.filter(ValidCards.contains)
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
@@ -92,18 +78,13 @@ object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLaps
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     val cardNum = if (isHuman(role)) {
-      val choices = cardCandidates().map(n => n -> deck(n).numAndName)
-      askMenu("Select which card from the discad pile:", choices).head
+      askCardDrawnFromDiscardPile(role, only = cardCandidates().toSet)
     }
     else {
       // Bot take candidate card nearest the bottom of the discard pile
       val candidates = cardCandidates().toSet
       val cardNum = game.cardsDiscarded.reverse.find(candidates.contains).get
-      log(s"\n$role Bot selects ${deck(cardNum).numAndName}.", Color.Event)
-      cardNum
+      processCardDrawn(role, cardNum, FromDiscard)
     }
-
-    cardDrawnFromDiscardPile(cardNum)
-    increaseCardsInHand(role, 1)
   }
 }

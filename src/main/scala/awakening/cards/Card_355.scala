@@ -43,7 +43,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 // Play if Trump Tweets is ON.
 // Cancel the next non-Automatic Event ard played by either player this
-// turn. he card may still be played for OPs.
+// turn. The card may still be played for OPs.
 // Flip Trump Tweets to OFF.
 // ------------------------------------------------------------------
 object Card_355 extends Card(355, "Fake News", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {

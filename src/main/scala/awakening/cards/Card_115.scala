@@ -96,8 +96,8 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
 
         addEventTarget(name)
         removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
-        log(s"\n$US player draw 2 cards", Color.Event)
-        askCardsDrawn(US, 2, FromDrawPile::Nil)
+        log(s"\n$US player draws 2 cards", Color.Event)
+        askMultipleCardsDrawnFromDrawPile(role, 2)
 
       case Jihadist if game.availablePlots.nonEmpty =>
         val (name, plot) = if (isHuman(role)) {

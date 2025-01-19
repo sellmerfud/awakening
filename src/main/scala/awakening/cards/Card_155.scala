@@ -73,6 +73,6 @@ object Card_155 extends Card(155, "Fracking", US, 3, NoRemove, NoLapsing, NoAuto
     addGlobalEventMarker(Fracking)
     rollPrestige()
     log("\nUS player draws a card", Color.Event)
-    askCardsDrawn(US, 1, FromDrawPile::Nil)
+    askCardDrawnFromDrawPile(role)
   }
 }

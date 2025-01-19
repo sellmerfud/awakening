@@ -77,69 +77,59 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
   def executeEvent(role: Role): Unit = {
     val opponent = oppositeRole(role)
     if (isHuman(role))
-      log(s"\nTake the top card of the $opponent hand", Color.Event)
+      log(s"\n$role takes the top card of the $opponent Bot's hand", Color.Event)
     else
-      log(s"\nTake a random card from your ($opponent) hand", Color.Event)
+      log(s"\n$role Bot take a random card from your ($opponent) hand", Color.Event)
 
-    val cardNum = askCardNumber(FromRole(opponent)::Nil, s"Card # of the card taken: ", allowNone = false).get
-    val card = deck(cardNum)
-    val cardDisplay = card.numAndName
-    val eventName = s""""${card.cardName}""""
+    // This will return None if Avenger was drawn, triggers and discarded
+    askCardDrawnFromOpponent(role, Some(s"What is the # of the card taken: "))
+      .foreach { cardNum =>
+        val card = deck(cardNum)
+        val cardDisplay = card.numAndName
+        val eventName = s""""${card.cardName}""""
 
-    // Clear this in case it is need by the event that was drawn.
-    cachedEventPlayableAnswer = None
+        // Clear this in case it is need by the event that was drawn.
+        cachedEventPlayableAnswer = None
+        val action = if (isHuman(role)) {
+          val choices = List(
+            choice(card.eventIsPlayable(role), "event",  s"Play the $cardDisplay event"),
+            choice(!card.autoTrigger,          "discard",s"Discard $cardDisplay"),
+            choice(true,                       "return", s"Return $cardDisplay to the $opponent hand"),
+            choice(true,                       "keep",   s"Keep $cardDisplay and give another card to the $opponent")
+          ).flatten
+          askMenu("Choose one:", choices).head
+        }
+        else if (card.eventIsPlayable(role))
+          "event"  // Bot will play event if possible
+        else
+          "discard" // Otherwise Bot will discard (which will trigger any auto-event)
 
-    // Avenger card will trigger when randomly drawn.
-    if (cardNum == AvengerCard) {
-      decreaseCardsInHand(opponent, 1)
-      avengerCardDrawn()
-      addCardToDiscardPile(AvengerCard)
-    }
-    else {
-      val action = if (isHuman(role)) {
-        val choices = List(
-          choice(card.eventIsPlayable(role), "event",  s"Play the $cardDisplay event"),
-          choice(!card.autoTrigger,          "discard",s"Discard $cardDisplay"),
-          choice(true,                       "return", s"Return $cardDisplay to the $opponent hand"),
-          choice(true,                       "keep",   s"Keep $cardDisplay and give another card to the $opponent")
-        ).flatten
-        askMenu("Choose one:", choices).head
+        action match {
+          case "discard" =>
+            processDiscardedCard(role, cardNum)
+
+          case "return"  =>
+            log(s"\nReturn $cardDisplay to the top of the $opponent hand", Color.Event)
+            decreaseCardsInHand(role, 1)
+            increaseCardsInHand(oppositeRole(role), 1)
+
+          case "keep"    =>
+            log(s"\nKeep $cardDisplay and place another card from your hand the $opponent hand", Color.Event)
+            askCardDrawnFromOpponent(oppositeRole(role), Some(s"What is the # of the card given: "), except = Set(cardNum))
+
+          case _ => // Play the event
+            addAdditionalCardToPlayedCard(card.number)
+            decreaseCardsInHand(role, 1)
+            log(s"\n$role executes the $cardDisplay event")
+            log(separator())
+            card.executeEvent(role)
+            if (card.markLapsingAfterExecutingEvent(role))
+              putCardInLapsingBox(card.number)
+            else if (card.removeAfterExecutingEvent(role))
+              removeCardFromGame(card.number)
+            else
+              addCardToDiscardPile(card.number)
+        }
       }
-      else if (card.eventIsPlayable(role))
-        "event"  // Bot will play event if possible
-      else
-        "discard" // Otherwise Bot will discard (which will trigger any auto-event)
-
-      action match {
-        case "discard" =>
-          decreaseCardsInHand(opponent, 1)
-          processDiscardedCard(cardNum)
-
-        case "return"  =>
-          log(s"\nReturn $cardDisplay to the top of the $opponent hand", Color.Event)
-
-        case "keep"    =>
-          log(s"\nKeep $cardDisplay and place another card from your hand the $opponent hand", Color.Event)
-          val givenNum = askCardNumber(FromRole(role)::Nil, s"Card # of the card given: ", allowNone = false).get
-          if (givenNum == AvengerCard) {
-            avengerCardDrawn()
-            decreaseCardsInHand(opponent, 1) // Reduce oppoents hand because Avenger is discarded
-            addCardToDiscardPile(AvengerCard)
-          }
-
-        case _ => // Play the event
-          decreaseCardsInHand(opponent, 1)
-          addAdditionalCardToPlayedCard(card.number)
-          log(s"\n$role executes the $cardDisplay event")
-          log(separator())
-          card.executeEvent(role)
-          if (card.markLapsingAfterExecutingEvent(role))
-            putCardInLapsingBox(card.number)
-          else if (card.removeAfterExecutingEvent(role))
-            removeCardFromGame(card.number)
-          else
-            addCardToDiscardPile(card.number)
-      }
-    }
   }
 }

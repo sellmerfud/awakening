@@ -81,7 +81,7 @@ object Card_034 extends Card(34, "Enhanced Measures", US, 3, NoRemove, NoLapsing
       addGlobalEventMarker(EnhancedMeasures)
       if (hasCardInHand(Jihadist)) {
         log(s"Take the top card of the $Jihadist Bot's hand", Color.Event)
-        askCardsDrawn(US, 1, FromRole(game.botRole)::Nil)
+        askCardDrawnFromOpponent(role)
       }
       else
         log(s"The $Jihadist Bot's hand is empty so no card is drawn.", Color.Event)
@@ -93,7 +93,7 @@ object Card_034 extends Card(34, "Enhanced Measures", US, 3, NoRemove, NoLapsing
       addGlobalEventMarker(EnhancedMeasures)
       if (hasCardInHand(Jihadist)) {
         log(s"$Jihadist (you) must put a random card from your hand on top card of the $US Bot's hand")
-        askCardsDrawn(US, 1, FromRole(game.humanRole)::Nil)
+        askCardDrawnFromOpponent(role, optPrompt = Some(s"What is the card # of the card given: "))
       }
       else
         log(s"The $Jihadist Players's hand is empty so no card is drawn.", Color.Event)

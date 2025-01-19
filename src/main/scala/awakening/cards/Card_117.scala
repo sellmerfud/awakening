@@ -72,18 +72,7 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
     val cardNum = shuffle(candidateCards(role).filter(_.printedOps == highOps).map(_.number)).head
 
     log(s"\n$role Bot selects ${deck(cardNum).numAndName}", Color.Event)
-
-    val source = if (game.cardsDiscarded.contains(cardNum))
-      cardDrawnFromDiscardPile(cardNum)
-    else if (game.cardsLapsing().contains(cardNum))
-      cardDrawnFromLapsingBox(cardNum)
-    else
-      cardDrawnFromFirstPlotBox(cardNum)
-
-    if (cardNum == AvengerCard)
-      avengerCardDrawn()
-    else
-      increaseCardsInHand(role, 1)
+    processCardDrawn(role, cardNum, cardLocation(cardNum).get)
   }
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

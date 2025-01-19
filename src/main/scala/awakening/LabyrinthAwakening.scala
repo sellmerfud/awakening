@@ -143,12 +143,26 @@ object LabyrinthAwakening {
   implicit val GameModeOrdering: Ordering[GameMode] = Ordering.by { m: GameMode => m.orderValue }
 
 
-  sealed trait CardAssociation
-  case object Unassociated extends CardAssociation { override def toString() = "Unassociated" }
+  sealed trait CardAssociation {
+    def assocString: String
+  }
+  case object Unassociated extends CardAssociation {
+    override def toString() = "Unassociated"
+    override def assocString = toString()
+  }
 
   sealed trait Role extends CardAssociation
-  case object US extends Role       { override def toString() = "US" }
-  case object Jihadist extends Role { override def toString() = "Jihadist" }
+  case object US extends Role
+  {
+    override def toString() = "US"
+    override def assocString = "US-Associated"
+  }
+
+  case object Jihadist extends Role {
+    override def toString() = "Jihadist"
+    override def assocString = "Jihadist-Associated"
+  }
+
   object Role {
     def apply(name: String): Role = name.toLowerCase match {
       case "us"       => US
@@ -2488,6 +2502,7 @@ object LabyrinthAwakening {
   sealed trait CardDrawSource {
     def name: String
     def contains(cardNum: Int): Boolean
+    override def toString() = name
   }
 
   case object FromDiscard extends CardDrawSource {
@@ -2603,26 +2618,32 @@ object LabyrinthAwakening {
     prompt: String,
     initial: Option[String] = None,
     allowNone: Boolean = true,
-    opsRequired: Option[Int] = None,
-    assocRequired: Option[CardAssociation] = None
+    only: Set[Int] = Set.empty,
+    except: Set[Int] = Set.empty,
+    opsRequired: Set[Int] = Set.empty,
+    assocRequired: Set[CardAssociation] = Set.empty
     ): Option[Int] = {
 
-    def validCardNumber(num: Int) = {
+    def opsOk(cardNum: Int) = opsRequired.isEmpty || opsRequired(deck(cardNum).printedOps)
 
+    def opsList = orList(opsRequired.toList.sorted)
+
+    def assocOk(cardNum: Int) = assocRequired.isEmpty || assocRequired(deck(cardNum).association)
+
+    def assocList = orList(assocRequired.toList.map(_.assocString))
+
+    def onlyOk(cardNum: Int) = only.isEmpty || only(cardNum)
+
+    def exceptOk(cardNum: Int) = except.isEmpty || !except(cardNum)
+
+    def cardList(cardNums: Set[Int]) = orList(cardNums
+      .toList
+      .sorted
+      .map(cardNumAndName))
+
+    def validCardNumber(num: Int) = {
       var isValid = false
       def display = s"[${cardNumAndName(num)}]"
-
-      def opsOk(cardNum: Int) = opsRequired match {
-        case None => true
-        case Some(ops) => deck(cardNum).printedOps == ops
-      }
-
-      def assocOk(cardNum: Int) = assocRequired match {
-        case None => true
-        case Some(assoc) => deck(cardNum).association == assoc
-        }
-
-
 
       if (!deck.isValidCardNumber(num))
         println(s"$num is not a valid card number for any of the scenario decks.")
@@ -2636,15 +2657,18 @@ object LabyrinthAwakening {
           println(s"It is in the ${location.name}")
         }
       }
-      else if (!opsOk(num))
-        println(s"${cardNumAndName(num)} is not a ${amountOf(opsRequired.get, "Op")} card.")
-      else if (!assocOk(num)) {
-        val assoc = assocRequired.get match {
-          case Unassociated => "an Unassociated"
-          case role => s"a $role-Associated"
-        }
-        println(s"${cardNumAndName(num)} is not $assoc card.")
+      else if (!onlyOk(num)) {
+        println(s"${cardNumAndName(num)} is not allowed.")
+        println(s"Select one of ${cardList(only)}")
       }
+      else if (!exceptOk(num)) {
+        println(s"${cardNumAndName(num)} cannot be drawn.")
+        println(s"Select a card other than ${cardList(except)}")
+      }
+      else if (!opsOk(num))
+        println(s"${cardNumAndName(num)} is not a $opsList Ops card.")
+      else if (!assocOk(num))
+        println(s"${cardNumAndName(num)} is not $assocList.")
       else
         isValid = true
 
@@ -2674,7 +2698,25 @@ object LabyrinthAwakening {
       }
     }
 
-    testResponse(initial)
+    // If we have any only set, then show a
+    // menu with only those cards.
+    val onlyList = if (only.nonEmpty)
+      sources
+        .flatMap(cardsInSource)
+        .filter(n => onlyOk(n) && exceptOk(n) && opsOk(n) && assocOk(n))
+    else
+      Nil
+
+    if (initial.isEmpty && onlyList.nonEmpty) {
+      val cardChoices = onlyList.map(n => Some(n) -> cardNumAndName(n))
+      val menuChoices = if (allowNone)
+        cardChoices :+ (None -> "Do not select a card")
+      else
+        cardChoices
+      askMenu("Select card:", menuChoices).head
+    }
+    else
+      testResponse(initial)
   }
 
   // At the end of a game the US wins if it has more than twice as many
@@ -2888,76 +2930,162 @@ object LabyrinthAwakening {
   val CriticalMiddle   = 200
   val AvengerCard      = 242
 
-  // Ask for the cards drawn form the given sources during the exeuction of
-  // an event and increase the hand count o the given role.
-  // -- This is NOT used for cards drawn at the beginning of the turn.
-  // -- This function handles triggering the Avenger event if it is drawn.
-  // -- If the only source is the Draw Pile and there are not enough cards in
-  //    the draw pile to satisfy the request:
-  //        -- For a non campaign game add the (shuffled) discards
-  //           to the draw pile and increasing the deck count or end the game.
-  //        -- For a campign game we handle adding the next deck to the draw pile
-  //           and updating the current game mode, or ending the game.
-  //
-  def askCardsDrawn(
-    role: Role,
-    numDrawn: Int,
-    sources: List[CardDrawSource],
-    lessOk: Boolean = false,
-    optPrompt: Option[String] = None): Unit = {
-    val blankIfNone = if (lessOk)
-       "(blank if none) "
-    else
-      ""
-    for (num <- (1 to numDrawn)) {
-      val prompt = optPrompt match {
-        case Some(prompt) =>
-          prompt
-        case None if numDrawn == 1 =>
-          s"\nWhat is the card# of the card that was drawn: $blankIfNone"
-        case None =>
-          s"\nWhat is the card# of the ${ordinal(num)} card that was drawn: $blankIfNone"
-      }
 
-      // If only source is the draw pile and the draw pile is empty...
-      if (sources == List(FromDrawPile) && numCardsInDrawPile() == 0) {
-        log("\nThe draw pile is empty and a card must be drawn.", Color.Info)
-        handleEmptyDrawPile(atEndOfTurn = false)
-      }
+  // Process a card drawn by the given role from the given source.
+  // The card is removed from the source and the hand size of the role
+  // is increased (unless the card is `Avenger` in which case the event is
+  // triggered and the card is placed in the discard  pile.)
+  // Returns true if the card was taken into hand.
+  def processCardDrawn(role: Role, cardNum: Int, source: CardDrawSource, triggerAvenger: Boolean = true): Boolean = {
+    log(s"\n$role draws ${cardNumAndName(cardNum)} from the $source", Color.Info)
+    source match {
+      case FromDrawPile =>
+        // We don't keep track of cards in the deck
 
-      askCardNumber(sources, prompt, allowNone = lessOk) match {
-        case None =>
-          return
-        case Some(cardNum) =>
-          log(s"${deck(cardNum)} is drawn", Color.Event)
+      case FromDiscard =>
+        game = game.copy(cardsDiscarded = game.cardsDiscarded.filterNot(_ == cardNum))
 
-          sources.find(_.contains(cardNum)).get match {
-            case FromDrawPile =>
-              // We don't keep track of cards in the deck
-            case FromDiscard =>
-              cardDrawnFromDiscardPile(cardNum)
-            case FromLapsing =>
-              cardDrawnFromLapsingBox(cardNum)
-            case From1stPlot =>
-              cardDrawnFromFirstPlotBox(cardNum)
-            case FromRemoved =>
-              cardDrawnFromRemovedPile(cardNum)
-            case FromRole(from) =>
-              decreaseCardsInHand(from, 1)
-            case other =>
-              throw new IllegalStateException(s"askCardsDrawn() cannot use this source: ${other.name}")
-          }
+      case FromLapsing =>
+        log("Mark the event as still lapsing.", Color.Info)
+        val newLapsing = game.eventsLapsing.map {
+          case LapsingEntry(`cardNum`, _) => LapsingEntry(cardNum, discarded = true)
+          case other => other
+        }
+        game = game.copy(eventsLapsing = newLapsing)
 
-          // Avenger event triggers and is placed in the
-          // discard pile.  Otherwise the play that drew the
-          // card adds it to their hand
-          if (cardNum == AvengerCard)
-            avengerCardDrawn()
-          else
-            increaseCardsInHand(role, 1)
-      }
+      case From1stPlot =>
+        log("Place an inuse marker in the first plot box.", Color.Info)
+        // Card number of zero used for 1st Plot marker
+        game = game.copy(firstPlotEntry = Some(LapsingEntry(0, discarded = true)))
+
+      case FromRemoved =>
+        game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
+
+      case FromRole(from) =>
+        decreaseCardsInHand(from, 1)
+
+      case other =>
+        throw new IllegalStateException(s"processCardDrawn() cannot use this source: ${other.name}")
+    }
+
+    // Avenger event triggers and is placed in the
+    // discard pile.  Otherwise the player that drew the
+    // card adds it to their hand
+    if (cardNum == AvengerCard && triggerAvenger) {
+      avengerCardDrawn()
+      false
+    }
+    else {
+      increaseCardsInHand(role, 1)
+      true
     }
   }
+
+  // This function is used to draw 1 or more cards from one or
+  // more sources: draw pile, discard pile, removed pile, lapsing box(es),
+  // 1st plot box, US hand, Jihadist hand
+  //
+  // This function is a bit of a Swiss Army knife and takes a  lot of
+  // arguments.  Most calles will probably want to call one of the simpler
+  // functions that make use of this one.
+  //
+  // This function validates that the card number entered is valid for the
+  // current scenario and that it exists on of the given sources.
+  // There are parameters to limit it to card with a given number of Ops,
+  // and/or a given association.
+  //
+  // For each card draw, the card is removed from the source, and the
+  // number of cards in hand for the given role is increased.
+  //
+  // -- This function will handle triggering the Avenger event if it is drawn.
+  // -- If the only source is the Draw Pile and there are not enough cards in
+  //    the draw pile to satisfy the request then this function will
+  ///   call handleEmptyDrawPile()
+  def askCardsDrawnFull(
+    role: Role,                      // Role that is drawing cards
+    totalNum: Int,                   // The number of cards to draw
+    sources: List[CardDrawSource],   // One or more sources from which to draw
+    lessOk: Boolean = false,         // true if < that numCards is allowed, including zero
+    optPrompt: Option[String] = None, // Override the default prompt
+    triggerAvenger: Boolean = true,
+    only: Set[Int] = Set.empty,
+    except: Set[Int] = Set.empty,
+    opsRequired: Set[Int] = Set.empty,
+    assocRequired: Set[CardAssociation] = Set.empty,
+  ): List[Either[Unit, Int]] = {
+    val blankIfNone = if (lessOk) " (blank if none)" else ""
+
+    def prompt(num: Int) = optPrompt
+      .getOrElse {
+        if (totalNum > 1)
+          s"\nWhat is the # the ${ordinal(num)} card that was drawn$blankIfNone: "
+        else
+          s"\nWhat is the # of the card that was drawn$blankIfNone: "
+      }
+
+
+    def nextDraw(num: Int): List[Either[Unit, Int]] =
+      if (num <= totalNum) {
+        // If only source is the draw pile and the draw pile is empty...
+        if (sources == List(FromDrawPile) && numCardsInDrawPile() == 0) {
+          log("\nThe draw pile is empty and a card must be drawn.", Color.Info)
+          handleEmptyDrawPile(atEndOfTurn = false)
+        }
+
+        val optCardNum = askCardNumber(
+          sources,
+          prompt(num),
+          allowNone = lessOk,
+          only = only,
+          except = except,
+          opsRequired = opsRequired,
+          assocRequired = assocRequired)
+
+        optCardNum match {
+          case None =>
+            return Nil
+
+          case Some(cardNum) =>
+            val source = sources.find(_.contains(cardNum)).get
+            // If card was taken into hand (not Avenger) then add it to the list
+            if (processCardDrawn(role, cardNum, source, triggerAvenger))
+              Right(cardNum)::nextDraw(num + 1)
+            else
+              Left(())::nextDraw(num + 1)
+        }
+      }
+      else
+        Nil
+
+    nextDraw(1).reverse
+  }
+
+  // Ask for 1 required card drawn from the Draw pile
+  // Will return None if Avenger was drawn triggered and discarded
+  def askCardDrawnFromDrawPile(role: Role, optPrompt: Option[String] = None): Option[Int] =
+    askCardsDrawnFull(role, 1, List(FromDrawPile), optPrompt = optPrompt).head.toOption
+
+  // Ask for `n` required cards drawb from the Draw pile
+  def askMultipleCardsDrawnFromDrawPile(role: Role, num: Int, optPrompt: Option[String] = None): List[Int] =
+    askCardsDrawnFull(role, num, List(FromDrawPile), optPrompt = optPrompt)
+      .flatMap(_.toSeq)
+
+  // Ask for 1 required card drawn from the Opponents hand
+  // Will return None if Avenger was drawn triggered and discarded
+  def askCardDrawnFromOpponent(role: Role, optPrompt: Option[String] = None, except: Set[Int] = Set.empty): Option[Int] = {
+    askCardsDrawnFull( role, 1, List(FromRole(oppositeRole(role))), optPrompt = optPrompt, except = except).head.toOption
+  }
+
+
+  // Ask for 1 required card drawn from the Discard pile
+  // Will return None if Avenger was drawn triggered and discarded
+  def askCardDrawnFromRemovedPile(role: Role, optPrompt: Option[String] = None, only: Set[Int] = Set.empty): Option[Int] =
+    askCardsDrawnFull(role, 1, List(FromRemoved), optPrompt = optPrompt, only = only).head.toOption
+
+  // Ask for 1 required card drawn from the Discard pile
+  // Will return None if Avenger was drawn triggered and discarded
+  def askCardDrawnFromDiscardPile(role: Role, optPrompt: Option[String] = None, only: Set[Int] = Set.empty): Option[Int] =
+    askCardsDrawnFull(role, 1, List(FromDiscard), optPrompt = optPrompt, only = only).head.toOption
 
   // Events such as Oil Price Spike, OPEC Production Cut, and Peace Dividend
   // allow the player to draw a card from either the discard pile or from a
@@ -2977,54 +3105,29 @@ object LabyrinthAwakening {
       log("\nThere are no cards in the Discard pile, Lapsing box, or First Plot box.", Color.Event)
     else {
       displayLine(s"\nSelect a card from the ${orList(sources.map(_.name).toList)} and add it to your hand.")
-
-      def askForCard(): Unit = {
-        askCardNumber(sources.toList, "\nWhat is the card# of the card that was drawn: (blank if none) ") match {
-          case None =>
-          case Some(num) if prohibited(num) =>
-            displayLine(s"You cannot select ${deck(num).numAndName}")
-            askForCard()
-          case Some(num) =>
-            sources.find(_.contains(num)).get match {
-              case FromDiscard => cardDrawnFromDiscardPile(num)
-              case FromLapsing => cardDrawnFromLapsingBox(num)
-              case _ => cardDrawnFromFirstPlotBox(num)
-            }
-
-            if (num == AvengerCard)
-              avengerCardDrawn()
-            else
-              increaseCardsInHand(role, 1)
-        }
-      }
-      askForCard()
+      askCardsDrawnFull(role, 1, sources.toList, except = prohibited)
     }
   }
 
-  def processDiscardedCard(cardNum: Int, triggerRole: Option[Role] = None): Unit = {
+  def processDiscardedCard(role: Role, cardNum: Int, triggerRole: Option[Role] = None): Unit = {
     val card = deck(cardNum)
-    val name = card.cardName
+    val eventName = card.cardName
+
+    decreaseCardsInHand(role, 1)
+    log(s"\n$role discards ${cardNumAndName(cardNum)}", Color.Event)
     if (cardNum == AvengerCard)
       avengerCardDrawn(discarded = true)
     else if (card.autoTrigger) {
-      log()
-      log(s"""The "$name" is being discarded, so the event triggers""", Color.Event)
+      log(s"\"$eventName\" is being discarded, so the event triggers", Color.Event)
       log(separator())
       card.executeEvent(US)  // Role does not matter
     }
     else if (triggerRole.contains(role => card.eventWillTrigger(role))) {
-      log()
-      log(s"""The "$name" event is triggered.""", Color.Event)
+      log(s"\nThe \"$eventName\" event is triggered.", Color.Event)
       performCardEvent(card, Jihadist, triggered = true)
     }
-    else {
-      // If there was a possiblity of triggering the event,
-      // then display that the event did not trigger.
-      if (triggerRole.nonEmpty) {
-        log()
-        log(s"""The "$name" event does not trigger.""", Color.Event)
-      }
-    }
+    else if (triggerRole.nonEmpty)
+      log(s"\nThe \"$eventName\" event does not trigger.", Color.Event)
     // Finally, place the card in the discard pile
     addCardToDiscardPile(cardNum)
   }
@@ -3032,46 +3135,43 @@ object LabyrinthAwakening {
   // Return card number that was discarded, or None.
   def askCardBeingDiscarded(
     role: Role,
-    prompt: String,
+    optPrompt: Option[String] = None,
     triggerRole: Option[Role] = None,
-    opsRequired: Option[Int] = None,
-    assocRequired: Option[CardAssociation] = None,
+    opsRequired: Set[Int] = Set.empty,
+    assocRequired: Set[CardAssociation] = Set.empty,
     allowNone: Boolean = false): Option[Int] = {
+    val blankIfNone = if (allowNone) " (blank if none)" else ""
+    val prompt = optPrompt.getOrElse(s"What # of the card being discarded$blankIfNone: ")
 
-    def askForCard(): Option[Int] = {
-      val response = askCardNumber(
-        FromRole(role)::Nil,
-        prompt,
-        allowNone = allowNone,
-        opsRequired = opsRequired,
-        assocRequired = assocRequired)
+    val optCardNum = askCardNumber(
+      FromRole(role)::Nil,
+      prompt,
+      allowNone = allowNone,
+      opsRequired = opsRequired,
+      assocRequired = assocRequired)
 
-      response match {
-        case None =>
-          None
-        case Some(cardNum) =>
-          decreaseCardsInHand(role, 1)
-          processDiscardedCard(cardNum, triggerRole)
-          Some(cardNum)
+    // If we got a card, then remove it from hand and add
+    // it to the discard pile processing events as necessary
+    optCardNum
+      .foreach { cardNum =>
+        processDiscardedCard(role, cardNum, triggerRole)
       }
-    }
-
-    askForCard()
+    optCardNum
   }
 
   // Convience method for discarding by number of cards
   def askCardsDiscarded(role: Role, numCards: Int, lessOk: Boolean = false, triggerRole: Option[Role] = None): List[Int] = {
     val blankIfNone = if (lessOk)
-       "(blank if none) "
+       " (blank if none)"
     else
       ""
     def nextCard(currentNum: Int): List[Int] = {
       if (currentNum <= numCards) {
         val prompt = if (numCards == 1)
-          s"\nWhat is the card# of the $role card being discarded: $blankIfNone"
+          s"\nWhat is the # of the $role card being discarded$blankIfNone: "
         else
-          s"\nWhat is the card# of the ${ordinal(currentNum)} $role card being discarded: "
-        askCardBeingDiscarded(role, prompt, triggerRole = triggerRole, allowNone = lessOk) match {
+          s"\nWhat is the # of the ${ordinal(currentNum)} $role card being discarded$blankIfNone: "
+        askCardBeingDiscarded(role, Some(prompt), triggerRole = triggerRole, allowNone = lessOk) match {
           case None =>
             Nil
           case Some(cardNum) =>
@@ -3090,10 +3190,10 @@ object LabyrinthAwakening {
     def nextCard(currentNum: Int, accumulatedOps: Int): Unit = {
       if (accumulatedOps < totalOps && hasCardInHand(role)) {
         val prompt =
-          s"\nWhat is the card# of the ${ordinal(currentNum)} $role card being discarded: (blank if none) "
+          s"\nWhat is the # of the ${ordinal(currentNum)} $role card being discarded: (blank if none) "
 
         displayLine(s"\n${amountOf(accumulatedOps, "Op")} of $totalOps have been accounted for.", Color.Info)
-        askCardBeingDiscarded(role, prompt, triggerRole) match {
+        askCardBeingDiscarded(role, Some(prompt), triggerRole) match {
           case None =>
           case Some(cardNum) =>
             nextCard(currentNum + 1, accumulatedOps + deck(cardNum).printedOps)
@@ -5546,16 +5646,6 @@ object LabyrinthAwakening {
     }
   }
 
-  def cardDrawnFromDiscardPile(cardNumber: Int): Unit = {
-    log("\n%s drawn from the discard pile".format(deck(cardNumber).numAndName), Color.Event)
-    game = game.copy(cardsDiscarded = game.cardsDiscarded.filterNot(_ == cardNumber))
-  }
-
-    def cardDrawnFromRemovedPile(cardNumber: Int): Unit = {
-    log("\n%s drawn from the removed pile".format(deck(cardNumber).numAndName), Color.Event)
-    game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNumber))
-  }
-
   def removeCardFromGame(cardNumber: Int): Unit = {
     log("\nRemove %s from the game".format(deck(cardNumber).numAndName), Color.Event)
     game = game.copy(cardsRemoved = cardNumber :: game.cardsRemoved)
@@ -5564,16 +5654,6 @@ object LabyrinthAwakening {
   def putCardInLapsingBox(cardNumber: Int): Unit = {
     log("\nPut %s in the lapsing box".format(deck(cardNumber).numAndName), Color.Event)
     game = game.copy(eventsLapsing = LapsingEntry(cardNumber) :: game.eventsLapsing)
-  }
-
-  def cardDrawnFromLapsingBox(cardNumber: Int): Unit = {
-    log("\n%s drawn from the lapsing box".format(deck(cardNumber).numAndName), Color.Event)
-    log("Mark the event as still lapsing.", Color.Event)
-    val newLapsing = game.eventsLapsing.map {
-      case LapsingEntry(`cardNumber`, _) => LapsingEntry(cardNumber, discarded = true)
-      case other => other
-    }
-    game = game.copy(eventsLapsing = newLapsing)
   }
 
   def cardDrawnFromFirstPlotBox(cardNumber: Int): Unit = {
@@ -8002,7 +8082,7 @@ object LabyrinthAwakening {
     val reserves = if (activeRole == Jihadist)
       s"${amountOf(game.reserves.jihadist, "op")} in reserve"
     else
-        s"${amountOf(game.reserves.us, "op")} in reserve"      
+        s"${amountOf(game.reserves.us, "op")} in reserve"
     val phaseNum = actionPhaseCount(activeRole) + 1
     val roleType = if (isHuman(activeRole)) "Player's" else "Bot's"
     val phase = s"$activeRole $roleType ${ordinal(phaseNum)} action phase"
@@ -8465,7 +8545,7 @@ object LabyrinthAwakening {
 
         case Reassess =>
           println("You must play a second 3 Ops card")
-          askCardNumber(FromRole(US)::Nil, "Card # ", allowNone = true, opsRequired = Some(3)) match {
+          askCardNumber(FromRole(US)::Nil, "Card # ", allowNone = true, opsRequired = Set(3)) match {
             case None => throw AbortAction
             case Some(cardNum) =>
               val card2 = deck(cardNum)

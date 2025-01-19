@@ -82,10 +82,10 @@ object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoA
   def executeEvent(role: Role): Unit = {
     val name = askCountry("Select adversary country: ", getCandidates())
     val ops = (game getMuslim name).resourceValue
-    val prompt = s"\nYou must discard card with Ops value: $ops"
-
+    
+    displayLine(s"\nYou must discard card with Ops value: $ops", Color.Info)
     printSummary(game.countrySummary(name))
-    askCardBeingDiscarded(role, prompt, opsRequired = Some(ops)) match {
+    askCardBeingDiscarded(role, opsRequired = Set(ops)) match {
       case Some(_) =>
         println()
         addEventTarget(name)

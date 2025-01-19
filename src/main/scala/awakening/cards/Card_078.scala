@@ -73,9 +73,8 @@ object Card_078 extends Card(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsin
     if (isHuman(role))
       log(s"\nThe $US Bot does NOT discard any cards", Color.Event)
     else if (hasCardInHand(US)) {
-      log(s"\nYou ($US) must discard any of Iran, Hizballah, or Jaysh al-Mahdi", Color.Event)
-      if (askCardsDiscarded(US, 1, lessOk = true) == Nil)
-        log("\nThe US did not discard one of: Iran, Hizballah, or Jaysh al-Mahdi", Color.Event)
+      displayLine(s"\nYou ($US) must discard any of Iran, Hizballah, or Jaysh al-Mahdi", Color.Info)
+      askCardsDiscarded(US, 1, lessOk = true)
     }
     else
       log(s"\nThe $US does not have a card to discard.", Color.Event)

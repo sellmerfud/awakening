@@ -64,40 +64,26 @@ object Card_160 extends Card(160, "Operation Neptune Spear", US, 3, NoRemove, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = candidateCards.exists(game.cardsDiscarded.contains)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    candidateCards.exists(game.cardsDiscarded.contains)
+  def botWillPlayEvent(role: Role): Boolean = true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role)) {
-      val choices = candidateCards.map(n => n -> deck(n).numAndName) :+
-        (0, "No card was drawn")
-  
-      val prompt = "\nSelect a card from the discard pile:"
-      askMenu(prompt, choices).head match {
-        case 0 =>
-          log("\nNo card was drawn from the discard pile", Color.Event)
-        case cardNum =>
-          cardDrawnFromDiscardPile(cardNum)
-          increaseCardsInHand(role, 1)
-      }
-    }
+    if (isHuman(role))
+      askCardDrawnFromDiscardPile(role, only = candidateCards.toSet)
     else {
       // See Event Instructions table
       // Bot takes the candidate card closes to the bottom of the discard pile
       val cardNum = game.cardsDiscarded.reverse.find(candidateCards.contains).get
-      log("\nThe Bot selects the card that is nearest the bottom of the discard pile:", Color.Event)
-      cardDrawnFromDiscardPile(cardNum)
-      increaseCardsInHand(role, 1)
+      processCardDrawn(role, cardNum, FromDiscard)
     }
   }
 }

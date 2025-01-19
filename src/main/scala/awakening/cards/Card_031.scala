@@ -93,10 +93,10 @@ object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAu
     }
     
     if (isHuman(role))
-      log(s"$US draws one card and adds it to their hand")
+      log(s"$US draws a card and adds it to their hand")
     else
-      log(s"Add one card to the top of the $US Bot hand")
-    askCardsDrawn(US, 1, FromDrawPile::Nil)
+      log(s"Draw a one card and place it on top of the $US Bot'sw hand")
+    askCardDrawnFromDrawPile(role)
     addGlobalEventMarker(Wiretapping)
   }
 }
