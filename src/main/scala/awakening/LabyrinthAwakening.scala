@@ -4133,7 +4133,7 @@ object LabyrinthAwakening {
     }
     else if (card.association == opponent && allowOpponentTrigger) {
       if (card.eventWillTrigger(opponent))
-        log(s"The $opponent event will trigger.", Color.Info)
+        log(s"The $opponent event will trigger$fakeNews.", Color.Info)
       else
         log(s"The $opponent event will NOT trigger.", Color.Info)
     }
