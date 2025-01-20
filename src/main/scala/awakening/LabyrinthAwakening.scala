@@ -7907,13 +7907,13 @@ object LabyrinthAwakening {
       log(reason, Color.Info)
 
       if (askExitAfterWin()) {
-        game = game.copy(turnActions = Nil)
+        // game = game.copy(turnActions = Nil)
         saveGameState(Some(summary))
         throw QuitGame
       }
       else {
         game = game.copy(ignoreVictory = true)
-        saveGameState(Some(summary))
+        log(s"\nIgnoring $victor automatic victory.", Color.Info)
       }
     }
 
