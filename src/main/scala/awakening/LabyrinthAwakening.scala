@@ -7204,7 +7204,7 @@ object LabyrinthAwakening {
       log(f"$amt%2d - $name")
 
     log(s"\nDraw cards alternately into the $Jihadist and $US hands", Color.Info)
-    log(s"up to $jihadistNum cards and $usNum cards respectively.", Color.Info)
+    log(s"drawing $jihadistNum cards and $usNum cards respectively.", Color.Info)
 
     increaseCardsInHand(Jihadist, jihadistNum)
     increaseCardsInHand(US, usNum)
@@ -8393,7 +8393,7 @@ object LabyrinthAwakening {
     printSummary(game.removedCardsSummary)
   }
 
-  
+
 
   // Test to see if the event should trigger and if so
   // perform the event.
@@ -8635,7 +8635,7 @@ object LabyrinthAwakening {
         // Ask what happens next
         val choices = options.map(o => Some(o) -> o.menuText) :+
           (None, s"Abort card")
-        
+
         val newOptions = askMenu("What happens next:", choices).head match {
           case None =>
             if (askYorN("Really abort (y/n)? "))
