@@ -83,14 +83,14 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val numCadres = if (role == game.humanRole)
+    val numCadres = if (isHuman(role))
       askInt("Place how many cadres", 1, 3, Some(3))
     else
       3
 
     def nextCadre(num: Int, candidates: List[String]): Unit =
       if (num <= numCadres && candidates.nonEmpty) {
-        val target = if (role == game.humanRole)
+        val target = if (isHuman(role))
           askCountry(s"Place ${ordinal(num)} cadre is which country: ", candidates)
         else
           JihadistBot.recruitTravelToPriority(candidates).get

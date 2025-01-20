@@ -105,7 +105,7 @@ object Card_323 extends Card(323, "Blasphemy", Unassociated, 1, NoRemove, NoLaps
       }
 
     var (target, placementAction) = role match {
-      case _ if role == game.humanRole =>
+      case _ if isHuman(role) =>
         val target = askCountry("Place a marker in which country: ", getCandidates())
         val marker = humanMarker(target)
         (target, marker)

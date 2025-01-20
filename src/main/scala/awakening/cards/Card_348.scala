@@ -91,7 +91,7 @@ object Card_348 extends Card(348, "Travel Ban", Unassociated, 2, NoRemove, NoLap
       removeLapsingEvents(List(Biometrics, IslamicMaghreb))
       val candidates = countryNames(game.muslims.filter(_.awakening > 0))
       if (candidates.nonEmpty) {
-        val target = if (role == game.humanRole)
+        val target = if (isHuman(role))
           askCountry("Remove awakening marker from which country: ", candidates)
         else
           JihadistBot.markerTarget(candidates).get

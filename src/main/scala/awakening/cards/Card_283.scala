@@ -74,7 +74,7 @@ object Card_283 extends Card(283, "Lone Wolf", Jihadist, 1, NoRemove, NoLapsing,
   def executeEvent(role: Role): Unit = {
     val testCountries = Canada::Scandinavia::India::Nil
 
-    val testTarget = if (role == game.humanRole)
+    val testTarget = if (isHuman(role))
       askCountry("Test which country: ", testCountries)
     else {
       // The Bot will only select and untested country if the GWOT penalty is zero

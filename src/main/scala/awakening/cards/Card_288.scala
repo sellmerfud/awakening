@@ -135,7 +135,7 @@ object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRe
       case _ => // 6
         val candidates = countryNames(game.muslims.filter(_.canTakeBesiegedRegimeMarker))
         if (candidates.nonEmpty) {
-          val target = if (role == game.humanRole)
+          val target = if (isHuman(role))
             askCountry("Place a Besieged Regime marker in which country: ", candidates)
           else
             JihadistBot.markerTarget(candidates).get

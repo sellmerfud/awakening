@@ -84,7 +84,7 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
   def executeEvent(role: Role): Unit = {
     if (role == US) {
       if (removeCellCandidates().nonEmpty) {
-        val (target, (actives, sleepers, sadr)) = if (isHuman(role) == game.humanRole) {
+        val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
           val t = askCountry("Remove a Cell from which country: ", removeCellCandidates())
           (t, askCells(t, 1, true))
         }
