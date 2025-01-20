@@ -2652,7 +2652,8 @@ object LabyrinthAwakening {
     only: Set[Int] = Set.empty,
     except: Set[Int] = Set.empty,
     opsRequired: Set[Int] = Set.empty,
-    assocRequired: Set[CardAssociation] = Set.empty
+    assocRequired: Set[CardAssociation] = Set.empty,
+    allowAbort: Boolean = true,
     ): Option[Int] = {
 
     def opsOk(cardNum: Int) = opsRequired.isEmpty || opsRequired(deck(cardNum).printedOps)
@@ -2706,6 +2707,7 @@ object LabyrinthAwakening {
       isValid
     }
 
+    val ABORT = raw"(?i)(?:a|ab|abo|abor|abort)".r
     // Test the reponse and prompt again if necessary
     def testResponse(response: Option[String]): Option[Int] = {
       response match {
@@ -2713,6 +2715,11 @@ object LabyrinthAwakening {
           readLine(prompt) match {
             case null | "" if allowNone => None
             case null | "" => testResponse(None)
+            case ABORT() if allowAbort =>
+              if (askYorN("Really abort (y/n)? "))
+                throw AbortAction
+              else
+                testResponse(None)
             case input => testResponse(Some(input))
           }
 
@@ -7940,7 +7947,7 @@ object LabyrinthAwakening {
   // This action is only take by the Human US player
   case object DiscardLast extends UserAction {
     override def perform(param: Option[String]): Unit = {
-      askCardNumber(FromRole(US)::Nil, "Card # to discard (blank to cancel): ", param)
+      askCardNumber(FromRole(US)::Nil, "Card # to discard (blank to cancel): ", param, allowAbort = false)
         .foreach { cardNumber =>
           decreaseCardsInHand(US, 1)
           addCardToDiscardPile(cardNumber)
@@ -8457,7 +8464,7 @@ object LabyrinthAwakening {
   // the action phase.  Hence the `additional` parameter.
   def usCardPlay(param: Option[String], additional: Boolean = false): Unit = {
 
-    askCardNumber(FromRole(US)::Nil, "Card # ", param) foreach { cardNumber =>
+    askCardNumber(FromRole(US)::Nil, "Card # ", param, allowAbort = false) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
 
@@ -8834,7 +8841,7 @@ object LabyrinthAwakening {
 
   def jihadistCardPlay(param: Option[String]): Unit = {
 
-    askCardNumber(FromRole(Jihadist)::Nil, "Card # ", param) foreach { cardNumber =>
+    askCardNumber(FromRole(Jihadist)::Nil, "Card # ", param, allowAbort = false) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
 
@@ -9615,7 +9622,7 @@ object LabyrinthAwakening {
             println(separator())
             wrapInColumns("", candidates.sorted.map(cardNumAndName))
               .foreach(println)
-            askCardNumber(source::Nil, s"Enter # of card in the ${source.name} (blank for none): ")
+            askCardNumber(source::Nil, s"Enter # of card in the ${source.name} (blank for none): ", allowAbort = false)
         }
     }
   }
