@@ -80,6 +80,7 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    log("\nUS side selects Scandinavia's Posture.", Color.Event)
     val posture = if (isHuman(US))
       askPosture(Scandinavia)
     else

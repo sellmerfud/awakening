@@ -119,9 +119,9 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
     val eventSelection: Either[String, Int] = if (isHuman(role)) {
       askMenu("Choose one:", eventTypechoices).head match {
         case "marker" =>
-          Left(askMenu("\nRemove which event marker:", markerChoices).head)
+          Left(askMenu("Remove which event marker:", markerChoices).head)
         case _ =>
-          Right(askMenu[Int]("\nRemove which lapsing card: ", lapsingChoices).head)
+          Right(askMenu[Int]("Remove which lapsing card: ", lapsingChoices).head)
       }
     }
     else { // Bot will choose event marker first, then lapsing event

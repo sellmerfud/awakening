@@ -82,7 +82,7 @@ object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing
     val card = deck(askCardNumber(FromRole(role)::Nil, prompt, allowNone = false).get)
     decreaseCardsInHand(Jihadist, 1)
     addSecondCardToPlayedCard(card.number)
-    logCardPlay(Jihadist, card, playable = false, secondCard = true)
+    logCardPlay(Jihadist, card, opsOnly = true, allowOpponentTrigger = false)
 
     def nextRecruit(completed: Int): Unit = 
       if (completed < card.ops && game.cellsToRecruit > 0) {
@@ -117,7 +117,7 @@ object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing
         List(RecruitAction, TriggerAction) -> "Recruit before triggering the event",
         List(TriggerAction, RecruitAction) -> "Trigger the event before recruiting",
       )
-      askMenu("\nChoose one:", choices).head
+      askMenu("Choose one:", choices).head
     }
     else
       List(RecruitAction)

@@ -2345,7 +2345,7 @@ object LabyrinthAwakening {
       false -> "Continue with the game ignoring further victory conditions.",
       true  -> "Exit the game."
     )
-    askMenu("\nChoose one:", choices).head
+    askMenu("Choose one:", choices).head
   }
 
   def askInt(prompt: String, low: Int, high: Int, default: Option[Int] = None, allowAbort: Boolean = true): Int = {
@@ -2527,7 +2527,7 @@ object LabyrinthAwakening {
   }
 
   def askPosture(country: String): String =
-    askSimpleMenu(s"\nSelect the posture of $country: ", List(Soft, Hard))
+    askSimpleMenu(s"Select the posture of $country: ", List(Soft, Hard))
 
 
   sealed trait CardDrawSource {
@@ -4112,21 +4112,31 @@ object LabyrinthAwakening {
   def logAdjustment(countryName: String, attributeName: String, oldValue: Any, newValue: Any): Unit =
     logAdjustment(s"$countryName: $attributeName", oldValue, newValue)
 
-  def logCardPlay(player: Role, card: Card, playable: Boolean, secondCard: Boolean = false): Unit = {
+  def logCardPlay(player: Role, card: Card, opsOnly: Boolean = false, allowOpponentTrigger: Boolean = true): Unit = {
+    val opponent = oppositeRole(player)
     val fakeNews = if (lapsingEventInPlay(FakeNews))
      """, but will be cancelled by "Fake News""""
     else
       ""
+
     log()
     log(separator(char = '='), Color.Other)
-    val second = if (secondCard) " [2nd card play]" else ""
-    log(s"$player plays $card$second", Color.Other)
+    log(s"$player plays $card", Color.Other)
+
     if (card.autoTrigger)
-      log(s"The ${card.association} event will automatically trigger", Color.Other)
-    else if ((card.association == player || card.association == Unassociated) && playable && !secondCard)
-      log(s"The ${card.association} event is playable$fakeNews", Color.Other)
-    else if ((card.association == player || card.association == Unassociated) && !playable && !secondCard)
-      log(s"The ${card.association} event is not playable", Color.Other)
+      log(s"The ${card.association} event will automatically trigger", Color.Info)
+    else if ((card.association == player || card.association == Unassociated) && !opsOnly) {
+      if (card.eventIsPlayable(player))
+        log(s"The ${card.association} event is playable$fakeNews", Color.Info)
+      else
+        log(s"The ${card.association} event is NOT playable", Color.Info)
+    }
+    else if (card.association == opponent && allowOpponentTrigger) {
+      if (card.eventWillTrigger(opponent))
+        log(s"The $opponent event will trigger.", Color.Info)
+      else
+        log(s"The $opponent event will NOT trigger.", Color.Info)
+    }
   }
 
   def separator(length: Int = 72, char: Char = '-'): String = char.toString * length
@@ -8383,72 +8393,11 @@ object LabyrinthAwakening {
     printSummary(game.removedCardsSummary)
   }
 
-  sealed trait CardAction
-  case class  TriggeredEvent(card: Card) extends CardAction
-  case object Ops extends CardAction
-
-  // Return a list of actions.
-  // card2 is only used for US reassessment
-  def getActionOrder(cards: List[Card], opponent: Role): List[CardAction] = {
-
-    def askOrder(prompt: String, choices: List[(String, String)]): String = {
-      val allChoices = choices :+ ("abort", "Abort card")
-      askMenu(prompt, allChoices, allowAbort = false).head match {
-        case "abort" =>
-          if (askYorN("Really abort (y/n)? "))
-            throw AbortAction
-          else
-            askOrder(prompt, choices)
-        case result => result
-      }
-    }
-    val (triggeredCards, nonTriggeredCards) = cards
-      .partition(c => c.autoTrigger || c.eventWillTrigger(opponent))
-
-    println()
-    for (c <- nonTriggeredCards; if c.association == opponent)
-      displayLine(s"The $opponent associated \"${c.cardName}\" event will not trigger.", Color.Info)
-    for (c <- triggeredCards) {
-      val desc = if (c.association == opponent)
-          s"The $opponent associated \"${c.cardName}\" event will trigger."
-        else
-          s"The \"${c.cardName}\" event will auto trigger."
-      displayLine(desc, Color.Info)
-    }
-
-    triggeredCards match {
-      case c :: Nil =>
-        val choices = List(
-          "operations" ->  "Operations",
-          "event"      -> s"Event: ${c.cardName}"
-        )
-
-        askOrder("\nWhich should happen first?", choices)  match {
-          case "event"    => List(TriggeredEvent(c), Ops)
-          case _          => List(Ops, TriggeredEvent(c))
-        }
-
-      case c1 :: c2 :: Nil =>
-        val choices = List(
-          "operations" -> "Reassessment",
-          "1st event"  -> s"Event: ${c1.cardName}",
-          "2nd event"  -> s"Event: ${c2.cardName}")
-        val first  = askOrder("\nWhich should happen first?", choices)
-        val second = askOrder("\nWhich should happen second?", choices.filterNot(_._1 == first))
-        val third  = choices.map(_._1).filterNot(k => k == first || k == second).head
-        List(first, second, third).map {
-          case "1st event" => TriggeredEvent(c1)
-          case "2nd event" => TriggeredEvent(c2)
-          case _           => Ops
-        }
-      case _ => // No events triggered
-        List(Ops)
-    }
-  }
+  
 
   // Test to see if the event should trigger and if so
   // perform the event.
-  def attemptTriggeredEvent(opponentRole: Role, card: Card): Unit = {
+  def performTriggeredEvent(opponentRole: Role, card: Card): Unit = {
     if (card.autoTrigger)
       performCardEvent(card, opponentRole, triggered = true)
     else if (card.eventWillTrigger(opponentRole))
@@ -8458,6 +8407,7 @@ object LabyrinthAwakening {
       }
     else
       log("\n%s event \"%s\" has no effect".format(card.association, card.cardName), Color.Event)
+    pause()
   }
 
   // The Intel Community event allows the US to play an additional card during
@@ -8476,7 +8426,7 @@ object LabyrinthAwakening {
 
       cachedEventPlayableAnswer = None
 
-      logCardPlay(US, card, card.eventIsPlayable(US))
+      logCardPlay(US, card)
       try {
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
@@ -8545,6 +8495,7 @@ object LabyrinthAwakening {
     }
   }
 
+
   // Once the user enters a valid command (other than using reserves), then in order to
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
@@ -8566,7 +8517,25 @@ object LabyrinthAwakening {
     def inReserve    = game.reserves.us
     def opsAvailable = (card.ops + reservesUsed) min 3
 
+    val origEventWillTrigger = card.autoTrigger || card.eventWillTrigger(Jihadist)
     val canReassess = firstCardOfPhase(US) && card.ops == 3 && hasCardInHand(US)
+
+    sealed trait PerformOption {
+      def menuText: String
+    }
+    case object PerformCardActivity extends PerformOption {
+      override def menuText = "Operations"
+    }
+    case object Play2ndCard extends PerformOption {
+      override def menuText = "Play 2nd card to perform Reassessment"
+    }
+    case object PerformReassess extends PerformOption {
+      override def menuText = "Perform Reassessment"
+    }
+    case class TriggerOpponentEvent(card: Card) extends PerformOption {
+      override def menuText = s"Trigger event [${card.cardName}]"
+
+    }
 
     def promptForSecondCard(): Card = {
       println("\nYou must play a second 3 Ops card.")
@@ -8578,15 +8547,16 @@ object LabyrinthAwakening {
           decreaseCardsInHand(US, 1)
           // Replace the head card play with a reassessment
           game = game.copy(turnActions = PlayedReassement(card.number, card2.number) :: game.turnActions.tail)
-          logCardPlay(US, card2, card2.eventIsPlayable(US), true)
+          logCardPlay(US, card2, opsOnly = true)
           card2
       }
     }
 
-    // Returns the activity and optinally a second card if Reassess was selected.
-    @tailrec def getUsActivity(): String = {
+
+    @tailrec def getUsActivity(): Either[String, List[PerformOption]] = {
       // The US must announce reassessment before triggering an event
       // so if the event was triggered then reassessment is not allowed.
+      val showReassess = canReassess && !origEventWillTrigger && inReserve == 0
       val actions = List(
         choice(eventPlayable && reservesUsed == 0,         ExecuteEvent, ExecuteEvent),
         choice(true,                                       WarOfIdeas, WarOfIdeas),
@@ -8595,6 +8565,7 @@ object LabyrinthAwakening {
         choice(game.withdrawPossible(opsAvailable),        Withdraw, Withdraw),
         choice(game.disruptTargets(opsAvailable).nonEmpty, Disrupt, Disrupt),
         choice(game.alertPossible(opsAvailable),           Alert, Alert),
+        choice(showReassess,                               Reassess, Reassess),
         choice(card.ops < 3 && inReserve < 2,              AddReserves, AddReserves),
         choice(opsAvailable < 3 && inReserve > 0,          UseReserves, UseReserves),
         choice(true,                                       AbortCard, AbortCard),
@@ -8603,33 +8574,118 @@ object LabyrinthAwakening {
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
 
       askMenu(s"$US action: ", actions).head match {
-        case UseReserves =>
-          reservesUsed = inReserve
-          log(s"$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
-          game = game.copy(reserves = game.reserves.copy(us = 0))
-          getUsActivity()
-
         case AbortCard =>
           if (askYorN("Really abort (y/n)? "))
             throw AbortAction
           else
             getUsActivity()
 
+        case UseReserves =>
+          reservesUsed = inReserve
+          log(s"$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
+          game = game.copy(reserves = game.reserves.copy(us = 0))
+          getUsActivity()
+
+        case Reassess =>
+            val card2 = promptForSecondCard()
+            if (card2.autoTrigger || card2.eventWillTrigger(Jihadist))
+              Right(List(PerformReassess, TriggerOpponentEvent(card2)))
+            else
+              Left(Reassess)
+
         case action =>
-          action
+          Left(action)
       }
     }
 
-    def askReassess(): Boolean = {
-      val choices = List(
-        Some(false) -> "Use only this card to perform an action.",
-        Some(true) -> "Do a Reassessment using this card and another 3 Ops card.",
-        None -> "Abort this card."
-      )
-      askMenu("You played a 3 Ops card:", choices).head match {
-        case Some(result) => result
-        case None => throw AbortAction
+    def performCardActivity(activity: String): Unit = {
+      activity match {
+        case AddReserves  => addToReserves(US, card.ops)
+        case ExecuteEvent => performCardEvent(card, US)
+        case WarOfIdeas   => humanWarOfIdeas(opsAvailable)
+        case Deploy       => humanDeploy(opsAvailable)
+        case Disrupt      => humanDisrupt(opsAvailable)
+        case Reassess     => humanReassess()
+        case RegimeChg    => humanRegimeChange()
+        case Withdraw     => humanWithdraw()
+        case Alert        => humanAlert()
+        case _ => throw new IllegalStateException(s"performCardActivity() - Invalid US activity: $activity")
       }
+      pause()
+    }
+
+    def processOptions(options: List[PerformOption]): Unit = options match {
+      case Nil =>
+        // End the processOptions recursive loop
+      case PerformCardActivity::Nil =>
+        getUsActivity() match {
+          case Left(activity) =>
+            performCardActivity(activity)
+          case Right(moreOptions) =>
+            processOptions(options.filterNot(_ == PerformCardActivity):::moreOptions)
+        }
+
+      case PerformReassess::Nil =>
+        performCardActivity(Reassess)
+
+      case TriggerOpponentEvent(c)::Nil =>
+        performTriggeredEvent(Jihadist, c)
+
+      case options =>
+        // Ask what happens next
+        val choices = options.map(o => Some(o) -> o.menuText) :+
+          (None, s"Abort card")
+        
+        val newOptions = askMenu("What happens next:", choices).head match {
+          case None =>
+            if (askYorN("Really abort (y/n)? "))
+              throw AbortAction
+            else
+              options
+
+          case Some(PerformCardActivity) =>
+            getUsActivity() match {
+              case Left(activity) =>
+                performCardActivity(activity)
+                options
+                  .filter {
+                    case PerformCardActivity => false
+                    case Play2ndCard => false  // Not longer an option!
+                    case _ => true
+                  }
+              case Right(moreOptions) =>
+                // Reassess and TriggerCard replace the perform option
+                // So the user can chooose the order
+                options.filterNot(_ == PerformCardActivity):::moreOptions
+            }
+
+          case Some(Play2ndCard) =>
+            val card2 = promptForSecondCard()
+            val triggerCard2 = if (card2.autoTrigger || card2.eventWillTrigger(Jihadist))
+              List(TriggerOpponentEvent(card2))
+            else
+              Nil
+            PerformReassess :: options
+              .filter {
+                case Play2ndCard => false
+                case PerformCardActivity => false
+                case _ => true
+              } ::: triggerCard2
+
+          case Some(PerformReassess) =>
+            performCardActivity(Reassess)
+            options.filterNot(_ == PerformReassess)
+
+          case Some(TriggerOpponentEvent(c)) =>
+            performTriggeredEvent(Jihadist, c)
+            options
+              .filter {
+                case TriggerOpponentEvent(x) => x.number != c.number
+                case Play2ndCard => false // No longer an option!
+                case _ => true
+              }
+        }
+        processOptions(newOptions)
     }
 
     // If the the event will auto trigger of if it is a Jihadist associated event
@@ -8637,41 +8693,13 @@ object LabyrinthAwakening {
     // Reassessment.  This is done because the player must "announce" that they
     // wish to do Reassessment before seeing the results of any triggered event form
     // the first 3 Ops card played.
-    val eventWillTrigger = card.autoTrigger || card.eventWillTrigger(Jihadist)
-    val (doReassess, actionOrder) = if (canReassess && askReassess()) {
-      val card2 = promptForSecondCard()
-      (true, getActionOrder(card::card2::Nil, opponent = Jihadist))
-    }
-    else 
-      (false, getActionOrder(card::Nil, opponent = Jihadist))
-
-
-    def doCardAction(action: CardAction): Unit = action match {
-      case TriggeredEvent(c) =>
-        attemptTriggeredEvent(Jihadist, c)
-
-      case Ops if doReassess =>
-        humanReassess()
-
-      case Ops =>
-        getUsActivity() match {
-          case AddReserves  => addToReserves(US, card.ops)
-          case ExecuteEvent => performCardEvent(card, US)
-          case WarOfIdeas   => humanWarOfIdeas(opsAvailable)
-          case Deploy       => humanDeploy(opsAvailable)
-          case Disrupt      => humanDisrupt(opsAvailable)
-          case Reassess     => humanReassess()
-          case RegimeChg    => humanRegimeChange()
-          case Withdraw     => humanWithdraw()
-          case Alert        => humanAlert()
-          case _ => throw new IllegalStateException(s"Invalid US action: $action")
-        }
+    val initialOptions = (origEventWillTrigger, canReassess) match {
+      case (false, _) => List(PerformCardActivity)
+      case (true, false) => List(PerformCardActivity, TriggerOpponentEvent(card))
+      case (true, true) => List(PerformCardActivity, TriggerOpponentEvent(card), Play2ndCard)
     }
 
-    for (action <- actionOrder) {
-      doCardAction(action)
-      pause()
-    }
+    processOptions(initialOptions)
   }
 
   // This method allows the human player to execute an operation with the
@@ -8852,8 +8880,7 @@ object LabyrinthAwakening {
       cachedEventPlayableAnswer = None
       // If TheDoorOfItjihad lapsing card is in effect,
       // then Jihadist cannot play any events (except autoTrigger events)
-      val playable = lapsingEventNotInPlay(TheDoorOfItjihad) && card.eventIsPlayable(Jihadist)
-      logCardPlay(Jihadist, card, playable)
+      logCardPlay(Jihadist, card)
       try {
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
@@ -8963,49 +8990,60 @@ object LabyrinthAwakening {
       }
     }
 
+    def performCardActivity(activity: String): Unit = {
+      activity match {
+        case AddReserves  => addToReserves(Jihadist, card.ops)
+        case ExecuteEvent => performCardEvent(card, Jihadist)
+        case Recruit      => humanRecruit(opsAvailable)
+        case Travel       => humanTravel(opsAvailable)
+        case Jihad        => humanJihad(opsAvailable)
+        case PlotAction   => humanPlot(opsAvailable)
+        case other => throw new IllegalStateException(s"Invalid Jihadist action: $other")
+      }
+      pause()
+    }
+
     // Allow the user to use the first plot option to cancel the event.
     // The Ruthless US bot resolve does not allow this.
-    val firstPlot = 
+    val canUseFirstPlot =
       !game.usResolve(Ruthless) &&
       !card.autoTrigger && card.eventWillTrigger(US) &&
       game.plotPossible(1) &&
-      game.firstPlotEntry.isEmpty &&
-      askYorN(s"\nDo you wish to use your First Plot option to cancel the $US event? (y/n) ")
+      game.firstPlotEntry.isEmpty
 
-    val actionOrder = if (firstPlot) {
-        println()
-        println(separator())
-        log(s"Place the $card card in the first plot box", Color.Info)
-        game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
-        List(TriggeredEvent(card), Ops)
+    if (card.autoTrigger || card.eventWillTrigger(US)) {
+      val choices = List(
+        choice(canUseFirstPlot, "first-plot", s"Cancel event with 1st plot option [${card.cardName}]"),
+        choice(true, "ops", "Operations"),
+        choice(true, "trigger" , s"Trigger event [${card.cardName}]"),
+        choice(true, "abort", "Abort card"),
+      ).flatten
+
+      def performActions(): Unit = {
+        askMenu("What happens next:", choices).head match {
+          case "first-plot" =>
+            log(s"\nPlace the $card card in the first plot box", Color.Info)
+            log(s"\nThe US associated \"${card.cardName}\" event does not trigger", Color.Info)
+            game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
+            performCardActivity(getJihadistActivity(true))
+
+          case "ops" =>
+            performCardActivity(getJihadistActivity(false))
+            performTriggeredEvent(US, card)
+          case "trigger" =>
+            performTriggeredEvent(US, card)
+            performCardActivity(getJihadistActivity(false))
+          case _ =>
+            if (askYorN("Really abort (y/n)? "))
+              throw AbortAction
+            else
+              performActions()
+        }
+      }
+      performActions()
     }
     else
-      getActionOrder(card :: Nil, opponent = US)
-  
-
-    def doCardAction(action: CardAction): Unit = action match {
-      case TriggeredEvent(c) if firstPlot =>
-        log(s"\nFirst plot prevents the US associated \"${card.cardName}\" event from triggering", Color.Info)
-
-      case TriggeredEvent(c) =>
-        attemptTriggeredEvent(US, c)
-
-      case Ops =>
-        getJihadistActivity(firstPlot) match {
-          case AddReserves  => addToReserves(Jihadist, card.ops)
-          case ExecuteEvent => performCardEvent(card, Jihadist)
-          case Recruit      => humanRecruit(opsAvailable)
-          case Travel       => humanTravel(opsAvailable)
-          case Jihad        => humanJihad(opsAvailable)
-          case PlotAction   => humanPlot(opsAvailable)
-          case other => throw new IllegalStateException(s"Invalid Jihadist action: $other")
-        }
-    }
-
-    for (action <- actionOrder) {
-      doCardAction(action)
-      pause()
-    }
+      performCardActivity(getJihadistActivity(false))
   }
 
   def humanRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
@@ -9783,7 +9821,7 @@ object LabyrinthAwakening {
         choice(true,                "finished",        "Finished adjusting lapsing/1st plot markers")
       ).flatten
 
-      askMenu("\nChoose one:", choices).head match {
+      askMenu("Choose one:", choices).head match {
         case "add-lapsing" =>
           val choices = notLapsing.map(n => n -> cardNumAndName(n)) :+
             (0 -> "Do not add a lapsing marker")
@@ -9801,7 +9839,7 @@ object LabyrinthAwakening {
         case "remove-lapsing" =>
           val choices = lapsing.map(n => n -> cardNumAndName(n)) :+
             (0 -> "Do not remove a lapsing marker")
-          askMenu("\nChose the card associated with the marker to remove:", choices).head match {
+          askMenu("Chose the card associated with the marker to remove:", choices).head match {
             case 0 =>
             case n =>
               movedLapsing += n

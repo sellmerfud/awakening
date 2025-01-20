@@ -86,7 +86,7 @@ object Card_053 extends Card(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing, 
     val card = deck(askCardNumber(FromRole(role)::Nil, prompt, allowNone = false).get)
     decreaseCardsInHand(Jihadist, 1)
     addSecondCardToPlayedCard(card.number)
-    logCardPlay(Jihadist, card, playable = false, secondCard = true)
+    logCardPlay(Jihadist, card, opsOnly = true, allowOpponentTrigger = false)
     
     // Add Ops on the Madrassas card.
     val totalOps = card.ops + this.ops
