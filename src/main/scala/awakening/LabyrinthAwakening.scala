@@ -2342,7 +2342,7 @@ object LabyrinthAwakening {
 
   def askExitAfterWin(): Boolean = {
     val choices = List(
-      false -> "Continue with the game ignoring further victory conditions.",
+      false -> "Continue with the game ignoring instant victory conditions.",
       true  -> "Exit the game."
     )
     askMenu("Choose one:", choices).head
