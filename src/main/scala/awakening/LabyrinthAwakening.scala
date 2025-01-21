@@ -4343,7 +4343,6 @@ object LabyrinthAwakening {
           |-----------------------------------------------------------------------------
           """.stripMargin
         displayLine(help)
-        pause()
       }
       else
         redirect_path match {
@@ -8046,23 +8045,27 @@ object LabyrinthAwakening {
       val help = """|
         |Action prompt help
         |-----------------------------------------------------------------------------
-        |Enter the menu character corresponding to an action.
-        |You will be prompted for the necessary input.
+        |This prompt shows the actions that can be taken during the current
+        |action phase.  The action(s) above the dividing line pertain to game play
+        |and those below the line allow you to view and manage the state of the game.
         |
-        |There are some shortcuts available to reduce typing.
-        |For example when playing a card you can supply the card number
-        |as an argument to avoid being prompted for it:
+        |To execute an action you simply type the name of the action.
+        |For simplcity you actually only have to type the first character of the name.
+        |After entering an action you will be prompted for the information needed to
+        |complete that action.
+        |
+        |To avoid these extra prompts you can follow the action with an argument.
+        |For example to play card #35 you would type:
         |p 35<enter>
         |
-        |And because playing a card is the most common action, you can simply
-        |enter the card number:
+        |And because playing a card is done so often, for this action only you can
+        |omit the action name and simply enter the card number:
         |35<enter>
         |
-        |The s, a, and h commands without an argument will show a menu.
-        |You can provide an argument to these commands to avoid going through the menu.
-        |Use the argument 'help' or '?' to see detailed help for the specific command:
-        |s help<enter>
-        |h ?<enter>
+        |Entering Show, History, or Adjust will display a menu of options.
+        |Once you become familiar with these actions you may want to skip the menu
+        |by following the action with an argument.
+        |Use the argument 'help' or '?' to see help for the specific action.
         |-----------------------------------------------------------------------------
         """.stripMargin
       displayLine(help)
@@ -8095,10 +8098,31 @@ object LabyrinthAwakening {
       }
   }
 
+
   // ---------------------------------------------------
   // This is the main prompt for taking an action during
   // the game.
   def actionPhasePrompt(): (UserAction, Option[String]) = {
+    val PlayCardName = "Play card"
+    def getResponse(prompt: String, options: Seq[String], allowInt: Boolean): Option[(String, Option[String])] = {
+      val HELP = raw"(?i)(?:\?|he|hel|help)".r
+
+      readLine(prompt) match {
+        case null | "" => None
+        case input =>
+          val (cmd::param) = input.trim.split(" ", 2).toList
+          cmd match {
+            case "" => None
+            case INTEGER(i) if allowInt => Some((PlayCardName, Some(i)))
+            case HELP() => Some(("?", None))
+            case s =>
+              matchOne(s.trim, options) match {
+                case Some(c) => Some((c, param.lastOption))
+                case _ => getResponse(prompt, options, allowInt)
+              }
+          }
+      }
+    }
 
     val activeRole = getActiveRole()
     val numCardsPlayed = numCardsPlayedInCurrentPhase()
@@ -8112,23 +8136,31 @@ object LabyrinthAwakening {
     val canCadre = isJihadistHuman && game.hasCountry(_.hasCadre)
     val canRoll = mostRecentSaveNumber(game.saveName).getOrElse(0) > 0
 
+    def choice(test: Boolean, name: String, action: UserAction) = if (test)
+      Some((name, action))
+    else
+      None
     val (holdLast, holdMsg) = if (isUSHuman && numInHand == 1)
       (true, " (holding last card)")
     else
       (false, "")
-    val choices = List(
-      choice(canPlay,     PlayCard,           'p', "Play a card"),
-      choice(canDiscard,  DiscardLast,        'd', "Discard last card"),
-      choice(canEndPhase, EndPhase(holdLast), 'e', s"End action phase$holdMsg"),
-      choice(canCadre,    RemoveCadre,        'v', "Volunatary cadre removal"),
-      choice(true,        ShowState,          's', "Show game state"),
-      choice(true,        History,            'h', "History"),
-      choice(canRoll,     Rollback,           'r', "Rollback"),
-      choice(true,        Adjust,             'a', "Adjust game state"),
-      choice(true,        Help,               '?', "Help"),
-      choice(true,        Quit,               'q', "Quit game"),
-    ).flatten
+    val mainChoices = ListMap(List(
+      choice(canPlay,     PlayCardName, PlayCard),
+      choice(canDiscard,  "Discard last card", DiscardLast),
+      choice(canCadre,    "Volunatary cadre removal", RemoveCadre),
+      choice(canEndPhase, s"End action phase$holdMsg", EndPhase(holdLast)),
+    ).flatten:_*)
 
+    val otherChoices = ListMap(List(
+      choice(true,    "Show", ShowState),
+      choice(true,    "History", History),
+      choice(canRoll, "Rollback", Rollback),
+      choice(true,    "Adjust", Adjust),
+      choice(true,    "Quit", Quit),
+      choice(true,    "?", Help),
+    ).flatten:_*)
+
+    val options = (mainChoices.keysIterator ++ otherChoices.keysIterator).toSeq
     val reserves = if (activeRole == Jihadist)
       s"${amountOf(game.reserves.jihadist, "Op")} in reserve"
     else
@@ -8150,9 +8182,17 @@ object LabyrinthAwakening {
     displayLine(line2, Color.Info)
     displayLine(line3, Color.Info)
     displayLine("======================================================", Color.Info)
+    displayLine()
+    for (display <- mainChoices.keysIterator)
+      displayLine(display)
+    displayLine("------------------------------------------------------")
+    displayLine(otherChoices.keysIterator.mkString(" | "))
+    displayLine("------------------------------------------------------")
     val numericItem = if (canPlay) Some(PlayCard) else None
-    argMenu("Action: ", choices, numericItem) match {
-      case Some(result) => result
+    getResponse("Action: ", options, allowInt = canPlay) match {
+      case Some((actionName, param)) =>
+        val action = mainChoices.getOrElse(actionName, otherChoices(actionName))
+        (action, param)
       case None => actionPhasePrompt()
     }
   }
@@ -8169,30 +8209,30 @@ object LabyrinthAwakening {
           saveGameState()
 
 
-    // If we are at the end of the action phase allow the user
-    // to bypass the menu
-    val activeRole = getActiveRole()
-    val numCardsPlayed = numCardsPlayedInCurrentPhase()
-    val numInHand = numCardsInHand(activeRole)
-    val owner = if (isHuman(activeRole))
-      "your"
-    else
-      s"$activeRole Bot's"
-    val isUSHuman = activeRole == US && isHuman(US)
-    val canEndPhase = numCardsPlayed == 2 || numInHand == 0
-    val promptCanFollowAction =
-      lastAction == Some(PlayCard) ||
-      lastAction == Some(DiscardLast) ||
-      lastAction == Some(EndPhase(false))
+      // If we are at the end of the action phase allow the user
+      // to bypass the menu
+      val activeRole = getActiveRole()
+      val numCardsPlayed = numCardsPlayedInCurrentPhase()
+      val numInHand = numCardsInHand(activeRole)
+      val owner = if (isHuman(activeRole))
+        "your"
+      else
+        s"$activeRole Bot's"
+      val isUSHuman = activeRole == US && isHuman(US)
+      val canEndPhase = numCardsPlayed == 2 || numInHand == 0
+      val promptCanFollowAction =
+        lastAction == Some(PlayCard) ||
+        lastAction == Some(DiscardLast) ||
+        lastAction == Some(EndPhase(false))
 
-    val promptLine1 = if (numCardsPlayed == 2)
-      "Two cards have been played."
-    else
-      s"No cards remaining in $owner hand."
-    val endPrompt = 
-      s"""|
-          |$promptLine1
-          |End the current $activeRole action phase? (y/n) """.stripMargin
+      val promptLine1 = if (numCardsPlayed == 2)
+        "Two cards have been played."
+      else
+        s"No cards remaining in $owner hand."
+      val endPrompt =
+        s"""|
+            |$promptLine1
+            |End the current $activeRole action phase? (y/n) """.stripMargin
 
       if (canEndPhase && promptCanFollowAction && askYorN(endPrompt)) {
         val action = EndPhase(false)
