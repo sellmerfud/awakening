@@ -51,9 +51,20 @@ object Card_094 extends Card(94, "The door of Itjihad was closed", Jihadist, 3, 
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates() =
-    (game.targetsThisPhase.testedOrImprovedToFairOrGood ++
-     game.targetsLastPhase.testedOrImprovedToFairOrGood).toList.sorted
+  //  A target must have been tested or improved to Fair/Good
+  // in the current or last action phase and the target must still
+  // be either Fair or Good.
+  def getCandidates() = {
+    val isFairOrGood = (name: String) =>
+      game.getCountry(name) match {
+        case m: MuslimCountry => m.isFair || m.isGood
+        case _ => false
+      }
+    (game.targetsThisPhase.testedOrImprovedToFairOrGood ++ game.targetsLastPhase.testedOrImprovedToFairOrGood)
+      .toList
+      .filter(isFairOrGood)
+      .sorted
+  }
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
