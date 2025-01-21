@@ -28,3 +28,18 @@ to_florian:
     cp target/awakening-"$VERS".zip ~/Dropbox/Public/
   fi
 
+# Dumps the contents of a log-nnn file
+[no-cd]
+@dump_log path:
+  jq -r '.log[].text' '{{path}}'
+
+# Shows the software-version, anbd file-version of a save-nnn file
+[no-cd]
+save_info path:
+  #! /usr/bin/env bash
+   jq '{ "software-version",
+         "file-version",
+         "botEnhancements": ."game-state"."botEnhancements",
+         "scenarioName": ."game-state"."scenarioName",
+         "# turn actions": ."game-state"."turnActions" | length
+       }' '{{path}}'
