@@ -2191,14 +2191,16 @@ object LabyrinthAwakening {
 
   def cacheYesOrNo(prompt: String) = cacheQuestion(askYorN(prompt))
 
+  def pluralize(num: Int, name: String, plural: Option[String] = None) =
+    (num.abs, plural) match {
+      case (1, _)            => name
+      case (_, Some(plural)) => plural
+      case _                 => s"${name}s"
+  }
   // If num is 1 use the name as is
   // otherwise either use the plural if given or add an 's' to the name.
   def amountOf(num: Int, name: String, plural: Option[String] = None) =
-    (num.abs, plural) match {
-      case (1, _)            => s"$num $name"
-      case (_, Some(plural)) => s"$num $plural"
-      case _                 => s"$num ${name}s"
-    }
+    s"$num ${pluralize(num, name, plural)}"
 
   def opsString(num: Int) = amountOf(num, "Op")
 
@@ -5113,12 +5115,33 @@ object LabyrinthAwakening {
     ).flatten
     val effects = if (effectsList.nonEmpty) effectsList.mkString(" (", ", ", ")") else ""
 
+    // Get the fresh instance of the Muslim country
+    val m = game.getMuslim(name)
+    val usPresence = List(
+      if (m.militia > 0) Some(s"${m.militia} militia") else None,
+      if (m.numAdvisors > 0) Some(amountOf(m.numAdvisors, "Advisors marker")) else None,
+      if (m.troops > 0) Some(amountOf(m.troops, "troop")) else None,
+    ).flatten ::: m.troopsMarkers
+    val usPresenceString = usPresence match {
+      case Nil => "none"
+      case _ => usPresence.mkString(", ")
+    }
+    val jihadistPresence = List(
+        if (m.cells > 0) Some(amountOf(m.cells, "cell")) else None,
+        if (m.hasSadr) Some("Sadr marker") else None,
+    ).flatten
+    val jihadistPresenceString = jihadistPresence match {
+      case Nil => "none"
+      case _ => jihadistPresence.mkString(", ")
+    }
+
+    
     log()
     log(s"Attrition: $name$effects")
     log(separator())
+    log(s"US presence: $usPresenceString")
+    log(s"Jihadist presence: $jihadistPresenceString")
 
-    // Get the fresh instance of the Muslim country
-    val m = game.getMuslim(name)
     // If Siege of Mosul in play then cells are halved and (troops + militia)
     // are doubled
     val jihadDie = getDieRoll(s"Enter Jihadist attrition die roll for $name: ")
@@ -5128,24 +5151,19 @@ object LabyrinthAwakening {
     val jihadHits = totalCells / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
     val usHits    = totalTroopsAndMilitia / 6 + (if (usDie <= totalTroopsAndMilitia % 6) 1 else 0)
 
-    if (totalCells == 0 && totalTroopsAndMilitia == 0)
-      log("No cells, troops or militia present")
-    else {
-      if (totalCells == 0)
-        log("No Jihadist cells to inflict hits")
-      else {
-        if (totalCells > 0 && totalCells % 6 != 0)
-          log(s"Jihadist die roll: $jihadDie")
-        log(s"The Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
-      }
+    if (totalCells > 0 || totalTroopsAndMilitia > 0) {
+      if (totalTroopsAndMilitia > 0 && totalTroopsAndMilitia % 6 != 0)
+        log(s"US die roll : $usDie")
+      else if (totalTroopsAndMilitia > 0)
+        log(s"US die roll : not necessary")
 
-      if (totalTroopsAndMilitia == 0)
-        log("No US troops or militia present to inflict hits")
-      else {
-        if (totalTroopsAndMilitia > 0 && totalTroopsAndMilitia % 6 != 0)
-          log(s"US die roll : $usDie")
-        log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
-      }
+      if (totalCells > 0 && totalCells % 6 != 0)
+        log(s"\nJihadist die roll: $jihadDie")
+      else if (totalCells > 0)
+        log(s"\nJihadist die roll: not necessary")
+
+      log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
+      log(s"\nThe Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
 
       if (jihadHits + usHits > 0) {
         val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits, hamaOffensive)
@@ -5156,9 +5174,10 @@ object LabyrinthAwakening {
           val delta = unfulfilledJihadHits - unfulfilledUSHits
           if (delta == 0) {
             if (unfulfilledJihadHits != 0)
-              log(s"Both sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No further effects.")
+              log(s"\nBoth sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No further effects.")
           }
           else {
+            log()
             if (unfulfilledJihadHits > 0)
               log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
             if (unfulfilledUSHits > 0)

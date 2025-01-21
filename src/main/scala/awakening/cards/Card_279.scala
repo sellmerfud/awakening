@@ -61,9 +61,11 @@ object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTri
   )
 
   // Returns true if the printed conditions of the event are satisfied
+  // Max of 3 Advisors allowed on the map.
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = numAdvisorsOnMap < 3 && getCandidates().nonEmpty
 
+  def numAdvisorsOnMap = game.muslims.map(_.numAdvisors).sum
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -76,26 +78,29 @@ object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTri
   override
   def executeEvent(role: Role): Unit = {
     //  Up to two targets
-    val targets = if (getCandidates().size == 1)
-      getCandidates()
-    else if (isHuman(role)) {
-      val numTargets = askInt("How many countries do you wish to target: ", 1, 2)
-      if (numTargets == 1)
-        askCountry("Select country for Advisors: ", getCandidates()) :: Nil
-      else
-        askCountries(2, getCandidates())
+    val maxTargets = 2 min (3 - numAdvisorsOnMap)
+
+    if (isHuman(role)) {
+      def nextPlacement(num: Int): Unit = if (num <= maxTargets) {
+        val choices = getCandidates().map(name => Some(name) -> name) :+ (None, "Finished placing Advisors")
+        displayLine(s"\n${amountOf(numAdvisorsOnMap, "Advisors marker")} of 3 total currently on the map.", Color.Info)
+        askMenu(s"Select country for ${ordinal(num)} Advisors marker:", choices).head match {
+          case Some(target) =>
+            addEventTarget(target)
+            addAdvisorsToCountry(target)
+            nextPlacement(num + 1)
+          case None =>
+        }
+      }
+      nextPlacement(1)
     }
     else {
-      val first = USBot.deployToPriority(getCandidates()).get
-      val second = USBot.deployToPriority(getCandidates().filterNot(_ == first)).get
-      first::second::Nil
-    }
-
-    val numPerTarget = 3 - targets.size
-    for (t <- targets) {
-      addEventTarget(t)
-      for (a <- 1 to numPerTarget)
-        addAdvisorsToCountry(t)
+      // Bot
+      for (num <- 1 to maxTargets) {
+        val target = USBot.deployToPriority(getCandidates()).get
+        addEventTarget(target)
+        addAdvisorsToCountry(target)
+      }
     }
   }
 }
