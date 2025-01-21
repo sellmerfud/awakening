@@ -3764,7 +3764,7 @@ object LabyrinthAwakening {
     log(s"\nRoll posture of $name")
     log(s"Die roll: $die")
     if (drm != 0) {
-      log(f"$drm%+d")
+      log(f"$drm%+d drm")
       log(s"Modified roll: $modifiedDie")
     }
     val newPosture = if (modifiedDie < 5) Soft else Hard
