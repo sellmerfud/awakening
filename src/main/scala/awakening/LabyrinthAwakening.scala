@@ -5071,6 +5071,8 @@ object LabyrinthAwakening {
 
       log()
       log(s"$US must absorb ${amountOf(losses, "loss", Some("losses"))}")
+      if (hamaOffensive)
+        log(s"$multiplier losses per hit [Hama Offensive]", Color.Info)
 
       val (markersLost, troopsLost, militiaLost) = if (game.humanRole == US) {
         // If there are any markers representing troops or
@@ -5147,14 +5149,21 @@ object LabyrinthAwakening {
       hits
     else {
       // Remove two cells per hit if any troops present or if "Advisors" marker present.
-      val multiplier    = (if (m.totalTroops > 0 || m.hasMarker(Advisors)) 2 else 1) +
-                          (if (lapsingEventInPlay(ExpandedROE)) 1 else 0)
+      val troopsOrAdvisors = m.totalTroops > 0 || m.hasMarker(Advisors)
+      val expandedROE = lapsingEventInPlay(ExpandedROE)
+      val multiplier    = (if (troopsOrAdvisors) 2 else 1) +
+                          (if (expandedROE) 1 else 0)
       val losses        = hits * multiplier
       val unfulfilled   = (losses - m.totalCells) max 0
       val hitsRemaining =  (unfulfilled + multiplier - 1) / multiplier
-
+      val desc = List(
+        if (troopsOrAdvisors) Some("Troops/Advisors") else None,
+        if (expandedROE) Some("Expanded ROE") else None,
+      ).flatten.mkString(", ")
       log()
       log(s"$Jihadist must absorb ${amountOf(losses, "loss", Some("losses"))}")
+      if (multiplier > 1)
+        log(s"$multiplier losses per hit [$desc]", Color.Info)
 
       val (activesLost, sleepersLost, sadr) = if (m.totalCells <= losses)
         (m.activeCells, m.sleeperCells, m.hasSadr)
@@ -5181,58 +5190,69 @@ object LabyrinthAwakening {
     assert(game.getMuslim(name).civilWar, s"civilWarAttrition() called on non-Civil War country: $name")
 
     val siegeOfMosul = lapsingEventInPlay(SiegeofMosul)
-    val effectsList = List(
-      if (hamaOffensive) Some("Hama Offensive") else None,
-      if (siegeOfMosul)  Some("Siege of Mosul") else None
-    ).flatten
-    val effects = if (effectsList.nonEmpty) effectsList.mkString(" (", ", ", ")") else ""
-
+    val hamaOffensiveDisplay = if (hamaOffensive)
+      Some(" (Hama Offensive)")
+    else
+      ""
     // Get the fresh instance of the Muslim country
     val m = game.getMuslim(name)
+    // If Siege of Mosul in play then cells are halved and (troops + militia)
+    // are doubled
     val usPresence = List(
       if (m.militia > 0) Some(s"${m.militia} militia") else None,
       if (m.numAdvisors > 0) Some(amountOf(m.numAdvisors, "Advisors marker")) else None,
       if (m.troops > 0) Some(amountOf(m.troops, "troop")) else None,
     ).flatten ::: m.troopsMarkers
-    val usPresenceString = usPresence match {
-      case Nil => "none"
-      case _ => usPresence.mkString(", ")
-    }
     val jihadistPresence = List(
         if (m.cells > 0) Some(amountOf(m.cells, "cell")) else None,
         if (m.hasSadr) Some("Sadr marker") else None,
     ).flatten
-    val jihadistPresenceString = jihadistPresence match {
-      case Nil => "none"
-      case _ => jihadistPresence.mkString(", ")
-    }
-
-
-    log()
-    log(s"Attrition: $name$effects")
-    log(separator())
-    log(s"US presence: $usPresenceString")
-    log(s"Jihadist presence: $jihadistPresenceString")
-
-    // If Siege of Mosul in play then cells are halved and (troops + militia)
-    // are doubled
-    val jihadDie = getDieRoll(s"Enter Jihadist attrition die roll for $name: ")
-    val usDie = getDieRoll(s"Enter US attrition die roll for $name: ")
     val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
     val totalTroopsAndMilitia = if (siegeOfMosul) m.totalTroopsAndMilitia * 2 else m.totalTroopsAndMilitia
+    val usPresenceString = usPresence match {
+      case Nil => "none"
+      case _ => usPresence.mkString(", ") + (
+                  if (siegeOfMosul)
+                    s" [doubled] = $totalTroopsAndMilitia"
+                  else
+                    s" = $totalTroopsAndMilitia"
+                )
+    }
+    val jihadistPresenceString = jihadistPresence match {
+      case Nil => "none"
+      case _ => jihadistPresence.mkString(", ") + (
+                  if (siegeOfMosul)
+                    s" [halved] = $totalCells"
+                  else
+                    s" = $totalCells"
+                )
+    }
+
+    log()
+    log(s"Attrition: $name$hamaOffensiveDisplay")
+    log(separator())
+    if (siegeOfMosul) {
+      log(s"Siege of Mosul is in effect: cells are halved, troops/militia are doubled", Color.Info)
+    }
+    log(s"US presence: $usPresenceString")
+    log(s"Jihadist presence: $jihadistPresenceString")
+    
+    
+    val jihadDie = getDieRoll(s"Enter Jihadist attrition die roll for $name: ")
+    val usDie = getDieRoll(s"Enter US attrition die roll for $name: ")
     val jihadHits = totalCells / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
     val usHits    = totalTroopsAndMilitia / 6 + (if (usDie <= totalTroopsAndMilitia % 6) 1 else 0)
 
     if (totalCells > 0 || totalTroopsAndMilitia > 0) {
       if (totalTroopsAndMilitia > 0 && totalTroopsAndMilitia % 6 != 0)
-        log(s"US die roll : $usDie")
+        log(s"\nUS die roll : $usDie")
       else if (totalTroopsAndMilitia > 0)
-        log(s"US die roll : not necessary")
+        log(s"\nUS die roll : not necessary")
 
       if (totalCells > 0 && totalCells % 6 != 0)
-        log(s"\nJihadist die roll: $jihadDie")
+        log(s"Jihadist die roll: $jihadDie")
       else if (totalCells > 0)
-        log(s"\nJihadist die roll: not necessary")
+        log(s"Jihadist die roll: not necessary")
 
       log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
       log(s"\nThe Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
@@ -7221,6 +7241,7 @@ object LabyrinthAwakening {
               removedPlots  = removed   ::: game.removedPlots)
           game = game.updateCountry(n.copy(plots = Nil)).copy(plotData = updatedPlots)
       }
+      pause()
     }
     val targets = unblocked.map(u => PlotTarget(u.name, u.isMuslim)).toSet
     game = game.copy(
@@ -8238,7 +8259,7 @@ object LabyrinthAwakening {
       (false, "")
     val mainChoices = ListMap(List(
       choice(canPlay,     PlayCardName, PlayCard),
-      choice(canDiscard,  "Discard last card", DiscardLast),
+      choice(canDiscard,  "Discard last card (with no effect)", DiscardLast),
       choice(canCadre,    "Volunatary cadre removal", RemoveCadre),
       choice(canEndPhase, s"End action phase$holdMsg", EndPhase(holdLast)),
     ).flatten:_*)
