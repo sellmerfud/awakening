@@ -2001,8 +2001,9 @@ object LabyrinthAwakening {
           val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) List("Oil exporter") else Nil
           val autoRecruit = if (m.autoRecruit) List("Auto-Recruit") else Nil
           val desc = (gov :: res :: oil ::: autoRecruit).mkString(", ")
+          val muslimType = if (m.isShiaMix) "Shia-Mix" else "Sunni"
           summary.add("")
-          summary.add(s"$name  (Muslim)")
+          summary.add(s"$name  (Muslim, $muslimType)")
           summary.add(separator(length = 54))
           summary.add(desc)
           numItem(m.activeCells, "Active cell")
@@ -4362,7 +4363,7 @@ object LabyrinthAwakening {
         val help = """|
           |History command help
           |-----------------------------------------------------------------------------
-          |If you enter the 'h' command with no arguments you will see a menu.
+          |If you enter the 'history' command with no arguments you will see a menu.
           |
           |You can bypass the menu by following the command with arguments.
           |h last   -- Show the history of the last action
@@ -8125,6 +8126,7 @@ object LabyrinthAwakening {
         |Entering Show, History, or Adjust will display a menu of options.
         |Once you become familiar with these actions you may want to skip the menu
         |by following the action with an argument.
+        |
         |Use the argument 'help' or '?' to see help for the specific action.
         |-----------------------------------------------------------------------------
         """.stripMargin
@@ -8357,11 +8359,11 @@ object LabyrinthAwakening {
       val help = """|
         |Show command help
         |-----------------------------------------------------------------------------
-        |If you enter the 's' command with no arguments you will see a menu.
+        |If you enter the 'show' command with no arguments you will see a menu.
         |
-        |You can bypass the menu by following the command with arguments.
+        |You can bypass the menu by following the command with an argument.
         |The argument can be shortend to it a unique prefix of the argument.
-        |For example: 's sum'  is equivalent to 's summary'
+        |For example: 's sum'  is equivalent to 'show summary'
         |
         |s summary   -- Game summary including score
         |s <country> -- Show status of a the named country
@@ -8375,6 +8377,10 @@ object LabyrinthAwakening {
         |s removed   -- Cards removed from the game
         |s all       -- Entire game state
         |s help      -- Show this help message
+        |
+        |When showing the status of countries you can specify multiple names
+        |separated by commas.
+        |For example: s syr,egy,iraq  would show the status Syria, Egypt and Iraq.
         |-----------------------------------------------------------------------------
       """.stripMargin
       displayLine(help)
@@ -9540,10 +9546,10 @@ object LabyrinthAwakening {
         |-----------------------------------------------------------------------------
         |There is no menu for the adjust command.
         |
-        |To adjust some state within the game the 'a' command followed by
+        |To adjust some state within the game use the 'adjust' command followed by
         |a argument specifying what you want to adjust.
         |The argument can be shortend to it a unique prefix of the argument.
-        |For example: 'a pre'  is equivalent to 's prestige'
+        |For example: 'a pre'  is equivalent to 'adjust prestige'
         |
         |a <country>   -- Settings for the named country
         |a prestige    -- US prestige level
