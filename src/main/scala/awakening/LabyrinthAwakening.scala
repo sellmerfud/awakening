@@ -9615,6 +9615,7 @@ object LabyrinthAwakening {
         |a events      -- Global events that are in play
         |a markers     -- Marker for discarded Lapsing event/1st plot
         |a difficulty  -- Jihadist ideology/US resolve
+        |a game length -- Game length in decks (not available in campaign game)
         |a color       -- Toggle color in logs
         |                 (Does not work with Windows 10.0 or older)
         |a enhanced    -- Toggle enhanced Bot implementation (Jihadist Bot only)
@@ -9627,13 +9628,17 @@ object LabyrinthAwakening {
       displayLine(help)
     }
 
-    val options = List(
-      "prestige", "funding", "difficulty", "cards",
+    val options = (List(
+      "prestige", "funding", "difficulty", "cards", "game length",
       "markers", "events" , "reserves",
       "plots", "troops", "posture", "auto roll",
       "bot logging", "enhanced", "manual roll", "color",
       "resolved", "help"
-    ).sorted :::countryNames(game.countries).sorted
+    ).sorted:::countryNames(game.countries).sorted)
+      .filter {
+        case "game length" => !game.campaign && game.deckNumber < 3
+        case _ => true
+      }
 
     def adjustEntity(entity: String): Unit = {
       entity match {
@@ -9644,6 +9649,7 @@ object LabyrinthAwakening {
         case "auto roll"   => adjustAutoRoll()
         case "resolved"    => adjustPlotTargets()
         case "difficulty"  => adjustDifficulty()
+        case "game length" => adjustGameLength()
         case "bot logging" => adjustBotLogging()
         case "enhanced"    => adjustBotEnhancements()
         case "manual roll" => adjustBotManualDieRolls()
@@ -9781,6 +9787,14 @@ object LabyrinthAwakening {
       logAdjustment(s"$label", game.botDifficulties.map(_.name), updated.map(_.name))
       game = game.copy(botDifficulties = updated)
       saveAdjustment("Bot difficulty")
+    }
+  }
+
+  def adjustGameLength(): Unit = {
+    adjustInt("Game length", game.gameLength, game.deckNumber to 3) foreach { value =>
+      logAdjustment("Game length", game.gameLength, value)
+      game = game.copy(gameLength = value)
+      saveAdjustment("Game length")
     }
   }
 
