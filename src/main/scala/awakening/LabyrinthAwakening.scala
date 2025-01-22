@@ -2970,40 +2970,52 @@ object LabyrinthAwakening {
   // continues.
 
   def handleEmptyDrawPile(atEndOfTurn: Boolean): Unit = {
+    
     if (game.deckNumber == game.gameLength) {
       // The game ends immediately.
       // Lapsing cards are not discarded.
       logEndGameScoring()
-      saveGameState(Some("Game Over"), true)
-      throw QuitGame
+
+      // If this was not a 3 deck game, then give the user a
+      // chance to extend the game.
+      val choices = Range.inclusive(game.gameLength + 1, 3)
+        .toList.
+        map(len => Some(len) -> s"Extend game to $len decks") :+ (None, "Quit game")
+      askMenu("\nChoose one:", choices).head match {
+        case Some(len) =>
+          log(s"\nGame length extended from ${game.gameLength} to $len decks.", Color.Info)
+          game = game.copy(gameLength = len)
+        case None =>
+          saveGameState(Some("Game Over"), true)
+          throw QuitGame
+      }
+    }
+
+    // Lapsing events, and any 1st Plot card are discarded
+    // and replace with markers to so show that the events
+    // are still in effect until the end of turn, and
+    // no card may be placed in the 1st plot box.
+    removeLapsingAnd1stPLot()
+
+    if (game.campaign) {
+      GameMode.next(game.currentMode) match {
+        case Some(AwakeningMode) => addAwakeningCards()
+        case Some(ForeverWarMode) => addForeverWarCards()
+        case _ =>
+      }
     }
     else {
-      // Lapsing events, and any 1st Plot card are discarded
-      // and replace with markers to so show that the events
-      // are still in effect until the end of turn, and
-      // no card may be placed in the 1st plot box.
-      removeLapsingAnd1stPLot()
-
-      if (game.campaign) {
-        GameMode.next(game.currentMode) match {
-          case Some(AwakeningMode) => addAwakeningCards()
-          case Some(ForeverWarMode) => addForeverWarCards()
-          case _ =>
-        }
-      }
-      else {
-        // Single scenario game
-        if (numCardsInDrawPile() == 0)
-          log("\nShuffle the discard pile to form a new draw pile.", Color.Info)
-        else
-          log("\nShuffle the discard pile and place it beneath the existing draw pile.", Color.Info)
-        log(s"This begins the ${ordinal(game.deckNumber)} deck of ${game.gameLength}.", Color.Info)
-        log("Move the deck marker one space to the right.", Color.Info)
-        game = game.copy(
-          deckNumber = game.deckNumber + 1,
-          cardsDiscarded = Nil
-        )
-      }
+      // Single scenario game
+      if (numCardsInDrawPile() == 0)
+        log("\nShuffle the discard pile to form a new draw pile.", Color.Info)
+      else
+        log("\nShuffle the discard pile and place it beneath the existing draw pile.", Color.Info)
+      log(s"This begins the ${ordinal(game.deckNumber)} deck of ${game.gameLength}.", Color.Info)
+      log("Move the deck marker one space to the right.", Color.Info)
+      game = game.copy(
+        deckNumber = game.deckNumber + 1,
+        cardsDiscarded = Nil
+      )
     }
   }
 
