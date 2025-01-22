@@ -2228,6 +2228,47 @@ object LabyrinthAwakening {
     case _         => x.dropRight(1).mkString(", ") + ", or " + x.last.toString
   }
 
+  case class MatchOneError(msg: String, ambiguous: Seq[String])
+  // Find a match for the given string in the list of options.
+  // Any unique prefix of the given options will succeed.
+  def matchOneCL(input: String, options: Seq[String], abbreviations: Map[String, String] = Map.empty): Either[MatchOneError, String] = {
+    val trimmed = input.trim
+    // Filter out any abbreviations that do not have a match with one of the options.
+    val abbr = abbreviations.filter { case (_, name) => options.contains(name) }
+    if (trimmed.isEmpty)
+      Left(MatchOneError(s"Input is empty.", Seq.empty))
+    else {
+      val lowerInput = trimmed.toLowerCase
+      val allOptions = (options ++ abbr.keys).distinct
+      val paired = allOptions.map(name => name -> name.toLowerCase)
+      val normalized = allOptions.map(_.toLowerCase)
+      val normalizedAbbreviations = for ((a, v) <- abbr) yield (a.toLowerCase, v)
+      val matches = paired.filter{ case (_, lower) => lower.startsWith(lowerInput) }
+      // val matches = normalized.distinct.filter(_ startsWith trimmed.toLowerCase)
+      matches match {
+        case Seq() =>
+          Left(MatchOneError(s"\"$trimmed\" is not valid.", Seq.empty))
+
+        case Seq((value, _))  =>
+          abbr.get(value) match {
+            case Some(abbrValue) => Right(abbrValue)
+            case None            => Right(value)
+          }
+
+        case many if many.exists(v => v._2 == lowerInput) =>
+          // We got more than one match, but one of the matches is
+          // an exact match (which happens to be a prefix of another entry)
+          normalizedAbbreviations.get(lowerInput) match {
+            case Some(abbrValue) => Right(abbrValue)
+            case None            => Right(options(normalized.indexOf(lowerInput)))
+          }
+
+        case ambiguous =>
+          Left(MatchOneError(s"\"$trimmed\" is ambiguous.", ambiguous.map(_._1)))
+      }
+    }    
+  }
+
   // Find a match for the given string in the list of options.
   // Any unique prefix of the given options will succeed.
   def matchOne(
@@ -8401,11 +8442,31 @@ object LabyrinthAwakening {
         case None =>
       }
     }
-
+    
     val HELP  = """(?:\?|--help|-h)""".r
     param.map(_.trim) match {
       case Some(param) if HELP.matches(param) =>
         showEntity("help")
+
+      case Some(param) if param.contains(",") =>
+        param.split(raw"\s*,\s*").filter(_ != "").toList match {
+          case Nil =>
+            displayLine("Invalid input.")
+          case paramEntries =>
+            paramEntries
+              .foreach { possibleName =>
+                matchOneCL(possibleName, countryNames(game.countries), CountryAbbreviations) match {
+                  case Right(name) =>
+                    printSummary(game.countrySummary(name))
+                  case Left(MatchOneError(msg, ambiguous)) =>
+                    displayLine()
+                    displayLine(msg)
+                    if (ambiguous.nonEmpty) {
+                      displayLine(s"Can be one of: ${ambiguous.mkString(", ")}")
+                    }
+                }
+              }
+        }
 
       case Some(param) if param != "" =>
         askOneOf("Show: ", options, Some(param), true, false, CountryAbbreviations)
