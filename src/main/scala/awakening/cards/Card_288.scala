@@ -72,13 +72,23 @@ object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRe
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
+  val resultMsgs = Vector(
+    "", // zero
+    "Place a Cell in the US",
+    "Place a level 1 Plot in a random Schengen country",
+    "Place a random Reaction marker",
+    "Set the posture of a Fair non-Muslim country",
+    "Remove an Aid marker",
+    "Place a Besieged Regime marker",
+  )
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
     val die = getDieRoll(s"Enter event die roll: ")
-    log(s"\nDie roll: $die", Color.Event)
+    log(s"\nDie roll: $die - ${resultMsgs(die)}", Color.Event)
+
     die match {
       case 1 =>
         if (game.cellsAvailable > 0) {
