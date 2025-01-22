@@ -2267,7 +2267,7 @@ object LabyrinthAwakening {
         case ambiguous =>
           Left(MatchOneError(s"\"$trimmed\" is ambiguous.", ambiguous.map(_._1)))
       }
-    }    
+    }
   }
 
   // Find a match for the given string in the list of options.
@@ -4070,33 +4070,60 @@ object LabyrinthAwakening {
     b.toList
   }
 
-  def wrapInColumns[T](prefix: String, values: Seq[T], maxWidth: Int = 100, showNone: Boolean = true): Seq[String] = {
-    val stringValues = values.map(_.toString)
-    val width = longestString(stringValues)
-    val columnValues = stringValues.map(padLeft(_, width))
-    val b = new ListBuffer[String]
-    val s = new StringBuilder(prefix)
-    var first = true
-    if (columnValues.isEmpty) {
+  def wrapInColumns[T](
+    prefix: String,
+    values: Seq[T],
+    maxWidth: Int = 100,
+    separator: String = " | ",
+    showNone: Boolean = true    
+  ): Seq[String] = {
+    def getColWidths(numCols: Int, strings: Seq[String]): List[Int] = {
+      val extra = strings.size % numCols
+      val padded = if (extra == 0)
+        strings
+      else
+        strings :++ Seq.fill(numCols - extra)("")
+      padded
+        .grouped(numCols)
+        .toList
+        .transpose
+        .foldLeft(List.empty[Int]) { (widths, entries) => longestString(entries) :: widths}
+        .reverse
+    }
+
+    def findNumCols(numCols: Int, strings: Seq[String]): (Int, List[Int]) = {
+      val colWidths = getColWidths(numCols, strings)
+      if (numCols == 1 || colWidths.sum + ((numCols - 1) * separator.length) + prefix.length <= maxWidth)
+        (numCols, colWidths)
+      else
+        findNumCols(numCols - 1, strings)
+    }
+
+    if (values.isEmpty) {
       if (showNone)
-        s.append("none")
+        Seq("none")
+      else
+        Seq.empty
     }
     else {
+      val b = new ListBuffer[String]
+      val strings = values.map(_.toString)
+      val (numCols, colWidths) = findNumCols(8 min strings.length, strings)
+      val rows = strings.grouped(numCols)
       val margin = " " * prefix.length
-      s.append(columnValues.head)
-      for (v <- columnValues.tail) {
-        s.append("  ")
-        if (s.length + v.length < maxWidth)
-          s.append(v)
-        else {
-          b += s.toString
-          s.clear()
-          s.append(margin).append(v)
-        }
+      var first = true
+
+      for (row <- rows) {
+        val cols = for ((colText, width) <- row.zip(colWidths))
+          yield padLeft(colText, width)
+        if (first)
+          b += prefix + cols.mkString(separator)
+        else
+          b += margin + cols.mkString(separator)
+        first = false
       }
+      b.toList
     }
-    b += s.toString
-    b.toList
   }
 
   //  Return true  if the user enters skip.
@@ -5180,7 +5207,7 @@ object LabyrinthAwakening {
       case _ => jihadistPresence.mkString(", ")
     }
 
-    
+
     log()
     log(s"Attrition: $name$effects")
     log(separator())
@@ -8451,7 +8478,7 @@ object LabyrinthAwakening {
         case None =>
       }
     }
-    
+
     val HELP  = """(?:\?|--help|-h)""".r
     param.map(_.trim) match {
       case Some(param) if HELP.matches(param) =>
