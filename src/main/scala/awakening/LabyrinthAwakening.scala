@@ -1975,11 +1975,11 @@ object LabyrinthAwakening {
 
       getCountry(name) match {
         case n: NonMuslimCountry =>
-          val posture = if (n.iranSpecialCase) "(Special Case)" else n.posture
+          val specialCase = if (n.iranSpecialCase) ", Special Case" else ""
           summary.add("")
-          summary.add(s"$name  (Non-Muslim)")
+          summary.add(s"$name  (Non-Muslim$specialCase)")
           summary.add(separator(length = 54))
-          summary.add(s"${govToString(n.governance)}, $posture, Recruit ${n.recruitNumber}")
+          summary.add(s"${govToString(n.governance)}, ${n.posture}, Recruit ${n.recruitNumber}")
           numItem(n.activeCells, "Active cell")
           numItem(n.sleeperCells, "Sleeper cell")
           numItem(n.cadres, "Cadre")
