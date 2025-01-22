@@ -4257,9 +4257,12 @@ object LabyrinthAwakening {
   }
 
   def printHistorySegment(saveNumber: Int, lastSaveNumber: Int, pauseAfter: Boolean, optWriter: Option[java.io.Writer] = None): Unit = {
-    val prompt = "Press Enter to continue (or 'skip' to skip these prompts)"
     var pauseNext = pauseAfter
     if (saveNumber <= lastSaveNumber) {
+      val prompt   = if (saveNumber == lastSaveNumber)
+        "Press Enter to continue"
+      else
+        "Press Enter to continue (or 'skip' to skip these prompts)"
       val header   = s">>> History of save point $saveNumber <<<\n"
       val entries = loadSavedLog(game.saveName, saveNumber)
 
