@@ -83,7 +83,7 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
     getBotCandidates().nonEmpty &&
     (game.trainingCamp match {
       case Some(currentCamp) if game.botEnhancements =>
-        currentCamp != JihadistBot.cellPlacementPriority(false)(getBotCandidates())
+        currentCamp != JihadistBot.cellPlacementPriority(false)(getBotCandidates()).get
       case _ => true
     })
   }
