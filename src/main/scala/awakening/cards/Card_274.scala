@@ -100,16 +100,16 @@ object Card_274 extends Card(274, "Government of National Accord", US, 3, NoRemo
         log("\nThere are less Troops and Militia than Cells, no die roll necessary.", Color.Event)
 
       case x if die <= x  =>
-        log(s"Troops + Militia - Cells = $x")
-        log(s"Die roll: $die, success!")
-        log("The Civil War ends.")
+        log(s"Troops + Militia - Cells = $x", Color.Event)
+        log(s"Die roll: $die - Success!", Color.Event)
+        log("The Civil War ends.", Color.Event)
         endCivilWar(target)
         increasePrestige(1)
 
       case x =>
-        log(s"Troops + Militia - Cells = $x")
-        log(s"Die roll: $die, failure")
-        log("The Civil War does not end.")
+        log(s"Troops + Militia - Cells = $x", Color.Event)
+        log(s"Die roll: $die - Failure", Color.Event)
+        log("The Civil War does not end.", Color.Event)
     }
   }
 }

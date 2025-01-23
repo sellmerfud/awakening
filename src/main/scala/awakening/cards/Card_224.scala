@@ -135,7 +135,7 @@ object Card_224 extends Card(224, "Je Suis Charlie", Unassociated, 2, NoRemove, 
             case "posture"  => setUSPosture(oppositePosture(game.worldPosture))
             case "prestige" =>
               val die = getDieRoll("Enter prestige die roll: ", Some(role))
-              log(s"\nDie roll: $die", Color.Event)
+              log(s"\nDie roll for prestige loss: $die", Color.Event)
               decreasePrestige((die + 1)/ 2)
           }
         }
@@ -146,7 +146,7 @@ object Card_224 extends Card(224, "Je Suis Charlie", Unassociated, 2, NoRemove, 
           setUSPosture(Soft)
         else {
           val die = getDieRoll("Enter prestige die roll: ")
-          log(s"\nDie roll: $die", Color.Event)
+          log(s"\nDie roll for prestige loss: $die", Color.Event)
           decreasePrestige((die + 1)/ 2)
         }
       }

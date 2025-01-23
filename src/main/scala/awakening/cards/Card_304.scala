@@ -79,14 +79,14 @@ object Card_304 extends Card(304, "Loose Chemicals", Jihadist, 2, NoRemove, NoLa
   def executeEvent(role: Role): Unit = {
     addEventTarget(Syria)
     val die = getDieRoll(s"Enter event die roll: ")
-    val dieResult = if (die < 4) "Success" else "Failure"
-    log(s"\nDie roll: $die [$dieResult]", Color.Event)
     if (die < 4) {
+      log(s"\nDie roll: $die - Add WMD to available plots", Color.Event)
       moveWMDCacheToAvailable(Syria, 1)
       // Card only removed if die roll was successful
       removeCardFromGame(this.number)
     }
     else {
+      log(s"\nDie roll: $die - Remove a cell", Color.Event)
       val (actives, sleepers, sadr) = if (isHuman(role))
         askCells(Syria, 1, sleeperFocus = false)
       else

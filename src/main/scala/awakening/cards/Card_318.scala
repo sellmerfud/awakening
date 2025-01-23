@@ -103,9 +103,9 @@ object Card_318 extends Card(318, "South China Sea Crisis", Jihadist, 3, Remove,
     val die = getDieRoll(s"Enter event die roll: ")
     val modifiedDie = (die + game.prestigeModifier) max 1 min 6
     val newPosture = if (modifiedDie < 5) Soft else Hard
-    log(s"\nDie roll: $die", Color.Event)
+    log(s"\nDie roll for $postureTarget posture: $die", Color.Event)
     log(f"${game.prestigeModifier}%+d (US prestige modifier)", Color.Event)
-    log(s"Modified roll: $modifiedDie", Color.Event)
+    log(s"Modified roll: $modifiedDie - $newPosture", Color.Event)
 
     addEventTarget(postureTarget)
     setCountryPosture(postureTarget, newPosture)

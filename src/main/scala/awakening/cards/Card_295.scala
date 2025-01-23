@@ -75,7 +75,7 @@ object Card_295 extends Card(295, "Black Gold", Jihadist, 2, NoRemove, NoLapsing
       log("\nJihadist funding is at 9.  The event has no effect.", Color.Event)
     else {
       val die = getDieRoll(s"Enter event die roll: ")
-      log(s"\nDie roll: $die", Color.Event)
+      log(s"\nDie roll for funding increase: $die", Color.Event)
       increaseFunding((die + 1) / 2)
     }
   }

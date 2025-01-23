@@ -74,13 +74,11 @@ object Card_301 extends Card(301, "Green on Blue", Jihadist, 2, NoRemove, NoLaps
   def executeEvent(role: Role): Unit = {
     val die = getDieRoll(s"Enter event die roll: ")
     increaseFunding(1)
-    log(s"\nDie roll: $die", Color.Event)
     if (die < 4) {
-      log(s"US posture switches.", Color.Event)
+      log(s"Die roll: $die - US posture switches.", Color.Event)
       setUSPosture(oppositePosture(game.usPosture))
     }
     else
-      log(s"US posture stays the same.", Color.Event)
-
+      log(s"Die roll: $die - US posture stays the same.", Color.Event)
   }
 }

@@ -79,14 +79,13 @@ object Card_181 extends Card(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemov
     addEventTarget(Iran)
     val die = getDieRoll("Enter event die roll: ", Some(role))
     val success = die < 4
-    log(s"Die roll: $die")
     if (success) {
-      log("\nSuccess", Color.Event)
+      log(s"\nDie roll: $die - Success", Color.Event)
       moveWMDCacheToAvailable(Iran, game.getCountry(Iran).wmdCache)
       removeCardFromGame(this.number) // Card only removed if die roll was successful
     }
     else {
-      log("\nFailure", Color.Event)
+      log(s"\nDie roll: $die - Failure", Color.Event)
       if (game.getCountry(Iran).activeCells > 0)
         removeCellsFromCountry(Iran, 1, 0, sadr = false, addCadre = true)
       else

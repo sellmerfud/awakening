@@ -80,9 +80,8 @@ object Card_303 extends Card(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, N
   def executeEvent(role: Role): Unit = {
     addEventTarget(Iran)
     val die = getDieRoll(s"Enter event die roll: ")
-    val dieResult = if (die < 4) "Success" else "Failure"
-    log(s"\nDie roll: $die [$dieResult]", Color.Event)
     if (die < 4) {
+      log(s"\nDie roll: $die - Add WMD to available plots", Color.Event)
       moveWMDCacheToAvailable(Iran, 1)
       if (isIranSpecialCase) {
         log("\nFlip Iran country mat to its Shia-Mix Muslim side and set it to Fair Adversary.", Color.Event)
@@ -100,6 +99,7 @@ object Card_303 extends Card(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, N
       removeCardFromGame(this.number)
     }
     else {
+      log(s"\nDie roll: $die - Remove a cell", Color.Event)
       val (actives, sleepers, sadr) = if (isHuman(role))
         askCells(Iran, 1, sleeperFocus = false)
       else

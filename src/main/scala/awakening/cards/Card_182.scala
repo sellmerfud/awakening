@@ -125,7 +125,7 @@ object Card_182 extends Card(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLaps
     }
 
 
-    log(s"Tan die: $tanDie,  Black die: $blackDie")
+    log(s"\nTan die: $tanDie,  Black die: $blackDie", Color.Event)
     val target = getTarget(countries.drop(tanDie - 1)).map {
       case "Schengen" if isHuman(role) =>
         askCountry("Choose a Hard Schengen country: ", validSchengen)

@@ -90,10 +90,10 @@ object Card_048 extends Card(48, "Adam Gadahn", Jihadist, 1, NoRemove, NoLapsing
         val die     = getDieRoll(s"Enter $ord recruit die roll: ", Some(role))
         val success = die < 3
         val result  = if (success) "succeeds" else "fails"
-        log(s"$ord recruit $result with a roll of $die")
+        log(s"$ord recruit $result with a roll of $die", Color.Event)
         if (success) {
           val numCells = if (game.jihadistIdeology(Potent)) {
-            log(s"$Jihadist Bot with Potent Ideology places two cells for each success")
+            log(s"$Jihadist Bot with Potent Ideology places two cells for each success", Color.Info)
             2
           }
           else

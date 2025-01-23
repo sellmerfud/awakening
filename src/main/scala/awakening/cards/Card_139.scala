@@ -70,7 +70,7 @@ object Card_139 extends Card(139, "Int'l Banking Regime", US, 2, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     val die = getDieRoll("Enter event die roll: ", Some(role))
-    log(s"\nDie roll for funding decrease: $die")
+    log(s"\nDie roll for funding decrease: $die", Color.Event)
     println()
     decreaseFunding((die + 1) / 2)  // Half rounded up
   }

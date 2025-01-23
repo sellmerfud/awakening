@@ -81,7 +81,7 @@ object Card_069 extends Card(69, "Kazakh Strain", Jihadist, 2, Remove, NoLapsing
       true
     else {
       val ok = die <= game.getCountry(CentralAsia).governance
-      log(s"Die roll: $die  (${if (ok) "Success" else "Failure"})")
+      log(s"Die roll: $die - ${if (ok) "Success" else "Failure"}", Color.Event)
       ok
     }
 

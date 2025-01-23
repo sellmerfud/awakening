@@ -78,7 +78,7 @@ object Card_071 extends Card(71, "Loose Nuke", Jihadist, 2, Remove, NoLapsing, N
     addEventTarget(Russia)
     val die = getDieRoll("Enter event die roll: ", Some(role))
     val success = die <= (game getCountry Russia).governance
-    log(s"Die roll: $die  (${if (success) "Success" else "Failure"})")
+    log(s"Die roll: $die - ${if (success) "Success" else "Failure"}", Color.Event)
     if (success) {
       log(s"The Loose Nukes WMD plot is now available")
       addRemovedWMDToAvailable(1)

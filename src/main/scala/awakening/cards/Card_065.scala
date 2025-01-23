@@ -95,7 +95,7 @@ object Card_065 extends Card(65, "HEU", Jihadist, 2, Remove, NoLapsing, NoAutoTr
       true
     else {
       val ok = die <= game.getCountry(name).governance
-      log(s"Die roll: $die  (${if (ok) "Success" else "Failure"})")
+      log(s"Die roll: $die - ${if (ok) "Success" else "Failure"}", Color.Event)
       ok
     }
 

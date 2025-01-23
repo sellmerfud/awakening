@@ -112,13 +112,12 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
         }
         else {
           val die = getDieRoll("Enter event die roll: ", Some(role))
-          log(s"Die roll: $die")
           if (c.recruitSucceeds(die)) {
-            log(s"Recruit in $target succeeds with a die roll of $die")
+            log(s"Recruit in $target succeeds with a die roll of $die", Color.Event)
             addSleeperCellsToCountry(target, cells)
           }
           else {
-            log(s"Recruit in $target fails with a die roll of $die")
+            log(s"Recruit in $target fails with a die roll of $die", Color.Event)
             addCadreToCountry(target)
           }
         }

@@ -99,8 +99,8 @@ object Card_343 extends Card(343, "JCPOA", Unassociated, 2, JihadistRemove, NoLa
     else { // Jihadist
       addEventTarget(Iran)
       val die = getDieRoll(s"Enter event die roll: ")
-      log(s"\nDie roll: $die", Color.Event)
       if (die < 4) {
+        log(s"\nDie roll: $die - Remove cell and play WMD in available plots", Color.Event)
         val (actives, sleepers, sadr) = if (isHuman(role))
           askCells(Iran, 1, false)
         else
@@ -117,7 +117,7 @@ object Card_343 extends Card(343, "JCPOA", Unassociated, 2, JihadistRemove, NoLa
         }
       }
       else
-        log("No Effect.", Color.Event)
+        log(s"\nDie roll: $die - No Effect", Color.Event)
     }
   }
 }

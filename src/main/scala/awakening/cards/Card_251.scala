@@ -74,6 +74,18 @@ object Card_251 extends Card(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, No
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
+  val resultMsgs = Vector(
+  "Random reaction marker",
+  "-1 US Prestige",
+  "Remove an Aid marker",
+  "+1 Funding",
+  "-1 Funding",
+  "Place an Aid marker",
+  "+1 US Prestige",
+  "Random Awakening Marker", // 7
+  "Random Awakening Marker", // 8
+  "Random Awakening Marker"  // 9 possible if Hillary Wins scenario and Prestite > 10
+  )
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
@@ -110,11 +122,14 @@ object Card_251 extends Card(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, No
     val die = getDieRoll("Enter event die roll: ", Some(role))
     val modRoll = die + hillaryMod + prestigeMod
 
-    log(s"Die roll: $die")
+    if (modRoll == die)
+      log(s"\nDie roll: $die - ${resultMsgs(die)}", Color.Event)
+    else
+      log(s"\nDie roll: $die", Color.Event)
     logNotZero(prestigeMod, "Prestige modifier")
     logNotZero(hillaryMod,  s"${awakening.scenarios.HillaryWins.name} scenario rule")
     if (modRoll != die)
-      log(s"Modified roll: $modRoll")
+      log(s"Modified roll: $modRoll - ${resultMsgs(modRoll)}", Color.Event)
     println()
     modRoll match {
       case 0 =>

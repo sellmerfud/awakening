@@ -82,12 +82,11 @@ object Card_014 extends Card(14, "Covert Action", US, 2, NoRemove, NoLapsing, No
     addEventTarget(name)
     val die = getDieRoll("Enter event die roll: ", Some(role))
     val success = die > 3
-    log(s"Die roll: $die")
     if (success) {
-      log("Success")
+      log(s"Die roll: $die - Success!", Color.Event)
       shiftAlignmentLeft(name)
     }
     else
-      log("Failure")
+      log(s"Die roll: $die - Failure!", Color.Event)
   }
 }
