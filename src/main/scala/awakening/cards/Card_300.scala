@@ -57,14 +57,24 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = game.jihadTargets.sorted
+  def getCandidates() = game.jihadTargets.filterNot(game.isCaliphateMember).sorted
 
   def botMajorJihadCandidates() = countryNames(
-    game.getMuslims(game.majorJihadTargets(2)).filter(m => m.isPoor && JihadistBot.majorJihadSuccessPossible(m))
+    game.getMuslims(game.majorJihadTargets(2))
+      .filter { m =>
+        !game.isCaliphateMember(m.name) &&
+        m.isPoor &&
+        JihadistBot.majorJihadSuccessPossible(m)
+      }
   )
 
   def botMinorJihadCandidates() = countryNames(
-    game.getMuslims(game.jihadTargets).filter(m => (m.isFair || m.isGood) && JihadistBot.minorJihadSuccessPossible(m))
+    game.getMuslims(game.jihadTargets)
+      filter { m =>
+        !game.isCaliphateMember(m.name) &&
+        (m.isFair || m.isGood) &&
+        inspect("jsp", JihadistBot.minorJihadSuccessPossible(m))
+      }
   )
 
   // Returns true if the printed conditions of the event are satisfied
