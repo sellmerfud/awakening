@@ -68,13 +68,19 @@ object Card_290 extends Card(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoL
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
+  val resultMsgs = Vector(
+    "Place a Reaction marker in Central Asia",
+    "Place a Cell in China",
+    "Place a level 1 Plot in China",
+  )
+
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
     val die = getDieRoll(s"Enter event die roll: ")
-    log(s"\nDie roll: $die", Color.Event)
+    log(s"\nDie roll: $die - ${resultMsgs((die - 1) / 2)}", Color.Event)
     die match {
       case 1 | 2 =>
         addEventTarget(CentralAsia)

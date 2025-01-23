@@ -73,7 +73,6 @@ object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRe
   def botWillPlayEvent(role: Role): Boolean = true
 
   val resultMsgs = Vector(
-    "", // zero
     "Place a Cell in the US",
     "Place a level 1 Plot in a random Schengen country",
     "Place a random Reaction marker",
@@ -87,7 +86,7 @@ object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRe
   override
   def executeEvent(role: Role): Unit = {
     val die = getDieRoll(s"Enter event die roll: ")
-    log(s"\nDie roll: $die - ${resultMsgs(die)}", Color.Event)
+    log(s"\nDie roll: $die - ${resultMsgs(die - 1)}", Color.Event)
 
     die match {
       case 1 =>
