@@ -2970,7 +2970,7 @@ object LabyrinthAwakening {
   // continues.
 
   def handleEmptyDrawPile(atEndOfTurn: Boolean): Unit = {
-    
+
     if (game.deckNumber == game.gameLength) {
       // The game ends immediately.
       // Lapsing cards are not discarded.
@@ -4695,12 +4695,14 @@ object LabyrinthAwakening {
       val CANCEL    = -3
 
       def showPage(pageNum: Int): Unit = {
+        val width = longestString(pages(pageNum).map(_.saveNumber.toString))
+        val fmt = s"%${width}d"
         val saveChoices: List[(Int, (String, Seq[String]))] = pages(pageNum)
           .toList
           .filterNot(_.endOfTurn)   // Don't allow rollback to end of turn
           .map {
             case GameSegment(saveNumber, endOfTurn, summary) =>
-              saveNumber -> (s"Save point ${saveNumber} ", summary)
+              saveNumber -> (s"[Save point $fmt]".format(saveNumber), summary)
           }
         val otherChoices: List[(Int, (String, Seq[String]))] = List(
           choice(pageNum > firstPage, PAGE_UP,   "Page up, show newer save points ", Seq.empty),
