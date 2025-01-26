@@ -4903,12 +4903,12 @@ object LabyrinthAwakening {
       (toM orElse toN) foreach { t =>
         val newVal = t.plots.sorted
         if (fromM.plots.sorted != newVal)
-          b += s"Set plots to ${mapPlotsDisplay(newVal, to.humanRole == Jihadist)}"
+          b += s"Plots: ${mapPlotsDisplay(newVal, to.humanRole == Jihadist)}"
       }
       (toM orElse toN) foreach { t =>
         val newVal = t.markers.sorted
         if (fromM.markers.sorted != newVal)
-          b += s"Set markers to ${markersString(newVal)}"
+          b += s"Event markers: ${markersString(newVal)}"
       }
 
       if (b.nonEmpty) {
