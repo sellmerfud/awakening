@@ -3099,6 +3099,7 @@ object LabyrinthAwakening {
   // -- If the only source is the Draw Pile and there are not enough cards in
   //    the draw pile to satisfy the request then this function will
   ///   call handleEmptyDrawPile()
+  // Cards returned as Left(Int) have been discarded  (Avenger)
   def askCardsDrawnFull(
     role: Role,                      // Role that is drawing cards
     totalNum: Int,                   // The number of cards to draw
@@ -3110,7 +3111,7 @@ object LabyrinthAwakening {
     except: Set[Int] = Set.empty,
     opsRequired: Set[Int] = Set.empty,
     assocRequired: Set[CardAssociation] = Set.empty,
-  ): List[Either[Unit, Int]] = {
+  ): List[Either[Int, Int]] = {
     val blankIfNone = if (lessOk) " (blank if none)" else ""
 
     def prompt(num: Int) = optPrompt
@@ -3122,7 +3123,7 @@ object LabyrinthAwakening {
       }
 
 
-    def nextDraw(num: Int): List[Either[Unit, Int]] =
+    def nextDraw(num: Int): List[Either[Int, Int]] =
       if (num <= totalNum) {
         // If only source is the draw pile and the draw pile is empty...
         if (sources == List(FromDrawPile) && numCardsInDrawPile() == 0) {
@@ -3145,17 +3146,18 @@ object LabyrinthAwakening {
 
           case Some(cardNum) =>
             val source = sources.find(_.contains(cardNum)).get
-            // If card was taken into hand (not Avenger) then add it to the list
+            // If card was taken into hand (not Avenger) then add it as Right(num)
+            // Otherwise Left(num)
             if (processCardDrawn(role, cardNum, source, triggerAvenger))
               Right(cardNum)::nextDraw(num + 1)
             else
-              Left(())::nextDraw(num + 1)
+              Left(cardNum)::nextDraw(num + 1)
         }
       }
       else
         Nil
 
-    nextDraw(1).reverse
+    nextDraw(1)
   }
 
   // Ask for 1 required card drawn from the Draw pile

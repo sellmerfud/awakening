@@ -74,7 +74,40 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
     if (isHuman(role)) {
       log(s"\nTake the top two cards from the $Jihadist hand.", Color.Event)
       log(s"Keep one and return the other to the top of the $Jihadist hand.")
-      askCardDrawnFromOpponent(US, optPrompt = Some("What is the card# of the card that you kept: "))
+      // This will decrease the Jihadist hand size by 2
+      val cards = askCardsDrawnFull(US, 2, List(FromRole(oppositeRole(role))))
+      // In Avenger is drawn then  it will have been activated and automatically
+      // placed in the discard pile leaveing us with only one card.
+      sealed trait CardOption
+      case class Discard(num: Int) extends CardOption
+      case class Return(num: Int) extends CardOption
+      val taken = cards.collect { case Right(num) => num }
+      val actions = taken match {
+        case num::Nil =>
+          val choices = List(Discard(num) -> "Discard it", Return(num) -> s"Return it to $Jihadist hand")
+          askMenu(s"\nWhat happens to ${cardNumAndName(num)}:", choices)
+
+        case nums =>
+          val choices = List(
+            List(Discard(nums(0)), Return(nums(1))) -> s"${cardNumAndName(nums(0))}",
+            List(Discard(nums(1)), Return(nums(0))) -> s"${cardNumAndName(nums(1))}",
+          )
+          askMenu("\nWhich card should be discarded:", choices).head
+      }
+      actions.foreach {
+        case Discard(num) =>
+          // We increase the Jihadist hand size first because processDiscardedCard()
+          // will decrease it again.
+          decreaseCardsInHand(US, 1)
+          increaseCardsInHand(Jihadist, 1)
+          processDiscardedCard(Jihadist, num)
+
+        case Return(num) =>
+          log(s"${cardNumAndName(num)} is returned to the $Jihadist hand.")
+          decreaseCardsInHand(US, 1)
+          increaseCardsInHand(Jihadist, 1)
+      }
+      
     }
     else {
       log(s"\nYou ($Jihadist) must randomly discard one card.", Color.Event)
