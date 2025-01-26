@@ -1460,7 +1460,7 @@ object LabyrinthAwakening {
     targetsLastPhase: PhaseTargets       = PhaseTargets(),
     ignoreVictory: Boolean               = false,
     botLogging: Boolean                  = false,
-    botEnhancements: Boolean             = true, // Use enhancements to official Awakening bot algorithms
+    botEnhancements: Boolean             = false, // Use enhancements to official Awakening bot algorithms
     manualDieRolls: Boolean              = false,  // Overrides humanAutoRoll
     history: Vector[GameSegment]         = Vector.empty,
     description: String                  = "",
@@ -1874,6 +1874,7 @@ object LabyrinthAwakening {
         summary.add(s"Human auto roll        : ${if (humanAutoRoll) "yes" else "no"}")
       summary.add(s"Bot logging            : ${if (botLogging) "yes" else "no"}")
       summary.add(s"Ignore instant vicory  : ${if (ignoreVictory) "yes" else "no"}")
+      summary.add(s"Software version       : ${versionString}")
       summary
     }
 
@@ -2133,7 +2134,9 @@ object LabyrinthAwakening {
     humanRole: Role,
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
-    showColor: Boolean) = {
+    showColor: Boolean,
+    enhancedBot: Boolean) =
+  {
 
     var countries = if (scenario.startingMode == LabyrinthMode && !campaign)
       LabyrinthDefaultCountries
@@ -2166,13 +2169,14 @@ object LabyrinthAwakening {
       cardsInUse = scenario.startingMode.cardRange,
       cardsRemoved = scenario.cardsRemoved,
       showColor = showColor,
+      botEnhancements = enhancedBot,
       offMapTroops = scenario.offMapTroops,
       saveName = saveName)
   }
 
 
   // Global variables
-  var game = initialGameState("no-name", Awakening, 1, false, US, true, Muddled :: Nil, !scala.util.Properties.isWin)
+  var game = initialGameState("no-name", Awakening, 1, false, US, true, Muddled :: Nil, !scala.util.Properties.isWin, false)
 
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -7657,8 +7661,6 @@ object LabyrinthAwakening {
       choice(true, "exit", "Exit the program"),
     ).flatten
 
-    displayVersion()
-
     askMenu("Game Menu", choices).head match {
       case "new" =>
         startNewGame(params)
@@ -7686,6 +7688,15 @@ object LabyrinthAwakening {
     }
   }
 
+  def askEnhancedBot(): Option[Boolean] = {
+    val choices = List(
+      Some(false) -> "Standard Awakening Jihadist Bot",
+      Some(true)  -> "Enhanced Jihadist Bot",
+      None        -> "Cancel"
+    )
+    askMenu("\nChoose Bot opponent:", choices).head
+  }
+
   // Prompt user for needed info and begin a new game.
   def startNewGame(params: UserParams): Unit = {
     case object CancelNewGame  extends Exception
@@ -7699,12 +7710,21 @@ object LabyrinthAwakening {
       val humanRole = params.side
         .orElse(askHumanSide())
         .getOrElse(throw CancelNewGame)
+
+      val enhancedBot = if (humanRole == US)
+        params.enhancedBot
+          .orElse(askEnhancedBot())  // TODO: true for testing, This should be false
+          .getOrElse(throw CancelNewGame)
+      else
+        false  // No enhanced US Bot so don't bother asking
+
       val difficulties = if (humanRole == US)
         params.jihadistBotDifficulties
           .getOrElse(askDifficulties(Jihadist))
       else
         params.usBotDifficulties
           .getOrElse(askDifficulties(US))
+
       val humanAutoRoll = params.autoDice
         .getOrElse(!askYorN("\nDo you wish to roll your own dice (y/n)? "))
 
@@ -7714,7 +7734,16 @@ object LabyrinthAwakening {
       val showColor = params.showColor
         .getOrElse(!scala.util.Properties.isWin)
 
-      game = initialGameState(saveName, scenario, gameLength, campaign, humanRole, humanAutoRoll, difficulties, showColor)
+      game = initialGameState(
+        saveName,
+        scenario,
+        gameLength,
+        campaign,
+        humanRole,
+        humanAutoRoll,
+        difficulties,
+        showColor,
+        enhancedBot)
 
       logSummary(game.scenarioSummary)
       printSummary(game.scoringSummary)
@@ -7755,6 +7784,8 @@ object LabyrinthAwakening {
     try {
 
       gamesDir.mkpath()  // Make sure the /games directory exists
+      displayVersion()
+
       var configParams   = loadParamsFile(UserParams())
       var cmdLineParams  = parseCommandLine(args.toIndexedSeq, configParams)
 
@@ -7861,6 +7892,8 @@ object LabyrinthAwakening {
         }
         bool("", "--color", "Show colored log messages")
           { (v, c) => c.copy(showColor = Some(v)) }
+        bool("", "--enhanced-bot", "Use enhanced Bot (Jihadist Bot only)")
+          { (v, c) => c.copy(enhancedBot = Some(v)) }
         flag("-v", "--version", "Display program version and exit") { (c) =>
           println(versionString)
           System.exit(0)
@@ -7886,6 +7919,7 @@ object LabyrinthAwakening {
     val ideology: List[BotDifficulty] = Nil,
     val usResolve: List[BotDifficulty] = Nil,
     val showColor: Option[Boolean] = None,
+    val enhancedBot: Option[Boolean] = None,
   ) {
 
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
@@ -7901,9 +7935,10 @@ object LabyrinthAwakening {
 
   def loadParamsFile(initialParams: UserParams): UserParams = {
     import java.util.Properties
-    val testpath = Some(Pathname("./test_config")) filter (_.exists)
-    val path = testpath getOrElse Pathname("./awakening_config")
-    if (path.exists && path.isReadable) {
+    import scala.util.Properties.userHome
+
+    def readConfig(path: Pathname): UserParams = {
+      displayLine(s"using config file: [$path]")
       try {
         var params = initialParams
         val props = new Properties()
@@ -7967,6 +8002,14 @@ object LabyrinthAwakening {
             case _ => println(s"Ignoring invalid color value ($value) in awakening_config file")
           }
         }
+
+        propValue("enhanced-bot") foreach { value =>
+          value.toLowerCase match {
+            case "yes" => params = params.copy(enhancedBot = Some(true))
+            case "no"  => params = params.copy(enhancedBot = Some(false))
+            case _ => println(s"Ignoring invalid enhanced-bot value ($value) in awakening_config file")
+          }
+        }
         params
       }
       catch {
@@ -7975,8 +8018,17 @@ object LabyrinthAwakening {
           initialParams
       }
     }
-    else
-      initialParams
+
+    // Use the first config file that we find or return the
+    // initial params there isn't any.
+    List(
+      Pathname(".") / "test_config",
+      Pathname(".") / "awakening_config",
+      Pathname(userHome) / "awakening_config",
+      Pathname(userHome) / ".awakening_config")
+      .find(path => path.exists && path.isReadable)
+      .map(readConfig)
+      .getOrElse(initialParams)
   }
 
   val AllUSLevels = List(OffGuard,Competent,Adept,Vigilant,Ruthless,NoMercy)

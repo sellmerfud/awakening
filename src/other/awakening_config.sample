@@ -5,6 +5,20 @@
 # Note that any values you specify on the command line will
 # override values in this file.
 
+# The software will look for this file in the following
+# locations and will use the first one it finds in the
+# given order:
+# <app-directory>/awakening_config
+# <home-directory>/awakening_config
+# <home-directory>/.awakening_config
+#
+# Copy this sample file to one of the these locations
+# and modify it to suit your preferences.
+# I recommend putting it in your <home-directory> so that
+# it will automatically be used each time you install a
+# newer version.
+
+
 # Name of the scenario to play
 # Must be one of:
 #  LetsRoll, YouCanCallMeAl, Anaconda, MissionAccomplished
@@ -64,7 +78,7 @@ us-resolve =
 dice =
 
 # By default color is logged on non-Windows systems.
-# The Windows command console on older (Pre Windows 10) versions
+# The Windows command console on older (Windows 10) versions
 # of Windows does not support color, so color is disabled by default
 # on Windows systems.  If you are running a version of Windows that
 # supports color in the console, then you can set this value to yes.
