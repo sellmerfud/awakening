@@ -57,23 +57,18 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = game.jihadTargets.filterNot(game.isCaliphateMember).sorted
+  def getCandidates() = game.jihadTargets.sorted
 
   def botMajorJihadCandidates() = countryNames(
     game.getMuslims(game.majorJihadTargets(2))
-      .filter { m =>
-        !game.isCaliphateMember(m.name) &&
-        m.isPoor &&
-        JihadistBot.majorJihadSuccessPossible(m)
-      }
+      .filter { m => m.isPoor && JihadistBot.majorJihadSuccessPossible(m) }
   )
 
   def botMinorJihadCandidates() = countryNames(
     game.getMuslims(game.jihadTargets)
       filter { m =>
-        !game.isCaliphateMember(m.name) &&
         (m.isFair || m.isGood) &&
-        inspect("jsp", JihadistBot.minorJihadSuccessPossible(m))
+        JihadistBot.minorJihadSuccessPossible(m)
       }
   )
 
@@ -118,11 +113,11 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
           }
         }
 
-        // preferred minor jihad canidates may be empty if triggered during US turn
-        botMinorJihadCandidates() match {
-          case Nil => nextTarget(2, getCandidates(), Vector.empty).toList
-          case candidates => nextTarget(2, candidates, Vector.empty).toList
+        val possibles = botMinorJihadCandidates() match {
+          case Nil => getCandidates()
+          case preferred => preferred
         }
+        nextTarget(2, possibles, Vector.empty).toList
       }
     }
 
