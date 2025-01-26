@@ -70,12 +70,14 @@ object Card_313 extends Card(313, "Hayat Tahir al-Sham", Jihadist, 3, Remove, No
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   //
-  // We only allow the Bot to play the event if it can declare a Caliphate
+  // The Enhanced Bot will only play the event if it can declare a Caliphate
   // Capital.  This is because if Syria is already in Civil War then it is an
   // auto recruit country so simply placing cells there is not a priority.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    !game.caliphateDeclared && (game.cellsAvailable + numAdjacentCells >= 3)
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    !game.caliphateDeclared && game.cellsAvailable + numAdjacentCells >= 3
+  else
+    game.cellsAvailable + numAdjacentCells >= 3
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
