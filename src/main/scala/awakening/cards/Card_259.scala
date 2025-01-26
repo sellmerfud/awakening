@@ -110,12 +110,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
       if (askMenu("Choose one:", actionChoices).head == "place") {
         val numMilita  = game.militiaAvailable min 2
         val candidates = getPlacementCandidates()
-        val sunniCandidates = countryNames(
-          game.muslims.filter { m =>
-            m.isSunni &&
-            (m.canTakeMilitia || game.adjacentMuslims(m.name).exists(_.canTakeMilitia))
-          }
-        )
+        val sunniCandidates = candidates.filter(_ != GulfStates)
         val inSunni = sunniCandidates.nonEmpty
         val inGulfStates = candidates.contains(GulfStates)
         val targetChoices = List(
