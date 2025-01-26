@@ -1497,6 +1497,9 @@ object LabyrinthAwakening {
     def removedPlots        = plotData.removedPlots
     def resolvedPlotTargets = plotData.resolvedTargets
 
+    def totalAdvisorsOnMap = muslims.map(_.numAdvisors).sum
+    def advisorsAvailable = (3 - totalAdvisorsOnMap ) max 0
+
     // The methods assume a valid name and will throw an exception if an invalid name is used!
     def getCountry(name: String) = {
       if (currentMode == LabyrinthMode && !game.campaign && (name == Nigeria || name == Mali))

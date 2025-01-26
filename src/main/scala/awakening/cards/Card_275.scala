@@ -90,7 +90,10 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
     else
       log(s"\nThere are no available militia to add to $target.", Color.Event)
 
-    addAdvisorsToCountry(target)
+    if (game.advisorsAvailable > 0)
+      addAdvisorsToCountry(target)
+    else
+      log(s"\nAll three Advisors are already on the map.", Color.Event)
 
     val removeCandidates = countryNames(game.getMuslims(IraqSyria).filter(_.totalCells > 0))
 

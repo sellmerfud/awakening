@@ -63,9 +63,8 @@ object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTri
   // Returns true if the printed conditions of the event are satisfied
   // Max of 3 Advisors allowed on the map.
   override
-  def eventConditionsMet(role: Role) = numAdvisorsOnMap < 3 && getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = game.advisorsAvailable > 0 && getCandidates().nonEmpty
 
-  def numAdvisorsOnMap = game.muslims.map(_.numAdvisors).sum
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -78,12 +77,12 @@ object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTri
   override
   def executeEvent(role: Role): Unit = {
     //  Up to two targets
-    val maxTargets = 2 min (3 - numAdvisorsOnMap)
+    val maxTargets = 2 min game.advisorsAvailable
 
     if (isHuman(role)) {
       def nextPlacement(num: Int): Unit = if (num <= maxTargets) {
         val choices = getCandidates().map(name => Some(name) -> name) :+ (None, "Finished placing Advisors")
-        displayLine(s"\n${amountOf(numAdvisorsOnMap, "Advisors marker")} of 3 total currently on the map.", Color.Info)
+        displayLine(s"\n${amountOf(game.totalAdvisorsOnMap, "Advisors marker")} of 3 total currently on the map.", Color.Info)
         askMenu(s"Select country for ${ordinal(num)} Advisors marker:", choices).head match {
           case Some(target) =>
             addEventTarget(target)

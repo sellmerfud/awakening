@@ -70,7 +70,7 @@ object Card_121 extends Card(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAuto
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    game.muslims.map(_.numAdvisors).sum < 3 &&
+    game.advisorsAvailable > 0 &&
     getCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
