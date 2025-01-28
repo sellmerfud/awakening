@@ -4694,9 +4694,7 @@ object LabyrinthAwakening {
   }
 
   // Returns (savePoint, pageNum)
-  // `savePoint` is actually the save point number prior to the
-  // one selected because that is where the game state was saved prior to
-  // the start of the selected point.
+  // `savePoint` the saveNumber of turn to roll back to.
   // `pageNum` is the current page that was show when the user made a
   // selection.  It is used so that this funciton call be called again
   // if necessary showing the same page for consistency.
@@ -4733,7 +4731,7 @@ object LabyrinthAwakening {
           case CANCEL      => None
           case PAGE_UP     => showPage(pageNum - 1)
           case PAGE_DOWN   => showPage(pageNum + 1)
-          case saveNumber => Some(saveNumber - 1, pageNum)
+          case saveNumber => Some(saveNumber, pageNum)
         }
       }
 
@@ -4754,7 +4752,7 @@ object LabyrinthAwakening {
     val prompt = "Roll back to replay starting at which save point:"
 
     def promptUser(startPage: Int): Option[Int] = {
-      displayLine("\nRollback to the beginning of a previous save point.", Color.Info)
+      displayLine("\nRollback to the beginning of a selected save point.", Color.Info)
       askSavePoint(prompt, 0) match {
         case Some((saveNumber, pageNum)) =>
           if (askYorN(s"Are you sure you want to rollback to this save point? (y/n) "))
@@ -4768,15 +4766,53 @@ object LabyrinthAwakening {
 
     promptUser(0)
       .foreach { saveNumber =>
+        val target = saveNumber - 1  // We actually load the previous savePoint
         val oldGameState = game
-        game = loadGameState(game.saveName, saveNumber)
+        val segment = game.history.find(_.saveNumber == saveNumber).get
+        displayLine(s"\nRolling back to start of [Save point ${segment.saveNumber}] ${segment.summary.head}", Color.Info)
+        game = loadGameState(game.saveName, target)
         saveGameDescription(game.saveName, game.description)  // Update the description file
         // Remove all safe files that succeed this one.
         // We are exploring anew
-        removeSaveFiles(game.saveName, saveNumber + 1)
-        removeLogFiles(game.saveName, saveNumber + 1)
+        removeSaveFiles(game.saveName, target + 1)
+        removeLogFiles(game.saveName, target + 1)
         displayGameStateDifferences(oldGameState, game)
+      }
+  }
+
+  // Allow the user to select a save point.
+  // Then they can use the show command to explore the
+  // game state at that save point.
+  def inspect(): Unit = {
+    // Pronpt for what to show while inspecting a seleted save point
+    def inspectPrompt(segment: GameSegment): Unit = {
+      displayLine(s"\nInspecting prior to [Save point ${segment.saveNumber}] ${segment.summary.head}", Color.Info)
+      displayLine(separator(), Color.Info)
+      readLine("Inspect (blank to cancel): ") match {
+        case null | "" =>
+        case input =>
+          showCommand(Some(input))
+          inspectPrompt(segment)
+      }
     }
+
+    def nextInspect(startPage: Int): Unit = {
+      val prompt = "Inspect which save point:"
+      displayLine("\nInspect the game at the start of a selected save point.", Color.Info)
+      askSavePoint(prompt, startPage) match {
+        case Some((saveNumber, pageNum)) =>
+          val segment = game.history.find(_.saveNumber == saveNumber).get
+          val target = saveNumber  - 1
+          val oldGameState = game
+          game = loadGameState(game.saveName, target)
+          inspectPrompt(segment)
+          game = oldGameState
+          nextInspect(pageNum)
+        case None =>
+      }
+    }
+
+    nextInspect(0)
   }
 
   // Remove turn files starting with the given save file number and all
@@ -8234,6 +8270,12 @@ object LabyrinthAwakening {
     }
   }
 
+  case object Inspect extends UserAction {
+    override def perform(param: Option[String]): Unit = {
+      inspect()
+    }
+  }
+
   case object Adjust extends UserAction {
     override def perform(param: Option[String]): Unit = {
       adjustCommand(param)
@@ -8361,6 +8403,7 @@ object LabyrinthAwakening {
       choice(true,    "Show", ShowState),
       choice(true,    "History", History),
       choice(canRoll, "Rollback", Rollback),
+      choice(canRoll, "Inspect", Inspect),
       choice(true,    "Adjust", Adjust),
       choice(true,    "Quit", Quit),
       choice(true,    "?", Help),
