@@ -8421,22 +8421,27 @@ object LabyrinthAwakening {
     val played = s"${amountOf(numCardsPlayed, "Card")} played"
     val drawPile = s"${numCardsInDrawPile()} in draw pile"
     val inHand = s"$numInHand in hand"
-    val line1 = f"| $phase%-36s$turn%14s |"
-    val line2 = f"| $played%-30s$inHand%20s |"
-    val line3 = f"| $reserves%-25s$drawPile%25s |"
+    val lineLen = 56
+    
+    def formatLine(left: String, right: String): String = {
+      val padLen = lineLen - 4 - left.length - right.length
+      val pad = " " * padLen
+      s"| $left$pad$right |"
+
+    }
 
     displayLine()
-    displayLine("======================================================", Color.Info)
-    displayLine(line1, Color.Info)
-    displayLine(line2, Color.Info)
-    displayLine(line3, Color.Info)
-    displayLine("======================================================", Color.Info)
+    displayLine(separator(lineLen, char = '='), Color.Info)
+    displayLine(formatLine(phase, turn), Color.Info)
+    displayLine(formatLine(played, inHand), Color.Info)
+    displayLine(formatLine(phase, drawPile), Color.Info)
+    displayLine(separator(lineLen, char = '='), Color.Info)
     displayLine()
     for (display <- mainChoices.keysIterator)
       displayLine(display)
-    displayLine("------------------------------------------------------")
+    displayLine(separator(lineLen), Color.Info)
     displayLine(otherChoices.keysIterator.mkString(" | "))
-    displayLine("------------------------------------------------------")
+    displayLine(separator(lineLen), Color.Info)
     val numericItem = if (canPlay) Some(PlayCard) else None
     getResponse("Action: ", options, allowInt = canPlay) match {
       case Some((actionName, param)) =>
