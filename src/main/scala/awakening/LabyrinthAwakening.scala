@@ -4693,8 +4693,14 @@ object LabyrinthAwakening {
     getName()
   }
 
-  // Allows the user to roll back to the beginning of any turn.
-  def rollback(): Unit = {
+  // Returns (savePoint, pageNum)
+  // `savePoint` is actually the save point number prior to the
+  // one selected because that is where the game state was saved prior to
+  // the start of the selected point.
+  // `pageNum` is the current page that was show when the user made a
+  // selection.  It is used so that this funciton call be called again
+  // if necessary showing the same page for consistency.
+  def askSavePoint(prompt: String, startPage: Int): Option[(Int, Int)] = {
     try {
       val pages = game.history.drop(1).reverse.sliding(25, 25).toList
       val firstPage = 0
@@ -4703,7 +4709,7 @@ object LabyrinthAwakening {
       val PAGE_DOWN = -2
       val CANCEL    = -3
 
-      def showPage(pageNum: Int): Unit = {
+      def showPage(pageNum: Int): Option[(Int, Int)] = {
         val width = longestString(pages(pageNum).map(_.saveNumber.toString))
         val fmt = s"%${width}d"
         val saveChoices: List[(Int, (String, Seq[String]))] = pages(pageNum)
@@ -4716,44 +4722,60 @@ object LabyrinthAwakening {
         val otherChoices: List[(Int, (String, Seq[String]))] = List(
           choice(pageNum > firstPage, PAGE_UP,   "Page up, show newer save points ", Seq.empty),
           choice(pageNum < lastPage,  PAGE_DOWN, "Page down, show older save points ", Seq.empty),
-          choice(true,                CANCEL,    "Cancel, do not roll back ", Seq.empty)
+          choice(true,                CANCEL,    "Cancel", Seq.empty)
         ).flatten
 
         val current = game.history.last
-        displayLine("\nRollback to the beginning of a previous save point.", Color.Info)
+        // displayLine("\nRollback to the beginning of a previous save point.", Color.Info)
         displayLine("The save points are displayed with the most recent first.", Color.Info)
 
-        askMenuWithWrap("Roll back to replay starting at which save point:", saveChoices:::otherChoices) match {
-          case CANCEL      =>
+        askMenuWithWrap(prompt, saveChoices:::otherChoices) match {
+          case CANCEL      => None
           case PAGE_UP     => showPage(pageNum - 1)
           case PAGE_DOWN   => showPage(pageNum + 1)
-          case saveNumber =>
-            if (askYorN(s"Are you sure you want to rollback to this save point? (y/n) ")) {
-              // Games are saved at the end of the turn, so we actually want
-              // to load the file with saveNumber -1.
-              val target       = saveNumber - 1
-              val oldGameState = game
-              game = loadGameState(game.saveName, target)
-              saveGameDescription(game.saveName, game.description)  // Update the description file
-
-              // Remove all safe files that succeed this one.
-              // We are exploring anew
-              removeSaveFiles(game.saveName, target + 1)
-              removeLogFiles(game.saveName, target + 1)
-              displayGameStateDifferences(oldGameState, game)
-            }
-            else
-              showPage(pageNum)
+          case saveNumber => Some(saveNumber - 1, pageNum)
         }
       }
 
       if (game.history.size > 1)
-        showPage(0)
-      else
+        showPage(startPage)
+      else {
         println("\nThere are no previous save points")
+        None
+      }
     }
     catch {
-      case AbortAction =>
+      case AbortAction => None
+    }
+  }
+
+  // Allows the user to roll back to the beginning of any turn.
+  def rollback(): Unit = {
+    val prompt = "Roll back to replay starting at which save point:"
+
+    def promptUser(startPage: Int): Option[Int] = {
+      displayLine("\nRollback to the beginning of a previous save point.", Color.Info)
+      askSavePoint(prompt, 0) match {
+        case Some((saveNumber, pageNum)) =>
+          if (askYorN(s"Are you sure you want to rollback to this save point? (y/n) "))
+            Some(saveNumber)
+          else
+            promptUser(pageNum)
+        case None =>
+          None
+      }
+    }
+
+    promptUser(0)
+      .foreach { saveNumber =>
+        val oldGameState = game
+        game = loadGameState(game.saveName, saveNumber)
+        saveGameDescription(game.saveName, game.description)  // Update the description file
+        // Remove all safe files that succeed this one.
+        // We are exploring anew
+        removeSaveFiles(game.saveName, saveNumber + 1)
+        removeLogFiles(game.saveName, saveNumber + 1)
+        displayGameStateDifferences(oldGameState, game)
     }
   }
 
