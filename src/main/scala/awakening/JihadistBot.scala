@@ -1516,11 +1516,14 @@ object JihadistBot extends BotHelpers {
 
   def iranTarget(names: List[String]): Option[String] = {
     val priorities = List(
+      new CriteriaFilter("Fair, Regime Change", muslimTest(m => m.isFair && m.inRegimeChange)),
       GoodPriority,
       FairPriority,
-      new CriteriaFilter("Untested Muslim", muslimTest(_.isUntested)))
-      botLog("Find \"Iran\" target", Color.Debug)
-      topPriority(game getMuslims names, priorities).map(_.name)
+      new CriteriaFilter("Untested Muslim", muslimTest(_.isUntested)),
+      HighestResourcePriority,
+    )
+    botLog("Find \"Iran\" target", Color.Debug)
+    topPriority(game.getMuslims(names), priorities).map(_.name)
   }
 
 

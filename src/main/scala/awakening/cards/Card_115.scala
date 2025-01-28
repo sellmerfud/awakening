@@ -74,8 +74,30 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => true
-    case Jihadist => game.availablePlots.nonEmpty
+    case US =>
+      true
+      
+    case Jihadist if game.botEnhancements =>
+      val indonesia = game.getMuslim(IndonesiaMalaysia)
+      val pakistan = game.getMuslim(Pakistan)
+      game.availablePlots.nonEmpty &&
+      (indonesia.governance < Poor || pakistan.governance < Poor || game.funding < 8)
+
+    case Jihadist =>
+      game.availablePlots.nonEmpty
+  }
+
+  def enhBotTarget(names: List[String]): String = {
+    import JihadistBot.{ CriteriaFilter, muslimTest, nonMuslimTest }
+    val priorities = List(
+      new CriteriaFilter("Indonesia with Good governance", muslimTest(m => m.name == IndonesiaMalaysia && m.isGood)),
+      new CriteriaFilter("Pakistan with Good governance", muslimTest(m => m.name == Pakistan && m.isGood)),
+      new CriteriaFilter("Indonesia with Fair governance", muslimTest(m => m.name == IndonesiaMalaysia && m.isFair)),
+      new CriteriaFilter("Pakistan with Fair governance", muslimTest(m => m.name == Pakistan && m.isFair)),
+      new CriteriaFilter("Non-Muslim", nonMuslimTest(_ => true)),
+    )
+    JihadistBot.botLog("Find \"Hambali\" target", Color.Debug)
+    JihadistBot.topPriority(game.getMuslims(getCandidates()), priorities).map(_.name).get
   }
 
   // Carry out the event for the given role.
@@ -105,7 +127,10 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
           (name, askAvailablePlots(1, ops = 3).head)
         }
         else {
-          val name = JihadistBot.plotPriority(getCandidates()).get
+          val name = if (game.botEnhancements)
+            enhBotTarget(getCandidates())
+          else
+            JihadistBot.plotPriority(getCandidates()).get
           (name, JihadistBot.preparePlots(game.availablePlots).head)
         }
 

@@ -65,15 +65,20 @@ object Card_102 extends Card(102, "Former Soviet Union", Unassociated, 2, NoRemo
   override
   def botWillPlayEvent(role: Role): Boolean = {
     val centralAsia = game.getMuslim(CentralAsia)
-    if (role == Jihadist)
-      centralAsia.isGood ||
-      centralAsia.isAlly ||
-      (centralAsia.isNeutral && centralAsia.isFair)
-    else // US
-      centralAsia.isIslamistRule ||
-      centralAsia.isPoor ||
-      centralAsia.isUntested ||
-      centralAsia.isAdversary
+    role match {
+      case Jihadist if game.botEnhancements =>
+        centralAsia.isGood ||
+        (centralAsia.isFair && centralAsia.isAlly)
+      case Jihadist =>
+        centralAsia.isGood ||
+        centralAsia.isAlly ||
+        (centralAsia.isNeutral && centralAsia.isFair)
+      case US =>
+        centralAsia.isIslamistRule ||
+        centralAsia.isPoor ||
+        centralAsia.isUntested ||
+        centralAsia.isAdversary
+    }
   }
 
   // Carry out the event for the given role.

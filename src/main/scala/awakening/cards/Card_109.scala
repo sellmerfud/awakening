@@ -70,7 +70,12 @@ object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsin
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements =>
+      game.prestigeLevel != Low && game.gwotPenalty > 0
+
+    case _ => true
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

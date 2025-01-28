@@ -73,6 +73,10 @@ object Card_108 extends Card(108, "Musharraf", Unassociated, 2, NoRemove, NoLaps
       case US =>
         eventRemovesLastCell() ||
         (!pakistan.isAlly && !pakistan.isGood && !(pakistan.isFair && pakistan.isNeutral))
+      case Jihadist if game.botEnhancements => 
+        val pakistan = game.getMuslim(Pakistan)
+        pakistan.isGood ||
+        (pakistan.isFair && !pakistan.isAdversary)
       case Jihadist => 
         pakistan.isAlly && (pakistan.isGood || pakistan.isFair)
     }

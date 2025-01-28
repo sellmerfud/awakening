@@ -85,6 +85,8 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
     case Jihadist => getBotJihadCandidates().nonEmpty
   }
 
+  def shixMixCandidates() =
+    countryNames(game.muslims.filter(_.isShiaMix))
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
@@ -92,7 +94,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
   def executeEvent(role: Role): Unit = role match {
     case US if isHuman(role) =>
       val iranHasCell = game.getCountry(Iran).totalCells > 0
-      val target = askCountry("Select a Shia-Mix country: ", countryNames(game.muslims.filter(_.isShiaMix)))
+      val target = askCountry("Select a Shia-Mix country: ", shixMixCandidates())
       val targetHasCell = game.getCountry(target).totalCells > 0
       addEventTarget(target)
       testCountry(target)  // Event specifically says to test
@@ -124,9 +126,14 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
 
     case Jihadist =>
       val name = if (isHuman(role))
-        askCountry("Select a Shix-Mix country: ", countryNames(game.muslims.filter(_.isShiaMix)))
+        askCountry("Select a Shix-Mix country: ", shixMixCandidates())
       else
-        JihadistBot.iranTarget(getBotJihadCandidates()).get
+        getBotCellCandidates() match {
+          case Nil =>
+            JihadistBot.iranTarget(shixMixCandidates()).get
+            case candidates =>
+            JihadistBot.iranTarget(candidates).get
+        }
 
       addEventTarget(name)
       testCountry(name) // Event specifically says to test

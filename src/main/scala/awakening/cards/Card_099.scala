@@ -42,7 +42,7 @@ import awakening.LabyrinthAwakening._
 // Card Text:
 // ------------------------------------------------------------------
 // US selects and discards 1 card from US hand.
-// -1 Prestife. -1 Funding.
+// -1 Prestige. -1 Funding.
 // ------------------------------------------------------------------
 object Card_099 extends Card(99, "HAMAS Elected", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -63,11 +63,15 @@ object Card_099 extends Card(99, "HAMAS Elected", Unassociated, 1, Remove, NoLap
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    role == Jihadist &&
-    !game.botEnhancements && // Enhanced Jihadist Bot never plays this
-    (game.prestige > 1 || hasCardInHand(US))
-
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements => 
+      //  Only play if the prestige level would change
+      getPrestigeLevel(game.prestige - 1) !=  game.prestigeLevel
+    case Jihadist =>
+      game.prestige > 1 || hasCardInHand(US)
+    case _ =>
+      false
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

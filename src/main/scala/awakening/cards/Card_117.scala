@@ -66,10 +66,105 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       .map(deck.apply)
       .filter(_.association == role)
 
+   abstract class EnhJihadCardEntry(val cardNums: Set[Int]) {
+    def this(cardNum: Int) = this(Set(cardNum))
+    def conditionsMet: Boolean
+    def willTake: Boolean = conditionsMet && deck(cardNums.head).botWillPlayEvent(Jihadist)
+  }
+
+  val enhancedJihadistCandidateEntries = List(
+    new EnhJihadCardEntry(102) {  // Former Soviet Uniont
+      override def conditionsMet = game.getMuslim(CentralAsia).isGood
+    }, 
+    new EnhJihadCardEntry(107) {  // Kurdistan
+      override def conditionsMet =
+        game.getMuslim(Iraq).isGood ||
+        game.getMuslim(Iraq).isFair ||
+        game.getMuslim(Turkey).isGood
+    }, 
+    new EnhJihadCardEntry(Set(104, 105)) {  // Iran
+      override def conditionsMet = true
+    }, 
+    new EnhJihadCardEntry(120) {  // US Election
+      override def conditionsMet = game.worldPosture == game.usPosture
+    }, 
+    new EnhJihadCardEntry(112) {  // Bin Ladin
+      override def conditionsMet = game.prestigeLevel != Low
+    }, 
+    new EnhJihadCardEntry(93) {  // Taliban
+      override def conditionsMet = game.prestigeLevel != Low
+    }, 
+    new EnhJihadCardEntry(111) {  // Zawahiri
+      override def conditionsMet = game.prestigeLevel != Low
+    }, 
+    new EnhJihadCardEntry(108) {  // Musharraf
+      override def conditionsMet =
+        game.getMuslim(Pakistan).isGood &&
+        !game.getMuslim(Pakistan).hasMarker(BenazirBhutto)
+    }, 
+    new EnhJihadCardEntry(Set(84, 85)) {  // Leak
+      override def conditionsMet =
+        globalEventInPlay(Renditions) ||
+        globalEventInPlay(Wiretapping) ||
+        globalEventInPlay(EnhancedMeasures)
+    }, 
+    new EnhJihadCardEntry(90) {  // Quagmire
+      override def conditionsMet =
+        game.hasMuslim(_.inRegimeChange)
+    }, 
+    new EnhJihadCardEntry(76) {  // Abu Ghurayb
+      override def conditionsMet =
+        game.hasMuslim(_.inRegimeChange)
+    }, 
+    new EnhJihadCardEntry(86) {  // Lebanon War
+      override def conditionsMet = true
+    }, 
+    new EnhJihadCardEntry(63) {  // Gaza War
+      override def conditionsMet = true
+    }, 
+    new EnhJihadCardEntry(Set(87,88,89)) {  // Martyrdom Operations
+      override def conditionsMet = true
+    }, 
+    new EnhJihadCardEntry(92) {  // Saddam
+      override def conditionsMet =
+        game.fundingLevel != Ample &&
+        game.getMuslim(Iraq).isPoor &&
+        game.getMuslim(Iraq).isAdversary &&
+        globalEventNotInPlay(SaddamCaptured)
+    }, 
+    new EnhJihadCardEntry(95) {  // Wahhabism
+      override def conditionsMet =
+        game.fundingLevel != Ample &&
+        !game.getMuslim(SaudiArabia).isGood
+    }, 
+    new EnhJihadCardEntry(72) {  // Opium
+      override def conditionsMet =
+        game.getMuslim(Afghanistan).isIslamistRule &&
+        game.cellsAvailable >= 3
+    }, 
+  )
+
+  def enhancedJihadistBotEntries(): List[Int] = {
+    val available = game.cardsDiscarded.toSet ++ game.cardsLapsing().toSet ++ game.firstPlotCard().toSet
+
+    enhancedJihadistCandidateEntries
+      .flatMap { entry =>
+        val cardNums = available.intersect(entry.cardNums)
+        if (cardNums.nonEmpty && entry.willTake)
+          Some(cardNums.head)
+        else
+          None
+      }
+  }
+
 
   def botCardDraw(role: Role): Unit = {
-    val highOps = candidateCards(role).map(_.printedOps).max
-    val cardNum = shuffle(candidateCards(role).filter(_.printedOps == highOps).map(_.number)).head
+    val cardNum = if (role == Jihadist && game.botEnhancements)
+      enhancedJihadistBotEntries().head
+    else {
+      val highOps = candidateCards(role).map(_.printedOps).max
+      shuffle(candidateCards(role).filter(_.printedOps == highOps).map(_.number)).head
+    }
 
     log(s"\n$role Bot selects ${deck(cardNum).numAndName}", Color.Event)
     processCardDrawn(role, cardNum, cardLocation(cardNum).get)
@@ -84,6 +179,12 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       val IR_OilExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter)
       (game.islamistResources + IR_OilExporters < 6 || !game.islamistAdjacency) &&
       candidateCards(US).nonEmpty
+
+    case Jihadist if game.botEnhancements =>
+      // Will not play if it would cause immediate victory for the US player
+      val US_OilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
+      (game.goodResources + US_OilExporters < 12) &&
+      enhancedJihadistBotEntries().nonEmpty
 
     case Jihadist =>
       // Will not play if it would cause immediate victory for the US player

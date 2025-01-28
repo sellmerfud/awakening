@@ -72,8 +72,23 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => true
-    case Jihadist => getJihadistCandidates().nonEmpty
+    case US =>
+      true
+    case Jihadist if game.botEnhancements =>
+      game.getMuslim(Turkey).isGood ||
+      game.getMuslim(Iraq).isGood ||
+      game.getMuslim(Iraq).isFair
+    case Jihadist =>
+      getJihadistCandidates().nonEmpty
+  }
+
+  def enhBotTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      JihadistBot.GoodPriority,
+      JihadistBot.HighestResourcePriority,
+    )
+    JihadistBot.botLog("Find \"Kurdistan\" target", Color.Debug)
+    JihadistBot.topPriority(game.getMuslims(getJihadistCandidates()), priorities).map(_.name)
   }
 
   // Carry out the event for the given role.
@@ -95,6 +110,8 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
       if (getJihadistCandidates().nonEmpty) {
         val name = if (isHuman(role))
           askCountry("Select country degrade governance: ", getJihadistCandidates())
+        else if (game.botEnhancements)
+          enhBotTarget(getJihadistCandidates()).get
         else
           JihadistBot.alignGovTarget(getJihadistCandidates()).get
 

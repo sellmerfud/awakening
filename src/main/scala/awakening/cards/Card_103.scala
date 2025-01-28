@@ -70,7 +70,11 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role) = role match {
-    case US       => getCandidates().nonEmpty
+    case US => getCandidates().nonEmpty
+    case Jihadist if game.botEnhancements =>
+      val lebanon = game.getMuslim(Lebanon)
+      lebanon.isGood ||
+      (lebanon.isFair && lebanon.isAlly)
     case Jihadist =>
       val lebanon = game.getMuslim(Lebanon)
       !lebanon.isAdversary &&

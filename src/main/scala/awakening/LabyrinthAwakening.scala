@@ -277,6 +277,17 @@ object LabyrinthAwakening {
   val Medium   = "Medium"
   val High     = "High"
   val VeryHigh = "Very High"
+
+  def getPrestigeLevel(prestigeValue: Int) =
+    prestigeValue match {
+      case x if x <  4 => Low
+      case x if x <  7 => Medium
+      case x if x < 10 => High
+      case _           => VeryHigh
+    }
+
+
+
   // Funding level
   val Tight    = "Tight"
   val Moderate = "Moderate"
@@ -298,6 +309,19 @@ object LabyrinthAwakening {
       throw new IllegalArgumentException(s"oppositePosture($p)")
     if (p == Hard) Soft else Hard
   }
+
+  // Returns the current GWOT
+  // posture (Soft, Even, Hard)
+  // value 0, 1, 2, 3
+  def getGwot(hardSoftDelta: Int): (String, Int) = {
+    val posture = hardSoftDelta match {
+      case 0 => Even
+      case d if d < 0 => Soft
+      case _ => Hard
+    }
+    (posture, hardSoftDelta.abs min 3)
+  }
+
   val GovernanceUntested = 0
   val Good               = 1
   val Fair               = 2
@@ -1598,11 +1622,7 @@ object LabyrinthAwakening {
     // Returns the current GWOT
     // posture (Soft, Even, Hard)
     // value 0, 1, 2, 3
-    def gwot: (String, Int) = {
-      val delta = hardSoftDelta
-      val posture = if (delta == 0) Even else if (delta < 0) Soft else Hard
-      (posture, delta.abs min 3)
-    }
+    def gwot: (String, Int) = getGwot(hardSoftDelta)
 
     def worldPosture = gwot._1
 
@@ -1620,12 +1640,7 @@ object LabyrinthAwakening {
       case _           => LowIntensity
     }
 
-    def prestigeLevel = prestige match {
-      case x if x <  4 => Low
-      case x if x <  7 => Medium
-      case x if x < 10 => High
-      case _           => VeryHigh
-    }
+    def prestigeLevel = getPrestigeLevel(prestige)
 
     def fundingLevel = funding match {
       case x if x < 4 => Tight
@@ -1870,7 +1885,7 @@ object LabyrinthAwakening {
       summary.add("")
       summary.add("Options:")
       summary.add(separator())
-      summary.add(s"Use Bot enhancments    : ${if (botEnhancements) "yes" else "no"}")
+      summary.add(s"Use Bot enhancements    : ${if (botEnhancements) "yes" else "no"}")
       if (manualDieRolls)
         summary.add(s"Manual die rolls       : ${if (manualDieRolls) "yes" else "no"}")
       else
@@ -8422,7 +8437,7 @@ object LabyrinthAwakening {
     val drawPile = s"${numCardsInDrawPile()} in draw pile"
     val inHand = s"$numInHand in hand"
     val lineLen = 56
-    
+
     def formatLine(left: String, right: String): String = {
       val padLen = lineLen - 4 - left.length - right.length
       val pad = " " * padLen
