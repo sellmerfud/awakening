@@ -7850,6 +7850,7 @@ object LabyrinthAwakening {
   case object ExitProgram extends Exception
   case object QuitGame    extends Exception
   case object AbortAction extends Exception
+  case object CancelledByFerguson extends Exception
 
   def versionString = {
     val versionSuffix  = if (SOFTWARE_VERSION.startsWith("0")) " - BETA" else ""
@@ -8877,6 +8878,25 @@ object LabyrinthAwakening {
           throw AbortAction
         case Some(cardNum) =>
           val card2 = deck(cardNum)
+          if (lapsingEventInPlay(Ferguson) && card2.association == US) {
+            displayLine("\nFerguson is in effect, so the Jihadist will cancel any US associated card.", Color.Info)
+            val choices = List(
+              "another" -> "Choose another 3 Ops card",
+              "abort"   -> "Abort the Reassessment action",
+              "proceed" -> "Play this card anyway")
+            askMenu("What do you wish to do:", choices).head match {
+              case "another" => promptForSecondCard()
+              case "abort"   => throw AbortAction
+              case _ =>
+                log(s"${card2.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
+                log(s"The reassessment action is cancelled", Color.Event)
+                addPlayedCard(US, cardNum)
+                addCardToDiscardPile(cardNum)
+                removeLapsingEvent(Ferguson)
+                throw CancelledByFerguson
+            }
+          }
+
           decreaseCardsInHand(US, 1)
           // Replace the head card play with a reassessment
           game = game.copy(turnActions = PlayedReassement(card.number, card2.number) :: game.turnActions.tail)
@@ -9032,7 +9052,11 @@ object LabyrinthAwakening {
       case (true, true) => List(PerformCardActivity, TriggerOpponentEvent(card), Play2ndCard)
     }
 
-    processOptions(initialOptions)
+    try processOptions(initialOptions)
+    catch {
+      // If cancelled then we just return from this function.
+      case CancelledByFerguson =>
+    }
   }
 
   // This method allows the human player to execute an operation with the
