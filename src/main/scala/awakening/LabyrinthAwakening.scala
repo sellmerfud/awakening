@@ -1885,7 +1885,7 @@ object LabyrinthAwakening {
       summary.add("")
       summary.add("Options:")
       summary.add(separator())
-      summary.add(s"Use Bot enhancements    : ${if (botEnhancements) "yes" else "no"}")
+      summary.add(s"Use Bot enhancements   : ${if (botEnhancements) "yes" else "no"}")
       if (manualDieRolls)
         summary.add(s"Manual die rolls       : ${if (manualDieRolls) "yes" else "no"}")
       else

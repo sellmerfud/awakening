@@ -93,12 +93,18 @@ object JihadistBot extends BotHelpers {
   def sadrValue(s: Boolean) = if (s) 1 else 0
   def activeCells(c: Country)   = (c.activeCells  - usedCells(c.name).actives) max 0
   def sleeperCells(c: Country)  = (c.sleeperCells - usedCells(c.name).sleepers) max 0
-  def unusedCells(c: Country)   = (c.totalCells   - usedCells(c.name).total) max 0
+  def unusedCells(c: Country)   = (c.cells - usedCells(c.name).total) max 0
   def sadrAvailable(c: Country) = c.hasSadr && !usedCells.sadrUsed
-  def totalUnused(c: Country)   = unusedCells(c) + sadrValue(sadrAvailable(c))
-  def unusedCellsOnMap = (game.countries map totalUnused).sum
+
+  def totalUnused(c: Country, includeSadr: Boolean) =
+    if (includeSadr)
+      unusedCells(c) + sadrValue(sadrAvailable(c))
+    else
+      unusedCells(c)
+
+  def unusedCellsOnMap = game.countries.map(c => totalUnused(c, includeSadr = true)).sum
   // Sadr cannot travel
-  def unusedCellsOnMapForTravel = (game.countries map unusedCells).sum
+  def unusedCellsOnMapForTravel = game.countries.map(unusedCells).sum
 
   def poorMuslimWhereMajorJihadPossible(m: MuslimCountry): Boolean =
     m.isPoor &&
@@ -1057,7 +1063,7 @@ object JihadistBot extends BotHelpers {
       def noPath  = FundingTightDecision
       def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
         m.isPoor &&
-        totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
+        totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5 &&
         majorJihadSuccessPossible(m)
       }
     }
@@ -1092,7 +1098,7 @@ object JihadistBot extends BotHelpers {
           m.jihadOK &&
           (m.isGood || m.isFair) &&
           minorJihadSuccessPossible(m) &&
-          totalUnused(m) > 0
+          totalUnused(m, includeSadr = true) > 0  // Standard Bot includes Sadr
         }
       }
     }
@@ -1139,7 +1145,7 @@ object JihadistBot extends BotHelpers {
       def desc = "Cell in Non-Muslim?"
       def yesPath = PlotOpFunding
       def noPath  = TravelOp(target = None, maxAttempts = None, adjacentOnly = false)
-      def condition(ops: Int) = game hasNonMuslim (totalUnused(_) > 0)
+      def condition(ops: Int) = game.hasNonMuslim(n => totalUnused(n, includeSadr = true) > 0)
     }
   }
 
@@ -1173,7 +1179,7 @@ object JihadistBot extends BotHelpers {
           .map(game.getMuslim)
           .exists { m =>
             m.isPoor &&
-            totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
+            totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5 &&
             majorJihadSuccessPossible(m)
           }
       }
@@ -1196,7 +1202,7 @@ object JihadistBot extends BotHelpers {
           .map(game.getMuslim)
           .filter { m =>
             m.isPoor &&
-            totalUnused(m) - m.totalTroopsAndMilitia >= 5 &&
+            totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5 &&
             majorJihadSuccessPossible(m)
           }
           .map(_.name)
@@ -1219,7 +1225,7 @@ object JihadistBot extends BotHelpers {
           m.jihadOK &&
           (m.isGood || m.isFair) &&
           minorJihadSuccessPossible(m) &&
-          totalUnused(m) > 0
+          totalUnused(m, includeSadr = false) > 0  // Enhanced Bot does NOT include Sadr
         }
       }
     }
@@ -2237,7 +2243,7 @@ object JihadistBot extends BotHelpers {
       }
       else {
         val canPlot = (c: Country) => !alreadyTried(c.name) &&
-                                      totalUnused(c) > 0 && (
+                                      totalUnused(c, includeSadr = true) > 0 && (
                                         (game isNonMuslim c.name) ||
                                         !(game getMuslim c.name).isIslamistRule
                                       )
@@ -2249,7 +2255,7 @@ object JihadistBot extends BotHelpers {
           case None => completed
           case Some(name) =>
             val c = game getCountry name
-            val numAttempts = totalUnused(c) min remaining
+            val numAttempts = totalUnused(c, includeSadr = true) min remaining
             val actives     = activeCells(c) min numAttempts
             val sadr        = sadrAvailable(c) && actives < numAttempts
             val sleepers    = numAttempts - actives - sadrValue(sadr)
@@ -2287,6 +2293,7 @@ object JihadistBot extends BotHelpers {
   def minorJihadOperation(card: Card): Int = {
     log(s"\n$Jihadist performs a Minor Jihad operation")
     log(separator())
+    val allowSadr = !game.botEnhancements // Enhanced Bot does not allow Sadr to participate
     val maxJihad = maxOpsPlusReserves(card)
     def nextJihadTarget(completed: Int, alreadyTried: Set[String]): List[JihadTarget] = {
       val remaining = maxJihad - completed
@@ -2296,13 +2303,13 @@ object JihadistBot extends BotHelpers {
         // The Bot will never conduct minor Jihad in a country with Poor governance.
         val canJihad = (m: MuslimCountry) => !alreadyTried(m.name) &&
                                              minorJihadSuccessPossible(m) &&
-                                             totalUnused(m) > 0 && !m.isPoor
+                                             totalUnused(m, includeSadr = allowSadr) > 0 && !m.isPoor
         val candidates = countryNames(game.jihadTargets map game.getMuslim filter canJihad)
         minorJihadTarget(candidates) match {
           case None => Nil   // No more candidates
           case Some(name) =>
             val m = game.getMuslim(name)
-            val numAttempts = totalUnused(m) min remaining
+            val numAttempts = totalUnused(m, includeSadr = allowSadr) min remaining
             val actives  = numAttempts min activeCells(m)
             val sleepers = (numAttempts - actives) min sleeperCells(m)
             val sadr     = numAttempts - actives - sleepers > 0
@@ -2335,7 +2342,7 @@ object JihadistBot extends BotHelpers {
     val isCandidate = (m: MuslimCountry) =>
       majorJihadSuccessPossible(m) &&
       m.isPoor &&
-      totalUnused(m) - m.totalTroopsAndMilitia >= 5
+      totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5
     val candidates = game.majorJihadTargets(opsUsed)
       .map(game.getMuslim)
       .filter(isCandidate)
@@ -2390,7 +2397,7 @@ object JihadistBot extends BotHelpers {
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
         game.availablePlots.contains(PlotWMD) &&
-        totalUnused(game.getCountry(UnitedStates)) > 0
+        totalUnused(game.getCountry(UnitedStates), includeSadr = true) > 0
       }
 
       // Plot as many time as possible in the US as long as there are
@@ -2409,7 +2416,7 @@ object JihadistBot extends BotHelpers {
         val maxOps = cardOps + reserveOps
         def nextAttempt(completed: Int): Int = {
           val us = game getCountry UnitedStates
-          if (completed == maxOps || totalUnused(us) == 0 || game.availablePlots.isEmpty)
+          if (completed == maxOps || totalUnused(us, includeSadr = true) == 0 || game.availablePlots.isEmpty)
           completed
           else {
             displayHeader()
@@ -2510,7 +2517,7 @@ object JihadistBot extends BotHelpers {
         game.usPosture == Soft &&
         game.gwotPenalty == 0  &&
         game.availablePlots.nonEmpty &&
-        game.hasNonMuslim(n => n.isSoft && totalUnused(n) > 0)
+        game.hasNonMuslim(n => n.isSoft && totalUnused(n, includeSadr = true) > 0)
       }
 
       // Plot in Soft Non-Muslim countries while the US posture is Soft to
@@ -2541,7 +2548,7 @@ object JihadistBot extends BotHelpers {
             val target = topPriority(softs, plotPriorities).get
 
             def nextAttempt(plotsPerformed: Int): Int = {
-              if (completed + plotsPerformed == maxOps || totalUnused(target) == 0 || game.availablePlots.isEmpty)
+              if (completed + plotsPerformed == maxOps || totalUnused(target, includeSadr = true) == 0 || game.availablePlots.isEmpty)
                 plotsPerformed
               else {
                 displayHeader()
@@ -2558,7 +2565,7 @@ object JihadistBot extends BotHelpers {
             nextPlotTarget(completed + numPlots, candidates filterNot (_.name == target.name))
           }
         }
-        nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && totalUnused(n) > 0))
+        nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && totalUnused(n, includeSadr = true) > 0))
       }
     }
 
@@ -2775,7 +2782,7 @@ object JihadistBot extends BotHelpers {
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
         game.availablePlots.contains(PlotWMD) &&
-        totalUnused(game.getCountry(UnitedStates)) > 0
+        totalUnused(game.getCountry(UnitedStates), includeSadr = true) > 0
       }
 
       // Plot as many time as possible in the US as long as there are
@@ -2794,7 +2801,7 @@ object JihadistBot extends BotHelpers {
         val maxOps = cardOps + reserveOps
         def nextAttempt(completed: Int): Int = {
           val us = game.getCountry(UnitedStates)
-          if (completed == maxOps || totalUnused(us) == 0 || game.availablePlots.isEmpty)
+          if (completed == maxOps || totalUnused(us, includeSadr = true) == 0 || game.availablePlots.isEmpty)
             completed
           else {
             displayHeader()
