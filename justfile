@@ -43,3 +43,6 @@ save_info path:
          "scenarioName": ."game-state"."scenarioName",
          "# turn actions": ."game-state"."turnActions" | length
        }' '{{path}}'
+
+@saved_game path:
+  ouch decompress -d games '{{path}}'
