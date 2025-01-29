@@ -74,6 +74,8 @@ object Card_076 extends Card(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing, 
   def executeEvent(role: Role): Unit = {
     if (isHuman(role))
       log("\nDraw two cards and add them to your hand", Color.Event)
+    else if (game.botEnhancements)
+      log(s"\nDraw 2 cards and shuffle them into the $Jihadist Bot's hand", Color.Event)
     else
       log(s"\nDraw 2 cards and place them on top of the $Jihadist Bot's hand", Color.Event)
     askMultipleCardsDrawnFromDrawPile(role, 2)

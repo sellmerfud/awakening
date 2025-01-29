@@ -103,7 +103,10 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
           processDiscardedCard(Jihadist, num)
 
         case Return(num) =>
-          log(s"${cardNumAndName(num)} is returned to the $Jihadist hand.")
+          if (game.botEnhancements)
+            log(s"${cardNumAndName(num)} is shuffled into the $Jihadist hand.")
+          else
+            log(s"${cardNumAndName(num)} is returned to the top of the $Jihadist hand.")
           decreaseCardsInHand(US, 1)
           increaseCardsInHand(Jihadist, 1)
       }

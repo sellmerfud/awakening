@@ -90,6 +90,8 @@ object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLa
 
     if (isHuman(role))
       log(s"\nDraw a card and add it to your hand", Color.Event)
+    else if (game.botEnhancements)
+      log(s"\nDraw a card and shuffle it into the $Jihadist Bot's hand", Color.Event)
     else
       log(s"\nDraw a card and place it on top of the $Jihadist Bot's hand", Color.Event)
       askCardDrawnFromDrawPile(role)

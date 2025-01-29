@@ -102,6 +102,8 @@ object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsin
     rollPrestige()
     if (isHuman(role))
       log(s"\nDraw a card and add it to your hand", Color.Event)
+    else if (role == Jihadist && game.botEnhancements)
+      log(s"\nDraw a card and shuffle it into the $role Bot's hand", Color.Event)
     else
       log(s"\nDraw a card and place it on top of the $role Bot's hand", Color.Event)
     askCardDrawnFromDrawPile(role)

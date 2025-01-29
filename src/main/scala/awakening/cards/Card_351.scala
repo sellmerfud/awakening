@@ -108,13 +108,16 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
           case "discard" =>
             processDiscardedCard(role, cardNum)
 
-          case "return"  =>
+          case "return" =>
             log(s"\nReturn $cardDisplay to the top of the $opponent hand", Color.Event)
             decreaseCardsInHand(role, 1)
             increaseCardsInHand(oppositeRole(role), 1)
 
-          case "keep"    =>
-            log(s"\nKeep $cardDisplay and place another card from your hand the $opponent hand", Color.Event)
+          case "keep" =>
+            if (opponent == Jihadist && game.botEnhancements)
+              log(s"\nKeep $cardDisplay and shuffle another card from your hand into the $opponent hand", Color.Event)
+            else
+              log(s"\nKeep $cardDisplay and place another card from your hand on the $opponent hand", Color.Event)
             askCardDrawnFromOpponent(oppositeRole(role), Some(s"What is the # of the card given: "), except = Set(cardNum))
 
           case _ => // Play the event
