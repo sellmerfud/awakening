@@ -7505,7 +7505,7 @@ object LabyrinthAwakening {
       decreaseFunding(1)
     }
     if (game.numIslamistRule > 0) {
-      log(s"US prestige drops buy 1 (At least 1 country is under Islamist Rule)")
+      log(s"US prestige drops by 1 (At least 1 country is under Islamist Rule)")
       decreasePrestige(1)
     }
     else
@@ -8454,7 +8454,7 @@ object LabyrinthAwakening {
     displayLine(separator(lineLen, char = '='), Color.Info)
     displayLine(formatLine(phase, turn), Color.Info)
     displayLine(formatLine(played, inHand), Color.Info)
-    displayLine(formatLine(phase, drawPile), Color.Info)
+    displayLine(formatLine(reserves, drawPile), Color.Info)
     displayLine(separator(lineLen, char = '='), Color.Info)
     displayLine()
     for (display <- mainChoices.keysIterator)
