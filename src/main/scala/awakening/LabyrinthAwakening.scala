@@ -8100,11 +8100,15 @@ object LabyrinthAwakening {
 
     // Use the first config file that we find or return the
     // initial params there isn't any.
+    val xdg_config = sys.env.get("XDG_CONFIG_HOME")
+      .map(s => Pathname(s))
+      .getOrElse(Pathname(userHome)  / ".config")
     List(
       Pathname(".") / "test_config",
       Pathname(".") / "awakening_config",
       Pathname(userHome) / "awakening_config",
-      Pathname(userHome) / ".awakening_config")
+      Pathname(userHome) / ".awakening_config",
+      xdg_config / "awakening" / "awakening_config")
       .find(path => path.exists && path.isReadable)
       .map(readConfig)
       .getOrElse(initialParams)
