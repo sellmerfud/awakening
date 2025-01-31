@@ -2813,10 +2813,10 @@ object LabyrinthAwakening {
     if (initial.isEmpty && onlyList.nonEmpty) {
       val cardChoices = onlyList.map(n => Some(n) -> cardNumAndName(n))
       val menuChoices = if (allowNone)
-        cardChoices :+ (None -> "Do not select a card")
+        cardChoices :+ (None -> "None")
       else
         cardChoices
-      askMenu("Select card:", menuChoices).head
+      askMenu(prompt, menuChoices).head
     }
     else
       testResponse(initial)
@@ -3256,6 +3256,7 @@ object LabyrinthAwakening {
     triggerRole: Option[Role] = None,
     opsRequired: Set[Int] = Set.empty,
     assocRequired: Set[CardAssociation] = Set.empty,
+    only: Set[Int] = Set.empty,
     allowNone: Boolean = false): Option[Int] = {
     val blankIfNone = if (allowNone) " (blank if none)" else ""
     val prompt = optPrompt.getOrElse(s"What # of the card being discarded$blankIfNone: ")
@@ -3265,7 +3266,8 @@ object LabyrinthAwakening {
       prompt,
       allowNone = allowNone,
       opsRequired = opsRequired,
-      assocRequired = assocRequired)
+      assocRequired = assocRequired,
+      only = only)
 
     // If we got a card, then remove it from hand and add
     // it to the discard pile processing events as necessary
@@ -3277,18 +3279,36 @@ object LabyrinthAwakening {
   }
 
   // Convience method for discarding by number of cards
-  def askCardsDiscarded(role: Role, numCards: Int, lessOk: Boolean = false, triggerRole: Option[Role] = None): List[Int] = {
+  def askCardsDiscarded(
+    role: Role,
+    numCards: Int,
+     lessOk: Boolean = false,
+     triggerRole: Option[Role] = None,
+     only: Set[Int] = Set.empty,
+  ): List[Int] = {
     val blankIfNone = if (lessOk)
        " (blank if none)"
     else
       ""
     def nextCard(currentNum: Int): List[Int] = {
       if (currentNum <= numCards) {
-        val prompt = if (numCards == 1)
-          s"\nWhat is the # of the $role card being discarded$blankIfNone: "
-        else
-          s"\nWhat is the # of the ${ordinal(currentNum)} $role card being discarded$blankIfNone: "
-        askCardBeingDiscarded(role, Some(prompt), triggerRole = triggerRole, allowNone = lessOk) match {
+        val prompt = (numCards, only.nonEmpty) match {
+          case (1, true) => 
+            s"\nWhat is the $role card being discarded: "
+          case (_, true) => 
+            s"\nWhat is the ${ordinal(currentNum)} $role card being discarded: "
+          case (1, false) => 
+            s"\nWhat is the # of the $role card being discarded$blankIfNone: "
+          case (_, false) => 
+            s"\nWhat is the # of the ${ordinal(currentNum)} $role card being discarded$blankIfNone: "
+        }
+        askCardBeingDiscarded(
+          role,
+          Some(prompt),
+          only = only,
+          triggerRole = triggerRole,
+          allowNone = lessOk
+        ) match {
           case None =>
             Nil
           case Some(cardNum) =>

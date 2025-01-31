@@ -80,6 +80,19 @@ object Card_017 extends Card(17, "FSB", US, 2, NoRemove, NoLapsing, NoAutoTrigge
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    val targetCards = Set(65, 69, 71)
+      .filter(cardNum => cardFoundIn(List(FromDrawPile), cardNum))
+    if (isHuman(role))
+      log(s"\nThe $Jihadist Bot does NOT discard any cards", Color.Event)
+    else if (hasCardInHand(Jihadist) && targetCards.nonEmpty) {
+      displayLine(s"\nYou ($US) must discard any of Loose Nuke, HEU, and Kazakh Strain", Color.Info)
+      askCardsDiscarded(Jihadist, targetCards.size, only = targetCards, lessOk = true)
+    }
+    else if (targetCards.isEmpty)
+      log(s"\nNone of the target cards are in the $Jihadist Hand.", Color.Event)
+    else
+      log(s"\nThe $US does not have a card to discard.", Color.Event)
+
     // In the solo game, the discard option of the event it ignored.
     val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
       val target = askCountry("Select country: ", getCandidates())

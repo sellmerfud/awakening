@@ -70,12 +70,16 @@ object Card_078 extends Card(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    val targetCards = Set(103, 104, 105, 106)
+      .filter(cardNum => cardFoundIn(List(FromDrawPile), cardNum))
     if (isHuman(role))
       log(s"\nThe $US Bot does NOT discard any cards", Color.Event)
-    else if (hasCardInHand(US)) {
-      displayLine(s"\nYou ($US) must discard any of Iran, Hizballah, or Jaysh al-Mahdi", Color.Info)
-      askCardsDiscarded(US, 1, lessOk = true)
+    else if (hasCardInHand(US) && targetCards.nonEmpty) {
+      displayLine(s"\nYou ($US) must discard any of Iran, Hizballah, and Jaysh al-Mahdi", Color.Info)
+      askCardsDiscarded(US, targetCards.size, only = targetCards, lessOk = true)
     }
+    else if (targetCards.isEmpty)
+      log(s"\nNone of the target cards are in the $US Hand.", Color.Event)
     else
       log(s"\nThe $US does not have a card to discard.", Color.Event)
 
