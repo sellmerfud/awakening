@@ -63,17 +63,53 @@ object Card_331 extends Card(331, "JASTA", Unassociated, 1, Remove, NoLapsing, N
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = false // Not playable in the Solo game
+  def eventConditionsMet(role: Role) = game.worldPosture == Hard && game.usPosture == Soft
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = false   // Unplayable by the Bots
+
+  val NamedTargets = Set(Libya, SaudiArabia, Pakistan)
+  def shiftCandidates() = countryNames(
+    game.muslims
+      .filter { c =>
+        c.alignment != Adversary &&
+        (NamedTargets(c.name) || c.totalCells > 1)
+      }
+  )
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit = ()
+  def executeEvent(role: Role): Unit = {
+    val targetCards = Set(207, 283, 182, 291, 294, 298)
+      .filter(cardNum => cardFoundIn(List(FromDrawPile), cardNum))
+
+    // This event is only playable by the Human player, and the Bot's hand is not
+    // inspected, so the Bot is never forced to discard cards.  The Human player
+    // must still discard any of the target cards.
+    val candidates = shiftCandidates()
+    if (candidates.isEmpty)
+      log(s"\nNone of the candidate countries can be shifted towards Adversary.", Color.Info)
+    else {
+      val target = askCountry("Select country to shift toward Adversary: ", candidates)
+      shiftAlignmentRight(target)
+    }
+
+    if (hasCardInHand(role) && targetCards.nonEmpty) {
+      displayLine(s"\nYou ($role) must discard any the listed cards from your hand.", Color.Info)
+      askCardsDiscarded(role, targetCards.size, only = targetCards, lessOk = true)
+    }
+    else if (targetCards.isEmpty)
+      log(s"\nNone of the target cards are in the $role Hand.", Color.Event)
+    else
+      log(s"\nThe $role does not have a card to discard.", Color.Event)
+
+    log(s"\nIn the solitaire game you may not inspect the ${oppositeRole(role)} Bot's hand", Color.Info)
+    log(s"so the ${oppositeRole(role)} Bot does not discard andy cards.", Color.Info)
+
+  }
 }
