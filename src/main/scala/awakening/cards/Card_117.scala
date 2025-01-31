@@ -166,8 +166,14 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       shuffle(candidateCards(role).filter(_.printedOps == highOps).map(_.number)).head
     }
 
-    log(s"\n$role Bot selects ${deck(cardNum).numAndName}", Color.Event)
-    processCardDrawn(role, cardNum, cardLocation(cardNum).get)
+    val cardDisplay = deck(cardNum).numAndName
+    log(s"\n$role Bot selects $cardDisplay", Color.Event)
+    if (processCardDrawn(role, cardNum, cardLocation(cardNum).get)) {
+      if (role == Jihadist && game.botEnhancements)
+        log(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
+        else
+        log(s"\nPlace $cardDisplay on top of the $role Bot's hand", Color.Info)
+    }
   }
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -182,8 +188,12 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
 
     case Jihadist if game.botEnhancements =>
       // Will not play if it would cause immediate victory for the US player
-      val US_OilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
-      (game.goodResources + US_OilExporters < 12) &&
+      // or there are 2 or more countries countries with printed resource value
+      // of 3 that are at Good governance.
+      val GoodOilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
+      val Good3ResExporters = game.muslims.count(m => m.isGood && m.oilExporter && m.printedRsources == 3)
+      (game.goodResources + GoodOilExporters < 12) &&
+      (Good3ResExporters < 2) &&
       enhancedJihadistBotEntries().nonEmpty
 
     case Jihadist =>
