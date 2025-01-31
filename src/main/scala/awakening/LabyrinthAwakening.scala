@@ -261,7 +261,6 @@ object LabyrinthAwakening {
     override def toString() = if (backlashed) s"${plot.name} (backlashed)" else plot.name
   }
   implicit val PlotOnMapOrdering: Ordering[PlotOnMap] = Ordering.by { x: PlotOnMap => x.plot }
-
   val NoRegimeChange    = "None"
   val GreenRegimeChange = "Green"
   val TanRegimeChange   = "Tan"
@@ -7085,11 +7084,26 @@ object LabyrinthAwakening {
     case class Unblocked(name: String, isMuslim: Boolean, mapPlot: PlotOnMap)
     def chng(amt: Int) = if (amt > 0) "Increase" else "Decrease"
 
+    // Order plots so that backlashed plots are resolved first
+    // This will ensure that beneficial plots do not increase
+    // funding while already at nine before backlashed plots
+    // decrease funding.
+    implicit val UnblockedOrdering: Ordering[Unblocked] = new Ordering[Unblocked] {
+      def compare(x: Unblocked, y: Unblocked) = {
+        if (x.mapPlot.backlashed && !y.mapPlot.backlashed)
+          -1
+        else if (!x.mapPlot.backlashed && y.mapPlot.backlashed)
+          1
+        else
+          x.name.compare(y.name)
+      }
+    }
+
     def adjustFundingByDelta(delta: Int): Unit =
       if (delta > 0)
         increaseFunding(delta)
       else
-        decreaseFunding(delta)
+        decreaseFunding(delta.abs)
 
     val unblocked = for (c <- game.countries.filter(_.hasPlots); p <- c.plots)
       yield Unblocked(c.name, c.isMuslim, p)
@@ -7126,7 +7140,7 @@ object LabyrinthAwakening {
       log("There are no unblocked plots on the map", Color.Info)
     }
     else {
-      for (Unblocked(name, _, mapPlot) <- unblocked) {
+      for (Unblocked(name, _, mapPlot) <- unblocked.sorted) {
         val country = game.getCountry(name)
         log(separator())
         log(s"Unblocked $mapPlot in $name", Color.Info)
