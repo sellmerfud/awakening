@@ -64,15 +64,11 @@ object Card_101 extends Card(101, "Kosovo", Unassociated, 1, NoRemove, NoLapsing
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case Jihadist if game.botEnhancements =>
-      //  Only if GWOT marker would move
+      //  Only if US is hard and GWOT marker would move
       val serbia = game.getNonMuslim(Serbia)
-      if (serbia.isUntested || serbia.posture == game.usPosture) {
+      if (game.usPosture == Hard && (serbia.isUntested || serbia.posture == game.usPosture)) {
         val amount = if (serbia.isUntested) 1 else 2
-        val newHardSoftDelta = if (game.usPosture == Hard)
-          game.hardSoftDelta - amount
-        else
-          game.hardSoftDelta + amount
-        
+        val newHardSoftDelta = game.hardSoftDelta - amount
         game.gwot != getGwot(newHardSoftDelta)
       }
       else
