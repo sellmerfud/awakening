@@ -8368,6 +8368,8 @@ object LabyrinthAwakening {
         |by following the action with an argument.
         |
         |Use the argument 'help' or '?' to see help for the specific action.
+        |For example, to see help for the show command, you would enter:
+        |s ?<enter>
         |-----------------------------------------------------------------------------
         """.stripMargin
       displayLine(help)
