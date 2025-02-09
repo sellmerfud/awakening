@@ -63,6 +63,15 @@ object Card_046 extends Card(46, "Sistani", US, 3, NoRemove, NoLapsing, NoAutoTr
   override
   def eventConditionsMet(role: Role) = getCandidates().nonEmpty
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist => false
+    case US =>
+      getCandidates()
+        .map(game.getMuslim)
+        .exists(m => m.governance == Fair && game.goodResources + m.resourceValue >= 12)
+  }
+  
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

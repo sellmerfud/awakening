@@ -176,6 +176,27 @@ object LabyrinthAwakening {
     val key = name.toLowerCase
   }
 
+  sealed abstract class EnhBotDifficulty(val name: String) {
+    override def toString() = name
+  }
+
+  case object EnhBotEasy extends EnhBotDifficulty("easy")
+  case object EnhBotMedium extends EnhBotDifficulty("medium")
+  case object EnhBotHard extends EnhBotDifficulty("hard")
+
+  object EnhBotDifficulty {
+    lazy val All = List(EnhBotEasy, EnhBotMedium, EnhBotHard)
+    def fromStringOpt(name: String): Option[EnhBotDifficulty] = All.find(_.name == name)
+    def fromString(name: String): EnhBotDifficulty =
+      fromStringOpt(name).getOrElse {
+        throw new IllegalArgumentException(s"Invalid Enhance Bot difficulty: $name")
+      }
+  }
+
+  def enhBotEasy()   = game.botEnhancements && game.enhBotDifficulty == EnhBotEasy
+  def enhBotMedium() = game.botEnhancements && game.enhBotDifficulty == EnhBotMedium
+  def enhBotHard()   = game.botEnhancements && game.enhBotDifficulty == EnhBotHard
+
   def isBot(role: Role) = (role == game.botRole)
   def isHuman(role: Role) = (role == game.humanRole)
 
@@ -830,6 +851,14 @@ object LabyrinthAwakening {
     // the last cell on the map resulting in victory.
     def eventRemovesLastCell(): Boolean = false
 
+    // When the Enhanced Jihadist Bot is in play and the
+    // difficulty level is Easy or Medium US associated events
+    // will trigger during the Jihadsit turn.  But we do not
+    // want to trigger a US associated event if it would result
+    // in an immediated US victory.
+    // This function can be overridden by cards to police this.
+    def eventWouldResultInVictoryFor(role: Role): Boolean = false
+
     // Returns true if the printed conditions of the event are satisfied
     def eventConditionsMet(role: Role): Boolean = false
 
@@ -854,7 +883,7 @@ object LabyrinthAwakening {
 
     def eventWillTrigger(opponentRole: Role): Boolean = {
       association  == opponentRole &&
-      opponentRole == game.botRole &&
+      (opponentRole == game.botRole || enhBotEasy() || enhBotMedium()) &&
       eventConditionsMet(opponentRole)
     }
 
@@ -1484,6 +1513,7 @@ object LabyrinthAwakening {
     ignoreVictory: Boolean               = false,
     botLogging: Boolean                  = false,
     botEnhancements: Boolean             = false, // Use enhancements to official Awakening bot algorithms
+    enhBotDifficulty: EnhBotDifficulty   = EnhBotHard,
     manualDieRolls: Boolean              = false,  // Overrides humanAutoRoll
     history: Vector[GameSegment]         = Vector.empty,
     description: String                  = "",
@@ -1885,6 +1915,7 @@ object LabyrinthAwakening {
       summary.add("Options:")
       summary.add(separator())
       summary.add(s"Use Bot enhancements   : ${if (botEnhancements) "yes" else "no"}")
+      summary.add(s"Enhanced Bot difficulty: $enhBotDifficulty")
       if (manualDieRolls)
         summary.add(s"Manual die rolls       : ${if (manualDieRolls) "yes" else "no"}")
       else
@@ -2016,9 +2047,13 @@ object LabyrinthAwakening {
         case m: MuslimCountry =>
           val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
           val res = amountOf(m.resourceValue, "resource")
+          val resDisp = if (m.resourceValue == m.printedResources)
+            res
+          else
+            s"$res (${m.printedResources})"
           val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) List("Oil exporter") else Nil
           val autoRecruit = if (m.autoRecruit) List("Auto-Recruit") else Nil
-          val desc = (gov :: res :: oil ::: autoRecruit).mkString(", ")
+          val desc = (gov :: resDisp :: oil ::: autoRecruit).mkString(", ")
           val muslimType = if (m.isShiaMix) "Shia-Mix" else "Sunni"
           summary.add("")
           summary.add(s"$name  (Muslim, $muslimType)")
@@ -2152,7 +2187,8 @@ object LabyrinthAwakening {
     humanAutoRoll: Boolean,
     botDifficulties: List[BotDifficulty],
     showColor: Boolean,
-    enhancedBot: Boolean) =
+    enhancedBot: Boolean,
+    enhBotDifficulty: EnhBotDifficulty) =
   {
 
     var countries = if (scenario.startingMode == LabyrinthMode && !campaign)
@@ -2187,13 +2223,25 @@ object LabyrinthAwakening {
       cardsRemoved = scenario.cardsRemoved,
       showColor = showColor,
       botEnhancements = enhancedBot,
+      enhBotDifficulty = enhBotDifficulty,
       offMapTroops = scenario.offMapTroops,
       saveName = saveName)
   }
 
 
   // Global variables
-  var game = initialGameState("no-name", Awakening, 1, false, US, true, Muddled :: Nil, !scala.util.Properties.isWin, false)
+  var game = initialGameState(
+    "no-name",
+    Awakening,
+    1,
+    false,
+    US,
+    true,
+    Muddled :: Nil,
+    !scala.util.Properties.isWin,
+    false,
+    EnhBotHard
+  )
 
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -3293,13 +3341,13 @@ object LabyrinthAwakening {
     def nextCard(currentNum: Int): List[Int] = {
       if (currentNum <= numCards) {
         val prompt = (numCards, only.nonEmpty) match {
-          case (1, true) => 
+          case (1, true) =>
             s"\nWhat is the $role card being discarded: "
-          case (_, true) => 
+          case (_, true) =>
             s"\nWhat is the ${ordinal(currentNum)} $role card being discarded: "
-          case (1, false) => 
+          case (1, false) =>
             s"\nWhat is the # of the $role card being discarded$blankIfNone: "
-          case (_, false) => 
+          case (_, false) =>
             s"\nWhat is the # of the ${ordinal(currentNum)} $role card being discarded$blankIfNone: "
         }
         askCardBeingDiscarded(
@@ -3425,6 +3473,7 @@ object LabyrinthAwakening {
   def askMenuWithWrap[T](
     menuPrompt: String = "",
     items: List[(T, (String, Seq[String]))],
+    delim: String = ", ",
     sameLine: Boolean = true,
     allowAbort: Boolean = true): T = {
 
@@ -3446,13 +3495,13 @@ object LabyrinthAwakening {
         val (name, detail) = itemMap(key)
         if (sameLine) {
           val prefix = s"${number}${name} "
-          wrap(prefix, detail, showNone = false).foreach(println)
+          wrap(prefix, detail, delim = delim, showNone = false).foreach(println)
         }
         else {
           val offset = " " * (numWidth + 2)
           println(s"${number}${name}")
           if (detail.nonEmpty)
-            wrap(offset, detail, showNone = false).foreach(println)
+            wrap(offset, detail, delim = delim, showNone = false).foreach(println)
         }
       }
       println(separator())
@@ -4098,7 +4147,7 @@ object LabyrinthAwakening {
 
   // Format the given sequence of strings in a comma separated list
   // such that we do not exceed the given maxWith.
-  def wrap[T](prefix: String, values: Seq[T], maxWidth: Int = 100, showNone: Boolean = true): Seq[String] = {
+  def wrap[T](prefix: String, values: Seq[T], maxWidth: Int = 100, showNone: Boolean = true, delim: String = ", "): Seq[String] = {
     val stringValues = values.map(_.toString)
     val b = new ListBuffer[String]
     val s = new StringBuilder(prefix)
@@ -4111,7 +4160,7 @@ object LabyrinthAwakening {
       val margin = " " * prefix.length
       s.append(stringValues.head)
       for (v <- stringValues.tail) {
-        s.append(", ")
+        s.append(delim)
         if (s.length + v.length < maxWidth)
           s.append(v)
         else {
@@ -4130,7 +4179,7 @@ object LabyrinthAwakening {
     values: Seq[T],
     maxWidth: Int = 100,
     separator: String = " | ",
-    showNone: Boolean = true    
+    showNone: Boolean = true
   ): Seq[String] = {
     def getColWidths(numCols: Int, strings: Seq[String]): List[Int] = {
       val extra = strings.size % numCols
@@ -4259,9 +4308,9 @@ object LabyrinthAwakening {
     }
     else if (card.association == opponent && allowOpponentTrigger) {
       if (card.eventWillTrigger(opponent))
-        log(s"The $opponent event will trigger$fakeNews.", Color.Info)
+        log(s"The $opponent event conditions are currently satisfied$fakeNews.", Color.Info)
       else
-        log(s"The $opponent event will NOT trigger.", Color.Info)
+        log(s"The $opponent event conditions are NOT currently satisfied.", Color.Info)
     }
   }
 
@@ -5064,6 +5113,26 @@ object LabyrinthAwakening {
     }
   }
 
+  def subtractFromReserves(role: Role, ops: Int): Unit = {
+    role match {
+      case US if game.reserves.us > 0  && ops > 0 =>
+        val newReserves = (game.reserves.us - ops) max 0
+        val opsRemoved = game.reserves.us - newReserves
+        game = game.copy(reserves = game.reserves.copy(us = newReserves))
+        log(
+          s"$US subtracts ${opsString(opsRemoved)} from reserves.  Reserves now ${opsString(newReserves)}",
+          Color.MapMarker)
+      case Jihadist if game.reserves.jihadist > 0 && ops > 0 =>
+        val newReserves = (game.reserves.jihadist - ops) max 0
+        val opsRemoved = game.reserves.jihadist - newReserves
+        game = game.copy(reserves = game.reserves.copy(jihadist = newReserves))
+        log(
+          s"$Jihadist subtracts ${opsString(opsRemoved)} from reserves.  Reserves now ${opsString(newReserves)}",
+          Color.MapMarker)
+      case _ =>
+    }
+  }
+
   def clearReserves(role: Role): Unit = {
     if (role == US && game.reserves.us > 0) {
       game = game.copy(reserves = game.reserves.copy(us = 0))
@@ -5351,8 +5420,8 @@ object LabyrinthAwakening {
     }
     log(s"US presence: $usPresenceString")
     log(s"Jihadist presence: $jihadistPresenceString")
-    
-    
+
+
     val jihadDie = getDieRoll(s"Enter Jihadist attrition die roll for $name: ")
     val usDie = getDieRoll(s"Enter US attrition die roll for $name: ")
     val jihadHits = totalCells / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
@@ -5878,10 +5947,15 @@ object LabyrinthAwakening {
   }
 
 
-  def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Unit = {
+  def performCardEvent(card: Card, role: Role, triggered: Boolean = false): Boolean = {
     if (!card.autoTrigger && lapsingEventInPlay(FakeNews)) {
       log("\n%s event \"%s\" is cancelled by \"Fake News\"".format(card.association, card.cardName), Color.Event)
       removeLapsingEvent(FakeNews)
+      false  // Event was cancelled
+    }
+    else if (triggered && !card.eventConditionsMet(role)) {
+      log("\n%s event \"%s\" does not trigger. The event conditions are not satisfied. ".format(card.association, card.cardName))
+      false
     }
     else {
       if (card.autoTrigger)
@@ -5897,6 +5971,7 @@ object LabyrinthAwakening {
         putCardInLapsingBox(card.number)
       else if (card.removeAfterExecutingEvent(role))
         removeCardFromGame(card.number)
+      true
     }
   }
 
@@ -7749,6 +7824,28 @@ object LabyrinthAwakening {
     askMenu("Choose a side:", choices, allowAbort = false).head
   }
 
+  // ask which side the user wishes to play
+  def askEnhBotDifficulty(bot: Role): EnhBotDifficulty = {
+    val human = oppositeRole(bot)
+    val easyDesc = Seq(
+      s"$human associated events are triggered during the $bot turn when the",
+      s"event conditions are met.  When an event triggers, the # of Ops",
+      s"on the $human associated card are added to $bot reserves.")
+    val mediumDesc = Seq(
+      s"When $bot reserves = 0 $human associated events are triggered during the $bot turn",
+      s"when the event conditions are met.  When an event triggers, the # of Ops",
+      s"on the $human associated card are added to $bot reserves.",
+      s"When $bot reserves > 0 $human associated events are NOT triggered during the $bot turn.",
+      s"Instead the # of Ops on the $human associated card are subtracted from $bot reserves.")
+    val hardDesc = Seq(
+      s"$human associated events are never triggered during the $bot turn.")
+    val choices = List(
+      EnhBotEasy   -> ("Easy", easyDesc),
+      EnhBotMedium -> ("Medium", mediumDesc),
+      EnhBotHard   -> ("Hard", hardDesc))
+    askMenuWithWrap(s"\nSelect enhanced $bot Bot difficulty level:", choices, delim = "  ", sameLine = false, allowAbort = false)
+  }
+
 
   def programMainMenu(params: UserParams): Unit = {
 
@@ -7830,12 +7927,29 @@ object LabyrinthAwakening {
       else
         false  // No enhanced US Bot so don't bother asking
 
-      val difficulties = if (humanRole == US)
-        params.jihadistBotDifficulties
-          .getOrElse(askDifficulties(Jihadist))
-      else
-        params.usBotDifficulties
-          .getOrElse(askDifficulties(US))
+      val difficulties = (humanRole, enhancedBot) match {
+        case (US, true) =>
+          List(Muddled)
+        case (Jihadist, true) =>
+          List(OffGuard)
+        case (US, false) =>
+          params.jihadistBotDifficulties
+            .getOrElse(askDifficulties(Jihadist))
+        case (Jihadist, false) =>
+          params.usBotDifficulties
+            .getOrElse(askDifficulties(US))
+      }
+
+      val enhBotDifficulty = (humanRole, enhancedBot) match {
+        case (US, true) =>
+          params.enhBotDifficulty
+            .getOrElse(askEnhBotDifficulty(Jihadist))
+        case (Jihadist, true) =>
+          params.enhBotDifficulty
+            .getOrElse(askEnhBotDifficulty(US))
+        case (_, false) =>
+          EnhBotHard
+      }
 
       val humanAutoRoll = params.autoDice
         .getOrElse(!askYorN("\nDo you wish to roll your own dice (y/n)? "))
@@ -7855,7 +7969,8 @@ object LabyrinthAwakening {
         humanAutoRoll,
         difficulties,
         showColor,
-        enhancedBot)
+        enhancedBot,
+        enhBotDifficulty)
 
       logSummary(game.scenarioSummary)
       printSummary(game.scoringSummary)
@@ -8003,6 +8118,9 @@ object LabyrinthAwakening {
           val values = (v map { case USDiff(diff) => diff }).sorted.distinct
           c.copy(usResolve = values)
         }
+        val enhBotDiffValues = EnhBotDifficulty.All.map(d => d.name -> d).toMap
+        reqd[EnhBotDifficulty]("", "--enh-bot-difficulty", enhBotDiffValues, "Enhanced Bot difficulty level")
+          { (v, c) => c.copy(enhBotDifficulty = Some(v)) }
         bool("", "--color", "Show colored log messages")
           { (v, c) => c.copy(showColor = Some(v)) }
         bool("", "--enhanced-bot", "Use enhanced Bot (Jihadist Bot only)")
@@ -8031,6 +8149,7 @@ object LabyrinthAwakening {
     val autoDice: Option[Boolean] = None,
     val ideology: List[BotDifficulty] = Nil,
     val usResolve: List[BotDifficulty] = Nil,
+    val enhBotDifficulty: Option[EnhBotDifficulty] = None,
     val showColor: Option[Boolean] = None,
     val enhancedBot: Option[Boolean] = None,
   ) {
@@ -8123,6 +8242,14 @@ object LabyrinthAwakening {
             case _ => println(s"Ignoring invalid enhanced-bot value ($value) in awakening_config file")
           }
         }
+
+        propValue("enhanced-bot-difficulty") foreach { value =>
+          EnhBotDifficulty.fromStringOpt(value.toLowerCase) match {
+            case Some(difficulty) => params = params.copy(enhBotDifficulty = Some(difficulty))
+            case None =>println(s"Ignoring invalid enhanced-bot value ($value) in awakening_config file")
+          }            
+        }
+
         params
       }
       catch {
@@ -9839,6 +9966,7 @@ object LabyrinthAwakening {
         |a color       -- Toggle color in logs
         |                 (Does not work with Windows 10.0 or older)
         |a enhanced    -- Toggle enhanced Bot implementation (Jihadist Bot only)
+        |a enhlevel    -- Enhanced Bot difficultly level
         |a auto roll   -- Toggle auto rolling for Player dice rolls
         |a manual roll -- Toggle manual dice rolls for all rolls
         |a bot log     -- Toggle bot log entries for debugging
@@ -9852,7 +9980,7 @@ object LabyrinthAwakening {
       "prestige", "funding", "difficulty", "cards", "game length",
       "markers", "events" , "reserves",
       "plots", "troops", "posture", "auto roll",
-      "bot logging", "enhanced", "manual roll", "color",
+      "bot logging", "enhanced", "enhlevel", "manual roll", "color",
       "resolved", "help"
     ).sorted:::countryNames(game.countries).sorted)
       .filter {
@@ -9872,6 +10000,7 @@ object LabyrinthAwakening {
         case "game length" => adjustGameLength()
         case "bot logging" => adjustBotLogging()
         case "enhanced"    => adjustBotEnhancements()
+        case "enhlevel"    => adjustEnhBotDifficulty()
         case "manual roll" => adjustBotManualDieRolls()
         case "color"       => adjustShowColor()
         case "cards"       => adjustCardLocations()
@@ -10038,6 +10167,14 @@ object LabyrinthAwakening {
     logAdjustment("Bot enhancements", game.botEnhancements, newValue)
     game = game.copy(botEnhancements = newValue)
     saveAdjustment("Bot enhancements")
+  }
+
+  def adjustEnhBotDifficulty(): Unit = {
+    val choices = EnhBotDifficulty.All.map(d => d -> d.name)
+    val newValue = askMenu("Enhanced Bot difficulty level:", choices).head
+    logAdjustment("Enh Bot difficulty", game.enhBotDifficulty, newValue)
+    game = game.copy(enhBotDifficulty = newValue)
+    saveAdjustment("Enh Bot difficulty")
   }
 
   def adjustBotManualDieRolls(): Unit = {

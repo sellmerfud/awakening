@@ -72,6 +72,15 @@ object Card_270 extends Card(270, "Deep State", US, 3, Remove, NoLapsing, NoAuto
     USBot.markerAlignGovTarget(candidates).get
   }
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist => false
+    case US =>
+      getCandidates()
+        .map(game.getMuslim)
+        .exists(m => m.governance == Fair && game.goodResources + m.resourceValue >= 12)
+  }
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates().nonEmpty

@@ -1752,13 +1752,18 @@ object JihadistBot extends BotHelpers {
     performCardEvent(card, Jihadist, triggered = true)
   }
 
+  sealed trait EventTriggerOption
+  case object EventTriggerNone extends EventTriggerOption
+  case object EventTriggerBefore extends EventTriggerOption
+  case object EventTriggerAfter extends EventTriggerOption
+
   // Starting point for Jihadist bot card play.
   // The playable argument indicates if the
   def cardPlay(card: Card, ignoreEvent: Boolean): Unit = {
     resetStaticData()
     val eventPlayable =
       !ignoreEvent &&
-      lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks al Non-US events
+      lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks all Non-US events
       card.eventIsPlayable(Jihadist) &&
       card.botWillPlayEvent(Jihadist)
     // If the event is playable then the event is always executed
@@ -1771,11 +1776,37 @@ object JihadistBot extends BotHelpers {
         addToReserves(Jihadist, card.ops)
     }
     else {
+      val eventTriggerOption = if (card.association == US && (enhBotEasy() || enhBotMedium())) {
+        // If the event conditions are not currently met, then
+        // the bot will carry out the event first since it will have
+        // no effect.  If difficulty is medium and we will subtract from reserves,
+        // then alwasy evvaluate the event after conduction operations.
+        if (card.eventConditionsMet(US) || (enhBotMedium() && game.reserves.jihadist > 0)) {
+          log(s"\nThe $Jihadist Bot will evaluate the $US associated event after peforming operations.", Color.Info)
+          EventTriggerAfter
+        }
+        else {
+          log(s"\nThe $Jihadist Bot will evaluate the $US associated event before peforming operations.", Color.Info)
+          EventTriggerBefore
+        }
+      }
+      else
+        EventTriggerNone
+
       // US Elections is the only auto trigger event.
       // The Bot will execute the event first.
       if (card.autoTrigger) {
         performCardEvent(card, Jihadist)
         log()
+      }
+
+      if (eventTriggerOption == EventTriggerBefore) {
+        if (performCardEvent(card, US, triggered = true)) {
+          pause()
+          log(s"\nOps on the \"${card.cardName}\" card are added to $Jihadist reserves.", Color.Info)
+          addToReserves(Jihadist, card.printedOps)
+          pause()
+        }
       }
 
       // There is an unlikely, but possible chance that there are no cells or cadres on
@@ -1815,6 +1846,27 @@ object JihadistBot extends BotHelpers {
 
         if (opsUsed < card.ops)
           radicalization(card, opsUsed)
+      }
+
+      if (eventTriggerOption == EventTriggerAfter) {
+        pause()
+        if (enhBotMedium() && game.reserves.jihadist > 0) {
+          // Its possible that the event conditions are no longer satisfied
+          if (card.eventConditionsMet(US)) {
+            log(s"\n$Jihadist reserves are not empty so the \"${card.cardName}\" event does not trigger.", Color.Info)
+            log(s"Ops on the \"${card.cardName}\" card are removed from $Jihadist reserves.", Color.Info)
+            subtractFromReserves(Jihadist, card.printedOps)
+          }
+          else
+            log("\n%s event \"%s\" does not trigger. The event conditions are not satisfied. ".format(card.association, card.cardName))
+        }
+        else if (card.eventConditionsMet(US) && card.eventWouldResultInVictoryFor(US))
+          log(s"\nThe \"${card.cardName}\" event will not trigger because it could result in an immediate $US victory.", Color.Info)
+        else if (performCardEvent(card, US, triggered = true)) {
+          pause()
+          log(s"\nOps on the \"${card.cardName}\" card are added to $Jihadist reserves.", Color.Info)
+          addToReserves(Jihadist, card.printedOps)
+        }
       }
     }
   }

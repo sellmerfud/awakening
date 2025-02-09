@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -60,7 +60,17 @@ object Card_035 extends Card(35, "Hijab", US, 3, Remove, NoLapsing, NoAutoTrigge
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = game.numIslamistRule == 0
-    
+
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist => false
+    case US =>
+      val turkey = game.getMuslim(Turkey)
+      // Include Untested because it could test to Fair
+      (turkey.isUntested || turkey.governance == Fair) &&
+      game.goodResources + turkey.resourceValue >= 12
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

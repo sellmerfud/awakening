@@ -64,6 +64,16 @@ object Card_260 extends Card(260, "Imran Khan", US, 2, Remove, NoLapsing, NoAuto
     !pakistan.isIslamistRule && pakistan.totalCells == 0 && !game.isCaliphateMember(Pakistan)
   }
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist => false
+    case US =>
+      val pakistan = game.getMuslim(Pakistan)
+      // Include Untested because it could test to Fair
+      (pakistan.isUntested || pakistan.governance == Fair) &&
+      game.goodResources + pakistan.resourceValue >= 12
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
