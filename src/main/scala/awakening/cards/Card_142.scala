@@ -80,7 +80,7 @@ object Card_142 extends Card(142, "Militia", US, 2, NoRemove, NoLapsing, NoAutoT
     else
       USBot.deployToPriority(getCandidates()).get
 
-    val num = game.getMuslim(target).printedRsources min game.militiaAvailable
+    val num = game.getMuslim(target).printedResources min game.militiaAvailable
 
     if (num > 0) {
       println()

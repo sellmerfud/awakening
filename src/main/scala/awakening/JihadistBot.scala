@@ -218,9 +218,9 @@ object JihadistBot extends BotHelpers {
 
   val enhBotResourceValue = (m: MuslimCountry) =>
     if (m.name == Iran && m.hasMarker(TehranBeirutLandCorridor))
-      m.printedRsources + 1
+      m.printedResources + 1
     else
-      m.printedRsources
+      m.printedResources
 
   def currentIRResources = {
     val muslimResources = game.muslims

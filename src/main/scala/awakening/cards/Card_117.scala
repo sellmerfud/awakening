@@ -191,7 +191,7 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       // or there are 2 or more countries countries with printed resource value
       // of 3 that are at Good governance.
       val GoodOilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
-      val Good3ResExporters = game.muslims.count(m => m.isGood && m.oilExporter && m.printedRsources == 3)
+      val Good3ResExporters = game.muslims.count(m => m.isGood && m.oilExporter && m.printedResources == 3)
       (game.goodResources + GoodOilExporters < 12) &&
       (Good3ResExporters < 2) &&
       enhancedJihadistBotEntries().nonEmpty
