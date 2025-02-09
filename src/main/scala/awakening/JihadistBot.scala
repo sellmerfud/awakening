@@ -41,6 +41,8 @@ package awakening
 import scala.util.Random.shuffle
 import scala.annotation.tailrec
 import LabyrinthAwakening._
+import awakening.scenarios.LetsRoll
+import awakening.scenarios.YouCanCallMeAl
 
 object JihadistBot extends BotHelpers {
 
@@ -232,12 +234,65 @@ object JihadistBot extends BotHelpers {
   }
 
 
+  // Enhanced Bot will always peform minor Jihad in a good country
+  // But in Fair country there are some further condtions to consider.
+  val minorJihadGovTest = (m: MuslimCountry) =>
+    if (game.botEnhancements)
+      m.isGood ||
+      m.isFair && (
+        m.name == Pakistan || m.totalTroops > 0 || m.isAlly ||
+        m.resourceValue == 3 || m.autoRecruit || m.aidMarkers > 0
+      )
+    else
+      (m.isGood || m.isFair)
+
   // Find the priority Major Jihad priority target.
   // We start with all Muslim countries where a Major Jihad is possible (including umarked countries).
   // The country must have less than seven Troops and Militia.
   // We then use the Travel OpP flowchart to pick the favorites and finally we use the
   // Recruit/Travel to priorities table to choose among those that remain.
   def majorJihadPriorityCountry: Option[String] = {
+    import awakening.scenarios.{ LetsRoll, YouCanCallMeAl }
+    val pakistanAndCentralAsiaSpecial = game.scenarioName == LetsRoll.name || game.scenarioName == YouCanCallMeAl.name
+    val specialResVal = (m: MuslimCountry) =>
+      if (m.name == Pakistan || m.name == CentralAsia)
+        3
+      else
+        enhBotResourceValue(m)
+
+    // When the scenario is Let's Roll or You can call me Al, then
+    // we treat Pakistan and Central Asia has having 3 resources for the
+    // sake of determining priority.
+    val HighestPrintedResourcePrioritySpecial = new HighestScorePriority(
+      "Highest printed resource*, Pakistan/Central Asia = 3",
+      muslimScore(specialResVal)
+    )
+
+    val firstPriority = currentIRResources match {
+      case 1 if pakistanAndCentralAsiaSpecial => HighestPrintedResourcePrioritySpecial::Nil
+      case n if n < 4 => HighestPrintedResourcePriority::Nil
+      case 4 => PoorOrUntested2PlusResources::Nil
+      case _ => Nil
+    }
+    // These priorities are a slight variation on the travelTo priorities
+    val priorities = firstPriority :::
+    List(
+      BestJihadDRMPriority(false),
+      AutoRecruitFilter,
+      HighestCellsMinusTandM,
+      LowestTandM,
+      NoTandMGreatestCellsPlusAdjacent,
+      MostMoveableAdjacentCells,
+      BesiegedRegimePriority,
+      AdversaryPriority,
+      NeutralPriority,
+      AllyPriority,
+      UnmarkedPriority,
+      NoAwakeningOrReactionMarkersPriority,
+      AdjacentToAutoRecruitPriority,
+      OilExporterPriority
+    )
+
     // We only selecte the priority country once per play
     if (PriorityCountries.majorJihadPrioritySet == false) {
       val possibilities = game.muslims.filter(m => majorJihadSuccessPossible(m) && m.totalTroopsAndMilitia < 7)
@@ -248,7 +303,7 @@ object JihadistBot extends BotHelpers {
           botLog("None found")
           None
         case candidates =>
-          topPriority(candidates, recruitAndTravelToPriorities, allowBotLog = true).map(_.name)
+          topPriority(candidates, priorities, allowBotLog = true).map(_.name)
       }
       PriorityCountries.majorJihadPriority = target
       PriorityCountries.majorJihadPrioritySet = true
@@ -1096,7 +1151,7 @@ object JihadistBot extends BotHelpers {
       def condition(ops: Int) = {
         game hasMuslim { m =>
           m.jihadOK &&
-          (m.isGood || m.isFair) &&
+          minorJihadGovTest(m) &&
           minorJihadSuccessPossible(m) &&
           totalUnused(m, includeSadr = true) > 0  // Standard Bot includes Sadr
         }
@@ -1217,16 +1272,74 @@ object JihadistBot extends BotHelpers {
     }
 
     object CellInGoodFairWhereJSP extends OperationDecision {
-      def desc = "Cells in Good or Fair Muslim where Jihad Success Possible?"
+      def desc = "Cells in Good or Fair* Muslim where Jihad Success Possible?"
       def yesPath = MinorJihadOp
-      def noPath  = TravelToUnmarkedNonMuslim
+      def noPath  = LabScenarioAndIRResEqualsOne
       def condition(ops: Int) = {
+        val fairOk = (m: MuslimCountry) =>
+          m.name == Pakistan || m.totalTroops > 0 || m.isAlly ||
+          m.resourceValue == 3 || m.autoRecruit || m.aidMarkers > 0
+
         game hasMuslim { m =>
           m.jihadOK &&
-          (m.isGood || m.isFair) &&
+          minorJihadGovTest(m) &&
           minorJihadSuccessPossible(m) &&
           totalUnused(m, includeSadr = false) > 0  // Enhanced Bot does NOT include Sadr
         }
+      }
+    }
+
+    // We have some special EvO nodes that are used only with the Let's Roll and
+    // You Can Call Me Al scenarios:
+    object LabScenarioAndIRResEqualsOne extends OperationDecision {
+      def desc = "Let's Roll/You can call me Al and IR resources = 1?"
+      def yesPath = CanAdjacentTravelToUnmarkedCentralAsia
+      def noPath  = TravelToUnmarkedNonMuslim
+      def condition(ops: Int) = {
+        import awakening.scenarios.{ LetsRoll, YouCanCallMeAl }
+        (game.scenarioName == LetsRoll.name || game.scenarioName == YouCanCallMeAl.name) &&
+        currentIRResources == 1
+      }
+    }
+
+    object CanAdjacentTravelToUnmarkedCentralAsia extends OperationDecision {
+      def desc = "Central Asia unmarked and moveable adjacent cells?"
+      def yesPath = {
+        val die = getDieRoll(s"Enter die roll (1-2: consider Pakistan, 3-4: Travel 1 cell to C. Asia, 5-6: GWOT travel): ")
+        botLog(s"Central Asia die roll: $die")
+        if (die < 3)
+          CanAdjacentTravelToFairPakistan
+        else if (die < 5)
+          TravelOp(target = Some(CentralAsia), maxAttempts = Some(1), adjacentOnly = true)
+        else
+          TravelToUnmarkedNonMuslim
+      }
+      def noPath  = {
+        val die = getDieRoll(s"Enter die roll (1-3 = GWOT travel): ")
+        botLog(s"Pakistan die roll: $die")
+        if (die < 4)
+          TravelToUnmarkedNonMuslim
+        else
+          CanAdjacentTravelToFairPakistan
+      }
+      def condition(ops: Int) = {
+        import awakening.scenarios.{ LetsRoll, YouCanCallMeAl }
+        (game.scenarioName == LetsRoll.name || game.scenarioName == YouCanCallMeAl.name) &&
+        currentIRResources == 1
+      }
+    }
+
+    object CanAdjacentTravelToFairPakistan extends OperationDecision {
+      def desc = "Pakistan Fair, no troops/FATA/Bhutto and moveable adjacent cells?"
+      def yesPath = TravelOp(target = Some(Pakistan), maxAttempts = None, adjacentOnly = true)
+      def noPath  = TravelToUnmarkedNonMuslim
+      def condition(ops: Int) = {
+        val pakistan = game.getMuslim(Pakistan)
+        pakistan.isFair &&
+        pakistan.totalTroops == 0 &&
+        !pakistan.hasMarker(BenazirBhutto) &&
+        !pakistan.hasMarker(FATA) &&
+        canAdjacentTravelTo(pakistan)
       }
     }
 
@@ -2352,10 +2465,12 @@ object JihadistBot extends BotHelpers {
       if (remaining == 0)
         Nil  // We've used all available Ops
       else {
-        // The Bot will never conduct minor Jihad in a country with Poor governance.
-        val canJihad = (m: MuslimCountry) => !alreadyTried(m.name) &&
-                                             minorJihadSuccessPossible(m) &&
-                                             totalUnused(m, includeSadr = allowSadr) > 0 && !m.isPoor
+        val canJihad = (m: MuslimCountry) =>
+          !alreadyTried(m.name) &&
+          minorJihadSuccessPossible(m) &&
+          totalUnused(m, includeSadr = allowSadr) > 0 &&
+          minorJihadGovTest(m)
+
         val candidates = countryNames(game.jihadTargets map game.getMuslim filter canJihad)
         minorJihadTarget(candidates) match {
           case None => Nil   // No more candidates
