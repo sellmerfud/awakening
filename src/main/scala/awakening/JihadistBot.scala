@@ -1323,9 +1323,8 @@ object JihadistBot extends BotHelpers {
           CanAdjacentTravelToFairPakistan
       }
       def condition(ops: Int) = {
-        import awakening.scenarios.{ LetsRoll, YouCanCallMeAl }
-        (game.scenarioName == LetsRoll.name || game.scenarioName == YouCanCallMeAl.name) &&
-        currentIRResources == 1
+        val centralAsia = game.getMuslim(CentralAsia)
+        centralAsia.isUntested && canAdjacentTravelTo(centralAsia)
       }
     }
 
