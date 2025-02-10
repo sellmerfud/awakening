@@ -89,7 +89,7 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
     if (lapsingEventInPlay(ArabWinter))
       log(s"\nCannot place awakening/reaction markers. [Arab Winter]", Color.Event)
     else if (getCandidates().isEmpty)
-      log(s"\nThere are no countries that can take awakening/reactions markers.", Color.Event)
+      log(s"\nNone of the candidate countries can take awakening/reactions markers.", Color.Event)
     else {
       val (placementAction, target) = role match {
         case _ if isHuman(role) =>
@@ -97,7 +97,7 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
             addAwakeningMarker _ -> "Place awakening marker",
             addReactionMarker _ -> "Place reaction marker")
           val orderedChoices = if (role == US) choices else choices.reverse
-          (askMenu("Choose one:", orderedChoices).head, askCountry("Select country: ", getCandidates()))
+          (askMenu("Choose one:", orderedChoices).head, askSimpleMenu("Select country:", getCandidates()))
         case US =>
           (addAwakeningMarker _, USBot.markerAlignGovTarget(getCandidates()).get)
         case Jihadist =>
