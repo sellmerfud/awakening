@@ -5953,7 +5953,7 @@ object LabyrinthAwakening {
       removeLapsingEvent(FakeNews)
       false  // Event was cancelled
     }
-    else if (triggered && !card.eventConditionsMet(role)) {
+    else if (!card.autoTrigger && triggered && !card.eventConditionsMet(role)) {
       log("\n%s event \"%s\" does not trigger. The event conditions are not satisfied. ".format(card.association, card.cardName))
       false
     }
