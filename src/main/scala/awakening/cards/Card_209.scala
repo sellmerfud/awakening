@@ -70,17 +70,21 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
 
   def iranNotIR = !game.getCountry(Iran).isIslamistRule
 
+  def canRemoveCells = iranNotIR && getCellCandidates().nonEmpty
+
+  def canRemoveMilitia = iranNotAlly && getMilitiaCandidates().nonEmpty
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = iranNotAlly || iranNotIR
+  def eventConditionsMet(role: Role) = canRemoveCells || canRemoveMilitia
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => iranNotIR && getCellCandidates().nonEmpty
-    case Jihadist => iranNotAlly && getMilitiaCandidates().nonEmpty
+    case US => canRemoveCells
+    case Jihadist => canRemoveMilitia
   }
 
   // Carry out the event for the given role.
@@ -92,8 +96,8 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
     def numToRemove(name: String) = if (game.getMuslim(name).isSunni) 1 else 2
 
     val choices = List(
-      choice(iranNotIR, "cells",   "Remove cell(s)"),
-      choice(iranNotIR, "militia", "Remove militia"),
+      choice(canRemoveCells, "cells",   "Remove cell(s)"),
+      choice(canRemoveMilitia, "militia", "Remove militia"),
     ).flatten
     val orderedChoices = if (role == US) choices else choices.reverse
 
@@ -104,33 +108,24 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
     }
 
     val target = action match {
-      case "cells" if getCellCandidates().isEmpty => None
-      case "militia" if getMilitiaCandidates().isEmpty => None
-      case "cells" if isHuman(role) => Some(askCountry("Select country with cells: ", getCellCandidates()))
-      case "militia" if isHuman(role) => Some(askCountry("Select country with militia: ", getMilitiaCandidates()))
-      case "cells" => USBot.disruptPriority(getCellCandidates())
-      case _ => JihadistBot.minorJihadTarget(getMilitiaCandidates())
+      case "cells" if isHuman(role) => askCountry("Select country with cells: ", getCellCandidates())
+      case "militia" if isHuman(role) => askCountry("Select country with militia: ", getMilitiaCandidates())
+      case "cells" => USBot.disruptPriority(getCellCandidates()).get
+      case _ => JihadistBot.minorJihadTarget(getMilitiaCandidates()).get
     }
 
-    target match {
-      case Some(name) if action == "cells" =>
-        addEventTarget(name)
+    if (action == "cells") {
+        addEventTarget(target)
         val (actives, sleepers, sadr) = if (isHuman(role))
-          askCells(name, numToRemove(name), sleeperFocus = true)
+          askCells(target, numToRemove(target), sleeperFocus = true)
         else
-          USBot.chooseCellsToRemove(name, numToRemove(name))
-        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
-
-      case Some(name) =>
-        addEventTarget(name)
-        val numMilitia = numToRemove(name) min game.getMuslim(name).militia
-        removeMilitiaFromCountry(name, numMilitia)
-
-      case None if action == "cells "=>
-        log("\nThere a no Muslim countries with cells.  The event has no effect.", Color.Event)
-
-      case None =>
-        log("\nThere a no Muslim countries with militia.  The event has no effect.", Color.Event)
+          USBot.chooseCellsToRemove(target, numToRemove(target))
+        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    }
+    else {
+        addEventTarget(target)
+        val numMilitia = numToRemove(target) min game.getMuslim(target).militia
+        removeMilitiaFromCountry(target, numMilitia)
     }
   }
 }
