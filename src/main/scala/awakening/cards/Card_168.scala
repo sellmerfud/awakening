@@ -38,7 +38,6 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
-import awakening.cards.Card_145.getCandidates
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -62,6 +61,8 @@ object Card_168 extends Card(168, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAu
     m.totalCells > 0 &&
     m.totalTroops > 0
 
+  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
