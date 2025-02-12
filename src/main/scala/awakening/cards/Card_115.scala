@@ -97,7 +97,7 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
       new CriteriaFilter("Non-Muslim", nonMuslimTest(_ => true)),
     )
     JihadistBot.botLog("Find \"Hambali\" target", Color.Debug)
-    JihadistBot.topPriority(game.getMuslims(getCandidates()), priorities).map(_.name).get
+    JihadistBot.topPriority(game.getCountries(getCandidates()), priorities).map(_.name).get
   }
 
   // Carry out the event for the given role.
