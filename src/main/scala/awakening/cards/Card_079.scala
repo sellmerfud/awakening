@@ -110,9 +110,17 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
 
       addEventTarget(UnitedStates)
       if (numTravels < 2) {
-        val from = JihadistBot.travelFromTarget(UnitedStates, preferredTravellers) orElse {
-            JihadistBot.travelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates))
+        val from = if (game.botEnhancements) {
+          JihadistBot.travelFromTarget(UnitedStates, preferredTravellers) orElse {
+            game = game.copy(botEnhancements = false)
+            val result = JihadistBot.travelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates))
+            game = game.copy(botEnhancements = true)
+            result
+          }
         }
+        else
+          JihadistBot.travelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates))
+          
         from match {
           case Some(from) =>
             val fromCountry = game.getCountry(from)

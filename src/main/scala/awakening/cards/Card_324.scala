@@ -37,6 +37,7 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
@@ -93,7 +94,9 @@ object Card_324 extends Card(324, "BREXIT", Unassociated, 1, USRemove, NoLapsing
           case candidates if isHuman(role) =>
             Some(askCountry(s"Move cell to $UnitedKingdom from which country: ", candidates))
           case candidates =>
-            JihadistBot.travelFromTarget(UnitedKingdom, candidates)
+            JihadistBot.travelFromTarget(UnitedKingdom, candidates).orElse {
+              shuffle(candidates).headOption
+            }
         }
 
         source.foreach { name =>
