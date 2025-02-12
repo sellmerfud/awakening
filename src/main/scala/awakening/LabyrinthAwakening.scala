@@ -9489,23 +9489,22 @@ object LabyrinthAwakening {
     val UseReserves  = "Expend reserves"
     val RemoveCadre  = "Remove cadre"
     val AbortCard    = "Abort Card"
-    var reservesUsed          = 0
-    var opponentEventResolved = false
+    var reservesUsed = 0
+    var firstPlotUsed = false
     def inReserve    = game.reserves.jihadist
     def opsAvailable = (card.ops + reservesUsed) min 3
 
-    @tailrec def getJihadistActivity(firstPlot: Boolean): String = {
+    @tailrec def getJihadistActivity(): String = {
       val actions = List(
-        choice(firstPlot,                                        PlotAction, PlotAction),
-        choice(!firstPlot && eventPlayable && reservesUsed == 0, ExecuteEvent, ExecuteEvent),
-        choice(!firstPlot && game.recruitPossible,               Recruit, Recruit),
-        choice(!firstPlot,                                       Travel, Travel), // Travel must be possible or the Jihadist has lost
-        choice(!firstPlot && game.jihadPossible,                 Jihad, Jihad),
-        choice(!firstPlot && game.plotPossible(opsAvailable),    PlotAction, PlotAction),
-        choice(!firstPlot && card.ops < 3 && inReserve < 2,      AddReserves, AddReserves),
-        choice(opsAvailable < 3 && inReserve > 0,                UseReserves, UseReserves),
-        choice(game.hasCountry(_.hasCadre),                      RemoveCadre, RemoveCadre),
-        choice(true,                                             AbortCard, AbortCard),
+        choice(eventPlayable && reservesUsed == 0, ExecuteEvent, ExecuteEvent),
+        choice(game.recruitPossible,               Recruit, Recruit),
+        choice(true,                               Travel, Travel), // Travel must be possible or the Jihadist has lost
+        choice(game.jihadPossible,                 Jihad, Jihad),
+        choice(game.plotPossible(opsAvailable),    PlotAction, PlotAction),
+        choice(card.ops < 3 && inReserve < 2,      AddReserves, AddReserves),
+        choice(opsAvailable < 3 && inReserve > 0,  UseReserves, UseReserves),
+        choice(game.hasCountry(_.hasCadre),        RemoveCadre, RemoveCadre),
+        choice(true,                               AbortCard, AbortCard),
       ).flatten
 
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
@@ -9514,17 +9513,17 @@ object LabyrinthAwakening {
           reservesUsed = inReserve
           log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
           game = game.copy(reserves = game.reserves.copy(jihadist = 0))
-          getJihadistActivity(firstPlot)
+          getJihadistActivity()
 
         case RemoveCadre =>
           humanVoluntarilyRemoveCadre()
-          getJihadistActivity(firstPlot)
+          getJihadistActivity()
 
         case AbortCard =>
             if (askYorN("Really abort (y/n)? "))
               throw AbortAction
             else
-              getJihadistActivity(firstPlot)
+              getJihadistActivity()
         case action => action
       }
     }
@@ -9536,23 +9535,25 @@ object LabyrinthAwakening {
         case Recruit      => humanRecruit(opsAvailable)
         case Travel       => humanTravel(opsAvailable)
         case Jihad        => humanJihad(opsAvailable)
-        case PlotAction   => humanPlot(opsAvailable)
+        case PlotAction   =>
+          humanPlot(opsAvailable)
+          // The first plot used in a turn is placed in the 1st plot box
+          // The Ruthless US bot resolve does not allow this.
+          if (game.firstPlotEntry.isEmpty && !game.usResolve(Ruthless)) {
+            firstPlotUsed = true
+            log(s"\nPlace the $card card in the first plot box", Color.Info)
+            game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
+          }
+            
+
         case other => throw new IllegalStateException(s"Invalid Jihadist action: $other")
       }
       pause()
     }
 
-    // Allow the user to use the first plot option to cancel the event.
-    // The Ruthless US bot resolve does not allow this.
-    val canUseFirstPlot =
-      !game.usResolve(Ruthless) &&
-      !card.autoTrigger && card.eventWillTrigger(US) &&
-      game.plotPossible(1) &&
-      game.firstPlotEntry.isEmpty
 
-    if (card.autoTrigger || card.eventWillTrigger(US)) {
+    if (card.autoTrigger || card.association == US) {
       val choices = List(
-        choice(canUseFirstPlot, "first-plot", s"Cancel event with 1st plot option [${card.cardName}]"),
         choice(true, "ops", "Operations"),
         choice(true, "trigger" , s"Trigger event [${card.cardName}]"),
         choice(true, "abort", "Abort card"),
@@ -9560,18 +9561,17 @@ object LabyrinthAwakening {
 
       def performActions(): Unit = {
         askMenu("What happens next:", choices).head match {
-          case "first-plot" =>
-            log(s"\nPlace the $card card in the first plot box", Color.Info)
-            log(s"\nThe US associated \"${card.cardName}\" event does not trigger", Color.Info)
-            game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
-            performCardActivity(getJihadistActivity(true))
-
           case "ops" =>
-            performCardActivity(getJihadistActivity(false))
-            performTriggeredEvent(US, card)
+            performCardActivity(getJihadistActivity())
+            if (card.association == US && firstPlotUsed)
+              log(s"\nThe First plot option prevents the US associated \"${card.cardName}\" event from triggering", Color.Info)
+            else
+              performTriggeredEvent(US, card)
+
           case "trigger" =>
             performTriggeredEvent(US, card)
-            performCardActivity(getJihadistActivity(false))
+            performCardActivity(getJihadistActivity())
+
           case _ =>
             if (askYorN("Really abort (y/n)? "))
               throw AbortAction
@@ -9582,7 +9582,7 @@ object LabyrinthAwakening {
       performActions()
     }
     else
-      performCardActivity(getJihadistActivity(false))
+      performCardActivity(getJihadistActivity())
   }
 
   def humanRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
