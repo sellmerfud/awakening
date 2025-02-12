@@ -105,25 +105,46 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
     def nextTravel(destNum: Int, alreadyTried: Set[String]): Int = {
       // If the event was triggered during US turn then the Bot may be forced
       // to travel a cell that it normally would not use
-      val allTravellers = countryNames(game.countries.filter(c => JihadistBot.unusedCells(c) > 0))
-      if (destNum < 2) {
-        val candidates = Schengen.filter(name => !alreadyTried(name) && JihadistBot.canTravelTo(name))
+      val candidates = Schengen.filter(name => !alreadyTried(name) && JihadistBot.canTravelTo(name)) match {
+        case Nil => Schengen.filter(name => !alreadyTried(name))
+        case c => c
+      }
+
+      if (destNum < 2 && candidates.nonEmpty) {
         val to   = JihadistBot.posturePriority(candidates).get
-        val preferredTravellers = countryNames(game.countries.filter(JihadistBot.hasCellForTravel(_, to)))
-        val from = JihadistBot.travelFromTarget(to, preferredTravellers.filterNot(_ == to)) orElse {
-            JihadistBot.travelFromTarget(to, allTravellers.filterNot(_ == to))
+        val sources = countryNames(game.countries.filter(JihadistBot.hasCellForTravel(_, to))) match {
+          case Nil => countryNames(game.countries.filter(c => JihadistBot.unusedCells(c) > 0))
+          case s => s
         }
-        from match {
-          case Some(from) =>
-            val fromCountry = game.getCountry(from)
-            val active = JihadistBot.activeCells(fromCountry) > 0
-            addEventTarget(to)
-            moveCellsBetweenCountries(from, to, 1, active, forTravel = true)
-            JihadistBot.usedCells(to).addSleepers(1)
-            nextTravel(destNum + 1, alreadyTried + to)
-          case None =>
-            nextTravel(destNum, alreadyTried + to)
+
+        if (sources.nonEmpty) {
+          val from = if (game.botEnhancements) {
+            JihadistBot.travelFromTarget(to, sources.filterNot(_ == to)).orElse {
+              // Event was triggered so enhanced bot must move a cell it otherwise
+              // would not move.
+              game = game.copy(botEnhancements = false)
+              val result =JihadistBot.travelFromTarget(to, sources.filterNot(_ == to))
+              game = game.copy(botEnhancements = true)
+              result
+            }
+          }
+          else
+            JihadistBot.travelFromTarget(to, sources.filterNot(_ == to))
+          
+          from match {
+            case Some(from) =>
+              val fromCountry = game.getCountry(from)
+              val active = JihadistBot.activeCells(fromCountry) > 0
+              addEventTarget(to)
+              moveCellsBetweenCountries(from, to, 1, active, forTravel = true)
+              JihadistBot.usedCells(to).addSleepers(1)
+              nextTravel(destNum + 1, alreadyTried + to)
+            case None =>
+              nextTravel(destNum, alreadyTried + to)
+          }
         }
+        else
+          destNum
       }
       else
         destNum
