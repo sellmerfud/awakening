@@ -78,8 +78,14 @@ object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, 
     log(s"\nTake the top card of the ${game.botRole} Bot's hand.", Color.Event)
     val cannotGive = askCardDrawnFromOpponent(game.humanRole).toSet
     
-    log("\nPut a random card from your hand (not including the one you just took)", Color.Event)
-    log(s"on top card of the ${game.botRole} Bot's hand.", Color.Event)
+    if (role == Jihadist && game.botEnhancements) {
+      log("\nTake a random card from your hand (not including the one you just took)", Color.Event)
+      log(s"and shuffle it into the $role Bot's hand.", Color.Event)
+    }
+    else {
+      log("\nTake a random card from your hand (not including the one you just took)", Color.Event)
+      log(s"and place it on top card of the $role Bot's hand.", Color.Event)
+    }
     
     askCardDrawnFromOpponent(game.botRole, except = cannotGive)
 

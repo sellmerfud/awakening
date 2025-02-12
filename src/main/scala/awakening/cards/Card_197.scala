@@ -85,8 +85,15 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
       if (getCandidates().nonEmpty) {
         if (isHuman(role))
           askCardDrawnFromRemovedPile(role, only = getCandidates().toSet)
-        else // Bot takes the card closest to the top of the removed pile.
-          processCardDrawn(role, getCandidates().head, FromRemoved)       
+        else { // Bot takes the card closest to the top of the removed pile.
+          val cardNum = getCandidates().head
+          processCardDrawn(role, cardNum, FromRemoved)       
+          log(s"\nTake [${cardNumAndName(cardNum)}] from the removed pile and", Color.Event)
+          if (role == Jihadist && game.botEnhancements)
+            log(s"shuffle it into the $role hand.", Color.Event)
+          else
+            log(s"place it on top of the $role hand.", Color.Event)
+        }
       }
       else
         log("\nNone of the listed cards is in the removed cards pile.", Color.Event)

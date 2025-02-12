@@ -77,7 +77,7 @@ object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLaps
   override
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
-    val cardNum = if (isHuman(role)) {
+    if (isHuman(role)) {
       askCardDrawnFromDiscardPile(role, only = cardCandidates().toSet)
     }
     else {
@@ -85,6 +85,11 @@ object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLaps
       val candidates = cardCandidates().toSet
       val cardNum = game.cardsDiscarded.reverse.find(candidates.contains).get
       processCardDrawn(role, cardNum, FromDiscard)
+      log(s"\nTake [${cardNumAndName(cardNum)}] from the discard pile and", Color.Event)
+      if (role == Jihadist && game.botEnhancements)
+        log(s"shuffle it into the $role hand.", Color.Event)
+      else
+        log(s"place it on top of the $role hand.", Color.Event)
     }
   }
 }

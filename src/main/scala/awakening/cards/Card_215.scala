@@ -95,6 +95,11 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
     case Jihadist => game.cellsAvailable > 0
   }
 
+  val TCNum = 196  // Training Camps card
+  val PANum = 182  // Paris Attacks card
+  val CardTargets = List(PANum, TCNum)
+  def cardCandidates = CardTargets.filter(game.cardsDiscarded.contains)
+
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
@@ -104,15 +109,13 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
       increasePrestige(3)
     else {
       // Jihadist
-      val TCDisplay = deck(196).numAndName
-      val PADisplay = deck(182).numAndName
       // See Event Instructions table
       // Can possibly declare Caliphate, only in Syria or Iraq
       if (isHuman(role)) {
         println("\nPlace up to 3 cells in Syria and/or Iraq.")
         println(separator())
-        val inSyria = askInt("How cells many do you wish to place in Syria? ", 0, 3)
-        val inIraq = askInt("How many cells do you wish to place in Syria? ", 0, 3 - inSyria)
+        val inSyria = askInt("How many cells do you wish to place in Syria? ", 0, 3)
+        val inIraq = askInt("How many cells do you wish to place in Iraq? ", 0, 3 - inSyria)
         val targets = List((Syria, inSyria),(Iraq, inIraq)).filterNot(_._2 == 0)
         for ((target, num) <- targets) {
           addEventTarget(target)
@@ -127,18 +130,32 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
             declareCaliphate(target)
         }
 
-        val choices = List(
-          choice(game.cellsAvailable > 0, "cell", "Place a cell from the track in a random Schengen country"),
-          choice(true,                    "draw" -> s"Draw [$TCDisplay] or [$PADisplay] from the discard pile")
-        ).flatten
-        println()
-        askMenu("Choose one:", choices).head match {
-          case "draw" =>
-            log(s"\bJihadist draws [$TCDisplay] or [$PADisplay] from the discard pile", Color.Event)
-          case "cell" =>
-            val schengen = randomSchengenCountry
-            addEventTarget(schengen.name)
-            addSleeperCellsToCountry(schengen.name, 1)
+        if (game.cellsAvailable == 0 && cardCandidates.isEmpty) {
+          log(s"\nNo cells available to place in Schengen country.", Color.Event)
+          log(s"\nNeither ${orList(CardTargets.map(cardNumAndName))} is in the discard pile.", Color.Event)
+        }
+        else {
+          sealed trait Choice
+          case object PlaceCell extends Choice
+          case class DrawCard(num: Int) extends Choice
+          val cardChoices = cardCandidates
+            .map(num => DrawCard(num) -> s"Draw [${cardNumAndName(num)}] from the discard pile")
+          val choices = if (game.cellsAvailable > 0)
+            (PlaceCell -> "Place a cell from the track in a random Schengen country") :: cardChoices
+          else
+            cardChoices
+
+          askMenu("\nChoose one:", choices).head match {
+            case PlaceCell =>
+              log(s"\n$role places a cell in a random Schengen country.", Color.Event)
+              val schengen = randomSchengenCountry
+              addEventTarget(schengen.name)
+              addSleeperCellsToCountry(schengen.name, 1)
+
+            case DrawCard(cardNum) =>
+              processCardDrawn(role, cardNum, FromDiscard)
+              log(s"\n$role takes [${cardNumAndName(cardNum)}] from the discard pile", Color.Event)
+          }
         }
       }
       else if (game.botEnhancements) {
@@ -155,9 +172,18 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         if (jihadistChoosesToDeclareCaliphate(target, totalPlaced))
           declareCaliphate(target)
 
-        if (askYorN(s"\nIs [$TCDisplay] or [$PADisplay] in the discard pile? (y/n) "))
-          log(s"\nJihadist draws [$TCDisplay] if available otherwise [$PADisplay]  from discard pile", Color.Event)
+        if (cardCandidates.nonEmpty) {
+          val cardNum = if (cardCandidates.contains(TCNum))
+            TCNum
+          else
+            PANum
+
+          processCardDrawn(role, cardNum, FromDiscard)
+          log(s"\nTake [${cardNumAndName(cardNum)}] from the discard pile and", Color.Event)
+          log(s"shuffle it into the $role hand", Color.Event)
+        }
         else if (game.cellsAvailable > 0) {
+          log(s"\n$role places a cell in a random Schengen country.", Color.Event)
           val schengen = randomSchengenCountry
           addEventTarget(schengen.name)
           addSleeperCellsToCountry(schengen.name, 1)
@@ -171,9 +197,18 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         if (jihadistChoosesToDeclareCaliphate(target, num))
           declareCaliphate(target)
 
-        if (askYorN(s"\nIs [$TCDisplay] or [$PADisplay] in the discard pile? (y/n) "))
-          log(s"\nJihadist draws [$TCDisplay] if available otherwise [$PADisplay]  from discard pile", Color.Event)
+        val cardChoices = game.cardsDiscarded
+          .reverse   // Will take the on closes to the bottom
+          .filter(CardTargets.contains)
+
+        if (cardChoices.nonEmpty) {
+          val cardNum = cardChoices.head
+          processCardDrawn(role, cardNum, FromDiscard)
+          log(s"\nTake [${cardNumAndName(cardNum)}] from the discard pile and", Color.Event)
+          log(s"place it on top of the $role hand", Color.Event)
+        }
         else if (game.cellsAvailable > 0) {
+          log(s"\n$role places a cell in a random Schengen country.", Color.Event)
           val schengen = randomSchengenCountry
           addEventTarget(schengen.name)
           addSleeperCellsToCountry(schengen.name, 1)
