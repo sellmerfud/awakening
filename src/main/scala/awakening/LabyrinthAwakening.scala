@@ -9015,10 +9015,11 @@ object LabyrinthAwakening {
     val AbortCard    = "Abort card"
     var reservesUsed = 0
     var card1EventValid = false
+    var cardEventTriggered = false
     def inReserve    = game.reserves.us
     def opsAvailable = (card.ops + reservesUsed) min 3
 
-    val origEventWillTrigger = card.autoTrigger || card.eventWillTrigger(Jihadist)
+    val firstCardCanTrigger = card.autoTrigger || card.association  == Jihadist
     val canReassess = firstCardOfPhase(US) && card.ops == 3 && hasCardInHand(US)
 
     sealed trait PerformOption {
@@ -9076,7 +9077,7 @@ object LabyrinthAwakening {
     @tailrec def getUsActivity(): Either[String, List[PerformOption]] = {
       // The US must announce reassessment before triggering an event
       // so if the event was triggered then reassessment is not allowed.
-      val showReassess = canReassess && !origEventWillTrigger && inReserve == 0
+      val showReassess = canReassess && !cardEventTriggered && reservesUsed == 0
       val actions = List(
         choice(eventPlayable && reservesUsed == 0,         ExecuteEvent, ExecuteEvent),
         choice(true,                                       WarOfIdeas, WarOfIdeas),
@@ -9108,8 +9109,18 @@ object LabyrinthAwakening {
 
         case Reassess =>
             val card2 = promptForSecondCard()
-            if (card2.autoTrigger || card2.eventWillTrigger(Jihadist))
-              Right(List(PerformReassess, TriggerOpponentEvent(card2)))
+            var newOptions = List(PerformReassess)
+            val trigger1 = if (firstCardCanTrigger)
+              List(TriggerOpponentEvent(card))
+            else
+              Nil
+            val trigger2 = if (card2.autoTrigger || card2.association == Jihadist)
+              List(TriggerOpponentEvent(card2))
+            else
+              Nil
+              
+            if (trigger1.nonEmpty || trigger2.nonEmpty)
+              Right(PerformReassess :: trigger1 ::: trigger2)
             else
               Left(Reassess)
 
@@ -9141,6 +9152,7 @@ object LabyrinthAwakening {
         getUsActivity() match {
           case Left(activity) =>
             performCardActivity(activity)
+
           case Right(moreOptions) =>
             processOptions(options.filterNot(_ == PerformCardActivity):::moreOptions)
         }
@@ -9150,6 +9162,7 @@ object LabyrinthAwakening {
 
       case TriggerOpponentEvent(c)::Nil =>
         performTriggeredEvent(Jihadist, c)
+        cardEventTriggered = true
 
       case options =>
         // Ask what happens next
@@ -9173,6 +9186,7 @@ object LabyrinthAwakening {
                     case Play2ndCard => false  // Not longer an option!
                     case _ => true
                   }
+
               case Right(moreOptions) =>
                 // Reassess and TriggerCard replace the perform option
                 // So the user can chooose the order
@@ -9181,7 +9195,7 @@ object LabyrinthAwakening {
 
           case Some(Play2ndCard) =>
             val card2 = promptForSecondCard()
-            val triggerCard2 = if (card2.autoTrigger || card2.eventWillTrigger(Jihadist))
+            val triggerCard2 = if (card2.autoTrigger || card2.association == Jihadist)
               List(TriggerOpponentEvent(card2))
             else
               Nil
@@ -9198,6 +9212,7 @@ object LabyrinthAwakening {
 
           case Some(TriggerOpponentEvent(c)) =>
             performTriggeredEvent(Jihadist, c)
+            cardEventTriggered = true
             options
               .filter {
                 case TriggerOpponentEvent(x) => x.number != c.number
@@ -9208,15 +9223,15 @@ object LabyrinthAwakening {
         processOptions(newOptions)
     }
 
-    // If the the event will auto trigger of if it is a Jihadist associated event
+    // If the the event will auto trigger or if it is a Jihadist associated event
     // that will trigger, then Ask if user up front if the wish to perform
     // Reassessment.  This is done because the player must "announce" that they
     // wish to do Reassessment before seeing the results of any triggered event form
     // the first 3 Ops card played.
-    val initialOptions = (origEventWillTrigger, canReassess) match {
-      case (false, _) => List(PerformCardActivity)
+    val initialOptions = (firstCardCanTrigger, canReassess) match {
+      case (false, _)    => List(PerformCardActivity)
       case (true, false) => List(PerformCardActivity, TriggerOpponentEvent(card))
-      case (true, true) => List(PerformCardActivity, TriggerOpponentEvent(card), Play2ndCard)
+      case (true, true)  => List(PerformCardActivity, TriggerOpponentEvent(card), Play2ndCard)
     }
 
     try processOptions(initialOptions)
