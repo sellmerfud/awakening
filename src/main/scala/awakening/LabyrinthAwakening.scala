@@ -2906,7 +2906,7 @@ object LabyrinthAwakening {
     val winner = if (usScore > jihadistScore * 2) US else Jihadist
     val scoreEntries = goodEntries.zipAll(irEntries, emptyEntry, emptyEntry)
     val header  = "Good Resources              Islamist Rule Resources"
-    val header2 = "(No green regime change)    (Plus green regime change)"
+    val header2 = "                            (Plus green regime change)"
     val divider = "--------------------------  --------------------------"
 
     log()
