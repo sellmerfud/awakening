@@ -279,7 +279,7 @@ object JihadistBot extends BotHelpers {
     val priorities = firstPriority :::
     List(
       BestJihadDRMPriority(false),
-      AutoRecruitFilter,
+      AutoRecruitNoTandMFilter,
       HighestCellsMinusTandM,
       LowestTandM,
       NoTandMGreatestCellsPlusAdjacent,
@@ -530,7 +530,14 @@ object JihadistBot extends BotHelpers {
     new CriteriaFilter(
       "Good Muslim w/ adjacent cells",
       muslimTest(m => m.isGood && m.hasAdjacent(c => hasCellForTravel(c, m.name)) && m.reactionDelta > 1))
-  val AutoRecruitFilter = new CriteriaFilter("Auto recruit", muslimTest(_.autoRecruit))
+  val AutoRecruitFilter = new CriteriaFilter(
+    "Auto recruit",
+    muslimTest(_.autoRecruit)
+  )
+  val AutoRecruitNoTandMFilter = new CriteriaFilter(
+    "Auto recruit with no TandM",
+    muslimTest(m => m.autoRecruit && m.totalTroopsAndMilitia == 0)
+  )
 
   // Used with botEnhancements
   val PoorTroopsCellsFilter =
