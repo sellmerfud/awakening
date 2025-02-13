@@ -56,14 +56,14 @@ object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTri
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.civilWar && m.alignment != Adversary && m.totalTroops == 0)
   )
 
   // Returns true if the printed conditions of the event are satisfied
   // Max of 3 Advisors allowed on the map.
   override
-  def eventConditionsMet(role: Role) = game.advisorsAvailable > 0 && getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = game.advisorsAvailable > 0 && getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -81,7 +81,7 @@ object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTri
 
     if (isHuman(role)) {
       def nextPlacement(num: Int): Unit = if (num <= maxTargets) {
-        val choices = getCandidates().map(name => Some(name) -> name) :+ (None, "Finished placing Advisors")
+        val choices = getCandidates.map(name => Some(name) -> name) :+ (None, "Finished placing Advisors")
         displayLine(s"\n${amountOf(game.totalAdvisorsOnMap, "Advisors marker")} of 3 total currently on the map.", Color.Info)
         askMenu(s"Select country for ${ordinal(num)} Advisors marker:", choices).head match {
           case Some(target) =>
@@ -96,7 +96,7 @@ object Card_279 extends Card(279, "SFABs", US, 3, NoRemove, NoLapsing, NoAutoTri
     else {
       // Bot
       for (num <- 1 to maxTargets) {
-        val target = USBot.deployToPriority(getCandidates()).get
+        val target = USBot.deployToPriority(getCandidates).get
         addEventTarget(target)
         addAdvisorsToCountry(target)
       }

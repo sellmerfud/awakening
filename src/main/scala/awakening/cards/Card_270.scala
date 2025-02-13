@@ -64,9 +64,9 @@ object Card_270 extends Card(270, "Deep State", US, 3, Remove, NoLapsing, NoAuto
       m.isTested && !(m.isIslamistRule || m.civilWar)
   }
 
-  def getCandidates() = List(Egypt, Syria, Pakistan, Turkey).filter(isCandidate)
+  def getCandidates = List(Egypt, Syria, Pakistan, Turkey).filter(isCandidate)
 
-  def getBotCandidates() = getCandidates().filter(name => !game.getMuslim(name).isGood)
+  def getBotCandidates = getCandidates.filter(name => !game.getMuslim(name).isGood)
 
   def getBotTarget(candidates: List[String]) = USBot.cachedTarget("deep-state") {
     USBot.markerAlignGovTarget(candidates).get
@@ -76,14 +76,14 @@ object Card_270 extends Card(270, "Deep State", US, 3, Remove, NoLapsing, NoAuto
   def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
     case Jihadist => false
     case US =>
-      getCandidates()
+      getCandidates
         .map(game.getMuslim)
         .exists(m => m.governance == Fair && game.goodResources + m.resourceValue >= 12)
   }
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -93,8 +93,8 @@ object Card_270 extends Card(270, "Deep State", US, 3, Remove, NoLapsing, NoAuto
   // has Adversary alignment.
   override
   def botWillPlayEvent(role: Role): Boolean = {
-    getBotCandidates().nonEmpty &&
-    (game.usPosture == Hard || game.getMuslim(getBotTarget(getBotCandidates())).isAdversary)
+    getBotCandidates.nonEmpty &&
+    (game.usPosture == Hard || game.getMuslim(getBotTarget(getBotCandidates)).isAdversary)
   }
 
   // Carry out the event for the given role.
@@ -105,11 +105,11 @@ object Card_270 extends Card(270, "Deep State", US, 3, Remove, NoLapsing, NoAuto
     // When triggered during US turn the Bot's perferred candidates
     // may not be available.
     val target = if (isHuman(role))
-      askCountry("Which country: ", getCandidates())
-    else if (getBotCandidates().nonEmpty)
-      getBotTarget(getBotCandidates())
+      askCountry("Which country: ", getCandidates)
+    else if (getBotCandidates.nonEmpty)
+      getBotTarget(getBotCandidates)
     else
-      getBotTarget(getCandidates())
+      getBotTarget(getCandidates)
 
     val m = game.getMuslim(target)
     println()

@@ -49,11 +49,11 @@ import awakening.{ USBot, JihadistBot }
 // ------------------------------------------------------------------
 object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
 
-  def getRemoveCellCandidates() = countryNames(game.nonMuslims.filter(_.totalCells > 0))
+  def getRemoveCellCandidates = countryNames(game.nonMuslims.filter(_.totalCells > 0))
 
-  def getAlertPlotCandidates() = countryNames(game.nonMuslims.filter(_.hasPlots))
+  def getAlertPlotCandidates = countryNames(game.nonMuslims.filter(_.hasPlots))
 
-  def getUSCandidates() = countryNames(game.nonMuslims.filter(n => n.totalCells > 0 || n.hasCadre || n.hasPlots))
+  def getUSCandidates = countryNames(game.nonMuslims.filter(n => n.totalCells > 0 || n.hasCadre || n.hasPlots))
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
@@ -62,19 +62,19 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
     // Removing a Cell or Cadre in US is higher priority than alerting
     // a plot elsewhere
     val us = game.getNonMuslim(UnitedStates)
-    us.hasPlots || (getAlertPlotCandidates().nonEmpty && us.totalCells == 0 && !us.hasCadre)
+    us.hasPlots || (getAlertPlotCandidates.nonEmpty && us.totalCells == 0 && !us.hasCadre)
   }
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getRemoveCellCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    getRemoveCellCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = role match {
-    case US => getUSCandidates().nonEmpty
+    case US => getUSCandidates.nonEmpty
     case Jihadist => game.cellsAvailable > 0 || game.availablePlots.contains(Plot1)
   }
 
@@ -123,7 +123,7 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
     }
     else {  // US
       if (isHuman(role)) {
-        val name = askCountry("Select country: ", getUSCandidates())
+        val name = askCountry("Select country: ", getUSCandidates)
         val n = game.getNonMuslim(name)
         val choices = List(
           choice(n.totalCells > 0, "cell" , "Remove a cell"),
@@ -146,15 +146,15 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
       else {  // US Bot
         // Top priority is removing last cell on the map if possible
         if (eventRemovesLastCell()) {
-          val c = game.getCountry(getRemoveCellCandidates().head)
+          val c = game.getCountry(getRemoveCellCandidates.head)
           addEventTarget(c.name)
           removeCellsFromCountry(c.name, c.activeCells, c.sleeperCells, c.hasSadr, addCadre = true)
         }
         else {
-          val name = if (getUSCandidates().contains(UnitedStates))
+          val name = if (getUSCandidates.contains(UnitedStates))
             UnitedStates
           else
-            USBot.disruptPriority(getUSCandidates()).get
+            USBot.disruptPriority(getUSCandidates).get
 
           addEventTarget(name)
           val n = game.getNonMuslim(name)

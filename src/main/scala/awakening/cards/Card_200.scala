@@ -71,11 +71,11 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
 
   def getCandidates(role: Role) = countryNames(game.muslims.filter(isCandidate(role)))
 
-  def getUSAlignCandidates() = countryNames(game.muslims.filter(isUSAlignCandidate))
+  def getUSAlignCandidates = countryNames(game.muslims.filter(isUSAlignCandidate))
 
-  def getUSAwakeningCandidates() = countryNames(game.muslims.filter(isUSAwakeningCandidate))
+  def getUSAwakeningCandidates = countryNames(game.muslims.filter(isUSAwakeningCandidate))
 
-  def getJihadistAlignCandidates() = countryNames(game.muslims.filter(isJihadistAlignCandidate))
+  def getJihadistAlignCandidates = countryNames(game.muslims.filter(isJihadistAlignCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -86,7 +86,7 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getUSAlignCandidates().nonEmpty || getUSAwakeningCandidates().nonEmpty
+    case US => getUSAlignCandidates.nonEmpty || getUSAwakeningCandidates.nonEmpty
     case Jihadist => true
   }
 
@@ -130,8 +130,8 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
         (target, action, from)
 
       case US => // Bot
-        val alignCandidates = USBot.criticalMiddleShiftPossibilities(getUSAlignCandidates())
-        val awakeCandidates = getUSAlignCandidates()
+        val alignCandidates = USBot.criticalMiddleShiftPossibilities(getUSAlignCandidates)
+        val awakeCandidates = getUSAlignCandidates
         (alignCandidates, awakeCandidates) match {
           case (Nil, Nil) =>
             // Unlikely that there are no spaces to act on, but could happen
@@ -147,7 +147,7 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
         }
 
       case Jihadist => // Bot
-        getJihadistAlignCandidates() match {
+        getJihadistAlignCandidates match {
           case Nil =>
             val target = JihadistBot.travelToTarget(getCandidates(Jihadist)).get
             val isFromCandidate = (c: Country) => JihadistBot.hasCellForTravel(c, target, placement = true)

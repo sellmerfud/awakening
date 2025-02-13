@@ -56,12 +56,12 @@ object Card_238 extends Card(238, "Revolution", Unassociated, 3, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.isPoor && m.awakening > 0 && m.reaction > 0)
   )
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -76,9 +76,9 @@ object Card_238 extends Card(238, "Revolution", Unassociated, 3, NoRemove, NoLap
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     val name = role match {
-      case _ if isHuman(role) => askCountry("Select country: ", getCandidates())
-      case US => USBot.revolutionTarget(getCandidates()).get
-      case Jihadist => JihadistBot.revolutionTarget(getCandidates()).get
+      case _ if isHuman(role) => askCountry("Select country: ", getCandidates)
+      case US => USBot.revolutionTarget(getCandidates).get
+      case Jihadist => JihadistBot.revolutionTarget(getCandidates).get
     }
     addEventTarget(name)
     startCivilWar(name)

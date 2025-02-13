@@ -58,19 +58,19 @@ object Card_233 extends Card(233, "UN Ceasefire", Unassociated, 2, NoRemove, NoL
   val isCandidate = (m: MuslimCountry) =>
     m.civilWar && !game.isCaliphateMember(m.name)
 
-  def getCandidates() = countryNames(game.muslims.filter(_.civilWar))
+  def getCandidates = countryNames(game.muslims.filter(_.civilWar))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = getCandidates().exists { name =>
+  def eventRemovesLastCell(): Boolean = getCandidates.exists { name =>
     val numCells = game.getCountry(name).totalCells
     USBot.wouldRemoveLastCell(name, numCells)
   }
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   def arabWinter = lapsingEventInPlay(ArabWinter)
 
@@ -85,17 +85,17 @@ object Card_233 extends Card(233, "UN Ceasefire", Unassociated, 2, NoRemove, NoL
     ((m.totalCells >= m.militia && !arabWinter) ||
     (m.totalTroopsAndMilitia >= m.totalCells && arabWinter))
 
-  def getUSBotCandidates() = countryNames(game.muslims.filter(isUSBotCandidate))
+  def getUSBotCandidates = countryNames(game.muslims.filter(isUSBotCandidate))
 
-  def getJihadistBotCandidates() = countryNames(game.muslims.filter(isJihadistBotCandidate))
+  def getJihadistBotCandidates = countryNames(game.muslims.filter(isJihadistBotCandidate))
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getUSBotCandidates().nonEmpty
-    case Jihadist => getJihadistBotCandidates().nonEmpty
+    case US => getUSBotCandidates.nonEmpty
+    case Jihadist => getJihadistBotCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -105,9 +105,9 @@ object Card_233 extends Card(233, "UN Ceasefire", Unassociated, 2, NoRemove, NoL
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     val name = role match {
-      case _ if isHuman(role) => askCountry("\nSelect a Civil War country: ", getCandidates())
-      case US => USBot.unCeasefireTarget(getUSBotCandidates()).get
-      case Jihadist => JihadistBot.unCeasefireTarget(getJihadistBotCandidates()).get
+      case _ if isHuman(role) => askCountry("\nSelect a Civil War country: ", getCandidates)
+      case US => USBot.unCeasefireTarget(getUSBotCandidates).get
+      case Jihadist => JihadistBot.unCeasefireTarget(getJihadistBotCandidates).get
     }
 
     addEventTarget(name)

@@ -59,7 +59,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def bowlingGreenTargetEventInPlay(): Boolean =
+  def bowlingGreenTargetEventInPlay: Boolean =
     game.markers.nonEmpty ||
     game.countries.exists(c => c.markers.nonEmpty && !game.isCaliphateMember(c.name)) ||
     game.eventsLapsing.nonEmpty
@@ -87,7 +87,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = bowlingGreenTargetEventInPlay()
+  def eventConditionsMet(role: Role) = bowlingGreenTargetEventInPlay
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

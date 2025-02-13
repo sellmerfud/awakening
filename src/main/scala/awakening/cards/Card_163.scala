@@ -64,11 +64,11 @@ object Card_163 extends Card(163, "Status Quo", US, 3, NoRemove, NoLapsing, NoAu
     (m.totalTroopsAndMilitia / 2) >= m.totalCells &&
     !game.isCaliphateMember(m.name)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -82,9 +82,9 @@ object Card_163 extends Card(163, "Status Quo", US, 3, NoRemove, NoLapsing, NoAu
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else
-      USBot.statusQuoTarget(getCandidates()).get  // See Event Instructions table
+      USBot.statusQuoTarget(getCandidates).get  // See Event Instructions table
 
     addEventTarget(target)
     endRegimeChange(target)

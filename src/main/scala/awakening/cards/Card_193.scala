@@ -56,11 +56,11 @@ object Card_193 extends Card(193, "Regional al-Qaeda", Jihadist, 3, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(m => m.name != Iran && m.isUntested))
+  def getCandidates = countryNames(game.muslims.filter(m => m.name != Iran && m.isUntested))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -74,7 +74,7 @@ object Card_193 extends Card(193, "Regional al-Qaeda", Jihadist, 3, NoRemove, No
   override
   def executeEvent(role: Role): Unit = {
     val maxPerTarget = if (game.numIslamistRule > 0) 2 else 1
-    val maxTargets   = 2 min getCandidates().size
+    val maxTargets   = 2 min getCandidates.size
     case class Target(name: String, cells: Int)
 
     val targets = if (isHuman(role)) {
@@ -105,7 +105,7 @@ object Card_193 extends Card(193, "Regional al-Qaeda", Jihadist, 3, NoRemove, No
         }
       }
 
-      nextTarget(game.cellsAvailable, getCandidates(), Vector.empty)
+      nextTarget(game.cellsAvailable, getCandidates, Vector.empty)
     }
     else { // Bot
       def nextTarget(
@@ -125,7 +125,7 @@ object Card_193 extends Card(193, "Regional al-Qaeda", Jihadist, 3, NoRemove, No
         }
       }
 
-      nextTarget(game.cellsAvailable, getCandidates(), Vector.empty)
+      nextTarget(game.cellsAvailable, getCandidates, Vector.empty)
     }
 
     for (Target(name, num) <- targets) {

@@ -57,11 +57,11 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.countries.filter(_.totalCells == 0))
+  def getCandidates = countryNames(game.countries.filter(_.totalCells == 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -76,14 +76,14 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     var targets = if (isHuman(role))
-      askCountries(3, getCandidates())
+      askCountries(3, getCandidates)
     else {
       // See Event Instructions table
       val nonIR = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
       val candidates = if (nonIR.size >= 3)
         nonIR
       else
-        getCandidates()
+        getCandidates
 
       // US is always first choice if possible
       if (candidates.contains(UnitedStates))

@@ -58,13 +58,13 @@ object Card_249 extends Card(249, "Saudi Air Strikes", US, 1, NoRemove, NoLapsin
     (m.name == SaudiArabia ||
     (areAdjacent(m.name, SaudiArabia) && (m.civilWar || m.inRegimeChange || m.isIslamistRule)))
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists {
+    getCandidates.exists {
       case Yemen => USBot.wouldRemoveLastCell(Yemen, 2)
       case name => USBot.wouldRemoveLastCell(name, 1)
     }
@@ -76,7 +76,7 @@ object Card_249 extends Card(249, "Saudi Air Strikes", US, 1, NoRemove, NoLapsin
     val saudi = game.getMuslim(SaudiArabia)
     saudi.isTested &&
     (saudi.isNeutral || saudi.isAlly) &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
   }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -91,9 +91,9 @@ object Card_249 extends Card(249, "Saudi Air Strikes", US, 1, NoRemove, NoLapsin
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry(s"Remove cell(s) from which country: ", getCandidates())
+      askCountry(s"Remove cell(s) from which country: ", getCandidates)
     else 
-      USBot.disruptPriority(getCandidates()).get
+      USBot.disruptPriority(getCandidates).get
 
     val c = game.getMuslim(target)
     val num = if (c.name == Yemen)

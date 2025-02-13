@@ -62,7 +62,7 @@ object Card_225 extends Card(225, "Jihadi John", Unassociated, 2, USRemove, NoLa
   override
   def eventConditionsMet(role: Role) = true
 
-  def getBotSchengenCandidates() = countryNames(
+  def getBotSchengenCandidates = countryNames(
     game.getNonMuslims(Schengen).filter(n => n.isUntested || n.posture == game.usPosture)
   )
   // Returns true if the Bot associated with the given role will execute the event
@@ -71,7 +71,7 @@ object Card_225 extends Card(225, "Jihadi John", Unassociated, 2, USRemove, NoLa
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => game.prestige < 12
-    case Jihadist => game.funding < 9 || getBotSchengenCandidates().nonEmpty
+    case Jihadist => game.funding < 9 || getBotSchengenCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -89,7 +89,7 @@ object Card_225 extends Card(225, "Jihadi John", Unassociated, 2, USRemove, NoLa
           (name, askPosture(name))
         }
         else
-          (JihadistBot.posturePriority(getBotSchengenCandidates()).get, oppositePosture(game.usPosture))
+          (JihadistBot.posturePriority(getBotSchengenCandidates).get, oppositePosture(game.usPosture))
 
         addEventTarget(name)
         setCountryPosture(name, posture)

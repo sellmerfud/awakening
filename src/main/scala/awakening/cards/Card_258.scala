@@ -55,13 +55,13 @@ object Card_258 extends Card(258, "75th Ranger Regiment", US, 2, NoRemove, NoLap
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 2))
+    getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 2))
 
-  def getCandidates() = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
+  def getCandidates = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -75,9 +75,9 @@ object Card_258 extends Card(258, "75th Ranger Regiment", US, 2, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Remove cells from which Civil War country: ", getCandidates())
+      askCountry("Remove cells from which Civil War country: ", getCandidates)
     else
-      USBot.disruptPriority(getCandidates()).get
+      USBot.disruptPriority(getCandidates).get
 
     val num = game.getMuslim(target).totalCells min 2
     val (actives, sleepers, sadr) = if (isHuman(role))

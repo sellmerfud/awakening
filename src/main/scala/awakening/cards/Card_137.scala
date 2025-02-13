@@ -55,12 +55,12 @@ object Card_137 extends Card(137, "FMS", US, 2, NoRemove, NoLapsing, NoAutoTrigg
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.canTakeMilitia && m.isAlly)
   )
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
 
   // Returns true if the Bot associated with the given role will execute the event

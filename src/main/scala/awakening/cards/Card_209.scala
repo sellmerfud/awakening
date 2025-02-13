@@ -62,17 +62,17 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
     countryNames(game.muslims.filter(m => m.isShiaMix && m.totalCells > 0))
       .exists(name => USBot.wouldRemoveLastCell(name, 2))
 
-  def getMilitiaCandidates() = countryNames(game.muslims.filter(_.militia > 0))
+  def getMilitiaCandidates = countryNames(game.muslims.filter(_.militia > 0))
 
-  def getCellCandidates() = countryNames(game.muslims.filter(_.totalCells > 0))
+  def getCellCandidates = countryNames(game.muslims.filter(_.totalCells > 0))
 
   def iranNotAlly = game.getCountry(Iran).isNonMuslim || !game.getMuslim(Iran).isAlly
 
   def iranNotIR = !game.getCountry(Iran).isIslamistRule
 
-  def canRemoveCells = iranNotIR && getCellCandidates().nonEmpty
+  def canRemoveCells = iranNotIR && getCellCandidates.nonEmpty
 
-  def canRemoveMilitia = iranNotAlly && getMilitiaCandidates().nonEmpty
+  def canRemoveMilitia = iranNotAlly && getMilitiaCandidates.nonEmpty
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -108,10 +108,10 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
     }
 
     val target = action match {
-      case "cells" if isHuman(role) => askCountry("Select country with cells: ", getCellCandidates())
-      case "militia" if isHuman(role) => askCountry("Select country with militia: ", getMilitiaCandidates())
-      case "cells" => USBot.disruptPriority(getCellCandidates()).get
-      case _ => JihadistBot.minorJihadTarget(getMilitiaCandidates()).get
+      case "cells" if isHuman(role) => askCountry("Select country with cells: ", getCellCandidates)
+      case "militia" if isHuman(role) => askCountry("Select country with militia: ", getMilitiaCandidates)
+      case "cells" => USBot.disruptPriority(getCellCandidates).get
+      case _ => JihadistBot.minorJihadTarget(getMilitiaCandidates).get
     }
 
     if (action == "cells") {

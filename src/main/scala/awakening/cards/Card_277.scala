@@ -61,10 +61,10 @@ object Card_277 extends Card(277, "Regime Change Policy", US, 3, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getHumanCandidates() = countryNames(game.muslims)
+  def getHumanCandidates = countryNames(game.muslims)
 
   // The Bot will only choose IR countries
-  def getBotCandidates() = countryNames(game.muslims.filter(_.isIslamistRule))
+  def getBotCandidates = countryNames(game.muslims.filter(_.isIslamistRule))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -76,7 +76,7 @@ object Card_277 extends Card(277, "Regime Change Policy", US, 3, NoRemove, NoLap
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    game.usPosture == Soft && getBotCandidates().nonEmpty
+    game.usPosture == Soft && getBotCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -84,7 +84,7 @@ object Card_277 extends Card(277, "Regime Change Policy", US, 3, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     val (target, source, numTroops) = if (isHuman(role)) {
-      val t = askCountry("Regime Change in which country: ", getHumanCandidates())
+      val t = askCountry("Regime Change in which country: ", getHumanCandidates)
       val s = askCountry("Deploy troops from: ", game.regimeChangeSourcesFor(t))
       val maxTroops = if (s == "track")
         game.troopsAvailable
@@ -94,7 +94,7 @@ object Card_277 extends Card(277, "Regime Change Policy", US, 3, NoRemove, NoLap
       (t, s, numTroops)
     }
     else
-      (USBot.regimeChangeTarget(getBotCandidates()).get, "track", 6)
+      (USBot.regimeChangeTarget(getBotCandidates).get, "track", 6)
 
     addEventTarget(target)
     testCountry(target)

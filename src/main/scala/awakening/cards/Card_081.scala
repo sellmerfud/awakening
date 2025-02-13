@@ -57,17 +57,17 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(_.inRegimeChange))
+  def getCandidates = countryNames(game.muslims.filter(_.inRegimeChange))
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = {
-    val haveTarget = game.getMuslims(getCandidates())
+    val haveTarget = game.getMuslims(getCandidates)
       .exists (m => m.aidMarkers > 0 || !m.besiegedRegime)
 
     game.cellsAvailable > 0 || haveTarget

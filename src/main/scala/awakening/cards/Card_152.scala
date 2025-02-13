@@ -59,13 +59,13 @@ object Card_152 extends Card(152, "Congress Acts", US, 3, NoRemove, NoLapsing, N
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCivilWars() = countryNames(game.muslims.filter(_.civilWar))
+  def getCivilWars = countryNames(game.muslims.filter(_.civilWar))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
     globalEventInPlay(Sequestration) ||
-    (game.troopsAvailable >= 6 && getCivilWars().nonEmpty)
+    (game.troopsAvailable >= 6 && getCivilWars.nonEmpty)
 
 
   def botCandidates() = countryNames(
@@ -89,8 +89,8 @@ object Card_152 extends Card(152, "Congress Acts", US, 3, NoRemove, NoLapsing, N
       removeGlobalEventMarker(Sequestration)
 
     if (isHuman(role)) {
-      if (game.troopsAvailable >= 6 && getCivilWars().nonEmpty) {
-        val target = askCountry("Select country: ", getCivilWars())
+      if (game.troopsAvailable >= 6 && getCivilWars.nonEmpty) {
+        val target = askCountry("Select country: ", getCivilWars)
         val numTroops = askInt("Deploy how many troops from the track", 6, game.troopsAvailable, Some(6))
         addEventTarget(target)
         performRegimeChange("track", target, numTroops)

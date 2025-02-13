@@ -56,13 +56,13 @@ object Card_191 extends Card(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoL
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
+  def getCandidates = countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
             lapsingEventNotInPlay(ArabWinter) &&
-            getCandidates().nonEmpty
+            getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -83,7 +83,7 @@ object Card_191 extends Card(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoL
     else
       log("Egypt cannot currently take a reaction marker.", Color.Event)
 
-    val other2 = getCandidates() match {
+    val other2 = getCandidates match {
       case c::Nil =>
         List(c, c)
       case candidates if isHuman(role) =>

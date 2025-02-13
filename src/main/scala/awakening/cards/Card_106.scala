@@ -52,12 +52,12 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims
       .filter(m => m.isShiaMix && m.totalCells > 0 && m.totalTroops > 0)
   )
 
-  def getJihadistBotCandidates() = getCandidates()
+  def getJihadistBotCandidates = getCandidates
     .filter { name =>
       val m = game.getMuslim(name)
       m.isGood || m.isFair
@@ -67,12 +67,12 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 2))
+    getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 2))
 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,7 +80,7 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => true
-    case Jihadist => getJihadistBotCandidates().nonEmpty
+    case Jihadist => getJihadistBotCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -90,12 +90,12 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
   def executeEvent(role: Role): Unit = {
     if (role == US) {
       val (name, (actives, sleepers, sadr)) = if (isHuman(role)) {
-        val name = askCountry("Select a Shia-Mix country with troops and cells: ", getCandidates())
+        val name = askCountry("Select a Shia-Mix country with troops and cells: ", getCandidates)
         val num = 2 min game.getMuslim(name).totalCells
         (name, askCells(name, num, sleeperFocus = true))
       }
       else {
-        val name = USBot.disruptPriority(getCandidates()).get
+        val name = USBot.disruptPriority(getCandidates).get
         val num = 2 min game.getMuslim(name).totalCells
         (name, USBot.chooseCellsToRemove(name, num))
       }
@@ -104,9 +104,9 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
     }
     else {  // Jihadist
       val name = if (isHuman(role))
-        askCountry("Select a Shia-Mix country with troops and cells: ", getCandidates())
+        askCountry("Select a Shia-Mix country with troops and cells: ", getCandidates)
       else
-        JihadistBot.alignGovTarget(getJihadistBotCandidates()).get
+        JihadistBot.alignGovTarget(getJihadistBotCandidates).get
 
       val target = game.getMuslim(name)
       addEventTarget(name)

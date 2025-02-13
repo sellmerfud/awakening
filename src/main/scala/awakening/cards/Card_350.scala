@@ -65,14 +65,14 @@ object Card_350 extends Card(350, "UN Peace Envoy", Unassociated, 2, NoRemove, N
   val isJihadistBotCandidate = (m: MuslimCountry) =>
     isCandidate(m) && m.totalCells > m.totalTroopsAndMilitia
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getUSBotCandidates() = countryNames(game.muslims.filter(isUSBotCandidate))
+  def getUSBotCandidates = countryNames(game.muslims.filter(isUSBotCandidate))
 
-  def getJihadistBotCandidates() = countryNames(game.muslims.filter(isJihadistBotCandidate))
+  def getJihadistBotCandidates = countryNames(game.muslims.filter(isJihadistBotCandidate))
 
-  def getLastCellCandidate(): Option[String] = 
-    getCandidates()
+  def getLastCellCandidate: Option[String] = 
+    getCandidates
       .find { name =>
         val m = game.getMuslim(name)
         m.totalTroopsAndMilitia >= m.totalCells &&
@@ -84,14 +84,14 @@ object Card_350 extends Card(350, "UN Peace Envoy", Unassociated, 2, NoRemove, N
   //
   // Note: the US Bot candidates only consider countries where TandM > cells,
   //       however, when checking for removing the last cell we must consider
-  //       countries where TandM >= cells so we cal getCandidate() rather than
-  //       getUSBotCandidates()
+  //       countries where TandM >= cells so we cal getCandidate rather than
+  //       getUSBotCandidates
 override
-  def eventRemovesLastCell(): Boolean = getLastCellCandidate().nonEmpty
+  def eventRemovesLastCell(): Boolean = getLastCellCandidate.nonEmpty
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -99,8 +99,8 @@ override
   //
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => eventRemovesLastCell() || getUSBotCandidates().nonEmpty
-    case Jihadist => getJihadistBotCandidates().nonEmpty
+    case US => eventRemovesLastCell() || getUSBotCandidates.nonEmpty
+    case Jihadist => getJihadistBotCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -110,16 +110,16 @@ override
   def executeEvent(role: Role): Unit = {
     val target = role match {
       case _ if isHuman(role) =>
-        askCountry("Which country: ", getCandidates())
+        askCountry("Which country: ", getCandidates)
 
-      case US if getLastCellCandidate().nonEmpty =>
-        getLastCellCandidate().get
+      case US if getLastCellCandidate.nonEmpty =>
+        getLastCellCandidate.get
 
       case US =>
-        USBot.disruptPriority(getUSBotCandidates()).get
+        USBot.disruptPriority(getUSBotCandidates).get
 
       case Jihadist =>
-        JihadistBot.troopsMilitiaTarget(getJihadistBotCandidates()).get
+        JihadistBot.troopsMilitiaTarget(getJihadistBotCandidates).get
     }
 
     def nextRemoval(): Unit = {

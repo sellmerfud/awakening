@@ -55,11 +55,11 @@ object Card_257 extends Card(257, "Women's Rights Activism", US, 1, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(_.reaction > 0))
+  def getCandidates = countryNames(game.muslims.filter(_.reaction > 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -73,9 +73,9 @@ object Card_257 extends Card(257, "Women's Rights Activism", US, 1, NoRemove, No
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Remove reaction marker from which country: ", getCandidates())
+      askCountry("Remove reaction marker from which country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
 
     addEventTarget(target)
     removeReactionMarker(target)

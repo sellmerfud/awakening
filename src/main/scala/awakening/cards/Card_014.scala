@@ -56,13 +56,13 @@ object Card_014 extends Card(14, "Covert Action", US, 2, NoRemove, NoLapsing, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(_.isAdversary)
   )
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -76,9 +76,9 @@ object Card_014 extends Card(14, "Covert Action", US, 2, NoRemove, NoLapsing, No
   override
   def executeEvent(role: Role): Unit = {
     val name = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
     addEventTarget(name)
     val die = getDieRoll("Enter event die roll: ", Some(role))
     val success = die > 3

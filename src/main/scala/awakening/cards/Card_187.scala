@@ -63,13 +63,13 @@ object Card_187 extends Card(187, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
     isCandidate(m) &&
     ( m.aidMarkers > 0 || !m.besiegedRegime)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getNoCellCandidates() = countryNames(game.muslims.filter(isNoCellsCandidate))
+  def getNoCellCandidates = countryNames(game.muslims.filter(isNoCellsCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -77,9 +77,9 @@ object Card_187 extends Card(187, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
   override
   def botWillPlayEvent(role: Role): Boolean =
     if (game.cellsAvailable > 0)
-      getCandidates().nonEmpty
+      getCandidates.nonEmpty
     else
-      getNoCellCandidates().nonEmpty
+      getNoCellCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -88,11 +88,11 @@ object Card_187 extends Card(187, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
   def executeEvent(role: Role): Unit = {
 
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
-    else if (game.cellsAvailable == 0 && getNoCellCandidates().nonEmpty)
-      JihadistBot.markerTarget(getNoCellCandidates()).get
+      askCountry("Select country: ", getCandidates)
+    else if (game.cellsAvailable == 0 && getNoCellCandidates.nonEmpty)
+      JihadistBot.markerTarget(getNoCellCandidates).get
     else
-      JihadistBot.cellPlacementPriority(game.cellsAvailable >= 3)(getCandidates()).get
+      JihadistBot.cellPlacementPriority(game.cellsAvailable >= 3)(getCandidates).get
 
     addEventTarget(target)
     val m = game.getMuslim(target)

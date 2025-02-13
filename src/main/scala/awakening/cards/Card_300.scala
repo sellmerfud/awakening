@@ -57,7 +57,7 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = game.jihadTargets.sorted
+  def getCandidates = game.jihadTargets.sorted
 
   def botMajorJihadCandidates() = countryNames(
     game.getMuslims(game.majorJihadTargets(2))
@@ -74,7 +74,7 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -89,7 +89,7 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
   override
   def executeEvent(role: Role): Unit = {
     val targets = if (isHuman(role))
-      getHumanJihadTargets(2, getCandidates())
+      getHumanJihadTargets(2, getCandidates)
     else {  // Bot
       if (botMajorJihadCandidates().nonEmpty) {
         val target = JihadistBot.majorJihadPriorityCountry match {
@@ -114,7 +114,7 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
         }
 
         val possibles = botMinorJihadCandidates() match {
-          case Nil => getCandidates()
+          case Nil => getCandidates
           case preferred => preferred
         }
         nextTarget(2, possibles, Vector.empty).toList

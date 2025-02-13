@@ -58,7 +58,7 @@ object Card_013 extends Card(13, "Anbar Awakening", US, 2, NoRemove, NoLapsing, 
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     List(Iraq, Syria)
       .map(game.getMuslim)
       .filter(_.totalTroops > 0)
@@ -66,7 +66,7 @@ object Card_013 extends Card(13, "Anbar Awakening", US, 2, NoRemove, NoLapsing, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,9 +80,9 @@ object Card_013 extends Card(13, "Anbar Awakening", US, 2, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     val name = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
     
     addEventTarget(name)
     addAidMarker(name)

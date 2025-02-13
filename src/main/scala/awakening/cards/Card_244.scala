@@ -63,7 +63,7 @@ object Card_244 extends Card(244, "Foreign Internal Defense", US, 1, NoRemove, N
   val isCandidate = (m: MuslimCountry) =>
     meetsCriteria(m) && m.canTakeMilitia
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -75,7 +75,7 @@ object Card_244 extends Card(244, "Foreign Internal Defense", US, 1, NoRemove, N
   override
   def botWillPlayEvent(role: Role): Boolean =
     game.militiaAvailable > 0 &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -84,13 +84,13 @@ object Card_244 extends Card(244, "Foreign Internal Defense", US, 1, NoRemove, N
   def executeEvent(role: Role): Unit = {
     if (game.militiaAvailable == 0)
       log("\nThere are no available militia to place on the map. The event has no effect.", Color.Event)
-    else if (getCandidates().isEmpty)
+    else if (getCandidates.isEmpty)
       log("\nThere are canidate countries that can take a militia. The event has no effect.", Color.Event)
     else {
       val target = if (isHuman(role))
-        askCountry(s"Select country to place militia: ", getCandidates())
+        askCountry(s"Select country to place militia: ", getCandidates)
       else
-        USBot.deployToPriority(getCandidates()).get
+        USBot.deployToPriority(getCandidates).get
 
       addEventTarget(target)
       println()

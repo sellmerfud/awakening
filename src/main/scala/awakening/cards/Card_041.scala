@@ -58,7 +58,7 @@ object Card_041 extends Card(41, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrigg
   def eventRemovesLastCell(): Boolean = false
 
   // Added civilWar condition for when playing in a campaign game
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.inRegimeChange || m.civilWar)
   )
 
@@ -66,7 +66,7 @@ object Card_041 extends Card(41, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrigg
   override
   def eventConditionsMet(role: Role) =
     game.gwotPenalty == 0 &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -81,9 +81,9 @@ object Card_041 extends Card(41, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrigg
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select country for NATO: ", getCandidates())
+      askCountry("Select country for NATO: ", getCandidates)
     else
-      USBot.deployToPriority(getCandidates()).get
+      USBot.deployToPriority(getCandidates).get
     val currentNatoLocation = game.muslims
       .find(_.hasMarker(NATO))
       .map(_.name)

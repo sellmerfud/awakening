@@ -69,17 +69,17 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
     m.canTakeMilitia &&
     (m.name == GulfStates || (m.name != Iran && (m.isSunni || game.adjacentToSunni(m.name))))
 
-  def getPlacementCandidates() = countryNames(game.muslims.filter(ispPlacementCandidate))
+  def getPlacementCandidates = countryNames(game.muslims.filter(ispPlacementCandidate))
 
   def canPlace =
     game.militiaAvailable > 0 &&
-    getPlacementCandidates().nonEmpty
+    getPlacementCandidates.nonEmpty
 
-  def getReposCandidates() = reposCountries.filter(name => game.getMuslim(name).canTakeMilitia)
+  def getReposCandidates = reposCountries.filter(name => game.getMuslim(name).canTakeMilitia)
 
   def canReposition =
-    getReposCandidates().size > 1 &&
-    getReposCandidates().exists(name => game.getMuslim(name).militia > 0)
+    getReposCandidates.size > 1 &&
+    getReposCandidates.exists(name => game.getMuslim(name).militia > 0)
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -109,7 +109,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
 
       if (askMenu("Choose one:", actionChoices).head == "place") {
         val numMilita  = game.militiaAvailable min 2
-        val candidates = getPlacementCandidates()
+        val candidates = getPlacementCandidates
         val sunniCandidates = candidates.filter(_ != GulfStates)
         val inSunni = sunniCandidates.nonEmpty
         val inGulfStates = candidates.contains(GulfStates)
@@ -172,7 +172,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
           }
         }
 
-        val reposCandidates = getReposCandidates()
+        val reposCandidates = getReposCandidates
         val totalMilitia = reposCandidates.foldLeft(0) { (sum, name) => sum + game.getMuslim(name).militia }
         val starting = reposCandidates.map { name =>
           MilitiaCountry(name, game.getMuslim(name).militia)
@@ -208,7 +208,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
     }
     else {
       // Bot
-      val target = USBot.deployToPriority(getPlacementCandidates()).get
+      val target = USBot.deployToPriority(getPlacementCandidates).get
       addEventTarget(target)
       addMilitiaToCountry(target, game.militiaAvailable min 2)
     }

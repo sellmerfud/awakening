@@ -56,7 +56,7 @@ object Card_162 extends Card(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrig
   override
   def eventRemovesLastCell(): Boolean = {
     val totalCellsOnMap = game.totalCellsOnMap
-    getCandidates().exists(name => game.getMuslim(name).totalCells == totalCellsOnMap)
+    getCandidates.exists(name => game.getMuslim(name).totalCells == totalCellsOnMap)
   }
 
   val isCandidate = (m: MuslimCountry) =>
@@ -65,18 +65,18 @@ object Card_162 extends Card(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrig
     m.awakening > 0 &&
     m.reaction > 0
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   val isBotCandidate = (m: MuslimCountry) =>
     isCandidate(m) &&
     (m.totalCells == game.totalCellsOnMap || m.isAdversary || (m.isNeutral && !m.isGood))
 
-  def getBotCanndidates() = countryNames(game.muslims.filter(isBotCandidate))
+  def getBotCanndidates = countryNames(game.muslims.filter(isBotCandidate))
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -91,8 +91,8 @@ object Card_162 extends Card(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrig
   def executeEvent(role: Role): Unit = {
     // If the event was triggered during Jihadist player's turn
     // then the Bot's preferred candidates may not exsist
-    val botCandidates = getBotCanndidates() match {
-      case Nil => getCandidates()
+    val botCandidates = getBotCanndidates match {
+      case Nil => getCandidates
       case candidates => candidates
     }
     val botLastCellTarget = botCandidates.find { name =>
@@ -100,7 +100,7 @@ object Card_162 extends Card(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrig
     }
 
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else
       botLastCellTarget.getOrElse(USBot.scafTarget(botCandidates).get)
 

@@ -45,7 +45,7 @@ import awakening.USBot
 // Remove a cell from a Muslim country (not Iran).
 // ------------------------------------------------------------------
 object Card_023 extends Card(23, "Predator", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims
       .filter(m => m.name != Iran && m.totalCells > 0)
   )
@@ -59,11 +59,11 @@ object Card_023 extends Card(23, "Predator", US, 2, NoRemove, NoLapsing, NoAutoT
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -77,11 +77,11 @@ object Card_023 extends Card(23, "Predator", US, 2, NoRemove, NoLapsing, NoAutoT
   override
   def executeEvent(role: Role): Unit = {
     val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
-      val target = askCountry("Select country with a cell: ", getCandidates())
+      val target = askCountry("Select country with a cell: ", getCandidates)
       (target, askCells(target, 1, sleeperFocus = true))
     }
     else {
-      var target = USBot.disruptPriority(getCandidates()).get
+      var target = USBot.disruptPriority(getCandidates).get
       (target, USBot.chooseCellsToRemove(target, 1))
     }
     

@@ -51,11 +51,11 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getNonCaliphateCandidates() = countryNames(
+  def getNonCaliphateCandidates = countryNames(
     game.muslims.filter(m => m.totalCells > 0 && (m.civilWar || m.inRegimeChange))
   )
 
-  def getCaliphateCandidates() = countryNames(
+  def getCaliphateCandidates = countryNames(
     game.muslims.filter(m => m.totalCells > 0 && game.isCaliphateMember(m.name))
   )
 
@@ -63,8 +63,8 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean = {
-    val nonCalNum = getNonCaliphateCandidates().map(name => game.getCountry(name).totalCells).sum min 3
-    val calNum    = getCaliphateCandidates().map(name => game.getCountry(name).totalCells).sum min 4
+    val nonCalNum = getNonCaliphateCandidates.map(name => game.getCountry(name).totalCells).sum min 3
+    val calNum    = getCaliphateCandidates.map(name => game.getCountry(name).totalCells).sum min 4
 
     nonCalNum == game.totalCellsOnMap || calNum == game.totalCellsOnMap
   }
@@ -72,8 +72,8 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    getNonCaliphateCandidates().nonEmpty ||
-    getCaliphateCandidates().nonEmpty
+    getNonCaliphateCandidates.nonEmpty ||
+    getCaliphateCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -91,18 +91,18 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
     if (isHuman(role)) {
       val choices = List(
         choice(
-          getNonCaliphateCandidates().nonEmpty,
+          getNonCaliphateCandidates.nonEmpty,
           "non-cal",
           "Remove up to 3 cells in Civil War/Regime Change countries"),
         choice(
-          getCaliphateCandidates().nonEmpty,
+          getCaliphateCandidates.nonEmpty,
           "cal",
           "Remove 4 cells total in Caliphate countries")
       ).flatten
 
       val (candidates, maxCells, upto) = askMenu("Choose one:", choices).head match {
-        case "non-cal" => (getNonCaliphateCandidates(), 3, true)
-        case _         => (getCaliphateCandidates(), 4, false)
+        case "non-cal" => (getNonCaliphateCandidates, 3, true)
+        case _         => (getCaliphateCandidates, 4, false)
       }
 
       println()
@@ -116,14 +116,14 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
       // Bot will remove cells from caliphate countries only if it can remove
       // four cells (or there are no Civil War/Regime change countries)
       // Otherwise it will remove the max it can from Civil War/Regime change countries
-      val nonCalNum = getNonCaliphateCandidates().map(name => game.getCountry(name).totalCells).sum min 3
-      val calNum    = getCaliphateCandidates().map(name => game.getCountry(name).totalCells).sum min 4
+      val nonCalNum = getNonCaliphateCandidates.map(name => game.getCountry(name).totalCells).sum min 3
+      val calNum    = getCaliphateCandidates.map(name => game.getCountry(name).totalCells).sum min 4
 
 
       val (candidates, maxCells) = if (calNum == 4 || calNum == game.totalCellsOnMap || nonCalNum == 0)
-        (getCaliphateCandidates(), calNum)
+        (getCaliphateCandidates, calNum)
       else
-        (getNonCaliphateCandidates(), nonCalNum)
+        (getNonCaliphateCandidates, nonCalNum)
 
       // We will select the cells one at a time, because
       // removal of a cell could change the Bots priorities

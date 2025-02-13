@@ -61,13 +61,13 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
   override
   def eventConditionsMet(role: Role) = true
 
-  def getMilitiaCandidates() = African.filter(name => game.getCountry(name).canTakeMilitia)
+  def getMilitiaCandidates = African.filter(name => game.getCountry(name).canTakeMilitia)
 
-  def getCellsCandidates() = African
+  def getCellsCandidates = African
 
-  def canPlaceMilitia = game.militiaAvailable > 0 && getMilitiaCandidates().nonEmpty
+  def canPlaceMilitia = game.militiaAvailable > 0 && getMilitiaCandidates.nonEmpty
 
-  def canPlaceCells = game.cellsAvailable > 0 && getCellsCandidates().nonEmpty
+  def canPlaceCells = game.cellsAvailable > 0 && getCellsCandidates.nonEmpty
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -98,20 +98,20 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
       case r if isHuman(r) =>
         val action = askMenu("Choose one:", choices).headOption
         val name = action match {
-          case Some(MilitiaAction) => askCountry("Select African country: ", getMilitiaCandidates())
-          case Some(CellsAction) => askCountry("Select African country: ", getCellsCandidates())
+          case Some(MilitiaAction) => askCountry("Select African country: ", getMilitiaCandidates)
+          case Some(CellsAction) => askCountry("Select African country: ", getCellsCandidates)
           case _ => ""
         }
       (name, action)
 
       case US => // US Bot
-        val name = shuffle(USBot.highestCellsMinusTandM(getMilitiaCandidates())).head
+        val name = shuffle(USBot.highestCellsMinusTandM(getMilitiaCandidates)).head
         (name, Some(MilitiaAction))
 
       case Jihadist => // Jihadist Bot
         val name = JihadistBot.caliphatePriorityTarget(Mali::Nigeria::Nil) match {
           case Some(name) if game.cellsAvailable >= 3 => name
-          case _ => JihadistBot.cellPlacementPriority(false)(getCellsCandidates()).get
+          case _ => JihadistBot.cellPlacementPriority(false)(getCellsCandidates).get
         }
         (name, Some(CellsAction))
     }

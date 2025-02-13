@@ -62,7 +62,7 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
   override
   def eventConditionsMet(role: Role) = true
 
-  def getPlotCandidates() = if (game.numIslamistRule == 0)
+  def getPlotCandidates = if (game.numIslamistRule == 0)
     game.availablePlots.filter(_ == Plot1)
   else
     game.availablePlots
@@ -72,8 +72,8 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    (role == Jihadist && getPlotCandidates().nonEmpty) ||
-    (role == US && getPlotCandidates().isEmpty)
+    (role == Jihadist && getPlotCandidates.nonEmpty) ||
+    (role == US && getPlotCandidates.isEmpty)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -89,7 +89,7 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
     addEventTarget(Scandinavia)
     setCountryPosture(Scandinavia, posture)
 
-    val plotCandidates = getPlotCandidates()
+    val plotCandidates = getPlotCandidates
     if (plotCandidates.nonEmpty) {
       log()
       val plot = plotCandidates match {

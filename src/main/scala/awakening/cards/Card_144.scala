@@ -57,11 +57,11 @@ object Card_144 extends Card(144, "Operation New Dawn", US, 2, NoRemove, NoLapsi
 
   val isCandidate = (m: MuslimCountry) => m.troops > 0 && m.canTakeMilitia
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty && game.militiaAvailable > 0
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty && game.militiaAvailable > 0
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -75,7 +75,7 @@ object Card_144 extends Card(144, "Operation New Dawn", US, 2, NoRemove, NoLapsi
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Replace troops in which country: ", getCandidates())
+      askCountry("Replace troops in which country: ", getCandidates)
     else {
       // The Bot picks Regime Change countries first,
       // then countries with Plots,

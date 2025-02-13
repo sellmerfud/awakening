@@ -60,11 +60,11 @@ object Card_190 extends Card(190, "Martyrdom Operation", Jihadist, 3, NoRemove, 
     c.totalCells > 0 &&
     (game.isNonMuslim(c.name) || !game.getMuslim(c.name).isIslamistRule)
 
-  def getCandidates() = countryNames(game.countries.filter(isCandidate))
+  def getCandidates = countryNames(game.countries.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -79,13 +79,13 @@ object Card_190 extends Card(190, "Martyrdom Operation", Jihadist, 3, NoRemove, 
   def executeEvent(role: Role): Unit = {
     if (game.availablePlots.nonEmpty) {
       val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
-        val target = askCountry("Select country: ", getCandidates())
+        val target = askCountry("Select country: ", getCandidates)
         val cell = askCells(target, 1, sleeperFocus = false)
         (target, cell, askAvailablePlots(2, ops = 3))
       }
       else {
         // See Event Instructions table
-        val target = JihadistBot.plotPriority(getCandidates()).get
+        val target = JihadistBot.plotPriority(getCandidates).get
         val cell = JihadistBot.chooseCellsToRemove(target, 1)
         (target, cell, JihadistBot.preparePlots(game.availablePlots).take(2))
       }

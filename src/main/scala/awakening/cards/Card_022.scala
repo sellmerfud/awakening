@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 object Card_022 extends Card(22, "Mossad & Shin Bet", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.getCountries(Israel::Jordan::Lebanon::Nil)
       .filter(_.totalCells > 0)
   )
@@ -60,13 +60,13 @@ object Card_022 extends Card(22, "Mossad & Shin Bet", US, 2, NoRemove, NoLapsing
   override
   def eventRemovesLastCell(): Boolean = {
     // Can we remove the last cell on the board?
-    val totalCells = getCandidates().map(name => game.getCountry(name).totalCells).sum
+    val totalCells = getCandidates.map(name => game.getCountry(name).totalCells).sum
     totalCells > 0 && totalCells == game.totalCellsOnMap
   }
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -79,7 +79,7 @@ object Card_022 extends Card(22, "Mossad & Shin Bet", US, 2, NoRemove, NoLapsing
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    getCandidates().foreach { name =>
+    getCandidates.foreach { name =>
       val c = game.getCountry(name)
       addEventTarget(name)
       removeCellsFromCountry(name, c.activeCells, c.sleeperCells, c.hasSadr, addCadre = true)

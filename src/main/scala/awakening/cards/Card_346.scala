@@ -66,22 +66,22 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
   def possibleCountries =
     game.getMuslim(Pakistan) :: game.adjacentCountries(Pakistan)
 
-  def getMilitiaCandidates() =
+  def getMilitiaCandidates =
     countryNames(possibleCountries.filter(isMilitiaCandidate))
 
-  def getCellCandidates() =
+  def getCellCandidates =
     countryNames(possibleCountries.filter(isCellCandidate))
 
-  def canPlaceMilitia = game.militiaAvailable > 0 && getMilitiaCandidates().nonEmpty
+  def canPlaceMilitia = game.militiaAvailable > 0 && getMilitiaCandidates.nonEmpty
 
-  def canPlaceCell = game.cellsAvailable > 0 && getCellCandidates().nonEmpty
+  def canPlaceCell = game.cellsAvailable > 0 && getCellCandidates.nonEmpty
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
     canPlaceMilitia && // Have to place a milita in order to remove a cell
-    getMilitiaCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    getMilitiaCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -111,17 +111,17 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
       case _ if isHuman(role) =>
         val pieceType = askMenu("Choose one:", orderedChoices).head
         val target = if (pieceType == "militia")
-          askCountry("Place a milita in which country: ", getMilitiaCandidates())
+          askCountry("Place a milita in which country: ", getMilitiaCandidates)
         else
-          askCountry("Place a cell in which country: ", getCellCandidates())
+          askCountry("Place a cell in which country: ", getCellCandidates)
         (target, pieceType)
       case US =>
-        val target = getMilitiaCandidates().find(name => USBot.wouldRemoveLastCell(name, 1)) getOrElse
-          USBot.deployToPriority(getMilitiaCandidates()).get
+        val target = getMilitiaCandidates.find(name => USBot.wouldRemoveLastCell(name, 1)) getOrElse
+          USBot.deployToPriority(getMilitiaCandidates).get
         (target, "militia")
 
       case Jihadist =>
-        val target = JihadistBot.cellPlacementPriority(false)(getCellCandidates()).get
+        val target = JihadistBot.cellPlacementPriority(false)(getCellCandidates).get
         (target, "cell")
     }
 

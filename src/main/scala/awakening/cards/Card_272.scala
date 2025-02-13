@@ -71,7 +71,7 @@ object Card_272 extends Card(272, "Fire and Fury", US, 3, Remove, NoLapsing, NoA
   override
   def botWillPlayEvent(role: Role): Boolean = false // Unplayable by Bot
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
       game.muslims.filter(m => m.name != Iran && (m.civilWar || m.isAdversary))
   )
 
@@ -80,8 +80,8 @@ object Card_272 extends Card(272, "Fire and Fury", US, 3, Remove, NoLapsing, NoA
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (getCandidates().nonEmpty && askYorN("Do you wish to perform a Regime Change Operation? (y/n) ")) {
-      val dest      = askCountry("Regime change in which country: ", getCandidates())
+    if (getCandidates.nonEmpty && askYorN("Do you wish to perform a Regime Change Operation? (y/n) ")) {
+      val dest      = askCountry("Regime change in which country: ", getCandidates)
       val source    = askCountry("Deploy troops from: ", game.regimeChangeSourcesFor(dest))
       val maxTroops = if (source == "track")
         game.troopsAvailable

@@ -57,11 +57,11 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(_.civilWar))
+  def getCandidates = countryNames(game.muslims.filter(_.civilWar))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -79,7 +79,7 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
   override
   def executeEvent(role: Role): Unit = {
     val name = role match {
-      case _ if isHuman(role) => askCountry("Select country in Civil War: ", getCandidates())
+      case _ if isHuman(role) => askCountry("Select country in Civil War: ", getCandidates)
       case US => USBot.qadhafiTarget(USBot.qadhafiCandidates).get
       case Jihadist => JihadistBot.qadhafiTarget(JihadistBot.qadhafiCandidates).get
     }

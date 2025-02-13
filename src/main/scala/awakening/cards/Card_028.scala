@@ -46,7 +46,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 object Card_028 extends Card(28, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
-  def getCandidates() = countryNames(game.muslims.filter(_.besiegedRegime))
+  def getCandidates = countryNames(game.muslims.filter(_.besiegedRegime))
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
@@ -66,13 +66,13 @@ object Card_028 extends Card(28, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTri
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getCandidates().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit = getCandidates() match {
+  def executeEvent(role: Role): Unit = getCandidates match {
     case Nil =>
       log(s"The event has no effect.", Color.Event)
       log(s"There are no Besieged Regime markers on the map.", Color.Event)

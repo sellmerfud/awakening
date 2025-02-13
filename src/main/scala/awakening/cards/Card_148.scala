@@ -62,13 +62,13 @@ object Card_148 extends Card(148, "Tahrir Square", US, 2, NoRemove, NoLapsing, N
     m.awakening == 0
 
   // Candidates other than Egypt
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(ArabWinter) &&  // Prevents placing Awakening/Reaction markers
-    (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker || getCandidates().nonEmpty)
+    (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker || getCandidates.nonEmpty)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -85,11 +85,11 @@ object Card_148 extends Card(148, "Tahrir Square", US, 2, NoRemove, NoLapsing, N
     addAwakeningMarker(Egypt, 2)
     addReactionMarker(Egypt)
 
-    if (getCandidates().nonEmpty) {
+    if (getCandidates.nonEmpty) {
       val target = if (isHuman(role))
-        askCountry("Place 1 awakening marker in which country: ", getCandidates())
+        askCountry("Place 1 awakening marker in which country: ", getCandidates)
       else
-        USBot.markerAlignGovTarget(getCandidates()).get
+        USBot.markerAlignGovTarget(getCandidates).get
 
       addEventTarget(target)
       addAwakeningMarker(target)

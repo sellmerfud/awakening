@@ -59,14 +59,14 @@ object Card_297 extends Card(297, "Early Exit", Jihadist, 2, Remove, NoLapsing, 
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.countries.filter(c => (c.hasCadre || c.totalCells > 0) && (c.totalTroops > 0 || c.numAdvisors > 0))
   )
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    !game.caliphateDeclared && trumpTweetsON && getCandidates().nonEmpty
+    !game.caliphateDeclared && trumpTweetsON && getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,9 +80,9 @@ object Card_297 extends Card(297, "Early Exit", Jihadist, 2, Remove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Which country: ", getCandidates())
+      askCountry("Which country: ", getCandidates)
     else
-      JihadistBot.earlyExitPriority(getCandidates()).get
+      JihadistBot.earlyExitPriority(getCandidates).get
 
     addEventTarget(target)
     removeAllTroopsFromCountry(target)

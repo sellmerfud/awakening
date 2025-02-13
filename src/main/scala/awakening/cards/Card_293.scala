@@ -66,19 +66,19 @@ object Card_293 extends Card(293, "Attempted Coup", Jihadist, 2, NoRemove, NoLap
     isCandidate(m) &&
     !(game.botEnhancements && m.isIslamistRule)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getBotPreferred() = countryNames(game.muslims.filter(isBotPreferred))
+  def getBotPreferred = countryNames(game.muslims.filter(isBotPreferred))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotPreferred().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getBotPreferred.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -86,11 +86,11 @@ object Card_293 extends Card(293, "Attempted Coup", Jihadist, 2, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Place which country into Civil War: ", getCandidates())
+      askCountry("Place which country into Civil War: ", getCandidates)
     else
-      getBotPreferred() match {
+      getBotPreferred match {
         // When triggered during US turn preferred candidates may be empty
-        case Nil => JihadistBot.fewestCellsPriority(getCandidates()).get
+        case Nil => JihadistBot.fewestCellsPriority(getCandidates).get
         case preferred => JihadistBot.fewestCellsPriority(preferred).get
       }
 

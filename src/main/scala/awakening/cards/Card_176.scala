@@ -63,19 +63,19 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
   }
   val isBotCandidate = (m: MuslimCountry) => isCandidate(m) && m.isFair && m.isAlly
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getBotCandidates() = countryNames(game.muslims.filter(isBotCandidate))
+  def getBotCandidates = countryNames(game.muslims.filter(isBotCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotCandidates().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getBotCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -83,11 +83,11 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
-    else if (getBotCandidates().nonEmpty)
-      JihadistBot.changeOfStateTarget(getBotCandidates()).get
+      askCountry("Select country: ", getCandidates)
+    else if (getBotCandidates.nonEmpty)
+      JihadistBot.changeOfStateTarget(getBotCandidates).get
       else
-      JihadistBot.changeOfStateTarget(getCandidates()).get
+      JihadistBot.changeOfStateTarget(getCandidates).get
 
     addEventTarget(target)
     setCountryToUntested(target) // Strip the country of all markers and make it Untested

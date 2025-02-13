@@ -60,17 +60,17 @@ object Card_158 extends Card(158, "Mass Turnout", US, 3, NoRemove, NoLapsing, No
   val isCandidate = (m: MuslimCountry) =>
     m.inRegimeChange && m.awakening > 0 && !game.isCaliphateMember(m.name)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   override
   def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
     case Jihadist => false
     case US =>
-      getCandidates()
+      getCandidates
         .map(game.getMuslim)
         .exists(m => m.governance == Fair && game.goodResources + m.resourceValue >= 12)
   }
@@ -87,9 +87,9 @@ object Card_158 extends Card(158, "Mass Turnout", US, 3, NoRemove, NoLapsing, No
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select regime change country: ", getCandidates())
+      askCountry("Select regime change country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
 
     addEventTarget(target)
     improveGovernance(target, 1, canShiftToGood = true)

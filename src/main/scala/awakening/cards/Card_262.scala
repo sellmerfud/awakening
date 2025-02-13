@@ -52,7 +52,7 @@ object Card_262 extends Card(262, "MOAB", US, 2, NoRemove, NoLapsing, NoAutoTrig
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.countries.filter(c => c.totalCells > 0 && (c.totalTroops > 0 || c.hasMarker(Advisors)))
   )
 
@@ -60,11 +60,11 @@ object Card_262 extends Card(262, "MOAB", US, 2, NoRemove, NoLapsing, NoAutoTrig
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -78,11 +78,11 @@ object Card_262 extends Card(262, "MOAB", US, 2, NoRemove, NoLapsing, NoAutoTrig
   override
   def executeEvent(role: Role): Unit = {
     val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
-      val name = askCountry("Remove a cell from which country: ", getCandidates())
+      val name = askCountry("Remove a cell from which country: ", getCandidates)
       (name, askCells(name, 1, true))
     }
     else {
-      val name = USBot.disruptPriority(getCandidates()).get
+      val name = USBot.disruptPriority(getCandidates).get
       (name, USBot.chooseCellsToRemove(name, 1))
     }
 

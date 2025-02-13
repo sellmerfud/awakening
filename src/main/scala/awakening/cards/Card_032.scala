@@ -58,7 +58,7 @@ object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoA
   def eventRemovesLastCell(): Boolean = false
 
   //  Oil price spike can make 3 resource countries unplayable this turn
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.isAdversary && m.resourceValue < 4)
   )
 
@@ -66,7 +66,7 @@ object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoA
   override
   def eventConditionsMet(role: Role) =
     game.usPosture == Soft &&
-    getCandidates().nonEmpty &&
+    getCandidates.nonEmpty &&
     cacheYesOrNo(s"Do you have a card in hand with an Ops value exactly matching the resource value of an Adversary country? ")
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -80,7 +80,7 @@ object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoA
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val name = askCountry("Select adversary country: ", getCandidates())
+    val name = askCountry("Select adversary country: ", getCandidates)
     val ops = (game getMuslim name).resourceValue
     
     displayLine(s"\nYou must discard card with Ops value: $ops", Color.Info)

@@ -62,11 +62,11 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
   override
   def eventConditionsMet(role: Role) = !game.caliphateDeclared
 
-  def getGoodCandidates() = countryNames(
+  def getGoodCandidates = countryNames(
     game.nonMuslims.filter(n => n.isGood && n.name != UnitedStates)
   )
 
-  def getFairCandidates() = countryNames(
+  def getFairCandidates = countryNames(
     game.nonMuslims.filter(_.isFair)
   )
 
@@ -76,7 +76,7 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
   override
   def botWillPlayEvent(role: Role): Boolean =
     game.cellsAvailable > 0 &&
-    (getGoodCandidates().nonEmpty || getFairCandidates().nonEmpty)
+    (getGoodCandidates.nonEmpty || getFairCandidates.nonEmpty)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -85,10 +85,10 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
   def executeEvent(role: Role): Unit = {
     if (game.cellsAvailable == 0)
       log("\nThere are no availabe cells. The event has no effect.", Color.Event)
-    else if (getGoodCandidates().isEmpty && getFairCandidates().isEmpty)
+    else if (getGoodCandidates.isEmpty && getFairCandidates.isEmpty)
       log("\nThere are no valid target countries. The event has no effect.", Color.Event)
     else {
-      val goodTarget: Option[String] = getGoodCandidates() match {
+      val goodTarget: Option[String] = getGoodCandidates match {
         case Nil => None
         case candidates if isHuman(role) =>
           Some(askCountry("Place a cell in which Good Non-Muslim country: ", candidates))
@@ -96,7 +96,7 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
           JihadistBot.cellPlacementPriority(false)(candidates)
       }
 
-      val fairTarget: Option[String] = getFairCandidates() match {
+      val fairTarget: Option[String] = getFairCandidates match {
         case Nil => None
         case candidates if isHuman(role) =>
           Some(askCountry("Place a cell in which Fair Non-Muslim country: ", candidates))

@@ -58,12 +58,12 @@ object Card_159 extends Card(159, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrig
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.inRegimeChange || m.civilWar)
   )
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = game.gwotPenalty == 0 && getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = game.gwotPenalty == 0 && getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,9 +80,9 @@ object Card_159 extends Card(159, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrig
       .find(_.hasMarker(NATO2))
       .map(_.name)
     val target = if (isHuman(role))
-      askCountry("Select country for NATO: ", getCandidates())
+      askCountry("Select country for NATO: ", getCandidates)
     else
-      USBot.deployToPriority(getCandidates()).get
+      USBot.deployToPriority(getCandidates).get
 
     addEventTarget(target)
     addAidMarker(target)

@@ -55,11 +55,11 @@ object Card_145 extends Card(145, "Russian Aid", US, 2, NoRemove, NoLapsing, NoA
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(_.civilWar))
+  def getCandidates = countryNames(game.muslims.filter(_.civilWar))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -73,9 +73,9 @@ object Card_145 extends Card(145, "Russian Aid", US, 2, NoRemove, NoLapsing, NoA
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Place militia and aid in which country: ", getCandidates())
+      askCountry("Place militia and aid in which country: ", getCandidates)
     else
-      USBot.deployToPriority(getCandidates()).get
+      USBot.deployToPriority(getCandidates).get
 
     println()
     addEventTarget(target)

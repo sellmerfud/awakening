@@ -54,7 +54,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
 
   val isCandidate = (m: MuslimCountry) => m.civilWar && areAdjacent(m.name, Turkey)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   def jihadBotCandidates() = {
     val botTest = (m: MuslimCountry) =>
@@ -66,11 +66,11 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -108,20 +108,20 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
 
     val (target, removeAction, placeAction) = role match {
       case _ if isHuman(role) =>
-        val target = askCountry("Which country: ", getCandidates())
+        val target = askCountry("Which country: ", getCandidates)
         val removeAction = askMenu("Choose one:", removeChoices(target)).headOption.getOrElse("cell")
         val placeAction  = askMenu("Choose one:", placeChoices(target)).head // can always place aid
         (target, removeAction, placeAction)
 
       case US =>
-        val withCellCandidates = getCandidates().filter(name => game.getMuslim(name).totalCells > 0)
-        val noMilitiaCandidates = getCandidates().filter(name => game.getMuslim(name).militia == 0)
+        val withCellCandidates = getCandidates.filter(name => game.getMuslim(name).totalCells > 0)
+        val noMilitiaCandidates = getCandidates.filter(name => game.getMuslim(name).militia == 0)
         val (target, removeAction) = if (withCellCandidates.nonEmpty)
           (USBot.disruptPriority(withCellCandidates).get, "cell")
         else if (noMilitiaCandidates.nonEmpty)
           (USBot.markerAlignGovTarget(noMilitiaCandidates).get, "cell")
         else
-          (USBot.markerAlignGovTarget(getCandidates()).get, "militia")
+          (USBot.markerAlignGovTarget(getCandidates).get, "militia")
         (target, removeAction, "aid")
 
       case Jihadist =>

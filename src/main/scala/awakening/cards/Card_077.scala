@@ -56,13 +56,13 @@ object Card_077 extends Card(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing,
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates(): List[String] = {
+  def getCandidates: List[String] = {
     val possibles = game.getMuslim(SaudiArabia)::game.adjacentMuslims(SaudiArabia)
     countryNames(possibles.filter(m => m.totalTroops > 0 && !m.isAdversary))
   }
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -76,9 +76,9 @@ object Card_077 extends Card(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing,
   override
   def executeEvent(role: Role): Unit = {
     val name = if (isHuman(role))
-      askCountry("Select country with troops: ", getCandidates())
+      askCountry("Select country with troops: ", getCandidates)
     else
-      JihadistBot.alignGovTarget(getCandidates()).get
+      JihadistBot.alignGovTarget(getCandidates).get
 
     addEventTarget(name)
     shiftAlignmentRight(name)

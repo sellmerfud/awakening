@@ -56,10 +56,10 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.countries.filter(c => !c.isIslamistRule && c.totalCells > 0))
+  def getCandidates = countryNames(game.countries.filter(c => !c.isIslamistRule && c.totalCells > 0))
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -74,7 +74,7 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val candidates = getCandidates()
+    val candidates = getCandidates
     if (candidates.nonEmpty) {
       val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
         val target = askCountry("Select country: ", candidates)

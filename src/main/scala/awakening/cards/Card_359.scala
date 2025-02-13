@@ -57,9 +57,9 @@ object Card_359 extends Card(359, "Quick Win/Bad Intel", Unassociated, 3, NoRemo
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getUSCandidates() = countryNames(game.muslims.filter(_.inRegimeChange))
+  def getUSCandidates = countryNames(game.muslims.filter(_.inRegimeChange))
 
-  def getJihadistCandidates() = countryNames(
+  def getJihadistCandidates = countryNames(
     game.muslims.filter { m =>
       m.inRegimeChange &&
       (!m.besiegedRegime || (lapsingEventNotInPlay(ArabWinter) && m.canTakeAwakeningOrReactionMarker))
@@ -69,8 +69,8 @@ object Card_359 extends Card(359, "Quick Win/Bad Intel", Unassociated, 3, NoRemo
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = role match {
-    case US => getUSCandidates().nonEmpty
-    case Jihadist => getJihadistCandidates().nonEmpty
+    case US => getUSCandidates.nonEmpty
+    case Jihadist => getJihadistCandidates.nonEmpty
   }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -85,10 +85,10 @@ object Card_359 extends Card(359, "Quick Win/Bad Intel", Unassociated, 3, NoRemo
   override
   def executeEvent(role: Role): Unit = {
     val target = role match {
-      case US if isHuman(US) => askCountry("Which country: ", getUSCandidates())
-      case US => USBot.markerAlignGovTarget(getUSCandidates()).get
-      case Jihadist  if isHuman(Jihadist) => askCountry("Which country: ", getJihadistCandidates())
-      case Jihadist => JihadistBot.markerTarget(getJihadistCandidates()).get
+      case US if isHuman(US) => askCountry("Which country: ", getUSCandidates)
+      case US => USBot.markerAlignGovTarget(getUSCandidates).get
+      case Jihadist  if isHuman(Jihadist) => askCountry("Which country: ", getJihadistCandidates)
+      case Jihadist => JihadistBot.markerTarget(getJihadistCandidates).get
     }
 
     addEventTarget(target)

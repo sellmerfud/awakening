@@ -58,7 +58,7 @@ object Card_339 extends Card(339, "Erdogan Dance", Unassociated, 2, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = {
+  def getCandidates = {
     val targets =
       game.targetsLastPhase.ops ++
       game.targetsLastPhase.event ++
@@ -71,13 +71,13 @@ object Card_339 extends Card(339, "Erdogan Dance", Unassociated, 2, NoRemove, No
       .sorted
   }
 
-  def muslimCandidates() = getCandidates().filter(game.isMuslim)
+  def muslimCandidates() = getCandidates.filter(game.isMuslim)
 
-  def nonMuslimCandidates() = getCandidates().filter(game.isNonMuslim)
+  def nonMuslimCandidates() = getCandidates.filter(game.isNonMuslim)
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   def botMuslimCandidates(role: Role) = {
     val isCandidate = role match {
@@ -113,7 +113,7 @@ object Card_339 extends Card(339, "Erdogan Dance", Unassociated, 2, NoRemove, No
   def executeEvent(role: Role): Unit = {
     val target = role match {
       case _ if isHuman(role) =>
-        askCountry("Which country: ", getCandidates())
+        askCountry("Which country: ", getCandidates)
       case US if botMuslimCandidates(US).nonEmpty =>
         USBot.markerAlignGovTarget(botMuslimCandidates(US)).get
       case US =>

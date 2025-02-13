@@ -67,23 +67,23 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
   val isJihadistCandidate = (m: MuslimCountry) =>
     isCandidate(m) && m.militia > m.totalCells
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getUSCandidates() = countryNames(game.muslims.filter(isUSCandidate))
+  def getUSCandidates = countryNames(game.muslims.filter(isUSCandidate))
 
-  def getJihadistCandidates() = countryNames(game.muslims.filter(isJihadistCandidate))
+  def getJihadistCandidates = countryNames(game.muslims.filter(isJihadistCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getUSCandidates().nonEmpty
-    case Jihadist => getJihadistCandidates().nonEmpty
+    case US => getUSCandidates.nonEmpty
+    case Jihadist => getJihadistCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -93,9 +93,9 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     val target = role match {
-      case _ if isHuman(role) => askCountry("Select country: ", getCandidates())
-      case US => USBot.disruptPriority(USBot.highestCellsMinusTandM(getUSCandidates())).get
-      case Jihadist => JihadistBot.minorJihadTarget(getJihadistCandidates()).get
+      case _ if isHuman(role) => askCountry("Select country: ", getCandidates)
+      case US => USBot.disruptPriority(USBot.highestCellsMinusTandM(getUSCandidates)).get
+      case Jihadist => JihadistBot.minorJihadTarget(getJihadistCandidates).get
     }
 
     addEventTarget(target)

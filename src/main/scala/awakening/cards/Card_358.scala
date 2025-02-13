@@ -53,20 +53,20 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getSunniUSCandidates() = countryNames(game.muslims.filter(m => m.isSunni && m.totalCells > 0))
+  def getSunniUSCandidates = countryNames(game.muslims.filter(m => m.isSunni && m.totalCells > 0))
 
-  def getShiaUSCandidates() = countryNames(game.muslims.filter(m => m.isShiaMix && m.totalCells > 0))
+  def getShiaUSCandidates = countryNames(game.muslims.filter(m => m.isShiaMix && m.totalCells > 0))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean = {
-    val numSunni = getSunniUSCandidates()
+    val numSunni = getSunniUSCandidates
       .map(game.getMuslim)
       .filter(m => m.isSunni && m.totalCells > 0)
       .map(_.totalCells)
       .sum
-    val numShia = getShiaUSCandidates()
+    val numShia = getShiaUSCandidates
       .map(game.getMuslim)
       .filter(m => m.isShiaMix && m.totalCells > 0)
       .map(_.totalCells)
@@ -90,26 +90,26 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
   override
   def executeEvent(role: Role): Unit = {
     if (role == US) {
-      if (getSunniUSCandidates().nonEmpty) {
+      if (getSunniUSCandidates.nonEmpty) {
         val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
-          val t = askCountry("Remove cell from which Sunni country: ", getSunniUSCandidates())
+          val t = askCountry("Remove cell from which Sunni country: ", getSunniUSCandidates)
           (t, askCells(t, 1, true))
         }
         else {
-          val t = USBot.disruptPriority(getSunniUSCandidates()).get
+          val t = USBot.disruptPriority(getSunniUSCandidates).get
           (t, USBot.chooseCellsToRemove(t, 1))
         }
         addEventTarget(target)
         removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
       }
 
-      if (getShiaUSCandidates().nonEmpty) {
+      if (getShiaUSCandidates.nonEmpty) {
         val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
-          val t = askCountry("Remove cell from which Shia-Mix country: ", getShiaUSCandidates())
+          val t = askCountry("Remove cell from which Shia-Mix country: ", getShiaUSCandidates)
           (t, askCells(t, 1, true))
         }
         else {
-          val t = USBot.disruptPriority(getShiaUSCandidates()).get
+          val t = USBot.disruptPriority(getShiaUSCandidates).get
           (t, USBot.chooseCellsToRemove(t, 1))
         }
         addEventTarget(target)

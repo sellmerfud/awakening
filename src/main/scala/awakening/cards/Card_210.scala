@@ -55,9 +55,9 @@ object Card_210 extends Card(210, "Sectarian Violence", Unassociated, 1, NoRemov
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getAwakeningCandidates() = countryNames(game.muslims.filter(_.awakening > 0))
+  def getAwakeningCandidates = countryNames(game.muslims.filter(_.awakening > 0))
 
-  def getReactionCandidates() = countryNames(game.muslims.filter(_.reaction > 0))
+  def getReactionCandidates = countryNames(game.muslims.filter(_.reaction > 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -68,8 +68,8 @@ object Card_210 extends Card(210, "Sectarian Violence", Unassociated, 1, NoRemov
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getReactionCandidates().nonEmpty
-    case Jihadist => getAwakeningCandidates().nonEmpty
+    case US => getReactionCandidates.nonEmpty
+    case Jihadist => getAwakeningCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -89,19 +89,19 @@ object Card_210 extends Card(210, "Sectarian Violence", Unassociated, 1, NoRemov
     }
 
     action match {
-      case "reaction" if getReactionCandidates().nonEmpty =>
+      case "reaction" if getReactionCandidates.nonEmpty =>
         val name = if (isHuman(role))
-          askCountry("Remove reaction marker from which country: ", getReactionCandidates())
+          askCountry("Remove reaction marker from which country: ", getReactionCandidates)
         else
-          USBot.markerAlignGovTarget(getReactionCandidates()).get
+          USBot.markerAlignGovTarget(getReactionCandidates).get
         addEventTarget(name)
         removeReactionMarker(name)
 
-      case "awakening" if getAwakeningCandidates().nonEmpty =>
+      case "awakening" if getAwakeningCandidates.nonEmpty =>
         val name = if (isHuman(role))
-          askCountry("Remove awakening marker from which country: ", getAwakeningCandidates())
+          askCountry("Remove awakening marker from which country: ", getAwakeningCandidates)
         else
-          JihadistBot.markerTarget(getAwakeningCandidates()).get
+          JihadistBot.markerTarget(getAwakeningCandidates).get
         addEventTarget(name)
         removeAwakeningMarker(name)
 

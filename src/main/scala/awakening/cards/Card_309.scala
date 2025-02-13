@@ -57,7 +57,7 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.nonMuslims.filter { n =>
       n.isUntested && !n.isGood && game.adjacentMuslims(n.name).exists(_.isTested)
     }
@@ -65,7 +65,7 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -82,12 +82,12 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
     if (game.availablePlots.contains(Plot1)) {
       val maxPlots = game.availablePlots.count(_ == Plot1)
       val (target, numPlots) = if (isHuman(role)) {
-          val t = askCountry("Place plots in which country: ", getCandidates())
+          val t = askCountry("Place plots in which country: ", getCandidates)
           val n = askInt(s"Place how many Level 1 Plots in $t", 1, maxPlots, Some(maxPlots))
           (t, n)
       }
       else
-        (JihadistBot.plotPriority(getCandidates()).get, maxPlots)
+        (JihadistBot.plotPriority(getCandidates).get, maxPlots)
 
       addEventTarget(target)
       for (i <- 1 to numPlots)

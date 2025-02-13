@@ -56,14 +56,14 @@ object Card_040 extends Card(40, "Mass Turnout", US, 3, NoRemove, NoLapsing, NoA
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims
+  def getCandidates = countryNames(game.muslims
     .filter(m => m.inRegimeChange && !game.isCaliphateMember(m.name)) 
   )
     
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -77,9 +77,9 @@ object Card_040 extends Card(40, "Mass Turnout", US, 3, NoRemove, NoLapsing, NoA
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select regime change country: ", getCandidates())
+      askCountry("Select regime change country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
     
     addEventTarget(target)
     improveGovernance(target, 1, canShiftToGood = true)

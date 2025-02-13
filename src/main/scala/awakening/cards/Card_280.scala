@@ -55,13 +55,13 @@ object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, N
 
   //  Candidates are any Muslim country with cells that is adjacent
   //  to another Muslim country of the opposite type (Sunni/Shia Mix)
-  def getCandidates() = {
+  def getCandidates = {
     val adjOther = (m: MuslimCountry) =>
       (m.isSunni && game.adjacentToShiaMix(m.name)) || (m.isShiaMix && game.adjacentToSunni(m.name))
     countryNames(game.muslims.filter(m => m.totalCells > 0 && adjOther(m)))
   }
 
-  def maxCellsToRemove = game.getMuslims(getCandidates()).map(_.totalCells).sum min 3
+  def maxCellsToRemove = game.getMuslims(getCandidates).map(_.totalCells).sum min 3
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
@@ -75,7 +75,7 @@ object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, N
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getCandidates().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -84,7 +84,7 @@ object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, N
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       println()
-      val removed = askToRemoveCells(maxCellsToRemove, true, getCandidates(), sleeperFocus = true)
+      val removed = askToRemoveCells(maxCellsToRemove, true, getCandidates, sleeperFocus = true)
       for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
         addEventTarget(name)
         removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
@@ -95,7 +95,7 @@ object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, N
       // We will select the cells one at a time, because
       // removal of a cell could change the Bot's priorities
       def nextRemoval(remaining: Int): Unit = {
-        val withCells = getCandidates().filter(name => game.getMuslim(name).totalCells > 0)
+        val withCells = getCandidates.filter(name => game.getMuslim(name).totalCells > 0)
         if (remaining > 0 && withCells.nonEmpty) {
           val target = USBot.disruptPriority(withCells).get
           val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 1)

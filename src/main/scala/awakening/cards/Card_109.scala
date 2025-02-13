@@ -47,7 +47,7 @@ import awakening.{ USBot, JihadistBot }
 // ------------------------------------------------------------------
 object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
 
- def getCandidates() = countryNames(
+ def getCandidates = countryNames(
     game.muslims.filter(m => m.inRegimeChange && m.totalCells > 1)
   )
 
@@ -60,11 +60,11 @@ object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsin
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 2))
+    getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 2))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -83,16 +83,16 @@ object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsin
   override
   def executeEvent(role: Role): Unit = {
     val (name, (actives, sleepers, sadr)) = if (isHuman(role)) {
-      val name = askCountry("Select a Regime Change country with 2+ cells: ", getCandidates())
+      val name = askCountry("Select a Regime Change country with 2+ cells: ", getCandidates)
       (name, askCells(name, 2, sleeperFocus = role == US))
     }
     else if (role == US) {
-      val name = USBot.disruptPriority(getCandidates()).get
+      val name = USBot.disruptPriority(getCandidates).get
       (name, USBot.chooseCellsToRemove(name, 2))
     }
     else {
       val priorities = List(JihadistBot.MostCellsPriority)
-      val candidates = getCandidates().map(game.getCountry)
+      val candidates = getCandidates.map(game.getCountry)
       val name = JihadistBot.topPriority(candidates, priorities).map(_.name).get
       (name, JihadistBot.chooseCellsToRemove(name, 2))
     }

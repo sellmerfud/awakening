@@ -65,29 +65,29 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
     case n: NonMuslimCountry => n.totalCells > 0
   }
 
-  def getCandidates() = Countries.filter(name => isCandidate(game.getCountry(name)))
+  def getCandidates = Countries.filter(name => isCandidate(game.getCountry(name)))
 
   val isUSBotCandidate = (c: Country) => c match {
     case m: MuslimCountry => (m.inRegimeChange && !m.isAlly) || (m.isAdversary && !m.isIslamistRule)
     case n: NonMuslimCountry => n.totalCells > 0 && n.posture == Soft && game.usPosture == Hard
   }
 
-  def getUSBotCandidates() = Countries.filter(name => isUSBotCandidate(game.getCountry(name)))
+  def getUSBotCandidates = Countries.filter(name => isUSBotCandidate(game.getCountry(name)))
 
-  def getUSBotMuslimCandidates() = getUSBotCandidates().filter(game.isMuslim)
+  def getUSBotMuslimCandidates = getUSBotCandidates.filter(game.isMuslim)
 
-  def getUSBotNonMuslimCandidates() = getUSBotCandidates().filter(game.isNonMuslim)
+  def getUSBotNonMuslimCandidates = getUSBotCandidates.filter(game.isNonMuslim)
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getUSBotCandidates().nonEmpty
+    case US => getUSBotCandidates.nonEmpty
     case Jihadist => game.cellsAvailable > 0 || game.availablePlots.contains(Plot1)
   }
 
@@ -98,11 +98,11 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
   def executeEvent(role: Role): Unit = {
     if (role == US) {
       val target = if (isHuman(role))
-        askCountry("Which country: ", getCandidates())
-      else if (getUSBotMuslimCandidates().nonEmpty)
-        USBot.markerAlignGovTarget(getUSBotMuslimCandidates()).get
+        askCountry("Which country: ", getCandidates)
+      else if (getUSBotMuslimCandidates.nonEmpty)
+        USBot.markerAlignGovTarget(getUSBotMuslimCandidates).get
       else
-        USBot.posturePriority(getUSBotNonMuslimCandidates()).get
+        USBot.posturePriority(getUSBotNonMuslimCandidates).get
 
       addEventTarget(target)
       if (game.isMuslim(target))
@@ -112,7 +112,7 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
     }
     else if (game.cellsAvailable > 0 || game.availablePlots.contains(Plot1)) { // Jihadist
       val (target, action) = if (isHuman(role)) {
-        val name = askCountry("Which country: ", getCandidates())
+        val name = askCountry("Which country: ", getCandidates)
         val choices = List(
           choice(game.availablePlots contains Plot1, "plot", "Place a level 1 Plot"),
           choice(game.cellsAvailable > 0,            "cell", "Place a Cell")
@@ -120,9 +120,9 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
         (name, askMenu("Choose one:", choices).head)
       }
       else if (game.availablePlots.contains(Plot1))
-        (JihadistBot.plotPriority(getCandidates()).get, "plot")
+        (JihadistBot.plotPriority(getCandidates).get, "plot")
       else
-        (JihadistBot.cellPlacementPriority(false)(getCandidates()).get, "cell")
+        (JihadistBot.cellPlacementPriority(false)(getCandidates).get, "cell")
 
       addEventTarget(target)
       if (action == "plot")

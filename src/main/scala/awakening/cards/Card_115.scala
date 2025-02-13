@@ -52,7 +52,7 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates() = {
+  def getCandidates = {
     val possibles = game.getCountries(IndonesiaMalaysia :: getAdjacent(IndonesiaMalaysia))
     countryNames(possibles.filter {
       case m: MuslimCountry    => m.totalCells > 0 && m.isAlly
@@ -63,11 +63,11 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+  def eventRemovesLastCell(): Boolean = getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -97,7 +97,7 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
       new CriteriaFilter("Non-Muslim", nonMuslimTest(_ => true)),
     )
     JihadistBot.botLog("Find \"Hambali\" target", Color.Debug)
-    JihadistBot.topPriority(game.getCountries(getCandidates()), priorities).map(_.name).get
+    JihadistBot.topPriority(game.getCountries(getCandidates), priorities).map(_.name).get
   }
 
   // Carry out the event for the given role.
@@ -108,11 +108,11 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
     role match {
       case US =>
         val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
-          val name = askCountry("Select country: ", getCandidates())
+          val name = askCountry("Select country: ", getCandidates)
           (name, askCells(name, 1, sleeperFocus = true))
         }
         else {
-          val name = USBot.disruptPriority(getCandidates()).get
+          val name = USBot.disruptPriority(getCandidates).get
           (name, USBot.chooseCellsToRemove(name, 1))
         }
 
@@ -123,14 +123,14 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
 
       case Jihadist if game.availablePlots.nonEmpty =>
         val (name, plot) = if (isHuman(role)) {
-          val name = askCountry("Select country: ", getCandidates())
+          val name = askCountry("Select country: ", getCandidates)
           (name, askAvailablePlots(1, ops = 3).head)
         }
         else {
           val name = if (game.botEnhancements)
-            enhBotTarget(getCandidates())
+            enhBotTarget(getCandidates)
           else
-            JihadistBot.plotPriority(getCandidates()).get
+            JihadistBot.plotPriority(getCandidates).get
           (name, JihadistBot.preparePlots(game.availablePlots).head)
         }
 

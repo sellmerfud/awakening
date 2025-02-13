@@ -56,13 +56,13 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.militia > 0 && (m.civilWar || m.inRegimeChange))
   )
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -76,9 +76,9 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else
-      JihadistBot.troopsMilitiaTarget(getCandidates()).get
+      JihadistBot.troopsMilitiaTarget(getCandidates).get
 
     addEventTarget(target)
     val militia = game.getMuslim(target).militia

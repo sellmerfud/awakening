@@ -61,7 +61,7 @@ object Card_241 extends Card(241, "Abdel Fattah el-Sisi", US, 1, Remove, NoLapsi
   override
   def eventConditionsMet(role: Role) = globalEventNotInPlay(PoliticalIslamismJihadist)
 
-  def getCandidates() = countryNames(game.muslims.filter { m =>
+  def getCandidates = countryNames(game.muslims.filter { m =>
     m.canTakeAwakeningOrReactionMarker && (m.name == Egypt || m.militia > 0)
   })
 
@@ -71,7 +71,7 @@ object Card_241 extends Card(241, "Abdel Fattah el-Sisi", US, 1, Remove, NoLapsi
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = !arabWinter && getCandidates().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = !arabWinter && getCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -80,13 +80,13 @@ object Card_241 extends Card(241, "Abdel Fattah el-Sisi", US, 1, Remove, NoLapsi
   def executeEvent(role: Role): Unit = {
     if (arabWinter)
       log("\nAwakening markers cannot be placed. [Arab Winter]", Color.Event)
-    else if (getCandidates().isEmpty)
+    else if (getCandidates.isEmpty)
       log("\nNeither Egypt nor any countries with militia can take awakening markers.", Color.Event)
     else {
       val target = if (isHuman(role))
-        askCountry(s"Place an awakening marker in which country: ", getCandidates())
+        askCountry(s"Place an awakening marker in which country: ", getCandidates)
       else
-        USBot.markerAlignGovTarget(getCandidates()).get
+        USBot.markerAlignGovTarget(getCandidates).get
       println()
       addEventTarget(target)
       addAwakeningMarker(target)

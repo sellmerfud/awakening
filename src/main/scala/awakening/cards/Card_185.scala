@@ -60,17 +60,17 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
 
   val isCandidate = (c: Country) => c.totalTroops > 0
 
-  def getCandidates() = countryNames(game.countries.filter(isCandidate))
+  def getCandidates = countryNames(game.countries.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   val isBotCandidate = (c: Country) =>
     isCandidate(c) &&
     !JihadistBot.muslimTest(m => m.caliphateCapital || m.inRegimeChange)(c)
 
-  def getBotCandidates() = countryNames(game.countries.filter(isBotCandidate))
+  def getBotCandidates = countryNames(game.countries.filter(isBotCandidate))
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -78,7 +78,7 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
   //
   // Bot will not play this in Caliphate Capital or in a country under Regime Change
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotCandidates().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getBotCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -88,7 +88,7 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
     // The only non-muslim country that may contain troops is the Philippines
     // if (abu Sayyaf is in effect)
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else {
       // See Event Instructions table
       // Only choose the Philippines if it is the only candidate
@@ -98,8 +98,8 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
       )
 
       // When triggered during US turn preferred canidates may be empty
-      val candidates = getBotCandidates() match {
-        case Nil => JihadistBot.narrowCandidates(getCandidates(), eventPriorities, allowBotLog = false)
+      val candidates = getBotCandidates match {
+        case Nil => JihadistBot.narrowCandidates(getCandidates, eventPriorities, allowBotLog = false)
         case c => JihadistBot.narrowCandidates(c, eventPriorities, allowBotLog = false)
       }
 

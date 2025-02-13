@@ -60,9 +60,9 @@ object Card_164 extends Card(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoLa
   override
   def eventConditionsMet(role: Role) = true
 
-  def getCandidates() = countryNames(game.muslims.filter(_.awakening > 0))
+  def getCandidates = countryNames(game.muslims.filter(_.awakening > 0))
 
-  def isEventEffective = globalEventNotInPlay(BloodyThursday) || getCandidates().nonEmpty
+  def isEventEffective = globalEventNotInPlay(BloodyThursday) || getCandidates.nonEmpty
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

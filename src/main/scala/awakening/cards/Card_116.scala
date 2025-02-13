@@ -48,12 +48,12 @@ import awakening.JihadistBot
 // country with a cell.
 // ------------------------------------------------------------------
 object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
-  def getUSCandidates() = countryNames(
+  def getUSCandidates = countryNames(
     (game.nonMuslims ::: game.muslims.filter(_.isAlly))
       .filter(_.plots.nonEmpty)
   )
 
-  def getJihadistCandidates() = countryNames(
+  def getJihadistCandidates = countryNames(
     (game.nonMuslims ::: game.muslims.filter(!_.isIslamistRule))
       .filter(_.totalCells > 0)
   )
@@ -62,7 +62,7 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
   // in the given country
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean =
-    getUSCandidates().contains(countryName)
+    getUSCandidates.contains(countryName)
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
@@ -72,8 +72,8 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = role match {
-    case US => getUSCandidates().nonEmpty
-    case Jihadist => getJihadistCandidates().nonEmpty
+    case US => getUSCandidates.nonEmpty
+    case Jihadist => getJihadistCandidates.nonEmpty
   }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -91,7 +91,7 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
   override
   def executeEvent(role: Role): Unit = role match {
     case US =>
-      for (name <- getUSCandidates(); c = game.getCountry(name)) {
+      for (name <- getUSCandidates; c = game.getCountry(name)) {
         addEventTarget(name)
         for (plot <- c.plots)
           performAlert(name, plot)
@@ -101,13 +101,13 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
 
     case Jihadist if game.availablePlots.nonEmpty =>
       val (name, plot) = if (isHuman(role)) {
-        val name = askCountry("Select country: ", getJihadistCandidates())
+        val name = askCountry("Select country: ", getJihadistCandidates)
         (name, askAvailablePlots(1, ops = 3).head)
       }
-      else if (getJihadistCandidates().contains(UnitedStates))
+      else if (getJihadistCandidates.contains(UnitedStates))
         (UnitedStates, JihadistBot.preparePlots(game.availablePlots).head)
       else {
-        val name = JihadistBot.plotPriority(getJihadistCandidates()).get
+        val name = JihadistBot.plotPriority(getJihadistCandidates).get
         (name, JihadistBot.preparePlots(game.availablePlots).head)
       }
 

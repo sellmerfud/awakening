@@ -62,12 +62,12 @@ object Card_131 extends Card(131, "Arab Spring Fallout", US, 2, NoRemove, NoLaps
     m.awakening == 0 &&
     game.adjacentMuslims(m.name).forall(_.awakening == 0)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty
+    lapsingEventNotInPlay(ArabWinter) && getCandidates.nonEmpty
 
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -81,7 +81,7 @@ object Card_131 extends Card(131, "Arab Spring Fallout", US, 2, NoRemove, NoLaps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val candidates = getCandidates()
+    val candidates = getCandidates
     val targets = if (candidates.size <= 2)
       candidates
     else if (isHuman(role)) {

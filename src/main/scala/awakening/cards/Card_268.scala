@@ -58,16 +58,16 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getAlignmentCandidates() = countryNames(
+  def getAlignmentCandidates = countryNames(
     game.muslims.filter(m => !(m.isIslamistRule || m.isAlly || game.isCaliphateMember(m.name)))
   )
-  def getPostureCandidates() = countryNames(
+  def getPostureCandidates = countryNames(
     game.nonMuslims.filter(n => n.canChangePosture && n.posture != game.usPosture)
   )
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getAlignmentCandidates().nonEmpty || getPostureCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getAlignmentCandidates.nonEmpty || getPostureCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -82,12 +82,12 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
   def executeEvent(role: Role): Unit = {
     val action = if (isHuman(role)) {
       val choices = List(
-        choice(getAlignmentCandidates().nonEmpty, "align",   "Shift alignment of 1 country"),
-        choice(getPostureCandidates().nonEmpty,   "posture", "Set posture of 1 country")
+        choice(getAlignmentCandidates.nonEmpty, "align",   "Shift alignment of 1 country"),
+        choice(getPostureCandidates.nonEmpty,   "posture", "Set posture of 1 country")
       ).flatten
       askMenu("Choose one:", choices).head
     }
-    else if (getAlignmentCandidates().nonEmpty)  // Bot
+    else if (getAlignmentCandidates.nonEmpty)  // Bot
       "align"
     else
       "posture"
@@ -95,18 +95,18 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
     action match {
       case "align" =>
         val target = if (isHuman(role))
-          askCountry("\nShift alignment of which country: ", getAlignmentCandidates())
+          askCountry("\nShift alignment of which country: ", getAlignmentCandidates)
         else
-          USBot.markerAlignGovTarget(getAlignmentCandidates()).get
+          USBot.markerAlignGovTarget(getAlignmentCandidates).get
         addEventTarget(target)
         testCountry(target)  // Must be tested in order to shift
         shiftAlignmentLeft(target)
 
       case _ =>
         val target = if (isHuman(role))
-          askCountry("\nSet posture of which country to match US posture: ", getPostureCandidates())
+          askCountry("\nSet posture of which country to match US posture: ", getPostureCandidates)
         else
-          USBot.posturePriority(getPostureCandidates()).get
+          USBot.posturePriority(getPostureCandidates).get
         addEventTarget(target)
         setCountryPosture(target, game.usPosture)
     }

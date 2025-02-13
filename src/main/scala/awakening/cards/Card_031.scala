@@ -48,7 +48,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   val PotentialTargets = List(UnitedStates, UnitedKingdom, Canada)
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.getCountries(PotentialTargets) filter { c =>
       c.hasCadre || c.totalCells > 0 || c.plots.nonEmpty
     }
@@ -63,7 +63,7 @@ object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAu
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean = {
-    val totalCells = (getCandidates().map(name => game.getCountry(name).totalCells)).sum
+    val totalCells = (getCandidates.map(name => game.getCountry(name).totalCells)).sum
     totalCells > 0 && totalCells == game.totalCellsOnMap
   }
 
@@ -71,7 +71,7 @@ object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAu
   override
   def eventConditionsMet(role: Role) =
     globalEventNotInPlay(LeakWiretapping) &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -84,7 +84,7 @@ object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAu
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    for (name <- getCandidates(); c = game.getCountry(name)) {
+    for (name <- getCandidates; c = game.getCountry(name)) {
       addEventTarget(name)
       removeCadresFromCountry(name, c.cadres)
       removeCellsFromCountry(name, c.activeCells, c.sleeperCells, c.hasSadr, addCadre = false)

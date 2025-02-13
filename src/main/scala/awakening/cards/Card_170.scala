@@ -56,7 +56,7 @@ object Card_170 extends Card(170, "Theft of State", Jihadist, 1, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.isPoor && m.awakening > 0)
   )
 
@@ -64,7 +64,7 @@ object Card_170 extends Card(170, "Theft of State", Jihadist, 1, NoRemove, NoLap
   override
   def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(ArabWinter) &&  // Would prevent "replacement" of marker
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -78,9 +78,9 @@ object Card_170 extends Card(170, "Theft of State", Jihadist, 1, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else
-      JihadistBot.markerTarget(getCandidates()).get
+      JihadistBot.markerTarget(getCandidates).get
 
     addEventTarget(target)
     removeAwakeningMarker(target)

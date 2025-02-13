@@ -60,13 +60,13 @@ object Card_274 extends Card(274, "Government of National Accord", US, 3, NoRemo
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.civilWar && !game.isCaliphateMember(m.name))
   )
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,11 +80,11 @@ object Card_274 extends Card(274, "Government of National Accord", US, 3, NoRemo
   override
   def executeEvent(role: Role): Unit = {
     val numMilitia = game.militiaAvailable min 2
-    val candidates = getCandidates()
+    val candidates = getCandidates
     val target = if (isHuman(role))
-      askCountry("Which Civil War country: ", getCandidates())
+      askCountry("Which Civil War country: ", getCandidates)
     else
-      USBot.deployToPriority(getCandidates()).get
+      USBot.deployToPriority(getCandidates).get
 
     log(s"\n$US chooses to target $target", Color.Event)
     if (numMilitia > 0)

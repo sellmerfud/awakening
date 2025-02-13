@@ -56,12 +56,12 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(m => m.name != Iran && m.isUntested))
+  def getCandidates = countryNames(game.muslims.filter(m => m.name != Iran && m.isUntested))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    getCandidates().size >= 2
+    getCandidates.size >= 2
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -98,7 +98,7 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
       }
     }
 
-    for (Target(name, num) <- getTargets(game.cellsAvailable, getCandidates(), Vector.empty)) {
+    for (Target(name, num) <- getTargets(game.cellsAvailable, getCandidates, Vector.empty)) {
       addEventTarget(name)
       addSleeperCellsToCountry(name, num)
     }

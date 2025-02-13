@@ -58,14 +58,14 @@ object Card_291 extends Card(291, "Vehicle-ramming Attacks", Jihadist, 1, NoRemo
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.getNonMuslims(Schengen).filter(_.isHard))
+  def getCandidates = countryNames(game.getNonMuslims(Schengen).filter(_.isHard))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(IslamicMaghreb) &&
     globalEventNotInPlay(TravelBan)       &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,9 +80,9 @@ object Card_291 extends Card(291, "Vehicle-ramming Attacks", Jihadist, 1, NoRemo
   def executeEvent(role: Role): Unit = {
     if (game.availablePlots.contains(Plot1)) {
       val target = if (isHuman(role))
-        askCountry("Place level 1 Plot in which Hard Schengen country: ", getCandidates())
+        askCountry("Place level 1 Plot in which Hard Schengen country: ", getCandidates)
       else
-        JihadistBot.plotPriority(getCandidates()).get
+        JihadistBot.plotPriority(getCandidates).get
 
       addEventTarget(target)
       addAvailablePlotToCountry(target, Plot1, visible = true)

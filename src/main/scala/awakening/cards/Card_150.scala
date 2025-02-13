@@ -55,7 +55,7 @@ object Card_150 extends Card(150, "UNSCR 1973", US, 2, NoRemove, NoLapsing, NoAu
 
   // Can play in country that already has the marker if it also contains at least one cell.
   // Or in any other civil war country that does not have the maker.
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter { m =>
       (m.hasMarker(UNSCR_1973) && m.totalCells > 0) || (m.civilWar && !m.hasMarker(UNSCR_1973))
     }
@@ -64,12 +64,12 @@ object Card_150 extends Card(150, "UNSCR 1973", US, 2, NoRemove, NoLapsing, NoAu
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -83,11 +83,11 @@ object Card_150 extends Card(150, "UNSCR 1973", US, 2, NoRemove, NoLapsing, NoAu
   override
   def executeEvent(role: Role): Unit = {
     val name = if (isHuman(role))
-      askCountry("Place UNSCR 1973 in which country: ", getCandidates())
+      askCountry("Place UNSCR 1973 in which country: ", getCandidates)
     else if (eventRemovesLastCell())
-      getCandidates().find(name => game.getMuslim(name).totalCells > 0).get
+      getCandidates.find(name => game.getMuslim(name).totalCells > 0).get
     else
-      USBot.unscr1973Target(getCandidates()).get
+      USBot.unscr1973Target(getCandidates).get
 
     addEventTarget(name)
     val country = game.getMuslim(name)

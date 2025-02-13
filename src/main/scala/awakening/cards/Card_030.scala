@@ -58,7 +58,7 @@ object Card_030 extends Card(30, "UN Nation Building", US, 2, NoRemove, NoLapsin
   def eventRemovesLastCell(): Boolean = false
 
   // Added civilWar condition for when playing in a campaign game
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims
       .filter(m => (m.inRegimeChange || m.civilWar) && !game.isCaliphateMember(m.name))
   )
@@ -67,7 +67,7 @@ object Card_030 extends Card(30, "UN Nation Building", US, 2, NoRemove, NoLapsin
   override
   def eventConditionsMet(role: Role) =
     globalEventNotInPlay(VieiraDeMelloSlain) && 
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -81,9 +81,9 @@ object Card_030 extends Card(30, "UN Nation Building", US, 2, NoRemove, NoLapsin
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else 
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
     
     addEventTarget(target)
     addAidMarker(target)

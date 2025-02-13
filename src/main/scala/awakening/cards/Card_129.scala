@@ -52,7 +52,7 @@ object Card_129 extends Card(129, "Special Forces", US, 1, NoRemove, NoLapsing, 
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   // Countries with cells that are not within two countries with troops/advisor
-  def getCandidates() = {
+  def getCandidates = {
     // First find all countries with troops or "Advisors"
     val withForces = countryNames(game.countries.filter(c => c.totalTroops > 0 || c.hasMarker(Advisors)))
     // Next get all countries that contain any cells and filter out the ones are are not
@@ -69,12 +69,12 @@ object Card_129 extends Card(129, "Special Forces", US, 1, NoRemove, NoLapsing, 
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -88,9 +88,9 @@ object Card_129 extends Card(129, "Special Forces", US, 1, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Remove cell in which country: ", getCandidates())
+      askCountry("Remove cell in which country: ", getCandidates)
     else
-      USBot.disruptPriority(getCandidates()).get
+      USBot.disruptPriority(getCandidates).get
 
     val (actives, sleepers, sadr) = if (isHuman(role))
       askCells(target, 1, sleeperFocus = true)

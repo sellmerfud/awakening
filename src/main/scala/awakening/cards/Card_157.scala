@@ -57,14 +57,14 @@ object Card_157 extends Card(157, "Limited Deployment", US, 3, NoRemove, NoLapsi
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(_.civilWar))
+  def getCandidates = countryNames(game.muslims.filter(_.civilWar))
 
   def awakeningCandidates(civilWarName: String) =
     countryNames(game.adjacentMuslims(civilWarName).filter(_.canTakeAwakeningOrReactionMarker))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = game.usPosture == Hard && getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = game.usPosture == Hard && getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -78,7 +78,7 @@ object Card_157 extends Card(157, "Limited Deployment", US, 3, NoRemove, NoLapsi
   override
   def executeEvent(role: Role): Unit = {
     val (target, adjacent) = if (isHuman(role)) {
-      val target = askCountry("Select country: ", getCandidates())
+      val target = askCountry("Select country: ", getCandidates)
       val adjacent = if( lapsingEventInPlay(ArabWinter)) {
         log("\nAwakening markers cannot be placed because \"Arab Winter\" is in effect", Color.Event)
         None
@@ -94,7 +94,7 @@ object Card_157 extends Card(157, "Limited Deployment", US, 3, NoRemove, NoLapsi
       (target, adjacent)
     }
     else {
-      val t = USBot.deployToPriority(USBot.highestCellsMinusTandM(getCandidates())).get
+      val t = USBot.deployToPriority(USBot.highestCellsMinusTandM(getCandidates)).get
       (t, USBot.markerAlignGovTarget(awakeningCandidates(t)))
     }
 

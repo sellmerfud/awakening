@@ -60,13 +60,13 @@ object Card_214 extends Card(214, "3 Cups of Tea", Unassociated, 2, NoRemove, No
   override
   def eventConditionsMet(role: Role) = true
 
-  def getCandidates() = countryNames(game.muslims.filter(_.isUntested))
+  def getCandidates = countryNames(game.muslims.filter(_.isUntested))
 
   def isEffective(role: Role) = role match {
     case US =>
-      lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty
+      lapsingEventNotInPlay(ArabWinter) && getCandidates.nonEmpty
     case Jihadist =>
-      (lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty) || globalEventNotInPlay(ThreeCupsOfTea)
+      (lapsingEventNotInPlay(ArabWinter) && getCandidates.nonEmpty) || globalEventNotInPlay(ThreeCupsOfTea)
   }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -81,11 +81,11 @@ object Card_214 extends Card(214, "3 Cups of Tea", Unassociated, 2, NoRemove, No
   override
   def executeEvent(role: Role): Unit = {
     if (isEffective(role)) {
-      if (getCandidates().nonEmpty) {
+      if (getCandidates.nonEmpty) {
         val name = role match {
-          case _ if isHuman(role) => askCountry("Select unmarked Muslim country: ", getCandidates())
-          case US => USBot.markerAlignGovTarget(getCandidates()).get
-          case Jihadist => JihadistBot.markerTarget(getCandidates()).get
+          case _ if isHuman(role) => askCountry("Select unmarked Muslim country: ", getCandidates)
+          case US => USBot.markerAlignGovTarget(getCandidates).get
+          case Jihadist => JihadistBot.markerTarget(getCandidates).get
         }
 
         addEventTarget(name)

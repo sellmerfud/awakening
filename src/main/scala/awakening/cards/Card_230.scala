@@ -65,16 +65,16 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
     (m.civilWar || m.inRegimeChange) &&
     !game.isCaliphateMember(m.name)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   val isJihadistBotCandidate = (m: MuslimCountry) =>
     isCandidate(m) && !(m.isPoor && m.isAdversary)
 
-  def getJihadistBotCandidates() = countryNames(game.muslims.filter(isJihadistBotCandidate))
+  def getJihadistBotCandidates = countryNames(game.muslims.filter(isJihadistBotCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -89,7 +89,7 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => false  // US Bot treats this as unplayable
-    case Jihadist => game.funding < 9 || getJihadistBotCandidates().nonEmpty
+    case Jihadist => game.funding < 9 || getJihadistBotCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -99,7 +99,7 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
   def executeEvent(role: Role): Unit = {
     val (name, (actives, sleepers, sadr), action) = role match {
       case _ if isHuman(role) =>
-        val name = askCountry("Select country: ", getCandidates())
+        val name = askCountry("Select country: ", getCandidates)
         val m = game.getMuslim(name)
         val numCells = m.totalCells - 1
         displayLine(s"\nRemove ${amountOf(numCells, "cell")} from $name", Color.Event)
@@ -113,8 +113,8 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
 
       case _ => // Jihadist Bot
         // If funding < 9 then there may not be a preferred candidate
-        val possibleCandidates = getJihadistBotCandidates() match {
-          case Nil => getCandidates()
+        val possibleCandidates = getJihadistBotCandidates match {
+          case Nil => getCandidates
           case cs => cs
         }
         val name = if (game.funding == 9)

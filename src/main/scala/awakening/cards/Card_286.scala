@@ -55,7 +55,7 @@ object Card_286 extends Card(286, "Palestinian Peace", Jihadist, 1, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.adjacentMuslims(Israel).filter(_.canTakeAwakeningOrReactionMarker)
   )
 
@@ -63,7 +63,7 @@ object Card_286 extends Card(286, "Palestinian Peace", Jihadist, 1, NoRemove, No
   override
   def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(ArabWinter) &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -77,9 +77,9 @@ object Card_286 extends Card(286, "Palestinian Peace", Jihadist, 1, NoRemove, No
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Place reaction marker in which country: ", getCandidates())
+      askCountry("Place reaction marker in which country: ", getCandidates)
     else
-      JihadistBot.markerTarget(getCandidates()).get
+      JihadistBot.markerTarget(getCandidates).get
 
     addEventTarget(target)
     addReactionMarker(target)

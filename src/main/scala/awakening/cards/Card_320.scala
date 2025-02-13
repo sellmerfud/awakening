@@ -56,13 +56,13 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims filter (m => m.militia > 0 && (m.inRegimeChange || m.civilWar))
   )
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -77,8 +77,8 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       def nextMilitia(numLeft: Int): Unit = {
-        if (numLeft > 0 && getCandidates().nonEmpty) {
-          val target = askCountry("Remove militia from which country: ", getCandidates())
+        if (numLeft > 0 && getCandidates.nonEmpty) {
+          val target = askCountry("Remove militia from which country: ", getCandidates)
           val maxNum = game.getMuslim(target).militia min numLeft
           val num    = askInt(s"Remove how many from $target", 1, maxNum)
           addEventTarget(target)
@@ -87,7 +87,7 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
         }
       }
 
-      val maxRemoval = getCandidates().map(game.getMuslim(_).militia).sum min 3
+      val maxRemoval = getCandidates.map(game.getMuslim(_).militia).sum min 3
       askInt("\nRemove how many total militia from the map", 0, maxRemoval) match {
         case 0 => log("\nJihadist choose to remove no milita.", Color.Event)
         case num => nextMilitia(num)
@@ -96,8 +96,8 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
     else {
       // Bot
       def nextMilitia(numLeft: Int): Unit = {
-        if (numLeft > 0 && getCandidates().nonEmpty) {
-          val target = JihadistBot.troopsMilitiaTarget(getCandidates()).get
+        if (numLeft > 0 && getCandidates.nonEmpty) {
+          val target = JihadistBot.troopsMilitiaTarget(getCandidates).get
           val num    = game.getMuslim(target).militia min numLeft
           addEventTarget(target)
           removeMilitiaFromCountry(target, num)

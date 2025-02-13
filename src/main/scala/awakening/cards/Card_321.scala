@@ -57,7 +57,7 @@ object Card_321 extends Card(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.countries.filter(_.isPoor) :::
     game.muslims.filter(_.civilWar) :::
     game.getCountries(African).filter(_.isUntested)
@@ -65,7 +65,7 @@ object Card_321 extends Card(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,16 +80,16 @@ object Card_321 extends Card(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, No
   def executeEvent(role: Role): Unit = {
     if (game.cellsAvailable > 0) {
       val (target, num) = if (isHuman(role))
-        (askCountry("Which country: ", getCandidates()),
+        (askCountry("Which country: ", getCandidates),
          askInt("Place how many cells", 1, game.cellsAvailable min 3))
       else if (game.cellsAvailable >= 3 && (game.botEnhancements || game.islamistResources == 5)) {
           // If we are placing 3 cells and we can declare caliphate then
           // select that country
-          val t = JihadistBot.cellPlacementPriority(true)(getCandidates()).get
+          val t = JihadistBot.cellPlacementPriority(true)(getCandidates).get
           (t, game.cellsAvailable min 3)
         }
       else
-        (JihadistBot.cellPlacementPriority(false)(getCandidates()).get, game.cellsAvailable min 3)
+        (JihadistBot.cellPlacementPriority(false)(getCandidates).get, game.cellsAvailable min 3)
 
       addEventTarget(target)
       addSleeperCellsToCountry(target, num)

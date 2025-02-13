@@ -63,11 +63,11 @@ object Card_149 extends Card(149, "UN Nation Building", US, 2, NoRemove, NoLapsi
     !m.isAdversary &&       // Cannot perform WoI in adversary
     !(m.isGood && m.isAlly) // Cannot perform WoI in Good Ally
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -81,9 +81,9 @@ object Card_149 extends Card(149, "UN Nation Building", US, 2, NoRemove, NoLapsi
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
+      askCountry("Select country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
 
     addEventTarget(target)
     addAidMarker(target)

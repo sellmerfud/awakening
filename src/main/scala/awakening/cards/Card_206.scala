@@ -56,32 +56,32 @@ object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, 
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getAwakeCandidates() = if (lapsingEventInPlay(ArabWinter))
+  def getAwakeCandidates = if (lapsingEventInPlay(ArabWinter))
     Nil
   else
     countryNames(game.muslims.filter(_.reaction > 0))
 
-  def getReactCandidates() = if (lapsingEventInPlay(ArabWinter))
+  def getReactCandidates = if (lapsingEventInPlay(ArabWinter))
     Nil
   else
     countryNames(game.muslims.filter(_.awakening > 0))
 
-  def getCandidates() = if (lapsingEventInPlay(ArabWinter))
+  def getCandidates = if (lapsingEventInPlay(ArabWinter))
     Nil
   else
     countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getAwakeCandidates().nonEmpty || getReactCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getAwakeCandidates.nonEmpty || getReactCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getAwakeCandidates().nonEmpty
-    case Jihadist => getReactCandidates().nonEmpty
+    case US => getAwakeCandidates.nonEmpty
+    case Jihadist => getReactCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -92,8 +92,8 @@ object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, 
     val action = role match {
       case _ if isHuman(role) =>
         val choices = List(
-          choice(getAwakeCandidates().nonEmpty, "awakening", "Place awakening marker"),
-          choice(getReactCandidates().nonEmpty, "reaction", "Place reaction marker"),
+          choice(getAwakeCandidates.nonEmpty, "awakening", "Place awakening marker"),
+          choice(getReactCandidates.nonEmpty, "reaction", "Place reaction marker"),
         ).flatten
         val orderedChoices = if (role == US)
           choices
@@ -108,13 +108,13 @@ object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, 
 
     val (target, placmentAction) = action match {
       case "awakening" if isHuman(role) =>
-        (askCountry("Place awakening marker in which country? ", getAwakeCandidates()), addAwakeningMarker _)
+        (askCountry("Place awakening marker in which country? ", getAwakeCandidates), addAwakeningMarker _)
       case "reaction" if isHuman(role) =>
-        (askCountry("Place reaction marker in which country? ", getReactCandidates()), addReactionMarker _)
+        (askCountry("Place reaction marker in which country? ", getReactCandidates), addReactionMarker _)
       case "awakening" =>
-        (USBot.markerAlignGovTarget(getAwakeCandidates()).get, addAwakeningMarker _)
+        (USBot.markerAlignGovTarget(getAwakeCandidates).get, addAwakeningMarker _)
       case _ =>
-        (JihadistBot.markerTarget(getReactCandidates()).get, addReactionMarker _)
+        (JihadistBot.markerTarget(getReactCandidates).get, addReactionMarker _)
     }
 
     addEventTarget(target)

@@ -79,11 +79,11 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
     canPlaceBesiegedRegime(c) ||
     canPlaceReaction(c)
 
-  def getCandidates() = PossibleCountries.filter(name => isCandidate(game.getCountry(name)))
+  def getCandidates = PossibleCountries.filter(name => isCandidate(game.getCountry(name)))
 
-  def getReactionCandidates() = getCandidates().filter(name => canPlaceReaction(game.getCountry(name)))
+  def getReactionCandidates = getCandidates.filter(name => canPlaceReaction(game.getCountry(name)))
 
-  def getBesiegeCandidates() = getCandidates().filter(name => canPlaceBesiegedRegime(game.getCountry(name)))
+  def getBesiegeCandidates = getCandidates.filter(name => canPlaceBesiegedRegime(game.getCountry(name)))
 
   def candidateCards() = {
     val targets = List(73, 183, 186, 169)
@@ -93,7 +93,7 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    getCandidates().nonEmpty ||
+    getCandidates.nonEmpty ||
     candidateCards().nonEmpty
 
 
@@ -109,11 +109,11 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   override
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
-      val canReaction = getReactionCandidates().nonEmpty
+      val canReaction = getReactionCandidates.nonEmpty
       val canCell     = game.cellsAvailable > 0
       val canPlot1    = game.availablePlots.contains(Plot1)
       val canPlot2    = game.availablePlots.contains(Plot2)
-      val canBesiege  = getBesiegeCandidates().nonEmpty
+      val canBesiege  = getBesiegeCandidates.nonEmpty
       val canDraw     = candidateCards().nonEmpty
       val choices = List(
         choice(canReaction,"reaction", "Place 1 Reaction marker"),
@@ -128,23 +128,23 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
         println()
         action match {
           case "reaction" =>
-            val target = askCountry("Place reaction marker in which country: ", getReactionCandidates())
+            val target = askCountry("Place reaction marker in which country: ", getReactionCandidates)
             addEventTarget(target)
             addReactionMarker(target)
           case "cell" =>
-            val target = askCountry("Place a cell in which country: ", getCandidates())
+            val target = askCountry("Place a cell in which country: ", getCandidates)
             addEventTarget(target)
             addSleeperCellsToCountry(target, 1)
           case "plot1" =>
-            val target = askCountry("Place a level 1 plot in which country: ", getCandidates())
+            val target = askCountry("Place a level 1 plot in which country: ", getCandidates)
             addEventTarget(target)
             addAvailablePlotToCountry(target, Plot1)
           case "plot2" =>
-            val target = askCountry("Place a level 2 plot in which country: ", getCandidates())
+            val target = askCountry("Place a level 2 plot in which country: ", getCandidates)
             addEventTarget(target)
             addAvailablePlotToCountry(target, Plot2)
           case "besiege"  =>
-            val target = askCountry("Place besieged regime marker in which country: ", getBesiegeCandidates())
+            val target = askCountry("Place besieged regime marker in which country: ", getBesiegeCandidates)
             addEventTarget(target)
             addBesiegedRegimeMarker(target)
           case _ =>
@@ -155,15 +155,15 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
     else {
       // See Event Instructions table
       val besiegeTarget = JihadistBot.markerTarget(
-        getBesiegeCandidates().filter(name => !game.getMuslim(name).isIslamistRule)
+        getBesiegeCandidates.filter(name => !game.getMuslim(name).isIslamistRule)
       )
       val cellTarget = if (game.cellsAvailable > 0)
-        JihadistBot.cellPlacementPriority(false)(getCandidates())
+        JihadistBot.cellPlacementPriority(false)(getCandidates)
       else
         None
-      val reactionTarget = JihadistBot.markerTarget(getReactionCandidates())
+      val reactionTarget = JihadistBot.markerTarget(getReactionCandidates)
       val plotTarget = if (game.availablePlots.exists(p => p == Plot1 || p == Plot2))
-        JihadistBot.plotTarget(getCandidates(), game.funding >= 7)
+        JihadistBot.plotTarget(getCandidates, game.funding >= 7)
       else
         None
       val actions = List(

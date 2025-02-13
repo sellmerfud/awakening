@@ -67,16 +67,16 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
     case m: MuslimCountry => m.civilWar || game.isCaliphateMember(m.name)
   }
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.getCountries(CandidateCountries.toList).filter(isCandidate)
   )
 
-  def getImprovedCandidates() = countryNames(
+  def getImprovedCandidates = countryNames(
     game.getCountries(CandidateCountries.toList).filter(c => isCandidate(c) && isImprovedCandidate(c))
   )
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -94,7 +94,7 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
       else
         1
     val (target, action) = if (isHuman(role)) {
-      val target = askCountry("Select country: ", getCandidates())
+      val target = askCountry("Select country: ", getCandidates)
       val action = if (game.cellsAvailable == 0 && game.funding == 9)
         "no-effect"
       else {
@@ -106,8 +106,8 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
       (target, action)
     }
     else {
-      val candidates = getImprovedCandidates() match {
-        case Nil => getCandidates()
+      val candidates = getImprovedCandidates match {
+        case Nil => getCandidates
         case c => c
       }
       val target = JihadistBot.cellPlacementPriority(false)(candidates).get

@@ -59,7 +59,7 @@ object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getReactionCandidates() = countryNames(
+  def getReactionCandidates = countryNames(
     game.muslims.filter(m => m.isShiaMix && m.canTakeAwakeningOrReactionMarker)
   )
   // Returns true if the printed conditions of the event are satisfied
@@ -74,7 +74,7 @@ object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, No
     case US => true
     case Jihadist =>
       game.prestige > 1 ||
-      (lapsingEventNotInPlay(ArabWinter) && getReactionCandidates().nonEmpty) ||
+      (lapsingEventNotInPlay(ArabWinter) && getReactionCandidates.nonEmpty) ||
       !game.getCountry(Iran).hasMarker(TradeEmbargoJihadist)
   }
 
@@ -98,13 +98,13 @@ object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, No
       decreasePrestige(1)
       if (lapsingEventInPlay(ArabWinter))
         log("\nCannot place a reaction marker. [Arab Winter]", Color.Event)
-      else if (getReactionCandidates().isEmpty)
+      else if (getReactionCandidates.isEmpty)
         log("\nThere are no Shix-Mix countries that can take a reaction marker.", Color.Event)
       else {
         val target = if (isHuman(role))
-          askCountry("Select Shia-Mix country to place reaction marker: ", getReactionCandidates())
+          askCountry("Select Shia-Mix country to place reaction marker: ", getReactionCandidates)
         else
-          JihadistBot.markerTarget(getReactionCandidates()).get
+          JihadistBot.markerTarget(getReactionCandidates).get
         addEventTarget(target)
         addReactionMarker(target)
       }

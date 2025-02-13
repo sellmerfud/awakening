@@ -62,14 +62,14 @@ object Card_153 extends Card(153, "Facebook", US, 3, NoRemove, NoLapsing, NoAuto
     m.canTakeAwakeningOrReactionMarker &&
     (m.awakening > 0 || (game.adjacentMuslims(m.name).exists(_.awakening > 0)))
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
     globalEventInPlay(Smartphones) &&
     lapsingEventNotInPlay(ArabWinter) &&  // Prevents placing Awakening/Reaction markers
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -82,7 +82,7 @@ object Card_153 extends Card(153, "Facebook", US, 3, NoRemove, NoLapsing, NoAuto
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val candidates = getCandidates()
+    val candidates = getCandidates
     val targets = if (candidates.size <= 3)
       candidates
     else if (isHuman(role))

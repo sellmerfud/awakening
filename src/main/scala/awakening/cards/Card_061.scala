@@ -57,14 +57,14 @@ object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLa
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = (game.targetsThisPhase.disrupted ++ game.targetsLastPhase.disrupted).toList.sorted
+  def getCandidates = (game.targetsThisPhase.disrupted ++ game.targetsLastPhase.disrupted).toList.sorted
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(GTMO) &&
     globalEventNotInPlay(Renditions) &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -79,9 +79,9 @@ object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLa
   def executeEvent(role: Role): Unit = {
     if (game.cellsAvailable > 0) {
       val name = if (isHuman(role))
-        askCountry("Select country where disrupt occurred: ", getCandidates())
+        askCountry("Select country where disrupt occurred: ", getCandidates)
       else
-        JihadistBot.cellPlacementPriority(false)(getCandidates()).get
+        JihadistBot.cellPlacementPriority(false)(getCandidates).get
       addEventTarget(name)
       addSleeperCellsToCountry(name, 1)
     }

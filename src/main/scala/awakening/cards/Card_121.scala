@@ -65,13 +65,13 @@ object Card_121 extends Card(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAuto
     m.civilWar &&
     m.totalTroops == 0
 
-  def getCandidates() = countryNames(game.muslims.filter(advisorsCandidate))
+  def getCandidates = countryNames(game.muslims.filter(advisorsCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
     game.advisorsAvailable > 0 &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -85,9 +85,9 @@ object Card_121 extends Card(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAuto
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry(s"Place Advisors in which country: ", getCandidates())
+      askCountry(s"Place Advisors in which country: ", getCandidates)
     else
-      USBot.deployToPriority(getCandidates()).get
+      USBot.deployToPriority(getCandidates).get
     println()
     addEventTarget(target)
     addAdvisorsToCountry(target)

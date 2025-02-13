@@ -50,7 +50,7 @@ import awakening.LabyrinthAwakening._
 object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
   val UnconfirmedCandidates = List(215, 216, 219, 225, 237)
 
-  def getCandidates() = game.cardsRemoved.filter(UnconfirmedCandidates.contains)
+  def getCandidates = game.cardsRemoved.filter(UnconfirmedCandidates.contains)
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -69,7 +69,7 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getCandidates().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -77,16 +77,16 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
   override
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
-    if (getCandidates().isEmpty && game.prestige == 1) {
+    if (getCandidates.isEmpty && game.prestige == 1) {
       log("\nNone of the listed cards is in the removed cards pile and US prestige is 1.", Color.Event)
       log("The event has no effect.", Color.Event)
     }
     else {
-      if (getCandidates().nonEmpty) {
+      if (getCandidates.nonEmpty) {
         if (isHuman(role))
-          askCardDrawnFromRemovedPile(role, only = getCandidates().toSet)
+          askCardDrawnFromRemovedPile(role, only = getCandidates.toSet)
         else { // Bot takes the card closest to the top of the removed pile.
-          val cardNum = getCandidates().head
+          val cardNum = getCandidates.head
           processCardDrawn(role, cardNum, FromRemoved)       
           log(s"\nTake [${cardNumAndName(cardNum)}] from the removed pile and", Color.Event)
           if (role == Jihadist && game.botEnhancements)

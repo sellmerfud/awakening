@@ -64,12 +64,12 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
   override
   def eventConditionsMet(role: Role) = true
 
-  def getCandidates() = countryNames(game.muslims.filter(_.totalCells > 0))
+  def getCandidates = countryNames(game.muslims.filter(_.totalCells > 0))
 
-  def getBotPreferred() = countryNames(game.muslims.filter(m => m.totalCells - m.totalTroopsAndMilitia > 4))
+  def getBotPreferred = countryNames(game.muslims.filter(m => m.totalCells - m.totalTroopsAndMilitia > 4))
 
   def eventEffective =
-    getCandidates().nonEmpty || hasCardInHand(Jihadist)
+    getCandidates.nonEmpty || hasCardInHand(Jihadist)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -91,7 +91,7 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
     }
     else if (isHuman(role)) {
       val choices = List(
-        choice(getCandidates().nonEmpty ,"remove", "Remove up to 2 cells in any one Muslim country"),
+        choice(getCandidates.nonEmpty ,"remove", "Remove up to 2 cells in any one Muslim country"),
         choice( hasCardInHand(Jihadist) ,"discard", s"Discard top card of the $Jihadist hand"),
       ).flatten
       askMenu("Choose one:", choices).head match {
@@ -100,11 +100,11 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
           log(s"Discard top card of the $Jihadist hand")
           askCardsDiscarded(Jihadist, 1)
 
-        case _ if getCandidates().isEmpty =>
+        case _ if getCandidates.isEmpty =>
           log("\nThere are no Muslim countries with cells.  The event has no effect.", Color.Event)
 
         case _ =>
-          val target = askCountry("Remove cells from which country: ", getCandidates())
+          val target = askCountry("Remove cells from which country: ", getCandidates)
           val num = game.getMuslim(target).totalCells min 2
           val (actives, sleepers, sadr) = askCells(target, num, true)
           addEventTarget(target)
@@ -115,9 +115,9 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
       // Bot
       // If no preferred candidates, the Bot will choose to have Jihadist discard
       // if it has cards in hand.  Otherwise it will remove from non-preferred country.
-      val target = getBotPreferred() match {
+      val target = getBotPreferred match {
         case Nil if hasCardInHand(Jihadist) => None
-        case Nil => USBot.disruptPriority(getCandidates())
+        case Nil => USBot.disruptPriority(getCandidates)
         case preferred => USBot.disruptPriority(preferred)
       }
 

@@ -62,12 +62,12 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
     m.canTakeAwakeningOrReactionMarker &&
     (game.targetsThisPhase.wasOpsOrEventTarget(m.name) || game.targetsLastPhase.wasOpsOrEventTarget(m.name))
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   // Always can play to allow facebook (event if smartphones is already in effect)
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -88,7 +88,7 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
   def executeEvent(role: Role): Unit = {
     if (lapsingEventInPlay(ArabWinter))
       log(s"\nCannot place awakening/reaction markers. [Arab Winter]", Color.Event)
-    else if (getCandidates().isEmpty)
+    else if (getCandidates.isEmpty)
       log(s"\nNone of the candidate countries can take awakening/reactions markers.", Color.Event)
     else {
       val (placementAction, target) = role match {
@@ -97,11 +97,11 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
             addAwakeningMarker _ -> "Place awakening marker",
             addReactionMarker _ -> "Place reaction marker")
           val orderedChoices = if (role == US) choices else choices.reverse
-          (askMenu("Choose one:", orderedChoices).head, askSimpleMenu("Select country:", getCandidates()))
+          (askMenu("Choose one:", orderedChoices).head, askSimpleMenu("Select country:", getCandidates))
         case US =>
-          (addAwakeningMarker _, USBot.markerAlignGovTarget(getCandidates()).get)
+          (addAwakeningMarker _, USBot.markerAlignGovTarget(getCandidates).get)
         case Jihadist =>
-          (addReactionMarker _, JihadistBot.markerTarget(getCandidates()).get)
+          (addReactionMarker _, JihadistBot.markerTarget(getCandidates).get)
       }
 
       addEventTarget(target)

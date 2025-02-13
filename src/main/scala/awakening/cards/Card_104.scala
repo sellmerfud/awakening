@@ -52,14 +52,14 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getBotCellCandidates() = {
+  def getBotCellCandidates = {
     val iran = if ((game getCountry Iran).totalCells > 0) List(Iran) else Nil
     iran ::: countryNames(
       game.muslims.filter(m => m.isShiaMix && m.totalCells > 0) // Bot only cares if cell can be removed
     )
   }
 
-  def getBotJihadCandidates() = {
+  def getBotJihadCandidates = {
     val jihadTest   = (m: MuslimCountry) =>
       m.isShiaMix &&
       (m.isUntested || m.isGood || m.isFair || m.aidMarkers > 0)
@@ -70,7 +70,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getBotCellCandidates().exists (name => USBot.wouldRemoveLastCell(name, 1))
+    getBotCellCandidates.exists (name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -81,8 +81,8 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getBotCellCandidates().nonEmpty
-    case Jihadist => getBotJihadCandidates().nonEmpty
+    case US => getBotCellCandidates.nonEmpty
+    case Jihadist => getBotJihadCandidates.nonEmpty
   }
 
   def shixMixCandidates() =
@@ -128,8 +128,8 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
       else
         log(s"\nThere is no cell to remove in either $target or $Iran.", Color.Event)
 
-    case US if getBotCellCandidates().nonEmpty => // Bot
-        val name = USBot.disruptPriority(getBotCellCandidates()).get
+    case US if getBotCellCandidates.nonEmpty => // Bot
+        val name = USBot.disruptPriority(getBotCellCandidates).get
         val (active, sleeper, sadr) = USBot.chooseCellsToRemove(name, 1)
         addEventTarget(name)
         testCountry(name) // Event specifically says to test
@@ -142,7 +142,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
       val name = if (isHuman(role))
         askCountry("Select a Shix-Mix country: ", shixMixCandidates())
       else
-        getBotJihadCandidates() match {
+        getBotJihadCandidates match {
           case Nil =>
             jihadBotTarget(shixMixCandidates()).get
           case candidates =>

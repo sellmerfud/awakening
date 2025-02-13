@@ -58,7 +58,7 @@ object Card_065 extends Card(65, "HEU", Jihadist, 2, Remove, NoLapsing, NoAutoTr
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     List(Russia, CentralAsia)
       .map(game.getCountry)
       .filter(c => c.totalCells > 0 && !c.hasMarker(CTR))
@@ -66,7 +66,7 @@ object Card_065 extends Card(65, "HEU", Jihadist, 2, Remove, NoLapsing, NoAutoTr
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -79,7 +79,7 @@ object Card_065 extends Card(65, "HEU", Jihadist, 2, Remove, NoLapsing, NoAutoTr
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val candidates = getCandidates()
+    val candidates = getCandidates
     val name = if (isHuman(role))
       askCountry("Select country: ", candidates)
     else if (candidates.size == 1)

@@ -66,22 +66,22 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
   }
   val isSource = (c: Country) => isCellsSource(c) || isReactionSource(c)
 
-  def getCellSources() = countryNames(game.countries.filter(isCellsSource))
+  def getCellSources = countryNames(game.countries.filter(isCellsSource))
 
-  def getReactionSources() = countryNames(game.muslims.filter(isReactionSource))
+  def getReactionSources = countryNames(game.muslims.filter(isReactionSource))
 
   val isCandidate = (m: MuslimCountry) =>
     m.civilWar || m.inRegimeChange || game.isCaliphateMember(m.name)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // US bot will place cells in a candidate country with the lowest
   // resource value
-  def getUSBotTarget() = USBot.cachedTarget("flypaper-target") {
+  def getUSBotTarget = USBot.cachedTarget("flypaper-target") {
     val lowResource = (game.muslims.filter(isCandidate).map(_.resourceValue)).min
     val candidates = game.muslims.filter(m => isCandidate(m) && m.resourceValue == lowResource)
     shuffle(countryNames(candidates)).head
@@ -90,15 +90,15 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
   // Enhanced Bot will choose the Caliphate priority target if it is currently
   // at 5 Islamist Resources in order to win the game.  But only if there are
   // 3 cells that can make the trip.
-  def getJihadistBotTarget() = JihadistBot.cachedTarget("flypaper-target") {
-    JihadistBot.caliphatePriorityTarget(getCandidates())
+  def getJihadistBotTarget = JihadistBot.cachedTarget("flypaper-target") {
+    JihadistBot.caliphatePriorityTarget(getCandidates)
       .filter { name =>
         game.botEnhancements &&
         game.caliphateCapital.isEmpty &&
         game.islamistResources == 5 &&
         game.countries.count(c => JihadistBot.hasCellForTravel(c, name, placement = true)) > 2
       }
-      .getOrElse(JihadistBot.cellPlacementPriority(false)(getCandidates()).get)
+      .getOrElse(JihadistBot.cellPlacementPriority(false)(getCandidates).get)
   }
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -106,11 +106,11 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
-      val target = getUSBotTarget()
+      val target = getUSBotTarget
       game.hasCountry(c => c.name != target && isSource(c))
 
     case Jihadist =>
-      val target = getJihadistBotTarget()
+      val target = getJihadistBotTarget
       val numTravelers = game.countries.count(c => JihadistBot.hasCellForTravel(c, target, placement = true))
       // Enhanced bot will only select the event if it can remove 3 cells
       // Normal bot only requires 1
@@ -129,7 +129,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
     // Can possibly declare Caliphate, by either player
     // See Event Instructions table
     if (isHuman(role)) {
-      val reactionSources = getReactionSources()
+      val reactionSources = getReactionSources
       val numReaction = askInt("\nRemove how many reaction markers? ", 0, 3 min reactionSources.size)
       val reactionCountries = if (numReaction == 0)
         Nil
@@ -145,7 +145,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
         removeReactionMarker(name)
       }
 
-      val cellSources = getCellSources().filterNot(reactionCountries.contains)
+      val cellSources = getCellSources.filterNot(reactionCountries.contains)
       val numCells = askInt("\nRemove how many cells? ", 0, (3 - numReaction) min cellSources.size)
       val cellCountries = if (numCells == 0)
         Nil
@@ -168,7 +168,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
 
       val numToPlace = (numReaction + numCells) min game.cellsAvailable
       if (numToPlace > 0) {
-        val name = askCountry(s"Select country to place ${amountOf(numToPlace, "cell")}: ", getCandidates())
+        val name = askCountry(s"Select country to place ${amountOf(numToPlace, "cell")}: ", getCandidates)
         addEventTarget(name)
         addSleeperCellsToCountry(name, numToPlace)
         if (jihadistChoosesToDeclareCaliphate(name, numToPlace))
@@ -179,7 +179,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
     }
     else if (role == Jihadist) {
       // Jihadist Bot removes only "cells""
-      val target = getJihadistBotTarget()
+      val target = getJihadistBotTarget
       val cellSources = countryNames(game.countries.filter (c => JihadistBot.hasCellForTravel(c, target, placement = true)))
       val countries = if (cellSources.size <= 3)
         cellSources
@@ -207,7 +207,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
     }
     else {
       // US Bot will remove reaction markers before cells, 2 max
-      val target = getUSBotTarget()
+      val target = getUSBotTarget
 
       def nextReaction(remaining: Int, countries: List[String]): List[String] = {
         if (remaining == 0 || countries.isEmpty)
@@ -231,16 +231,16 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       // The US Bot does not want to allow a caliphate to be declared
       // so it will limit removals to 2 unless there are not available cells
       // or if the caliphate already exists.
-      val numReactions = if (game.caliphateCapital.nonEmpty || (getReactionSources().size >= 3 && game.cellsAvailable < 3))
+      val numReactions = if (game.caliphateCapital.nonEmpty || (getReactionSources.size >= 3 && game.cellsAvailable < 3))
         3
       else
         2
-      val reactionCountries = nextReaction(numReactions, getReactionSources())
+      val reactionCountries = nextReaction(numReactions, getReactionSources)
 
       for (name <- reactionCountries)
         removeReactionMarker(name)
 
-      val cellCountries = nextCell(2 - reactionCountries.size max 0, getCellSources().filterNot(_ == target))
+      val cellCountries = nextCell(2 - reactionCountries.size max 0, getCellSources.filterNot(_ == target))
 
       for ((name, (active, sleeper, sadr)) <- cellCountries)
         removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)

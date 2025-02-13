@@ -65,7 +65,7 @@ object Card_323 extends Card(323, "Blasphemy", Unassociated, 1, NoRemove, NoLaps
     isCandidate(m) &&
     ((role == US && !m.isAdversary) || (role == Jihadist && !m.isAlly))
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   def getBotCandidates(role: Role) = {
     val test = isBotCandidate(role)
@@ -75,7 +75,7 @@ object Card_323 extends Card(323, "Blasphemy", Unassociated, 1, NoRemove, NoLaps
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty
+    lapsingEventNotInPlay(ArabWinter) && getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -106,7 +106,7 @@ object Card_323 extends Card(323, "Blasphemy", Unassociated, 1, NoRemove, NoLaps
 
     var (target, placementAction) = role match {
       case _ if isHuman(role) =>
-        val target = askCountry("Place a marker in which country: ", getCandidates())
+        val target = askCountry("Place a marker in which country: ", getCandidates)
         val marker = humanMarker(target)
         (target, marker)
       case US       => (USBot.markerAlignGovTarget(getBotCandidates(role)).get, addAwakeningMarker _)

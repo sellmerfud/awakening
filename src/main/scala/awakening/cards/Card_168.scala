@@ -61,12 +61,12 @@ object Card_168 extends Card(168, "IEDs", Jihadist, 1, NoRemove, NoLapsing, NoAu
     m.totalCells > 0 &&
     m.totalTroops > 0
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
   
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-        getCandidates().nonEmpty &&
+        getCandidates.nonEmpty &&
         hasCardInHand(US)
 
   // Returns true if the Bot associated with the given role will execute the event

@@ -64,13 +64,13 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
   val isCandidate = (m: MuslimCountry) => m.isTested && !m.isGood
   val isBotCandidate = (m: MuslimCountry) => isCandidate(m) && !m.autoRecruit
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getBotCandidates() = countryNames(game.muslims.filter(isBotCandidate))
+  def getBotCandidates = countryNames(game.muslims.filter(isBotCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,10 +80,10 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
   // marker in the same country where it already exists.
   override
   def botWillPlayEvent(role: Role): Boolean = {
-    getBotCandidates().nonEmpty &&
+    getBotCandidates.nonEmpty &&
     (game.trainingCamp match {
       case Some(currentCamp) if game.botEnhancements =>
-        currentCamp != JihadistBot.cellPlacementPriority(false)(getBotCandidates()).get
+        currentCamp != JihadistBot.cellPlacementPriority(false)(getBotCandidates).get
       case _ => true
     })
   }
@@ -94,10 +94,10 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Place Training Camps in which country: ", getCandidates())
+      askCountry("Place Training Camps in which country: ", getCandidates)
     else
-      getBotCandidates() match {
-        case Nil => JihadistBot.cellPlacementPriority(false)(getCandidates()).get
+      getBotCandidates match {
+        case Nil => JihadistBot.cellPlacementPriority(false)(getCandidates).get
         case preferred => JihadistBot.cellPlacementPriority(false)(preferred).get
       }
 

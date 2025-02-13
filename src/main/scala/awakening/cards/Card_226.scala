@@ -58,7 +58,7 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.getCountries(African).filter {
       case m: MuslimCountry => m.resourceValue < 3 && m.isPoor
       case _ => false
@@ -67,7 +67,7 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -77,7 +77,7 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
     case US =>
       // Must have a serval target and can place either the
       // marker and/or militia there
-      USBot.servalTarget(getCandidates())
+      USBot.servalTarget(getCandidates)
         .map { name =>
           val target = game.getMuslim(name)
           !target.hasMarker(OperationServal) ||
@@ -87,7 +87,7 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
     case Jihadist =>
       // Will play if it can place a cell or start a Civil War
       game.cellsAvailable > 0 ||
-      JihadistBot.minorJihadTarget(getCandidates())
+      JihadistBot.minorJihadTarget(getCandidates)
         .map(name => !game.getMuslim(name).civilWar)
         .getOrElse(false)
   }
@@ -100,9 +100,9 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
     // See Event Instructions table
     if (role == US) {
       val name = if (isHuman(role))
-        askCountry("\nSelect country for Serval marker: ", getCandidates())
+        askCountry("\nSelect country for Serval marker: ", getCandidates)
       else
-        USBot.servalTarget(getCandidates()).get
+        USBot.servalTarget(getCandidates).get
 
       // If the marker is already on the map, remove it first,
       // unless it is in the target country.
@@ -122,9 +122,9 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
     }
     else {  // Jihadist
       val name = if (isHuman(role))
-        askCountry("Select country: ", getCandidates())
+        askCountry("Select country: ", getCandidates)
       else
-        JihadistBot.minorJihadTarget(getCandidates()).get
+        JihadistBot.minorJihadTarget(getCandidates).get
 
       addEventTarget(name)
       startCivilWar(name)

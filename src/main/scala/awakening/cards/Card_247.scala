@@ -62,7 +62,7 @@ object Card_247 extends Card(247, "Nadia Murad", US, 1, NoRemove, NoLapsing, NoA
     m.canTakeAwakeningOrReactionMarker &&
     !game.isCaliphateMember(m.name)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -70,7 +70,7 @@ object Card_247 extends Card(247, "Nadia Murad", US, 1, NoRemove, NoLapsing, NoA
     val iraq = game.getMuslim(Iraq)
     lapsingEventNotInPlay(ArabWinter) &&
     (iraq.civilWar || iraq.isIslamistRule || iraq.besiegedRegime || game.isCaliphateMember(Iraq)) &&
-    getCandidates().nonEmpty
+    getCandidates.nonEmpty
   }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -85,9 +85,9 @@ object Card_247 extends Card(247, "Nadia Murad", US, 1, NoRemove, NoLapsing, NoA
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry(s"Place an awakening marker in which country: ", getCandidates())
+      askCountry(s"Place an awakening marker in which country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
     println()
     addEventTarget(target)
     addAwakeningMarker(target)

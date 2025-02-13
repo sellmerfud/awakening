@@ -61,11 +61,11 @@ object Card_125 extends Card(125, "Peshmerga", US, 1, NoRemove, NoLapsing, NoAut
     m.totalCells > 0 &&
     m.canTakeMilitia
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -81,9 +81,9 @@ object Card_125 extends Card(125, "Peshmerga", US, 1, NoRemove, NoLapsing, NoAut
   def executeEvent(role: Role): Unit = {
     if (game.militiaAvailable > 0) {
       val target = if (isHuman(role))
-        askCountry(s"Select country for militia: ", getCandidates())
+        askCountry(s"Select country for militia: ", getCandidates)
       else
-        USBot.deployToPriority(getCandidates()).get
+        USBot.deployToPriority(getCandidates).get
 
       addEventTarget(target)
       println()

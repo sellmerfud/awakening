@@ -60,18 +60,18 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
   val isCandidate = (m: MuslimCountry) =>
     (m.civilWar || m.inRegimeChange) && m.totalCells >= 3
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    JihadistBot.talibanResurgentTarget(getCandidates()).nonEmpty
+    JihadistBot.talibanResurgentTarget(getCandidates).nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -80,7 +80,7 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     val (target, plots, (actives, sleepers, sadr)) = if (isHuman(role)) {
-      val name = askCountry("Select country: ", getCandidates())
+      val name = askCountry("Select country: ", getCandidates)
       val plots = askPlots(game.availablePlots.filterNot(_ == PlotWMD), 2)
       val m = game.getMuslim(name)
       if (m.totalCells == 3)
@@ -92,9 +92,9 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
     }
     else {
       // If event triggered during US turn then preferred target may not exist.
-      val name = JihadistBot.talibanResurgentTarget(getCandidates()) match {
+      val name = JihadistBot.talibanResurgentTarget(getCandidates) match {
         case Some(name) => name
-        case None => JihadistBot.minorJihadTarget(getCandidates()).get
+        case None => JihadistBot.minorJihadTarget(getCandidates).get
       }
       val plots = JihadistBot.preparePlots(game.availablePlots.filterNot(_ == PlotWMD)).take(2)
       (name, plots, JihadistBot.chooseCellsToRemove(name, 3))

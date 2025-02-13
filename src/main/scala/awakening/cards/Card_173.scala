@@ -66,14 +66,14 @@ object Card_173 extends Card(173, "Arab Winter", Jihadist, 2, NoRemove, Lapsing,
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
-  def getCandidates() = countryNames(game.muslims.filter(_.awakening > 0))
+  def getCandidates = countryNames(game.muslims.filter(_.awakening > 0))
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    getCandidates() match {
+    getCandidates match {
       case Nil =>
         log(s"\nThere are no awakening markers on the map.", Color.Event)
 

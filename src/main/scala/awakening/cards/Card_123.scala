@@ -57,11 +57,11 @@ object Card_123 extends Card(123, "Humanitarian Aid", US, 1, NoRemove, NoLapsing
 
   val isCandidate = (m: MuslimCountry) => m.canTakeAidMarker && m.totalCells > 0
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -75,9 +75,9 @@ object Card_123 extends Card(123, "Humanitarian Aid", US, 1, NoRemove, NoLapsing
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry(s"Humanitarian Aid in which country: ", getCandidates())
+      askCountry(s"Humanitarian Aid in which country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
 
     println()
     addEventTarget(target)

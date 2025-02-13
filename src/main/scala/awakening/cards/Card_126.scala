@@ -51,13 +51,13 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(_.totalCells > 0))
+  def getCandidates = countryNames(game.muslims.filter(_.totalCells > 0))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists(USBot.wouldRemoveLastCell(_, 2))
+    getCandidates.exists(USBot.wouldRemoveLastCell(_, 2))
 
 
   // Returns true if the printed conditions of the event are satisfied
@@ -69,7 +69,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    getCandidates().nonEmpty ||
+    getCandidates.nonEmpty ||
     hasCardInHand(Jihadist)
 
   // Carry out the event for the given role.
@@ -77,10 +77,10 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (getCandidates().nonEmpty || hasCardInHand(Jihadist)) {
+    if (getCandidates.nonEmpty || hasCardInHand(Jihadist)) {
       if (isHuman(role)) {
         val choices = List(
-          choice(getCandidates().nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),
+          choice(getCandidates.nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),
           choice(hasCardInHand(Jihadist),  "discard", "Discard 1 card from the Jihadist hand")
         ).flatten
         askMenu("Choose one:", choices).head match {
@@ -89,7 +89,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
             askCardsDiscarded(Jihadist, 1)
 
           case _ =>
-            val target = askCountry("Remove 2 cells in which country? ", getCandidates())
+            val target = askCountry("Remove 2 cells in which country? ", getCandidates)
             val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
             addEventTarget(target)
             println()
@@ -98,7 +98,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
       }
       else {
         // First remove cells if it would remove last cell on the map
-        val candidates = getCandidates()
+        val candidates = getCandidates
         if (candidates.size == 1 && USBot.wouldRemoveLastCell(candidates.head, 2)) {
           val target = candidates.head
           addEventTarget(target)

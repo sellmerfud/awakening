@@ -74,9 +74,9 @@ object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLaps
     n.name != UnitedStates &&
     n.name != Israel
 
-  def getAlignCandidates() = countryNames(game.muslims.filter(isAlignCandidate))
+  def getAlignCandidates = countryNames(game.muslims.filter(isAlignCandidate))
 
-  def getPostureCandidates() = countryNames(game.nonMuslims.filter(isPostureCandidate))
+  def getPostureCandidates = countryNames(game.nonMuslims.filter(isPostureCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -87,8 +87,8 @@ object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLaps
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    getAlignCandidates().nonEmpty ||
-    getPostureCandidates().nonEmpty ||
+    getAlignCandidates.nonEmpty ||
+    getPostureCandidates.nonEmpty ||
     game.prestige > 1
 
   // Carry out the event for the given role.
@@ -96,10 +96,10 @@ object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLaps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (getAlignCandidates().isEmpty && getPostureCandidates().isEmpty && game.prestige == 1)
+    if (getAlignCandidates.isEmpty && getPostureCandidates.isEmpty && game.prestige == 1)
       log("\nThe event has no effect.", Color.Event)
     else {
-      val alignTarget = getAlignCandidates() match {
+      val alignTarget = getAlignCandidates match {
         case Nil =>
           log("\nThere are no qualifiying countries that can be shifted to adversary.", Color.Event)
           None
@@ -111,7 +111,7 @@ object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLaps
           JihadistBot.alignGovTarget(candidates)
       }
 
-      val postureTarget = getPostureCandidates() match {
+      val postureTarget = getPostureCandidates match {
         case Nil =>
           log("\nThere are unmarked non-Schengen countries.", Color.Event)
           None

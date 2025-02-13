@@ -51,18 +51,18 @@ object Card_132 extends Card(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing,
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates() = countryNames(game.muslims.filter(m => m.civilWar))
-  def getCandidatesWithCells() = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
+  def getCandidates = countryNames(game.muslims.filter(m => m.civilWar))
+  def getCandidatesWithCells = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidatesWithCells().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    getCandidatesWithCells.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -70,7 +70,7 @@ object Card_132 extends Card(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing,
   override
   def botWillPlayEvent(role: Role): Boolean =
     game.militiaAvailable > 0 ||
-    getCandidatesWithCells().nonEmpty
+    getCandidatesWithCells.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -78,15 +78,15 @@ object Card_132 extends Card(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing,
   override
   def executeEvent(role: Role): Unit = {
     val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
-      val target = askCountry("Select civil war country: ", getCandidates())
+      val target = askCountry("Select civil war country: ", getCandidates)
       (target, askCells(target, 1, sleeperFocus = true))
     }
     else {
       // Bot chooses the candidate with the where (totalCells - TandM) is highest.
-      val target = if (getCandidatesWithCells().nonEmpty && game.totalCellsOnMap == 1)
-        getCandidatesWithCells().head
+      val target = if (getCandidatesWithCells.nonEmpty && game.totalCellsOnMap == 1)
+        getCandidatesWithCells.head
       else {
-        val best = USBot.highestCellsMinusTandM(getCandidates())
+        val best = USBot.highestCellsMinusTandM(getCandidates)
         shuffle(best).head
       }
       (target, USBot.chooseCellsToRemove(target, 1))

@@ -47,7 +47,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
-  def getCandidates(): List[String] = countryNames(
+  def getCandidates: List[String] = countryNames(
     game.countries.filter {
       case m: MuslimCountry =>
         m.plots.nonEmpty && (m.isGood || m.isAlly)
@@ -59,7 +59,7 @@ object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, No
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
-  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = getCandidates().contains(countryName)
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = getCandidates.contains(countryName)
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
@@ -68,7 +68,7 @@ object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -81,7 +81,7 @@ object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val plotCandidates    = getCandidates()
+    val plotCandidates    = getCandidates
     val postureCandidates = countryNames(game.nonMuslims.filter(_.canChangePosture))
     if (isHuman(role)) {
       val name = askCountry("Select country with plots: ", plotCandidates)

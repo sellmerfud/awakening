@@ -50,7 +50,7 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims
       .filter(m => m.isShiaMix && m.totalCells > 0 && distance(m.name, Lebanon) <= 3)
   )
@@ -58,7 +58,7 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    getCandidates().exists (name => USBot.wouldRemoveLastCell(name, 1))
+    getCandidates.exists (name => USBot.wouldRemoveLastCell(name, 1))
 
 
   // Returns true if the printed conditions of the event are satisfied
@@ -70,7 +70,7 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role) = role match {
-    case US => getCandidates().nonEmpty
+    case US => getCandidates.nonEmpty
     case Jihadist if game.botEnhancements =>
       val lebanon = game.getMuslim(Lebanon)
       lebanon.isGood ||
@@ -87,13 +87,13 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = role match {
-    case US if getCandidates().nonEmpty =>
+    case US if getCandidates.nonEmpty =>
       val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
-        val name = askCountry("Remove a cell from which country: ", getCandidates())
+        val name = askCountry("Remove a cell from which country: ", getCandidates)
         (name, askCells(name, 1, sleeperFocus = true))
       }
       else {
-        val name = USBot.disruptPriority(getCandidates()).get
+        val name = USBot.disruptPriority(getCandidates).get
         (name, USBot.chooseCellsToRemove(name, 1))
       }
       addEventTarget(name)

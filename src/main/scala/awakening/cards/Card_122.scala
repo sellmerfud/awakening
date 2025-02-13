@@ -61,11 +61,11 @@ object Card_122 extends Card(122, "Backlash", US, 1, NoRemove, NoLapsing, NoAuto
   val isCandidate = (m: MuslimCountry) =>
     m.plots.exists(!_.backlashed) && !game.isCaliphateMember(m.name)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -79,7 +79,7 @@ object Card_122 extends Card(122, "Backlash", US, 1, NoRemove, NoLapsing, NoAuto
   override
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
-      val target = askCountry(s"Backlash in which country: ", getCandidates())
+      val target = askCountry(s"Backlash in which country: ", getCandidates)
       // Pick a random plot in the country
       addEventTarget(target)
       val m = game.getMuslim(target)
@@ -91,7 +91,7 @@ object Card_122 extends Card(122, "Backlash", US, 1, NoRemove, NoLapsing, NoAuto
     }
     else {
       val plots = for {
-        name <- getCandidates()
+        name <- getCandidates
         m = game.getMuslim(name)
         plot <- m.plots
         if !plot.backlashed

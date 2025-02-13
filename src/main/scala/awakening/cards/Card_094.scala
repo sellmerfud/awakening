@@ -54,7 +54,7 @@ object Card_094 extends Card(94, "The door of Itjihad was closed", Jihadist, 3, 
   //  A target must have been tested or improved to Fair/Good
   // in the current or last action phase and the target must still
   // be either Fair or Good.
-  def getCandidates() = {
+  def getCandidates = {
     val isFairOrGood = (name: String) =>
       game.getCountry(name) match {
         case m: MuslimCountry => m.isFair || m.isGood
@@ -73,7 +73,7 @@ object Card_094 extends Card(94, "The door of Itjihad was closed", Jihadist, 3, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -87,9 +87,9 @@ object Card_094 extends Card(94, "The door of Itjihad was closed", Jihadist, 3, 
   override
   def executeEvent(role: Role): Unit = {
         val name = if (isHuman(role))
-          askCountry("Select country to worsen governance: ", getCandidates())
+          askCountry("Select country to worsen governance: ", getCandidates)
         else
-          JihadistBot.alignGovTarget(getCandidates()).get
+          JihadistBot.alignGovTarget(getCandidates).get
 
         addEventTarget(name)
         worsenGovernance(name, 1, canShiftToIR = false)

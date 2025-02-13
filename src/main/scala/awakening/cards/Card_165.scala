@@ -65,19 +65,19 @@ object Card_165 extends Card(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAu
     !m.isIslamistRule &&
     !(game.botEnhancements && m.inRegimeChange) // Enhanced Bot does not play in regime change country
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getBotCandidates() = countryNames(game.muslims.filter(isBotCandidate))
+  def getBotCandidates = countryNames(game.muslims.filter(isBotCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotCandidates().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getBotCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -87,11 +87,11 @@ object Card_165 extends Card(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAu
     // The Bots preferred candidate may be empty if the event
     // was triggere during the US player's turn.
     val target = if (isHuman(role))
-      askCountry("Select country: ", getCandidates())
-    else if (getBotCandidates().nonEmpty)
-      JihadistBot.goodThenFairThenPoorPriority(getBotCandidates()).get
+      askCountry("Select country: ", getCandidates)
+    else if (getBotCandidates.nonEmpty)
+      JihadistBot.goodThenFairThenPoorPriority(getBotCandidates).get
     else
-      JihadistBot.goodThenFairThenPoorPriority(getCandidates()).get
+      JihadistBot.goodThenFairThenPoorPriority(getCandidates).get
 
     addEventTarget(target)
     val m = game.getMuslim(target)

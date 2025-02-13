@@ -65,7 +65,7 @@ object Card_138 extends Card(138, "Intel Community", US, 2, NoRemove, NoLapsing,
   override
   def botWillPlayEvent(role: Role): Boolean = false // Bot treats this as unplayable
 
-  def getCadreCandidates() = countryNames(game.countries.filter(_.hasCadre))
+  def getCadreCandidates = countryNames(game.countries.filter(_.hasCadre))
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -80,10 +80,10 @@ object Card_138 extends Card(138, "Intel Community", US, 2, NoRemove, NoLapsing,
       // See Event Instructions table
       log("\nUS player does not inspect the Jihadist hand in the solo game.", Color.Event)
       val cadres = countryNames(game.countries filter (_.hasCadre))
-      if (getCadreCandidates().isEmpty)
+      if (getCadreCandidates.isEmpty)
         log("\nThere are no cadres on the map to remove.", Color.Event)
       else {
-        val target = askCountry("Select country with cadre: ", getCadreCandidates())
+        val target = askCountry("Select country with cadre: ", getCadreCandidates)
         addEventTarget(target)
         removeCadresFromCountry(target, 1)
       }

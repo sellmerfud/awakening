@@ -58,9 +58,9 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
 
   // Note: The code only allows 1 cadre marker per country.
   // I have since realized that this is incorrect.
-  def getCandidates() = countryNames(game.countries)
+  def getCandidates = countryNames(game.countries)
 
-  def getBotCandidates() = {
+  def getBotCandidates = {
     val isCandidate = if (game.botEnhancements)
       (c: Country) => !c.hasCadre && c.totalCells == 0 && !JihadistBot.isCadreRemovalCandidate(c)
     else
@@ -76,7 +76,7 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotCandidates().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getBotCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -107,9 +107,9 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
     )
 
     if (isHuman(role))
-      nextCadre(1, getCandidates())
-      else if (getBotCandidates().nonEmpty)
-        nextCadre(1, getBotCandidates())
+      nextCadre(1, getCandidates)
+      else if (getBotCandidates.nonEmpty)
+        nextCadre(1, getBotCandidates)
       else
         log(s"\nThe Jihadist Bot chooses to not place any cadres.", Color.Event)
   }

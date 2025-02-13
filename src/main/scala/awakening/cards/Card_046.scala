@@ -56,18 +56,18 @@ object Card_046 extends Card(46, "Sistani", US, 3, NoRemove, NoLapsing, NoAutoTr
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => m.isShiaMix && m.inRegimeChange && m.totalCells > 0)
   )
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   override
   def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
     case Jihadist => false
     case US =>
-      getCandidates()
+      getCandidates
         .map(game.getMuslim)
         .exists(m => m.governance == Fair && game.goodResources + m.resourceValue >= 12)
   }
@@ -84,9 +84,9 @@ object Card_046 extends Card(46, "Sistani", US, 3, NoRemove, NoLapsing, NoAutoTr
   override
   def executeEvent(role: Role): Unit = {
     val name = if (isHuman(role))
-      askCountry("Select Shia-Mix regime change country: ", getCandidates())
+      askCountry("Select Shia-Mix regime change country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
     
     improveGovernance(name, 1, canShiftToGood = true)
   }

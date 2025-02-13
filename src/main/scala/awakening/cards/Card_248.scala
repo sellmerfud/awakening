@@ -62,12 +62,12 @@ object Card_248 extends Card(248, "Patriotic Arab Democracies Movement", US, 1, 
     m.canTakeAwakeningOrReactionMarker &&
     !game.isCaliphateMember(m.name)
 
-  def getCandidates() = countryNames(game.muslims.filter(isCandidate))
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    lapsingEventNotInPlay(ArabWinter) && getCandidates().nonEmpty
+    lapsingEventNotInPlay(ArabWinter) && getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -81,9 +81,9 @@ object Card_248 extends Card(248, "Patriotic Arab Democracies Movement", US, 1, 
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry(s"Place an awakening marker in which country: ", getCandidates())
+      askCountry(s"Place an awakening marker in which country: ", getCandidates)
     else
-      USBot.markerAlignGovTarget(getCandidates()).get
+      USBot.markerAlignGovTarget(getCandidates).get
     println()
     addEventTarget(target)
     addAwakeningMarker(target)

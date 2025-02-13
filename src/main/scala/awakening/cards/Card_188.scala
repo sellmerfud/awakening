@@ -64,7 +64,7 @@ object Card_188 extends Card(188, "ISIL", Jihadist, 3, Remove, NoLapsing, NoAuto
       !m.isGood         &&
       m.totalTroopsAndMilitia <= m.totalCells
 
-  def getCandidates() = countryNames(game.getMuslims(Iraq::Syria::Nil).filter(isCandidate))
+  def getCandidates = countryNames(game.getMuslims(Iraq::Syria::Nil).filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -75,7 +75,7 @@ object Card_188 extends Card(188, "ISIL", Jihadist, 3, Remove, NoLapsing, NoAuto
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    getCandidates().nonEmpty || game.prestige > 1
+    getCandidates.nonEmpty || game.prestige > 1
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -83,10 +83,10 @@ object Card_188 extends Card(188, "ISIL", Jihadist, 3, Remove, NoLapsing, NoAuto
   override
   def executeEvent(role: Role): Unit = {
 
-    if (getCandidates().isEmpty && game.prestige == 1)
+    if (getCandidates.isEmpty && game.prestige == 1)
       log("The event has no effect.", Color.Event)
     else {
-      for (target <- getCandidates()) {
+      for (target <- getCandidates) {
         addEventTarget(target)
         startCivilWar(target)
       }

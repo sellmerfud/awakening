@@ -61,7 +61,7 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
   override
   def eventConditionsMet(role: Role) = true
 
-  def getJihadistCandidates() = List(Iraq, Turkey)
+  def getJihadistCandidates = List(Iraq, Turkey)
     .filter { name =>
       val m = game.getMuslim(name)
       !m.isPoor && !m.isIslamistRule
@@ -79,7 +79,7 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
       game.getMuslim(Iraq).isGood ||
       game.getMuslim(Iraq).isFair
     case Jihadist =>
-      getJihadistCandidates().nonEmpty
+      getJihadistCandidates.nonEmpty
   }
 
   def enhBotTarget(names: List[String]): Option[String] = {
@@ -88,7 +88,7 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
       JihadistBot.HighestResourcePriority,
     )
     JihadistBot.botLog("Find \"Kurdistan\" target", Color.Debug)
-    JihadistBot.topPriority(game.getMuslims(getJihadistCandidates()), priorities).map(_.name)
+    JihadistBot.topPriority(game.getMuslims(getJihadistCandidates), priorities).map(_.name)
   }
 
   // Carry out the event for the given role.
@@ -107,13 +107,13 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
                             map game.getMuslim
                             filter (m => !(m.isPoor || m.isIslamistRule)))
       // candidates could be empty if Iraq is Poor and Turkey just tested to Poor
-      if (getJihadistCandidates().nonEmpty) {
+      if (getJihadistCandidates.nonEmpty) {
         val name = if (isHuman(role))
-          askCountry("Select country degrade governance: ", getJihadistCandidates())
+          askCountry("Select country degrade governance: ", getJihadistCandidates)
         else if (game.botEnhancements)
-          enhBotTarget(getJihadistCandidates()).get
+          enhBotTarget(getJihadistCandidates).get
         else
-          JihadistBot.alignGovTarget(getJihadistCandidates()).get
+          JihadistBot.alignGovTarget(getJihadistCandidates).get
 
         addEventTarget(name)
         testCountry(name)  // If Iraq it may not have been tested

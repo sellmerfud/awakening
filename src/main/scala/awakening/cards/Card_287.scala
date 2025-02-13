@@ -59,23 +59,23 @@ object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemo
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getReactionCandidates() = countryNames(
+  def getReactionCandidates = countryNames(
     game.muslims.filter(m => m.canTakeAwakeningOrReactionMarker && distance(Lebanon, m.name) <= 2)
   )
 
-   def getBesiegedRegimeCandidates() = countryNames(
+   def getBesiegedRegimeCandidates = countryNames(
      game.muslims.filter(m => m.canTakeBesiegedRegimeMarker && distance(Lebanon, m.name) <= 2)
    )
 
-   def getCellCandidates() = countryNames(
+   def getCellCandidates = countryNames(
      game.countries.filter(c => distance(Lebanon, c.name) <= 2)
    )
 
-   def canPlaceReaction = lapsingEventNotInPlay(ArabWinter) && getReactionCandidates().nonEmpty
+   def canPlaceReaction = lapsingEventNotInPlay(ArabWinter) && getReactionCandidates.nonEmpty
 
-   def canPlaceBesieged = getBesiegedRegimeCandidates().nonEmpty
+   def canPlaceBesieged = getBesiegedRegimeCandidates.nonEmpty
 
-   def canPlaceCell = game.cellsAvailable > 0 && getCellCandidates().nonEmpty
+   def canPlaceCell = game.cellsAvailable > 0 && getCellCandidates.nonEmpty
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -104,17 +104,17 @@ object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemo
 
       askMenu("Choose one:", choices).headOption match {
         case Some("reaction") =>
-          val target = askCountry("Place reaction marker in which country: ", getReactionCandidates())
+          val target = askCountry("Place reaction marker in which country: ", getReactionCandidates)
           addEventTarget(target)
           addReactionMarker(target)
 
         case Some("besieged") =>
-          val target = askCountry("Place besieged regime marker in which country: ", getBesiegedRegimeCandidates())
+          val target = askCountry("Place besieged regime marker in which country: ", getBesiegedRegimeCandidates)
           addEventTarget(target)
           addBesiegedRegimeMarker(target)
 
         case Some(_) =>
-          val target = askCountry("Place cell in which country: ", getCellCandidates())
+          val target = askCountry("Place cell in which country: ", getCellCandidates)
           addEventTarget(target)
           addSleeperCellsToCountry(target, 1)
 
@@ -126,17 +126,17 @@ object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemo
     else {
       // Bot will place a reaction marker if possible, then besieged regime, then cell
       if (canPlaceReaction) {
-        val target = JihadistBot.markerTarget(getReactionCandidates()).get
+        val target = JihadistBot.markerTarget(getReactionCandidates).get
         addEventTarget(target)
         addReactionMarker(target)
       }
       else if (canPlaceBesieged) {
-        val target = JihadistBot.markerTarget(getBesiegedRegimeCandidates()).get
+        val target = JihadistBot.markerTarget(getBesiegedRegimeCandidates).get
         addEventTarget(target)
         addBesiegedRegimeMarker(target)
       }
       else {
-        val target = JihadistBot.cellPlacementPriority(false)(getCellCandidates()).get
+        val target = JihadistBot.cellPlacementPriority(false)(getCellCandidates).get
         addEventTarget(target)
         addSleeperCellsToCountry(target, 1)
       }

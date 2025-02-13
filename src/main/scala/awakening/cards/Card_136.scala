@@ -52,7 +52,7 @@ object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLap
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates() = countryNames(
+  def getCandidates = countryNames(
     game.muslims.filter(m => !m.isIslamistRule && m.totalCells > 0)
   )
 
@@ -62,7 +62,7 @@ object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLap
   def eventRemovesLastCell(): Boolean =
     // Must activate a sleeper if present, then remove any two others
     // so only successful if there is no sleeper to flip
-    getCandidates() match {
+    getCandidates match {
       case name::Nil =>
         game.getMuslim(name).sleeperCells == 0 && USBot.wouldRemoveLastCell(name, 2)
       case _ => false
@@ -77,14 +77,14 @@ object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLap
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    getCandidates().nonEmpty || game.funding > 1
+    getCandidates.nonEmpty || game.funding > 1
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val candidates = getCandidates()
+    val candidates = getCandidates
     if (candidates.isEmpty && game.funding == 1)
       log("\nThe event has no effect.", Color.Event)
     else {
