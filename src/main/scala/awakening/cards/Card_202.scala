@@ -106,7 +106,7 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
     if (isHuman(role)) {
       askMenu("Choose one:", choices).head match {
         case "reserves" =>
-          clearReserves(oppositeRole(role))
+          clearReserves(role.opponent)
           addToReserves(role, resValue)
 
         case "posture"  =>
@@ -133,7 +133,7 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
       // See Event Instructions table
       getBotPostureCandidates(role) match {
         case Nil =>
-          clearReserves(oppositeRole(role))
+          clearReserves(role.opponent)
           addToReserves(role, resValue)
 
         case candidates if role == US =>

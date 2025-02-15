@@ -75,7 +75,7 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
       log(s"\nTake the top two cards from the $Jihadist hand.", Color.Event)
       log(s"Keep one and return the other to the top of the $Jihadist hand.")
       // This will decrease the Jihadist hand size by 2
-      val cards = askCardsDrawnFull(US, 2, List(FromRole(oppositeRole(role))))
+      val cards = askCardsDrawnFull(US, 2, List(FromRole(role.opponent)))
       // In Avenger is drawn then  it will have been activated and automatically
       // placed in the discard pile leaveing us with only one card.
       sealed trait CardOption

@@ -65,14 +65,13 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
     game.eventsLapsing.nonEmpty
 
   def bowlingGreenBotMarkers(role: Role): List[String] = {
-    val opponent = oppositeRole(role)
     val globalMarkers = game.markers
-      .filter(GlobalMarkers(_) == opponent)
+      .filter(GlobalMarkers(_) == role.opponent)
     val countryMarkers =
       game.countries
       .filterNot(c => game.isCaliphateMember(c.name))
       .flatMap(_.markers)
-      .filter(CountryMarkers(_) == opponent)
+      .filter(CountryMarkers(_) == role.opponent)
     (globalMarkers ::: countryMarkers).sorted.distinct
   }
 

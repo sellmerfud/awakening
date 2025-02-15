@@ -153,7 +153,13 @@ object LabyrinthAwakening {
     override def assocString = toString()
   }
 
-  sealed trait Role extends CardAssociation
+  sealed trait Role extends CardAssociation {
+    def opponent: Role = this match {
+      case US => Jihadist
+      case Jihadist => US
+    }
+  }
+
   case object US extends Role
   {
     override def toString() = "US"
@@ -180,8 +186,6 @@ object LabyrinthAwakening {
 
   def isBot(role: Role) = (role == game.botRole)
   def isHuman(role: Role) = (role == game.humanRole)
-
-  def oppositeRole(role: Role) = if (role == US) Jihadist else US
 
   // US
   val OffGuard  = BotDifficulty(1, "Off Guard", "Standard rules")
@@ -242,7 +246,7 @@ object LabyrinthAwakening {
   def enhBotEasy()   = game.botEnhancements && game.enhBotDifficulty == EnhBotEasy
   def enhBotMedium() = game.botEnhancements && game.enhBotDifficulty == EnhBotMedium
   def enhBotHard()   = game.botEnhancements && game.enhBotDifficulty == EnhBotHard
-  
+
   trait Plot {
     val number: Int        // Dice rolled against governance in muslim countries
     val opsToPlace: Int    // Min number of ops needed to place this plot.
@@ -3243,7 +3247,7 @@ object LabyrinthAwakening {
   // Ask for 1 required card drawn from the Opponents hand
   // Will return None if Avenger was drawn triggered and discarded
   def askCardDrawnFromOpponent(role: Role, optPrompt: Option[String] = None, except: Set[Int] = Set.empty): Option[Int] = {
-    askCardsDrawnFull( role, 1, List(FromRole(oppositeRole(role))), optPrompt = optPrompt, except = except).head.toOption
+    askCardsDrawnFull( role, 1, List(FromRole(role.opponent)), optPrompt = optPrompt, except = except).head.toOption
   }
 
 
@@ -4293,7 +4297,7 @@ object LabyrinthAwakening {
     logAdjustment(s"$countryName: $attributeName", oldValue, newValue)
 
   def logCardPlay(player: Role, card: Card, opsOnly: Boolean = false, allowOpponentTrigger: Boolean = true): Unit = {
-    val opponent = oppositeRole(player)
+    val opponent = player.opponent
     val fakeNews = if (lapsingEventInPlay(FakeNews))
      """, but will be cancelled by "Fake News""""
     else
@@ -7831,7 +7835,7 @@ object LabyrinthAwakening {
 
   // ask which side the user wishes to play
   def askEnhBotDifficulty(bot: Role): EnhBotDifficulty = {
-    val human = oppositeRole(bot)
+    val human = bot.opponent
     val easyDesc = Seq(
       s"$human associated events are triggered during the $bot turn when the",
       s"event conditions are met.  When an event triggers, the # of Ops",

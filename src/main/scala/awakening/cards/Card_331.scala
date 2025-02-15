@@ -108,8 +108,8 @@ object Card_331 extends Card(331, "JASTA", Unassociated, 1, Remove, NoLapsing, N
     else
       log(s"\nThe $role does not have a card to discard.", Color.Event)
 
-    log(s"\nIn the solitaire game you may not inspect the ${oppositeRole(role)} Bot's hand", Color.Info)
-    log(s"so the ${oppositeRole(role)} Bot does not discard andy cards.", Color.Info)
+    log(s"\nIn the solitaire game you may not inspect the ${role.opponent} Bot's hand", Color.Info)
+    log(s"so the ${role.opponent} Bot does not discard andy cards.", Color.Info)
 
   }
 }
