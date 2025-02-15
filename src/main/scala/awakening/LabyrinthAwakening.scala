@@ -128,6 +128,10 @@ object LabyrinthAwakening {
   }
 
   object GameMode {
+    val ALL = List(LabyrinthMode, AwakeningMode, ForeverWarMode)
+    implicit val GameModeOrdering: Ordering[GameMode] =
+      Ordering.by { m: GameMode => m.orderValue }
+
     def apply(name: String): GameMode = name.toLowerCase match {
       case "labyrinth"   => LabyrinthMode
       case "awakening"   => AwakeningMode
@@ -135,12 +139,10 @@ object LabyrinthAwakening {
       case _ => throw new IllegalArgumentException(s"Invalid game mode name: $name")
     }
 
-    val ALL = List(LabyrinthMode, AwakeningMode, ForeverWarMode)
-
     def next(current: GameMode) = ALL.dropWhile(_ != current).headOption
+    
   }
 
-  implicit val GameModeOrdering: Ordering[GameMode] = Ordering.by { m: GameMode => m.orderValue }
 
 
   sealed trait CardAssociation {
@@ -176,34 +178,10 @@ object LabyrinthAwakening {
     val key = name.toLowerCase
   }
 
-  sealed abstract class EnhBotDifficulty(val name: String) {
-    override def toString() = name
-  }
-
-  case object EnhBotEasy extends EnhBotDifficulty("easy")
-  case object EnhBotMedium extends EnhBotDifficulty("medium")
-  case object EnhBotHard extends EnhBotDifficulty("hard")
-
-  object EnhBotDifficulty {
-    lazy val All = List(EnhBotEasy, EnhBotMedium, EnhBotHard)
-    def fromStringOpt(name: String): Option[EnhBotDifficulty] = All.find(_.name == name)
-    def fromString(name: String): EnhBotDifficulty =
-      fromStringOpt(name).getOrElse {
-        throw new IllegalArgumentException(s"Invalid Enhance Bot difficulty: $name")
-      }
-  }
-
-  def enhBotEasy()   = game.botEnhancements && game.enhBotDifficulty == EnhBotEasy
-  def enhBotMedium() = game.botEnhancements && game.enhBotDifficulty == EnhBotMedium
-  def enhBotHard()   = game.botEnhancements && game.enhBotDifficulty == EnhBotHard
-
   def isBot(role: Role) = (role == game.botRole)
   def isHuman(role: Role) = (role == game.humanRole)
 
   def oppositeRole(role: Role) = if (role == US) Jihadist else US
-
-
-  implicit val BotDifficultyOrdering: Ordering[BotDifficulty] = Ordering.by { x: BotDifficulty => x.order }
 
   // US
   val OffGuard  = BotDifficulty(1, "Off Guard", "Standard rules")
@@ -222,6 +200,9 @@ object LabyrinthAwakening {
   val Virulent   = BotDifficulty(6, "Virulent"  , "Ignore all DRM penalties")
 
   object BotDifficulty {
+    implicit val BotDifficultyOrdering: Ordering[BotDifficulty] = 
+      Ordering.by { x: BotDifficulty => x.order }
+
     def apply(name: String): BotDifficulty = name.toLowerCase match {
       case OffGuard.key   => OffGuard
       case Competent.key  => Competent
@@ -239,6 +220,29 @@ object LabyrinthAwakening {
     }
   }
 
+    sealed abstract class EnhBotDifficulty(val name: String) {
+    override def toString() = name
+  }
+
+  case object EnhBotEasy extends EnhBotDifficulty("easy")
+  case object EnhBotMedium extends EnhBotDifficulty("medium")
+  case object EnhBotHard extends EnhBotDifficulty("hard")
+
+  object EnhBotDifficulty {
+    lazy val All = List(EnhBotEasy, EnhBotMedium, EnhBotHard)
+
+    def fromStringOpt(name: String): Option[EnhBotDifficulty] = All.find(_.name == name)
+
+    def fromString(name: String): EnhBotDifficulty =
+      fromStringOpt(name).getOrElse {
+        throw new IllegalArgumentException(s"Invalid Enhance Bot difficulty: $name")
+      }
+  }
+
+  def enhBotEasy()   = game.botEnhancements && game.enhBotDifficulty == EnhBotEasy
+  def enhBotMedium() = game.botEnhancements && game.enhBotDifficulty == EnhBotMedium
+  def enhBotHard()   = game.botEnhancements && game.enhBotDifficulty == EnhBotHard
+  
   trait Plot {
     val number: Int        // Dice rolled against governance in muslim countries
     val opsToPlace: Int    // Min number of ops needed to place this plot.
@@ -281,7 +285,8 @@ object LabyrinthAwakening {
   case class PlotOnMap(plot: Plot, backlashed: Boolean = false) {
     override def toString() = if (backlashed) s"${plot.name} (backlashed)" else plot.name
   }
-  implicit val PlotOnMapOrdering: Ordering[PlotOnMap] = Ordering.by { x: PlotOnMap => x.plot }
+  implicit val PlotOnMapOrdering: Ordering[PlotOnMap] =
+    Ordering.by { x: PlotOnMap => x.plot }
   val NoRegimeChange    = "None"
   val GreenRegimeChange = "Green"
   val TanRegimeChange   = "Tan"
