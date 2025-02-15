@@ -8514,15 +8514,18 @@ object LabyrinthAwakening {
 
   def getActiveRole(): Role = {
     game.turnActions
-      .find(_.isInstanceOf[EndOfActionPhase])
-      .map(a => oppositeRole(a.asInstanceOf[EndOfActionPhase].role))
+      .collect { case eoap: EndOfActionPhase => eoap.role.opponent }
+      .headOption
       .getOrElse(Jihadist)
   }
+
   def getCurrentPhaseCardPlays(): List[CardPlay] =
     game.turnActions
-      .takeWhile(a => !a.isInstanceOf[EndOfActionPhase])
-      .filter(_.isInstanceOf[CardPlay])
-      .map(_.asInstanceOf[CardPlay])
+      .takeWhile {
+        case _: EndOfActionPhase => false
+        case _ => true
+      }
+      .collect { case a: CardPlay => a }
 
   def numCardsPlayedInCurrentPhase() = {
     getCurrentPhaseCardPlays()
