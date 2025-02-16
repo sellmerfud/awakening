@@ -65,7 +65,13 @@ object Card_058 extends Card(58, "Al-Anbar", Jihadist, 2, Remove, NoLapsing, NoA
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if [no IR on board] or [Iraq not Adversary]
+    !game.muslims.exists(_.isIslamistRule) ||
+    !game.getMuslim(Iraq).isAdversary
+  }
+  else
+    true  // Standard Bot always plays this
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

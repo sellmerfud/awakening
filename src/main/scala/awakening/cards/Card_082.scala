@@ -63,11 +63,22 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
+  def unmarkedNonMuslimCandidates = if (game.usPosture == Hard && game.gwotPenalty == 0)
+    game.nonMuslims.filter(_.isUntested).map(_.name)
+  else
+    Nil
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // If US hard and no GWOT penalty: Unmarked non-Muslim, using the same priorities
+    // as with EvO/GWOT travel: 1.highest Gov, 2. Caucasus, 3. Russia, 4.Philippines, 5. Thailand, 6. Schengen, 7. random
+    // Then, only playable if at least 3 cells on track: Use Recruit Priorities
+    unmarkedNonMuslimCandidates.nonEmpty || game.cellsAvailable > 2
+  }
+  else
     game.cellsAvailable > 0
 
   // Carry out the event for the given role.
@@ -77,6 +88,30 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   def executeEvent(role: Role): Unit = {
     var targets = if (isHuman(role))
       askCountries(3, getCandidates)
+    else if (game.botEnhancements) {
+
+      def nextTarget(targets: List[String]): List[String] = {
+        val nonMuslim = unmarkedNonMuslimCandidates
+          .filterNot(targets.contains)
+          .map(game.getCountry)
+        val forRecruit = getCandidates
+          .filterNot(targets.contains)
+          .map(game.getCountry)
+        val maxTargets = game.cellsAvailable min 3
+
+        if (targets.size < maxTargets && (nonMuslim.nonEmpty || forRecruit.nonEmpty)) {
+          import JihadistBot.EnhancedEvoTable.TravelToUnmarkedNonMuslim.priorities
+          import JihadistBot.{ topPriority, recruitAndTravelToPriorities }
+          if (nonMuslim.nonEmpty)
+            nextTarget(topPriority(nonMuslim, priorities).map(_.name).get::targets)
+          else
+            nextTarget(topPriority(forRecruit, recruitAndTravelToPriorities).map(_.name).get::targets)
+        }
+        else
+          targets
+      }
+      nextTarget(Nil)
+    }
     else {
       // See Event Instructions table
       val nonIR = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))

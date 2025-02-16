@@ -60,18 +60,30 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    getCandidates.size >= 2
+  def eventConditionsMet(role: Role) = getCandidates.size >= 2
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if any IR on board and 3+ cells available
+    game.hasMuslim(_.isIslamistRule) && game.cellsAvailable > 2
+  }
+  else
+    game.cellsAvailable > 0
+
+  private def adjacentToMjp(candidates: List[String]): List[String] =
+    (game.botEnhancements, JihadistBot.PriorityCountries.majorJihadPriority) match {
+      case (true, Some(mjp)) => candidates.filter(name => areAdjacent(name, mjp))
+      case _ => Nil
+    }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
+  //
+  // Enhanced Bot gived priority to candidates that are adjacent to the Majority Jihad Priority
   override
   def executeEvent(role: Role): Unit = {
     val maxPerTarget = if (game.numIslamistRule > 0) 2 else 1
@@ -84,14 +96,15 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
       else {
         val (target, numCells) = if (isHuman(role)) {
           val num = existingTargets.size + 1
-          val name = askCountry(s"\nSelect ${ordinal(num)} unmarked Muslim country: ", candidates)
-          val numCells = maxPerTarget min available
-          (name, numCells)
+          val target = askCountry(s"\nSelect ${ordinal(num)} unmarked Muslim country: ", candidates)
+          (target, maxPerTarget min available)
         }
         else {
-          var name = JihadistBot.recruitTravelToPriority(candidates).get
-          val numCells = maxPerTarget min available
-          (name, numCells)
+          val target = adjacentToMjp(candidates) match {
+            case Nil    => JihadistBot.recruitTravelToPriority(candidates).get
+            case adjMjp => JihadistBot.recruitTravelToPriority(adjMjp).get
+          }
+          (target, maxPerTarget min available)
         }
 
         getTargets(available - numCells, candidates.filterNot(_ == target), existingTargets :+ Target(target, numCells))

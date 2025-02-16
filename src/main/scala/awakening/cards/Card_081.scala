@@ -62,11 +62,18 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
+  def withAidCandidates = getCandidates
+    .filter(name => game.getMuslim(name).aidMarkers > 0)
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = {
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if [any RC has AID (priority to highest Resource)] or 3+ cells available
+    withAidCandidates.nonEmpty || game.cellsAvailable > 2
+  }
+  else {
     val haveTarget = game.getMuslims(getCandidates)
       .exists (m => m.aidMarkers > 0 || !m.besiegedRegime)
 
@@ -104,15 +111,26 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
   }
   else {  // Bot
     val numCells = 5 min game.cellsAvailable
-    val regimeChange = game.muslims.filter(_.inRegimeChange)
-    val withAid = game.muslims.filter(m => m.inRegimeChange && m.aidMarkers > 0)
-    val notBesieged = game.muslims.filter(m => m.inRegimeChange && !m.besiegedRegime)
-    val target = if (game.cellsAvailable > 0)
-      JihadistBot.cellPlacementPriority(numCells >= 3)(countryNames(regimeChange)).get
-    else if (withAid.nonEmpty)
-      JihadistBot.markerTarget(countryNames(withAid)).get
+    val target = if (game.botEnhancements) {
+      if (withAidCandidates.nonEmpty)
+        withAidCandidates
+          .sortBy(name => -game.getMuslim(name).resourceValue) // Highest resource first
+          .head
       else
-      JihadistBot.minorJihadTarget(countryNames(notBesieged)).get
+        JihadistBot.cellPlacementPriority(numCells >= 3)(getCandidates).get
+    }
+    else {
+      val regimeChange = game.muslims.filter(_.inRegimeChange)
+      val withAid = game.muslims.filter(m => m.inRegimeChange && m.aidMarkers > 0)
+      val notBesieged = game.muslims.filter(m => m.inRegimeChange && !m.besiegedRegime)
+
+      if (game.cellsAvailable > 0)
+        JihadistBot.cellPlacementPriority(numCells >= 3)(countryNames(regimeChange)).get
+      else if (withAid.nonEmpty)
+        JihadistBot.markerTarget(countryNames(withAid)).get
+      else
+        JihadistBot.minorJihadTarget(countryNames(notBesieged)).get
+    }
 
     addEventTarget(target)
     val m = game.getMuslim(target)

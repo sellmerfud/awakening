@@ -38,6 +38,7 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -65,10 +66,19 @@ object Card_064 extends Card(64, "Hariri Killed", Jihadist, 2, Remove, NoLapsing
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = {
+    // Enhanced Bot will play if:
+    //  [Syria Good] or [Syria Fair and not Adversary] or [Syria Fair Adversary and IR*=4]
+    // Standard Bot will play if effective.
     val lebanon = game.getMuslim(Lebanon)
     val syria = game.getMuslim(Syria)
 
-    lebanon.isUntested || !syria.isAdversary || syria.isGood || syria.isFair
+    if (game.botEnhancements) {
+      syria.isGood ||
+      (syria.isFair && !syria.isAdversary) ||
+      (syria.isFair && syria.isAdversary && JihadistBot.currentIRResources == 4)
+    }
+    else
+      lebanon.isUntested || !syria.isAdversary || syria.isGood || syria.isFair
   }
 
   // Carry out the event for the given role.

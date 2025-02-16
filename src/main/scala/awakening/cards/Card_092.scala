@@ -66,7 +66,10 @@ object Card_092 extends Card(92, "Saddam", Jihadist, 3, NoRemove, NoLapsing, NoA
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.funding < 9
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.funding < 8
+  else
+    game.funding < 9
 
 
   // Carry out the event for the given role.

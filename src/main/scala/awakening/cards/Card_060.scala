@@ -62,7 +62,13 @@ object Card_060 extends Card(60, "Bhutto Shot", Jihadist, 2, Remove, NoLapsing, 
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if [Benazir Bhutto marker active] or [no IR within 1 country of Pakistan)
+    countryEventInPlay(Pakistan, BenazirBhutto) ||
+    !(game.getMuslim(Pakistan) :: game.adjacentMuslims(Pakistan)).exists(_.isIslamistRule)
+  }
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

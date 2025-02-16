@@ -66,7 +66,10 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.availablePlots.nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.availablePlots.nonEmpty && JihadistBot.enhMartyrdomKSMTarget(getCandidates, martyrdom = true).nonEmpty
+  else
+    game.availablePlots.nonEmpty
 
 
   // Carry out the event for the given role.
@@ -75,21 +78,30 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
   override
   def executeEvent(role: Role): Unit = {
     val candidates = getCandidates
+    lazy val enhBotTarget = JihadistBot.enhMartyrdomKSMTarget(getCandidates, martyrdom = true)
     if (candidates.nonEmpty) {
       val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
         val target = askCountry("Select country: ", candidates)
         val cell = askCells(target, 1, sleeperFocus = false)
         (target, cell, askAvailablePlots(2, ops = 3))
       }
-      else {
-        // See Event Instructions table
-        val target = JihadistBot.plotPriority(candidates).get
-        addEventTarget(target)
-        val c = game getCountry target
+      else if (game.botEnhancements && enhBotTarget.nonEmpty) {
+        // The enhBotTarget will only come up empty, if we were triggered
+        // during the US turn.  Fall back to normal Bot code.
+        val c = game.getCountry(enhBotTarget.get)
         val cell = if (c.activeCells > 0) (1, 0, false)
                    else if (c.hasSadr)    (0, 0, true)
                    else                   (0, 1, false)
-        (target, cell, JihadistBot.preparePlots(game.availablePlots) take 2)
+        (enhBotTarget.get, cell, JihadistBot.preparePlots(game.availablePlots).take(2))
+      }
+      else {
+        // See Event Instructions table
+        val target = JihadistBot.plotPriority(candidates).get
+        val c = game.getCountry(target)
+        val cell = if (c.activeCells > 0) (1, 0, false)
+                   else if (c.hasSadr)    (0, 0, true)
+                   else                   (0, 1, false)
+        (target, cell, JihadistBot.preparePlots(game.availablePlots)take(2))
       }
 
       addEventTarget(target)

@@ -65,7 +65,14 @@ object Card_057 extends Card(57, "Abu Sayyaf", Jihadist, 2, Remove, NoLapsing, N
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if cell available and US hard and Phillipines Unmarked
+    game.cellsAvailable > 0 &&
+    game.usPosture == Hard &&
+    game.getCountry(Philippines).isUntested
+  }
+  else
+    true  // Normal Bot always plays this
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

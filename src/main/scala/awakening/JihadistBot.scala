@@ -211,6 +211,96 @@ object JihadistBot extends BotHelpers {
     PriorityCountries.autoRecruitPriority
   }
 
+
+  // Return the best candidate for replacing a cell with a plot.
+  // This is used by the Martyrdom Operations and KSM events.
+  // Priorities
+  // 1. US
+  // 2. Good Muslim, priority to highest Resource, then with troops
+  // 3. Fair Auto-Recruit Muslim, priority to RC
+  // 4. If [Abu Sayyaf marker present] and [Prestige>low and/or Funding<7]: Phillipines
+  // 5. If [Prestige>low]: Poor Muslim with troops, priority to RC, then AID
+  // 6. If [US hard and Funding <7]: non-Muslim, priority to Schengen, then hard, then highest Gov
+  // 7. If [US hard and no GWOT penalty]: hard non-Muslim, priority to Schengen, then highest Gov
+  // 8. If [US soft and Funding <7]: non-Muslim, priority to soft, then highest Gov
+  // 9. Fair 3 Resource Muslim
+  // 10. Only Martyrdom Operation: If [Funding <8]: Poor Muslim, priority to Troops, then AID, then Adversary, then Neutral.
+  // 11. Else unplayable
+
+  def enhMartyrdomKSMTarget(candidates: List[String], martyrdom: Boolean): Option[String] = {
+    lazy val muslims = candidates
+      .collect { case name if game.isMuslim(name) => game.getMuslim(name) }
+
+    lazy val goodMuslims = muslims.filter(_.isGood)
+
+    lazy val fairAutoRecruits = muslims.filter(m => m.isFair && m.autoRecruit)
+    
+    lazy val phillipinesOK =
+      game.getCountry(Philippines).hasMarker(AbuSayyaf) &&
+      (game.prestige > 3 || game.funding < 7)
+
+    lazy val poorMuslimsWithTroops = muslims.filter(m => m.isPoor && m.totalTroops > 0)
+
+    lazy val nonMuslims = candidates
+      .collect { case name if game.isNonMuslim(name) => game.getNonMuslim(name) }
+
+    lazy val hardNonMuslims = nonMuslims.filter(_.isHard)
+
+    lazy val fair3ResourceMuslimes = muslims.filter(m => m.isFair && m.resourceValue >= 3)
+
+    lazy val poorMuslims = muslims.filter(_.isPoor)
+
+    if (candidates.isEmpty)
+      None
+    else if (candidates.contains(UnitedStates))
+      Some(UnitedStates)
+    else if (goodMuslims.nonEmpty) {
+      val priorities = List(HighestResourcePriority, WithTroopsPriority)
+      topPriority(goodMuslims, priorities).map(_.name)
+    }
+    else if (fairAutoRecruits.nonEmpty) {
+      val priorities = List(RegimeChangePriority)
+      topPriority(fairAutoRecruits, priorities).map(_.name)
+    }
+    else if (phillipinesOK)
+      Some(Philippines)
+    else if (game.prestige > 3 && poorMuslimsWithTroops.nonEmpty) {
+      val priorities = List(RegimeChangePriority, WithAidPriority)
+      topPriority(poorMuslimsWithTroops, priorities).map(_.name)
+    }
+    else if (game.usPosture == Hard && game.funding < 7 && nonMuslims.nonEmpty) {
+      val priorities = List(
+        new CriteriaFilter("Schengen", nonMuslimTest(_.isSchengen)),
+        new CriteriaFilter("Posture is Hard", nonMuslimTest(_.isHard)),
+        new HighestScorePriority("Highest Governance Value", _.governance))
+      topPriority(nonMuslims, priorities).map(_.name)
+    }
+    else if (game.usPosture == Hard && game.gwotPenalty == 0 && hardNonMuslims.nonEmpty) {
+      val priorities = List(
+        new CriteriaFilter("Schengen", nonMuslimTest(_.isSchengen)),
+        new HighestScorePriority("Highest Governance Value", _.governance))
+      topPriority(hardNonMuslims, priorities).map(_.name)
+    }
+    else if (game.usPosture == Soft && game.funding < 7 && nonMuslims.nonEmpty) {
+      val priorities = List(
+        new CriteriaFilter("Posture is Soft", nonMuslimTest(_.isSoft)),
+        new HighestScorePriority("Highest Governance Value", _.governance))
+      topPriority(nonMuslims, priorities).map(_.name)
+    }
+    else if (fair3ResourceMuslimes.nonEmpty)
+      topPriority(fair3ResourceMuslimes, plotPriorities).map(_.name)
+    else if (martyrdom && game.funding < 8 && poorMuslims.nonEmpty) {
+      val priorities = List(
+        WithTroopsPriority,
+        WithAidPriority,
+        AdversaryPriority,
+        NeutralPriority)
+      topPriority(poorMuslims, priorities).map(_.name)
+    }
+    else
+      None
+  }
+
   // The Enhanced Bot uses its current IR resources score
   // to make some decisions about certain priorities.
   //
@@ -468,6 +558,8 @@ object JihadistBot extends BotHelpers {
   // 40. Oil Exporter
   val OilExporterPriority = new CriteriaFilter("Oil exporter", muslimTest(_.oilExporter))
 
+  val RegimeChangePriority = new CriteriaFilter("Regime Change", muslimTest(_.inRegimeChange))
+  
   // Used by the Enh Bot.  Uses unmodified printed resource value
   // exception: Iran with Tehran-Beirut Land Corridor marker counts a Res=3
   val HighestPrintedResourcePriority = new HighestScorePriority(
@@ -480,6 +572,11 @@ object JihadistBot extends BotHelpers {
   val PoorOrUntested2PlusResources = new CriteriaFilter(
     "Poor/Untested Muslim with 2+ resources*",
     muslimTest(m => (m.isPoor || m.isUntested) && enhBotResourceValue(m) >= 2)
+  )
+
+  val HighestGovernance = new HighestScorePriority(
+    "Highest Governance",
+    muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)
   )
 
   val HighestCellsMinusTandM = new HighestScorePriority(
@@ -1351,7 +1448,7 @@ object JihadistBot extends BotHelpers {
     }
 
     object TravelToUnmarkedNonMuslim extends OperationDecision {
-      val selectionPriorities = List(
+      val priorities = List(
         new HighestScorePriority("Highest Governance Value", _.governance),
         new CriteriaFilter("Caucasus", _.name == Caucasus),
         new CriteriaFilter("Russia", _.name == Russia),
@@ -1384,11 +1481,11 @@ object JihadistBot extends BotHelpers {
             case Nil =>
               adjacentOnly = false
               botLog("No candidates can be reached by an adjacent traveling cell")
-              designatedTarget = topPriority(candidates, selectionPriorities).map(_.name)
+              designatedTarget = topPriority(candidates, priorities).map(_.name)
             case _ =>
                 adjacentOnly = true
                 botLog("Considering only targets that can be reached by an adjacent traveling cell")
-              designatedTarget = topPriority(adjacentCandidates, selectionPriorities).map(_.name)
+              designatedTarget = topPriority(adjacentCandidates, priorities).map(_.name)
           }  
           true
         }

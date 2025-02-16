@@ -62,7 +62,7 @@ object Card_049 extends Card(49, "Al-Ittihad al-Islami", Jihadist, 1, Remove, No
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
+  def botWillPlayEvent(role: Role): Boolean = !game.botEnhancements && game.cellsAvailable > 0
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

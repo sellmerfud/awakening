@@ -39,6 +39,7 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
+import awakening.cards.Card_107.enhBotTarget
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -82,6 +83,9 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => true
+    case Jihadist if game.botEnhancements => 
+      game.availablePlots.nonEmpty &&
+      JihadistBot.enhMartyrdomKSMTarget(getJihadistCandidates, martyrdom = false).nonEmpty
     case Jihadist => game.availablePlots.nonEmpty
   }
 
@@ -99,11 +103,21 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
       log("\nThe US player draws 2 cards", Color.Event)
       askMultipleCardsDrawnFromDrawPile(role, 2)
 
-    case Jihadist if game.availablePlots.nonEmpty =>
+    case Jihadist if game.availablePlots.isEmpty =>
+      log("\nThere are no available plots. The event has no effect.", Color.Event)
+
+    case Jihadist =>
+      lazy val enhBotTarget = if (game.botEnhancements)
+        JihadistBot.enhMartyrdomKSMTarget(getJihadistCandidates, martyrdom = false)
+      else
+        None
+
       val (name, plot) = if (isHuman(role)) {
         val name = askCountry("Select country: ", getJihadistCandidates)
         (name, askAvailablePlots(1, ops = 3).head)
       }
+      else if (enhBotTarget.nonEmpty)
+        (enhBotTarget.get, JihadistBot.preparePlots(game.availablePlots).head)
       else if (getJihadistCandidates.contains(UnitedStates))
         (UnitedStates, JihadistBot.preparePlots(game.availablePlots).head)
       else {
@@ -113,8 +127,5 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
 
       addEventTarget(name)
       addAvailablePlotToCountry(name, plot)
-
-    case Jihadist =>
-      log("\nThere are no available plots. The event has no effect.", Color.Event)
   }
 }

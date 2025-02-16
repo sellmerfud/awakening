@@ -63,7 +63,14 @@ object Card_078 extends Card(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsin
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if [GWOT soft] or [US hard and prestige>low]
+    val (worldPosture, _) = game.gwot
+    (game.usPosture == Hard && game.prestige < 4) ||
+    (game.usPosture == Soft && worldPosture == Soft)
+  }
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

@@ -60,6 +60,12 @@ object Card_077 extends Card(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing,
     val possibles = game.getMuslim(SaudiArabia)::game.adjacentMuslims(SaudiArabia)
     countryNames(possibles.filter(m => m.totalTroops > 0 && !m.isAdversary))
   }
+
+  // Ehanced Bot: Playable if any non-Good non-Adversary countries qualify.
+  def getEnhBotCandidates = 
+    game.getMuslims(getCandidates)
+      .filter(m => !m.isGood && !m.isAdversary)
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
@@ -68,7 +74,10 @@ object Card_077 extends Card(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    getEnhBotCandidates.nonEmpty
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -77,6 +86,16 @@ object Card_077 extends Card(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing,
   def executeEvent(role: Role): Unit = {
     val name = if (isHuman(role))
       askCountry("Select country with troops: ", getCandidates)
+    else if (game.botEnhancements) {
+      // Priority to Neutral, then RC, then Fair, then highest Resource
+      val priorities = List(
+        JihadistBot.NeutralPriority,
+        JihadistBot.RegimeChangePriority,
+        JihadistBot.FairPriority,
+        JihadistBot.HighestResourcePriority,
+      )
+      JihadistBot.topPriority(getEnhBotCandidates, priorities).map(_.name).get
+    }
     else
       JihadistBot.alignGovTarget(getCandidates).get
 

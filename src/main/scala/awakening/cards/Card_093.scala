@@ -60,6 +60,11 @@ object Card_093 extends Card(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, No
   override
   def eventConditionsMet(role: Role) = true
 
+  def prestigeBump = if (game.getMuslim(Afghanistan).isIslamistRule || game.getMuslim(Pakistan).isIslamistRule)
+    3
+  else
+    1
+
   def eventEffective =
     game.cellsAvailable > 0 ||
     game.prestige > 1       ||
@@ -68,8 +73,17 @@ object Card_093 extends Card(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, No
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  //
   override
-  def botWillPlayEvent(role: Role): Boolean = eventEffective
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if [any IR on board] or [Prestige bonus would change (i.e. very high--> high, high-->medium, or medium-->low)]
+    val newPrestige = (game.prestige - prestigeBump) max 0
+
+    prestigeBump == 3 || // IR on the board
+    getPrestigeLevel(game.prestige) != getPrestigeLevel(newPrestige)
+  }
+  else
+    eventEffective
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -103,11 +117,7 @@ object Card_093 extends Card(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, No
         addSleeperCellsToCountry(name, 1)
       }
 
-      val prestigeAmount = if (afghanistan.isIslamistRule || pakistan.isIslamistRule)
-        3
-      else
-        1
-      decreasePrestige(prestigeAmount)
+      decreasePrestige(prestigeBump)
     }
   }
 }

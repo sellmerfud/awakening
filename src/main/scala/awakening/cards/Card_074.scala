@@ -39,6 +39,7 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
+import scala.annotation.unused
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -64,7 +65,19 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = Schengen.exists(JihadistBot.canTravelTo)
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    game.getCountries(Schengen).find(_.cells == 0) match {
+      case None => false  // Should not happend
+      case Some(schengen) =>
+        val totalTravellers = game.countries
+          .map(c => JihadistBot.numCellsForTravel(c, schengen.name))
+          .sum
+        totalTravellers > 1
+    }
+  }
+  else
+    Schengen.exists(JihadistBot.canTravelTo)
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -100,6 +113,65 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
       }
     }
   }
+  else if (game.botEnhancements) {
+    // We use France as the target to satisfy the call to hasCellForTravel() but it could be
+    // any Schengen country.
+    import JihadistBot.unusedCells
+    val numForTravel = (c: Country) => JihadistBot.numCellsForTravel(c, France)
+    
+    // If cell[s] in Schengen, travel these within Schengen (before selecting travellers using Travel To-Priorities).
+    // Target countries: If US hard, select different targets: Unmarked, then hard, then soft.
+    // If US Soft: select the same target: soft, then hard, then Unmarked
+    val targets = if (game.usPosture == Hard)
+      game.getNonMuslims(Schengen)
+        .filter(c => unusedCells(c) == 0)
+        .sortWith { case (l, r) => (l.isUntested && !r.isUntested) || (l.isHard && r.isSoft) }
+        .take(2)
+        .map(_.name)
+    else
+      game.getNonMuslims(Schengen)
+        .filter(c => unusedCells(c) == 0)
+        .sortWith { case (l, r) => (l.isSoft && !r.isSoft) || (l.isHard && r.isUntested) }
+        .take(1)
+        .map(_.name)
+
+    // If only one target, then use it twice
+    val allTargets = if (targets.size == 1)
+      targets.head :: targets
+    else
+      targets
+
+    val schengenSources = game.getNonMuslims(Schengen)
+      .filter(c => unusedCells(c) > 0)
+      .sortWith { case (l, r) =>
+        (l.posture == game.usPosture && r.posture != game.usPosture) ||
+        unusedCells(l) > unusedCells(r)
+      }
+      .flatMap(c => if (unusedCells(c) > 1) List(c, c) else List(c))
+
+    val otherSources = {
+      val withUnused = game.countries
+        .filter(c => !Schengen.contains(c.name) && unusedCells(c) > 0)
+        .sortWith { case (l, r) => unusedCells(l) > unusedCells(r) }
+
+      val preferred = withUnused.flatMap(c => List.fill(numForTravel(c))(c))
+      val nonPreferred = withUnused.flatMap(c => List.fill(unusedCells(c) - numForTravel(c))(c))
+      preferred ::: nonPreferred
+    }
+      
+    val sources = (schengenSources ::: otherSources).take(2).map(_.name)
+
+    if (allTargets.isEmpty || sources.isEmpty)
+      log("\nThe event has no effect.", Color.Event)
+    else
+      for ((target, source) <- allTargets.zip(sources)) {
+        val sourceCountry = game.getCountry(source)
+        val active = JihadistBot.activeCells(sourceCountry) > 0
+        addEventTarget(target)
+        moveCellsBetweenCountries(source, target, 1, active, forTravel = true)
+        JihadistBot.usedCells(target).addSleepers(1)
+      }
+  }
   else {
     // Bot
     def nextTravel(destNum: Int, alreadyTried: Set[String]): Int = {
@@ -130,7 +202,7 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
           }
           else
             JihadistBot.travelFromTarget(to, sources.filterNot(_ == to))
-          
+
           from match {
             case Some(from) =>
               val fromCountry = game.getCountry(from)

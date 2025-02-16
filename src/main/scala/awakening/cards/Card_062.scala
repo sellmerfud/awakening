@@ -62,22 +62,39 @@ object Card_062 extends Card(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoA
 
   def willHaveEffect =
     countryEventInPlay(Russia, CTR) ||
-    game.getNonMuslim(Caucasus).posture == game.usPosture ||
+    (game.getNonMuslim(Caucasus).isUntested || game.getNonMuslim(Caucasus).posture == game.usPosture) ||
     !game.getMuslim(CentralAsia).isAdversary
+
+  // Shift Central Asia if [Fair ally], then Set Caucasus to Soft if [US hard and Caucasus not soft], else unplayable
+  def enhBotWillWillPlay = {
+    val cAsia = game.getMuslim(CentralAsia)
+    val caucasus = game.getNonMuslim(Caucasus)
+    !countryEventInPlay(Russia, CTR) && (
+      (cAsia.isFair && cAsia.isAlly) || (!caucasus.isSoft && game.usPosture == Hard)
+    )
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = willHaveEffect
-
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    enhBotWillWillPlay
+  else
+    willHaveEffect
+  
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
     if (willHaveEffect) {
-      val canShift   = !game.getMuslim(CentralAsia).isAdversary
+      val cAsia = game.getMuslim(CentralAsia)
+      val canShift = !cAsia.isAdversary
+      val botWillShift =
+        (game.botEnhancements && cAsia.isFair && cAsia.isAlly) ||
+        (!game.botEnhancements && canShift)
+
       val canPosture = game.getNonMuslim(Caucasus).posture != game.usPosture
       val target = if (countryEventInPlay(Russia, CTR))
         Russia
@@ -88,7 +105,7 @@ object Card_062 extends Card(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoA
         ).flatten
         askMenu("Choose one:", choices).head
       }
-      else if (canShift) // Bot will shift if possible
+      else if (botWillShift)
         CentralAsia
       else
         Caucasus
