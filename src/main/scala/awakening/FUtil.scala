@@ -299,14 +299,18 @@ object FUtil {
     read1Line(limit)
   }
 
-  def readLines(path: String, limit: Option[Int] = None): Seq[String] =
+  def readLines(path: String, limit: Option[Int]): Seq[String] =
     readLines(new BufferedReader(new FileReader(path)), limit)
+
+  def readLines(path: String): Seq[String] = readLines(path, None)
 
   def readLines(reader: BufferedReader, limit: Option[Int]): Seq[String] = {
     var lines = Vector[String]()
     eachLine(reader, limit) (lines :+= _)
     lines
   }
+
+  def readLines(reader: BufferedReader): Seq[String] = readLines(reader, None)
 
   def writeBytes(path: String, bytes: Array[Byte], length: Int = Int.MaxValue, offset: Int = 0): Unit = {
     import math.min
@@ -907,7 +911,7 @@ object FUtil {
     *
     *   see: eachChild()
     */
-    def children(implicit withDirectory: Boolean = true): Seq[Pathname] = {
+    def children(withDirectory: Boolean = true): Seq[Pathname] = {
       val entries = getEntries(withDotDirs = false)
       if (withDirectory) entries
       else               entries map (_.basename)
@@ -1000,8 +1004,11 @@ object FUtil {
 
     private def getEntries(withDotDirs: Boolean): Seq[Pathname] =
       if (isDirectory) {
-        val entries = Pathname.glob(this/"*")(FUtil.FNM_DOTMATCH)
-        if (withDotDirs) entries else entries filterNot DotDirs
+        val entries = Pathname.glob(this/"*", FUtil.FNM_DOTMATCH)
+        if (withDotDirs)
+          entries
+        else
+          entries.filterNot(DotDirs)
       }
       else
         throw new IllegalStateException(s"${toString()} is not a directory!")
@@ -1038,7 +1045,7 @@ object FUtil {
     def find(test: (Pathname) => FindVerb): Seq[Pathname] = {
       def process(pname: Pathname, results: Vector[Pathname]): Vector[Pathname] = {
         def processChildren: Vector[Pathname] = if (pname.isDirectory) {
-          val children = Pathname.glob(pname/"*")(FNM_DOTMATCH) filterNot DotDirs
+          val children = Pathname.glob(pname/"*", FNM_DOTMATCH).filterNot(DotDirs)
           (children foldLeft Vector[Pathname]()) ((r, c) => process(c, r))
         }
         else
@@ -1175,7 +1182,7 @@ object FUtil {
 
     def readFile(): String = FUtil.readFile(path)
 
-    def readLines(implicit limit: Option[Int] = None): Seq[String] = FUtil.readLines(path, limit)
+    def readLines(limit: Option[Int] = None): Seq[String] = FUtil.readLines(path, limit)
 
     /**  Returns a new Pathname represents the same path as the pathname except that
     *    it is relative to the given path name.
@@ -1293,10 +1300,7 @@ object FUtil {
     case object PRUNE   extends FindVerb
 
     // Implicit ordering for pathnames when sorted.
-    implicit object PathnameOrdering extends Ordering[Pathname] {
-      override def compare(a: Pathname, b: Pathname) = a.path compare b.path
-    }
-
+    implicit val PathnameOrdering: Ordering[Pathname] = Ordering.by(_.path)
     // Auto conversion for Pathname instances.
     implicit final def stringToPathname(s: String): Pathname = Pathname(s)
     implicit final def pathnameToString(p: Pathname): String = p.toString
@@ -1311,11 +1315,11 @@ object FUtil {
     /** Return scala.util.Properties.userHome as a Pathname */
     def userHome: Pathname = Pathname(userHomeProp)
     
-    def temp = Pathname(FUtil.temp_file("bedrock-tmpfile"))
+    def temp = Pathname(FUtil.temp_file("tmpfile"))
     def temp(prefix: String) = Pathname(FUtil.temp_file(prefix))
   
     /** Calls FUtil.glob and maps results to Pathnames */
-    def glob(spec: Pathname)(implicit flags: Int = 0): Seq[Pathname] =
+    def glob(spec: Pathname, flags: Int = 0): Seq[Pathname] =
       FUtil.glob(spec.path, flags) map (Pathname(_))
     
   }

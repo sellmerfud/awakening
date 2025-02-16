@@ -503,7 +503,7 @@ object SavedGame {
           // Older versions did not store the log as json
         // If we cannot parse the file then treat it as a regular
         // text file.
-        filepath.readLines.toVector map { line =>
+        filepath.readLines().toVector map { line =>
           LogEntry(line, None)
         }
       case e: IOException =>
