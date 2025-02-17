@@ -42,7 +42,7 @@ import java.io.{File, FilenameFilter, BufferedReader, FileReader, FileWriter, By
                 InputStream, OutputStream, FileInputStream, FileOutputStream, Reader, Writer, IOException}
 import java.util.Date
 import scala.collection.mutable.ListBuffer
-import scala.collection.immutable.Vector
+import scala.collection.immutable.{ Vector, BitSet }
 import scala.util.Properties.{lineSeparator, propOrEmpty, isWin}
 import scala.sys.process.{Process, ProcessBuilder, ProcessLogger}
 import scala.util.matching.Regex
@@ -421,10 +421,10 @@ object FUtil {
     exec(diff_cmd.split("\\s+").toIndexedSeq ++ Seq(path1, path2))
   }
 
-  val FNM_NOESCAPE = 0x01
-  val FNM_PATHNAME = 0x02
-  val FNM_DOTMATCH = 0x04
-  val FNM_CASEFOLD = 0x08
+  val FNM_NOESCAPE = 1
+  val FNM_PATHNAME = 2
+  val FNM_DOTMATCH = 3
+  val FNM_CASEFOLD = 4
 
   /**  Returns true if <i>path</i> matches against <i>pattern</i>.
   *
@@ -444,7 +444,7 @@ object FUtil {
   *              Behaves exactly like character sets in Regexp, including set negation ([^a-z]).
   *    \         Escapes the next metacharacter.
   *
-  *    <i>flags</i> is a bitwise OR of the `FNM_xxx`  parameters.
+  *    <i>flags</i> is a BitSet of the `FNM_xxx` flags.
   *    The same glob pattern and flags are used by `FUtil.glob`.
   *
   *       FUtil.fnmatch('cat',       'cat')        #=> true  # match entire string
@@ -459,19 +459,19 @@ object FUtil {
   *       FUtil.fnmatch('ca[^t]',  'cat')          #=> false # exclusive bracket expression ('^' or '!')
   *
   *       FUtil.fnmatch('cat', 'CAT')               #=> false # case sensitive
-  *       FUtil.fnmatch('cat', 'CAT', FNM_CASEFOLD) #=> true  # case insensitive
+  *       FUtil.fnmatch('cat', 'CAT', BitSet(FNM_CASEFOLD)) #=> true  # case insensitive
   *
-  *       FUtil.fnmatch('?',   '/', FNM_PATHNAME)  #=> false # wildcard doesn't match '/' on FNM_PATHNAME
-  *       FUtil.fnmatch('*',   '/', FNM_PATHNAME)  #=> false # ditto
-  *       FUtil.fnmatch('[/]', '/', FNM_PATHNAME)  #=> false # ditto
+  *       FUtil.fnmatch('?',   '/', BitSet(FNM_PATHNAME))  #=> false # wildcard doesn't match '/' on FNM_PATHNAME
+  *       FUtil.fnmatch('*',   '/', BitSet(FNM_PATHNAME))  #=> false # ditto
+  *       FUtil.fnmatch('[/]', '/', BitSet(FNM_PATHNAME))  #=> false # ditto
   *
   *       FUtil.fnmatch('\?',   '?')                 #=> true  # escaped wildcard becomes ordinary
   *       FUtil.fnmatch('\a',   'a')                 #=> true  # escaped ordinary remains ordinary
-  *       FUtil.fnmatch('\a',   '\a', FNM_NOESCAPE)  #=> true  # FNM_NOESACPE makes '\' ordinary
+  *       FUtil.fnmatch('\a',   '\a', BitSet(FNM_NOESCAPE))  #=> true  # FNM_NOESACPE makes '\' ordinary
   *       FUtil.fnmatch('[\?]', '?')                 #=> true  # can escape inside bracket expression
   *
   *       FUtil.fnmatch('*',   '.profile')                #=> false # wildcard doesn't match leading
-  *       FUtil.fnmatch('*',   '.profile', FNM_DOTMATCH)  #=> true  # period by default.
+  *       FUtil.fnmatch('*',   '.profile', BitSet(FNM_DOTMATCH))  #=> true  # period by default.
   *       FUtil.fnmatch('.*',  '.profile')                #=> true
   *
   *       rbfiles = '**' '/' '*.rb' # you don't have to do like this. just write in single string.
@@ -483,24 +483,24 @@ object FUtil {
   *       FUtil.fnmatch('**.rb', 'lib/song.rb')                #=> true
   *
   *       pattern = '*' '/' '*'
-  *       FUtil.fnmatch(pattern, 'dave/.profile', FNM_PATHNAME)  #=> false
-  *       FUtil.fnmatch(pattern, 'dave/.profile', FNM_PATHNAME | FNM_DOTMATCH) #=> true
+  *       FUtil.fnmatch(pattern, 'dave/.profile', BitSet(FNM_PATHNAME))  #=> false
+  *       FUtil.fnmatch(pattern, 'dave/.profile', BitSet(FNM_PATHNAME + FNM_DOTMATCH)) #=> true
   *
   *       pattern = '*' '/' '*' '/' '*' '/' 'foo'
-  *       FUtil.fnmatch(pattern, 'a/b/c/foo', FNM_PATHNAME)     #=> true
-  *       FUtil.fnmatch(pattern, '/a/b/c/foo', FNM_PATHNAME)    #=> true
-  *       FUtil.fnmatch(pattern, 'c:/a/b/c/foo', FNM_PATHNAME)  #=> true
-  *       FUtil.fnmatch(pattern, 'a/.b/c/foo', FNM_PATHNAME)    #=> false
-  *       FUtil.fnmatch(pattern, 'a/.b/c/foo', FNM_PATHNAME | FNM_DOTMATCH) #=> true
+  *       FUtil.fnmatch(pattern, 'a/b/c/foo', BitSet(FNM_PATHNAME))     #=> true
+  *       FUtil.fnmatch(pattern, '/a/b/c/foo', BitSet(FNM_PATHNAME))    #=> true
+  *       FUtil.fnmatch(pattern, 'c:/a/b/c/foo', BitSet(FNM_PATHNAME))  #=> true
+  *       FUtil.fnmatch(pattern, 'a/.b/c/foo', BitSet(FNM_PATHNAME))    #=> false
+  *       FUtil.fnmatch(pattern, 'a/.b/c/foo', BitSet(FNM_PATHNAME + FNM_DOTMATCH)) #=> true
   */
 
-  def fnmatch(pattern: String, string: String, flags: Int = 0): Boolean = {
+  def fnmatch(pattern: String, string: String, flags: BitSet = BitSet.empty): Boolean = {
     import scala.annotation.switch
     val NUL: Char = 0
-    val escape_ok = (flags & FNM_NOESCAPE) == 0
-    val pathname  = (flags & FNM_PATHNAME) != 0
-    val period    = (flags & FNM_DOTMATCH) == 0
-    val nocase    = (flags & FNM_CASEFOLD) != 0
+    val escape_ok = !flags(FNM_NOESCAPE)
+    val pathname  = flags(FNM_PATHNAME)
+    val period    = !flags(FNM_DOTMATCH)
+    val nocase    = flags(FNM_CASEFOLD)
 
     var pattern_chars = pattern.toList
     var p = NUL
@@ -600,7 +600,7 @@ object FUtil {
             val test = downcase(if (escape_ok && p == '\\') next_p else p)
             while (s != NUL) {
               if ((p == '?' || p == '[' || downcase(s) == test) &&
-                    fnmatch((p :: pattern_chars).mkString, (s :: string_chars).mkString, flags | FNM_DOTMATCH))
+                    fnmatch((p :: pattern_chars).mkString, (s :: string_chars).mkString, flags + FNM_DOTMATCH))
                 return true
               else if (ISDIRSEP(s))
                 return false
@@ -653,7 +653,7 @@ object FUtil {
   *      glob("*.[^r]*")           #=> ["config.h"]
   *      glob("*.{rb,h}")          #=> ["main.rb", "config.h"]
   *      glob("*")                 #=> ["config.h", "main.rb"]
-  *      glob("*", FNM_DOTMATCH)   #=> [".", "..", "config.h", "main.rb"]
+  *      glob("*", BitSet(FNM_DOTMATCH))   #=> [".", "..", "config.h", "main.rb"]
   *
   *      rbfiles = FUtil.join("**", "*.rb")
   *      glob(rbfiles)                   #=> ["main.rb",
@@ -670,14 +670,14 @@ object FUtil {
   *      glob(librbfiles)                #=> ["lib/song.rb"]
   */
 
-  def glob(pattern: String): Seq[String] = glob(Seq(pattern), 0)
-  def glob(pattern: String, flags: Int): Seq[String] = glob(Seq(pattern), flags)
+  def glob(pattern: String): Seq[String] = glob(Seq(pattern), BitSet.empty)
+  def glob(pattern: String, flags: BitSet): Seq[String] = glob(Seq(pattern), flags)
 
-  def glob(patterns: Seq[String]): Seq[String] = glob(patterns, 0)
-  def glob(patterns: Seq[String], flags: Int): Seq[String] = {
-    val escape_ok = (flags & FNM_NOESCAPE) == 0
-    val dotmatch  = (flags & FNM_DOTMATCH) != 0
-    val nocase    = (flags & FNM_CASEFOLD) != 0
+  def glob(patterns: Seq[String]): Seq[String] = glob(patterns, BitSet.empty)
+  def glob(patterns: Seq[String], flags: BitSet): Seq[String] = {
+    val escape_ok = !flags(FNM_NOESCAPE)
+    val dotmatch  = flags(FNM_DOTMATCH)
+    val nocase    = flags(FNM_CASEFOLD)
 
     def glob1(pattern: String): Seq[String] = {
       val rooted   = pattern.startsWith("/")
@@ -714,10 +714,10 @@ object FUtil {
         def list(dir: File, only_subdirs: Boolean): Seq[String] = {
           // The java File#list method does not include the "." and ".." entries so we must
           // add them here (but only if they match our pattern!)
-          val specials = Seq(".", "..").filter(fnmatch(pat, _, flags | FNM_PATHNAME))
+          val specials = Seq(".", "..").filter(fnmatch(pat, _, flags + FNM_PATHNAME))
           val found = dir.list(new FilenameFilter {
             def accept(dir: File, name: String) = {
-              (!(dir_only || only_subdirs) || new File(dir, name).isDirectory) && fnmatch(pat, name, flags | FNM_PATHNAME)
+              (!(dir_only || only_subdirs) || new File(dir, name).isDirectory) && fnmatch(pat, name, flags + FNM_PATHNAME)
             }
           }).toSeq
           specials ++ found
@@ -1004,7 +1004,7 @@ object FUtil {
 
     private def getEntries(withDotDirs: Boolean): Seq[Pathname] =
       if (isDirectory) {
-        val entries = Pathname.glob(this/"*", FUtil.FNM_DOTMATCH)
+        val entries = Pathname.glob(this/"*", BitSet(FNM_DOTMATCH))
         if (withDotDirs)
           entries
         else
@@ -1045,7 +1045,7 @@ object FUtil {
     def find(test: (Pathname) => FindVerb): Seq[Pathname] = {
       def process(pname: Pathname, results: Vector[Pathname]): Vector[Pathname] = {
         def processChildren: Vector[Pathname] = if (pname.isDirectory) {
-          val children = Pathname.glob(pname/"*", FNM_DOTMATCH).filterNot(DotDirs)
+          val children = Pathname.glob(pname/"*", BitSet(FNM_DOTMATCH)).filterNot(DotDirs)
           (children foldLeft Vector[Pathname]()) ((r, c) => process(c, r))
         }
         else
@@ -1064,7 +1064,7 @@ object FUtil {
     /** A shortcut for pname find (_ => INCLUDE) */
     def find(): Seq[Pathname] = find(_ => INCLUDE)
 
-    def fnmatch(pattern: String, flags: Int = 0) = FUtil.fnmatch(pattern, path, flags)
+    def fnmatch(pattern: String, flags: BitSet = BitSet.empty) = FUtil.fnmatch(pattern, path, flags)
 
     /** Return true if the pathname is absolute */
     def isAbsolute: Boolean = file.isAbsolute
@@ -1319,7 +1319,7 @@ object FUtil {
     def temp(prefix: String) = Pathname(FUtil.temp_file(prefix))
   
     /** Calls FUtil.glob and maps results to Pathnames */
-    def glob(spec: Pathname, flags: Int = 0): Seq[Pathname] =
+    def glob(spec: Pathname, flags: BitSet = BitSet.empty): Seq[Pathname] =
       FUtil.glob(spec.path, flags) map (Pathname(_))
     
   }
