@@ -64,7 +64,7 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   def unmarkedNonMuslimCandidates = if (game.usPosture == Hard && game.gwotPenalty == 0)
-    game.nonMuslims.filter(_.isUntested).map(_.name)
+    game.nonMuslims.filter(m => m.isUntested && m.totalCells == 0).map(_.name)
   else
     Nil
 
@@ -90,7 +90,7 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
       askCountries(3, getCandidates)
     else if (game.botEnhancements) {
 
-      def nextTarget(targets: List[String]): List[String] = {
+      def nextTarget(num: Int, targets: List[String]): List[String] = {
         val nonMuslim = unmarkedNonMuslimCandidates
           .filterNot(targets.contains)
           .map(game.getCountry)
@@ -99,18 +99,18 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
           .map(game.getCountry)
         val maxTargets = game.cellsAvailable min 3
 
-        if (targets.size < maxTargets && (nonMuslim.nonEmpty || forRecruit.nonEmpty)) {
+        if (num < 3 && (nonMuslim.nonEmpty || forRecruit.nonEmpty)) {
           import JihadistBot.EnhancedEvoTable.TravelToUnmarkedNonMuslim.priorities
           import JihadistBot.{ topPriority, recruitAndTravelToPriorities }
           if (nonMuslim.nonEmpty)
-            nextTarget(topPriority(nonMuslim, priorities).map(_.name).get::targets)
+            nextTarget(num + 1, topPriority(nonMuslim, priorities).map(_.name).get::targets)
           else
-            nextTarget(topPriority(forRecruit, recruitAndTravelToPriorities).map(_.name).get::targets)
+            nextTarget(num + 1, topPriority(forRecruit, recruitAndTravelToPriorities).map(_.name).get::targets)
         }
         else
           targets
       }
-      nextTarget(Nil)
+      nextTarget(0, Nil)
     }
     else {
       // See Event Instructions table
