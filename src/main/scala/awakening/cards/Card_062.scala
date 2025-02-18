@@ -62,7 +62,8 @@ object Card_062 extends Card(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoA
 
   def willHaveEffect =
     countryEventInPlay(Russia, CTR) ||
-    (game.getNonMuslim(Caucasus).isUntested || game.getNonMuslim(Caucasus).posture == game.usPosture) ||
+    game.getNonMuslim(Caucasus).isUntested ||
+    game.getNonMuslim(Caucasus).posture == game.usPosture ||
     !game.getMuslim(CentralAsia).isAdversary
 
   // Shift Central Asia if [Fair ally], then Set Caucasus to Soft if [US hard and Caucasus not soft], else unplayable
@@ -90,12 +91,14 @@ object Card_062 extends Card(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoA
   def executeEvent(role: Role): Unit = {
     if (willHaveEffect) {
       val cAsia = game.getMuslim(CentralAsia)
+      val caucasus = game.getNonMuslim(Caucasus)
       val canShift = !cAsia.isAdversary
-      val botWillShift =
-        (game.botEnhancements && cAsia.isFair && cAsia.isAlly) ||
-        (!game.botEnhancements && canShift)
+      val canPosture = caucasus.isUntested || caucasus.posture == game.usPosture
+      val botWillShift = if (game.botEnhancements)
+        (cAsia.isFair && cAsia.isAlly) || (canShift && !canPosture)
+      else
+        canShift
 
-      val canPosture = game.getNonMuslim(Caucasus).posture != game.usPosture
       val target = if (countryEventInPlay(Russia, CTR))
         Russia
       else if (isHuman(role)) {
