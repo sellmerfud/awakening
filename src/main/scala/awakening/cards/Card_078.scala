@@ -66,8 +66,7 @@ object Card_078 extends Card(78, "Axis of Evil", Jihadist, 3, NoRemove, NoLapsin
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
     // Playable if [GWOT soft] or [US hard and prestige>low]
     val (worldPosture, _) = game.gwot
-    (game.usPosture == Hard && game.prestige < 4) ||
-    (game.usPosture == Soft && worldPosture == Soft)
+    (game.usPosture == Hard && game.prestige > 3) || worldPosture == Soft
   }
   else
     true
