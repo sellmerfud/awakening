@@ -7858,8 +7858,8 @@ object LabyrinthAwakening {
 
   def programMainMenu(params: UserParams): Unit = {
 
-    def gameChoices(games: List[String]): List[(Option[String], (String, Seq[String]))] = {
-      val choices = games
+    def gameChoices(): List[(Option[String], (String, Seq[String]))] = {
+      val choices = savedGames()
         .toList
         .map { name =>
           val summary = loadGameDescription(name)
@@ -7885,7 +7885,7 @@ object LabyrinthAwakening {
         programMainMenu(params)
 
       case "resume" =>
-        askMenuWithWrap("Resume which game:", gameChoices(games), sameLine = false, allowAbort = false)
+        askMenuWithWrap("Resume which game:", gameChoices(), sameLine = false, allowAbort = false)
           .foreach { name =>
             game = loadMostRecent(name)
             printSummary(game.actionSummary)
@@ -7894,7 +7894,7 @@ object LabyrinthAwakening {
         programMainMenu(params)
 
       case "delete" =>
-        askMenuWithWrap("Delete which game:", gameChoices(games), sameLine = false, allowAbort = false)
+        askMenuWithWrap("Delete which game:", gameChoices(), sameLine = false, allowAbort = false)
           .foreach { name =>
             if (askYorN(s"\nReally delete game [$name] (y/n)? "))
               (gamesDir/name).rmtree()
