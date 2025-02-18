@@ -3317,8 +3317,13 @@ object JihadistBot extends BotHelpers {
     // -----------------------------------------------------------
     // Radicalization Action -  Recruit cells (CAN use reserve Ops)
     case object Recruit extends RadicalizationAction {
+      private def canRecruitInMjp: Boolean = majorJihadPriorityCountry
+        .map(name => game.getMuslim(name).recruitOK(madrassas = false))
+        .getOrElse(false)
+        
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
+        canRecruitInMjp ||
         botRecruitPossible(muslimWithCadreOnly = false)
 
       // Perform a recruit operation.
@@ -3333,7 +3338,10 @@ object JihadistBot extends BotHelpers {
           log(s"Radicalization: Recruit")
         }
         val maxOps = cardOps + reserveOps
-        val target = recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
+        val target = if (canRecruitInMjp)
+          majorJihadPriorityCountry.get
+        else
+          recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
         addOpsTarget(target)
         val m = game getMuslim target
         def nextAttempt(completed: Int): Int = {
