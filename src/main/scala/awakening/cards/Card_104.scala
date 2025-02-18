@@ -94,6 +94,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
       new CriteriaFilter("Fair, Regime Change", muslimTest(m => m.isFair && m.inRegimeChange)),
       GoodPriority,
       FairPriority,
+      WithAidPriority,
       new CriteriaFilter("Untested Muslim", muslimTest(_.isUntested)),
       HighestResourcePriority,
     )
