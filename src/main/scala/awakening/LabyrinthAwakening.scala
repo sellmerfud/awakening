@@ -3296,7 +3296,7 @@ object LabyrinthAwakening {
       log(separator())
       card.executeEvent(US)  // Role does not matter
     }
-    else if (triggerRole.contains(role => card.eventWillTrigger(role))) {
+    else if (triggerRole.exists(role => card.eventWillTrigger(role))) {
       log(s"\nThe \"$eventName\" event is triggered.", Color.Event)
       performCardEvent(card, Jihadist, triggered = true)
     }
