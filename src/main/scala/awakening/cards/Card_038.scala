@@ -79,7 +79,7 @@ object Card_038 extends Card(38, "Libyan Deal", US, 3, Remove, NoLapsing, NoAuto
     setAlignment(Libya, Ally)
     increasePrestige(1)
     val schengens = if (isHuman(role)) {
-      println("Select 2 Shegen countries' posture")
+      displayLine("\nSelect the posture of 2 Shengen countries.", Color.Info)
       askCountries(2, Schengen) map { name =>
         (name, askPosture(name))
       }
