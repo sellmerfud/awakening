@@ -40,91 +40,33 @@ package awakening.cards
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
-// Card Text:
-// ------------------------------------------------------------------
-// Select 3 countries without Cells.
-// Test them. Recruit once in each, ignoring Funding.
-// Place Cadre in each country that does not receive a Cell.
-// ------------------------------------------------------------------
+// -------------------------------------
+// This card is a duplicate of Card 82
+// -------------------------------------
 object Card_189 extends Card(189, "Jihadist Videos", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
-  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = Card_082.eventAlertsPlot(countryName, plot)
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = false
+  def eventRemovesLastCell(): Boolean = Card_082.eventRemovesLastCell()
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = Card_082.eventConditionsMet(role)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0 // Ignores funding so all cells can be used
+  def botWillPlayEvent(role: Role): Boolean = Card_082.botWillPlayEvent(role)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit = {
-    var targets = if (isHuman(role))
-      askCountries(3, countryNames(game.countries.filter(_.totalCells == 0)))
-    else {
-      // See Event Instructions table
-      val candidates = countryNames(game.countries.filter(c => c.totalCells == 0 && !c.isIslamistRule)) match {
-        case Nil => countryNames(game.countries.filter(c => c.totalCells == 0))
-        case nonIR => nonIR
-      }
-
-      // Always US first if it is eligible.
-      if (candidates.contains(UnitedStates))
-        UnitedStates :: JihadistBot.multipleTargets(2, candidates.filterNot(_ == UnitedStates))(JihadistBot.cellPlacementPriority(false))
-      else
-        JihadistBot.multipleTargets(3, candidates)(JihadistBot.cellPlacementPriority(false))
-    }
-
-    val numCells = if (isBot(role) && game.jihadistIdeology(Potent)) {
-      log(s"\n$Jihadist Bot with Potent Ideology places two cells for each recruit success", Color.Event)
-      2
-    }
-    else
-      1
-
-    // Process all of the targets
-    for (target <- targets) {
-      addEventTarget(target)
-      log(s"\nRecruit attempt in $target")
-      log(separator())
-      testCountry(target)  // Event specifically say to test
-      val c = game.getCountry(target)  // Get country after testing!
-
-      if (game.cellsAvailable > 0) {
-        val cells = numCells min game.cellsAvailable
-        if (c.autoRecruit) {
-          log(s"Recruit in $target succeeds automatically")
-          addSleeperCellsToCountry(target, cells)
-        }
-        else {
-          val die = getDieRoll(s"Enter recruit die roll for $target: ", Some(role))
-          if (c.recruitSucceeds(die)) {
-            log(s"Recruit in $target succeeds with a die roll of $die", Color.Event)
-            addSleeperCellsToCountry(target, cells)
-          }
-          else {
-            log(s"Recruit in $target fails with a die roll of $die", Color.Event)
-            addCadreToCountry(target)
-          }
-        }
-      }
-      else {
-        log("No available cells.")
-        addCadreToCountry(target)
-      }
-    }
-  }
+  def executeEvent(role: Role): Unit = Card_082.executeEvent(role)
 }

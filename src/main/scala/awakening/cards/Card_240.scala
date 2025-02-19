@@ -39,51 +39,33 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 
-// Card Text:
-// ------------------------------------------------------------------
-// Whenever this card is used for Operations or discarded.
-// Roll US Posture. Then,
-// if GWOT Penalty 0, +1 Prestige.
-// If not, -1 Prestige.
-// ------------------------------------------------------------------
+// -------------------------------------
+// This card is a duplicate of Card 120
+// -------------------------------------
 object Card_240 extends Card(240, "US Election", Unassociated, 3, NoRemove, NoLapsing, AutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
-  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = Card_120.eventAlertsPlot(countryName, plot)
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = false
+  def eventRemovesLastCell(): Boolean = Card_120.eventRemovesLastCell()
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = false // Not directly playable, but will always auto trigger
+  def eventConditionsMet(role: Role) = Card_120.eventConditionsMet(role)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = Card_120.botWillPlayEvent(role)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit = {
-  if (lapsingEventInPlay(USConsulateAttacked)) {
-    log("\nUS Consulate Attacked event is lapsing", Color.Event)
-    setUSPosture(oppositePosture(game.usPosture))
-  }
-  else
-    rollUSPosture()
-
-  logWorldPosture()
-
-  if (game.gwotPenalty == 0)
-    increasePrestige(1)
-  else
-    decreasePrestige(1)
-  }
+  def executeEvent(role: Role): Unit = Card_120.executeEvent(role)
 }

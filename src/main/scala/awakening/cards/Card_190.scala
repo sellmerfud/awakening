@@ -40,62 +40,33 @@ package awakening.cards
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
-// Card Text:
-// ------------------------------------------------------------------
-// Play if a non-Islamist Rule country has a Cell.
-// Replace the Cell with any 2 Available Plot markers.
-// ------------------------------------------------------------------
+// -------------------------------------
+// This card is a duplicate of Card 87
+// -------------------------------------
 object Card_190 extends Card(190, "Martyrdom Operation", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
-  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = Card_087.eventAlertsPlot(countryName, plot)
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = false
-
-  val isCandidate = (c: Country) =>
-    c.totalCells > 0 &&
-    (game.isNonMuslim(c.name) || !game.getMuslim(c.name).isIslamistRule)
-
-  def getCandidates = countryNames(game.countries.filter(isCandidate))
+  def eventRemovesLastCell(): Boolean = Card_087.eventRemovesLastCell()
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
+  def eventConditionsMet(role: Role) = Card_087.eventConditionsMet(role)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.availablePlots.nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = Card_087.botWillPlayEvent(role)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit = {
-    if (game.availablePlots.nonEmpty) {
-      val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
-        val target = askCountry("Select country: ", getCandidates)
-        val cell = askCells(target, 1, sleeperFocus = false)
-        (target, cell, askAvailablePlots(2, ops = 3))
-      }
-      else {
-        // See Event Instructions table
-        val target = JihadistBot.plotPriority(getCandidates).get
-        val cell = JihadistBot.chooseCellsToRemove(target, 1)
-        (target, cell, JihadistBot.preparePlots(game.availablePlots).take(2))
-      }
-
-      addEventTarget(target)
-      removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
-      for (plot <- plots)
-        addAvailablePlotToCountry(target, plot)
-    }
-    else
-      log("\nThere are no available plots. The event has no effect.", Color.Event)
-  }
+  def executeEvent(role: Role): Unit = Card_087.executeEvent(role)
 }
