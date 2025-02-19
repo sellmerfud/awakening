@@ -121,8 +121,6 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
           JihadistBot.alignGovTarget(possibleCandidates).get
         else {
           val candidates = game.getMuslims(possibleCandidates).sortBy(-_.totalCells)
-          inspect("candidates", candidates.map(_.name))
-          inspect("preferred", candidates.takeWhile(_.totalCells == candidates.head.totalCells).map(_.name))
           shuffle(candidates.takeWhile(_.totalCells == candidates.head.totalCells)).head.name
         }
         val m = game.getMuslim(name)
