@@ -89,7 +89,7 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
     }
 
     if (numCards > 0)
-      if (isHuman(Jihadist))
+      if (isHuman(US))
         msgs += s"Playable $Jihadist events on the discards are triggered."
       else
         msgs += s"$Jihadist associated events are not triggered."
@@ -98,7 +98,7 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
       log(msg, Color.Event)
 
     if (numCards > 0) {
-      if (isHuman(Jihadist))
+      if (isHuman(US))
         askCardsDiscarded(US, numCards, triggerRole = Some(Jihadist))
       else
         askCardsDiscarded(US, numCards)
