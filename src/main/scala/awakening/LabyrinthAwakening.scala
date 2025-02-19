@@ -2941,7 +2941,8 @@ object LabyrinthAwakening {
     log(s"${ScoreEntry("", usScore)}  ${ScoreEntry("", jihadistScore)}")
     log()
     if (winner == US) {
-      log(s"Good resources are at least $usMinimum.")
+      if (isHuman(US))
+        log(s"Good resources are at least $usMinimum.")
       log(s"Good resources are more than twice Islamist Rule resources.")
     }
     else {
