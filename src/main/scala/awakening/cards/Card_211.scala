@@ -77,8 +77,12 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
   // Jihad Bot will only play if it can place a marker.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => globalEventNotInPlay(Smartphones) || lapsingEventNotInPlay(ArabWinter)
-    case Jihadist => lapsingEventNotInPlay(ArabWinter)
+    case US =>
+      globalEventNotInPlay(Smartphones) || lapsingEventNotInPlay(ArabWinter)
+    case Jihadist if game.botEnhancements =>
+      globalEventInPlay(Smartphones) && lapsingEventNotInPlay(ArabWinter)
+    case Jihadist =>
+      lapsingEventNotInPlay(ArabWinter)
   }
 
   // Carry out the event for the given role.
