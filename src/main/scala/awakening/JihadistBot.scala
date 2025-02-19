@@ -248,6 +248,8 @@ object JihadistBot extends BotHelpers {
 
     lazy val fair3ResourceMuslimes = muslims.filter(m => m.isFair && m.resourceValue >= 3)
 
+    lazy val fairPakistan = muslims.exists(m => m.name == Pakistan && m.isFair)
+
     lazy val poorMuslims = muslims.filter(_.isPoor)
 
     if (candidates.isEmpty)
@@ -289,6 +291,8 @@ object JihadistBot extends BotHelpers {
     }
     else if (fair3ResourceMuslimes.nonEmpty)
       topPriority(fair3ResourceMuslimes, plotPriorities).map(_.name)
+    else if (fairPakistan)
+      Some(Pakistan)
     else if (martyrdom && game.funding < 8 && poorMuslims.nonEmpty) {
       val priorities = List(
         WithTroopsPriority,
