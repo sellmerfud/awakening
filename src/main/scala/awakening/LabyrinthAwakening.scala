@@ -2912,12 +2912,20 @@ object LabyrinthAwakening {
     val irEntries = if (irResources.nonEmpty) irResources else noEntries
     val usScore = goodResources.map(_.resources).sum
     val jihadistScore = irResources.map(_.resources).sum
-    val winner = if (usScore > jihadistScore * 2) US else Jihadist
+    // The US must have more than twice the points of the Jihadist
+    // Also in solo games the HUMAN US must have a minimum of good resources
+    // base on the length of the game:
+    //   1 deck : at least  6 Good resources
+    //   2 decks: at least  9 Good resources
+    //   3 decks: at least 12 Good resources
+    val usMinimum = 3 + (game.gameLength * 3)
+    val usHasMinimum = isBot(US) || usScore >= usMinimum
+    val usHasMoreThanTwice = usScore > jihadistScore * 2
+    val winner = if (usHasMinimum && usHasMoreThanTwice) US else Jihadist
     val scoreEntries = goodEntries.zipAll(irEntries, emptyEntry, emptyEntry)
     val header  = "Good Resources              Islamist Rule Resources"
     val header2 = "                            (Plus green regime change)"
     val divider = "--------------------------  --------------------------"
-
     log()
     log("Game Over after exhausting the final deck", Color.Info)
     log(separator(char = '='), Color.Info)
@@ -2932,11 +2940,16 @@ object LabyrinthAwakening {
     log(divider)
     log(s"${ScoreEntry("", usScore)}  ${ScoreEntry("", jihadistScore)}")
     log()
-
-    if (winner == US)
-      log(s"The US score is more than twice the Jihadist score.")
-    else
-      log(s"The US score is not more than twice the Jihadist score.")
+    if (winner == US) {
+      log(s"Good resources are at least $usMinimum.")
+      log(s"Good resources are more than twice Islamist Rule resources.")
+    }
+    else {
+      if (!usHasMinimum)
+        log(s"Good resources less than $usMinimum.")
+      if (!usHasMoreThanTwice)
+        log(s"Good resources are not more than twice Islamist Rule resources.")
+    }
     pause()
   }
 
