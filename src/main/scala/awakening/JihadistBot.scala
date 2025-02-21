@@ -766,9 +766,9 @@ object JihadistBot extends BotHelpers {
   def alignGovTarget(names: List[String]): Option[String] = {
     botLog("Find \"Align/Gov\" target", Color.Debug)
     if (game.botEnhancements)
-      topPriority(game getCountries names, recruitAndTravelToPriorities).map(_.name)
+      topPriority(game.getCountries(names), recruitAndTravelToPriorities).map(_.name)
     else
-      topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)).map(_.name)
+      topPriority(game.getCountries(names), jihadMarkerAlignGovPriorities(None)).map(_.name)
   }
 
   def markerTarget(names: List[String]): Option[String] = {
@@ -800,12 +800,12 @@ object JihadistBot extends BotHelpers {
       shuffle(narrowed).map(_.name).headOption
     }
     else
-      topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)).map(_.name)
+      topPriority(game.getCountries(names), jihadMarkerAlignGovPriorities(None)).map(_.name)
   }
 
   def troopsMilitiaTarget(names: List[String]): Option[String] = {
     botLog("Find \"Troops/Militia\" target", Color.Debug)
-    topPriority(game getCountries names, jihadMarkerAlignGovPriorities(None)).map(_.name)
+    topPriority(game.getCountries(names), jihadMarkerAlignGovPriorities(None)).map(_.name)
   }
 
   // Prepare plots for selection.
@@ -881,12 +881,12 @@ object JihadistBot extends BotHelpers {
     }
 
     botLog("Find \"Plot\" target", Color.Debug)
-    val candidates = selectCandidates(game getCountries names, flowchart)
+    val candidates = selectCandidates(game.getCountries(names), flowchart)
     topPriority(candidates, plotPriorities).map(_.name)
   }
 
   def plotPriority(names: List[String]): Option[String] = {
-    topPriority(game getCountries names, plotPriorities).map(_.name)
+    topPriority(game.getCountries(names), plotPriorities).map(_.name)
   }
 
   def RecruitFlowchart = if (game.botEnhancements)
@@ -967,17 +967,17 @@ object JihadistBot extends BotHelpers {
 
 
   def recruitTravelToPriority(names: List[String]): Option[String] = {
-    topPriority(game getCountries names, recruitAndTravelToPriorities).map(_.name)
+    topPriority(game.getCountries(names), recruitAndTravelToPriorities).map(_.name)
   }
 
   def fewestCellsPriority(names: List[String]): Option[String] = {
     val priorities = List(new LowestScorePriority("Least cells", (_.totalCells)))
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   // For the Early Exit event, Forever War card #297
   def earlyExitPriority(names: List[String]): Option[String] = {
-    val withAdvisors = (game getCountries names) filter (_.numAdvisors > 0)
+    val withAdvisors = game.getCountries(names).filter(_.numAdvisors > 0)
 
     if (withAdvisors.nonEmpty)
       topPriority(
@@ -994,14 +994,14 @@ object JihadistBot extends BotHelpers {
 
   def recruitTarget(names: List[String]): Option[String] = {
     botLog("Find \"Recruit\" target", Color.Debug)
-    val candidates = selectCandidates(game getCountries names, RecruitFlowchart)
+    val candidates = selectCandidates(game.getCountries(names), RecruitFlowchart)
     topPriority(candidates, recruitAndTravelToPriorities).map(_.name)
   }
 
 
   def travelToTarget(names: List[String]): Option[String] = {
     botLog("Find \"Travel To\" target", Color.Debug)
-    val candidates = selectCandidates(game getCountries names, TravelToFlowchart)
+    val candidates = selectCandidates(game.getCountries(names), TravelToFlowchart)
     topPriority(candidates, recruitAndTravelToPriorities).map(_.name)
   }
 
@@ -1121,7 +1121,7 @@ object JihadistBot extends BotHelpers {
       PoorPriority, FairPriority, GoodPriority, NotUSPriority,
       MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
       DisruptPrestigePriority, LowestRECPriority)
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   // If we have one or more Muslim countries at Islamist Rule
@@ -1225,11 +1225,13 @@ object JihadistBot extends BotHelpers {
       def desc = "Major Jihad Success possible at Poor?"
       def yesPath = MajorJihadOp(None)
       def noPath  = FundingTightDecision
-      def condition(ops: Int) = game.majorJihadTargets(ops) map game.getMuslim exists { m =>
-        m.isPoor &&
-        totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5 &&
-        majorJihadSuccessPossible(m)
-      }
+      def condition(ops: Int) = game.majorJihadTargets(ops)
+        .map(game.getMuslim)
+        .exists { m =>
+          m.isPoor &&
+          totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5 &&
+          majorJihadSuccessPossible(m)
+        }
     }
 
     object FundingTightDecision extends OperationDecision {
@@ -1694,13 +1696,13 @@ object JihadistBot extends BotHelpers {
   def goodPriority(names: List[String]): Option[String] = {
     val priorities = GoodPriority::Nil
     botLog("Find \"Good Priority\" target", Color.Debug)
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   def goodThenFairThenPoorPriority(names: List[String]): Option[String] = {
     val priorities = GoodPriority::FairPriority::PoorPriority::Nil
     botLog("Find \"Good/Fair/Poor Priority\" target", Color.Debug)
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   // ------------------------------------------------------------------
@@ -1737,7 +1739,7 @@ object JihadistBot extends BotHelpers {
            muslimTest(m => m.isPoor && game.prestige > 1)))
 
     botLog("Find \"Taliban Resurgent\" target", Color.Debug)
-    val candidates = countryNames(selectCandidates(game getCountries names, flowchart))
+    val candidates = countryNames(selectCandidates(game.getCountries(names), flowchart))
     minorJihadTarget(candidates)
   }
 
@@ -1746,7 +1748,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Not Adversary", muslimTest(m => !m.isAdversary)),
     )
     botLog("Find \"Critical Middle\" target", Color.Debug)
-    countryNames(selectCandidates(game getCountries names, flowchart))
+    countryNames(selectCandidates(game.getCountries(names), flowchart))
   }
 
   def unCeasefireTarget(names: List[String]): Option[String] = {
@@ -1756,7 +1758,7 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
 
     botLog("Find \"UN Ceasefire\" target", Color.Debug)
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   // Bot will not execute this in the Caliphate capital
@@ -1772,7 +1774,7 @@ object JihadistBot extends BotHelpers {
       HighestResourcePriority)
 
     botLog("Find \"Qadhafi\" target", Color.Debug)
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   def revolutionTarget(names: List[String]): Option[String] = {
@@ -1781,7 +1783,7 @@ object JihadistBot extends BotHelpers {
       HighestResourcePriority)
 
     botLog("Find \"Revolution\" target", Color.Debug)
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   def hamaOffensiveTarget(names: List[String]): Option[String] = {
@@ -1790,7 +1792,7 @@ object JihadistBot extends BotHelpers {
       HighestResourcePriority)
 
     botLog("Find \"Hama Offensive\" target", Color.Debug)
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   //  To select from which country adjacent to Syria
@@ -1801,7 +1803,7 @@ object JihadistBot extends BotHelpers {
       new HighestScorePriority("Largest Cells - TandM", muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)))
 
     botLog("Best \"Hayat Tahir\" adjacent with cells", Color.Debug)
-    topPriority(game getCountries names, priorities).map(_.name)
+    topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
   // Pick actives before sleepers
@@ -2357,7 +2359,7 @@ object JihadistBot extends BotHelpers {
         Set.empty[String]
 
       val banned = if (toName == UnitedStates)
-        (countryNames(game.countries) filter isTravelBanCountry).toSet
+        countryNames(game.countries).filter(isTravelBanCountry).toSet
       else
         Set.empty[String]
 
@@ -2490,7 +2492,7 @@ object JihadistBot extends BotHelpers {
 
   // Returns the number of Ops used.
   def plotOperation(card: Card, prestigeFocus: Boolean): Int = {
-    val maxCells = (game.plotTargets map game.getCountry map unusedCells).sum
+    val maxCells = game.plotTargets.map(game.getCountry).map(unusedCells).sum
     val maxAttempts = maxOpsPlusReserves(card) min maxCells
     log(s"\n$Jihadist performs a Plot operation")
     log(separator())
@@ -2566,7 +2568,7 @@ object JihadistBot extends BotHelpers {
           totalUnused(m, includeSadr = allowSadr) > 0 &&
           minorJihadGovTest(m)
 
-        val candidates = countryNames(game.jihadTargets map game.getMuslim filter canJihad)
+        val candidates = countryNames(game.jihadTargets.map(game.getMuslim).filter(canJihad))
         minorJihadTarget(candidates) match {
           case None => Nil   // No more candidates
           case Some(name) =>
@@ -2735,7 +2737,7 @@ object JihadistBot extends BotHelpers {
               // Now pick just the destinations that are adjacent to one of the sources
               val to = recruitTravelToPriority(adjDests).get
               travelFromTarget(to, adjacentTravelSources(to)) match {
-                case None => nextTravel(completed, destinations filterNot (_ == to))
+                case None => nextTravel(completed, destinations.filterNot(_ == to))
                 case Some(from) =>
                   displayHeader()
                   if (completed >= cardOps)
@@ -2744,7 +2746,7 @@ object JihadistBot extends BotHelpers {
                     case (_, true)::Nil => usedCells(to).addSleepers(1)
                     case _ =>
                   }
-                  nextTravel(completed + 1, destinations filterNot (_ == to))
+                  nextTravel(completed + 1, destinations.filterNot(_ == to))
               }
             }
             else if (lapsingEventInPlay(Biometrics)) // Non adjacent travel is not allowd
@@ -2752,7 +2754,7 @@ object JihadistBot extends BotHelpers {
             else {
               val to = recruitTravelToPriority(destinations).get
               travelFromTarget(to, travelSources(to)) match {
-                case None => nextTravel(completed, destinations filterNot (_ == to))
+                case None => nextTravel(completed, destinations.filterNot(_ == to))
                 case Some(from) =>
                   displayHeader()
                   if (completed >= cardOps)
@@ -2761,12 +2763,12 @@ object JihadistBot extends BotHelpers {
                     case (_, true)::Nil => usedCells(to).addSleepers(1)
                     case _ =>
                   }
-                  nextTravel(completed + 1, destinations filterNot (_ == to))
+                  nextTravel(completed + 1, destinations.filterNot(_ == to))
               }
             }
           }
         }
-        nextTravel(0, countryNames(game.nonMuslims filter (_.isUntested)))
+        nextTravel(0, countryNames(game.nonMuslims.filter(_.isUntested)))
       }
     }
 
@@ -2805,7 +2807,7 @@ object JihadistBot extends BotHelpers {
             // Within those we use the plot priorities to select the best one.
             val softs = {
               val ss = candidates sortBy (n => -n.governance) // sort so worst comes first
-              ss takeWhile (_.governance == ss.head.governance)
+              ss.takeWhile(_.governance == ss.head.governance)
             }
             val target = topPriority(softs, plotPriorities).get
 
@@ -2824,10 +2826,10 @@ object JihadistBot extends BotHelpers {
               }
             }
             val numPlots = nextAttempt(0)
-            nextPlotTarget(completed + numPlots, candidates filterNot (_.name == target.name))
+            nextPlotTarget(completed + numPlots, candidates.filterNot(_.name == target.name))
           }
         }
-        nextPlotTarget(0, game.nonMuslims filter (n => n.isSoft && totalUnused(n, includeSadr = true) > 0))
+        nextPlotTarget(0, game.nonMuslims.filter(n => n.isSoft && totalUnused(n, includeSadr = true) > 0))
       }
     }
 
@@ -3236,7 +3238,7 @@ object JihadistBot extends BotHelpers {
             if (adjDests.nonEmpty) {
               val to = recruitTravelToPriority(adjDests).get
               travelFromTarget(to, adjacentTravelSources(to)) match {
-                case None => nextTravel(completed, destinations filterNot (_ == to))
+                case None => nextTravel(completed, destinations.filterNot(_ == to))
                 case Some(from) =>
                   displayHeader()
                   if (completed >= cardOps)
@@ -3245,7 +3247,7 @@ object JihadistBot extends BotHelpers {
                     case (_, true)::Nil => usedCells(to).addSleepers(1)
                     case _ =>
                   }
-                  nextTravel(completed + 1, destinations filterNot (_ == to))
+                  nextTravel(completed + 1, destinations.filterNot(_ == to))
               }
             }
             else if (lapsingEventInPlay(Biometrics)) // Non adjacent travel is not allowd
@@ -3254,7 +3256,7 @@ object JihadistBot extends BotHelpers {
               val to = recruitTravelToPriority(destinations).get
               // Don't allow travel within the same country
               travelFromTarget(to, travelSources(to)) match {
-                case None => nextTravel(completed, destinations filterNot (_ == to))
+                case None => nextTravel(completed, destinations.filterNot(_ == to))
                 case Some(from) =>
                   displayHeader()
                   if (completed >= cardOps)
@@ -3263,12 +3265,12 @@ object JihadistBot extends BotHelpers {
                     case (_, true)::Nil => usedCells(to).addSleepers(1)
                     case _ =>
                   }
-                  nextTravel(completed + 1, destinations filterNot (_ == to))
+                  nextTravel(completed + 1, destinations.filterNot(_ == to))
               }
             }
           }
         }
-        nextTravel(0, countryNames(game.nonMuslims filter (_.isUntested)))
+        nextTravel(0, countryNames(game.nonMuslims.filter(_.isUntested)))
       }
     }
 
@@ -3508,7 +3510,7 @@ object JihadistBot extends BotHelpers {
     else {
       val target = troopsMilitiaTarget(candidates).get
       val num    = game.getCountry(target).troops min remaining
-      MapItem(target, num) :: troopsToTakeOffMap(remaining - num, candidates filterNot (_ == target))
+      MapItem(target, num) :: troopsToTakeOffMap(remaining - num, candidates.filterNot(_ == target))
     }
   }
 
@@ -3527,7 +3529,7 @@ object JihadistBot extends BotHelpers {
             val n = remaining min JihadistBot.numCellsForTravel(c, destination)
             val a = n min activeCells(c)
             val s = n - a
-            CellsItem(name, a, s) :: nextFromMap(countries filterNot (_ == name), remaining - n)
+            CellsItem(name, a, s) :: nextFromMap(countries.filterNot(_ == name), remaining - n)
           case None => Nil
         }
 

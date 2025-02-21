@@ -76,7 +76,7 @@ object Card_164 extends Card(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoLa
   def executeEvent(role: Role): Unit = {
     if (isEventEffective) {
       addGlobalEventMarker(BloodyThursday)
-      val candidates = countryNames(game.muslims filter (_.awakening > 0))
+      val candidates = countryNames(game.muslims.filter(_.awakening > 0))
       if (candidates.nonEmpty) {
         val target = if (isHuman(role))
           askCountry("Select country with awakening marker: ", candidates)

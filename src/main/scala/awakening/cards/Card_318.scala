@@ -84,7 +84,7 @@ object Card_318 extends Card(318, "South China Sea Crisis", Jihadist, 3, Remove,
       if (numFromTrack > 0)
         botItems += MapItem("track", numFromTrack)
       if (numFromMap > 0)
-        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
+        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries.filter(_.troops > 0)))
       botItems.toList
     }
 

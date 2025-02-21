@@ -162,7 +162,7 @@ trait BotHelpers {
           botLog("OpP Flowchart: no candidates found")
         Nil    // No filter found any candidates
       case (cs, f::fs) =>
-        (f filter cs) match {
+        f.filter(cs) match {
           case Nil =>            // Filter did not match anything, try the next filter
             if (allowBotLog)
               botLog(s"OpP Flowchart ($f): failed")
@@ -202,7 +202,7 @@ trait BotHelpers {
           // No more priorities
           best
         case (list, f :: fs) =>
-          (f filter list) match {
+          f.filter(list) match {
             case Nil =>
               if (allowBotLog)
                 botLog(s"$f: matched nothing")
@@ -233,7 +233,7 @@ trait BotHelpers {
   //       countries is empty.
   def topPriority(countries: List[Country], priorities: List[CountryFilter], allowBotLog: Boolean = true): Option[Country] = {
     if (allowBotLog)
-      botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")
+      botLog(s"topPriority: [${countries.map(_.name).mkString(", ")}]")
     @tailrec def nextPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
       (countries, priorities) match {
         case (Nil, _)    => None
@@ -247,14 +247,14 @@ trait BotHelpers {
             botLog(s"topPriority: Picked random country [${c.name}]")
           Some(c)
         case (cs, f::fs) =>
-          (f filter cs) match {
+          f.filter(cs) match {
             case Nil =>
               if (allowBotLog)
                 botLog(s"topPriority ($f) failed")
               nextPriority(cs, fs) // Filter entire list by next priority
             case rs  =>
               if (allowBotLog)
-                botLog(s"topPriority ($f) [${(rs map (_.name) mkString ", ")}]")
+                botLog(s"topPriority ($f) [${rs.map(_.name).mkString(", ")}]")
               nextPriority(rs, fs) // Filter matched list by next priority
           }
       }
@@ -295,7 +295,7 @@ trait BotHelpers {
   // A boolean criteria filter that is used in OpP flowcharts
   // Filters the given countries and returns the results.
   class CriteriaFilter(val desc: String, criteria: (Country) => Boolean) extends CountryFilter {
-    def filter(countries: List[Country]) = (countries filter criteria)
+    def filter(countries: List[Country]) = countries.filter(criteria)
   }
   
   // Highest integer score filter used with Priority Tables.
@@ -304,9 +304,9 @@ trait BotHelpers {
   // Then returns the list of countries whose score matches that highest value.
   class HighestScorePriority(val desc: String, score: (Country) => Int) extends CountryFilter {
     def filter(countries: List[Country]): List[Country] = {
-      val high = (countries map score).max
+      val high = countries.map(score).max
       // botLog(s"Highest ($desc): score = $high")
-      countries filter (c => score(c) == high)
+      countries.filter(c => score(c) == high)
     }
   }
 
@@ -316,9 +316,9 @@ trait BotHelpers {
   // Then returns the list of countries whose score matches that lowest value.
   class LowestScorePriority(val desc: String, score: (Country) => Int) extends CountryFilter {
     def filter(countries: List[Country]): List[Country] = {
-      val low = (countries map score).min
+      val low = countries.map(score).min
       // botLog(s"Lowest ($desc): score = $low")
-      countries filter (c => score(c) == low)
+      countries.filter(c => score(c) == low)
     }
   }
   
@@ -331,11 +331,11 @@ trait BotHelpers {
   class HighestScoreNode(val desc: String,
                          criteria: (Country) => Boolean, 
                          score:    (Country) => Int) extends CountryFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
+    def filter(countries: List[Country]) = countries.filter(criteria) match {
       case Nil        => Nil
       case candidates =>
-        val high = (candidates map score).max
-        candidates filter (c => score(c) == high)
+        val high = candidates.map(score).max
+        candidates.filter(c => score(c) == high)
     }
   }
   
@@ -348,11 +348,11 @@ trait BotHelpers {
   class LowestScoreNode(val desc: String,
                         criteria: (Country) => Boolean, 
                         score:    (Country) => Int) extends CountryFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
+    def filter(countries: List[Country]) = countries.filter(criteria) match {
       case Nil        => Nil
       case candidates =>
-        val low = (candidates map score).min
-        candidates filter (c => score(c) == low)
+        val low = candidates.map(score).min
+        candidates.filter(c => score(c) == low)
     }
   }
   
@@ -360,8 +360,7 @@ trait BotHelpers {
   // Returns the list of countries that are adjacent to the given target Country.
   class AdjacentCountriesNode(target: String) extends CountryFilter {
     val desc = s"Adjacent to $target"
-    def filter(countries: List[Country]) = 
-      (countries filter (c => areAdjacent(c.name, target)))
+    def filter(countries: List[Country]) = countries.filter(c => areAdjacent(c.name, target))
   }
 
 
@@ -377,7 +376,7 @@ trait BotHelpers {
         pickBest(targets) match {
           case None => Nil
           case Some(name) if allowDuplicates => name :: nextTarget(n + 1, targets)
-          case Some(name) => name :: nextTarget(n + 1, targets filterNot (_ == name))
+          case Some(name) => name :: nextTarget(n + 1, targets.filterNot(_ == name))
         }
       }
       else

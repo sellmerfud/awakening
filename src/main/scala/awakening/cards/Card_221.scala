@@ -187,7 +187,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
         def nextCountry(num: Int, candidates: List[String]): List[String] =
           if (num <= 3 && candidates.nonEmpty) {
             val country = JihadistBot.travelFromPriorities(target, candidates).get
-            country :: nextCountry(num + 1, candidates filterNot (_ == country))
+            country :: nextCountry(num + 1, candidates.filterNot(_ == country))
           }
           else
             Nil
@@ -214,7 +214,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
           Nil
         else {
           val name = USBot.disruptPriority(countries).get
-          name :: nextReaction(remaining - 1, countries filterNot (_ == name))
+          name :: nextReaction(remaining - 1, countries.filterNot(_ == name))
         }
       }
 
@@ -224,7 +224,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
         else {
           val name = USBot.disruptPriority(countries).get
           val cell = USBot.chooseCellsToRemove(name, 1)
-          (name, cell) :: nextCell(remaining - 1, countries filterNot (_ == name))
+          (name, cell) :: nextCell(remaining - 1, countries.filterNot(_ == name))
         }
       }
 

@@ -66,7 +66,7 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
 
   def botMinorJihadCandidates() = countryNames(
     game.getMuslims(game.jihadTargets)
-      filter { m =>
+      .filter { m =>
         (m.isFair || m.isGood) &&
         JihadistBot.minorJihadSuccessPossible(m)
       }

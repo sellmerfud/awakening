@@ -86,7 +86,7 @@ object Card_131 extends Card(131, "Arab Spring Fallout", US, 2, NoRemove, NoLaps
       candidates
     else if (isHuman(role)) {
       val first  = askCountry("Select first country: ", candidates)
-      val second = askCountry("Select second country: ", candidates filterNot (_ == first))
+      val second = askCountry("Select second country: ", candidates.filterNot(_ == first))
       first::second::Nil
     }
     else

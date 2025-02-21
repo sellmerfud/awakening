@@ -121,11 +121,11 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
             Nil
           else if (plots.nonEmpty && (plotsFirst || cellsLeft == 0)) {
             val target = JihadistBot.plotPriority(candidates).get
-            Action(target, Right(plots.head)) :: nextAction(cellsLeft, plots.tail, candidates filterNot (_ == target))
+            Action(target, Right(plots.head)) :: nextAction(cellsLeft, plots.tail, candidates.filterNot(_ == target))
           }
           else {
             val target = JihadistBot.cellPlacementPriority(false)(candidates).get
-            Action(target, Left(())) :: nextAction(cellsLeft - 1, plots, candidates filterNot (_ == target))
+            Action(target, Left(())) :: nextAction(cellsLeft - 1, plots, candidates.filterNot(_ == target))
           }
         }
 

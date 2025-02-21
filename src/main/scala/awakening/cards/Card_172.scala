@@ -175,12 +175,12 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
       else
         None
       val actions = List(
-        besiegeTarget  map (_ => Besiege),
-        cellTarget     map (_ => PlaceCell),
-        reactionTarget map (_ => PlaceReaction),
-        plotTarget     map (_ => PlacePlot2),
+        besiegeTarget.map(_ => Besiege),
+        cellTarget.map(_ => PlaceCell),
+        reactionTarget.map(_ => PlaceReaction),
+        plotTarget.map(_ => PlacePlot2),
         if (candidateCards().nonEmpty) Some("draw") else None,
-      ).flatten take 2
+      ).flatten.take(2)
 
       actions foreach { action =>
         println()
@@ -196,7 +196,7 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
             addReactionMarker(reactionTarget.get)
           case PlacePlot1|PlacePlot2 =>
             // Use Plot 2 if available otherwise Plot 1
-            val plot = (game.availablePlots.sorted dropWhile (p => p != Plot1 && p != Plot2)).head
+            val plot = (game.availablePlots.sorted.dropWhile(p => p != Plot1 && p != Plot2)).head
             addEventTarget(plotTarget.get)
             addAvailablePlotToCountry(plotTarget.get, plot)
           case Draw =>

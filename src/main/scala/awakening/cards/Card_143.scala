@@ -175,7 +175,7 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
         if (game.funding  >  1) Some("funding") else None,
         if (canPlaceAwakening ) Some("awakening") else None,
         Some("aid")
-      ).flatten take numActions
+      ).flatten.take(numActions)
 
       actions foreach {
         case "prestige" =>

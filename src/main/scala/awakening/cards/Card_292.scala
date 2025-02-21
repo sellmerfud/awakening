@@ -97,7 +97,7 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
 
         addEventTarget(target)
         addCadreToCountry(target)
-        nextCadre(num + 1, candidates filterNot (_ == target))
+        nextCadre(num + 1, candidates.filterNot(_ == target))
       }
 
     // Used when the event was triggered during US turn

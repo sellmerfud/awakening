@@ -103,9 +103,11 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
     else { // Jihadist
       addEventTarget(Turkey)
       testCountry(Turkey)  // Specifically called for by event
-      val candidates = countryNames(List(Turkey, Iraq)
-                            map game.getMuslim
-                            filter (m => !(m.isPoor || m.isIslamistRule)))
+      val candidates = countryNames(
+        List(Turkey, Iraq)
+          .map(game.getMuslim)
+          .filter(m => !(m.isPoor || m.isIslamistRule))
+      )
       // candidates could be empty if Iraq is Poor and Turkey just tested to Poor
       if (getJihadistCandidates.nonEmpty) {
         val name = if (isHuman(role))

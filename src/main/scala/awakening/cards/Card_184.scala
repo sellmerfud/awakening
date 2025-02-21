@@ -120,7 +120,7 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
       if (numFromTrack > 0)
         botItems += MapItem("track", numFromTrack)
       if (numFromMap > 0)
-        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
+        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries.filter(_.troops > 0)))
       botItems.toList
     }
 

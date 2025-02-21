@@ -114,7 +114,7 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
     }
     else {
       // See Event Instructions table
-      val nonIR = countryNames(game.countries filter (m => m.totalCells == 0 && !m.isIslamistRule))
+      val nonIR = countryNames(game.countries.filter(m => m.totalCells == 0 && !m.isIslamistRule))
       val candidates = if (nonIR.size >= 3)
         nonIR
       else

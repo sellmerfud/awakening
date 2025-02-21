@@ -80,7 +80,7 @@ object Card_076 extends Card(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing, 
       log(s"\nDraw 2 cards and place them on top of the $Jihadist Bot's hand", Color.Event)
     askMultipleCardsDrawnFromDrawPile(role, 2)
     decreasePrestige(2)
-    val candidates = countryNames(game.muslims filter (_.isAlly))
+    val candidates = countryNames(game.muslims.filter(_.isAlly))
     if (candidates.isEmpty)
       log("\nThere are no Ally Muslim countries. No shift possible.", Color.Event)
     val name = if (isHuman(role))

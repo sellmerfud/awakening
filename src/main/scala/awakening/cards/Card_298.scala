@@ -80,7 +80,7 @@ object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, N
   override
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
-      val postureCandidates = countryNames(game.nonMuslims filter (n => n.canRemovePosture))
+      val postureCandidates = countryNames(game.nonMuslims.filter(n => n.canRemovePosture))
       sealed trait Choice
       case object Plot extends Choice
       case object Posture extends Choice

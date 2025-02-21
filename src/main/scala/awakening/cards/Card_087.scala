@@ -101,7 +101,7 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
         val cell = if (c.activeCells > 0) (1, 0, false)
                    else if (c.hasSadr)    (0, 0, true)
                    else                   (0, 1, false)
-        (target, cell, JihadistBot.preparePlots(game.availablePlots)take(2))
+        (target, cell, JihadistBot.preparePlots(game.availablePlots).take(2))
       }
 
       addEventTarget(target)

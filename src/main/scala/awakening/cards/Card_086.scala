@@ -85,7 +85,7 @@ object Card_086 extends Card(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing
     decreasePrestige(1)
 
     if (game.cellsAvailable > 0) {
-      val candidates = countryNames(game.muslims filter (_.isShiaMix))
+      val candidates = countryNames(game.muslims.filter(_.isShiaMix))
       val name = if (isHuman(role))
         askCountry("Select a Shia-Mix country: ", candidates)
       else

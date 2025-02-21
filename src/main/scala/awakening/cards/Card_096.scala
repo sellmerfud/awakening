@@ -97,7 +97,7 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
         case plots if isHuman(Jihadist) => askPlots(plots, 1).head
         case plots => shuffle(plots).head
       }
-      val candidates = countryNames(game.muslims filter (!_.isIslamistRule))
+      val candidates = countryNames(game.muslims.filter(!_.isIslamistRule))
       val name = if (isHuman(Jihadist))
         askCountry(s"Place $plot in which country: ", candidates)
       else

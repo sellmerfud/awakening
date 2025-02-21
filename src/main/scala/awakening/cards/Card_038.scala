@@ -80,12 +80,12 @@ object Card_038 extends Card(38, "Libyan Deal", US, 3, Remove, NoLapsing, NoAuto
     increasePrestige(1)
     val schengens = if (isHuman(role)) {
       displayLine("\nSelect the posture of 2 Shengen countries.", Color.Info)
-      askCountries(2, Schengen) map { name =>
+      askCountries(2, Schengen).map { name =>
         (name, askPosture(name))
       }
     }
     else
-      USBot.multipleTargets(2, Schengen)(USBot.posturePriority) map (n => (n, game.usPosture))
+      USBot.multipleTargets(2, Schengen)(USBot.posturePriority).map(n => (n, game.usPosture))
     
     for ((name, posture) <- schengens) {
       addEventTarget(name)

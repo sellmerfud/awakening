@@ -49,9 +49,10 @@ import awakening.LabyrinthAwakening._
 object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   val PotentialTargets = List(UnitedStates, UnitedKingdom, Canada)
   def getCandidates = countryNames(
-    game.getCountries(PotentialTargets) filter { c =>
-      c.hasCadre || c.totalCells > 0 || c.plots.nonEmpty
-    }
+    game.getCountries(PotentialTargets)
+      .filter { c =>
+        c.hasCadre || c.totalCells > 0 || c.plots.nonEmpty
+      }
   )
 
   // Used by the US Bot to determine if the executing the event would alert a plot

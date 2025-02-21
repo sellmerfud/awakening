@@ -75,7 +75,7 @@ object Card_137 extends Card(137, "FMS", US, 2, NoRemove, NoLapsing, NoAutoTrigg
   override
   def executeEvent(role: Role): Unit = {
     if (game.militiaAvailable > 0) {
-      val candidates = countryNames(game.muslims filter (m =>  m.canTakeMilitia && m.isAlly))
+      val candidates = countryNames(game.muslims.filter(m =>  m.canTakeMilitia && m.isAlly))
       val target = if (isHuman(role))
         askCountry("Select country: ", candidates)
       else

@@ -82,7 +82,7 @@ object Card_173 extends Card(173, "Arab Winter", Jihadist, 2, NoRemove, Lapsing,
           candidates
         else if (isHuman(role)) {
           val target1 = askCountry("Select first country: ", candidates)
-          val target2 = askCountry("Select second country: ", candidates filterNot (_ == target1))
+          val target2 = askCountry("Select second country: ", candidates.filterNot(_ == target1))
           List(target1, target2)
         }
         else

@@ -84,7 +84,7 @@ object Card_179 extends Card(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsin
       if (numFromTrack > 0)
         botItems += MapItem("track", numFromTrack)
       if (numFromMap > 0)
-        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries filter (_.troops > 0)))
+        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries.filter(_.troops > 0)))
       botItems.toList
     }
 

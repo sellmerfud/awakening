@@ -524,13 +524,13 @@ object LabyrinthAwakening {
    Serbia            -> (Russia :: Turkey :: Schengen),
    Israel            -> (Egypt :: Jordan :: Lebanon :: Nil),
    India             -> (Pakistan :: IndonesiaMalaysia :: Nil),
-   Scandinavia       -> ((Schengen ::: SchengenLinks) filterNot (_ == Scandinavia)),
-   EasternEurope     -> ((Schengen ::: SchengenLinks) filterNot (_ == EasternEurope)),
-   Benelux           -> ((Schengen ::: SchengenLinks) filterNot (_ == Benelux)),
-   Germany           -> ((Schengen ::: SchengenLinks) filterNot (_ == Germany)),
-   France            -> ((Schengen ::: SchengenLinks) filterNot (_ == France)),
-   Italy             -> ((Schengen ::: SchengenLinks) filterNot (_ == Italy)),
-   Spain             -> ((Schengen ::: SchengenLinks) filterNot (_ == Spain)),
+   Scandinavia       -> (Schengen ::: SchengenLinks).filterNot(_ == Scandinavia),
+   EasternEurope     -> (Schengen ::: SchengenLinks).filterNot(_ == EasternEurope),
+   Benelux           -> (Schengen ::: SchengenLinks).filterNot(_ == Benelux),
+   Germany           -> (Schengen ::: SchengenLinks).filterNot(_ == Germany),
+   France            -> (Schengen ::: SchengenLinks).filterNot(_ == France),
+   Italy             -> (Schengen ::: SchengenLinks).filterNot(_ == Italy),
+   Spain             -> (Schengen ::: SchengenLinks).filterNot(_ == Spain),
    Russia            -> (Serbia :: Turkey :: Caucasus :: CentralAsia :: Schengen),
    Caucasus          -> (Turkey :: Russia :: CentralAsia :: Iran :: Nil),
    China             -> (CentralAsia:: Thailand :: Nil),
@@ -598,7 +598,7 @@ object LabyrinthAwakening {
       if (current == target)
         Some(0)
       else {
-        (getAdjacent(current) filterNot visited) match {
+        getAdjacent(current).filterNot(visited) match {
           case Nil       => None
           case adjacents =>
             val paths = adjacents.map(a => measure(a, visited ++ adjacents)).flatten.sorted
@@ -615,12 +615,18 @@ object LabyrinthAwakening {
   //  Return a list of countries with at least 1 cell that are closest to the
   //  target country
   def closestWithCells(target: String, allowSadr: Boolean = false): List[String] = {
-    val candidates = countryNames(game.countries filter (c => c.name != target && (if (allowSadr) c.totalCells > 0 else c.cells > 0)))
-    val ordered = (candidates map (name => (name, distance(name, target)))).sortWith((a, b) => a._2 < b._2)
+    val isCandidate = (c: Country) =>
+      c.name != target &&
+      (if (allowSadr) c.totalCells > 0 else c.cells > 0)
+    val candidates = countryNames(game.countries.filter(isCandidate))
+    val ordered = (candidates.map(name => (name, distance(name, target))))
+      .sortWith((a, b) => a._2 < b._2)
     if (ordered.isEmpty)
       Nil
     else
-      (ordered takeWhile (_._2 == ordered.head._2)) map (_._1)
+      ordered
+        .takeWhile(_._2 == ordered.head._2)
+        .map(_._1)
   }
 
   val PersionGulfExporterNames = SaudiArabia::GulfStates::Iraq::Iran::Nil
@@ -646,13 +652,14 @@ object LabyrinthAwakening {
 
   def persianGulfExporters = {
     val names = if (isIranSpecialCase)
-      PersionGulfExporterNames filterNot (_ == Iran)
+      PersionGulfExporterNames.filterNot(_ == Iran)
     else
       PersionGulfExporterNames
     game.getMuslims(names)
   }
 
-  def nonPersianGulfExporters = game.muslims filter (m => m.oilExporter && !PersionGulfExporterNames.contains(m.name))
+  def nonPersianGulfExporters =
+    game.muslims.filter(m => m.oilExporter && !PersionGulfExporterNames.contains(m.name))
 
   def isPersionGulflExporter(name: String) = countryNames(persianGulfExporters) contains name
   def isNonPersionGulflExporter(name: String) = countryNames(nonPersianGulfExporters) contains name
@@ -661,13 +668,13 @@ object LabyrinthAwakening {
     (plots.size, visible) match {
       case (0, _)     => List("none")
       case (n, false) => List(amountOf(n, "hidden plot"))
-      case (_, true)  => plots.sorted map (_.name)
+      case (_, true)  => plots.sorted.map(_.name)
     }
 
   def plotsDisplay(plots: List[Plot], visible: Boolean = true): String = (plots.size, visible) match {
     case (0, _)     => "none"
     case (n, false) => amountOf(n, "hidden plot")
-    case (_, true)  => plots.sorted map (_.name) mkString ", "
+    case (_, true)  => plots.sorted.map(_.name).mkString(", ")
   }
 
   def mapPlotsDisplay(plots: List[PlotOnMap], visible: Boolean = true): String = {
@@ -676,7 +683,7 @@ object LabyrinthAwakening {
       case (0, _)                   => "none"
       case (n, false) if lashed > 0 => s"${amountOf(n, "hidden plot")}, $lashed backlashed"
       case (n, false)               => amountOf(n, "hidden plot")
-      case (_, true)                => plots.sorted map (_.toString) mkString ", "
+      case (_, true)                => plots.sorted.map(_.toString).mkString(", ")
     }
   }
 
@@ -1076,7 +1083,7 @@ object LabyrinthAwakening {
   def cardNumAndName(number: Int): String = {
     deck(number).numAndName
   }
-  def cardNumsAndNames(xs: List[Int]): String = xs.sorted map cardNumAndName mkString ", "
+  def cardNumsAndNames(xs: List[Int]): String = xs.sorted.map(cardNumAndName).mkString(", ")
 
   // Add a Played Card to the list of plays
   def addPlayedCard(role: Role, cardNum: Int): Unit ={
@@ -1151,9 +1158,11 @@ object LabyrinthAwakening {
     }
 
     def markerTroops: Int = troopsMarkers.foldLeft(0) { (total, tm) => total + tm.num }
-    def deployableMarkerTroops = (troopsMarkers filter (_.canDeploy)).foldLeft(0) { (total, tm) => total + tm.num }
-    def markerTroopsThatAffectPrestige: Int =
-      troopsMarkers.foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
+    def deployableMarkerTroops = troopsMarkers
+      .filter(_.canDeploy)
+      .foldLeft(0) { (total, tm) => total + tm.num }
+    def markerTroopsThatAffectPrestige: Int = troopsMarkers
+      .foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
     def totalTroops = troops + markerTroops
     def totalDeployableTroops = if (game.humanRole == US)
       troops + deployableMarkerTroops
@@ -1566,38 +1575,40 @@ object LabyrinthAwakening {
     def getCountry(name: String) = {
       if (currentMode == LabyrinthMode && !game.campaign && (name == Nigeria || name == Mali))
         throw new IllegalArgumentException(s"getCountry() '$name' is not available in Labyrinth mode")
-      (countries find (_.name == name)).get
+      countries.find(_.name == name).get
     }
-    def getMuslim(name: String)    = (muslims find (_.name == name)).get
-    def getNonMuslim(name: String) = (nonMuslims find (_.name == name)).get
+    def getMuslim(name: String)    = muslims.find(_.name == name).get
+    def getNonMuslim(name: String) = nonMuslims.find(_.name == name).get
 
 
-    def getCountries(names: List[String]):  List[Country]          = names map getCountry
-    def getMuslims(names: List[String]):    List[MuslimCountry]    = names map getMuslim
-    def getNonMuslims(names: List[String]): List[NonMuslimCountry] = names map getNonMuslim
+    def getCountries(names: List[String]):  List[Country] = names.map(getCountry)
+    def getMuslims(names: List[String]):    List[MuslimCountry] = names.map(getMuslim)
+    def getNonMuslims(names: List[String]): List[NonMuslimCountry] = names.map(getNonMuslim)
 
-    def hasCountry(test: (Country) => Boolean)            = countries  exists test
-    def hasMuslim(test: (MuslimCountry) => Boolean)       = muslims    exists test
-    def hasNonMuslim(test: (NonMuslimCountry) => Boolean) = nonMuslims exists test
+    def hasCountry(test: (Country) => Boolean) = countries.exists(test)
+    def hasMuslim(test: (MuslimCountry) => Boolean) = muslims.exists(test)
+    def hasNonMuslim(test: (NonMuslimCountry) => Boolean) = nonMuslims.exists(test)
 
-    def isMuslim(name: String)    = hasMuslim(_.name == name)
+    def isMuslim(name: String) = hasMuslim(_.name == name)
     def isNonMuslim(name: String) = hasNonMuslim(_.name == name)
 
-    def adjacentCountries(name: String)   = getCountries(getAdjacent(name))
-    def adjacentMuslims(name: String)     = getMuslims(getAdjacent(name) filter isMuslim)
-    def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name) filter isNonMuslim)
-    def adjacentCountriesWithCells(name: String) = getCountries(getAdjacent(name)) filter (_.cells > 0)
+    def adjacentCountries(name: String) = getCountries(getAdjacent(name))
+    def adjacentMuslims(name: String) = getMuslims(getAdjacent(name).filter(isMuslim))
+    def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name).filter(isNonMuslim))
+    def adjacentCountriesWithCells(name: String) = getCountries(getAdjacent(name)).filter(_.cells > 0)
 
-    def adjacentToGoodAlly(name: String)     = game.adjacentMuslims(name) exists (m => m.isGood && m.isAlly)
-    def adjacentToIslamistRule(name: String) = game.adjacentMuslims(name) exists (_.isIslamistRule)
-    def adjacentToCivilWar(name: String)     = game.adjacentMuslims(name) exists (_.civilWar)
+    def adjacentToGoodAlly(name: String) = game.adjacentMuslims(name).exists(m => m.isGood && m.isAlly)
+    def adjacentToIslamistRule(name: String) = game.adjacentMuslims(name).exists(_.isIslamistRule)
+    def adjacentToCivilWar(name: String) = game.adjacentMuslims(name).exists(_.civilWar)
 
     // Return true if the given country is adjacent to at least on Sunni Muslim Country
-    def adjacentToSunni(name: String) = adjacentMuslims(name) exists (_.isSunni)
+    def adjacentToSunni(name: String) = adjacentMuslims(name).exists(_.isSunni)
     // Return true if the given country is adjacent to at least on Shi Mix Muslim Country
-    def adjacentToShiaMix(name: String) = adjacentMuslims(name) exists (_.isShiaMix)
+    def adjacentToShiaMix(name: String) = adjacentMuslims(name).exists(_.isShiaMix)
 
-    def caliphateCapital: Option[String] = muslims find (_.caliphateCapital) map (_.name)
+    def caliphateCapital: Option[String] = muslims
+      .find(_.caliphateCapital)
+      .map(_.name)
     def caliphateDeclared = caliphateCapital.nonEmpty
     def isCaliphateMember(name: String): Boolean = {
       caliphateCapital match {
@@ -1626,18 +1637,18 @@ object LabyrinthAwakening {
     }
 
     def updateCountry(changed: Country): GameState =
-      this.copy(countries = changed :: (countries filterNot (_.name == changed.name)))
+      this.copy(countries = changed :: countries.filterNot(_.name == changed.name))
 
     def updateCountries(changed: List[Country]): GameState = {
-      val updates = (changed map (c => (c.name -> c))).toMap
-      this.copy(countries = countries map (c => updates.getOrElse(c.name, c)))
+      val updates = changed.map(c => (c.name -> c)).toMap
+      this.copy(countries = countries.map(c => updates.getOrElse(c.name, c)))
     }
 
     def addMarker(name: String): GameState = this.copy(markers = name :: markers)
-    def removeMarker(name: String): GameState = this.copy(markers = markers filterNot (_ == name))
+    def removeMarker(name: String): GameState = this.copy(markers = markers.filterNot(_ == name))
 
     // List of countries that are valid targets for War of Ideas
-    def woiTargets: List[Country] = countries filter {
+    def woiTargets: List[Country] = countries.filter {
       case n: NonMuslimCountry => !(n.name == UnitedStates || n.name == Israel)
       case m: MuslimCountry    => m.isUntested || m.isNeutral || (m.isAlly && !m.isGood)
     }
@@ -1763,8 +1774,8 @@ object LabyrinthAwakening {
     // But if that is the only valid destination, then do not include "track" in the
     // list of sources.
     def deployTargets(ops: Int): Option[(List[String], List[String])] = {
-      val fromCountries = countryNames(countries filter (_.canDeployFrom(ops)))
-      val toCountries   = countryNames(countries filter (_.canDeployTo(ops)))
+      val fromCountries = countryNames(countries.filter(_.canDeployFrom(ops)))
+      val toCountries   = countryNames(countries.filter(_.canDeployTo(ops)))
       (fromCountries, toCountries) match {
         case (Nil, Nil )                        => None
         case (Nil, to  ) if troopsAvailable > 0 => Some("track"::Nil, to)
@@ -1776,8 +1787,13 @@ object LabyrinthAwakening {
     }
 
     def regimeChangeSourcesFor(target: String): List[String] = {
-      val ms = countryNames(countries filter (_.maxDeployFrom > 5)) filterNot (_ == target)
-      if (troopsAvailable > 5) "track" :: ms else ms
+      val sources = countryNames(
+        countries.filter(c => c.name != target && c.maxDeployFrom > 5)
+      )
+      if (troopsAvailable > 5)
+        "track" :: sources
+      else
+        sources
     }
 
     def regimeChangeTargets: List[String] = {
@@ -1790,22 +1806,27 @@ object LabyrinthAwakening {
       else
         true
 
-      val targets = countryNames(muslims filter { m =>
-        (m.isIslamistRule && isAllowed(m))         ||
-        (m.name == Iraq  && m.hasMarker(IraqiWMD)) ||
-        (m.name == Libya && m.hasMarker(LibyanWMD))
-      })
+      val targets = countryNames(
+        muslims.filter { m =>
+          (m.isIslamistRule && isAllowed(m))         ||
+          (m.name == Iraq  && m.hasMarker(IraqiWMD)) ||
+          (m.name == Libya && m.hasMarker(LibyanWMD))
+        }
+      )
       // Only a valid target if there is a source of troops available
-      targets filter haveSource
+      targets.filter(haveSource)
     }
 
     def regimeChangePossible(ops: Int) = {
       ops >= 3 && usPosture == Hard && regimeChangeTargets.nonEmpty
     }
 
-    def withdrawFromTargets: List[String] = countryNames(muslims filter (m => m.inRegimeChange && m.troops > 0))
+    def withdrawFromTargets: List[String] = countryNames(
+      muslims.filter(m => m.inRegimeChange && m.troops > 0)
+    )
 
-    def withdrawToTargets: List[String] = "track" :: countryNames(countries filter (_.canDeployTo(3)))
+    def withdrawToTargets: List[String] =
+      "track" :: countryNames(countries.filter(_.canDeployTo(3)))
 
     def withdrawPossible(ops: Int) =
         ops >= 3 && usPosture == Soft && withdrawFromTargets.nonEmpty
@@ -1854,37 +1875,37 @@ object LabyrinthAwakening {
 
     def alertPossible(ops: Int) = ops >= 3 && alertTargets.nonEmpty
 
-    def alertTargets: List[String] = countryNames(countries filter (_.hasPlots))
+    def alertTargets: List[String] = countryNames(countries.filter(_.hasPlots))
 
     def warOfIdeasMuslimTargets(ops: Int): List[String] =
-      countryNames(muslims filter (_.warOfIdeasOK(ops)))
+      countryNames(muslims.filter(_.warOfIdeasOK(ops)))
 
     def warOfIdeasNonMuslimTargets(ops: Int): List[String] =
-      countryNames(nonMuslims filter (_.warOfIdeasOK(ops)))
+      countryNames(nonMuslims.filter(_.warOfIdeasOK(ops)))
 
     def warOfIdeasTargets(ops: Int): List[String] =
       warOfIdeasMuslimTargets(ops) ::: warOfIdeasNonMuslimTargets(ops)
 
 
     def recruitTargets(madrassas: Boolean): List[String] =
-      countryNames(countries filter (_.recruitOK(madrassas)))
+      countryNames(countries.filter(_.recruitOK(madrassas)))
 
     def recruitPossible = lapsingEventNotInPlay(GTMO) &&
                           cellsToRecruit > 0 &&
                           recruitTargets(madrassas = false).nonEmpty
 
-    def jihadTargets: List[String] = countryNames(muslims filter (_.jihadOK))
+    def jihadTargets: List[String] = countryNames(muslims.filter(_.jihadOK))
     def jihadPossible = jihadTargets.nonEmpty
 
-    def majorJihadTargets(ops: Int) = countryNames(muslims filter (_.majorJihadOK(ops)))
+    def majorJihadTargets(ops: Int) = countryNames(muslims.filter(_.majorJihadOK(ops)))
     def majorJihadPossible(ops: Int) = majorJihadTargets(ops).nonEmpty
 
     def plotTargets: List[String] = {
-      val muslimTargets = muslims filter (m => !m.isIslamistRule && m.totalCells > 0)
-      val nonMuslimTargets = nonMuslims filter (_.totalCells > 0)
+      val muslimTargets = muslims.filter(m => !m.isIslamistRule && m.totalCells > 0)
+      val nonMuslimTargets = nonMuslims.filter(_.totalCells > 0)
       countryNames(muslimTargets ::: nonMuslimTargets)
     }
-    def plotsAvailableWith(ops: Int) = availablePlots filter (_.opsToPlace <= ops)
+    def plotsAvailableWith(ops: Int) = availablePlots.filter(_.opsToPlace <= ops)
     def plotPossible(ops: Int) = plotsAvailableWith(ops).nonEmpty && plotTargets.nonEmpty
 
     // --- Summaries --------------------------------------
@@ -2207,7 +2228,7 @@ object LabyrinthAwakening {
 
     // Apply scenario overrides to countries.
     for (c <- scenario.countries)
-      countries = c :: (countries filterNot (_.name == c.name))
+      countries = c :: countries.filterNot(_.name == c.name)
 
     GameState(
       scenario.name,
@@ -2364,7 +2385,7 @@ object LabyrinthAwakening {
       var associations = Map.empty[String, Set[String]].withDefaultValue(Set.empty)
       for ((a, o) <- abbr)
         associations += o -> (associations(o) + a)
-      options map {
+      options.map {
         case o if associations(o).nonEmpty => o + associations(o).toList.sorted.mkString(" (", ",", ")")
         case o => o
       }
@@ -2429,7 +2450,7 @@ object LabyrinthAwakening {
                abbr: Map[String, String] = Map.empty): Option[String] = {
     val choices = if (allowAbort) options ++ List(AbortCard) else options
     def testResponse(response: Option[String]): Option[String] = {
-      response flatMap (s => matchOne(s.trim, choices map (_.toString), abbr)) match {
+      response flatMap (s => matchOne(s.trim, choices.map(_.toString), abbr)) match {
         case None =>
           readLine(prompt) match {
             case null | "" if allowNone => None
@@ -2482,7 +2503,7 @@ object LabyrinthAwakening {
             "%s (%d - %d) Default = %d: ".format(prompt, choices.head, choices.last, d)
           else
             "%s (%s) Default = %d: ".format(prompt, orList(choices), d)
-          askOneOf(p, choices, allowNone = true, allowAbort = allowAbort) map (_.toInt) match {
+          askOneOf(p, choices, allowNone = true, allowAbort = allowAbort).map(_.toInt) match {
             case None    => d
             case Some(x) => x
           }
@@ -2491,7 +2512,7 @@ object LabyrinthAwakening {
             "%s (%d - %d): ".format(prompt, choices.head, choices.last)
           else
             "%s (%s): ".format(prompt, orList(choices))
-          (askOneOf(p, choices, None, allowAbort = allowAbort) map (_.toInt)).get
+          (askOneOf(p, choices, None, allowAbort = allowAbort).map(_.toInt)).get
       }
     }
   }
@@ -2512,7 +2533,7 @@ object LabyrinthAwakening {
     def nextCountry(n: Int, targets: List[String]): List[String] = {
       if (n <= num && targets.nonEmpty) {
         val name = askCountry(s"Select ${ordinal(n)} country: ", targets)
-        val newTargets = if (allowDuplicates) targets else (targets filterNot (_ == name))
+        val newTargets = if (allowDuplicates) targets else (targets.filterNot(_ == name))
         name :: nextCountry(n + 1, newTargets)
       }
       else
@@ -2651,7 +2672,7 @@ object LabyrinthAwakening {
       val choices = List(
         choice(c.troops > 0, TroopCube,   s"Troop cube (${c.troops} present)"),
         choice(militia > 0,  MilitiaCube, s"Militia cube (${militia} present)")
-      ).flatten ++ (c.troopsMarkers.sorted map (x => TroopMarker(x.name) -> x.name))
+      ).flatten ++ (c.troopsMarkers.sorted.map(x => TroopMarker(x.name) -> x.name))
       askMenu("Choose one:", choices).head
     }
   }
@@ -3078,9 +3099,8 @@ object LabyrinthAwakening {
 
       // If this was not a 3 deck game, then give the user a
       // chance to extend the game.
-      val choices = Range.inclusive(game.gameLength + 1, 3)
-        .toList.
-        map(len => Some(len) -> s"Extend game to $len decks") :+ (None, "Quit game")
+      val choices = Range.inclusive(game.gameLength + 1, 3).toList
+        .map(len => Some(len) -> s"Extend game to $len decks") :+ (None, "Quit game")
       askMenu("\nChoose one:", choices).head match {
         case Some(len) =>
           log(s"\nGame length extended from ${game.gameLength} to $len decks.", Color.Info)
@@ -3153,7 +3173,7 @@ object LabyrinthAwakening {
         game = game.copy(firstPlotEntry = Some(LapsingEntry(0, discarded = true)))
 
       case FromRemoved =>
-        game = game.copy(cardsRemoved = game.cardsRemoved filterNot (_ == cardNum))
+        game = game.copy(cardsRemoved = game.cardsRemoved.filterNot(_ == cardNum))
 
       case FromRole(from) =>
         decreaseCardsInHand(from, 1)
@@ -3473,7 +3493,7 @@ object LabyrinthAwakening {
       else if (itemsRemaining.size == 1)
         itemsRemaining.keys.head :: Nil
       else {
-        val indexMap = (itemsRemaining.keys.zipWithIndex map (_.swap)).toMap
+        val indexMap = (itemsRemaining.keys.zipWithIndex.map(_.swap)).toMap
         val choicePrompt = if (numChoices > 1)
           s"${ordinal(num)} Selection: "
         else
@@ -3519,7 +3539,7 @@ object LabyrinthAwakening {
       println(menuPrompt)
       println(separator(char = '='))
 
-      val indexMap = (itemMap.keys.zipWithIndex map (_.swap)).toMap
+      val indexMap = itemMap.keys.zipWithIndex.map(_.swap).toMap
 
       for ((key, i) <- itemMap.keysIterator.zipWithIndex) {
         val number = String.format(s"%${numWidth}d: ", i+1)
@@ -3615,11 +3635,14 @@ object LabyrinthAwakening {
         val choices = targets.map(t => t.country -> disp(t))
         println()
         val country = askMenu(s"${amountOf(numItems, name)} remaining, choose country", choices).head
-        val limit   = (targets find (_.country == country)).get.num min numItems
+        val limit   = targets.find(_.country == country).get.num min numItems
         val num     = askInt("How many", 1, limit)
-        val newTargets = targets map { t =>
-          if (t.country == country) t.copy(num = t.num - num) else t
-        } filterNot (_.num == 0)
+        val newTargets = targets.map { t =>
+          if (t.country == country)
+            t.copy(num = t.num - num)
+          else
+            t
+        }.filterNot (_.num == 0)
         MapItem(country, num) :: askMapItems(newTargets, numItems - num, name)
     }
   }
@@ -3654,7 +3677,7 @@ object LabyrinthAwakening {
               val src = if (sources.size == 1)
                 sources.head
               else {
-                val choices = sources map { i => i.name -> disp(i) }
+                val choices = sources.map(i => i.name -> disp(i))
                 val name = askMenu(s"${amountOf(numRemaining, "cell")} remaining, choose from:", choices).head
                 sources.find (_.name == name).get
               }
@@ -3665,11 +3688,13 @@ object LabyrinthAwakening {
               (src, (a, s))
           }
           val newSources = if (src.total == (a + s))
-            sources filterNot (_.name == src.name)
+            sources.filterNot(_.name == src.name)
           else
-            sources map { x =>
-              if (x.name == src.name) x.copy(actives = x.actives - a, sleepers = x.sleepers - s)
-              else x
+            sources.map { x =>
+              if (x.name == src.name)
+                x.copy(actives = x.actives - a, sleepers = x.sleepers - s)
+              else
+                x
             }
           CellsItem(src.name, a, s) :: nextChoice(numRemaining - a - s, newSources)
         }
@@ -3680,8 +3705,9 @@ object LabyrinthAwakening {
         List(CellsItem("track", 0, game.cellsAvailable))
       else
         Nil
-      val countrySrcs = (game getCountries names filter (_.totalCells > 0)
-                           map (c => CellsItem(c.name, c.activeCells, c.sleeperCells)))
+      val countrySrcs = game.getCountries(names)
+        .filter(_.totalCells > 0)
+        .map(c => CellsItem(c.name, c.activeCells, c.sleeperCells))
       nextChoice(num, trackSrc ::: countrySrcs)
     }
   }
@@ -3803,8 +3829,12 @@ object LabyrinthAwakening {
 
 
   def randomShiaMixList: List[MuslimCountry] = {
-    val xs = List(Syria, SaudiArabia, Turkey, Iraq, GulfStates, Yemen, Pakistan, Lebanon, Afghanistan)
-    (if (game.isMuslim(Iran)) Iran :: xs else xs) map game.getMuslim
+    val candidates = List(Syria, SaudiArabia, Turkey, Iraq, GulfStates, Yemen, Pakistan, Lebanon, Afghanistan)
+    val targets = if (game.isMuslim(Iran))
+      Iran :: candidates
+    else
+      candidates
+    game.getMuslims(candidates)
   }
 
   def randomShiaMixCountry: MuslimCountry = if (game.manualDieRolls) {
@@ -3909,7 +3939,7 @@ object LabyrinthAwakening {
   def rollUSPosture(drms: List[(Int, String)] = Nil): Unit = {
     val die = getDieRoll("Enter US posture die roll: ")
     val allDrms = (1, "Rolling US Posture") :: drms
-    val modifiedDie = die + (allDrms map (_._1)).sum
+    val modifiedDie = die + allDrms.map(_._1).sum
     val newPosture = if (modifiedDie < 5)
       Soft
     else
@@ -4092,7 +4122,7 @@ object LabyrinthAwakening {
       def compare(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = compareCapitalCandidates(x, y)
     }
     // Caliphate capital displaced.  Attempt to move it to adjacent caliphate country.
-    val adjacents = game.adjacentMuslims(previousCapital) filter (_.caliphateCandidate)
+    val adjacents = game.adjacentMuslims(previousCapital).filter(_.caliphateCandidate)
     log()
     log("The Caliphate capital has been displaced!")
     log(separator())
@@ -4109,7 +4139,7 @@ object LabyrinthAwakening {
       val newCapitalName = if (adjacents.size == 1)
         adjacents.head.name
       else if (game.humanRole == Jihadist) {
-        val choices = adjacents map (_.name)
+        val choices = adjacents.map(_.name)
         askCountry(s"Choose new Caliphate capital (${orList(choices)}): ", choices, allowAbort = false)
       }
       else {
@@ -4118,7 +4148,9 @@ object LabyrinthAwakening {
         // We sort the best to worst.  If more than one has the best score, then
         // we choose randomly among them.
         val sorted = adjacents.map(CaliphateCapitalCandidate).sorted
-        val best   = sorted.takeWhile(compareCapitalCandidates(_, sorted.head) == 0) map (_.m.name)
+        val best   = sorted
+          .takeWhile(compareCapitalCandidates(_, sorted.head) == 0)
+          .map(_.m.name)
         shuffle(best).head
       }
       setCaliphateCapital(newCapitalName)
@@ -4144,17 +4176,20 @@ object LabyrinthAwakening {
 
   // Select a random county to take an awakening or reaction marker
   def randomConvergenceTarget: MuslimCountry = {
-    @tailrec def getTarget: MuslimCountry = {
+    @tailrec def getTarget(): MuslimCountry = {
       val rmc = randomMuslimCountry
       if (rmc.canTakeAwakeningOrReactionMarker)
         rmc
-      else
-        shuffle(game.adjacentMuslims(rmc.name) filter (_.canTakeAwakeningOrReactionMarker)) match {
-          case Nil    => getTarget  // Try again
-          case x :: _ => x
+      else {
+        val candidates = game.adjacentMuslims(rmc.name)
+          .filter(_.canTakeAwakeningOrReactionMarker)
+        candidates match {
+          case Nil   => getTarget()  // Try again
+          case valid => shuffle(valid).head
         }
+      }
     }
-    getTarget
+    getTarget()
   }
 
   // Convergence
@@ -4308,7 +4343,7 @@ object LabyrinthAwakening {
       case true                       => "yes"
       case false                      => "no"
       case s: Seq[_] if s.isEmpty     => "none"
-      case s: Seq[_]                  => s map (_.toString) mkString ", "
+      case s: Seq[_]                  => s.map(_.toString).mkString(", ")
       case x if x.toString.trim == "" => "none"
       case x                          => x.toString.trim
     }
@@ -4353,7 +4388,10 @@ object LabyrinthAwakening {
     markers mkString ", "
 
   // Return a sorted list of the names of the given countries
-  def countryNames(candidates: List[Country]) = (candidates map (_.name)).sorted.distinct
+  def countryNames(candidates: List[Country]) = candidates
+    .map(_.name)
+    .sorted
+    .distinct
 
   // Get ordinal number.
   def ordinal(i: Int): String = i match {
@@ -4393,10 +4431,11 @@ object LabyrinthAwakening {
         row += 1
     }
 
-    rows.toIndexedSeq map { entries =>
-      (entries.toList.zipWithIndex map { case (entry, col) =>
-        padLeft(entry, colWidths(col))
-      }).mkString("  ")
+    rows.toIndexedSeq.map { entries =>
+      val paddedCols = entries.toList.zipWithIndex.map {
+        case (entry, col) => padLeft(entry, colWidths(col))
+      }
+      paddedCols.mkString("  ")
     }
   }
 
@@ -4476,7 +4515,7 @@ object LabyrinthAwakening {
           case x::_  if !(x startsWith ">") => None
           case ">":: Nil => throw HistoryError("No filename specified after '>'")
           case ">"::file::_ => Some(Pathname(file))
-          case file::_ => Some(Pathname(file drop 1))
+          case file::_ => Some(Pathname(file.drop(1)))
         }
       }
 
@@ -4761,11 +4800,12 @@ object LabyrinthAwakening {
     loadGameState(name, saveNumber)
   }
     // Return the list of saved games
-  def savedGames(): List[String] = {
-    gamesDir.children(withDirectory = false).toList map (_.toString) filter { name =>
-      mostRecentSaveNumber(name).nonEmpty
-    }
-  }
+  def savedGames(): List[String] =
+    gamesDir
+      .children(withDirectory = false)
+      .toList
+      .map(_.toString)
+      .filter(name => mostRecentSaveNumber(name).nonEmpty)
 
   def loadSavedLog(name: String, saveNumber: Int): Vector[LogEntry] = {
 
@@ -4975,7 +5015,7 @@ object LabyrinthAwakening {
       if (oldValue != newValue) b += msg
 
     show(from.botDifficulties, to.botDifficulties,
-        "Set the bot difficulties to %s".format(to.botDifficulties map (_.name) mkString ", "))
+        "Set the bot difficulties to %s".format(to.botDifficulties.map(_.name).mkString(", ")))
     show(from.goodResources, to.goodResources, s"Set Good Resources to ${to.goodResources}")
     show(from.islamistResources, to.islamistResources, s"Set Islamic Resources to ${to.islamistResources}")
     show(from.numGoodOrFair, to.numGoodOrFair, s"Set Good/Fair Countries to ${to.numGoodOrFair}")
@@ -5207,7 +5247,7 @@ object LabyrinthAwakening {
   def hasCardInHand(role: Role) = numCardsInHand(role) > 0
 
   def polarization(): Unit = {
-    val candidates = game.muslims filter (m => m.awakeningDelta.abs > 1)
+    val candidates = game.muslims.filter(m => m.awakeningDelta.abs > 1)
     log()
     log("Polarization")
     log(separator())
@@ -5215,7 +5255,7 @@ object LabyrinthAwakening {
       log("No countries affected", Color.Info)
     else {
       // Remember any Caliphate capital in case it is displaced.
-      val caliphateCapital = candidates find (_.caliphateCapital) map (_.name)
+      val caliphateCapital = candidates.find(_.caliphateCapital).map(_.name)
       val priorGameState = game
       // Work with names, because the underlying state of the countries will
       // undergo multiple changes, thus we will need to get the current copy of
@@ -5286,7 +5326,7 @@ object LabyrinthAwakening {
     if (hits == 0 || m.totalTroopsAndMilitia == 0)
       hits
     else {
-      val maxAbsorb     = m.troops + m.militia + (m.troopsMarkers map (_.num)).sum
+      val maxAbsorb     = m.troops + m.militia + m.troopsMarkers.map(_.num).sum
       val multiplier    = if (hamaOffensive) 2 else 1
       val losses        = hits * multiplier
       val unfulfilled   = (losses - maxAbsorb) max 0
@@ -5304,7 +5344,7 @@ object LabyrinthAwakening {
         // then allow the user to choose which units absorb the losses.
         val mixedCubes = m.troops > 0 && m.militia > 0
         if (losses >= m.totalTroopsAndMilitia)
-           (m.troopsMarkers map (_.name), m.troops, m.militia)
+           (m.troopsMarkers.map(_.name), m.troops, m.militia)
         else if (!mixedCubes && m.troopsMarkers.isEmpty) {
           if (m.troops > 0)
             (Nil, m.troops min losses, 0)
@@ -5320,7 +5360,7 @@ object LabyrinthAwakening {
                 choice(troops > 0,  TroopCube,  "Troop cube"),
                 choice(militia > 0, MilitiaCube,"Militia cube")
               ).flatten ++
-                (markers.sorted map (m => TroopMarker(m.name) -> s"${m.name}  (absorbs ${amountOf(m.num, "loss", Some("losses"))})"))
+                (markers.sorted.map(m => TroopMarker(m.name) -> s"${m.name}  (absorbs ${amountOf(m.num, "loss", Some("losses"))})"))
               println(s"$US must take ${amountOf(lossesRemaining, "more loss", Some("more losses"))}")
               askMenu("Which unit will take the next loss:", choices).head match {
                 case TroopCube   =>
@@ -5328,10 +5368,10 @@ object LabyrinthAwakening {
                 case MilitiaCube =>
                   militiaLost += 1; nextHit(lossesRemaining - 1, markers, troops, militia - 1)
                 case TroopMarker(name) =>
-                  val marker = (markers find (_.name == name)).get
+                  val marker = markers.find(_.name == name).get
                   val lossesAbsorbed = marker.num
                   markersLost = name :: markersLost
-                  nextHit(lossesRemaining - lossesAbsorbed, markers filterNot (_.name == name), troops, militia)
+                  nextHit(lossesRemaining - lossesAbsorbed, markers.filterNot(_.name == name), troops, militia)
               }
             }
           }
@@ -5542,18 +5582,18 @@ object LabyrinthAwakening {
   }
 
   def endTurnCivilWarAttrition(): Unit = {
-    def civilWars = game.muslims filter (m => (m.civilWar))
+    def civilWars = game.muslims.filter(_.civilWar)
     log()
     log("Civil War Attrition")
     log(separator())
     if (civilWars.isEmpty)
       log("No countries in civil war")
     else {
-      val caliphateCapital = civilWars find (_.caliphateCapital) map (_.name)
+      val caliphateCapital = civilWars.find(_.caliphateCapital).map(_.name)
       val priorGameState = game
-      val totalAdvisors = (civilWars map (_.numAdvisors)).sum
+      val totalAdvisors = civilWars.map(_.numAdvisors).sum
       // Add militia for any Advisors present
-      if (civilWars exists (_.numAdvisors > 0)) {
+      if (civilWars.exists(_.numAdvisors > 0)) {
         log("\nAdvisors")
         log(separator())
         if (game.militiaAvailable == 0)
@@ -5593,16 +5633,16 @@ object LabyrinthAwakening {
               val m = game.getMuslim(target)
               val num = m.numAdvisors min game.militiaAvailable
               addMilitiaToCountry(target, num)
-              nextMilita(numLeft - num, candidates filterNot (_ == target))
+              nextMilita(numLeft - num, candidates.filterNot(_ == target))
             }
-            nextMilita(game.militiaAvailable, countryNames(civilWars filter (_.numAdvisors > 0)))
+            nextMilita(game.militiaAvailable, countryNames(civilWars.filter(_.numAdvisors > 0)))
           }
 
         }
 
       }
 
-      for (name <- civilWars map (_.name))
+      for (name <- civilWars.map(_.name))
         civilWarAttrition(name, hamaOffensive = false, endOfTurn = true)
 
       // Check to see if the Caliphate Capital has been displaced because its country
@@ -5764,7 +5804,7 @@ object LabyrinthAwakening {
     val plot = plotOnMap.plot
     val prestigeDelta = if (plot == PlotWMD) 1 else 0
     val i = c.plots.indexOf(plotOnMap)
-    val remaining = (c.plots take i) ::: (c.plots drop (i + 1))
+    val remaining = c.plots.take(i) ::: c.plots.drop(i + 1)
     val updated = c match {
       case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = remaining))
       case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = remaining))
@@ -5889,10 +5929,10 @@ object LabyrinthAwakening {
             askAvailablePlots(1, ops)
           else if (game.jihadistIdeology(Attractive)) {
             log(s"$Jihadist Bot with Attractive Ideology places two plots")
-            JihadistBot.preparePlots(game.availablePlots) take 2
+            JihadistBot.preparePlots(game.availablePlots).take(2)
           }
           else
-            JihadistBot.preparePlots(game.availablePlots) take 1
+            JihadistBot.preparePlots(game.availablePlots).take(1)
 
           for (plot <- plots)
             addAvailablePlotToCountry(name, plot)
@@ -6329,8 +6369,8 @@ object LabyrinthAwakening {
         !(m.isUntested || m.isAlly || m.civilWar)
     }
 
-    (List(Iran, Syria, Lebanon) forall tehranBeirutCandidate) &&
-    (List(Iraq, Turkey)         exists tehranBeirutCandidate)
+    List(Iran, Syria, Lebanon).forall(tehranBeirutCandidate) &&
+    List(Iraq, Turkey).exists(tehranBeirutCandidate)
   }
 
   //  Check to see if the Tehran Beirut Land Corridor has been disrupted.
@@ -6347,7 +6387,7 @@ object LabyrinthAwakening {
   def countryEventNotInPlay(countryName: String, markerName: String) =
     !(countryEventInPlay(countryName, markerName))
   def countryEventInPlayAnywhere(markerName: String) =
-    game.countries exists (c => countryEventInPlay(c.name, markerName))
+    game.countries.exists(c => countryEventInPlay(c.name, markerName))
 
   def globalEventInPlay(name: String)     = game.markers contains name
   def globalEventNotInPlay(name: String)  = !globalEventInPlay(name)
@@ -6630,7 +6670,7 @@ object LabyrinthAwakening {
   }
 
   def removeAllTroopsMarkers(name: String): Unit = {
-    val markers = game.getMuslim(name).troopsMarkers map (_.name)
+    val markers = game.getMuslim(name).troopsMarkers.map(_.name)
     removeEventMarkersFromCountry(name: String, markers:_*)
   }
 
@@ -7090,8 +7130,8 @@ object LabyrinthAwakening {
       log(s"Remove ${amountOf(num, "placed WMD plot")} from $name", Color.MapPieces)
 
       c match {
-        case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = m.plots.sorted drop num))
-        case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = n.plots.sorted drop num))
+        case m: MuslimCountry    => game = game.updateCountry(m.copy(plots = m.plots.sorted.drop(num)))
+        case n: NonMuslimCountry => game = game.updateCountry(n.copy(plots = n.plots.sorted.drop(num)))
       }
       game = game.copy(
         plotData = game.plotData.copy(removedPlots = List.fill(num)(PlotWMD) ::: game.removedPlots)
@@ -7346,7 +7386,7 @@ object LabyrinthAwakening {
                 // roll plot dice
                 val dice = List.fill(mapPlot.plot.number)(getDieRoll(s"Enter die roll plot placement: "))
                 val successes = dice.count(isSuccess)
-                val diceStr = dice map (d => s"$d (${if (isSuccess(d)) "success" else "failure"})")
+                val diceStr = dice.map(d => s"$d (${if (isSuccess(d)) "success" else "failure"})")
                 log(s"Dice rolls to degrade governance: ${diceStr.mkString(", ")}")
                 // Remove 1 aid marker for each successful die roll
                 removeAidMarker(name, successes min m.aidMarkers)
@@ -8026,7 +8066,10 @@ object LabyrinthAwakening {
         log()
         log("The following cards are removed for this scenario")
         log(separator())
-        scenario.cardsRemoved map (deck(_).toString) foreach (log(_))
+        scenario
+          .cardsRemoved
+          .map(deck(_).toString)
+          .foreach(log(_))
       }
 
       scenario.additionalSetup()
@@ -8156,13 +8199,13 @@ object LabyrinthAwakening {
         list[JihadDiff]("", "--ideology=x,y,z",
                        ("Comma separated list of Jihadist ideology values" +: diffHelp(AllJihadistLevels)): _*) {
           (v, c) =>
-          val values = (v map { case JihadDiff(diff) => diff }).sorted.distinct
-          c.copy(ideology = values)
+            val values = v.map { case JihadDiff(diff) => diff }.sorted.distinct
+            c.copy(ideology = values)
         }
         list[USDiff]("", "--us-resolve=x,y,z",
                      ("Comma separated list of US resolve values" +: diffHelp(AllUSLevels)): _*) {
           (v, c) =>
-          val values = (v map { case USDiff(diff) => diff }).sorted.distinct
+          val values = v.map { case USDiff(diff) => diff }.sorted.distinct
           c.copy(usResolve = values)
         }
         val enhBotDiffValues = EnhBotDifficulty.All.map(d => d.name -> d).toMap
@@ -8202,12 +8245,12 @@ object LabyrinthAwakening {
   ) {
 
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
-      case Nil => level map (AllJihadistLevels take _)
+      case Nil => level.map(AllJihadistLevels.take(_))
       case xs  => Some(xs)
     }
 
     def usBotDifficulties: Option[List[BotDifficulty]] = usResolve match {
-      case Nil => level map (AllUSLevels take _)
+      case Nil => level.map(AllUSLevels.take(_))
       case xs  => Some(xs)
     }
   }
@@ -8222,7 +8265,7 @@ object LabyrinthAwakening {
         var params = initialParams
         val props = new Properties()
         def propValue(name: String): Option[String] =
-          (Option(props.getProperty(name)) map (_.trim)) match {
+          Option(props.getProperty(name)).map(_.trim) match {
             case Some("") => None  // Treat empty values a non-existent
             case x        => x
           }
@@ -8259,17 +8302,23 @@ object LabyrinthAwakening {
         }
 
         propValue("ideology") foreach { value =>
-          val tokens = value.split(",").toList map (_.trim) filterNot (_ == "")
+          val tokens = value.split(",")
+            .toList
+            .map(_.trim)
+            .filterNot(_ == "")
           if (tokens forall isValidIdeology)
-            params = params.copy(ideology = (tokens.distinct map BotDifficulty.apply).sorted)
+            params = params.copy(ideology = tokens.distinct.map(BotDifficulty.apply).sorted)
           else
             println(s"Ignoring invalid ideology value ($value) in awakening_config file")
         }
 
         propValue("us-resolve") foreach { value =>
-          val tokens = value.split(",").toList map (_.trim) filterNot (_ == "")
+          val tokens = value.split(",")
+            .toList
+            .map(_.trim)
+            .filterNot(_ == "")
           if (tokens forall isValidUsResolve)
-            params = params.copy(usResolve = (tokens.distinct map BotDifficulty.apply).sorted)
+            params = params.copy(usResolve = tokens.distinct.map(BotDifficulty.apply).sorted)
           else
             println(s"Ignoring invalid us-resolve value ($value) in awakening_config file")
         }
@@ -8354,14 +8403,16 @@ object LabyrinthAwakening {
           (num.toString -> s"${fmt.format(name)}: $pname plus $desc") :: nextChoice(num+1, Some(d), rest)
       }
 
-    levels take askMenu("Choose a difficulty level:", nextChoice(1, None, levels), allowAbort = false).head.toInt
+    levels.take(askMenu("Choose a difficulty level:", nextChoice(1, None, levels), allowAbort = false).head.toInt)
   }
 
   def isValidIdeology(name: String) =
-    JihadistLevels.keys exists (_.toLowerCase == name.toLowerCase)
+    JihadistLevels.keys
+      .exists(_.toLowerCase == name.toLowerCase)
 
   def isValidUsResolve(name: String) =
-    USLevels.keys exists (_.toLowerCase == name.toLowerCase)
+    USLevels.keys
+      .exists(_.toLowerCase == name.toLowerCase)
 
 
   // Check to see if any automatic victory condition has been met.
@@ -8926,15 +8977,15 @@ object LabyrinthAwakening {
     }
 
     printSummary(game.scenarioSummary)
-    printCountries("Muslim Countries with Good Governance",  countryNames(game.muslims filter (_.isGood)))
-    printCountries("Muslim Countries with Fair Governance",  countryNames(game.muslims filter (_.isFair)))
-    printCountries("Muslim Countries with Poor Governance",  countryNames(game.muslims filter (_.isPoor)))
-    printCountries("Muslim Countries under Islamic Rule",    countryNames(game.muslims filter (_.isIslamistRule)))
-    printCountries("Untested Muslim Countries",    countryNames(game.muslims filter (_.isUntested)))
-    printCountries("Non-Muslim Countries with Hard Posture", countryNames(game.nonMuslims filter (_.isHard)))
-    printCountries("Non-Muslim Countries with Soft Posture", countryNames(game.nonMuslims filter (_.isSoft)))
-    printCountries("Untested Non-Muslim Countries", countryNames(game.nonMuslims filter (_.isUntested)))
-    val iranSpecial = game.nonMuslims find (_.iranSpecialCase) map (_.name)
+    printCountries("Muslim Countries with Good Governance",  countryNames(game.muslims.filter(_.isGood)))
+    printCountries("Muslim Countries with Fair Governance",  countryNames(game.muslims.filter(_.isFair)))
+    printCountries("Muslim Countries with Poor Governance",  countryNames(game.muslims.filter(_.isPoor)))
+    printCountries("Muslim Countries under Islamic Rule",    countryNames(game.muslims.filter(_.isIslamistRule)))
+    printCountries("Untested Muslim Countries",    countryNames(game.muslims.filter(_.isUntested)))
+    printCountries("Non-Muslim Countries with Hard Posture", countryNames(game.nonMuslims.filter(_.isHard)))
+    printCountries("Non-Muslim Countries with Soft Posture", countryNames(game.nonMuslims.filter(_.isSoft)))
+    printCountries("Untested Non-Muslim Countries", countryNames(game.nonMuslims.filter(_.isUntested)))
+    val iranSpecial = game.nonMuslims.find(_.iranSpecialCase).map(_.name)
     if (iranSpecial.nonEmpty)
       printCountries("Iran Special Case", iranSpecial.toList)
     printSummary(game.scoringSummary)
@@ -9369,7 +9420,7 @@ object LabyrinthAwakening {
       val combos = for {
         i <- 1 to markers.size
         combo <- markers.combinations(i).toList if canRemoveAll(combo)
-        names = combo map (_.name)
+        names = combo.map(_.name)
       } yield (names.mkString(",") -> andList(names))
 
       if (combos.isEmpty)
@@ -9393,7 +9444,7 @@ object LabyrinthAwakening {
     val numTroops  = askInt("Deploy how many troops: ", minTroops, maxTroops)
 
     if (numTroops > 0) {
-      val dest = askCountry("Deploy troops to: ", to filterNot (_ == source))
+      val dest = askCountry("Deploy troops to: ", to.filterNot(_ == source))
       addOpsTarget(dest)
       moveTroops(source, dest, numTroops)
     }
@@ -9417,7 +9468,7 @@ object LabyrinthAwakening {
     log(s"\n$US performs a Withdraw operation")
     log(separator())
     val source = askCountry("Withdraw troops from which country: ", game.withdrawFromTargets)
-    val dest   = askCountry("Deploy withdrawn troops to: ", (game.withdrawToTargets filter (_ != source)))
+    val dest   = askCountry("Deploy withdrawn troops to: ", game.withdrawToTargets.filter(_ != source))
     val numTroops = askInt("How many troops: ", 1, game.getCountry(source).troops)
     addOpsTarget(source)
     performWithdraw(source, dest, numTroops)
@@ -9436,8 +9487,8 @@ object LabyrinthAwakening {
   def humanPickPlotToAlert(countryName: String): PlotOnMap = {
     val c = game.getCountry(countryName)
     assert(c.hasPlots, s"humanPickPlotToAlert(): $countryName has no plots")
-    if ((c.plots exists (_.backlashed)) && (c.plots exists (p => !p.backlashed)))
-      shuffle(c.plots filterNot (_.backlashed)).head
+    if (c.plots.exists(_.backlashed) && c.plots.exists(p => !p.backlashed))
+      shuffle(c.plots.filterNot(_.backlashed)).head
     else
       shuffle(c.plots).head
   }
@@ -9721,8 +9772,8 @@ object LabyrinthAwakening {
       }
     }
     else // We have enough cells to place one in all destinations
-      for ((dest, num) <- successes groupBy (dest => dest) map { case (dest, xs) => (dest -> xs.size) })
-        addSleeperCellsToCountry(dest, num)
+      for ((dest, successesInDest) <- successes.groupBy(dest => dest))
+        addSleeperCellsToCountry(dest, successesInDest.size)
   }
 
   def travelIsAutomatic(src: String, dest: String): Boolean = {
@@ -9744,11 +9795,10 @@ object LabyrinthAwakening {
     val numAttempts = askInt("How many attempts do you wish to make?", 1, maxRolls, Some(maxRolls))
     // Keep track of where cells have been selected. They can only be selected once!
     case class Source(name: String, sleepers: Int, actives: Int)
-    var sourceCountries =
-      (game.countries
-        filter (_.cells > 0)
-        map (c => c.name -> Source(c.name, c.sleeperCells, c.activeCells))
-      ).toMap
+    var sourceCountries = game.countries
+      .filter(_.cells > 0)
+      .map(c => c.name -> Source(c.name, c.sleeperCells, c.activeCells))
+      .toMap
 
     // All of the travelling cells must be declared before rolling any dice.
     val attempts = for (i <- 1 to numAttempts) yield {
@@ -9775,10 +9825,10 @@ object LabyrinthAwakening {
           countryNames(game.countries)
 
         if (Schengen.contains(src.name) && uk.hasMarker(BREXIT) && uk.isHard)
-          names = names filterNot (_ == UnitedKingdom)
+          names = names.filterNot(_ == UnitedKingdom)
 
         if (isTravelBanCountry(src.name))
-          names = names filterNot(_ == UnitedStates)
+          names = names.filterNot(_ == UnitedStates)
 
         names
       }
@@ -9826,7 +9876,7 @@ object LabyrinthAwakening {
       else if (m.sleeperCells == 0 && !m.hasSadr) (numRolls, 0, false)
       else askCells(name, numRolls, sleeperFocus = false)
       val target = JihadTarget(name, actives, sleepers, sadr, majorJihad)
-      target :: getHumanJihadTargets(diceLeft - numRolls, candidates filterNot (_ == name))
+      target :: getHumanJihadTargets(diceLeft - numRolls, candidates.filterNot(_ == name))
     }
   }
   // When ever a country is targeted and is a candidate for Major Jihad
@@ -9835,8 +9885,8 @@ object LabyrinthAwakening {
     val Active  = true
     log(s"\n$Jihadist performs a Jihad operation with ${opsString(ops)}")
     log(separator())
-    val jihadCountries = game.muslims filter (_.jihadOK)
-    val maxDice = ops min jihadCountries.map (_.totalCells).sum
+    val jihadCountries = game.muslims.filter(_.jihadOK)
+    val maxDice = ops min jihadCountries.map(_.totalCells).sum
     var candidates = countryNames(jihadCountries)
 
     val targets = getHumanJihadTargets(maxDice, candidates)
@@ -9848,7 +9898,7 @@ object LabyrinthAwakening {
   // Can only Plots with number <= ops or WMD Plot
   def humanPlot(ops: Int): Unit = {
     val numPlots = game.plotsAvailableWith(ops).size
-    val maxCells = (game.plotTargets map (name => game.getCountry(name).totalCells)).sum
+    val maxCells = game.plotTargets.map(name => game.getCountry(name).totalCells).sum
     val maxRolls = ops min maxCells
     log(s"\n$Jihadist performs a Plot operation with ${opsString(ops)}")
     log(separator())
@@ -10174,15 +10224,15 @@ object LabyrinthAwakening {
   def adjustDifficulty(): Unit = {
     val AllLevels = if (game.botRole == US) AllUSLevels
     else AllJihadistLevels
-    val AllNames = AllLevels map (_.name)
-    var inEffect = game.botDifficulties map (_.name)
+    val AllNames = AllLevels.map(_.name)
+    var inEffect = game.botDifficulties.map(_.name)
 
     val label = if (game.botRole == US) "US resolve" else "Jihadist ideology"
-    val standard = for (num <- 1 to AllNames.size; included = AllNames take num)
+    val standard = for (num <- 1 to AllNames.size; included = AllNames.take(num))
       yield s"$num) ${included.mkString(", ")}"
     // Don't allow the first name as a choice, as it represents the base
     // line difficulty and cannot be removed.
-    val choices = List.range(1, 7) ::: (AllNames drop 1)
+    val choices = List.range(1, 7) ::: AllNames.drop(1)
 
     @tailrec def getNextResponse(): Unit = {
       val current = s"Current $label: ${inEffect.mkString(", ")}"
@@ -10190,25 +10240,25 @@ object LabyrinthAwakening {
                   s"Select a number for standard $label combinations" :: standard.toList
 
       val help2 = "" :: s"Or enter the name of a $label to toggle its inclusion" ::
-                     (AllLevels map (_.toString))
+                     AllLevels.map(_.toString)
 
       help1 foreach println
       help2 foreach println
       askOneOf(s"$label: ", choices, allowNone = true, allowAbort = false) match {
         case None =>
         case Some(INTEGER(x)) =>
-          inEffect = AllNames take x.toInt
+          inEffect = AllNames.take(x.toInt)
           getNextResponse()
         case Some(name) if inEffect contains name =>
-          inEffect = inEffect filterNot (_ == name)
+          inEffect = inEffect.filterNot(_ == name)
           getNextResponse()
         case Some(name) =>
-          inEffect = AllNames filter (n => (inEffect contains n) || n == name) // Maintain standard order.
+          inEffect = AllNames.filter(n => (inEffect contains n) || n == name) // Maintain standard order.
           getNextResponse()
       }
     }
     getNextResponse()
-    val updated = inEffect map BotDifficulty.apply
+    val updated = inEffect.map(BotDifficulty.apply)
     if (updated != game.botDifficulties) {
       logAdjustment(s"$label", game.botDifficulties.map(_.name), updated.map(_.name))
       game = game.copy(botDifficulties = updated)
@@ -10540,7 +10590,7 @@ object LabyrinthAwakening {
     val AllMarkers = GlobalMarkers.keys.toList.sorted
     var inPlay = game.markers
     val priorGameState = game
-    def available = AllMarkers filterNot inPlay.contains
+    def available = AllMarkers.filterNot(inPlay.contains)
     def showColums(xs: List[String]): Unit = {
       if (xs.isEmpty) println("none")
       else columnFormat(xs, 4) foreach println
@@ -10558,14 +10608,14 @@ object LabyrinthAwakening {
       askOneOf("Marker: ", AllMarkers, allowNone = true, allowAbort = false) match {
         case None =>
         case Some(name) if inPlay contains name =>
-          inPlay = inPlay filterNot (_ == name)
+          inPlay = inPlay.filterNot(_ == name)
           getNextResponse()
         case Some(name) =>
           inPlay = name :: inPlay
           if (name == TrumpTweetsON)
-            inPlay = inPlay filterNot (_ == TrumpTweetsOFF)
+            inPlay = inPlay.filterNot(_ == TrumpTweetsOFF)
           else if (name == TrumpTweetsOFF)
-            inPlay = inPlay filterNot (_ == TrumpTweetsON)
+            inPlay = inPlay.filterNot(_ == TrumpTweetsON)
           getNextResponse()
       }
     }
@@ -10596,7 +10646,7 @@ object LabyrinthAwakening {
     var targetNames = origTargetNames
 
     def nextAction(): Unit = {
-      val nonTargets = countryNames(game.countries) filterNot targetNames.apply
+      val nonTargets = countryNames(game.countries).filterNot(targetNames.apply)
       sealed trait Choice
       case object Add extends Choice
       case object Delete extends Choice
@@ -10799,7 +10849,7 @@ object LabyrinthAwakening {
         println("Iran is a special case that does not have a posture.")
         pause()
       case n: NonMuslimCountry =>
-        val choices = (PostureUntested::Soft::Hard::Nil) filterNot (_ == n.posture)
+        val choices = (PostureUntested::Soft::Hard::Nil).filterNot(_ == n.posture)
         val prompt = s"New posture (${orList(choices)}): "
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newPosture =>
           logAdjustment(name, "Posture", n.posture, newPosture)
@@ -10817,7 +10867,7 @@ object LabyrinthAwakening {
         println(s"$name is untested. Set the governance first.")
         pause()
       case m: MuslimCountry =>
-        val choices = (Ally::Neutral::Adversary::Nil) filterNot (_ == m.alignment)
+        val choices = (Ally::Neutral::Adversary::Nil).filterNot(_ == m.alignment)
         val prompt = s"New alignment (${orList(choices)}): "
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newAlignment =>
           logAdjustment(name, "Alignment", m.alignment, newAlignment)
@@ -10833,11 +10883,12 @@ object LabyrinthAwakening {
       case _: NonMuslimCountry =>
         throw new IllegalArgumentException(s"Cannot set governance of non-Muslim country: $name")
       case m: MuslimCountry =>
-        val choices = ((GovernanceUntested::Good::Fair::Poor::IslamistRule::Nil)
-                      filterNot (_ == m.governance)
-                      map govToString)
+        val choices = List(GovernanceUntested, Good, Fair, Poor, IslamistRule)
+          .filterNot(_ == m.governance)
+          .map(govToString)
         val prompt = s"New governance (${orList(choices)}): "
-        askOneOf(prompt, choices, allowNone = true, allowAbort = false) map govFromString foreach { newGov =>
+        val choice = askOneOf(prompt, choices, allowNone = true, allowAbort = false)
+        choice.map(govFromString).foreach { newGov =>
           // When a country becomes Good or Islamist Rule, the country cannot contain:
           //  aid, besiege regime, civil war, regime change, awakening, reaction
           // Further when the country becomes Good, it cannot be the Caliphate Capital.
@@ -11088,7 +11139,7 @@ object LabyrinthAwakening {
         println("Cannot add Regime Change to a country under Islamist Rule")
         pause()
       case m: MuslimCountry =>
-        val choices = (NoRegimeChange::GreenRegimeChange::TanRegimeChange::Nil) filterNot (_ == m.regimeChange)
+        val choices = (NoRegimeChange::GreenRegimeChange::TanRegimeChange::Nil).filterNot(_ == m.regimeChange)
         val prompt = s"New regime change value (${orList(choices)}): "
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newValue =>
           val nixCapital = newValue == NoRegimeChange && m.caliphateCapital
@@ -11278,7 +11329,7 @@ object LabyrinthAwakening {
     val priorGameState = game
     var inPlay = country.markers
     val AllMarkers = CountryMarkers.keys.toList.sorted
-    def available = AllMarkers filterNot inPlay.contains
+    def available = AllMarkers.filterNot(inPlay.contains)
     def showColums(xs: List[String]): Unit = {
       if (xs.isEmpty) println("none")
       else columnFormat(xs, 4) foreach println
@@ -11298,7 +11349,7 @@ object LabyrinthAwakening {
           println("use 'adjust advisors' to adjust Advisors Markers")
           getNextResponse()
         case Some(name) if inPlay contains name =>
-          inPlay = inPlay filterNot(_ == name)
+          inPlay = inPlay.filterNot(_ == name)
           getNextResponse()
         case Some(name) =>
           inPlay = name :: inPlay
@@ -11323,7 +11374,7 @@ object LabyrinthAwakening {
   def adjustCountryAdvisors(name: String): Unit = {
     val numInOtherCountries = game.muslims.map(m => if (m.name == name) 0 else m.numAdvisors).sum
     val m = game.getMuslim(name)
-    var inPlace = m.markers filter (_ == Advisors)
+    var inPlace = m.markers.filter(_ == Advisors)
     val origNumAdvisors = inPlace.size
     var available = List.fill(3 - numInOtherCountries - inPlace.size)(Advisors)
 
@@ -11360,7 +11411,7 @@ object LabyrinthAwakening {
       getNextResponse()
 
       if (inPlace.size != origNumAdvisors) {
-        val newMarkers = inPlace ::: (m.markers filterNot (_ == Advisors))
+        val newMarkers = inPlace ::: (m.markers.filterNot(_ == Advisors))
         logAdjustment(name, "Markers", m.markers, newMarkers)
         game = game.updateCountry(m.copy(markers = newMarkers))
         saveAdjustment(name, "Markers")

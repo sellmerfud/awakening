@@ -79,7 +79,7 @@ object Card_138 extends Card(138, "Intel Community", US, 2, NoRemove, NoLapsing,
     else {
       // See Event Instructions table
       log("\nUS player does not inspect the Jihadist hand in the solo game.", Color.Event)
-      val cadres = countryNames(game.countries filter (_.hasCadre))
+      val cadres = countryNames(game.countries.filter(_.hasCadre))
       if (getCadreCandidates.isEmpty)
         log("\nThere are no cadres on the map to remove.", Color.Event)
       else {

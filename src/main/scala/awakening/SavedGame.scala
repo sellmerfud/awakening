@@ -121,19 +121,19 @@ object SavedGame {
 
   private def plotDataToMap(data: PlotData): Map[String, Any] =
     Map(
-      "availablePlots"        -> (data.availablePlots map (_.name)),
-      "resolvedPlots"         -> (data.resolvedPlots map (_.name)),
-      "removedPlots"          -> (data.removedPlots map (_.name)),
+      "availablePlots"        -> data.availablePlots.map(_.name),
+      "resolvedPlots"         -> data.resolvedPlots.map(_.name),
+      "removedPlots"          -> data.removedPlots.map(_.name),
       "resolvedTargets"       -> data.resolvedTargets.toList.map(plotTargetToMap),
       "resolvedInGreenOnBlue" -> data.resolvedInGreenOnBlue
     )
 
   private def plotDataFromMap(data: Map[String, Any]): PlotData =
     PlotData(
-      asList(data("availablePlots")) map (x => Plot.apply(asString(x))),
-      asList(data("resolvedPlots")) map (x => Plot.apply(asString(x))),
-      asList(data("removedPlots")) map (x => Plot.apply(asString(x))),
-      (asList(data("resolvedTargets")) map (x => plotTargetFromMap(asMap(x)))).toSet,
+      asList(data("availablePlots")).map(x => Plot.apply(asString(x))),
+      asList(data("resolvedPlots")).map(x => Plot.apply(asString(x))),
+      asList(data("removedPlots")).map(x => Plot.apply(asString(x))),
+      (asList(data("resolvedTargets")).map(x => plotTargetFromMap(asMap(x)))).toSet,
       asBoolean(data("resolvedInGreenOnBlue"))
     )
 
@@ -184,10 +184,10 @@ object SavedGame {
 
   private def phaseTargetsFromMap(data: Map[String, Any]): PhaseTargets =
     PhaseTargets(
-      (asList(data("ops")) map asString).toSet,
-      (asList(data("disrupted")) map asString).toSet,
-      (asList(data("testedOrImprovedToFairOrGood")) map asString).toSet,
-      (asList(data("event")) map asString).toSet
+      asList(data("ops")).map(asString).toSet,
+      asList(data("disrupted")).map(asString).toSet,
+      asList(data("testedOrImprovedToFairOrGood")).map(asString).toSet,
+      asList(data("event")).map(asString).toSet
     )
 
   private def turnActionToMap(turnAction: TurnAction): Map[String, Any] = {
@@ -248,7 +248,7 @@ object SavedGame {
           "sleeperCells"     -> m.sleeperCells,
           "activeCells"      -> m.activeCells,
           "cadres"           -> m.cadres,
-          "plots"            -> (m.plots map plotOnMapToMap),
+          "plots"            -> m.plots.map(plotOnMapToMap),
           "markers"          -> m.markers,
           "isSunni"          -> m.isSunni,
           "resources"        -> m.printedResources,
@@ -273,7 +273,7 @@ object SavedGame {
           "activeCells"     -> n.activeCells,
           "cadres"          -> n.cadres,
           "troops"          -> n.troops,
-          "plots"           -> (n.plots map plotOnMapToMap),
+          "plots"           -> n.plots.map(plotOnMapToMap),
           "markers"         -> n.markers,
           "postureValue"    -> n.postureValue,
           "recruitOverride" -> n.recruitOverride,
@@ -294,8 +294,8 @@ object SavedGame {
           asInt(params("sleeperCells")),
           asInt(params("activeCells")),
           asInt(params("cadres")),
-          asList(params("plots")) map (x => plotOnMapFromMap(asMap(x))),
-          asList(params("markers")) map asString,
+          asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
+          asList(params("markers")).map(asString),
           asBoolean(params("isSunni")),
           asInt(params("resources")),
           asString(params("alignment")),
@@ -319,8 +319,8 @@ object SavedGame {
           asInt(params("activeCells")),
           asInt(params("cadres")),
           asInt(params("troops")),
-          asList(params("plots")) map (x => plotOnMapFromMap(asMap(x))),
-          asList(params("markers")) map asString,
+          asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
+          asList(params("markers")).map(asString),
           asString(params("postureValue")),
           asInt(params("recruitOverride")),
           asInt(params("wmdCache")),
@@ -385,7 +385,7 @@ object SavedGame {
     GameSegment(
       asInt(data("saveNumber")),
       asBoolean(data("endOfTurn")),
-      asList(data("summary")) map (_.toString)
+      asList(data("summary")).map(_.toString)
     )
   }
   // Note: We no longer support save file versions less than 3.
@@ -456,7 +456,7 @@ object SavedGame {
     val top = Map(
       "file-version"     -> CurrentLogVersion,
       "software-version" -> SOFTWARE_VERSION,
-      "log"              -> (entries map logEntryToMap)
+      "log"              -> entries.map(logEntryToMap)
     )
     Json.build(top)
   }
@@ -503,7 +503,7 @@ object SavedGame {
           // Older versions did not store the log as json
         // If we cannot parse the file then treat it as a regular
         // text file.
-        filepath.readLines().toVector map { line =>
+        filepath.readLines().toVector.map { line =>
           LogEntry(line, None)
         }
       case e: IOException =>

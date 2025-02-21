@@ -48,10 +48,10 @@ object USBot extends BotHelpers {
   // The Bot will not consider WoI in an untested muslim country unless
   // it has 3 Ops to work with.
   def woiMuslimTargets(ops: Int): List[MuslimCountry] = if (ops >= 3)
-    game.muslims filter (_.warOfIdeasOK(ops))
+    game.muslims.filter(_.warOfIdeasOK(ops))
   else
-    game.muslims filter (m => m.isTested && m.warOfIdeasOK(ops))
-  def woiNonMuslimTargets(ops: Int): List[NonMuslimCountry] = game.nonMuslims filter (_.warOfIdeasOK(ops))
+    game.muslims.filter(m => m.isTested && m.warOfIdeasOK(ops))
+  def woiNonMuslimTargets(ops: Int): List[NonMuslimCountry] = game.nonMuslims.filter(_.warOfIdeasOK(ops))
   
   // Pick sleepers before actives
   // Return (actives, sleepers, sadr)
@@ -99,7 +99,7 @@ object USBot extends BotHelpers {
     val withdrawFrom = game.withdrawFromTargets
     val withdrawTo   = game.withdrawToTargets
     if (game.usPosture == Soft && ops == 3 && withdrawFrom.nonEmpty && withdrawTo.nonEmpty) {
-      val newTargets = game.deployTargets(ops) map {
+      val newTargets = game.deployTargets(ops).map {
         case (from, to) => ((from:::withdrawFrom).distinct, (to:::withdrawTo).distinct)
       }
       newTargets orElse Some(withdrawFrom -> withdrawTo)
@@ -109,7 +109,7 @@ object USBot extends BotHelpers {
   }
   
   val onlyOneActiveCell = (c: Country) => c.activeCells == 1 && c.sleeperCells == 0
-  val numPlotDice = (m: MuslimCountry) => (m.plots map { case PlotOnMap(plot, _) => plot.number }).sum
+  val numPlotDice = (m: MuslimCountry) => m.plots.map { case PlotOnMap(plot, _) => plot.number }.sum
 
   // This class is used when determining the priority plot to alert.
   // It contains an PlotOnMap and a Country containing that plot.
@@ -141,7 +141,7 @@ object USBot extends BotHelpers {
   // The input is filtered and if the results are empty, the original input
   // is returned. Otherwise the filtered input is returned.
   class PlotCriteria(val desc: String, criteria: (PlotInCountry) => Boolean) extends PlotFilter {
-    def filter(plots: List[PlotInCountry]) = (plots filter criteria) match {
+    def filter(plots: List[PlotInCountry]) = plots.filter(criteria) match {
       case Nil      => botLog(s"Criteria ($desc): match = false"); plots
       case matching => botLog(s"Criteria ($desc): match = true"); matching
     }
@@ -153,9 +153,9 @@ object USBot extends BotHelpers {
   // Then returns the list of plots whose score matches that highest value.
   class PlotHighestScore(val desc: String, score: (PlotInCountry) => Int) extends PlotFilter {
     def filter(plots: List[PlotInCountry]): List[PlotInCountry] = {
-      val high = (plots map score).max
+      val high = plots.map(score).max
       botLog(s"Highest ($desc): score = $high")
-      plots filter (plot => score(plot) == high)
+      plots.filter(plot => score(plot) == high)
     }
   }
   
@@ -221,12 +221,12 @@ object USBot extends BotHelpers {
   def priorityPlot(plots: List[PlotInCountry]): PlotInCountry = {
     assert(plots.nonEmpty, "priorityPlot() called with empty list")
     @tailrec def topPriority(plots: List[PlotInCountry], priorities: List[PlotFilter]): PlotInCountry = {
-      botLog(s"priorityPlot: [${(plots map (_.toString)) mkString ", "}]")
+      botLog(s"priorityPlot: [${plots.mkString(", ")}]")
       (plots, priorities) match {
         case (Nil, _)    => throw new IllegalStateException("priorityPlot() found nothing")
         case (p::Nil, _) => p                               // We've narrowed it to one
         case (ps, Nil)   => shuffle(ps).head                // Take one at random
-        case (ps, f::fs) => topPriority(f filter plots, fs) // Filter by next priority
+        case (ps, f::fs) => topPriority(f.filter(plots), fs) // Filter by next priority
       }
     }
     assert(plots.nonEmpty, "priorityPlot() called with empty list of plots")
@@ -325,7 +325,7 @@ object USBot extends BotHelpers {
   // Returns true if the plot is Alerted.
   def alertTable(card: Card, plots: List[PlotInCountry]): Boolean = {
     val plot = priorityPlot(plots)
-    val (fundingMod, prestigeMod) = alertTableMods(plots filterNot (_.id == plot.id))
+    val (fundingMod, prestigeMod) = alertTableMods(plots.filterNot(_.id == plot.id))
     val funding     = (game.funding  + fundingMod)  max 1 min 9
     val prestige    = (game.prestige + prestigeMod) max 1 min 12
     val alertResult = if (game isMuslim plot.country.name)
@@ -340,7 +340,7 @@ object USBot extends BotHelpers {
       }
       
       alertPlot(card, plot)
-      val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
+      val otherPlotsInCountry = plots.filter(p => p.id != plot.id && p.country.name == plot.country.name)
       if (game.usResolve(Competent) && otherPlotsInCountry.nonEmpty) {
         log(s"$US Bot with Competent resolve alerts two plots in the same country")
         val plot2 = priorityPlot(otherPlotsInCountry)
@@ -413,7 +413,8 @@ object USBot extends BotHelpers {
     val desc = "WMD place in country?"
     def yesPath = ThreeOpsForWMD
     def noPath  = ThreeOpsAvailable
-    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = plots exists (_.isWMD)
+    def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) =
+      plots.exists(_.isWMD)
   }
   
   object ThreeOpsForWMD extends AlertDecision {
@@ -428,7 +429,7 @@ object USBot extends BotHelpers {
     def yesPath = AlertPlot
     def noPath  = WMDWithTroopsAndPrestigeAbove3
     def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) = 
-      plots exists (p => p.isWMD && p.country.name == UnitedStates)
+      plots.exists(p => p.isWMD && p.country.name == UnitedStates)
   }
   
   object LastCardOrEventAlertsPriorityPlot extends AlertDecision {
@@ -458,8 +459,7 @@ object USBot extends BotHelpers {
     def yesPath = AlertPlot
     def noPath  = AlertTable
     def condition(card: Card, ops: Int, playableEvent: Boolean, plots: List[PlotInCountry]) =
-      game.funding < 8 &&
-      (plots exists (plot => plot.isWMD && inNonMuslimCountry(plot)))
+      game.funding < 8 && plots.exists(plot => plot.isWMD && inNonMuslimCountry(plot))
   }
   
   
@@ -624,10 +624,12 @@ object USBot extends BotHelpers {
     def desc = "Disrupt Muslim at least 2 more cells than TandM and JSP?"
     def yesPath = Disrupt
     def noPath  = IR3AndRegimeChangeDecision
-    def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
-      m.totalCells - m.totalTroopsAndMilitia >= 2 &&
-      minorJihadSuccessPossible(m) 
-    }
+    def condition(ops: Int) = game.disruptMuslimTargets(ops)
+      .map(game.getMuslim)
+      .exists { m => 
+        m.totalCells - m.totalTroopsAndMilitia >= 2 &&
+        minorJihadSuccessPossible(m) 
+      }
   }
   
   object IR3AndRegimeChangeDecision extends OperationDecision {
@@ -642,7 +644,7 @@ object USBot extends BotHelpers {
     def yesPath = WoiMuslimHighestDRM
     def noPath  = PrestigeLowDecision
     def condition(ops: Int) = 
-      woiMuslimTargets(ops) exists (m => modifyWoiRoll(0, m, silent = true) >= 0)
+      woiMuslimTargets(ops).exists(m => modifyWoiRoll(0, m, silent = true) >= 0)
   }
   
   object PrestigeLowDecision extends OperationDecision {
@@ -656,9 +658,9 @@ object USBot extends BotHelpers {
     def desc = "Disrupt for Prestige gain?"
     def yesPath = Disrupt
     def noPath  = USSoftDecision
-    def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
-      m.disruptAffectsPrestige
-    }
+    def condition(ops: Int) = game.disruptMuslimTargets(ops)
+      .map(game.getMuslim)
+      .exists(_.disruptAffectsPrestige)
   }
     
   object DeployDecision extends OperationDecision {
@@ -692,17 +694,17 @@ object USBot extends BotHelpers {
     def desc = "Disrupt for Prestige gain or to place a Cadre?"
     def yesPath = Disrupt
     def noPath  = WoiMuslimMinus1DrmDecision
-    def condition(ops: Int) = game.disruptMuslimTargets(ops) map game.getMuslim exists { m => 
-      m.disruptAffectsPrestige || onlyOneActiveCell(m)
-    }
+    def condition(ops: Int) = game.disruptMuslimTargets(ops)
+      .map(game.getMuslim)
+      .exists(m => m.disruptAffectsPrestige || onlyOneActiveCell(m))
   }
   
   object WoiMuslimMinus1DrmDecision extends OperationDecision {
     def desc = "WoI in Muslim with DRM of -1?"
     def yesPath = WoiMuslimMinusOneDRM
     def noPath  = HomelandSecurity
-    def condition(ops: Int) = 
-      woiMuslimTargets(ops) exists (m => modifyWoiRoll(0, m, silent = true) == -1)
+    def condition(ops: Int) = woiMuslimTargets(ops)
+      .exists(m => modifyWoiRoll(0, m, silent = true) == -1)
   }
 
   
@@ -758,11 +760,11 @@ object USBot extends BotHelpers {
   def disruptTarget(names: List[String]): Option[String] = {
     botLog("Find \"Disrupt\" target", Color.Debug)
     val candidates = selectCandidates(game getCountries names, DisruptFlowchart)
-    topPriority(candidates, disruptPriorities) map (_.name)
+    topPriority(candidates, disruptPriorities).map(_.name)
   }
   
   def disruptPriority(names: List[String]): Option[String] = {
-   topPriority(names map game.getCountry, disruptPriorities) map (_.name) 
+   topPriority(names.map(game.getCountry), disruptPriorities).map(_.name) 
   }
   
   // Narrow a list of Muslim countries to those where the
@@ -777,7 +779,7 @@ object USBot extends BotHelpers {
   // ------------------------------------------------------------------
   def servalTarget(names: List[String]): Option[String] = {
     val candidates = game.getMuslims(highestCellsMinusTandM(names))
-    topPriority(candidates, NeutralPriority::Nil) map (_.name)
+    topPriority(candidates, NeutralPriority::Nil).map(_.name)
   }
   
   // ------------------------------------------------------------------
@@ -786,7 +788,7 @@ object USBot extends BotHelpers {
       new CriteriaFilter("Opposite posture of US",
         nonMuslimTest(n => n.isTested && n.canChangePosture && n.posture != game.usPosture)),
       new CriteriaFilter("Untested non-Muslim", nonMuslimTest(_.isUntested)))
-    topPriority(game getNonMuslims names, priorities) map (_.name)
+    topPriority(game getNonMuslims names, priorities).map(_.name)
   }
   
   // ------------------------------------------------------------------
@@ -805,7 +807,7 @@ object USBot extends BotHelpers {
       PoorPriority, FairPriority, GoodPriority, FewestCellsPriority)
     botLog("Find \"non-Muslim WoI\" target", Color.Debug)
     val candidates = selectCandidates(game getCountries names, WoiNonMuslimFlowchart)
-    topPriority(candidates, priorities) map (_.name)
+    topPriority(candidates, priorities).map(_.name)
   }
 
   def woiNonMuslimPriority(names: List[String]): Option[String] = {
@@ -817,7 +819,7 @@ object USBot extends BotHelpers {
         FewestCellsPriority, GoodPriority, FairPriority, PoorPriority)
     
     botLog("Find \"non-Muslim WoI\" priority", Color.Debug)
-    topPriority(game getCountries names, priorities) map (_.name)
+    topPriority(game getCountries names, priorities).map(_.name)
   }
   // ------------------------------------------------------------------
   val LabyrinthDeployToPriorities = List(
@@ -853,18 +855,18 @@ object USBot extends BotHelpers {
 
   def deployToTarget(names: List[String]): Option[String] = {
     botLog("Find \"Deploy To\" target", Color.Debug)
-    val track        = names find (_ == "track")
-    val countryNames = names filterNot (_ == "track")
+    val track        = names.find(_ == "track")
+    val countryNames = names.filterNot(_ == "track")
     val target = selectCandidates(game getCountries countryNames, DeployToFlowchart) match {
       case Nil        => track
-      case candidates => topPriority(candidates, deployToPriorities) map (_.name)
+      case candidates => topPriority(candidates, deployToPriorities).map(_.name)
     }
     botLog(s"Deploy To result: ${target getOrElse "<none>"}")
     target
   }
   
   def deployToPriority(names: List[String]): Option[String] = {
-   topPriority(names map game.getCountry, deployToPriorities) map (_.name) 
+   topPriority(names.map(game.getCountry), deployToPriorities).map(_.name) 
   }
   
   // ------------------------------------------------------------------
@@ -887,12 +889,13 @@ object USBot extends BotHelpers {
     botLog("Find \"Deploy From\" target", Color.Debug)
     // Bot will always deploy exactly two troops from the track so it is of the table
     // if there is only 1 cube left
-    val track        = names find (_ == "track" && game.troopsAvailable > 1)
+    val track = names.find(_ == "track" && game.troopsAvailable > 1)
     // The bot will not deploy markers so get rid of any countries without troops cubes
-    val countryNames = names filterNot (_ == "track") filterNot (name => (game getCountry name).troops == 0)
+    val countryNames = names
+      .filter(name => name != "track" && game.getCountry(name).troops > 0)
     val target = selectCandidates(game getCountries countryNames, DeployFromFlowchart) match {
       case Nil        => track
-      case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
+      case candidates => topPriority(candidates, DeployFromPriorities).map(_.name)
     }
     botLog(s"Deploy From result: ${target getOrElse "<none>"}")
     target
@@ -904,7 +907,7 @@ object USBot extends BotHelpers {
   
   def regimeChangeTarget(names: List[String]): Option[String] = {
     botLog("Find \"Regime Change\" target", Color.Debug)
-    topPriority(game getCountries names, RegimeChangePriorities) map (_.name)
+    topPriority(game getCountries names, RegimeChangePriorities).map(_.name)
   }
   
   
@@ -927,11 +930,11 @@ object USBot extends BotHelpers {
   // Used to determine from where to get troops to use in a Regime Change Operation.
   def regimeChangeSource(names: List[String]): Option[String] = {
     botLog("Find \"Regime Change From\" target", Color.Debug)
-    val track        = names find (_ == "track")
-    val countryNames = names filterNot (_ == "track")
+    val track = names.find(_ == "track")
+    val countryNames = names.filterNot(_ == "track")
     selectCandidates(game getCountries countryNames, RegimeChangeFromFlowchart) match {
       case Nil        => track
-      case candidates => topPriority(candidates, DeployFromPriorities) map (_.name)
+      case candidates => topPriority(candidates, DeployFromPriorities).map(_.name)
     }
   }
   
@@ -967,13 +970,13 @@ object USBot extends BotHelpers {
   // get the list of all countries with aid markers using the woiMuslimPriorities
   // then select the last one in the list.
   def removeAidTarget: Option[String] = {
-    val withAid = countryNames(game.muslims filter (_.aidMarkers > 0))
+    val withAid = countryNames(game.muslims.filter(_.aidMarkers > 0))
     
     @tailrec def nextPriority(candidates: List[String], inOrder: List[String]): List[String] = candidates match {
       case Nil => inOrder
       case xs  => 
         val winner = markerAlignGovTarget(xs).get
-        nextPriority(candidates filterNot (_ == winner), winner :: inOrder)
+        nextPriority(candidates.filterNot(_ == winner), winner :: inOrder)
     }
     
     if (withAid.isEmpty)
@@ -984,7 +987,7 @@ object USBot extends BotHelpers {
   
   def markerAlignGovTarget(names: List[String]): Option[String] = {
     botLog("Find \"Marker/Align/Gov\" target", Color.Debug)
-    topPriority(game getCountries names, woiMuslimPriorities) map (_.name)
+    topPriority(game getCountries names, woiMuslimPriorities).map(_.name)
   }
   
   val BestWoiDRMFilter = new HighestScoreNode("Highest WoI DRM",
@@ -995,7 +998,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Best DRM WoI\" target", Color.Debug)
     val flowchart  = BestWoiDRMFilter::Nil
     val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, woiMuslimPriorities) map (_.name)
+    topPriority(candidates, woiMuslimPriorities).map(_.name)
   }
   
   val WoiDrmMinusOneFilter = new CriteriaFilter("WoI DRM -1",
@@ -1005,7 +1008,7 @@ object USBot extends BotHelpers {
     botLog("Find \"DRM -1 WoI\" target", Color.Debug)
     val flowchart = WoiDrmMinusOneFilter::Nil
     val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, woiMuslimPriorities) map (_.name)
+    topPriority(candidates, woiMuslimPriorities).map(_.name)
   }
   
   // ------------------------------------------------------------------
@@ -1015,7 +1018,7 @@ object USBot extends BotHelpers {
       
     botLog("Find \"UNSCR 1973\" target", Color.Debug)
     val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, disruptPriorities) map (_.name) 
+    topPriority(candidates, disruptPriorities).map(_.name) 
   }
   
   // ------------------------------------------------------------------
@@ -1028,7 +1031,7 @@ object USBot extends BotHelpers {
       
     botLog("Find \"SCAF\" target", Color.Debug)
     val candidates = selectCandidates(game getCountries names, flowchart)
-    topPriority(candidates, priorities) map (_.name)
+    topPriority(candidates, priorities).map(_.name)
   }
   
   // ------------------------------------------------------------------
@@ -1041,7 +1044,7 @@ object USBot extends BotHelpers {
     )
       
     botLog("Find \"Status Quo\" target", Color.Debug)
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getMuslims names, priorities).map(_.name)
   }
   
   // ------------------------------------------------------------------
@@ -1054,7 +1057,7 @@ object USBot extends BotHelpers {
     botLog("Find \"Ebola Scare\" target", Color.Debug)
     selectCandidates(game getCountries names, flowchart) match {
       case Nil => shuffle(names).headOption
-      case xs  => shuffle(xs).headOption map (_.name)
+      case xs  => shuffle(xs).headOption.map(_.name)
     }
   }
   
@@ -1065,7 +1068,7 @@ object USBot extends BotHelpers {
       new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
       
     botLog("Find \"UN Ceasefire\" target", Color.Debug)
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getMuslims names, priorities).map(_.name)
   }
   
   def qadhafiCandidates: List[String] =
@@ -1079,7 +1082,7 @@ object USBot extends BotHelpers {
       HighestResourcePriority)
       
     botLog("Find \"Qadhafi\" target", Color.Debug)
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getMuslims names, priorities).map(_.name)
   }
   
   def revolutionTarget(names: List[String]): Option[String] = {
@@ -1088,7 +1091,7 @@ object USBot extends BotHelpers {
       HighestResourcePriority)
       
     botLog("Find \"Revolution\" target", Color.Debug)
-    topPriority(game getMuslims names, priorities) map (_.name)
+    topPriority(game getMuslims names, priorities).map(_.name)
   }
 
   
@@ -1135,8 +1138,8 @@ object USBot extends BotHelpers {
   }
   
   def disruptRemovesLastCell(card: Card): Boolean = {
-    val maxOps  = maxOpsPlusReserves(card)
-    game.disruptTargets(maxOps) exists { name =>
+    val maxOps = maxOpsPlusReserves(card)
+    game.disruptTargets(maxOps).exists { name =>
       game.disruptLosses(name) match {
         case Some(Left(numCells)) =>
           //  If we would disrupt the last cells on the map and they are
@@ -1189,7 +1192,7 @@ object USBot extends BotHelpers {
         alertResolutionFlowchart(card, maxOps, eventPlayable, plots) match {
           case AlertPlot       => 
             val plot = priorityPlot(plots)
-            val otherPlotsInCountry = plots filter (p => p.id != plot.id && p.country.name == plot.country.name)
+            val otherPlotsInCountry = plots.filter(p => p.id != plot.id && p.country.name == plot.country.name)
             
             // The Bot will execute the auto trigger event first.
             if (card.autoTrigger) {
@@ -1417,7 +1420,7 @@ object USBot extends BotHelpers {
         val target = regimeChangeTarget(candidates).get
         regimeChangeSource(game.regimeChangeSourcesFor(target)) match {
           case Some(source) => (target, source)
-          case None => getTarget(candidates filterNot (_ == target))
+          case None => getTarget(candidates.filterNot(_ == target))
         }
       }
     }
@@ -1537,7 +1540,9 @@ object USBot extends BotHelpers {
       GoodPriority, FairPriority, PoorPriority,
       NoCellsPriority, HasCadrePriority, ClosestToUSPriority)              
     val maxOps = cardOps + reserveOps
-    val candidates = game.warOfIdeasNonMuslimTargets(maxOps) map game.getNonMuslim filter (_.isSoft)
+    val candidates = game.warOfIdeasNonMuslimTargets(maxOps)
+      .map(game.getNonMuslim)
+      .filter(_.isSoft)
     val target  = topPriority(candidates, priorities).get
     val opsUsed = target.governance
     if (opsUsed > cardOps)
@@ -1556,7 +1561,7 @@ object USBot extends BotHelpers {
   def hsDisruptNonMuslim(cardOps: Int, reserveOps: Int): Int = {
     val priorities = List(ClosestToUSPriority, MostCellsPriority)              
     val maxOps = cardOps + reserveOps
-    val candidates = game.disruptNonMuslimTargets(maxOps) map game.getNonMuslim
+    val candidates = game.disruptNonMuslimTargets(maxOps).map(game.getNonMuslim)
     val target  = topPriority(candidates, priorities).get
     val opsUsed = target.governance
     if (opsUsed > cardOps)
@@ -1584,7 +1589,7 @@ object USBot extends BotHelpers {
   // Returns the number of ops used
   def hsDisruptMuslimCadre(cardOps: Int): Int = {
     val priorities = List(ClosestToUSPriority)              
-    val candidates = game.disruptMuslimTargets(cardOps) map game.getMuslim
+    val candidates = game.disruptMuslimTargets(cardOps).map(game.getMuslim)
     val target  = topPriority(candidates, priorities).get
     val opsUsed = target.governance
     log()
@@ -1595,7 +1600,9 @@ object USBot extends BotHelpers {
     
   def hsWoiNonMuslimOpposite(cardOps: Int): Int = {
     val priorities = List(PoorPriority, FairPriority, GoodPriority)
-    val candidates = game.warOfIdeasNonMuslimTargets(cardOps) map game.getNonMuslim filter (_.isOppositeUsPosture)
+    val candidates = game.warOfIdeasNonMuslimTargets(cardOps)
+      .map(game.getNonMuslim)
+      .filter(_.isOppositeUsPosture)
     val target  = topPriority(candidates, priorities).get
     val opsUsed = target.governance
     log()
@@ -1606,7 +1613,9 @@ object USBot extends BotHelpers {
     
   def hsWoiNonMuslimUntested(cardOps: Int): Int = {
     val priorities = List(PoorPriority, FairPriority, GoodPriority)
-    val candidates = game.warOfIdeasNonMuslimTargets(cardOps) map game.getNonMuslim filter (_.isUntested)
+    val candidates = game.warOfIdeasNonMuslimTargets(cardOps)
+      .map(game.getNonMuslim)
+      .filter(_.isUntested)
     val target  = topPriority(candidates, priorities).get
     val opsUsed = target.governance
     log()
