@@ -108,6 +108,14 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+      sealed trait Choice
+      case object PlaceReaction extends Choice
+      case object PlaceCell extends Choice
+      case object PlacePlot1 extends Choice
+      case object PlacePlot2 extends Choice
+      case object Besiege extends Choice
+      case object Draw extends Choice
+
     if (isHuman(role)) {
       val canReaction = getReactionCandidates.nonEmpty
       val canCell     = game.cellsAvailable > 0
@@ -116,38 +124,38 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
       val canBesiege  = getBesiegeCandidates.nonEmpty
       val canDraw     = candidateCards().nonEmpty
       val choices = List(
-        choice(canReaction,"reaction", "Place 1 Reaction marker"),
-        choice(canCell,    "cell",     "Place 1 cell"),
-        choice(canPlot1,   "plot1",    "Place a level 1 plot"),
-        choice(canPlot2,   "plot2",    "Place a level 2 plot"),
-        choice(canBesiege, "besiege",  "Place a besieged regime marker"),
-        choice(canDraw,    "draw",     "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
+        choice(canReaction,PlaceReaction, "Place 1 Reaction marker"),
+        choice(canCell,    PlaceCell,     "Place 1 cell"),
+        choice(canPlot1,   PlacePlot1,    "Place a level 1 plot"),
+        choice(canPlot2,   PlacePlot2,    "Place a level 2 plot"),
+        choice(canBesiege, Besiege,       "Place a besieged regime marker"),
+        choice(canDraw,    Draw,          "Select Pirates, Boko Haram, or Islamic Maghreb from discard pile")
       ).flatten
 
       askMenu("Do any 2 of the following:", choices, 2, repeatsOK = false) foreach { action =>
         println()
         action match {
-          case "reaction" =>
+          case PlaceReaction =>
             val target = askCountry("Place reaction marker in which country: ", getReactionCandidates)
             addEventTarget(target)
             addReactionMarker(target)
-          case "cell" =>
+          case PlaceCell =>
             val target = askCountry("Place a cell in which country: ", getCandidates)
             addEventTarget(target)
             addSleeperCellsToCountry(target, 1)
-          case "plot1" =>
+          case PlacePlot1 =>
             val target = askCountry("Place a level 1 plot in which country: ", getCandidates)
             addEventTarget(target)
             addAvailablePlotToCountry(target, Plot1)
-          case "plot2" =>
+          case PlacePlot2 =>
             val target = askCountry("Place a level 2 plot in which country: ", getCandidates)
             addEventTarget(target)
             addAvailablePlotToCountry(target, Plot2)
-          case "besiege"  =>
+          case Besiege  =>
             val target = askCountry("Place besieged regime marker in which country: ", getBesiegeCandidates)
             addEventTarget(target)
             addBesiegedRegimeMarker(target)
-          case _ =>
+          case Draw =>
             askCardDrawnFromDiscardPile(role, only = candidateCards().toSet)
         }
       }
@@ -167,30 +175,31 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
       else
         None
       val actions = List(
-        besiegeTarget  map (_ => "besiege"),
-        cellTarget     map (_ => "cell"),
-        reactionTarget map (_ => "reaction"),
-        plotTarget     map (_ => "plot"),
+        besiegeTarget  map (_ => Besiege),
+        cellTarget     map (_ => PlaceCell),
+        reactionTarget map (_ => PlaceReaction),
+        plotTarget     map (_ => PlacePlot2),
         if (candidateCards().nonEmpty) Some("draw") else None,
       ).flatten take 2
 
       actions foreach { action =>
         println()
         action match {
-          case "besiege"  =>
+          case Besiege  =>
             addEventTarget(besiegeTarget.get)
             addBesiegedRegimeMarker(besiegeTarget.get)
-          case "cell" =>
+          case PlaceCell =>
             addEventTarget(cellTarget.get)
             addSleeperCellsToCountry(cellTarget.get, 1)
-          case "reaction" =>
+          case PlaceReaction =>
             addEventTarget(reactionTarget.get)
             addReactionMarker(reactionTarget.get)
-          case "plot" =>
+          case PlacePlot1|PlacePlot2 =>
+            // Use Plot 2 if available otherwise Plot 1
             val plot = (game.availablePlots.sorted dropWhile (p => p != Plot1 && p != Plot2)).head
             addEventTarget(plotTarget.get)
             addAvailablePlotToCountry(plotTarget.get, plot)
-          case _ =>
+          case Draw =>
             val cardNum = shuffle(candidateCards()).head
             processCardDrawn(role, cardNum, FromDiscard)
         }

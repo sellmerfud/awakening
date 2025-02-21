@@ -2628,22 +2628,30 @@ object LabyrinthAwakening {
     }
   }
 
+  sealed trait TroopOrMilitia
+  case object TroopCube extends TroopOrMilitia
+  case object MilitiaCube extends TroopOrMilitia
+  case class TroopMarker(name: String) extends TroopOrMilitia
+
   // Returns "troop-cube", "militia-cube", or the name of a troop marker
-  def askTroopOrMilitia(target: String): String = {
+  def askTroopOrMilitia(prompt: String, target: String): TroopOrMilitia = {
     val c = game.getCountry(target)
-    val militia = if (game.isMuslim(target)) game.getMuslim(target).militia else 0
+    val militia = if (game.isMuslim(target))
+      game.getMuslim(target).militia
+    else
+      0
 
     assert(c.totalTroops + militia > 0, s"askTroopOrMilitia($target) called but no units present")
 
     if (c.troops == 0 && c.troopsMarkers.isEmpty)
-      "militia-cube"
+      MilitiaCube
     else if (militia == 0 && c.troopsMarkers.isEmpty)
-      "troop-cube"
+      TroopCube
     else {
       val choices = List(
-        choice(c.troops > 0, "troop-cube",   s"Troop cube (${c.troops} present)"),
-        choice(militia > 0,  "militia-cube", s"Militia cube (${militia} present)")
-      ).flatten ++ (c.troopsMarkers.sorted map (x => x.name -> x.name))
+        choice(c.troops > 0, TroopCube,   s"Troop cube (${c.troops} present)"),
+        choice(militia > 0,  MilitiaCube, s"Militia cube (${militia} present)")
+      ).flatten ++ (c.troopsMarkers.sorted map (x => TroopMarker(x.name) -> x.name))
       askMenu("Choose one:", choices).head
     }
   }
@@ -4595,21 +4603,29 @@ object LabyrinthAwakening {
 
 
   def historyMenu(): Unit = {
+    sealed trait MenuChoice
+    case object Last extends MenuChoice
+    case object Current extends MenuChoice
+    case object Prev extends MenuChoice
+    case object Turn extends MenuChoice
+    case object All extends MenuChoice
+    case object Done extends MenuChoice
+
     val lastAction = mostRecentSaveNumber(game.saveName).get
     val choices = List(
-      choice(true, "last", "Last action"),
-      choice(true, "turn", "Current turn actions"),
-      choice(game.turn > 1, "prev", "Previous turn actions"),
-      choice(game.turn > 1, "chosen-turn", "Choosen turn actions"),
-      choice(true, "all", "Entire history"),
-      choice(true, "", "Finished"),
+      choice(true, Last, "Last action"),
+      choice(true, Current, "Current turn actions"),
+      choice(game.turn > 1, Prev, "Previous turn actions"),
+      choice(game.turn > 1, Turn, "Choosen turn actions"),
+      choice(true, All, "Entire history"),
+      choice(true, Done, "Finished"),
     ).flatten
 
     askMenu("Show history of:", choices).head match {
-      case "last" =>
+      case Last =>
         printHistorySegment(lastAction, lastAction, false)
 
-      case "turn" =>
+      case Current =>
         findFirstSavePointOfTurn(game.turn) match {
           case Some(start) if start == game.history.size =>
             displayLine("\nNo actions yet in the current turn.", Color.Event)
@@ -4619,7 +4635,7 @@ object LabyrinthAwakening {
             displayLine("\nCould not determine save point.", Color.Event)
         }
 
-      case "prev" =>
+      case Prev =>
         (findFirstSavePointOfTurn(game.turn - 1), findFirstSavePointOfTurn(game.turn)) match {
           case (Some(start), Some(next)) =>
             printHistorySegment(start, next - 1, true)
@@ -4627,7 +4643,7 @@ object LabyrinthAwakening {
             displayLine("\nCould not determine save point.", Color.Event)
         }
 
-      case "chosen-turn" =>
+      case Turn =>
         val turn = askInt("Show history of which turn", 1, game.turn)
         findFirstSavePointOfTurn(turn) match {
           case Some(start) if start == game.history.size =>
@@ -4645,9 +4661,9 @@ object LabyrinthAwakening {
             displayLine("\nCould not determine save point.", Color.Event)
         }
 
-      case "all" =>
+      case All =>
         printHistorySegment(0, lastAction, true)
-      case _ =>
+      case Done =>
     }
   }
 
@@ -5301,15 +5317,17 @@ object LabyrinthAwakening {
           def nextHit(lossesRemaining: Int, markers: List[TroopsMarker], troops: Int, militia: Int): Unit = {
             if (lossesRemaining > 0 && (markers.nonEmpty || troops > 0 || militia > 0)) {
               val choices = List(
-                choice(troops > 0,  "troop",  "Troop cube"),
-                choice(militia > 0, "militia","Militia cube")
+                choice(troops > 0,  TroopCube,  "Troop cube"),
+                choice(militia > 0, MilitiaCube,"Militia cube")
               ).flatten ++
-                (markers.sorted map (m => m.name -> s"${m.name}  (absorbs ${amountOf(m.num, "loss", Some("losses"))})"))
+                (markers.sorted map (m => TroopMarker(m.name) -> s"${m.name}  (absorbs ${amountOf(m.num, "loss", Some("losses"))})"))
               println(s"$US must take ${amountOf(lossesRemaining, "more loss", Some("more losses"))}")
               askMenu("Which unit will take the next loss:", choices).head match {
-                case "troop"   => troopsLost  += 1; nextHit(lossesRemaining - 1, markers, troops - 1, militia)
-                case "militia" => militiaLost += 1; nextHit(lossesRemaining - 1, markers, troops, militia - 1)
-                case name      =>
+                case TroopCube   =>
+                  troopsLost  += 1; nextHit(lossesRemaining - 1, markers, troops - 1, militia)
+                case MilitiaCube =>
+                  militiaLost += 1; nextHit(lossesRemaining - 1, markers, troops, militia - 1)
+                case TroopMarker(name) =>
                   val marker = (markers find (_.name == name)).get
                   val lossesAbsorbed = marker.num
                   markersLost = name :: markersLost
@@ -7886,19 +7904,25 @@ object LabyrinthAwakening {
       choices :+ (None -> ("Cancel", Seq.empty))
     }
     val games = savedGames()
+    sealed trait MenuChoice
+    case object New extends MenuChoice
+    case object Resume extends MenuChoice
+    case object Delete extends MenuChoice
+    case object Exit extends MenuChoice
+
     val choices = List(
-      choice(true, "new", "Start a new game"),
-      choice(games.nonEmpty, "resume", "Resume a saved game"),
-      choice(games.nonEmpty, "delete", "Delete a saved game"),
-      choice(true, "exit", "Exit the program"),
+      choice(true, New, "Start a new game"),
+      choice(games.nonEmpty, Resume, "Resume a saved game"),
+      choice(games.nonEmpty, Delete, "Delete a saved game"),
+      choice(true, Exit, "Exit the program"),
     ).flatten
 
     askMenu("Game Menu", choices).head match {
-      case "new" =>
+      case New =>
         startNewGame(params)
         programMainMenu(params)
 
-      case "resume" =>
+      case Resume =>
         askMenuWithWrap("Resume which game:", gameChoices(), sameLine = false, allowAbort = false)
           .foreach { name =>
             game = loadMostRecent(name)
@@ -7907,7 +7931,7 @@ object LabyrinthAwakening {
           }
         programMainMenu(params)
 
-      case "delete" =>
+      case Delete =>
         askMenuWithWrap("Delete which game:", gameChoices(), sameLine = false, allowAbort = false)
           .foreach { name =>
             if (askYorN(s"\nReally delete game [$name] (y/n)? "))
@@ -7915,7 +7939,7 @@ object LabyrinthAwakening {
           }
         programMainMenu(params)
 
-      case _ =>
+      case Exit =>
         throw ExitProgram
     }
   }
@@ -8724,11 +8748,15 @@ object LabyrinthAwakening {
     def nextCadre(): Int = {
       val candidates = countryNames(game.countries.filter(_.hasCadre))
       if (candidates.nonEmpty) {
-        val choices = candidates.map(n => n -> n) :+ ("cancel" -> "Finished removing cadres")
+        sealed trait Choice
+        case class Target(name: String) extends Choice
+        case object Cancel extends Choice
+        val choices = candidates.map(n => Target(n) -> n) :+
+          (Cancel -> "Finished removing cadres")
         askMenu(s"Remove cadre in which country: ", choices, allowAbort = false).head match {
-          case "cancel" =>
+          case Cancel =>
             0
-          case target =>
+          case Target(target) =>
             val num = askInt(s"\nRemove how many cadres from $target:", 0, game.getCountry(target).cadres)
             if (num > 0) {
               if (firstOne)
@@ -9074,14 +9102,18 @@ object LabyrinthAwakening {
           val card2 = deck(cardNum)
           if (lapsingEventInPlay(Ferguson) && card2.association == US) {
             displayLine("\nFerguson is in effect, so the Jihadist will cancel any US associated card.", Color.Info)
+            sealed trait Choice
+            case object Another extends Choice
+            case object Abort extends Choice
+            case object Proceed extends Choice
             val choices = List(
-              "another" -> "Choose another 3 Ops card",
-              "abort"   -> "Abort the Reassessment action",
-              "proceed" -> "Play this card anyway")
+              Another -> "Choose another 3 Ops card",
+              Abort   -> "Abort the Reassessment action",
+              Proceed -> "Play this card anyway")
             askMenu("What do you wish to do:", choices).head match {
-              case "another" => promptForSecondCard()
-              case "abort"   => throw AbortAction
-              case _ =>
+              case Another => promptForSecondCard()
+              case Abort   => throw AbortAction
+              case Proceed =>
                 log(s"${card2.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
                 log(s"The reassessment action is cancelled", Color.Event)
                 addPlayedCard(US, cardNum)
@@ -9579,26 +9611,30 @@ object LabyrinthAwakening {
 
 
     if (card.autoTrigger || card.association == US) {
+      sealed trait Choice
+      case object Ops extends Choice
+      case object Trigger extends Choice
+      case object Abort extends Choice
       val choices = List(
-        choice(true, "ops", "Operations"),
-        choice(true, "trigger" , s"Trigger event [${card.cardName}]"),
-        choice(true, "abort", "Abort card"),
-      ).flatten
+        Ops     -> "Operations",
+        Trigger -> s"Trigger event [${card.cardName}]",
+        Abort   -> "Abort card",
+      )
 
       def performActions(): Unit = {
         askMenu("What happens next:", choices).head match {
-          case "ops" =>
+          case Ops =>
             performCardActivity(getJihadistActivity())
             if (card.association == US && firstPlotUsed)
               log(s"\nThe First plot option prevents the US associated \"${card.cardName}\" event from triggering", Color.Info)
             else
               performTriggeredEvent(US, card)
 
-          case "trigger" =>
+          case Trigger =>
             performTriggeredEvent(US, card)
             performCardActivity(getJihadistActivity())
 
-          case _ =>
+          case Abort =>
             if (askYorN("Really abort (y/n)? "))
               throw AbortAction
             else
@@ -10402,16 +10438,22 @@ object LabyrinthAwakening {
         .partition(lapsingEventInPlay)
       val canAdd1stPlot = canChangeFirstPlot && game.firstPlotEntry.isEmpty
       val canRemove1stPlot = canChangeFirstPlot && game.firstPlotEntry.nonEmpty
+      sealed trait Choice
+      case object AddLapsing extends Choice
+      case object RemoveLapsing extends Choice
+      case object Add1stPlot extends Choice
+      case object Remove1stPlot extends Choice
+      case object Finished extends Choice
       val choices = List(
-        choice(notLapsing.nonEmpty, "add-lapsing",     "Add lapsing marker"),
-        choice(lapsing.nonEmpty,    "remove-lapsing",  "Remove lapsing marker"),
-        choice(canAdd1stPlot,       "add-1st-plot",    "Add 1st plot marker"),
-        choice(canRemove1stPlot,    "remove-1st-plot", "Remove 1st plot marker"),
-        choice(true,                "finished",        "Finished adjusting lapsing/1st plot markers")
+        choice(notLapsing.nonEmpty, AddLapsing,     "Add lapsing marker"),
+        choice(lapsing.nonEmpty,    RemoveLapsing,  "Remove lapsing marker"),
+        choice(canAdd1stPlot,       Add1stPlot,    "Add 1st plot marker"),
+        choice(canRemove1stPlot,    Remove1stPlot, "Remove 1st plot marker"),
+        choice(true,                Finished,        "Finished adjusting lapsing/1st plot markers")
       ).flatten
 
       askMenu("Choose one:", choices).head match {
-        case "add-lapsing" =>
+        case AddLapsing =>
           val choices = notLapsing.map(n => n -> cardNumAndName(n)) :+
             (0 -> "Do not add a lapsing marker")
 
@@ -10425,7 +10467,7 @@ object LabyrinthAwakening {
           }
           nextAdjustment()
 
-        case "remove-lapsing" =>
+        case RemoveLapsing =>
           val choices = lapsing.map(n => n -> cardNumAndName(n)) :+
             (0 -> "Do not remove a lapsing marker")
           askMenu("Chose the card associated with the marker to remove:", choices).head match {
@@ -10438,19 +10480,19 @@ object LabyrinthAwakening {
           }
           nextAdjustment()
 
-        case "add-1st-plot" =>
+        case Add1stPlot =>
           // The card number is irrelevant
             // Card number of zero used for 1st Plot marker
             game = game.copy(firstPlotEntry = Some(LapsingEntry(0, true)))
             displayLine(s"\nFirst plot marker added", Color.Info)
             nextAdjustment()
 
-        case "remove-1st-plot" =>
+        case Remove1stPlot =>
             game = game.copy(firstPlotEntry = None)
             displayLine(s"\nFirst plot marker removed", Color.Info)
             nextAdjustment()
 
-        case _ =>
+        case Finished =>
       }
     }
 
@@ -10555,10 +10597,14 @@ object LabyrinthAwakening {
 
     def nextAction(): Unit = {
       val nonTargets = countryNames(game.countries) filterNot targetNames.apply
+      sealed trait Choice
+      case object Add extends Choice
+      case object Delete extends Choice
+      case object Done extends Choice
       val choices = List(
-        choice(nonTargets.nonEmpty, "add",  "Add a country to the resolved plot targets"),
-        choice(targetNames.nonEmpty,    "del",  "Remove a country from the resolved plot targets"),
-        choice(true,                "done", "Finished")
+        choice(nonTargets.nonEmpty,  Add,    "Add a country to the resolved plot targets"),
+        choice(targetNames.nonEmpty, Delete, "Remove a country from the resolved plot targets"),
+        choice(true,                 Done,   "Finished")
       ).flatten
       println("\nCountries where plots were resolved in the last plot resolution phase:")
       if (targetNames.isEmpty)
@@ -10566,15 +10612,15 @@ object LabyrinthAwakening {
       else
         println(targetNames.toList.sorted.mkString(", "))
       askMenu("Choose one: ", choices, allowAbort = false).head  match {
-        case "done" =>
-        case "add"  =>
+        case Add  =>
           val name = askCountry("Select country to add: ", nonTargets.sorted, allowAbort = false)
           targetNames = targetNames + name
           nextAction()
-        case _ =>
+        case Delete =>
           val name = askCountry("Select country to remove: ", targetNames.toList.sorted, allowAbort = false)
           targetNames = targetNames - name
           nextAction()
+        case Done =>
       }
     }
 
@@ -11288,23 +11334,27 @@ object LabyrinthAwakening {
         println()
         println(s"$name now contains ${amountOf(inPlace.size, "Advisors marker")}")
         println(s"There are ${amountOf(available.size, "available Advisors marker")}")
+        sealed trait Choice
+        case object Place extends Choice
+        case object Remove extends Choice
+        case object Done extends Choice
         val choices = List(
-          choice(available.nonEmpty, "place",  "Add an Advisors marker"),
-          choice(inPlace.nonEmpty,   "remove", "Remove an Advisors marker"),
-          choice(true,               "done",   "Finished")
+          choice(available.nonEmpty, Place,  "Add an Advisors marker"),
+          choice(inPlace.nonEmpty,   Remove, "Remove an Advisors marker"),
+          choice(true,               Done,   "Finished")
         ).flatten
         askMenu("Choose one:", choices, allowAbort = false).head match {
-          case "place" =>
+          case Place =>
             inPlace = Advisors :: inPlace
             available = available.tail
             getNextResponse()
 
-          case "remove" =>
+          case Remove =>
             available = Advisors :: available
             inPlace = inPlace.tail
             getNextResponse()
 
-          case _ =>
+          case Done =>
         }
       }
       getNextResponse()
@@ -11327,13 +11377,18 @@ object LabyrinthAwakening {
       val numCache = game.getCountry(name).wmdCache
       val numAvail = game.plotData.numAvailWMD
       val numRemoved = game.plotData.numRemovedWMD
-
+      sealed trait Choice
+      case object DelAvail extends Choice
+      case object DelRemoved extends Choice
+      case object AddAvail extends Choice
+      case object AddRemoved extends Choice
+      case object Done extends Choice
       val choices = List(
-        choice(numCache > 0,  "delAvail",   "Remove to available box"),
-        choice(numCache > 0,  "delRemoved", "Remove out of the game"),
-        choice(numAvail > 0,  "addAvail",   "Add from available box"),
-        choice(numRemoved > 0,"addRemoved", "Add from out of play"),
-        choice(true,          "done",       "Finished")
+        choice(numCache > 0,   DelAvail,   "Remove to available box"),
+        choice(numCache > 0,   DelRemoved, "Remove out of the game"),
+        choice(numAvail > 0,   AddAvail,   "Add from available box"),
+        choice(numRemoved > 0, AddRemoved, "Add from out of play"),
+        choice(true,           Done,       "Finished")
       ).flatten
 
       displayLine(s"\n$name")
@@ -11342,23 +11397,23 @@ object LabyrinthAwakening {
       displayLine(s"Available   : $numAvail")
       displayLine(s"Out of play : $numRemoved")
       askMenu(s"Adjust WMD cache in $name:", choices).head match {
-        case "delAvail"   =>
+        case DelAvail   =>
           val num = askInt("\nRemove how many to available?", 0, numCache)
           moveWMDCacheToAvailable(name, num)
           nextAction()
-        case "delRemoved" =>
+        case DelRemoved =>
           val num = askInt("\nRemove how many out of the game?", 0, numCache)
           removeCachedWMD(name, num, bumpPrestige = false)
           nextAction()
-        case "addAvail"   =>
+        case AddAvail   =>
           val num = askInt("\nAdd how many from available?", 0, numAvail)
           addAvailableWMDToCache(name, num)
           nextAction()
-        case "addRemoved" =>
+        case AddRemoved =>
           val num = askInt("\nAdd how many from out of play?", 0, numRemoved)
           addRemovedWMDToCache(name, num)
           nextAction()
-        case _ =>
+        case Done =>
       }
     }
 

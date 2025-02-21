@@ -86,9 +86,12 @@ object Card_234 extends Card(234, "Free Syrian Army", Unassociated, 3, Remove, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Cells extends Choice
+    case object Militia extends Choice
     val choices = List(
-      "militia" -> "Place 2 militia and 1 cell in Syria",
-      "cells"   -> "Place 2 cells and 1 militia in Syria",
+      Militia -> "Place 2 militia and 1 cell in Syria",
+      Cells   -> "Place 2 cells and 1 militia in Syria",
     )
     val orderedChoices = if (role == US) choices else choices.reverse
 
@@ -97,7 +100,7 @@ object Card_234 extends Card(234, "Free Syrian Army", Unassociated, 3, Remove, N
 
     val (cells, militia) = role match {
       case _ if isHuman(role) =>
-        if (askMenu("Choose one:", choices).head == "cells")
+        if (askMenu("Choose one:", choices).head == Cells)
           (2, 1)
         else
           (1, 2)

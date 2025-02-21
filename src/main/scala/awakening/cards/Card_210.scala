@@ -77,19 +77,22 @@ object Card_210 extends Card(210, "Sectarian Violence", Unassociated, 1, NoRemov
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Reaction extends Choice
+    case object Awakening extends Choice
     val choices = List(
-      "reaction" -> "Remove a reaction marker.",
-      "awakening" -> "Remove an awakening marker.",
+      Reaction -> "Remove a reaction marker.",
+      Awakening -> "Remove an awakening marker.",
     )
 
     val action = role match {
       case _ if isHuman(role) => askMenu("Chosse one:", choices).head
-      case US => "reaction"
-      case Jihadist => "awakening"
+      case US => Reaction
+      case Jihadist => Awakening
     }
 
     action match {
-      case "reaction" if getReactionCandidates.nonEmpty =>
+      case Reaction if getReactionCandidates.nonEmpty =>
         val name = if (isHuman(role))
           askCountry("Remove reaction marker from which country: ", getReactionCandidates)
         else
@@ -97,7 +100,7 @@ object Card_210 extends Card(210, "Sectarian Violence", Unassociated, 1, NoRemov
         addEventTarget(name)
         removeReactionMarker(name)
 
-      case "awakening" if getAwakeningCandidates.nonEmpty =>
+      case Awakening if getAwakeningCandidates.nonEmpty =>
         val name = if (isHuman(role))
           askCountry("Remove awakening marker from which country: ", getAwakeningCandidates)
         else
@@ -105,10 +108,10 @@ object Card_210 extends Card(210, "Sectarian Violence", Unassociated, 1, NoRemov
         addEventTarget(name)
         removeAwakeningMarker(name)
 
-      case "reaction" =>
+      case Reaction =>
         log("There are no countries with reaction markers.  The event has no effect.", Color.Event)
 
-      case _ =>
+      case Awakening =>
         log("There are no countries with awakening markers.  The event has no effect.", Color.Event)
     }
   }

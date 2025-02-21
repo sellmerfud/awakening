@@ -86,12 +86,18 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait RemoveChoice
+    case object Cell extends RemoveChoice
+    case object Militia extends RemoveChoice
+    sealed trait PlaceChoice
+    case object Aid extends PlaceChoice
+    case object Besiege extends PlaceChoice
     def removeChoices(target: String) = {
       val cellOK = game.getMuslim(target).totalCells > 0
       val miliiaOK = game.getMuslim(target).militia > 0
       val list = List(
-        choice(cellOK, "cell", "Remove a cell"),
-        choice(miliiaOK, "militia", "Remove a militia"),
+        choice(cellOK, Cell, "Remove a cell"),
+        choice(miliiaOK, Militia, "Remove a militia"),
       ).flatten
       if (role == US) list else list.reverse
     }
@@ -100,8 +106,8 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
       val besiegedOK = game.getMuslim(target).canTakeBesiegedRegimeMarker
       val aidOK = game.getMuslim(target).canTakeAidMarker
       val list = List(
-        choice(aidOK, "aid", "Place an Aid marker"),
-        choice(besiegedOK, "besiege", "Place a Besieged Regime marker"),
+        choice(aidOK, Aid, "Place an Aid marker"),
+        choice(besiegedOK, Besiege, "Place a Besieged Regime marker"),
       ).flatten
       if (role == US) list else list.reverse
     }
@@ -109,7 +115,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
     val (target, removeAction, placeAction) = role match {
       case _ if isHuman(role) =>
         val target = askCountry("Which country: ", getCandidates)
-        val removeAction = askMenu("Choose one:", removeChoices(target)).headOption.getOrElse("cell")
+        val removeAction = askMenu("Choose one:", removeChoices(target)).headOption.getOrElse(Cell)
         val placeAction  = askMenu("Choose one:", placeChoices(target)).head // can always place aid
         (target, removeAction, placeAction)
 
@@ -117,37 +123,37 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
         val withCellCandidates = getCandidates.filter(name => game.getMuslim(name).totalCells > 0)
         val noMilitiaCandidates = getCandidates.filter(name => game.getMuslim(name).militia == 0)
         val (target, removeAction) = if (withCellCandidates.nonEmpty)
-          (USBot.disruptPriority(withCellCandidates).get, "cell")
+          (USBot.disruptPriority(withCellCandidates).get, Cell)
         else if (noMilitiaCandidates.nonEmpty)
-          (USBot.markerAlignGovTarget(noMilitiaCandidates).get, "cell")
+          (USBot.markerAlignGovTarget(noMilitiaCandidates).get, Cell)
         else
-          (USBot.markerAlignGovTarget(getCandidates).get, "militia")
-        (target, removeAction, "aid")
+          (USBot.markerAlignGovTarget(getCandidates).get, Militia)
+        (target, removeAction, Aid)
 
       case Jihadist =>
         val withMilitiaCandidates = jihadBotCandidates().filter(name => game.getMuslim(name).militia > 0)
         val notBesieged = jihadBotCandidates().filter(name => !game.getMuslim(name).besiegedRegime)
         val (target, removeAction) =  if (withMilitiaCandidates.nonEmpty)
-          (JihadistBot.troopsMilitiaTarget(withMilitiaCandidates).get, "militia")
+          (JihadistBot.troopsMilitiaTarget(withMilitiaCandidates).get, Militia)
         else
-          (JihadistBot.markerTarget(notBesieged).get, "cell")
-        val placeAction = if (game.getMuslim(target).besiegedRegime) "aid" else "besiege"
+          (JihadistBot.markerTarget(notBesieged).get, Cell)
+        val placeAction = if (game.getMuslim(target).besiegedRegime) Aid else Besiege
         (target, removeAction, placeAction)
     }
 
     val m = game.getMuslim(target)
     addEventTarget(target)
-    if (removeAction == "cell" && m.totalCells > 0) {
+    if (removeAction == Cell && m.totalCells > 0) {
       val (actives, sleepers, sadr) = if (isHuman(role))
         askCells(target, 1, true)
       else
         USBot.chooseCellsToRemove(target, 1)
       removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
     }
-    else if (removeAction == "militia" && m.militia > 0)
+    else if (removeAction == Militia && m.militia > 0)
       removeMilitiaFromCountry(target, 1)
 
-    if (placeAction == "aid")
+    if (placeAction == Aid)
       addAidMarker(target)
     else
       addBesiegedRegimeMarker(target)

@@ -92,29 +92,36 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Cells extends Choice
+    case object Militia extends Choice
     // See Event Instructions table
     def numToRemove(name: String) = if (game.getMuslim(name).isSunni) 1 else 2
 
     val choices = List(
-      choice(canRemoveCells, "cells",   "Remove cell(s)"),
-      choice(canRemoveMilitia, "militia", "Remove militia"),
+      choice(canRemoveCells, Cells,   "Remove cell(s)"),
+      choice(canRemoveMilitia, Militia, "Remove militia"),
     ).flatten
     val orderedChoices = if (role == US) choices else choices.reverse
 
     val action = role match {
       case _ if isHuman(role) => askMenu("Choose one:", choices).head
-      case US => "cells"
-      case Jihadist => "militia"
+      case US => Cells
+      case Jihadist => Militia
     }
 
     val target = action match {
-      case "cells" if isHuman(role) => askCountry("Select country with cells: ", getCellCandidates)
-      case "militia" if isHuman(role) => askCountry("Select country with militia: ", getMilitiaCandidates)
-      case "cells" => USBot.disruptPriority(getCellCandidates).get
-      case _ => JihadistBot.minorJihadTarget(getMilitiaCandidates).get
+      case Cells if isHuman(role) =>
+        askCountry("Select country with cells: ", getCellCandidates)
+      case Militia if isHuman(role) =>
+        askCountry("Select country with militia: ", getMilitiaCandidates)
+      case Cells =>
+        USBot.disruptPriority(getCellCandidates).get
+      case Militia =>
+        JihadistBot.minorJihadTarget(getMilitiaCandidates).get
     }
 
-    if (action == "cells") {
+    if (action == Cells) {
         addEventTarget(target)
         val (actives, sleepers, sadr) = if (isHuman(role))
           askCells(target, numToRemove(target), sleeperFocus = true)

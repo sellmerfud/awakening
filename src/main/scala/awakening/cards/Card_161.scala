@@ -75,9 +75,12 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
   override
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
+      sealed trait Choice
+      case object Activate extends Choice
+      case object Alert extends Choice
       val choices = List(
-        choice(game.sleeperCellsOnMap > 0, "activate", "Activate half (rounded up) of all sleeper cells on the map"),
-        choice(game.alertTargets.nonEmpty, "alert", "Alert all plots on the map")
+        choice(game.sleeperCellsOnMap > 0, Activate, "Activate half (rounded up) of all sleeper cells on the map"),
+        choice(game.alertTargets.nonEmpty, Alert, "Alert all plots on the map")
       ).flatten
 
       if (choices.isEmpty && game.prestige == 1)
@@ -85,7 +88,7 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
 
       if (choices.nonEmpty) {
         askMenu("Choose one:", choices).head match {
-          case "activate" =>
+          case Activate =>
             val numToFlip = (game.sleeperCellsOnMap + 1) / 2  // half rounded up
             // Ask which cells to activate
             val withSleepers = game.countries
@@ -109,7 +112,7 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
             }
             flipNextBatch(toFlip)
 
-          case _ =>
+          case Alert =>
             for (c <- game.countries; p <- c.plots)  {// Alert all plots on the map
               addEventTarget(c.name)
               performAlert(c.name, humanPickPlotToAlert(c.name))

@@ -81,20 +81,22 @@ object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, N
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       val postureCandidates = countryNames(game.nonMuslims filter (n => n.canRemovePosture))
-
+      sealed trait Choice
+      case object Plot extends Choice
+      case object Posture extends Choice
       val choices = List(
-        choice(plotsMarkers().nonEmpty,            "plot",    "Place non-WMD plot in any country"),
-        choice(removePostureCandidates().nonEmpty, "posture", "Remove posture marker from non-Muslim country")
+        choice(plotsMarkers().nonEmpty,            Plot,    "Place non-WMD plot in any country"),
+        choice(removePostureCandidates().nonEmpty, Posture, "Remove posture marker from non-Muslim country")
       ).flatten
 
       askMenu("Choose one:", choices).head match {
-        case "plot" =>
+        case Plot =>
           val target = askCountry("Place plot in which country: ", countryNames(game.countries))
           val plot  = askPlots(plotsMarkers(), 1).head
           addEventTarget(target)
           addAvailablePlotToCountry(target, plot)
 
-        case _ =>
+        case Posture =>
           val target = askCountry("Remove posture marker from which country: ", removePostureCandidates())
           addEventTarget(target)
           setCountryPosture(target, PostureUntested)

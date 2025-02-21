@@ -82,17 +82,20 @@ object Card_135 extends Card(135, "Delta / SEALS", US, 2, NoRemove, NoLapsing, N
   def executeEvent(role: Role): Unit = {
     if (canRevealPlots || canDraw) {
       if (isHuman(role)) {
+        sealed trait Choice
+        case object Reveal extends Choice
+        case object Draw extends Choice
         val choices = List(
-          choice(canRevealPlots, "reveal", "Reveal all WMD plots and remove one"),
-          choice(canDraw,        "draw"  , "Randomly draw 1 card from the Jihadist hand")
+          choice(canRevealPlots, Reveal, "Reveal all WMD plots and remove one"),
+          choice(canDraw,        Draw,   "Randomly draw 1 card from the Jihadist hand")
         ).flatten
 
         askMenu("Choose one:", choices).head match {
-          case "draw" =>
+          case Draw =>
             log("\nDraw the top card in the Jihadist Bot's hand", Color.Event)
             askCardDrawnFromOpponent(role)
 
-          case _ =>
+          case Reveal =>
             val Available = "Available Plots box"
             val wmdOnMap = for (c <- game.countries; PlotOnMap(PlotWMD, _) <- c.plots)
               yield c.name

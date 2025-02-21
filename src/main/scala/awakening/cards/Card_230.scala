@@ -97,6 +97,9 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Governance extends Choice
+    case object Alignment extends Choice
     val (name, (actives, sleepers, sadr), action) = role match {
       case _ if isHuman(role) =>
         val name = askCountry("Select country: ", getCandidates)
@@ -105,8 +108,8 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
         displayLine(s"\nRemove ${amountOf(numCells, "cell")} from $name", Color.Event)
         val cells = askCells(name, numCells, sleeperFocus = (role == US))
         val choices = List(
-          choice(!m.isPoor,      "gov",   "Worsen governance 1 level"),
-          choice(!m.isAdversary, "align", "Shift alignment 1 box toward Adversary")
+          choice(!m.isPoor,      Governance, "Worsen governance 1 level"),
+          choice(!m.isAdversary, Alignment,  "Shift alignment 1 box toward Adversary")
         ).flatten
         val action = askMenu("Choose one:", choices).headOption
         (name, cells, action)
@@ -126,9 +129,9 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
         val m = game.getMuslim(name)
         val cells = JihadistBot.chooseCellsToRemove(name, m.totalCells - 1)
         val action = if (!m.isAdversary)
-          Some("align")
+          Some(Alignment)
         else if (!m.isPoor)
-          Some("gov")
+          Some(Governance)
         else
           None
         (name, cells, action)
@@ -139,9 +142,9 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
     val totalCells = actives + sleepers + (if (sadr) 1 else 0)
     increaseFunding((totalCells + 1) / 2)  // half of removed cells rounded up
     action match {
-      case Some("gov")   => worsenGovernance(name, 1, canShiftToIR = false)
-      case Some("align") => shiftAlignmentRight(name)
-      case _             => log(s"\n$name is already Poor Adversary.", Color.Event)
+      case Some(Governance) => worsenGovernance(name, 1, canShiftToIR = false)
+      case Some(Alignment) => shiftAlignmentRight(name)
+      case _               => log(s"\n$name is already Poor Adversary.", Color.Event)
     }
   }
 }

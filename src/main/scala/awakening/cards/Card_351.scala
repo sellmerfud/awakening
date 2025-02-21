@@ -84,6 +84,11 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
     // This will return None if Avenger was drawn, triggers and discarded
     askCardDrawnFromOpponent(role, Some(s"What is the # of the card taken: "))
       .foreach { cardNum =>
+        sealed trait Choice
+        case object Event extends Choice
+        case object Discard extends Choice
+        case object Return extends Choice
+        case object Keep extends Choice
         val card = deck(cardNum)
         val cardDisplay = card.numAndName
         val eventName = s""""${card.cardName}""""
@@ -92,35 +97,35 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
         cachedEventPlayableAnswer = None
         val action = if (isHuman(role)) {
           val choices = List(
-            choice(card.eventIsPlayable(role), "event",  s"Play the $cardDisplay event"),
-            choice(!card.autoTrigger,          "discard",s"Discard $cardDisplay"),
-            choice(true,                       "return", s"Return $cardDisplay to the $opponent hand"),
-            choice(true,                       "keep",   s"Keep $cardDisplay and give another card to the $opponent")
+            choice(card.eventIsPlayable(role), Event,  s"Play the $cardDisplay event"),
+            choice(!card.autoTrigger,          Discard,s"Discard $cardDisplay"),
+            choice(true,                       Return, s"Return $cardDisplay to the $opponent hand"),
+            choice(true,                       Keep,   s"Keep $cardDisplay and give another card to the $opponent")
           ).flatten
           askMenu("Choose one:", choices).head
         }
         else if (card.eventIsPlayable(role))
-          "event"  // Bot will play event if possible
+          Event  // Bot will play event if possible
         else
-          "discard" // Otherwise Bot will discard (which will trigger any auto-event)
+          Discard // Otherwise Bot will discard (which will trigger any auto-event)
 
         action match {
-          case "discard" =>
+          case Discard =>
             processDiscardedCard(role, cardNum)
 
-          case "return" =>
+          case Return =>
             log(s"\nReturn $cardDisplay to the top of the $opponent hand", Color.Event)
             decreaseCardsInHand(role, 1)
             increaseCardsInHand(role.opponent, 1)
 
-          case "keep" =>
+          case Keep =>
             if (opponent == Jihadist && game.botEnhancements)
               log(s"\nKeep $cardDisplay and shuffle another card from your hand into the $opponent hand", Color.Event)
             else
               log(s"\nKeep $cardDisplay and place another card from your hand on the $opponent hand", Color.Event)
             askCardDrawnFromOpponent(role.opponent, Some(s"What is the # of the card given: "), except = Set(cardNum))
 
-          case _ => // Play the event
+          case Event =>
             addAdditionalCardToPlayedCard(card.number)
             decreaseCardsInHand(role, 1)
             log(s"\n$role executes the $cardDisplay event")

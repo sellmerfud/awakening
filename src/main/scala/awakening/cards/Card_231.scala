@@ -82,20 +82,23 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Cells extends Choice
+    case object Militia extends Choice
     val actionChoices = List(
-      choice(getCellsCandidates.nonEmpty, "cells", "Remove cells."),
-      choice(getMilitiaCandidates.nonEmpty, "militia", "Remove militia."),
+      choice(getCellsCandidates.nonEmpty,   Cells,   "Remove cells."),
+      choice(getMilitiaCandidates.nonEmpty, Militia, "Remove militia."),
     ).flatten
     val orderedActionChoices = if (role == US) actionChoices else actionChoices.reverse
 
     val action = role match {
       case _ if isHuman(role) => askMenu("Choose one:", orderedActionChoices).head
-      case US => "cells"
-      case Jihadist => "militia"
+      case US => Cells
+      case Jihadist => Militia
     }
 
     action match {
-      case "cells" if isHuman(role) =>
+      case Cells if isHuman(role) =>
         getCellsCandidates match {
           case Nil =>
             log("\nThere are no Civil War countries with cells.  The event has no effect.", Color.Event)
@@ -106,13 +109,13 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
         }
 
-      case "cells" =>
+      case Cells =>
         val name = USBot.disruptPriority(getCellsCandidates).get
         val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 3 min game.getMuslim(name).totalCells)
         addEventTarget(name)
         removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
 
-      case _  if isHuman(role) =>
+      case Militia  if isHuman(role) =>
         getMilitiaCandidates match {
           case Nil =>
             log("\nThere are no Civil War countries with militia.  The event has no effect.", Color.Event)
@@ -122,7 +125,7 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
             removeMilitiaFromCountry(name, 2 min (game getMuslim name).militia)
         }
 
-      case _ =>
+      case Militia =>
         val name = JihadistBot.minorJihadTarget(getMilitiaCandidates).get
         addEventTarget(name)
         removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)

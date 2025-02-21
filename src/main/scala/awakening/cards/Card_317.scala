@@ -81,13 +81,16 @@ object Card_317 extends Card(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsin
     val m = game.getMuslim(GulfStates)
     if (m.isGood || m.isFair || !m.isAdversary) {
       if (isHuman(role)) {
+        sealed trait Choice
+        case object Worsen extends Choice
+        case object Shift extends Choice
         val choices = List(
-          choice(m.isGood || m.isFair, "worsen", "Worsen governance of Gulf States"),
-          choice(!m.isAdversary,       "shift",  "Shift alignment of Gulf States towards Adversary")
+          choice(m.isGood || m.isFair, Worsen, "Worsen governance of Gulf States"),
+          choice(!m.isAdversary,       Shift,  "Shift alignment of Gulf States towards Adversary")
         ).flatten
         askMenu("Choose one:", choices).head match {
-          case "worsen" => worsenGovernance(GulfStates, 1, canShiftToIR = false)
-          case _        => shiftAlignmentRight(GulfStates)
+          case Worsen => worsenGovernance(GulfStates, 1, canShiftToIR = false)
+          case Shift  => shiftAlignmentRight(GulfStates)
         }
       }
       else if (m.isGood || m.isFair)

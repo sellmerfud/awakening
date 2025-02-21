@@ -80,34 +80,39 @@ object Card_349 extends Card(349, "Turkish Coup", Unassociated, 2, JihadistRemov
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Improve extends Choice
+    case object Worsen extends Choice
+    case object ShiftLeft extends Choice
+    case object ShiftRight extends Choice
     val turkey = game.getMuslim(Turkey)
     val choices = if (role == US)
       List(
-        choice(!turkey.isGood, "improve", "Improve governance 1 level"),
-        choice(!turkey.isAlly, "left",    "Shift alignment towards Ally")
+        choice(!turkey.isGood, Some(Improve),   "Improve governance 1 level"),
+        choice(!turkey.isAlly, Some(ShiftLeft), "Shift alignment towards Ally")
       ).flatten
     else
       List(
-        choice(!turkey.isIslamistRule, "worsen", "Worsen governance 1 level"),
-        choice(!turkey.isAdversary,    "right",  "Shift alignment towards Adversary")
+        choice(!turkey.isIslamistRule, Some(Worsen),     "Worsen governance 1 level"),
+        choice(!turkey.isAdversary,    Some(ShiftRight), "Shift alignment towards Adversary")
       ).flatten
 
     val action = role match {
-      case _  if isHuman(role) && choices.isEmpty => "none"
+      case _  if isHuman(role) && choices.isEmpty => None
       case _  if isHuman(role)                    => askMenu("Choose one:", choices).head
-      case US if !turkey.isGood                   => "improve"
-      case US                                     => "left"
-      case Jihadist if !turkey.isIslamistRule     => "worsen"
-      case Jihadist                               => "right"
+      case US if !turkey.isGood                   => Some(Improve)
+      case US                                     => Some(ShiftLeft)
+      case Jihadist if !turkey.isIslamistRule     => Some(Worsen)
+      case Jihadist                               => Some(ShiftRight)
     }
 
     addEventTarget(Turkey)
     action match {
-      case "improve" => improveGovernance(Turkey, 1, canShiftToGood = true)
-      case "worsen"  => worsenGovernance(Turkey, 1, canShiftToIR = true)
-      case "left"    => shiftAlignmentLeft(Turkey)
-      case "right"   => shiftAlignmentRight(Turkey)
-      case _         => log("\nThe event has no effect.", Color.Event)
+      case Some(Improve)    => improveGovernance(Turkey, 1, canShiftToGood = true)
+      case Some(Worsen)     => worsenGovernance(Turkey, 1, canShiftToIR = true)
+      case Some(ShiftLeft)  => shiftAlignmentLeft(Turkey)
+      case Some(ShiftRight) => shiftAlignmentRight(Turkey)
+      case None             => log("\nThe event has no effect.", Color.Event)
     }
   }
 }

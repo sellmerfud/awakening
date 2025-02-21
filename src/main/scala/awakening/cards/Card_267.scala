@@ -110,7 +110,6 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
           decreaseCardsInHand(US, 1)
           increaseCardsInHand(Jihadist, 1)
       }
-      
     }
     else {
       log(s"\nYou ($Jihadist) must randomly discard one card.", Color.Event)

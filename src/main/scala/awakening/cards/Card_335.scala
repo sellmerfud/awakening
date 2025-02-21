@@ -88,33 +88,36 @@ object Card_335 extends Card(335, "Rohingya Genocide", Unassociated, 1, NoRemove
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Posture extends Choice
+    case object Cell extends Choice
     val choices = List(
-      choice(true,                    "posture", "Set posture of India or Thailand"),
-      choice(game.cellsAvailable > 0, "cell",    "Place a Cell in India or Thailand")
+      choice(true,                    Posture, "Set posture of India or Thailand"),
+      choice(game.cellsAvailable > 0, Cell,    "Place a Cell in India or Thailand")
     ).flatten
 
     val (action, target, posture) = role match {
       case _ if isHuman(role) =>
         val action = askMenu("Choose one:", choices).head
         val name = askCountry("Which country: ", Countries)
-        val posture = if (action == "posture")
+        val posture = if (action == Posture)
           askPosture(name)
         else
           ""
         (action, name, posture)
 
       case US =>
-        ("posture", USBot.posturePriority(getBotPostureCandidates(US)).get, game.usPosture)
+        (Posture, USBot.posturePriority(getBotPostureCandidates(US)).get, game.usPosture)
 
       case Jihadist if game.cellsAvailable > 0 =>
-        ("cell", JihadistBot.cellPlacementPriority(false)(Countries).get, "")
+        (Cell, JihadistBot.cellPlacementPriority(false)(Countries).get, "")
 
       case Jihadist =>
-        ("posture", JihadistBot.posturePriority(getBotPostureCandidates(Jihadist)).get, oppositePosture(game.usPosture))
+        (Posture, JihadistBot.posturePriority(getBotPostureCandidates(Jihadist)).get, oppositePosture(game.usPosture))
     }
 
     addEventTarget(target)
-    if (action == "posture")
+    if (action == Posture)
       setCountryPosture(target, posture)
     else
       addSleeperCellsToCountry(target, 1)

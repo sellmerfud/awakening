@@ -89,18 +89,21 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-      def number(target: String) = if (isImprovedCandidate(game.getCountry(target)))
+    sealed trait Choice
+    case object Funding extends Choice
+    case object Cells extends Choice
+    def number(target: String) = if (isImprovedCandidate(game.getCountry(target)))
         2
       else
         1
     val (target, action) = if (isHuman(role)) {
       val target = askCountry("Select country: ", getCandidates)
       val action = if (game.cellsAvailable == 0 && game.funding == 9)
-        "no-effect"
+        None
       else {
         val choices = List(
-          "cells"   -> s"Place ${amountOf(number(target), "cell")} in $target",
-          "funding" -> s"Increase funding by ${number(target)}")
+          Some(Cells)   -> s"Place ${amountOf(number(target), "cell")} in $target",
+          Some(Funding) -> s"Increase funding by ${number(target)}")
         askMenu("Choose one:", choices).head
       }
       (target, action)
@@ -112,24 +115,24 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
       }
       val target = JihadistBot.cellPlacementPriority(false)(candidates).get
       val action = (game.cellsAvailable > 0, game.funding) match {
-        case (false, 9)         => "no-effect"
-        case (false, _)         => "funding"
-        case (true, f) if f < 8 => "funding"
-        case _                  => "cells"
+        case (false, 9)         => None
+        case (false, _)         => Some(Funding)
+        case (true, f) if f < 8 => Some(Funding)
+        case _                  => Some(Cells)
       }
       (target, action)
     }
 
     log(s"\nJihadist chooses $target", Color.Event)
     action match {
-      case "funding" =>
+      case Some(Funding) =>
         increaseFunding(number(target))
 
-      case "cells" =>
+      case Some(Cells) =>
         addEventTarget(target)
         addSleeperCellsToCountry(target, number(target) min game.cellsAvailable)
 
-      case _ =>
+      case None =>
         log("\nThere are no cells available to place and funding is at 9.", Color.Event)
     }
 

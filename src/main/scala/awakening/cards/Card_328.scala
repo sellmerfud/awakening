@@ -111,21 +111,24 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
         setCountryPosture(India, Hard)
     }
     else if (game.cellsAvailable > 0 || game.availablePlots.contains(Plot1)) { // Jihadist
+      sealed trait Choice
+      case object Plot extends Choice
+      case object Cell extends Choice
       val (target, action) = if (isHuman(role)) {
         val name = askCountry("Which country: ", getCandidates)
         val choices = List(
-          choice(game.availablePlots contains Plot1, "plot", "Place a level 1 Plot"),
-          choice(game.cellsAvailable > 0,            "cell", "Place a Cell")
+          choice(game.availablePlots contains Plot1, Plot, "Place a level 1 Plot"),
+          choice(game.cellsAvailable > 0,            Cell, "Place a Cell")
         ).flatten
         (name, askMenu("Choose one:", choices).head)
       }
       else if (game.availablePlots.contains(Plot1))
-        (JihadistBot.plotPriority(getCandidates).get, "plot")
+        (JihadistBot.plotPriority(getCandidates).get, Plot)
       else
-        (JihadistBot.cellPlacementPriority(false)(getCandidates).get, "cell")
+        (JihadistBot.cellPlacementPriority(false)(getCandidates).get, Cell)
 
       addEventTarget(target)
-      if (action == "plot")
+      if (action == Plot)
         addAvailablePlotToCountry(target, Plot1, visible = true)
       else
         addSleeperCellsToCountry(target, 1)

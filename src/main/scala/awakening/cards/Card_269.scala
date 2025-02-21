@@ -89,20 +89,23 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
     //  Allows US player to remove up to 4 cells from any caliphate members
     //  or up to 3 cells from any Civil War/Regime Change countries
     if (isHuman(role)) {
+      sealed trait Choice
+      case object Caliphate extends Choice
+      case object NonCaliphate extends Choice
       val choices = List(
         choice(
           getNonCaliphateCandidates.nonEmpty,
-          "non-cal",
+          NonCaliphate,
           "Remove up to 3 cells in Civil War/Regime Change countries"),
         choice(
           getCaliphateCandidates.nonEmpty,
-          "cal",
+          Caliphate,
           "Remove 4 cells total in Caliphate countries")
       ).flatten
 
       val (candidates, maxCells, upto) = askMenu("Choose one:", choices).head match {
-        case "non-cal" => (getNonCaliphateCandidates, 3, true)
-        case _         => (getCaliphateCandidates, 4, false)
+        case NonCaliphate => (getNonCaliphateCandidates, 3, true)
+        case Caliphate    => (getCaliphateCandidates, 4, false)
       }
 
       println()

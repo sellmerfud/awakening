@@ -96,24 +96,28 @@ object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemo
   override
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
+      sealed trait Choice
+      case object Reaction extends Choice
+      case object Besieged extends Choice
+      case object Cell extends Choice
       val choices = List(
-        choice(canPlaceReaction, "reaction", "Place a reaction marker"),
-        choice(canPlaceBesieged, "besieged", "Place a besieged regime marker"),
-        choice(canPlaceCell,     "cell",     "Place a cell")
+        choice(canPlaceReaction, Reaction, "Place a reaction marker"),
+        choice(canPlaceBesieged, Besieged, "Place a besieged regime marker"),
+        choice(canPlaceCell,     Cell,     "Place a cell")
       ).flatten
 
       askMenu("Choose one:", choices).headOption match {
-        case Some("reaction") =>
+        case Some(Reaction) =>
           val target = askCountry("Place reaction marker in which country: ", getReactionCandidates)
           addEventTarget(target)
           addReactionMarker(target)
 
-        case Some("besieged") =>
+        case Some(Besieged) =>
           val target = askCountry("Place besieged regime marker in which country: ", getBesiegedRegimeCandidates)
           addEventTarget(target)
           addBesiegedRegimeMarker(target)
 
-        case Some(_) =>
+        case Some(Cell) =>
           val target = askCountry("Place cell in which country: ", getCellCandidates)
           addEventTarget(target)
           addSleeperCellsToCountry(target, 1)

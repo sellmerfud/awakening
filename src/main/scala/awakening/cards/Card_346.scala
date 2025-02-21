@@ -101,16 +101,19 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Militia extends Choice
+    case object Cell extends Choice
     val choices = List(
-      choice(canPlaceMilitia, "militia", "Place a militia"),
-      choice(canPlaceCell,    "cell", "Place a cell"),
+      choice(canPlaceMilitia, Militia, "Place a militia"),
+      choice(canPlaceCell,    Cell, "Place a cell"),
     ).flatten
     val orderedChoices = if (role == US) choices else choices.reverse
 
     val (target, pieceType) = role match {
       case _ if isHuman(role) =>
         val pieceType = askMenu("Choose one:", orderedChoices).head
-        val target = if (pieceType == "militia")
+        val target = if (pieceType == Militia)
           askCountry("Place a milita in which country: ", getMilitiaCandidates)
         else
           askCountry("Place a cell in which country: ", getCellCandidates)
@@ -118,15 +121,15 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
       case US =>
         val target = getMilitiaCandidates.find(name => USBot.wouldRemoveLastCell(name, 1)) getOrElse
           USBot.deployToPriority(getMilitiaCandidates).get
-        (target, "militia")
+        (target, Militia)
 
       case Jihadist =>
         val target = JihadistBot.cellPlacementPriority(false)(getCellCandidates).get
-        (target, "cell")
+        (target, Cell)
     }
 
     addEventTarget(target)
-    if (pieceType == "militia") {
+    if (pieceType == Militia) {
       addMilitiaToCountry(target, 1)
       if (game.getCountry(target).totalCells > 0) {
         val (actives, sleepers, sadr) = if (isHuman(role))

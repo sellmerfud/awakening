@@ -89,11 +89,14 @@ object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Awakening extends Choice
+    case object Reaction extends Choice
     val action = role match {
       case _ if isHuman(role) =>
         val choices = List(
-          choice(getAwakeCandidates.nonEmpty, "awakening", "Place awakening marker"),
-          choice(getReactCandidates.nonEmpty, "reaction", "Place reaction marker"),
+          choice(getAwakeCandidates.nonEmpty, Awakening, "Place awakening marker"),
+          choice(getReactCandidates.nonEmpty, Reaction, "Place reaction marker"),
         ).flatten
         val orderedChoices = if (role == US)
           choices
@@ -101,19 +104,19 @@ object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, 
           choices.reverse
         askMenu("Choose one:", orderedChoices).head
 
-      case US => "awakening"
-      case Jihadist => "reaction"
+      case US => Awakening
+      case Jihadist => Reaction
     }
 
 
     val (target, placmentAction) = action match {
-      case "awakening" if isHuman(role) =>
+      case Awakening if isHuman(role) =>
         (askCountry("Place awakening marker in which country? ", getAwakeCandidates), addAwakeningMarker _)
-      case "reaction" if isHuman(role) =>
+      case Reaction if isHuman(role) =>
         (askCountry("Place reaction marker in which country? ", getReactCandidates), addReactionMarker _)
-      case "awakening" =>
+      case Awakening =>
         (USBot.markerAlignGovTarget(getAwakeCandidates).get, addAwakeningMarker _)
-      case _ =>
+      case Reaction =>
         (JihadistBot.markerTarget(getReactCandidates).get, addReactionMarker _)
     }
 

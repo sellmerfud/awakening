@@ -92,16 +92,19 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
     // See Event Instructions table
     if (role == Jihadist) {
       if (isHuman(role)) {
+        sealed trait Choice
+        case object PlaceCell extends Choice
+        case object PlacePlot extends Choice
         val name = askCountry("Select country: ", countryNames(game.nonMuslims))
         addEventTarget(name)
         val choices = List(
-          choice(game.cellsAvailable > 0,            "cell", "Place an active cell"),
-          choice(game.availablePlots contains Plot1, "plot", "Place a levle 1 plot")
+          choice(game.cellsAvailable > 0,            PlaceCell, "Place an active cell"),
+          choice(game.availablePlots contains Plot1, PlacePlot, "Place a levle 1 plot")
         ).flatten
 
         askMenu("Choose one:", choices).head match {
-          case "cell" => addActiveCellsToCountry(name, 1)
-          case "plot" => addAvailablePlotToCountry(name, Plot1)
+          case PlaceCell => addActiveCellsToCountry(name, 1)
+          case PlacePlot => addAvailablePlotToCountry(name, Plot1)
         }
       }
       else {  // Jihadist Bot
@@ -123,23 +126,27 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
     }
     else {  // US
       if (isHuman(role)) {
+        sealed trait Choice
+        case object RemoveCell extends Choice
+        case object RemoveCadre extends Choice
+        case object AlertPlot extends Choice
         val name = askCountry("Select country: ", getUSCandidates)
         val n = game.getNonMuslim(name)
         val choices = List(
-          choice(n.totalCells > 0, "cell" , "Remove a cell"),
-          choice(n.hasCadre,       "cadre", "Remove cadre"),
-          choice(n.hasPlots,       "plot" , "Alert a plot")
+          choice(n.totalCells > 0, RemoveCell , "Remove a cell"),
+          choice(n.hasCadre,       RemoveCadre, "Remove cadre"),
+          choice(n.hasPlots,       AlertPlot , "Alert a plot")
         ).flatten
 
         addEventTarget(name)
         askMenu("Choose one:", choices).head match {
-          case "cell" =>
+          case RemoveCell =>
             val (actives, sleepers, sadr) = askCells(name, 1, sleeperFocus = true)
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
 
-          case "cadre" =>
+          case RemoveCadre =>
             removeCadresFromCountry(name, 1)
-          case _ =>
+          case AlertPlot =>
             performAlert(name, humanPickPlotToAlert(name))
         }
       }

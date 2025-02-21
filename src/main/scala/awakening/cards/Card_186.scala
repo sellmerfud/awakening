@@ -79,13 +79,16 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
     addEventTarget(Nigeria)
     if (havePlots || haveCells) {
       if (isHuman(role)) {
+        sealed trait Choice
+        case object PlacePlot extends Choice
+        case object PlaceCells extends Choice
         val choices = List(
-          choice(havePlots, "plot",  "Place a level 2 or level 3 Plot in Nigeria"),
-          choice(haveCells, "cells", "Place up to 3 cells in Nigeria")
+          choice(havePlots, PlacePlot,  "Place a level 2 or level 3 Plot in Nigeria"),
+          choice(haveCells, PlaceCells, "Place up to 3 cells in Nigeria")
         ).flatten
 
         askMenu("Choose one:", choices).head match {
-          case "plot" =>
+          case PlacePlot =>
             val options = List(Plot2, Plot3).filter(game.availablePlots.contains)
             val plot = if (options.size == 1)
               options.head
@@ -94,7 +97,7 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
 
             addAvailablePlotToCountry(Nigeria, plot)
 
-          case _ =>
+          case PlaceCells =>
             val maxCells = 3 min game.cellsAvailable
             val num = askInt("\nPlace how many cells", 1, maxCells, Some(maxCells))
             addSleeperCellsToCountry(Nigeria, num)
@@ -105,21 +108,25 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
       }
       else {
         // Bot
+        sealed trait Choice
+        case object PlacePlot3 extends Choice
+        case object PlacePlot2 extends Choice
+        case object PlaceCells extends Choice
         val choices = if (game.getCountry(Nigeria).isNonMuslim)
-          List((havePlot3, "plot3"), (havePlot2, "plot2"), (haveCells, "cells"))
+          List((havePlot3, PlacePlot3), (havePlot2, PlacePlot2), (haveCells, PlaceCells))
         else
-          List((haveCells, "cells"), (havePlot3, "plot3"), (havePlot2, "plot2"))
+          List((haveCells, PlaceCells), (havePlot3, PlacePlot3), (havePlot2, PlacePlot2))
 
         val action = choices.dropWhile(_._1 == false).head._2
 
         action match {
-          case "plot3" =>
+          case PlacePlot3 =>
             addAvailablePlotToCountry(Nigeria, Plot3)
 
-          case "plot2" =>
+          case PlacePlot2 =>
             addAvailablePlotToCountry(Nigeria, Plot2)
 
-          case _ =>
+          case PlaceCells =>
             val num = 3 min game.cellsAvailable
             addSleeperCellsToCountry(Nigeria, num)
             if (jihadistChoosesToDeclareCaliphate(Nigeria, num))

@@ -79,13 +79,16 @@ object Card_315 extends Card(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLap
     testCountry(SaudiArabia) // Event specifically says to test
 
     if (isHuman(role)) {
+      sealed trait Choice
+      case object Shift extends Choice
+      case object Prestige extends Choice
       val choices = List(
-        "shift"    -> "Shift alignment of Saudi Arabia toward Adversary",
-        "prestige" -> "Decrease prestige by 2",
+        Shift    -> "Shift alignment of Saudi Arabia toward Adversary",
+        Prestige -> "Decrease prestige by 2",
       )
       askMenu("Choose one:", choices).head match {
-        case "shift" => shiftAlignmentRight(SaudiArabia)
-        case _       => decreasePrestige(2)
+        case Shift    => shiftAlignmentRight(SaudiArabia)
+        case Prestige => decreasePrestige(2)
       }
     }
     else if (game.prestige > 3)

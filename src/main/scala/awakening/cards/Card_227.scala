@@ -83,18 +83,21 @@ object Card_227 extends Card(227, "Popular Support", Unassociated, 2, NoRemove, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Awakening extends Choice
+    case object Reaction extends Choice
     val choices = List(
-      choice(getAwakeningCandidates.nonEmpty, "awakening", "Add awakening markers"),
-      choice(getReactionCandidates.nonEmpty, "reaction", "Add reaction markers"),
+      choice(getAwakeningCandidates.nonEmpty, Awakening, "Add awakening markers"),
+      choice(getReactionCandidates.nonEmpty, Reaction, "Add reaction markers"),
     ).flatten
     val orderedChoices = if (role == US) choices else choices.reverse
     val (target, adjacent, placmentAction) = role match {
       case _ if isHuman(role) =>
         val markerType = askMenu("Choose one:", orderedChoices).head
-        val (candidates, function) = if (markerType == "awakening")
-          (getAwakeningCandidates, addAwakeningMarker _)
-        else
-          (getReactionCandidates, addReactionMarker _)
+        val (candidates, function) = markerType match {
+          case Awakening => (getAwakeningCandidates, addAwakeningMarker _)
+          case Reaction  => (getReactionCandidates, addReactionMarker _)
+        }
         val name = askCountry(s"Select country with $markerType marker: ", candidates)
         val adjacent = getAdjCandidates(name) match {
           case Nil =>

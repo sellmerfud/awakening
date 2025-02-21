@@ -91,37 +91,42 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Reserves extends Choice
+    case object Posture extends Choice
+    case object PlaceCadre extends Choice
+    case object RemoveCadre extends Choice
     val resValue = if (role == US)
       game.reserves.jihadist
     else
       game.reserves.us
     val cadres = game.hasCountry(_.hasCadre)
-      val choices = List(
-        choice(resValue > 0, "reserves", s"Steal opponent's ${amountOf(resValue,"reserve Op")}"),
-        choice(true,         "posture",  "Set the posture of China, Russia, or India"),
-        choice(true,         "place",    "Place a cadre"),
-        choice(cadres,       "remove",   "Remove a cadre")
-      ).flatten
+    val choices = List(
+      choice(resValue > 0, Reserves, s"Steal opponent's ${amountOf(resValue,"reserve Op")}"),
+      choice(true,         Posture,  "Set the posture of China, Russia, or India"),
+      choice(true,         PlaceCadre,    "Place a cadre"),
+      choice(cadres,       RemoveCadre,   "Remove a cadre")
+    ).flatten
 
     if (isHuman(role)) {
       askMenu("Choose one:", choices).head match {
-        case "reserves" =>
+        case Reserves =>
           clearReserves(role.opponent)
           addToReserves(role, resValue)
 
-        case "posture"  =>
+        case Posture =>
           val name = askCountry("Set the posture of which country? ", PostureCountries)
           val posture = askPosture(name)
           addEventTarget(name)
           setCountryPosture(name, posture)
 
-        case "place"    =>
+        case PlaceCadre =>
           val candidates = countryNames(game.countries.filter(c => !c.hasCadre))
           val name = askCountry("Place a cadre in which country? ", candidates)
           addEventTarget(name)
           addCadreToCountry(name)
 
-        case _          =>
+        case RemoveCadre =>
           val candidates = countryNames(game.countries.filter(c => c.hasCadre ))
           val name = askCountry("Remove cadre from which country? ", candidates)
           addEventTarget(name)

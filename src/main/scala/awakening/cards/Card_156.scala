@@ -110,19 +110,22 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
       // Card allows placing militia or repositioning militia in the Gulf Union countries.
       val place = game.militiaAvailable > 0 && getPlaceCandidates.nonEmpty
       val repo = militiaInGulfUnion && getRepoCandidates.size > 1
+      sealed trait Choice
+      case object Place extends Choice
+      case object Reposition extends Choice
       val choices = List(
-        choice(place, "place", "Place up to 4 militia in one Gulf Union (or adjacent) country"),
-        choice(repo,  "repo",  "Reposition militia in Gulf Union countries"),
+        choice(place, Place, "Place up to 4 militia in one Gulf Union (or adjacent) country"),
+        choice(repo,  Reposition,  "Reposition militia in Gulf Union countries"),
       ).flatten
 
       askMenu("Choose one:", choices).head match {
-        case "place" =>
+        case Place =>
           val target = askCountry("Place militia in which country: ", getPlaceCandidates)
           val num    = askInt(s"Place how many militia in $target", 1, maxMilitia, Some(maxMilitia))
           addEventTarget(target)
           addMilitiaToCountry(target, num)
 
-        case _ => // Reposition militia with the Gulf Union countries
+        case Reposition => // Reposition militia with the Gulf Union countries
           val totalMilitia = GulfUnionCountries.foldLeft(0) { (sum, name) =>
             sum + game.getMuslim(name).militia
           }

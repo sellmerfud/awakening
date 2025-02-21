@@ -122,18 +122,22 @@ object Card_224 extends Card(224, "Je Suis Charlie", Unassociated, 2, NoRemove, 
     }
     else { // Jihadist
       if (isHuman(role)) {
+        sealed trait Choice
+        case object Posture extends Choice
+        case object Prestige extends Choice
         val canPosture = (game.usPosture == game.worldPosture)
         val choices = List(
-          choice(canPosture,        "posture" , "Set US posture to opposite of World"),
-          choice(game.prestige > 1, "prestige", "Reduce US prestige by 1/2 die roll (rounded up)")
+          choice(canPosture,        Posture , "Set US posture to opposite of World"),
+          choice(game.prestige > 1, Prestige, "Reduce US prestige by 1/2 die roll (rounded up)")
         ).flatten
 
         if (choices.isEmpty)
           log("\nThe event has no effect.", Color.Event)
         else {
           askMenu("Choose one:", choices).head match {
-            case "posture"  => setUSPosture(oppositePosture(game.worldPosture))
-            case "prestige" =>
+            case Posture  =>
+              setUSPosture(oppositePosture(game.worldPosture))
+            case Prestige =>
               val die = getDieRoll("Enter prestige die roll: ", Some(role))
               log(s"\nDie roll for prestige loss: $die", Color.Event)
               decreasePrestige((die + 1)/ 2)

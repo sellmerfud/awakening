@@ -102,23 +102,29 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
     if (!canPlace && !canReposition)
       log("\nThere are no milita to place or reposition. The event has no effect.", Color.Event)
     else if (isHuman(role)) {
+      sealed trait Choice
+      case object Place extends Choice
+      case object Reposition extends Choice
       val actionChoices = List(
-        choice(canPlace,      "place", "Place militia"),
-        choice(canReposition, "repos", "Reposition militia")
+        choice(canPlace,      Place,      "Place militia"),
+        choice(canReposition, Reposition, "Reposition militia")
       ).flatten
 
-      if (askMenu("Choose one:", actionChoices).head == "place") {
+      if (askMenu("Choose one:", actionChoices).head == Place) {
         val numMilita  = game.militiaAvailable min 2
         val candidates = getPlacementCandidates
         val sunniCandidates = candidates.filter(_ != GulfStates)
         val inSunni = sunniCandidates.nonEmpty
         val inGulfStates = candidates.contains(GulfStates)
+        sealed trait Where
+        case object Gulf extends Where
+        case object Sunni extends Where
         val targetChoices = List(
-          choice(inGulfStates, "gulf",  "Place milita in Gulf States"),
-          choice(inSunni,      "sunni", "Place milita in or adjacent to a Sunni country")
+          choice(inGulfStates, Gulf,  "Place milita in Gulf States"),
+          choice(inSunni,      Sunni, "Place milita in or adjacent to a Sunni country")
         ).flatten
 
-        if (askMenu("Choose one", targetChoices).head == "gulf") {
+        if (askMenu("Choose one", targetChoices).head == Gulf) {
           addEventTarget(GulfStates)
           addMilitiaToCountry(GulfStates, game.militiaAvailable min 2)
         }

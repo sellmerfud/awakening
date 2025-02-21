@@ -93,6 +93,21 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     if (isHuman(role)) {
+      sealed trait Choice
+      case object AddAid extends Choice
+      case object DelAid extends Choice
+      case object AddBesieged extends Choice
+      case object DelBesieged extends Choice
+      case object AddAwakening extends Choice
+      case object DelAwakening extends Choice
+      case object AddReaction extends Choice
+      case object DelReaction extends Choice
+      case object AddMilitia extends Choice
+      case object DelMilitia extends Choice
+      case object AddCells extends Choice
+      case object DelCells extends Choice
+      case object AddPosture extends Choice
+      case object DelPosture extends Choice
       val name = askCountry("Select country: ", CandidateCountries)
       val choices = game.getCountry(name) match {
         case m: MuslimCountry =>
@@ -100,25 +115,25 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
           val canBesiege = m.canTakeBesiegedRegimeMarker
           val canMilitia = game.militiaAvailable > 0 && m.canTakeMilitia
           List(
-            choice(m.canTakeAidMarker,      "+aid", "Place aid marker"),
-            choice(m.aidMarkers > 0,        "-aid", "Remove aid marker"),
-            choice(canBesiege,              "+bsg", "Place besieged regime marker"),
-            choice(m.besiegedRegime,        "-bsh", "Remove besieged regime marker"),
-            choice(canAwake,                "+awa", "Place awakening marker"),
-            choice(m.awakening > 0,         "-awa", "Remove awakening marker"),
-            choice(canAwake,                "+rea", "Place reaction marker"),
-            choice(m.reaction > 0,          "-rea", "Remove reaction marker"),
-            choice(canMilitia,              "+mil", "Place 2 militia"),
-            choice(m.militia > 0,           "-mil", "Remove 2 militia"),
-            choice(game.cellsAvailable > 0, "+cel", "Place 2 cells"),
-            choice(m.totalCells > 0,        "-cel", "Remove 2 cells")
+            choice(m.canTakeAidMarker,      AddAid, "Place aid marker"),
+            choice(m.aidMarkers > 0,        DelAid, "Remove aid marker"),
+            choice(canBesiege,              AddBesieged, "Place besieged regime marker"),
+            choice(m.besiegedRegime,        DelBesieged, "Remove besieged regime marker"),
+            choice(canAwake,                AddAwakening, "Place awakening marker"),
+            choice(m.awakening > 0,         DelAwakening, "Remove awakening marker"),
+            choice(canAwake,                AddReaction, "Place reaction marker"),
+            choice(m.reaction > 0,          DelReaction, "Remove reaction marker"),
+            choice(canMilitia,              AddMilitia, "Place 2 militia"),
+            choice(m.militia > 0,           DelMilitia, "Remove 2 militia"),
+            choice(game.cellsAvailable > 0, AddCells, "Place 2 cells"),
+            choice(m.totalCells > 0,        DelCells, "Remove 2 cells")
           ).flatten
         case n: NonMuslimCountry =>
           List(
-            choice(n.isUntested && n.canChangePosture,  "+pos", "Place posture marker"),
-            choice(n.isTested && n.canChangePosture,    "-pos", "Remove posture marker"),
-            choice(game.cellsAvailable > 0,             "+cel", "Place 2 cells"),
-            choice(n.totalCells > 0,                    "-cel", "Remove 2 cells")
+            choice(n.isUntested && n.canChangePosture,  AddPosture, "Place posture marker"),
+            choice(n.isTested && n.canChangePosture,    DelPosture, "Remove posture marker"),
+            choice(game.cellsAvailable > 0,             AddCells, "Place 2 cells"),
+            choice(n.totalCells > 0,                    DelCells, "Remove 2 cells")
           ).flatten
       }
 
@@ -131,24 +146,24 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
         if (game.getCountry(name).isMuslim && lapsingEventInPlay(ArabWinter))
           displayLine("\nCannot place awakening/reaction markers. [Arab Winter]", Color.Info)
         askMenu("Choose one:", choices).head match {
-          case "+aid" => addAidMarker(name)
-          case "-aid" => removeAidMarker(name)
-          case "+bsg" => addBesiegedRegimeMarker(name)
-          case "-bsh" => removeBesiegedRegimeMarker(name)
-          case "+awa" => addAwakeningMarker(name)
-          case "-awa" => removeAwakeningMarker(name)
-          case "+rea" => addReactionMarker(name)
-          case "-rea" => removeReactionMarker(name)
-          case "+mil" => addMilitiaToCountry(name, 2 min game.militiaAvailable)
-          case "-mil" => removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
-          case "+cel" => addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
-          case "-cel" =>
+          case AddAid => addAidMarker(name)
+          case DelAid => removeAidMarker(name)
+          case AddBesieged => addBesiegedRegimeMarker(name)
+          case DelBesieged => removeBesiegedRegimeMarker(name)
+          case AddAwakening => addAwakeningMarker(name)
+          case DelAwakening => removeAwakeningMarker(name)
+          case AddReaction => addReactionMarker(name)
+          case DelReaction => removeReactionMarker(name)
+          case AddMilitia => addMilitiaToCountry(name, 2 min game.militiaAvailable)
+          case DelMilitia => removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
+          case AddCells => addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
+          case DelCells =>
             val (actives, sleepers, sadr) = askCells(name, 2, role == US)
             removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
-          case "+pos" =>
+          case AddPosture =>
             val posture = askPosture(name)
             setCountryPosture(name, posture)
-          case _ => setCountryPosture(name, PostureUntested)
+          case DelPosture => setCountryPosture(name, PostureUntested)
         }
       }
     }

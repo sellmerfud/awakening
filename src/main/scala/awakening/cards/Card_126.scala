@@ -79,16 +79,19 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   def executeEvent(role: Role): Unit = {
     if (getCandidates.nonEmpty || hasCardInHand(Jihadist)) {
       if (isHuman(role)) {
+        sealed trait Choice
+        case object Remove extends Choice
+        case object Discard extends Choice
         val choices = List(
-          choice(getCandidates.nonEmpty, "remove",  "Remove up to 2 cells in one Muslim country"),
-          choice(hasCardInHand(Jihadist),  "discard", "Discard 1 card from the Jihadist hand")
+          choice(getCandidates.nonEmpty, Remove,   "Remove up to 2 cells in one Muslim country"),
+          choice(hasCardInHand(Jihadist), Discard, "Discard 1 card from the Jihadist hand")
         ).flatten
         askMenu("Choose one:", choices).head match {
-          case "discard" =>
+          case Discard =>
             log("\nDiscard the top card in the Jihadist hand", Color.Event)
             askCardsDiscarded(Jihadist, 1)
 
-          case _ =>
+          case Remove =>
             val target = askCountry("Remove 2 cells in which country? ", getCandidates)
             val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
             addEventTarget(target)

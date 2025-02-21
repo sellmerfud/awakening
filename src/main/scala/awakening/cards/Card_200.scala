@@ -95,14 +95,19 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Awakening extends Choice
+    case object ShiftLeft extends Choice
+    case object Cells extends Choice
+    case object ShiftRight extends Choice
     // See Event Instructions table
     val (target, action, from) = role match {
       case US if isHuman(role) =>
         val target = askCountry("Select country: ", getCandidates(US))
         val m = game.getMuslim(target)
         val choices = List(
-          choice(m.canTakeAwakeningOrReactionMarker, "awakening", "Place an awakening marker"),
-          choice(!m.isAlly,                          "shiftLeft", "Shift alignment towards Ally")
+          choice(m.canTakeAwakeningOrReactionMarker, Awakening, "Place an awakening marker"),
+          choice(!m.isAlly,                          ShiftLeft, "Shift alignment towards Ally")
         ).flatten
         val action = if (choices.isEmpty)
           None
@@ -114,15 +119,15 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
         val target = askCountry("Select country: ", getCandidates(Jihadist))
         val m = game.getMuslim(target)
         val choices = List(
-          choice(game.cellsAvailable > 0, "cells",      "Place cells"),
-          choice(!m.isAdversary,          "shiftRight", "Shift alignment towards Adversary")
+          choice(game.cellsAvailable > 0, Cells,      "Place cells"),
+          choice(!m.isAdversary,          ShiftRight, "Shift alignment towards Adversary")
         ).flatten
         val action = if (choices.isEmpty)
           None
         else
           askMenu("Choose one:", choices).headOption
         val from = action match {
-          case Some("cells") =>
+          case Some(Cells) =>
             val sources = countryNames(game.countries.filter(c => c.name != target && c.cells > 0))
             askCellsFromAnywhere(2, trackOK = true, sources, sleeperFocus = false)
           case _ => Nil
@@ -140,10 +145,10 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
             (target, None, Nil)
 
           case (Nil, candidates) =>
-            (USBot.markerAlignGovTarget(candidates).get, Some("awakening"), Nil)
+            (USBot.markerAlignGovTarget(candidates).get, Some(Awakening), Nil)
 
           case (candidates, _)  =>
-            (USBot.markerAlignGovTarget(candidates).get, Some("shiftLeft"), Nil)
+            (USBot.markerAlignGovTarget(candidates).get, Some(ShiftLeft), Nil)
         }
 
       case Jihadist => // Bot
@@ -153,26 +158,26 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
             val isFromCandidate = (c: Country) => JihadistBot.hasCellForTravel(c, target, placement = true)
             val fromCandidates = countryNames(game.countries.filter(isFromCandidate))
             val from = JihadistBot.selecCellsToPlace(target, fromCandidates, 2)
-            (target, Some("cells"), from)
+            (target, Some(Cells), from)
 
           case candidates =>
-            (JihadistBot.alignGovTarget(candidates).get, Some("shiftRight"), Nil)
+            (JihadistBot.alignGovTarget(candidates).get, Some(ShiftRight), Nil)
         }
     }
 
     addEventTarget(target)
     val m = game.getMuslim(target)
     action match {
+      case Some(Awakening) =>
+        addAwakeningMarker(target)
+      case Some(ShiftLeft) =>
+        shiftAlignmentLeft(target)
+      case Some(ShiftRight) =>
+        shiftAlignmentRight(target)
+      case Some(Cells) =>
+        moveCellsToTarget(target, from)
       case None =>
         log(s"\nThe event has no effect in $target.", Color.Event)
-      case Some("awakening") =>
-        addAwakeningMarker(target)
-      case Some("shiftLeft") =>
-        shiftAlignmentLeft(target)
-      case Some("shiftRight") =>
-        shiftAlignmentRight(target)
-      case _ =>
-        moveCellsToTarget(target, from)
     }
   }
 }

@@ -90,20 +90,23 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
       log("\nThe event has no effect.", Color.Event)
     }
     else if (isHuman(role)) {
+      sealed trait Choice
+      case object Remove extends Choice
+      case object Discard extends Choice
       val choices = List(
-        choice(getCandidates.nonEmpty ,"remove", "Remove up to 2 cells in any one Muslim country"),
-        choice( hasCardInHand(Jihadist) ,"discard", s"Discard top card of the $Jihadist hand"),
+        choice(getCandidates.nonEmpty ,  Remove, "Remove up to 2 cells in any one Muslim country"),
+        choice( hasCardInHand(Jihadist), Discard, s"Discard top card of the $Jihadist hand"),
       ).flatten
       askMenu("Choose one:", choices).head match {
-        case "discard" =>
+        case Discard =>
           println()
           log(s"Discard top card of the $Jihadist hand")
           askCardsDiscarded(Jihadist, 1)
 
-        case _ if getCandidates.isEmpty =>
+        case Remove if getCandidates.isEmpty =>
           log("\nThere are no Muslim countries with cells.  The event has no effect.", Color.Event)
 
-        case _ =>
+        case Remove =>
           val target = askCountry("Remove cells from which country: ", getCandidates)
           val num = game.getMuslim(target).totalCells min 2
           val (actives, sleepers, sadr) = askCells(target, num, true)

@@ -80,20 +80,23 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object Alignment extends Choice
+    case object Posture extends Choice
     val action = if (isHuman(role)) {
       val choices = List(
-        choice(getAlignmentCandidates.nonEmpty, "align",   "Shift alignment of 1 country"),
-        choice(getPostureCandidates.nonEmpty,   "posture", "Set posture of 1 country")
+        choice(getAlignmentCandidates.nonEmpty, Alignment,   "Shift alignment of 1 country"),
+        choice(getPostureCandidates.nonEmpty,   Posture, "Set posture of 1 country")
       ).flatten
       askMenu("Choose one:", choices).head
     }
     else if (getAlignmentCandidates.nonEmpty)  // Bot
-      "align"
+      Alignment
     else
-      "posture"
+      Posture
 
     action match {
-      case "align" =>
+      case Alignment =>
         val target = if (isHuman(role))
           askCountry("\nShift alignment of which country: ", getAlignmentCandidates)
         else
@@ -102,7 +105,7 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
         testCountry(target)  // Must be tested in order to shift
         shiftAlignmentLeft(target)
 
-      case _ =>
+      case Posture =>
         val target = if (isHuman(role))
           askCountry("\nSet posture of which country to match US posture: ", getPostureCandidates)
         else

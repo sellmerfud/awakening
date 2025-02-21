@@ -127,7 +127,7 @@ override
       if (m.totalCells > 0 && m.totalTroopsAndMilitia > 0) {
         val ((actives, sleepers, sadr), usUnit) = role match {
           case _ if isHuman(role) =>
-            (askCells(target, 1, role == US), askTroopOrMilitia(target))
+            (askCells(target, 1, role == US), askTroopOrMilitia("Remove which US piece:", target))
           case US =>
           (USBot.chooseCellsToRemove(target, 1), USBot.chooseTroopOrMilitiaToRemove(target))
           case Jihadist =>
@@ -136,9 +136,9 @@ override
 
         removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
         usUnit match {
-          case "militia-cube" => removeMilitiaFromCountry(target, 1)
-          case "troop-cube"   => moveTroops(target, "track", 1)
-          case marker         => removeEventMarkersFromCountry(target, marker)
+          case MilitiaCube         => removeMilitiaFromCountry(target, 1)
+          case TroopCube           => moveTroops(target, "track", 1)
+          case TroopMarker(marker) => removeEventMarkersFromCountry(target, marker)
         }
         nextRemoval()
       }

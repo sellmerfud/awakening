@@ -109,17 +109,20 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
       .map(m => m -> m)
     val lapsingChoices = game.eventsLapsing
       .map(event => event.cardNumber -> deck(event.cardNumber).numAndName)
+    sealed trait Choice
+    case object Marker extends Choice
+    case object Lapsing extends Choice
     val eventTypechoices = List(
-      choice(markerChoices.nonEmpty, "marker",  "Remove an event marker"),
-      choice(lapsingChoices.nonEmpty, "lapsing", "Remove a lapsing card")
+      choice(markerChoices.nonEmpty, Marker,  "Remove an event marker"),
+      choice(lapsingChoices.nonEmpty, Lapsing, "Remove a lapsing card")
     ).flatten
 
     // Left: marker name, Right: Lapsing card number
     val eventSelection: Either[String, Int] = if (isHuman(role)) {
       askMenu("Choose one:", eventTypechoices).head match {
-        case "marker" =>
+        case Marker =>
           Left(askMenu("Remove which event marker:", markerChoices).head)
-        case _ =>
+        case Lapsing =>
           Right(askMenu[Int]("Remove which lapsing card: ", lapsingChoices).head)
       }
     }

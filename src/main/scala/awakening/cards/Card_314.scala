@@ -83,17 +83,20 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
           if (actionNum > 3 || (cellsRemaining == 0 && plots.isEmpty))
             Nil
           else {
+            sealed trait Choice
+            case object Cell extends Choice
+            case object Plot extends Choice
             val choices = List(
-              choice(cellsRemaining > 0, "cell", "Place a Cell"),
-              choice(plots.nonEmpty,     "plot", "Place a Plot")
+              choice(cellsRemaining > 0, Cell, "Place a Cell"),
+              choice(plots.nonEmpty,     Plot, "Place a Plot")
             ).flatten
             println()
             askMenu(s"${ordinal(actionNum)} action:", choices).head match {
-              case "cell" =>
+              case Cell =>
                 val target = askCountry("Place a cell in which country: ", candidates)
                 Action(target, Left(())) :: nextAction(actionNum + 1, cellsRemaining - 1, plots, candidates.filterNot(_ == target))
 
-              case _ =>
+              case Plot =>
                 val target = askCountry("Place a plot in which country: ", candidates)
                 val plot   = askPlots(plots, 1).head
                 val index  = plots.indexOf(plot)

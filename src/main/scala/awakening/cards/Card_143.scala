@@ -112,15 +112,22 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
     val canDraw = cardDrawCandidates.nonEmpty
 
     if (isHuman(role)) {
+      sealed trait Choice
+      case object Awakening extends Choice
+      case object Aid extends Choice
+      case object Prestige extends Choice
+      case object Funding extends Choice
+      case object Posture extends Choice
+      case object Draw extends Choice
 
-      def nextAction(actionNum: Int, used: Set[String]): Unit = if (actionNum <= numActions) {
+      def nextAction(actionNum: Int, used: Set[Choice]): Unit = if (actionNum <= numActions) {
         val choices = List(
-          choice(canPlaceAwakening && !used("awakening"), "awakening", "Place 1 Awakening marker"),
-          choice(!used("aid"),               "aid",       "Place 1 Aid marker"),
-          choice(game.prestige < 12 && !used("prestige"), "prestige",  "+1 Prestige"),
-          choice(game.funding > 1 && !used("funding"),    "funding",   "-1 Funding"),
-          choice(!used("posture"),                        "posture",   "Select posture of 1 Schengen country"),
-          choice(canDraw && !used("draw"),                "draw",      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
+          choice(canPlaceAwakening && !used(Awakening), Awakening, "Place 1 Awakening marker"),
+          choice(!used(Aid),                            Aid,       "Place 1 Aid marker"),
+          choice(game.prestige < 12 && !used(Prestige), Prestige,  "+1 Prestige"),
+          choice(game.funding > 1 && !used(Funding),    Funding,   "-1 Funding"),
+          choice(!used(Posture),                        Posture,   "Select posture of 1 Schengen country"),
+          choice(canDraw && !used(Draw),                Draw,      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
         ).flatten
 
         if (cardDrawCandidates.isEmpty)
@@ -129,31 +136,31 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
         val action = askMenu(s"Choose ${ordinal(actionNum)} of $numActions actions:", choices).head
 
         action match {
-          case "awakening" =>
+          case Awakening =>
             val target = askCountry("\nPlace awakening marker in which country: ", awakeingCandidates)
             addEventTarget(target)
             addAwakeningMarker(target)
 
-          case "aid" =>
+          case Aid =>
             val target = askCountry("\nPlace aid marker in which country: ", aidCandidates)
             addEventTarget(target)
             addAidMarker(target)
 
-          case "prestige" =>
+          case Prestige =>
             println()
             increasePrestige(1)
 
-          case "funding"  =>
+          case Funding  =>
             println()
             decreaseFunding(1)
 
-          case "posture" =>
+          case Posture =>
             val target  = askCountry("\nSelect posture of which Schengen country: ", Schengen)
             val posture = askPosture(target)
             addEventTarget(target)
             setCountryPosture(target, posture)
 
-          case _ =>
+          case Draw =>
               askCardDrawnFromDiscardPile(role, only = cardDrawCandidates.toSet)
         }
         nextAction(actionNum + 1, used + action)
