@@ -60,7 +60,7 @@ object LabyrinthAwakening {
         case cl => cl
       }
 
-    Option(classLoader.getResourceAsStream("version")) match {
+    val version = Option(classLoader.getResourceAsStream("version")) match {
       case None           => "Missing"
       case Some(resource) =>
         try {
@@ -72,6 +72,12 @@ object LabyrinthAwakening {
         catch {
           case e: IOException => "Error"
         }
+    }
+
+    // For the florian version we append the commit if the commit_xxxxxxxxxx file exists.
+    Pathname.glob(Pathname.userDir / "commit_*").headOption match {
+      case None => version
+      case Some(commit) => s"$version - ${commit.basename}"
     }
   }
 
