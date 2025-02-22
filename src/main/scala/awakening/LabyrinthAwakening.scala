@@ -1959,6 +1959,7 @@ object LabyrinthAwakening {
       summary.add(s"Bot logging            : ${if (botLogging) "yes" else "no"}")
       summary.add(s"Ignore instant vicory  : ${if (ignoreVictory) "yes" else "no"}")
       summary.add(s"Software version       : ${versionString}")
+      summary.add(s"Configuration file     : ${configPath.map(_.toString).getOrElse("None")}")
       summary
     }
 
@@ -2278,6 +2279,9 @@ object LabyrinthAwakening {
     false,
     EnhBotHard
   )
+
+  // For display purposes only
+  var configPath: Option[Pathname] = None
 
   // Some events ask the user a question to determine if the event is
   // playable.  Sometimes we must test the event multiple times, such
@@ -8406,6 +8410,7 @@ object LabyrinthAwakening {
       xdg_config / "awakening" / "awakening_config")
       .find(path => path.exists && path.isReadable)
       .map { path =>
+        configPath = Some(path)
         if (showConfigLoc)
           displayLine(s"\nUsing configuration file: [$path]", Some(Color.Yellow))
         readConfig(path)
