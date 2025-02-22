@@ -146,7 +146,7 @@ object LabyrinthAwakening {
     }
 
     def next(current: GameMode) = ALL.dropWhile(_ != current).headOption
-    
+
   }
 
 
@@ -210,7 +210,7 @@ object LabyrinthAwakening {
   val Virulent   = BotDifficulty(6, "Virulent"  , "Ignore all DRM penalties")
 
   object BotDifficulty {
-    implicit val BotDifficultyOrdering: Ordering[BotDifficulty] = 
+    implicit val BotDifficultyOrdering: Ordering[BotDifficulty] =
       Ordering.by { x: BotDifficulty => x.order }
 
     def apply(name: String): BotDifficulty = name.toLowerCase match {
@@ -7986,7 +7986,7 @@ object LabyrinthAwakening {
         programMainMenu(params)
 
       case Exit =>
-        throw ExitProgram
+        throw ExitProgram(0)
     }
   }
 
@@ -8092,7 +8092,7 @@ object LabyrinthAwakening {
   }
 
   val AbortCard = "abort card"
-  case object ExitProgram extends Exception
+  case class ExitProgram(code: Int) extends Exception
   case object QuitGame    extends Exception
   case object AbortAction extends Exception
   case object CancelledByFerguson extends Exception
@@ -8110,10 +8110,13 @@ object LabyrinthAwakening {
       gamesDir.mkpath()  // Make sure the /games directory exists
       displayVersion()
 
-      var configParams   = loadParamsFile(UserParams())
-      var cmdLineParams  = parseCommandLine(args.toIndexedSeq, configParams)
+      var cmdLineParams = parseCommandLine(args.toIndexedSeq)
+      var configParams  = loadParamsFile(UserParams(), cmdLineParams.showConfigLoc)
+      val finalParams   = configParams.overrideWith(cmdLineParams)
+      if (cmdLineParams.showConfigLoc)
+        throw ExitProgram(0)
 
-      if (cmdLineParams.listGames) {
+      if (finalParams.listGames) {
         // List the saved games to the console and exit
         val saved = savedGames()
         if (saved.isEmpty)
@@ -8124,26 +8127,30 @@ object LabyrinthAwakening {
             println(fmt.format(s, loadGameDescription(s)))
         }
       }
-      else if (cmdLineParams.resumeName.nonEmpty) {
-        game = loadMostRecent(cmdLineParams.resumeName.get)
+      else if (finalParams.resumeName.nonEmpty) {
+        game = loadMostRecent(finalParams.resumeName.get)
         printSummary(game.actionSummary)
         playGame()
       }
-      else if (cmdLineParams.deleteName.nonEmpty) {
-        (gamesDir/cmdLineParams.deleteName.get).rmtree()
+      else if (finalParams.deleteName.nonEmpty) {
+        (gamesDir/finalParams.deleteName.get).rmtree()
       }
       else
-        programMainMenu(cmdLineParams)
+        programMainMenu(finalParams)
     }
     catch {
-      case ExitProgram =>
+      case ExitProgram(code) =>
+        // Ignoring the code as calling System.exit() from within
+        // sbt causes sbt to exit and is a pain when testing.
+        // System.exit(code) 
+
       case t: Throwable =>
         System.err.println(t.stackTrace)
         pause(Some("Press Enter to exit the program..."))
     }
   }
 
-  def parseCommandLine(args: Seq[String], userParams: UserParams): UserParams = {
+  def parseCommandLine(args: Seq[String]): UserParams = {
     import org.sellmerfud.optparse._
     def diffHelp(diffs: Seq[BotDifficulty]): Seq[String] = {
       val maxLen = longestString(diffs.map(_.name))
@@ -8221,14 +8228,19 @@ object LabyrinthAwakening {
           { (v, c) => c.copy(showColor = Some(v)) }
         bool("", "--enhanced-bot", "Use enhanced Bot (Jihadist Bot only)")
           { (v, c) => c.copy(enhancedBot = Some(v)) }
+        flag("-s", "--show-config-loc", "Display the location of the configuration file and exit.") { (c) =>
+          c.copy(showConfigLoc = true)
+        }
         flag("-v", "--version", "Display program version and exit") { (c) =>
           println(versionString)
-          System.exit(0)
-          c // To keep compiler happy
+          throw ExitProgram(0)
         }
-      }.parse(args, userParams)
+      }.parse(args, UserParams())
     }
-    catch { case e: OptionParserException => println(e.getMessage); sys.exit(1) }
+    catch {
+      case e: OptionParserException =>
+        println(e.getMessage)
+        throw ExitProgram(1) }
   }
 
 
@@ -8239,7 +8251,7 @@ object LabyrinthAwakening {
     val listGames: Boolean = false,
     val scenarioName: Option[String] = None,
     val campaign: Option[Boolean] = None,
-    val gameLength: Int = 1,
+    val gameLength: Option[Int] = None,
     val side: Option[Role] = None,
     val level: Option[Int] = None,
     val autoDice: Option[Boolean] = None,
@@ -8248,6 +8260,7 @@ object LabyrinthAwakening {
     val enhBotDifficulty: Option[EnhBotDifficulty] = None,
     val showColor: Option[Boolean] = None,
     val enhancedBot: Option[Boolean] = None,
+    val showConfigLoc: Boolean = false,
   ) {
 
     def jihadistBotDifficulties: Option[List[BotDifficulty]] = ideology match {
@@ -8259,14 +8272,33 @@ object LabyrinthAwakening {
       case Nil => level.map(AllUSLevels.take(_))
       case xs  => Some(xs)
     }
+
+    // Combine two params such that values in the
+    def overrideWith(other: UserParams): UserParams = {
+      UserParams(
+        other.resumeName.orElse(resumeName),
+        other.deleteName.orElse(deleteName),
+        other.listGames || listGames,
+        other.scenarioName.orElse(scenarioName),
+        other.campaign.orElse(campaign),
+        other.gameLength.orElse(gameLength),
+        other.side.orElse(side),
+        other.level.orElse(level),
+        other.autoDice.orElse(autoDice),
+        if (other.ideology.nonEmpty) other.ideology else ideology,
+        if (other.usResolve.nonEmpty) other.usResolve else usResolve,
+        other.enhBotDifficulty.orElse(enhBotDifficulty),
+        other.showColor.orElse(showColor),
+        other.enhancedBot.orElse(enhancedBot),
+      )
+    }
   }
 
-  def loadParamsFile(initialParams: UserParams): UserParams = {
+  def loadParamsFile(initialParams: UserParams, showConfigLoc: Boolean): UserParams = {
     import java.util.Properties
     import scala.util.Properties.userHome
 
     def readConfig(path: Pathname): UserParams = {
-      displayLine(s"using config file: [$path]")
       try {
         var params = initialParams
         val props = new Properties()
@@ -8349,7 +8381,7 @@ object LabyrinthAwakening {
           EnhBotDifficulty.fromStringOpt(value.toLowerCase) match {
             case Some(difficulty) => params = params.copy(enhBotDifficulty = Some(difficulty))
             case None =>println(s"Ignoring invalid enhanced-bot value ($value) in awakening_config file")
-          }            
+          }
         }
 
         params
@@ -8373,8 +8405,16 @@ object LabyrinthAwakening {
       Pathname(userHome) / ".awakening_config",
       xdg_config / "awakening" / "awakening_config")
       .find(path => path.exists && path.isReadable)
-      .map(readConfig)
-      .getOrElse(initialParams)
+      .map { path =>
+        if (showConfigLoc)
+          displayLine(s"\nUsing configuration file: [$path]", Some(Color.Yellow))
+        readConfig(path)
+      }
+      .getOrElse {
+        if (showConfigLoc)
+          displayLine(s"\nNo configuration file found", Some(Color.Red))
+        initialParams
+      }
   }
 
   val AllUSLevels = List(OffGuard,Competent,Adept,Vigilant,Ruthless,NoMercy)
@@ -9233,7 +9273,7 @@ object LabyrinthAwakening {
               List(TriggerOpponentEvent(card2))
             else
               Nil
-              
+
             if (trigger1.nonEmpty || trigger2.nonEmpty)
               Right(PerformReassess :: trigger1 ::: trigger2)
             else
@@ -9659,7 +9699,7 @@ object LabyrinthAwakening {
             log(s"\nPlace the $card card in the first plot box", Color.Info)
             game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
           }
-            
+
 
         case other => throw new IllegalStateException(s"Invalid Jihadist action: $other")
       }
