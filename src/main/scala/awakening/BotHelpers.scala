@@ -66,6 +66,7 @@ trait BotHelpers {
   def enhBotJihadAllowed(m: MuslimCountry, major: Boolean): Boolean = {
     val drm = jihadDRM(m, major)
     m.governance match {
+      case Fair if m.totalTroops > 0    => drm <= 1
       case Good|Fair|GovernanceUntested => drm <= 0
       case Poor                         => drm <= 1
       case _                            => false

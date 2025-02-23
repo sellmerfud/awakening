@@ -234,7 +234,7 @@ object JihadistBot extends BotHelpers {
     lazy val goodMuslims = muslims.filter(_.isGood)
 
     lazy val fairAutoRecruits = muslims.filter(m => m.isFair && m.autoRecruit)
-    
+
     lazy val phillipinesOK =
       game.getCountry(Philippines).hasMarker(AbuSayyaf) &&
       (game.prestige > 3 || game.funding < 7)
@@ -563,7 +563,7 @@ object JihadistBot extends BotHelpers {
   val OilExporterPriority = new CriteriaFilter("Oil exporter", muslimTest(_.oilExporter))
 
   val RegimeChangePriority = new CriteriaFilter("Regime Change", muslimTest(_.inRegimeChange))
-  
+
   // Used by the Enh Bot.  Uses unmodified printed resource value
   // exception: Iran with Tehran-Beirut Land Corridor marker counts a Res=3
   val HighestPrintedResourcePriority = new HighestScorePriority(
@@ -706,61 +706,58 @@ object JihadistBot extends BotHelpers {
     muslimScore(m => jihadDRM(m, true), nonMuslimScore = 100))
   val FewestCellsFilter = new LowestScoreNode("Fewest cells", _ => true, _.totalCells)
 
-  // jihad == None        - Do not include jihad drm priority
-  // jihad == Some(true)  - Include major jihad drm priority
-  // jihad == Some(false) - Include minor jihad drm priority
-  def jihadMarkerAlignGovPriorities(jihad: Option[Boolean]): List[CountryFilter] = {
-    val jihadPriorities = jihad match {
-      case None    => List.empty
-      case Some(x) => List(BestJihadDRMPriority(x))
-    }
+  def minorJihadPriorities(): List[CountryFilter] = {
+    if (game.botEnhancements)
+      List(
+        WithTroopsPriority, BestJihadDRMPriority(major = false), WithAidPriority, RegimeChangeTroopsPriority,
+        HighestResourcePriority, MostCellsPriority, AdjacentIslamistRulePriority
+      )
+    else
+      List(
+        BestJihadDRMPriority(major = false), PakistanPriority, BesiegedRegimePriority, SyriaPriority, WithAidPriority,
+        RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority, IranPriority, MostCellsPriority,
+        AdjacentIslamistRulePriority, OilExporterPriority
+      )
+  }
 
-    game.currentMode match {
-      case LabyrinthMode if game.botEnhancements =>
-        List(
-          WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
+  def majorJihadPriorities(): List[CountryFilter] = {
+    if (game.botEnhancements)
+      List(
+        BestJihadDRMPriority(major = true), WithAidPriority, RegimeChangeTroopsPriority,
+        HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority
+      )
+    else
+      List(
+        BestJihadDRMPriority(major = true), PakistanPriority, BesiegedRegimePriority, SyriaPriority,
+        WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
+        IranPriority, MostCellsPriority, AdjacentIslamistRulePriority, OilExporterPriority
+      )
+  }
 
-      case LabyrinthMode =>
-        List(
-          PakistanPriority, BesiegedRegimePriority,  WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority,
-          OilExporterPriority)
-
-      case AwakeningMode if game.botEnhancements =>
-        jihadPriorities ::: List(
-          WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
-
-      case AwakeningMode =>
-        jihadPriorities ::: List(
-          PakistanPriority, BesiegedRegimePriority, SyriaPriority, WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, IranPriority, MostCellsPriority, AdjacentIslamistRulePriority,
-          OilExporterPriority)
-
-      case ForeverWarMode if game.botEnhancements =>
-        jihadPriorities ::: List(
-          WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority)
-
-      case ForeverWarMode =>
-        jihadPriorities ::: List(
-          PakistanPriority, BesiegedRegimePriority, IranPriority, WithAidPriority, RegimeChangeTroopsPriority,
-          HighestResourcePriority, WithTroopsPriority, SyriaPriority, MostCellsPriority, AdjacentIslamistRulePriority,
-          OilExporterPriority)
-    }
+  def markerAlignGovPriorities(): List[CountryFilter] = {
+    if (game.botEnhancements)
+      List(
+        WithAidPriority, RegimeChangeTroopsPriority, HighestResourcePriority, WithTroopsPriority,
+        MostCellsPriority, AdjacentIslamistRulePriority
+      )
+    else
+      List(
+        PakistanPriority, BesiegedRegimePriority, SyriaPriority, WithAidPriority, RegimeChangeTroopsPriority,
+        HighestResourcePriority, WithTroopsPriority, IranPriority, MostCellsPriority, AdjacentIslamistRulePriority,
+        OilExporterPriority
+      )
   }
 
   // Bot will not try minor Jihad in Poor countries
   def minorJihadTarget(names: List[String]): Option[String] = {
     botLog("Find \"Minor Jihad\" target", Color.Debug)
-    topPriority(game getMuslims names, jihadMarkerAlignGovPriorities(Some(false))).map(_.name)
+    topPriority(game getMuslims names, minorJihadPriorities()).map(_.name)
   }
 
   // Bot will only try major Jihad in Poor countries
   def majorJihadTarget(names: List[String]): Option[String] = {
     botLog("Find \"Major Jihad\" target", Color.Debug)
-    topPriority(game getMuslims names, jihadMarkerAlignGovPriorities(Some(true))).map(_.name)
+    topPriority(game getMuslims names, majorJihadPriorities()).map(_.name)
   }
 
   def alignGovTarget(names: List[String]): Option[String] = {
@@ -768,7 +765,7 @@ object JihadistBot extends BotHelpers {
     if (game.botEnhancements)
       topPriority(game.getCountries(names), recruitAndTravelToPriorities).map(_.name)
     else
-      topPriority(game.getCountries(names), jihadMarkerAlignGovPriorities(None)).map(_.name)
+      topPriority(game.getCountries(names), markerAlignGovPriorities()).map(_.name)
   }
 
   def markerTarget(names: List[String]): Option[String] = {
@@ -800,12 +797,12 @@ object JihadistBot extends BotHelpers {
       shuffle(narrowed).map(_.name).headOption
     }
     else
-      topPriority(game.getCountries(names), jihadMarkerAlignGovPriorities(None)).map(_.name)
+      topPriority(game.getCountries(names), markerAlignGovPriorities()).map(_.name)
   }
 
   def troopsMilitiaTarget(names: List[String]): Option[String] = {
     botLog("Find \"Troops/Militia\" target", Color.Debug)
-    topPriority(game.getCountries(names), jihadMarkerAlignGovPriorities(None)).map(_.name)
+    topPriority(game.getCountries(names), markerAlignGovPriorities()).map(_.name)
   }
 
   // Prepare plots for selection.
@@ -1492,7 +1489,7 @@ object JihadistBot extends BotHelpers {
                 adjacentOnly = true
                 botLog("Considering only targets that can be reached by an adjacent traveling cell")
               designatedTarget = topPriority(adjacentCandidates, priorities).map(_.name)
-          }  
+          }
           true
         }
         else
@@ -3326,7 +3323,7 @@ object JihadistBot extends BotHelpers {
       private def canRecruitInMjp: Boolean = majorJihadPriorityCountry
         .map(name => game.getMuslim(name).recruitOK(madrassas = false))
         .getOrElse(false)
-        
+
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
         canRecruitInMjp ||
