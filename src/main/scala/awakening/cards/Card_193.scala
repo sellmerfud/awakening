@@ -40,100 +40,33 @@ package awakening.cards
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
-// Card Text:
-// ------------------------------------------------------------------
-// Play if you can select 2 Unmarked Muslim countries (non Iran).
-// Place a Cell in each, or 2 in each if any Islamist Rule.
-// ------------------------------------------------------------------
+// -------------------------------------
+// This card is a duplicate of Card 97
+// -------------------------------------
 object Card_193 extends Card(193, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
-  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = Card_091.eventAlertsPlot(countryName, plot)
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
-  def eventRemovesLastCell(): Boolean = false
-
-  def getCandidates = countryNames(game.muslims.filter(m => m.name != Iran && m.isUntested))
+  def eventRemovesLastCell(): Boolean = Card_091.eventRemovesLastCell()
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
+  def eventConditionsMet(role: Role) = Card_091.eventConditionsMet(role)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
+  def botWillPlayEvent(role: Role): Boolean = Card_091.botWillPlayEvent(role)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit = {
-    val maxPerTarget = if (game.numIslamistRule > 0) 2 else 1
-    val maxTargets   = 2 min getCandidates.size
-    case class Target(name: String, cells: Int)
-
-    val targets = if (isHuman(role)) {
-      def nextTarget(
-        available: Int,
-        candidates: List[String],
-        existingTargets: Vector[Target]): Vector[Target] = {
-        if (existingTargets.size == maxTargets)
-          existingTargets
-        else {
-          val num = existingTargets.size + 1
-          val name = askCountry(s"\nSelect ${ordinal(num)} unmarked Muslim country: ", candidates)
-          val target = if (available == 0)
-            Target(name, 0)
-          else if (num == maxTargets)
-            Target(name, maxPerTarget min available)
-          else if (available >= maxTargets * maxPerTarget)
-            Target(name, maxPerTarget)
-          else {
-              displayLine(s"\nThere are ${amountOf(available, "available cell")}", Color.Info)
-              Target(name, askInt(s"Place how many cells in $name", 1, 2))
-          }
-
-          nextTarget(
-            available - target.cells,
-            candidates.filterNot(_ == name),
-            existingTargets :+ target)
-        }
-      }
-
-      nextTarget(game.cellsAvailable, getCandidates, Vector.empty)
-    }
-    else { // Bot
-      def nextTarget(
-        available: Int,
-        candidates: List[String],
-        existingTargets: Vector[Target]): Vector[Target] = {
-        if (existingTargets.size == maxTargets)
-          existingTargets
-        else {
-          var name = JihadistBot.cellPlacementPriority(false)(candidates).get
-          val numCells = maxPerTarget min available
-
-          nextTarget(
-            available - numCells,
-            candidates.filterNot(_ == name),
-            existingTargets :+ Target(name, numCells))
-        }
-      }
-
-      nextTarget(game.cellsAvailable, getCandidates, Vector.empty)
-    }
-
-    for (Target(name, num) <- targets) {
-      addEventTarget(name)
-      if (num > 0)
-        addSleeperCellsToCountry(name, num)
-      else
-        log(s"\nNo cells available to place in $name.", Color.Event)
-    }
-  }
+  def executeEvent(role: Role): Unit = Card_091.executeEvent(role)
 }
