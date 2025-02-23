@@ -117,7 +117,7 @@ object Card_182 extends Card(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLaps
       case Nil =>
       case p::ps =>
         if (game.availablePlots.contains(p)) {
-          addAvailablePlotToCountry(name, p)
+          addAvailablePlotToCountry(name, p, visible = true)
         }
         else
           log(s"\nThere is not an available $p to place", Color.Event)
