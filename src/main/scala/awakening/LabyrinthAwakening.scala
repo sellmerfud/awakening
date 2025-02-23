@@ -5261,11 +5261,13 @@ object LabyrinthAwakening {
     log()
     log("Polarization")
     log(separator())
-    if (candidates.isEmpty)
+    if (candidates.isEmpty) {
       log("No countries affected", Color.Info)
+      pause()
+    }
     else {
       // Remember any Caliphate capital in case it is displaced.
-      val caliphateCapital = candidates.find(_.caliphateCapital).map(_.name)
+      val prevCaliphateCapital = candidates.find(_.caliphateCapital).map(_.name)
       val priorGameState = game
       // Work with names, because the underlying state of the countries will
       // undergo multiple changes, thus we will need to get the current copy of
@@ -5296,7 +5298,7 @@ object LabyrinthAwakening {
             }
             else
               shiftAlignmentLeft(name)
-
+            pause()
 
           case _ => // x < -2
             log()
@@ -5307,6 +5309,7 @@ object LabyrinthAwakening {
             }
             else
               shiftAlignmentRight(name)
+            pause()
         }
       }
 
@@ -5315,14 +5318,16 @@ object LabyrinthAwakening {
         log()
         for (Converger(name, awakening) <- convergers.sorted)
           performConvergence(forCountry = name, awakening)
+        pause()
       }
 
       // Check to see if the Caliphate Capital has been displaced because its country
       // was improved to Good governance.
-      caliphateCapital foreach { capitalName =>
-        if (game.getMuslim(capitalName).caliphateCapital == false) {
-          displaceCaliphateCapital(capitalName)
+      prevCaliphateCapital foreach { prevName =>
+        if (game.getMuslim(prevName).caliphateCapital == false) {
+          displaceCaliphateCapital(prevName)
           logExtraCellCapacityChange(priorGameState)
+          pause()
         }
       }
     }
@@ -5589,6 +5594,7 @@ object LabyrinthAwakening {
         }
       }
     }
+    pause()
   }
 
   def endTurnCivilWarAttrition(): Unit = {
@@ -5596,21 +5602,26 @@ object LabyrinthAwakening {
     log()
     log("Civil War Attrition")
     log(separator())
-    if (civilWars.isEmpty)
+    if (civilWars.isEmpty) {
       log("No countries in civil war")
+      pause()
+    }
     else {
-      val caliphateCapital = civilWars.find(_.caliphateCapital).map(_.name)
+      val prevCaliphateCapital = civilWars.find(_.caliphateCapital).map(_.name)
       val priorGameState = game
       val totalAdvisors = civilWars.map(_.numAdvisors).sum
       // Add militia for any Advisors present
       if (civilWars.exists(_.numAdvisors > 0)) {
         log("\nAdvisors")
         log(separator())
-        if (game.militiaAvailable == 0)
+        if (game.militiaAvailable == 0) {
           log("There are no available militia")
+          pause()
+        }
         else if (game.militiaAvailable >= totalAdvisors) {
           for (m <- civilWars; num = m.numAdvisors; if num > 0)
             addMilitiaToCountry(m.name, num)
+          pause()
         }
         else {
           //  There are not enough available militia for all Advisors so
@@ -5646,6 +5657,7 @@ object LabyrinthAwakening {
               nextMilita(numLeft - num, candidates.filterNot(_ == target))
             }
             nextMilita(game.militiaAvailable, countryNames(civilWars.filter(_.numAdvisors > 0)))
+            pause()
           }
 
         }
@@ -5657,10 +5669,11 @@ object LabyrinthAwakening {
 
       // Check to see if the Caliphate Capital has been displaced because its country
       // was improved to Good governance.
-      caliphateCapital foreach { capitalName =>
-        if (game.getMuslim(capitalName).caliphateCapital == false) {
-          displaceCaliphateCapital(capitalName)
+      prevCaliphateCapital foreach { prevName =>
+        if (game.getMuslim(prevName).caliphateCapital == false) {
+          displaceCaliphateCapital(prevName)
           logExtraCellCapacityChange(priorGameState)
+          pause()
         }
       }
     }
@@ -7614,11 +7627,14 @@ object LabyrinthAwakening {
 
     increaseCardsInHand(Jihadist, jihadistNum)
     increaseCardsInHand(US, usNum)
+    pause()
   }
 
   def removeLapsingAnd1stPLot(): Unit = {
+    var needPause = false
     game.firstPlotEntry foreach {
       case LapsingEntry(num, discarded) =>
+        needPause = true
         log("\nFirst Plot")
         log(separator())
         if (discarded) {
@@ -7632,11 +7648,14 @@ object LabyrinthAwakening {
     }
 
     if (game.eventsLapsing.nonEmpty) {
+      needPause = true
       log()
       log("Lapsing Events")
       log(separator())
       removeLapsingEvents(game.eventsLapsing.map(_.cardNumber), endOfTurn = true)
     }
+    if (needPause)
+      pause()
   }
 
 
@@ -7656,16 +7675,21 @@ object LabyrinthAwakening {
     }
 
     def flipGreenRegimeChangeMarkers(): Unit = {
+      var needPause = false
       for (rc <- game.muslims if rc.regimeChange == GreenRegimeChange) {
         game = game.updateCountry(rc.copy(regimeChange = TanRegimeChange))
         log(s"\nFlip green regime change marker in ${rc.name} to its tan side", Color.FlipPieces)
+        needPause = true
       }
+      if (needPause)
+        pause()
     }
 
     // Check active Gobal events that affect off map troops
     // Troops affected by Lapsing events will have already been
     // taken care of when the Lapsing event were removed.
     def returnOffMapTroopsToTrack(): Unit = {
+      var needPause = false
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
       if (globalEventInPlay(Sequestration)) {
@@ -7675,13 +7699,17 @@ object LabyrinthAwakening {
           .foreach { name =>
             log(s"\nThere is a 3 Resource Muslim country at Islamist Rule ($name)", Color.Event)
             removeGlobalEventMarker(Sequestration)
+            needPause = true
           }
       }
 
       if (globalEventInPlay(SouthChinaSeaCrisis) && game.usPosture == game.getNonMuslim(China).posture) {
         log("\nChina and the US have the same Posture", Color.Event)
         removeGlobalEventMarker(SouthChinaSeaCrisis)
+        needPause = true
       }
+      if (needPause)
+        pause()
     }
 
     val labyrinthOrder = !game.useExpansionRules
@@ -7721,6 +7749,7 @@ object LabyrinthAwakening {
       // Awakening Rule End of Turn order
       clearReserves(game.humanRole)  // The Bot's reserves are not cleared
       returnUsedPlotsToAvailable()
+      pause()
       polarization()
       endTurnCivilWarAttrition()
       // Polarization/Attrition could affect the score
@@ -7735,6 +7764,7 @@ object LabyrinthAwakening {
       // Labyrinth rule end of turn order
       removeLapsingAnd1stPLot()
       clearReserves(game.humanRole)  // The Bot's reserves are not cleared
+      pause()
       drawCardsForTurn()
       flipGreenRegimeChangeMarkers()
     }
@@ -7744,7 +7774,6 @@ object LabyrinthAwakening {
     game = game.copy(turnActions = Nil)
     game = game.copy(turn = game.turn + 1)
     saveGameState(Some(s"End of turn $turnNum"), endOfTurn = true)
-    pause()
   }
 
   // Take troops from available if possible, otherwise we must
@@ -8086,7 +8115,6 @@ object LabyrinthAwakening {
       game = game.copy(turn = 1)
       drawCardsForTurn()  // Display and save card draw for first turn
       saveGameState(Some("Beginning of game"))
-      pause()
       playGame()
     }
     catch {
