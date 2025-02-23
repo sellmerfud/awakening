@@ -2660,7 +2660,9 @@ object LabyrinthAwakening {
   sealed trait TroopOrMilitia
   case object TroopCube extends TroopOrMilitia
   case object MilitiaCube extends TroopOrMilitia
-  case class TroopMarker(name: String) extends TroopOrMilitia
+  case class TroopMarker(name: String) extends TroopOrMilitia  {
+    override def toString() = name
+  }
 
   // Returns "troop-cube", "militia-cube", or the name of a troop marker
   def askTroopOrMilitia(prompt: String, target: String): TroopOrMilitia = {
