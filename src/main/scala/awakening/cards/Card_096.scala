@@ -37,7 +37,6 @@
 
 package awakening.cards
 
-import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
@@ -95,7 +94,7 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
       val plot = plotCandidates match {
         case p::Nil => p
         case plots if isHuman(Jihadist) => askPlots(plots, 1).head
-        case plots => shuffle(plots).head
+        case plots => JihadistBot.preparePlots(plots).head
       }
       val candidates = countryNames(game.muslims.filter(!_.isIslamistRule))
       val name = if (isHuman(Jihadist))
