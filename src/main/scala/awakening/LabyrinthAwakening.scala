@@ -1522,7 +1522,6 @@ object LabyrinthAwakening {
     countries: List[Country],
     markers: List[String],
     plotData: PlotData,
-    sequestrationTroops: Boolean         = false,  // true if 3 troops off map due to Sequestration event
     offMapTroops: Int                    = 0,
     reserves: Reserves                   = Reserves(0, 0),
     cardsInUse: Range                    = Range.inclusive(0, 0),  // Range of cards in use (although some may have been removed)
@@ -2255,7 +2254,6 @@ object LabyrinthAwakening {
       countries,
       scenario.markersInPlay.sorted,
       PlotData(availablePlots = scenario.availablePlots.sorted, removedPlots = scenario.removedPlots),
-      false,  // sequestrationTroops: true if 3 troops off map due to Sequestration event
       cardsInUse = scenario.startingMode.cardRange,
       cardsRemoved = scenario.cardsRemoved,
       showColor = showColor,
@@ -6428,7 +6426,6 @@ object LabyrinthAwakening {
         case Sequestration =>
           log("Sequestration ends", Color.Event)
           moveOfMapTroopsToTrack(3)
-          game = game.copy(sequestrationTroops = false)
 
         case _ =>
       }
@@ -7364,7 +7361,7 @@ object LabyrinthAwakening {
               decreasePrestige(1)
             }
             // Sequestration
-            if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
+            if (mapPlot.plot == PlotWMD && globalEventInPlay(Sequestration)) {
               log("\nWMD plot resolved while Sequestration in effect", Color.Event)
               removeGlobalEventMarker(Sequestration)
             }
@@ -7481,7 +7478,7 @@ object LabyrinthAwakening {
             }
 
             // Sequestration
-            if (mapPlot.plot == PlotWMD && game.sequestrationTroops) {
+            if (mapPlot.plot == PlotWMD && globalEventInPlay(Sequestration)) {
               log("\nWMD plot resolved while Sequestration in effect", Color.Event)
               removeGlobalEventMarker(Sequestration)
             }
@@ -7669,7 +7666,7 @@ object LabyrinthAwakening {
     def returnOffMapTroopsToTrack(): Unit = {
       // If Sequestration troops are off map and there is a 3 Resource country at IslamistRule
       // then return the troops to available.
-      if (game.sequestrationTroops) {
+      if (globalEventInPlay(Sequestration)) {
         game.muslims
           .find(m => m.resourceValue >= 3 && m.isIslamistRule)
           .map(_.name)

@@ -130,7 +130,6 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
       putTroopsInOffMapBox(name, num)
     }
 
-    game = game.copy(sequestrationTroops = true)
     addGlobalEventMarker(Sequestration)
   }
 }
