@@ -9211,9 +9211,6 @@ object LabyrinthAwakening {
     case object PerformCardActivity extends PerformOption {
       override def menuText = "Operations"
     }
-    case object Play2ndCard extends PerformOption {
-      override def menuText = "Play 2nd card to perform Reassessment"
-    }
     case object PerformReassess extends PerformOption {
       override def menuText = "Perform Reassessment"
     }
@@ -9264,7 +9261,7 @@ object LabyrinthAwakening {
     @tailrec def getUsActivity(): Either[String, List[PerformOption]] = {
       // The US must announce reassessment before triggering an event
       // so if the event was triggered then reassessment is not allowed.
-      val showReassess = canReassess && !cardEventTriggered && reservesUsed == 0
+      val showReassess = canReassess && reservesUsed == 0
       val actions = List(
         choice(eventPlayable && reservesUsed == 0,         ExecuteEvent, ExecuteEvent),
         choice(true,                                       WarOfIdeas, WarOfIdeas),
@@ -9296,20 +9293,18 @@ object LabyrinthAwakening {
 
         case Reassess =>
             val card2 = promptForSecondCard()
-            var newOptions = List(PerformReassess)
-            val trigger1 = if (firstCardCanTrigger)
-              List(TriggerOpponentEvent(card))
-            else
-              Nil
-            val trigger2 = if (card2.autoTrigger || card2.association == Jihadist)
-              List(TriggerOpponentEvent(card2))
-            else
-              Nil
+            val newOptions = new ListBuffer[PerformOption]()
+            if (firstCardCanTrigger && !cardEventTriggered)
+              newOptions += TriggerOpponentEvent(card)
+            if (card2.autoTrigger || card2.association == Jihadist)
+              newOptions += TriggerOpponentEvent(card2)
 
-            if (trigger1.nonEmpty || trigger2.nonEmpty)
-              Right(PerformReassess :: trigger1 ::: trigger2)
-            else
+            if (newOptions.isEmpty)
               Left(Reassess)
+            else {
+              newOptions.prepend(PerformReassess)
+              Right(newOptions.toList)
+            }
 
         case action =>
           Left(action)
@@ -9335,21 +9330,23 @@ object LabyrinthAwakening {
     def processOptions(options: List[PerformOption]): Unit = options match {
       case Nil =>
         // End the processOptions recursive loop
-      case PerformCardActivity::Nil =>
-        getUsActivity() match {
-          case Left(activity) =>
-            performCardActivity(activity)
+      case option :: Nil =>
+        option match {
+          case PerformCardActivity =>
+            getUsActivity() match {
+              case Left(activity) =>
+                performCardActivity(activity)
+              case Right(moreOptions) =>
+                processOptions(moreOptions)
+            }
 
-          case Right(moreOptions) =>
-            processOptions(options.filterNot(_ == PerformCardActivity):::moreOptions)
+          case TriggerOpponentEvent(c) =>
+            performTriggeredEvent(Jihadist, c)
+            cardEventTriggered = true
+
+          case PerformReassess =>
+            performCardActivity(Reassess)
         }
-
-      case PerformReassess::Nil =>
-        performCardActivity(Reassess)
-
-      case TriggerOpponentEvent(c)::Nil =>
-        performTriggeredEvent(Jihadist, c)
-        cardEventTriggered = true
 
       case options =>
         // Ask what happens next
@@ -9370,28 +9367,12 @@ object LabyrinthAwakening {
                 options
                   .filter {
                     case PerformCardActivity => false
-                    case Play2ndCard => false  // Not longer an option!
                     case _ => true
                   }
 
               case Right(moreOptions) =>
-                // Reassess and TriggerCard replace the perform option
-                // So the user can chooose the order
-                options.filterNot(_ == PerformCardActivity):::moreOptions
+                moreOptions
             }
-
-          case Some(Play2ndCard) =>
-            val card2 = promptForSecondCard()
-            val triggerCard2 = if (card2.autoTrigger || card2.association == Jihadist)
-              List(TriggerOpponentEvent(card2))
-            else
-              Nil
-            PerformReassess :: options
-              .filter {
-                case Play2ndCard => false
-                case PerformCardActivity => false
-                case _ => true
-              } ::: triggerCard2
 
           case Some(PerformReassess) =>
             performCardActivity(Reassess)
@@ -9403,7 +9384,6 @@ object LabyrinthAwakening {
             options
               .filter {
                 case TriggerOpponentEvent(x) => x.number != c.number
-                case Play2ndCard => false // No longer an option!
                 case _ => true
               }
         }
@@ -9415,11 +9395,10 @@ object LabyrinthAwakening {
     // Reassessment.  This is done because the player must "announce" that they
     // wish to do Reassessment before seeing the results of any triggered event form
     // the first 3 Ops card played.
-    val initialOptions = (firstCardCanTrigger, canReassess) match {
-      case (false, _)    => List(PerformCardActivity)
-      case (true, false) => List(PerformCardActivity, TriggerOpponentEvent(card))
-      case (true, true)  => List(PerformCardActivity, TriggerOpponentEvent(card), Play2ndCard)
-    }
+    val initialOptions = if (firstCardCanTrigger)
+      List(PerformCardActivity, TriggerOpponentEvent(card))
+    else
+      List(PerformCardActivity)
 
     try processOptions(initialOptions)
     catch {
