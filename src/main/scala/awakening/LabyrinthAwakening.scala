@@ -8011,7 +8011,7 @@ object LabyrinthAwakening {
       choice(true, Exit, "Exit the program"),
     ).flatten
 
-    askMenu("Game Menu", choices).head match {
+    askMenu("Game Menu", choices, allowAbort = false).head match {
       case New =>
         startNewGame(params)
         programMainMenu(params)
