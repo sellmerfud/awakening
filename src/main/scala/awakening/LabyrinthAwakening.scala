@@ -8059,11 +8059,17 @@ object LabyrinthAwakening {
 
       val enhancedBot = if (humanRole == US)
         params.enhancedBot
-          .orElse(askEnhancedBot())  // TODO: true for testing, This should be false
+          .orElse(askEnhancedBot())
           .getOrElse(throw CancelNewGame)
       else
         false  // No enhanced US Bot so don't bother asking
 
+      if (enhancedBot) {
+        log("\nNote:")
+        log(separator())
+        log("The victory conditions when playing against the Enhanced Jihadist Bot")
+        log("are identical to those when playing the against Standard Jihadist Bot.")
+      }
       val difficulties = (humanRole, enhancedBot) match {
         case (US, true) =>
           List(Muddled)
