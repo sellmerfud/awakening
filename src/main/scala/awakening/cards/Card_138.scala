@@ -78,7 +78,11 @@ object Card_138 extends Card(138, "Intel Community", US, 2, NoRemove, NoLapsing,
       log(s"\nThe $US Bot treats this event as unplayable.  It has no effect.", Color.Event)
     else {
       // See Event Instructions table
-      log("\nUS player does not inspect the Jihadist hand in the solo game.", Color.Event)
+      if (game.botEnhancements)
+        log(s"\nYou may inspect the $Jihadist Bot's hand and then shuffle it.", Color.Event)
+      else
+        log("\nUS player does not inspect the Jihadist hand in the solo game.", Color.Event)
+        
       val cadres = countryNames(game.countries.filter(_.hasCadre))
       if (getCadreCandidates.isEmpty)
         log("\nThere are no cadres on the map to remove.", Color.Event)

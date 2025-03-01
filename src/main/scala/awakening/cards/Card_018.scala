@@ -72,7 +72,10 @@ object Card_018 extends Card(18, "Intel Community", US, 2, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
-    log("US player does not inspect the Jihadist hand in the solo game.", Color.Event)
+    if (game.botEnhancements)
+      log(s"\nYou may inspect the $Jihadist Bot's hand and then shuffle it.", Color.Event)
+    else
+      log("US player does not inspect the Jihadist hand in the solo game.", Color.Event)
 
     // US player conducts a 1 Op operations.
     log("\nUS player conducts an operation with 1 Op")
