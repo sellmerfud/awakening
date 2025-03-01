@@ -159,22 +159,38 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
 
 
   def botCardDraw(role: Role): Unit = {
-    val cardNum = if (role == Jihadist && game.botEnhancements)
-      enhancedJihadistBotEntries().head
-    else {
+    val enhCandidates = enhancedJihadistBotEntries()
+    val cardNum = if (role == Jihadist && game.botEnhancements && enhCandidates.nonEmpty)
+      Some(enhancedJihadistBotEntries().head)
+    else if (candidateCards(role).nonEmpty) {
       val highOps = candidateCards(role).map(_.printedOps).max
-      shuffle(candidateCards(role).filter(_.printedOps == highOps).map(_.number)).head
+      Some(shuffle(candidateCards(role).filter(_.printedOps == highOps).map(_.number)).head)
     }
+    else
+      None
 
-    val cardDisplay = deck(cardNum).numAndName
-    log(s"\n$role Bot selects $cardDisplay", Color.Event)
-    if (processCardDrawn(role, cardNum, cardLocation(cardNum).get)) {
-      if (role == Jihadist && game.botEnhancements)
-        log(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
-        else
-        log(s"\nPlace $cardDisplay on top of the $role Bot's hand", Color.Info)
+    cardNum.foreach { cardNum =>
+      val cardDisplay = deck(cardNum).numAndName
+      log(s"\n$role Bot selects $cardDisplay", Color.Event)
+      if (processCardDrawn(role, cardNum, cardLocation(cardNum).get)) {
+        if (role == Jihadist && game.botEnhancements)
+          log(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
+          else
+          log(s"\nPlace $cardDisplay on top of the $role Bot's hand", Color.Info)
+      }
     }
   }
+
+  def wouldCauseUSWin = {
+    val goodExporters = game.muslims.count(m => m.isGood && m.oilExporter)
+    game.goodResources + goodExporters >= 12
+  }
+
+  def wouldCauseJihadistWin = {
+    val irExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter)
+    game.islamistResources + irExporters >= 6
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -190,17 +206,14 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       // Will not play if it would cause immediate victory for the US player
       // or there are 2 or more countries countries with printed resource value
       // of 3 that are at Good governance.
-      val GoodOilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
       val Good3ResExporters = game.muslims.count(m => m.isGood && m.oilExporter && m.printedResources == 3)
-      (game.goodResources + GoodOilExporters < 12) &&
-      (Good3ResExporters < 2) &&
-      enhancedJihadistBotEntries().nonEmpty
+      wouldCauseJihadistWin ||
+      !wouldCauseUSWin && (Good3ResExporters < 2) && enhancedJihadistBotEntries().nonEmpty
 
     case Jihadist =>
       // Will not play if it would cause immediate victory for the US player
-      val US_OilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
-      (game.goodResources + US_OilExporters < 12) &&
-      candidateCards(Jihadist).nonEmpty
+      wouldCauseJihadistWin ||
+      (!wouldCauseUSWin && candidateCards(Jihadist).nonEmpty)
   }
 
   // Carry out the event for the given role.
@@ -208,8 +221,10 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role))
+    if (isHuman(role)) {
+      if (game.cardsDiscarded.nonEmpty || game.cardsLapsing().nonEmpty || game.firstPlotCard().nonEmpty)
         askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236))
+    }
     else
       botCardDraw(role)
     log("\nThe Resource value of each Oil Exporter is increased by 1 for the rest of the turn.", Color.Event)

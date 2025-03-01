@@ -71,6 +71,16 @@ object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, 
       val jihadOilExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter)
       game.islamistResources + jihadOilExporters < 6 || !game.islamistAdjacency
 
+    case Jihadist if game.botEnhancements =>
+      // Will not play if it would cause immediate victory for the US player
+      // or there are 2 or more countries countries with printed resource value
+      // of 3 that are at Good governance.
+      val GoodOilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
+      val Good3ResExporters = game.muslims.count(m => m.isGood && m.oilExporter && m.printedResources == 3)
+      (game.goodResources + GoodOilExporters < 12) &&
+      (Good3ResExporters < 2) 
+      // enhancedJihadistBotEntries().nonEmpty  To be done
+
     case Jihadist =>
       // Unplayable if it would cause US instant victory
       val usOilExporters = game.muslims.count(m => m.isGood && m.oilExporter)
@@ -84,6 +94,8 @@ object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, 
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     removeGlobalEventMarker(Fracking) // Cancels effects of "Fracking" marker
+    // Temporary until Florian works out how the bot will use this event.
+    // Then we will have specific code here.
     Card_117.executeEvent(role)
   }
 }
