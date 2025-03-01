@@ -86,7 +86,7 @@ object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, No
     if (role == US) {
       val iran = game.getCountry(Iran)
       if (iran.wmdCache > 0)
-        removePlacedWMD(Iran, iran.wmdCache, bumpPrestige = game.useExpansionRules)
+        removeCachedWMD(Iran, iran.wmdCache, bumpPrestige = game.useExpansionRules)
       addEventTarget(Iran)
       if (iran.hasMarker(TradeEmbargoJihadist)) {
         removeEventMarkersFromCountry(Iran, TradeEmbargoJihadist)
