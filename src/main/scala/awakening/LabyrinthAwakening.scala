@@ -4137,7 +4137,8 @@ object LabyrinthAwakening {
     log("The Caliphate capital has been displaced!")
     log(separator())
     if (adjacents.size == 0) {
-      log(s"There are no adjacent Caliphate candidates, remove Caliphate capital")
+      log(s"There are no adjacent Caliphate candidates")
+      log(s"Remove the Caliphate capital marker from $previousCapital", Color.MapPieces)
       decreaseFunding(2)
       increasePrestige(2)
     }
@@ -4163,6 +4164,8 @@ object LabyrinthAwakening {
           .map(_.m.name)
         shuffle(best).head
       }
+
+      log(s"Remove Caliphate member marker from $newCapitalName", Color.MapPieces)
       setCaliphateCapital(newCapitalName)
       decreaseFunding(1)
       increasePrestige(1)
@@ -5740,6 +5743,7 @@ object LabyrinthAwakening {
   // • Shift any Sleeper cells there to Active (4.7.4.1).
   // • Roll Prestige
   def performRegimeChange(source: String, dest: String, numTroops: Int): Unit = {
+    val caliphateMember = game.isCaliphateMember(dest)
     log()
     moveTroops(source, dest, numTroops)
     val m = game.getMuslim(dest)
@@ -5757,6 +5761,8 @@ object LabyrinthAwakening {
     log(s"Place a green regime change marker in $dest", Color.MapPieces)
     log(s"Set governance of ${m.name} ${govToString(newGov)}", Color.MapPieces)
     log(s"Set alignment of ${m.name} Ally", Color.MapPieces)
+    if (!caliphateMember && game.isCaliphateMember(dest))
+      log(s"Place a Caliphate member marker in $dest", Color.MapPieces)
     if (m.sleeperCells > 0)
       log(s"Flip the ${amountOf(m.sleeperCells, "sleeper cell")} in ${m.name} to active", Color.FlipPieces)
     rollPrestige()
@@ -6147,6 +6153,7 @@ object LabyrinthAwakening {
                         convergenceOK: Boolean = true): Unit = {
     if (levels > 0) {
       val m = game.getMuslim(name)
+      val caliphateMember = game.isCaliphateMember(name)
       assert(!m.isGood, s"improveGovernance() called on Good country - $name")
       val minGov = if (canShiftToGood) Good else Fair
       val newGov = (m.governance - levels) max minGov
@@ -6162,6 +6169,7 @@ object LabyrinthAwakening {
           if (m.awakening > 0 ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name", Color.MapPieces)
           if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name", Color.MapPieces)
           if (m.militia > 0   ) log(s"Remove ${m.militia} militia from $name", Color.MapPieces)
+          if (caliphateMember ) log(s"Remove Caliphate member marker from $name", Color.MapPieces)
 
           val improved = m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
                  militia = 0, besiegedRegime = false)
@@ -6637,6 +6645,8 @@ object LabyrinthAwakening {
           logExtraCellCapacityChange(priorGameState)
         }
       }
+      else if (priorGameState.isCaliphateMember(name) && !game.isCaliphateMember(name))
+        log(s"Remove Caliphate member marker from $name", Color.MapPieces)
     }
   }
 
@@ -6656,6 +6666,8 @@ object LabyrinthAwakening {
           logExtraCellCapacityChange(priorGameState)
         }
       }
+      else if (priorGameState.isCaliphateMember(name) && !game.isCaliphateMember(name))
+        log(s"Remove Caliphate member marker from $name", Color.MapPieces)
     }
   }
 
