@@ -6579,7 +6579,7 @@ object LabyrinthAwakening {
         log(s"Add ${amountOf(delta, "out of play cell")} to the right of the Ample Funding Box", Color.MapPieces)
       else if (delta < 0)
         log(
-          s"Remove the ${amountOf(delta.abs, "cell")} cells from the \"extra cells\" area to out of play",
+          s"Remove the ${amountOf(delta.abs, "cell")} from the \"extra cells\" area to out of play",
           Color.MapPieces)
     }
   }
@@ -8072,7 +8072,7 @@ object LabyrinthAwakening {
         log("\nNote:")
         log(separator())
         log("The victory conditions when playing against the Enhanced Jihadist Bot")
-        log("are identical to those when playing the against Standard Jihadist Bot.")
+        log("are identical to those when playing against the Standard Jihadist Bot.")
       }
       val difficulties = (humanRole, enhancedBot) match {
         case (US, true) =>
