@@ -8625,10 +8625,8 @@ object LabyrinthAwakening {
       saveGameState(Some(endPhase.toString))
 
 
-      if (bothHandsEmpty || (numCardsInHand(Jihadist) == 0 && holdLastCard)) {
-        pause()  // So the user can see the plot resolution results
+      if (bothHandsEmpty || (numCardsInHand(Jihadist) == 0 && holdLastCard))
         endTurn()
-      }
     }
   }
 
