@@ -348,48 +348,49 @@ object JihadistBot extends BotHelpers {
   // Recruit/Travel to priorities table to choose among those that remain.
   def majorJihadPriorityCountry: Option[String] = {
     import awakening.scenarios.{ LetsRoll, YouCanCallMeAl }
-    val pakistanAndCentralAsiaSpecial = game.scenarioName == LetsRoll.name || game.scenarioName == YouCanCallMeAl.name
-    val specialResVal = (m: MuslimCountry) =>
-      if (m.name == Pakistan || m.name == CentralAsia)
-        3
-      else
-        enhBotResourceValue(m)
 
-    // When the scenario is Let's Roll or You can call me Al, then
-    // we treat Pakistan and Central Asia has having 3 resources for the
-    // sake of determining priority.
-    val HighestPrintedResourcePrioritySpecial = new HighestScorePriority(
-      "Highest printed resource*, Pakistan/Central Asia = 3",
-      muslimScore(specialResVal)
-    )
 
-    val firstPriority = currentIRResources match {
-      case 1 if pakistanAndCentralAsiaSpecial => HighestPrintedResourcePrioritySpecial::Nil
-      case n if n < 4 => HighestPrintedResourcePriority::Nil
-      case 4 => PoorOrUntested2PlusResources::Nil
-      case _ => Nil
-    }
-    // These priorities are a slight variation on the travelTo priorities
-    val priorities = firstPriority :::
-    List(
-      BestJihadDRMPriority(false),
-      AutoRecruitNoTandMFilter,
-      HighestCellsMinusTandM,
-      LowestTandM,
-      NoTandMGreatestCellsPlusAdjacent,
-      MostMoveableAdjacentCells,
-      BesiegedRegimePriority,
-      AdversaryPriority,
-      NeutralPriority,
-      AllyPriority,
-      UnmarkedPriority,
-      NoAwakeningOrReactionMarkersPriority,
-      AdjacentToAutoRecruitPriority,
-      OilExporterPriority
-    )
-
-    // We only selecte the priority country once per play
+    // We only select the priority country once per play
     if (PriorityCountries.majorJihadPrioritySet == false) {
+      val pakistanAndCentralAsiaSpecial = game.scenarioName == LetsRoll.name || game.scenarioName == YouCanCallMeAl.name
+      val specialResVal = (m: MuslimCountry) =>
+        if (m.name == Pakistan || m.name == CentralAsia)
+          3
+        else
+          enhBotResourceValue(m)
+
+      // When the scenario is Let's Roll or You can call me Al, then
+      // we treat Pakistan and Central Asia has having 3 resources for the
+      // sake of determining priority.
+      val HighestPrintedResourcePrioritySpecial = new HighestScorePriority(
+        "Highest printed resource*, Pakistan/Central Asia = 3",
+        muslimScore(specialResVal)
+      )
+
+      val firstPriority = currentIRResources match {
+        case 1 if pakistanAndCentralAsiaSpecial => HighestPrintedResourcePrioritySpecial::Nil
+        case n if n < 4 => HighestPrintedResourcePriority::Nil
+        case 4 => PoorOrUntested2PlusResources::Nil
+        case _ => Nil
+      }
+      // These priorities are a slight variation on the travelTo priorities
+      val priorities = firstPriority :::
+      List(
+        BestJihadDRMPriority(false),
+        AutoRecruitNoTandMFilter,
+        HighestCellsMinusTandM,
+        LowestTandM,
+        NoTandMGreatestCellsPlusAdjacent,
+        MostMoveableAdjacentCells,
+        BesiegedRegimePriority,
+        AdversaryPriority,
+        NeutralPriority,
+        AllyPriority,
+        UnmarkedPriority,
+        NoAwakeningOrReactionMarkersPriority,
+        AdjacentToAutoRecruitPriority,
+        OilExporterPriority
+      )
       val possibilities = game.muslims.filter(m => majorJihadSuccessPossible(m) && m.totalTroopsAndMilitia < 7)
       botLog(s"Selecting Major Jihad Priority...", Color.Debug)
       botLog("Start with Muslim countries with < 7 TandM and Major jihad possible.")
@@ -646,34 +647,55 @@ object JihadistBot extends BotHelpers {
       "Poor with troops and cells",
       c => c.isPoor && c.troops > 0 && unusedCells(c) > 0)
 
-  val PoorTroopsActiveCellsFilter = new CriteriaFilter("Poor with troops and active cells",
-                  muslimTest(m => m.isPoor && m.troops > 0 && activeCells(m) > 0))
-  val PoorNeedCellsforMajorJihad = new CriteriaFilter("Poor, 1-4 more cells than TandM and JSP",
-                  muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m)))
-  val PoorCellsOutnumberTroopsMilitiaByAtLeast3 = new CriteriaFilter("Poor Muslim country w/ (cells - TandM) > 2",
-                  muslimTest(m => m.isPoor && (m.totalCells - m.totalTroopsAndMilitia) > 2))
-  val PoorAutoRecruit = new CriteriaFilter("Poor, Auto-recruit Muslim country",
-                  muslimTest(m => m.isPoor && m.autoRecruit))
-  val PoorAutoRecruitNoTandM = new CriteriaFilter("Poor, Auto-recruit Muslim country without TandM",
-                  muslimTest(m => m.isPoor && m.autoRecruit && m.totalTroopsAndMilitia == 0))
-  val PoorOrUnmarkedMuslim = new CriteriaFilter("Poor or Unmarked Muslim country",
-                  muslimTest(m => m.isPoor || m.isUntested))
-  val AutoRecruitPriorityCountry = new CriteriaFilter("Auto-recruit priority country",
-                  c => PriorityCountries.autoRecruitPrioritySet && Some(c.name) == autoRecruitPriorityCountry)
+  val PoorTroopsActiveCellsFilter = new CriteriaFilter(
+    "Poor with troops and active cells",
+    muslimTest(m => m.isPoor && m.troops > 0 && activeCells(m) > 0)
+  )
+  val PoorNeedCellsforMajorJihad = new CriteriaFilter(
+    "Poor, 1-4 more cells than TandM and JSP",
+    muslimTest(m => poorMuslimNeedsCellsForMajorJihad(m))
+  )
+  val PoorCellsOutnumberTroopsMilitiaByAtLeast3 = new CriteriaFilter(
+    "Poor Muslim country w/ (cells - TandM) > 2",
+    muslimTest(m => m.isPoor && (m.totalCells - m.totalTroopsAndMilitia) > 2)
+  )
+  val PoorAutoRecruit = new CriteriaFilter(
+    "Poor, Auto-recruit Muslim country",
+    muslimTest(m => m.isPoor && m.autoRecruit)
+  )
+  val PoorAutoRecruitNoTandM = new CriteriaFilter(
+    "Poor, Auto-recruit Muslim country without TandM",
+    muslimTest(m => m.isPoor && m.autoRecruit && m.totalTroopsAndMilitia == 0)
+  )
+  val PoorMuslimNoAutoRecruitIfTamdM = new CriteriaFilter(
+    "Poor Muslim country (not Auto-Recruit if TandM)",
+    muslimTest(m => m.isPoor && !(m.autoRecruit && m.totalTroopsAndMilitia > 0))
+  )
+  val UnmarkedOrPoorMuslimNoAutoRecruitIfTamdM = new CriteriaFilter(
+    "Unmarked or Poor Muslim country (not Auto-Recruit if TandM)",
+    muslimTest( m =>
+      m.isUntested ||
+      (m.isPoor && !(m.autoRecruit && m.totalTroopsAndMilitia > 0))
+    )
+  )
+  val AutoRecruitPriorityCountry = new CriteriaFilter(
+    "Auto-recruit priority country",
+    c => PriorityCountries.autoRecruitPrioritySet && Some(c.name) == autoRecruitPriorityCountry
+  )
 
-  val EnhRecruitPoorCadreNoTandMMajorJihadPossible =
-    new CriteriaFilter(
-      "Poor Muslim, w/ cadre and no TandM and (reaction - awakening > 2) and JSP",
-      muslimTest(m =>
-        (poorMuslimWhereMajorJihadPossible(m) && poorMuslimWithCadreAnNoTroopsOrMilitia(m))
-      ))
+  val EnhRecruitPoorCadreNoTandMMajorJihadPossible = new CriteriaFilter(
+    "Poor Muslim, w/ cadre and no TandM and (reaction - awakening > 2) and JSP",
+    muslimTest(m =>
+      (poorMuslimWhereMajorJihadPossible(m) && poorMuslimWithCadreAnNoTroopsOrMilitia(m))
+    )
+  )
 
-  val EnhTravelPoorNeedCellsforMajorJihad =
-    new CriteriaFilter(
-      "Poor, 1-4 more cells than TandM and (reaction - awakening > 2) and JSP",
-      muslimTest(m =>
-        poorMuslimNeedsCellsForMajorJihad(m)
-      ))
+  val EnhTravelPoorNeedCellsforMajorJihad = new CriteriaFilter(
+    "Poor, 1-4 more cells than TandM and (reaction - awakening > 2) and JSP",
+    muslimTest(m =>
+      poorMuslimNeedsCellsForMajorJihad(m)
+    )
+  )
 
 
   // Best DRM but Islamist Rule last.
@@ -888,8 +910,7 @@ object JihadistBot extends BotHelpers {
 
   def RecruitFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
-         PoorAutoRecruitNoTandM,
-         PoorMuslimFilter,
+         PoorMuslimNoAutoRecruitIfTamdM,
          AutoRecruitPriorityCountry,
          IslamistRulePriority
     )
@@ -904,7 +925,7 @@ object JihadistBot extends BotHelpers {
   def TravelToFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
          PoorAutoRecruitNoTandM,
-         PoorOrUnmarkedMuslim)
+         UnmarkedOrPoorMuslimNoAutoRecruitIfTamdM)
   else
     List(PoorNeedCellsforMajorJihad,
          GoodMuslimFilter,
