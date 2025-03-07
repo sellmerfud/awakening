@@ -5229,10 +5229,12 @@ object LabyrinthAwakening {
     if (role == US && game.reserves.us > 0) {
       game = game.copy(reserves = game.reserves.copy(us = 0))
       log(s"$role reserves set to zero", Color.MapMarker)
+      pause()
     }
     else if (role == Jihadist && game.reserves.jihadist > 0) {
       game = game.copy(reserves = game.reserves.copy(jihadist = 0))
       log(s"$role reserves set to zero", Color.MapMarker)
+      pause()
     }
   }
 
@@ -7687,6 +7689,7 @@ object LabyrinthAwakening {
         game = game.copy(plotData = updatedPlots)
         log()
         log(s"Return ${amountOf(num, "resolved plot")} to the available plots box", Color.MapPieces)
+        pause()
       }
     }
 
@@ -7765,7 +7768,6 @@ object LabyrinthAwakening {
       // Awakening Rule End of Turn order
       clearReserves(game.humanRole)  // The Bot's reserves are not cleared
       returnUsedPlotsToAvailable()
-      pause()
       polarization()
       endTurnCivilWarAttrition()
       // Polarization/Attrition could affect the score
@@ -7780,7 +7782,6 @@ object LabyrinthAwakening {
       // Labyrinth rule end of turn order
       removeLapsingAnd1stPLot()
       clearReserves(game.humanRole)  // The Bot's reserves are not cleared
-      pause()
       drawCardsForTurn()
       flipGreenRegimeChangeMarkers()
     }
