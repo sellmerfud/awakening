@@ -45,7 +45,7 @@ import awakening.LabyrinthAwakening._
 // the following into hand:
 // #219 Ayman al-Zawahiri
 // #215 Abu Bakr al-Baghdadi
-// #57  Abu Sayyaf (ISIL.),
+// #216 Abu Sayyaf (ISIL.),
 // #225 Jihadi John,
 // #237 Osama bin Ladin
 // ------------------------------------------------------------------
@@ -60,7 +60,7 @@ object Card_160 extends Card(160, "Operation Neptune Spear", US, 3, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val candidateCards = List(219, 215, 57, 225, 237)
+  val candidateCards = List(219, 215, 216, 225, 237)
 
   // Returns true if the printed conditions of the event are satisfied
   override
