@@ -72,10 +72,12 @@ object Anaconda extends Scenario {
     // countries. (Not the United States)
     val candidates = countryNames(game.countries) filterNot (_ == UnitedStates)
     log()
-    val targets = if (game.humanRole == Jihadist) {
+    val targets = if (isHuman(Jihadist)) {
       println("Choose three countries where you would like to place a sleeper cell:")
       askCountries(3, candidates)
     }
+    else if (game.botEnhancements)
+      List(Caucasus, Iraq, Afghanistan)
     else
       JihadistBot.multipleTargets(3, candidates)(JihadistBot.recruitTravelToPriority)
     
