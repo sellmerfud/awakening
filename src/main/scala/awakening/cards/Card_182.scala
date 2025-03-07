@@ -141,11 +141,13 @@ object Card_182 extends Card(182, "Paris Attacks", Jihadist, 2, NoRemove, NoLaps
         log(s"\n$name is the target of the Paris Attacks event")
         log(separator())
         placePlots(name, plots)
-        val numCells = activeCells min game.cellsAvailable
-        if (numCells > 0)
-          addActiveCellsToCountry(name, activeCells min game.cellsAvailable)
-        else
-          log("\nThere are no available cells to place", Color.Event)
+        if (activeCells > 0) {
+          val numCells = activeCells min game.cellsAvailable
+          if (numCells > 0)
+            addActiveCellsToCountry(name, activeCells min game.cellsAvailable)
+          else
+            log("\nThere are no available cells to place", Color.Event)
+        }
     }
   }
 }
