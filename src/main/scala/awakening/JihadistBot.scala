@@ -228,7 +228,8 @@ object JihadistBot extends BotHelpers {
   // 11. Else unplayable
 
   def enhMartyrdomKSMTarget(candidates: List[String], martyrdom: Boolean): Option[String] = {
-    lazy val muslims = candidates
+    val candidatesWithCells = candidates.filter(name => game.getMuslim(name).cells > 0)
+    lazy val muslims = candidatesWithCells
       .collect { case name if game.isMuslim(name) => game.getMuslim(name) }
 
     lazy val goodMuslims = muslims.filter(_.isGood)
@@ -236,12 +237,13 @@ object JihadistBot extends BotHelpers {
     lazy val fairAutoRecruits = muslims.filter(m => m.isFair && m.autoRecruit)
 
     lazy val phillipinesOK =
+      candidatesWithCells.contains(Philippines) &&
       game.getCountry(Philippines).hasMarker(AbuSayyaf) &&
       (game.prestige > 3 || game.funding < 7)
 
     lazy val poorMuslimsWithTroops = muslims.filter(m => m.isPoor && m.totalTroops > 0)
 
-    lazy val nonMuslims = candidates
+    lazy val nonMuslims = candidatesWithCells
       .collect { case name if game.isNonMuslim(name) => game.getNonMuslim(name) }
 
     lazy val hardNonMuslims = nonMuslims.filter(_.isHard)
@@ -252,9 +254,9 @@ object JihadistBot extends BotHelpers {
 
     lazy val poorMuslims = muslims.filter(_.isPoor)
 
-    if (candidates.isEmpty)
+    if (candidatesWithCells.isEmpty)
       None
-    else if (candidates.contains(UnitedStates))
+    else if (candidatesWithCells.contains(UnitedStates))
       Some(UnitedStates)
     else if (goodMuslims.nonEmpty) {
       val priorities = List(HighestResourcePriority, WithTroopsPriority)

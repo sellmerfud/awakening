@@ -42,7 +42,7 @@ import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-// Play if a non-Islanist Rule country has a cell.
+// Play if a non-Islamist Rule country has a cell.
 // Replace the cell with any 2 available plot markers.
 // ------------------------------------------------------------------
 object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
@@ -90,7 +90,6 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
         // during the US turn.  Fall back to normal Bot code.
         val c = game.getCountry(enhBotTarget.get)
         val cell = if (c.activeCells > 0) (1, 0, false)
-                   else if (c.hasSadr)    (0, 0, true)
                    else                   (0, 1, false)
         (enhBotTarget.get, cell, JihadistBot.preparePlots(game.availablePlots).take(2))
       }
