@@ -153,10 +153,16 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
         removeLapsingEvent(lapsingCardNum)
     }
 
-    if (isHuman(role))
-      log(s"\nDraw a card and add it to your ($role) hand.", Color.Event)
-    else
-      log(s"\nPut the top card of the draw deck on top of the $role Bot's hand of cards.", Color.Event)
+    log(s"\n$role player draws a card.", Color.Event)
     askCardDrawnFromDrawPile(role)
+      .map(deck(_).numAndName)
+      .foreach { cardDisplay =>
+        if (isHuman(role))
+          log(s"\nAdd $cardDisplay to your ($role) hand.", Color.Event)
+        else if (game.botEnhancements)
+          log(s"\nShuffle $cardDisplay into the $role Bot's hand of cards.", Color.Event)
+        else
+          log(s"\nPlace $cardDisplay on top of the $role Bot's hand of cards.", Color.Event)
+      }
   }
 }

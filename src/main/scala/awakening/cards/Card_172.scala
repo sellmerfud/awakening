@@ -156,7 +156,12 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
             addEventTarget(target)
             addBesiegedRegimeMarker(target)
           case Draw =>
+            log(s"\nThe $role player draws one of the listed cards from the discard pile.", Color.Event)
             askCardDrawnFromDiscardPile(role, only = candidateCards().toSet)
+              .map(deck(_).numAndName)
+              .foreach { cardDisplay =>
+                log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+              }
         }
       }
     }
@@ -201,7 +206,13 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
             addAvailablePlotToCountry(plotTarget.get, plot)
           case Draw =>
             val cardNum = shuffle(candidateCards()).head
+            log(s"\nThe $role player draws one of the listed cards from the discard pile.", Color.Event)
             processCardDrawn(role, cardNum, FromDiscard)
+            log(s"\nTake ${cardNumAndName(cardNum)} from the discard pile and", Color.Event)
+            if (game.botEnhancements)
+              log(s"shuffle it into the $role Bot's hand.", Color.Event)
+            else
+              log(s"place it on top of the $role Bot's hand.", Color.Event)
         }
       }
     }

@@ -1983,6 +1983,7 @@ object LabyrinthAwakening {
 
     def statusSummary: Summary = {
       val activePlotCountries = countries.filter(_.hasPlots)
+      val countriessWithCells = countryNames(game.countries.filter(_.totalCells > 0))
       val summary = new Summary
       summary.add(s"Status", Color.Info)
       summary.add(separator(char = '='), Color.Info)
@@ -2003,6 +2004,8 @@ object LabyrinthAwakening {
       summary.add(separator())
       summary.add(f"Cells on track  : $cellsOnTrack%2d   |")
       summary.add(f"Cells to recruit: ${cellsToRecruit}%2d   | Funding level     : ${fundingLevel}")
+      summary.add(separator())
+      summary.addSeq(wrap("Cells on map    : ", countriessWithCells, maxWidth = 74))
       if (useExpansionRules) {
         val albaghdadi = (globalEventInPlay(AlBaghdadi), caliphateDeclared) match {
           case (true, true) => Some(s"$AlBaghdadi with Caliphate")
@@ -3243,7 +3246,7 @@ object LabyrinthAwakening {
     def prompt(num: Int) = optPrompt
       .getOrElse {
         if (totalNum > 1)
-          s"\nWhat is the # the ${ordinal(num)} card that was drawn$blankIfNone: "
+          s"\nWhat is the # of the ${ordinal(num)} card that was drawn$blankIfNone: "
         else
           s"\nWhat is the # of the card that was drawn$blankIfNone: "
       }

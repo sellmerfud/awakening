@@ -92,8 +92,15 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
       addEventTarget(source)
     putTroopsInOffMapBox(source, 1)
 
-    log(s"\n$US player draws 1 card", Color.Event)
-    askCardDrawnFromDrawPile(US)
+    log(s"\nThe $role player draws a card.", Color.Event)
+    askCardDrawnFromDrawPile(role)
+      .map(deck(_))
+      .foreach { cardDisplay =>
+        if (isHuman(role))
+          log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+        else
+          log(s"\nPlace $cardDisplay on top of the $role Bot's hand.", Color.Event)
+      }
   }
   else { // Jihadist
     setTrumpTweetsOFF()

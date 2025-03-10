@@ -77,13 +77,20 @@ object Card_160 extends Card(160, "Operation Neptune Spear", US, 3, NoRemove, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    log(s"\nThe $role player draws one of the listed cards from the discard pile.", Color.Event)
     if (isHuman(role))
       askCardDrawnFromDiscardPile(role, only = candidateCards.toSet)
+        .map(deck(_).numAndName)
+        .foreach { cardDisplay =>
+          log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+        }
     else {
       // See Event Instructions table
       // Bot takes the candidate card closes to the bottom of the discard pile
       val cardNum = game.cardsDiscarded.reverse.find(candidateCards.contains).get
       processCardDrawn(role, cardNum, FromDiscard)
+      log(s"\nTake ${cardNumAndName(cardNum)} from the discard pile and", Color.Event)
+      log(s"place it on top of the $role hand.", Color.Event)
     }
   }
 }

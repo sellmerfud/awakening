@@ -72,7 +72,15 @@ object Card_155 extends Card(155, "Fracking", US, 3, NoRemove, NoLapsing, NoAuto
   def executeEvent(role: Role): Unit = {
     addGlobalEventMarker(Fracking)
     rollPrestige()
-    log("\nUS player draws a card", Color.Event)
+
+    log(s"\nThe $role player draws a card.", Color.Event)
     askCardDrawnFromDrawPile(role)
+      .map(deck(_))
+      .foreach { cardDisplay =>
+        if (isHuman(role))
+          log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+        else
+          log(s"\nPlace $cardDisplay on top of the $role Bot's hand.", Color.Event)
+      }
   }
 }

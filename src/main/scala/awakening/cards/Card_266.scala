@@ -80,8 +80,14 @@ object Card_266 extends Card(266, "Presidential Reality Show", US, 2, NoRemove, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    log(s"\nThe $role player from the discard pile either Trump Tweets or", Color.Event)
+    log("any card with a prerequisite that Trump Tweets is ON.", Color.Event)
     if (isHuman(role))
       askCardDrawnFromDiscardPile(role, only = candidateCards().toSet)
+        .map(deck(_).numAndName)
+        .foreach { cardDisplay =>
+          log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+        }
     else {
       // If Trump Tweet is of the Bot will take the Trump Tweets card closest
       // to the bottom of the pile if possible,  otherise it will take any
@@ -93,6 +99,8 @@ object Card_266 extends Card(266, "Presidential Reality Show", US, 2, NoRemove, 
       else
         game.cardsDiscarded.reverse.find(AllCandidates.contains).get
       processCardDrawn(role, cardNum, FromDiscard)
+      log(s"\nTake ${cardNumAndName(cardNum)} from the discard pile and", Color.Event)
+      log(s"place it ob top of the $US Bot's hand.", Color.Event)
     }
   }
 }

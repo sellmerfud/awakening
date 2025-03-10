@@ -88,12 +88,16 @@ object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLa
     else
       log(s"\nThere are no cells available to place on the map", Color.Event)
 
-    if (isHuman(role))
-      log(s"\nDraw a card and add it to your hand", Color.Event)
-    else if (game.botEnhancements)
-      log(s"\nDraw a card and shuffle it into the $Jihadist Bot's hand", Color.Event)
-    else
-      log(s"\nDraw a card and place it on top of the $Jihadist Bot's hand", Color.Event)
-      askCardDrawnFromDrawPile(role)
+    log(s"\nThe $role player draws a card.", Color.Event)
+    askCardDrawnFromDrawPile(role)
+      .map(deck(_).numAndName)
+      .foreach { cardDisplay =>
+        if (isHuman(role))
+          log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+        else if (game.botEnhancements)
+          log(s"\nShuffle $cardDisplay into the $role Bot's hand.", Color.Event)
+        else
+          log(s"\nPlace $cardDisplay on top of the $role Bot's hand.", Color.Event)
+      }
   }
 }

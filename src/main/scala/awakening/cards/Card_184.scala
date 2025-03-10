@@ -101,15 +101,26 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
     if (game.cardsDiscarded.isEmpty)
       log("\nThere are no cards in the discard pile.", Color.Event)
     else if (isHuman(US)) {
-      if (game.cardsDiscarded.contains(ObamaDoctrine))
+      if (game.cardsDiscarded.contains(ObamaDoctrine)) {
+        log(s"\nThe $US player take ${cardNumAndName(ObamaDoctrine)} from the discard pile and", Color.Event)
+        log("and adds it to their hand.", Color.Event)
         processCardDrawn(US, ObamaDoctrine, FromDiscard)
+      }
       else {
-        displayLine("\nUS player draws one card from the discard pile", Color.Info)
+        log(s"\nThe $US player draws one card from the discard pile.", Color.Event)
         askCardDrawnFromDiscardPile(US)
+          .map(deck(_).numAndName)
+          .foreach { cardDisplay =>
+            log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+          }
       }
     }
-    else // Bot
-      processCardDrawn(US, botCardChoice(), FromDiscard)
+    else { // Bot
+      val cardNum = botCardChoice()
+      log(s"\nThe $US Bot draws one card from the discard pile.", Color.Event)
+      if (processCardDrawn(US, cardNum, FromDiscard))
+        log(s"\nPlace ${cardNumAndName(cardNum)} on top of the $US Bot's hand.", Color.Event)
+    }
 
     val items = if (isHuman(role))
       selectTroopsToPutOffMap(3)

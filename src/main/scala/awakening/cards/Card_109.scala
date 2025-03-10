@@ -100,12 +100,16 @@ object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsin
     addEventTarget(name)
     removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
     rollPrestige()
-    if (isHuman(role))
-      log(s"\nDraw a card and add it to your hand", Color.Event)
-    else if (role == Jihadist && game.botEnhancements)
-      log(s"\nDraw a card and shuffle it into the $role Bot's hand", Color.Event)
-    else
-      log(s"\nDraw a card and place it on top of the $role Bot's hand", Color.Event)
+    log(s"\nThe $role player draws a card.", Color.Event)
     askCardDrawnFromDrawPile(role)
+      .map(deck(_))
+      .foreach { cardDisplay =>
+        if (isHuman(role))
+          log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+        else if (role == Jihadist && game.botEnhancements)
+          log(s"\nShuffle $cardDisplay into the $role Bot's hand.", Color.Event)
+        else
+          log(s"\nPlace $cardDisplay on top of the $role Bot's hand.", Color.Event)
+      }
   }
 }

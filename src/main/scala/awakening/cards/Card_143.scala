@@ -161,7 +161,12 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
             setCountryPosture(target, posture)
 
           case Draw =>
+            log(s"\nThe $role player draws a card from the discard pile.", Color.Event)
               askCardDrawnFromDiscardPile(role, only = cardDrawCandidates.toSet)
+                .map(deck(_).numAndName)
+                .foreach { cardDisplay =>
+                  log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+                }
         }
         nextAction(actionNum + 1, used + action)
       }

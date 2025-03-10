@@ -77,15 +77,21 @@ object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLaps
   override
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
+    log(s"\nThe $role player draws from the discard pile a card that either", Color.Event)
+    log(s"causes Civil War or allows a Regime change.", Color.Event)
     if (isHuman(role)) {
       askCardDrawnFromDiscardPile(role, only = cardCandidates().toSet)
+        .map(deck(_).numAndName)
+        .foreach { cardDisplay =>
+          log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+        }
     }
     else {
       // Bot take candidate card nearest the bottom of the discard pile
       val candidates = cardCandidates().toSet
       val cardNum = game.cardsDiscarded.reverse.find(candidates.contains).get
       processCardDrawn(role, cardNum, FromDiscard)
-      log(s"\nTake [${cardNumAndName(cardNum)}] from the discard pile and", Color.Event)
+      log(s"\nTake ${cardNumAndName(cardNum)} from the discard pile and", Color.Event)
       if (role == Jihadist && game.botEnhancements)
         log(s"shuffle it into the $role hand.", Color.Event)
       else

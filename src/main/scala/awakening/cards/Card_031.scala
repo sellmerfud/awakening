@@ -92,12 +92,17 @@ object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAu
       for (plot <- c.plots)
         performAlert(name, plot)
     }
-    
-    if (isHuman(role))
-      log(s"$US draws a card and adds it to their hand")
-    else
-      log(s"Draw a one card and place it on top of the $US Bot'sw hand")
+
+    log(s"\nThe $US player draws a card", Color.Event)
+
     askCardDrawnFromDrawPile(role)
+      .map(deck(_)
+      .numAndName).foreach { cardDisplay =>
+        if (isHuman(role))
+          log(s"Add $cardDisplay to you r ($US) hand.", Color.Event)
+        else
+          log(s"Place $cardDisplay on top of the $US Bot's hand.", Color.Event)
+      }
     addGlobalEventMarker(Wiretapping)
   }
 }

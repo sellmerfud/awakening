@@ -118,8 +118,16 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
 
         addEventTarget(name)
         removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
-        log(s"\n$US player draws 2 cards", Color.Event)
+        log(s"\nThe $US player draws two cards", Color.Event)
         askMultipleCardsDrawnFromDrawPile(role, 2)
+          .map(deck(_).numAndName)
+          .foreach { cards =>
+            val cardDisplay = andList(cards)
+            if (isHuman(role))
+              log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+            else 
+              log(s"\nPlace $cardDisplay on top of the $role Bot's hand.", Color.Event)
+          }
 
       case Jihadist if game.availablePlots.nonEmpty =>
         val (name, plot) = if (isHuman(role)) {

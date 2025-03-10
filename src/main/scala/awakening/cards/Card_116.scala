@@ -100,8 +100,16 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
         for (plot <- c.plots)
           performAlert(name, plot)
       }
-      log("\nThe US player draws 2 cards", Color.Event)
+      log(s"\nThe $role player draws two cards.", Color.Event)
       askMultipleCardsDrawnFromDrawPile(role, 2)
+        .map(deck(_).numAndName)
+        .foreach { cards =>
+          val cardDisplay = andList(cards)
+          if (isHuman(role))
+            log(s"\nAdd $cardDisplay to your hand.", Color.Event)
+          else 
+            log(s"\nPlace $cardDisplay on top of the $role Bot's hand.", Color.Event)
+        }
 
     case Jihadist if game.availablePlots.isEmpty =>
       log("\nThere are no available plots. The event has no effect.", Color.Event)

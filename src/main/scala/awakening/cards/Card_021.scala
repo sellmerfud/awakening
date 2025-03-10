@@ -88,7 +88,7 @@ object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, No
       val plot = humanPickPlotToAlert(name)
       addEventTarget(name)
       performAlert(name, plot)
-      log(s"$US draws one card and adds it to their hand")
+      log(s"\n$US draws one card and adds it to their hand", Color.Event)
       askCardDrawnFromDrawPile(role)
       val postureName = askCountry("Select posture of which country: ", postureCandidates)
       val newPosture = askPosture(postureName)
@@ -99,8 +99,12 @@ object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, No
       val USBot.PlotInCountry(plot, c) = USBot.selectPriorityPlot(plotCandidates)
       addEventTarget(c.name)
       performAlert(c.name, plot)
-      log(s"Draw a card and place it on top of the $US Bot hand")
+      log(s"\n$US draws one card.", Color.Event)
       askCardDrawnFromDrawPile(role)
+        .map(deck(_).numAndName)
+        .foreach { cardDisplay =>
+          log(s"Place $cardDisplay on top of the $US Bot hand", Color.Event)
+        }
       val postureName = USBot.posturePriority(postureCandidates).get
       addEventTarget(postureName)
       setCountryPosture(postureName, game.usPosture)
