@@ -86,7 +86,7 @@ object Card_077 extends Card(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing,
   def executeEvent(role: Role): Unit = {
     val name = if (isHuman(role))
       askCountry("Select country with troops: ", getCandidates)
-    else if (game.botEnhancements) {
+    else if (game.botEnhancements && getEnhBotCandidates.nonEmpty) {
       // Priority to Neutral, then RC, then Fair, then highest Resource
       val priorities = List(
         JihadistBot.NeutralPriority,
