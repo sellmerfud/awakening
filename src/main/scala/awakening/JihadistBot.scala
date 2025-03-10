@@ -733,7 +733,7 @@ object JihadistBot extends BotHelpers {
   def minorJihadPriorities(): List[CountryFilter] = {
     if (game.botEnhancements)
       List(
-        WithTroopsPriority, BestJihadDRMPriority(major = false), WithAidPriority, RegimeChangeTroopsPriority,
+        WithTroopsPriority, GoodPriority, BestJihadDRMPriority(major = false), WithAidPriority, RegimeChangeTroopsPriority,
         HighestResourcePriority, MostCellsPriority, AdjacentIslamistRulePriority
       )
     else
