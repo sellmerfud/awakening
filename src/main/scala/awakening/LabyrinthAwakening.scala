@@ -5767,6 +5767,8 @@ object LabyrinthAwakening {
       activeCells  = m.activeCells + m.sleeperCells,
       sleeperCells = 0
     ))
+    if (newGov == Fair)
+      addTestedOrImprovedToFairOrGood(dest)
     log(s"Place a green regime change marker in $dest", Color.MapPieces)
     log(s"Set governance of ${m.name} ${govToString(newGov)}", Color.MapPieces)
     log(s"Set alignment of ${m.name} Ally", Color.MapPieces)
