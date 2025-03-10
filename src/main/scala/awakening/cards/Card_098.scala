@@ -63,9 +63,11 @@ object Card_098 extends Card(98, "Gaza Withdrawal", Unassociated, 1, Remove, NoL
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    (role == US && game.funding > 1) ||
-    (role == Jihadist && game.cellsAvailable > 0)
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => game.funding > 1
+    case Jihadist if game.botEnhancements => false
+    case Jihadist => game.cellsAvailable > 0
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
