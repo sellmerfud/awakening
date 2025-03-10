@@ -5476,7 +5476,7 @@ object LabyrinthAwakening {
 
     val siegeOfMosul = lapsingEventInPlay(SiegeofMosul)
     val hamaOffensiveDisplay = if (hamaOffensive)
-      Some(" (Hama Offensive)")
+      " (Hama Offensive)"
     else
       ""
     // Get the fresh instance of the Muslim country
