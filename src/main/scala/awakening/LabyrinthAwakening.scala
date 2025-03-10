@@ -9101,7 +9101,6 @@ object LabyrinthAwakening {
     printSummary(game.scoringSummary)
     printSummary(game.statusSummary)
     printSummary(game.targetSummary)
-    printSummary(game.removedCardsSummary)
     if (game.useExpansionRules) {
       printSummary(game.civilWarSummary)
       printSummary(game.caliphateSummary)
