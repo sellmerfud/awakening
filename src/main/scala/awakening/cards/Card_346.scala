@@ -54,7 +54,7 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   val isMilitiaCandidate = (c: Country) => c match {
-    case n: NonMuslimCountry => false
+    case n: NonMuslimCountry => false   // Militia can never be place in Non muslim countries
     case m: MuslimCountry => m.canTakeMilitia
   }
 
@@ -114,7 +114,7 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
       case _ if isHuman(role) =>
         val pieceType = askMenu("Choose one:", orderedChoices).head
         val target = if (pieceType == Militia)
-          askCountry("Place a milita in which country: ", getMilitiaCandidates)
+          askCountry("Place a militia in which country: ", getMilitiaCandidates)
         else
           askCountry("Place a cell in which country: ", getCellCandidates)
         (target, pieceType)
