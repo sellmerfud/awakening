@@ -228,7 +228,7 @@ object JihadistBot extends BotHelpers {
   // 11. Else unplayable
 
   def enhMartyrdomKSMTarget(candidates: List[String], martyrdom: Boolean): Option[String] = {
-    val candidatesWithCells = candidates.filter(name => game.getMuslim(name).cells > 0)
+    val candidatesWithCells = candidates.filter(name => game.getCountry(name).cells > 0)
     lazy val muslims = candidatesWithCells
       .collect { case name if game.isMuslim(name) => game.getMuslim(name) }
 
