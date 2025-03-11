@@ -81,15 +81,14 @@ object USBot extends BotHelpers {
     }
   }
   
-  // Returns "troop-cube", "militia-cube", or the name of a troop marker
-  def chooseTroopOrMilitiaToRemove(name: String): String = {
+  def chooseTroopOrMilitiaToRemove(name: String): TroopOrMilitia = {
     val c = game.getCountry(name)
     if (game.isMuslim(name) && game.getMuslim(name).militia > 0)
-      "militia-cube"
+     MilitiaCube
     else if (c.troops > 0)
-      "troop-cube"
+      TroopCube
     else if (c.troopsMarkers.nonEmpty)
-      c.troopsMarkers.sorted.head.name
+      TroopMarker(c.troopsMarkers.sorted.head.name)
     else
       throw new IllegalStateException(s"USBot.chooseTroopOrMilitiaToRemove($name) not units present")
   }
