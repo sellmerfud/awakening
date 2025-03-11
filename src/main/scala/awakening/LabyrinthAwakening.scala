@@ -4383,12 +4383,10 @@ object LabyrinthAwakening {
     if (card.autoTrigger)
       log(s"The ${card.association} event will automatically trigger", Color.Info)
     else if ((card.association == player || card.association == Unassociated) && !opsOnly) {
-      if (card.eventIsPlayable(player)) {
-        if (player == Jihadist && lapsingEventInPlay(TheDoorOfItjihad))
-          log(s"The ${card.association} event is NOT playable [The door of Itjihad was closed]", Color.Info)
-        else
-          log(s"The ${card.association} event is playable$fakeNews", Color.Info)
-      }
+      if (player == Jihadist && lapsingEventInPlay(TheDoorOfItjihad))
+        log(s"The ${card.association} event is NOT playable [The door of Itjihad was closed]", Color.Info)
+      else if (card.eventIsPlayable(player))
+        log(s"The ${card.association} event is playable$fakeNews", Color.Info)
       else
         log(s"The ${card.association} event is NOT playable", Color.Info)
     }
