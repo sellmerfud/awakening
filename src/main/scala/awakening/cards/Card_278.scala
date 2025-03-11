@@ -76,7 +76,7 @@ object Card_278 extends Card(278, "Siege of Mosul", US, 3, NoRemove, Lapsing, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    log("\nDuring Attrition at the end of this turn, in each Civi War", Color.Event)
+    log("\nDuring Attrition at the end of this turn, in each Civil War", Color.Event)
     log("the number of cells will be halved and the number of troops", Color.Event)
     log("plus militia will be doubled prior to rolling attrition dice.", Color.Event)
     println()
