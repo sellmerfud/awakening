@@ -93,10 +93,13 @@ object Card_324 extends Card(324, "BREXIT", Unassociated, 1, USRemove, NoLapsing
           case Nil => None
           case candidates if isHuman(role) =>
             Some(askCountry(s"Move cell to $UnitedKingdom from which country: ", candidates))
+          case candidates if game.botEnhancements =>
+            JihadistBot.enhancedTravelFromTarget(UnitedKingdom, candidates, autoSuccess = true) orElse
+            JihadistBot.standardTravelFromTarget(UnitedKingdom, candidates, inPlaceOk = false) orElse
+            shuffle(candidates).headOption
           case candidates =>
-            JihadistBot.travelFromTarget(UnitedKingdom, candidates).orElse {
-              shuffle(candidates).headOption
-            }
+            JihadistBot.standardTravelFromTarget(UnitedKingdom, candidates, inPlaceOk = false) orElse
+            shuffle(candidates).headOption
         }
 
         source.foreach { name =>

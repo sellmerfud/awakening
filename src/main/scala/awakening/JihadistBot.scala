@@ -1025,22 +1025,49 @@ object JihadistBot extends BotHelpers {
     topPriority(candidates, recruitAndTravelToPriorities).map(_.name)
   }
 
-  def travelFromTarget(toCountry: String, names: List[String]): Option[String] = if (game.botEnhancements) {
-    // Enhanced Bot rules
-    // The
-    // First only adjacent cells are considered
-    // if adjacent: Auto-recruit country (priorities within those: Training camps-->IR-->CW-->RC-->poor-->most cells--->lowest resource level), THEN
-    //
-    // if adjacent: Muslim (priorities within those: poor—>fair-->good-->worst Reaction-Awakening—>lowest resource level—>most cells), THEN
-    //
-    // if adjacent: Non-Muslim (priorities within those: most cells -->good non-Schengen-->lowest governance), THEN
+  // Regular (non-enhanced) rules
+  // The bot will never travel a SLEEPER cell within the same country
+  def standardTravelFromTarget(toCountry: String, names: List[String], inPlaceOk: Boolean): Option[String] = {
+    def wouldMoveOrTravelWithinToSleep(c: Country) =
+      inPlaceOk && (
+        c.name != toCountry ||
+        (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
+      )
 
-    // If the target destination is GOOD/FAIR, then only allow travel from
-    // adjacent countries
-    val fromAdjacentOnly = game.getCountry(toCountry) match {
-      case m: MuslimCountry => (m.isGood || m.isFair)
-      case _ => false
-    }
+    botLog(s"Find \"Travel From\" target for $toCountry", Color.Debug)
+    val flowchart = List(
+      new AdjacentCountriesNode(toCountry),
+      AutoRecruitFilter,
+      FewestCellsFilter)
+
+    val priorities = List(new NotDestinationPriority(toCountry), IslamistRulePriority,
+                          PoorPriority, FairPriority, GoodPriority, NotUSPriority,
+                          MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
+                          DisruptPrestigePriority, LowestRECPriority)
+
+    val withCells  =
+      game.getCountries(names)
+        .filter(c => hasCellForTravel(c, toCountry))
+        .filter(wouldMoveOrTravelWithinToSleep)
+    val candidates = selectCandidates(withCells, flowchart)
+    topPriority(candidates, priorities).map(_.name)
+    
+  }
+
+  // Enhanced Bot rules
+  // For normal travel:
+  //   We select a cell from an adjacent country first if possible.
+  // For auto success travel (per events):
+  //   We select a cell from a non-adjacent country first if possible.
+  //
+  // If the target destination is GOOD/FAIR, then only allow travel from
+  // adjacent countries
+  def enhancedTravelFromTarget(toCountry: String, names: List[String], autoSuccess: Boolean): Option[String] = {
+    val fromAdjacentOnly = 
+      game.getCountry(toCountry) match {
+        case m: MuslimCountry => (m.isGood || m.isFair) && autoSuccess == false
+        case _ => false
+      }
 
     val withCells  =
       game.getCountries(names)
@@ -1054,9 +1081,9 @@ object JihadistBot extends BotHelpers {
     val adjacentAutoRecruit = ((c: Country) => c.autoRecruit && areAdjacent(c.name, toCountry), "Adjacent Auto-Recruit")
     val adjacentMuslim      = ((c: Country) => c.isMuslim && areAdjacent(c.name, toCountry), "Adjacent Muslim")
     val adjacentNonMuslim   = ((c: Country) => c.isNonMuslim && areAdjacent(c.name, toCountry), "Adjacent Non-Muslim")
-    val autoRecruit         = ((c: Country) => c.autoRecruit, "Auto-Recruit")
-    val muslim              = ((c: Country) => c.isMuslim, "Muslim")
-    val nonMuslim           = ((c: Country) => c.isNonMuslim, "Non-Muslim")
+    val autoRecruit         = ((c: Country) => c.autoRecruit && !areAdjacent(c.name, toCountry), "Non-adjacent Auto-Recruit")
+    val muslim              = ((c: Country) => c.isMuslim && !areAdjacent(c.name, toCountry), "Non-adjacent Muslim")
+    val nonMuslim           = ((c: Country) => c.isNonMuslim && !areAdjacent(c.name, toCountry), "Non-adjacent Non-Muslim")
 
     val autoRecruitPriorities = List(
       new CriteriaFilter("Training Camps", c => game.isTrainingCamp(c.name)),
@@ -1081,14 +1108,25 @@ object JihadistBot extends BotHelpers {
       new LowestScorePriority("Lowest Governance Value", _.governance),
     )
 
-    val TravelFromOptions: List[TravelFromCriteria] = List(
-      (adjacentAutoRecruit, autoRecruitPriorities),
-      (adjacentMuslim, muslimPriorities),
-      (adjacentNonMuslim, nonMuslimPriorities),
-      (autoRecruit, autoRecruitPriorities),
-      (muslim, muslimPriorities),
-      (nonMuslim, nonMuslimPriorities),
-    )
+    // If auto sucess travel then do not give priconsider non-adjacent first
+    val TravelFromOptions: List[TravelFromCriteria] = if (autoSuccess)
+      List(
+        (autoRecruit, autoRecruitPriorities),
+        (muslim, muslimPriorities),
+        (nonMuslim, nonMuslimPriorities),
+        (adjacentAutoRecruit, autoRecruitPriorities),
+        (adjacentMuslim, muslimPriorities),
+        (adjacentNonMuslim, nonMuslimPriorities),
+      )
+    else
+      List(
+        (adjacentAutoRecruit, autoRecruitPriorities),
+        (adjacentMuslim, muslimPriorities),
+        (adjacentNonMuslim, nonMuslimPriorities),
+        (autoRecruit, autoRecruitPriorities),
+        (muslim, muslimPriorities),
+        (nonMuslim, nonMuslimPriorities),
+      )
 
     @tailrec
     def nextCategory(criteriaOptions: List[TravelFromCriteria]): Option[String] = criteriaOptions match {
@@ -1105,33 +1143,12 @@ object JihadistBot extends BotHelpers {
     botLog(s"Find \"Travel From\" target for $toCountry", Color.Debug)
     nextCategory(TravelFromOptions)
   }
-  else {
-    // Regular (non-enhanced) rules
-    // The bot will never travel a SLEEPER cell within the same country
-    // The Enhanced Bot never travels cells within the same country.
-    def wouldMoveOrTravelWithinToSleep(c: Country) =
-      c.name != toCountry ||
-      (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
 
-    botLog(s"Find \"Travel From\" target for $toCountry", Color.Debug)
-    val flowchart = List(
-      new AdjacentCountriesNode(toCountry),
-      AutoRecruitFilter,
-      FewestCellsFilter)
-
-    val priorities = List(new NotDestinationPriority(toCountry), IslamistRulePriority,
-                          PoorPriority, FairPriority, GoodPriority, NotUSPriority,
-                          MostActveCellsPriority, NotRegimeChangePriority, WorstJihadDRMPriority,
-                          DisruptPrestigePriority, LowestRECPriority)
-
-    val withCells  =
-      game.getCountries(names)
-        .filter(c => hasCellForTravel(c, toCountry))
-        .filter(wouldMoveOrTravelWithinToSleep)
-    val candidates = selectCandidates(withCells, flowchart)
-    topPriority(candidates, priorities).map(_.name)
-  }
-
+  def travelFromTarget(toCountry: String, names: List[String]): Option[String] = if (game.botEnhancements)
+    enhancedTravelFromTarget(toCountry, names, autoSuccess = false)
+  else
+    standardTravelFromTarget(toCountry, names, inPlaceOk = true)
+    
 
   // This is used for some events where we want to check the priorities only,
   // and skip the flowchart.

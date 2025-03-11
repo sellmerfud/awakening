@@ -166,12 +166,11 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
       val allTravellers = countryNames(
         game.countries.filter(c => c.name != target && JihadistBot.unusedCells(c) > 0)
       )
-      val from = JihadistBot.travelFromTarget(target, preferredTravellers) orElse {
-            game = game.copy(botEnhancements = false)
-            val result = JihadistBot.travelFromTarget(target, allTravellers)
-            game = game.copy(botEnhancements = true)
-            result
-          }
+      val from = JihadistBot.enhancedTravelFromTarget(target, preferredTravellers, autoSuccess = true) orElse {
+        // If event triggered during US turn then there may not be a preferred travel source,
+        // so fall back to the standard Bot selection
+        JihadistBot.standardTravelFromTarget(target, allTravellers, inPlaceOk = false)
+      }
 
       from match {
         case None => false
@@ -222,15 +221,12 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
       addEventTarget(UnitedStates)
       if (numTravels < 2) {
         val from = if (game.botEnhancements) {
-          JihadistBot.travelFromTarget(UnitedStates, preferredTravellers) orElse {
-            game = game.copy(botEnhancements = false)
-            val result = JihadistBot.travelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates))
-            game = game.copy(botEnhancements = true)
-            result
+          JihadistBot.enhancedTravelFromTarget(UnitedStates, preferredTravellers, autoSuccess = true) orElse {
+            JihadistBot.standardTravelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates), inPlaceOk = false)
           }
         }
         else
-          JihadistBot.travelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates))
+          JihadistBot.standardTravelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates), inPlaceOk = false)
           
         from match {
           case Some(from) =>

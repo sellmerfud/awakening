@@ -191,17 +191,13 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
 
         if (sources.nonEmpty) {
           val from = if (game.botEnhancements) {
-            JihadistBot.travelFromTarget(to, sources.filterNot(_ == to)).orElse {
-              // Event was triggered so enhanced bot must move a cell it otherwise
-              // would not move.
-              game = game.copy(botEnhancements = false)
-              val result =JihadistBot.travelFromTarget(to, sources.filterNot(_ == to))
-              game = game.copy(botEnhancements = true)
-              result
+            JihadistBot.enhancedTravelFromTarget(to, sources.filterNot(_ == to), autoSuccess = true).orElse {
+              // If no enhanced preferred travel source then fall back to standard rules
+              JihadistBot.standardTravelFromTarget(to, sources.filterNot(_ == to), inPlaceOk = false)
             }
           }
           else
-            JihadistBot.travelFromTarget(to, sources.filterNot(_ == to))
+            JihadistBot.standardTravelFromTarget(to, sources.filterNot(_ == to), inPlaceOk = false)
 
           from match {
             case Some(from) =>
