@@ -1081,9 +1081,9 @@ object JihadistBot extends BotHelpers {
     val adjacentAutoRecruit = ((c: Country) => c.autoRecruit && areAdjacent(c.name, toCountry), "Adjacent Auto-Recruit")
     val adjacentMuslim      = ((c: Country) => c.isMuslim && areAdjacent(c.name, toCountry), "Adjacent Muslim")
     val adjacentNonMuslim   = ((c: Country) => c.isNonMuslim && areAdjacent(c.name, toCountry), "Adjacent Non-Muslim")
-    val autoRecruit         = ((c: Country) => c.autoRecruit && !areAdjacent(c.name, toCountry), "Non-adjacent Auto-Recruit")
-    val muslim              = ((c: Country) => c.isMuslim && !areAdjacent(c.name, toCountry), "Non-adjacent Muslim")
-    val nonMuslim           = ((c: Country) => c.isNonMuslim && !areAdjacent(c.name, toCountry), "Non-adjacent Non-Muslim")
+    val autoRecruit         = ((c: Country) => c.autoRecruit, "Auto-Recruit")
+    val muslim              = ((c: Country) => c.isMuslim, "Muslim")
+    val nonMuslim           = ((c: Country) => c.isNonMuslim, "Non-Muslim")
 
     val autoRecruitPriorities = List(
       new CriteriaFilter("Training Camps", c => game.isTrainingCamp(c.name)),
@@ -1114,9 +1114,6 @@ object JihadistBot extends BotHelpers {
         (autoRecruit, autoRecruitPriorities),
         (muslim, muslimPriorities),
         (nonMuslim, nonMuslimPriorities),
-        (adjacentAutoRecruit, autoRecruitPriorities),
-        (adjacentMuslim, muslimPriorities),
-        (adjacentNonMuslim, nonMuslimPriorities),
       )
     else
       List(
