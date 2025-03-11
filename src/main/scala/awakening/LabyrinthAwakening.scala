@@ -1983,7 +1983,10 @@ object LabyrinthAwakening {
 
     def statusSummary: Summary = {
       val activePlotCountries = countries.filter(_.hasPlots)
-      val countriessWithCells = countryNames(game.countries.filter(_.totalCells > 0))
+      val countriessWithCells = game.countries
+        .filter(_.cells > 0)
+        .sortBy(_.name)
+        .map(c => s"${c.name}:${c.cells}")
       val summary = new Summary
       summary.add(s"Status", Color.Info)
       summary.add(separator(char = '='), Color.Info)
