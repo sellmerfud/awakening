@@ -73,17 +73,17 @@ object Card_076 extends Card(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     log(s"\nThe $role player draws two cards.", Color.Event)
-    askMultipleCardsDrawnFromDrawPile(role, 2)
-      .map(deck(_).numAndName)
-      .foreach { cards =>
-        val cardDisplay = andList(cards)
+    askMultipleCardsDrawnFromDrawPile(role, 2) match {
+      case Nil =>
+      case cards =>
+        val cardDisplay = andList(cards.map(deck(_).numAndName))
         if (isHuman(role))
           log(s"\nAdd $cardDisplay to your hand.", Color.Event)
         else if (game.botEnhancements)
           log(s"\nShuffle $cardDisplay into the $Jihadist Bot's hand.", Color.Event)
         else
           log(s"\nPlace $cardDisplay on top of the $Jihadist Bot's hand", Color.Event)
-      }
+    }
 
     decreasePrestige(2)
     val candidates = countryNames(game.muslims.filter(_.isAlly))
