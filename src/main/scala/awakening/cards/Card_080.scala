@@ -64,10 +64,13 @@ object Card_080 extends Card(80, "FATA", Jihadist, 3, NoRemove, NoLapsing, NoAut
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  //
+  // Enhanced Bot will not play the event if the FATA marker is already in Pakistan.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    countryEventNotInPlay(Pakistan, FATA) ||
-    game.cellsAvailable > 0
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    countryEventNotInPlay(Pakistan, FATA) && game.cellsAvailable > 0
+  else
+    countryEventNotInPlay(Pakistan, FATA) || game.cellsAvailable > 0
 
 
   // Carry out the event for the given role.
@@ -81,7 +84,7 @@ object Card_080 extends Card(80, "FATA", Jihadist, 3, NoRemove, NoLapsing, NoAut
     else
       log(s"\nThere are no cells available to place in $Pakistan", Color.Event)
 
-    if (game.getCountry(Pakistan).hasMarker(FATA))
+    if (countryEventInPlay(Pakistan, FATA))
       log(s"\nThe $FATA marker is already in $Pakistan", Color.Event)
     else
       addEventMarkersToCountry(Pakistan, FATA)
