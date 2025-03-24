@@ -127,17 +127,18 @@ trait BotHelpers {
     override def toString() = desc
   }
 
+  trait Filter[T] {
+    val desc: String
+    def filter(countries: List[T]): List[T]
+    override def toString() = desc
+  }
   // CountryFilters are used both when selecting a list of candidates and
   // when picking the top priority when following a Priorities Table.
   // Each filter simply takes a list of Countries as input and produces
   // a filtered list as output.
   // The see the selectCandidates() and topPriority() functions to see how
   // filters are used (slightly differently) in each type of situation.
-  trait CountryFilter {
-    val desc: String
-    def filter(countries: List[Country]): List[Country]
-    override def toString() = desc
-  }
+  type CountryFilter = Filter[Country]
   
   // This corresponds to following amn OpP Flowchart, but is also used for
   // finding specific event candidates.
@@ -150,9 +151,9 @@ trait BotHelpers {
   // results from that filter are returned.
   // If none of the filters finds at least one matching country we return Nil, 
   // which indicates that no valid candidates were found for the OpP flowchart.
-  @tailrec final def selectCandidates(countries: List[Country], filters: List[CountryFilter], allowBotLog: Boolean = true): List[Country] = {
+  @tailrec final def selectCandidates[T <: PriorityItem](countries: List[T], filters: List[Filter[T]], allowBotLog: Boolean = true): List[T] = {
     if (allowBotLog)
-      botLog(s"OpP Flowchart: [${countries.map(_.name).mkString(", ")}]")
+      botLog(s"OpP Flowchart: [${countries.map(_.itemDesc).mkString(", ")}]")
     (countries, filters) match {
       case (Nil, _) =>
         if (allowBotLog)
@@ -170,7 +171,7 @@ trait BotHelpers {
             selectCandidates(cs, fs, allowBotLog)
           case results =>        // We got some results…
             if (allowBotLog)
-              botLog(s"OpP Flowchart ($f): [${(results.map(_.name).mkString(", "))}]")
+              botLog(s"OpP Flowchart ($f): [${(results.map(_.itemDesc).mkString(", "))}]")
             results
         }
     }
@@ -187,13 +188,13 @@ trait BotHelpers {
   //   the samme list of candidates is used with the next filter in the list.
   //   Effectivlely skipping that priority filter.
   // This will only return Nil if the original list of candidates is Nil.
-  def narrowCountries(
-    candidates: List[Country],
-    priorities: List[CountryFilter],
-    allowBotLog: Boolean = true): List[Country] = {
+  def narrowCandidates[T <: PriorityItem](
+    candidates: List[T],
+    priorities: List[Filter[T]],
+    allowBotLog: Boolean = true): List[T] = {
     if (allowBotLog)
-      botLog(s"narrow candidates: [${candidates.map(_.name).mkString(", ")}]")
-    @tailrec def nextPriority(candidates: List[Country], priorities: List[CountryFilter]): List[Country] = {
+      botLog(s"narrow candidates: [${candidates.map(_.itemDesc).mkString(", ")}]")
+    @tailrec def nextPriority(candidates: List[T], priorities: List[Filter[T]]): List[T] = {
       (candidates, priorities) match {
         case (Nil, _) => Nil  // Only happens if the initial list of canidates was empty.
         case (sp :: Nil, _) =>
@@ -210,7 +211,7 @@ trait BotHelpers {
               nextPriority(list, fs) // Filter entire list by next priority
             case best  =>
               if (allowBotLog)
-                botLog(s"$f: matched [${best.map(_.name).mkString(", ")}]")
+                botLog(s"$f: matched [${best.map(_.itemDesc).mkString(", ")}]")
               nextPriority(best, fs) // Filter matched list by next priority
           }
       }
@@ -218,11 +219,11 @@ trait BotHelpers {
     nextPriority(candidates, priorities)
   }
   
-  def narrowCandidates(
+  def narrowCountries(
     candidates: List[String],
     priorities: List[CountryFilter],
     allowBotLog: Boolean = true): List[String] =
-      narrowCountries(game.getCountries(candidates), priorities, allowBotLog).map(_.name)
+      narrowCandidates(game.getCountries(candidates), priorities, allowBotLog).map(_.name)
 
   // Process the list of countries by each CountryFilter in the priorities list.
   // The priorities list represents a single column in a Priorities Table.
@@ -232,20 +233,20 @@ trait BotHelpers {
   // random.
   // Note: The only time this function will return None, is if the original list of
   //       countries is empty.
-  def topPriority(countries: List[Country], priorities: List[CountryFilter], allowBotLog: Boolean = true): Option[Country] = {
+  def topPriority[T <: PriorityItem](countries: List[T], priorities: List[Filter[T]], allowBotLog: Boolean = true): Option[T] = {
     if (allowBotLog)
-      botLog(s"topPriority: [${countries.map(_.name).mkString(", ")}]")
-    @tailrec def nextPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
+      botLog(s"topPriority: [${countries.map(_.itemDesc).mkString(", ")}]")
+    @tailrec def nextPriority(countries: List[T], priorities: List[Filter[T]]): Option[T] = {
       (countries, priorities) match {
         case (Nil, _)    => None
         case (c::Nil, _) => 
           if (allowBotLog)
-            botLog(s"topPriority: Picked a winner [${c.name}]")
+            botLog(s"topPriority: Picked a winner [${c.itemDesc}]")
           Some(c)                             // We've narrowed it to one
         case (cs, Nil)   =>
           val c = shuffle(cs).head              // Take one at random
           if (allowBotLog)
-            botLog(s"topPriority: Picked random country [${c.name}]")
+            botLog(s"topPriority: Picked random country [${c.itemDesc}]")
           Some(c)
         case (cs, f::fs) =>
           f.filter(cs) match {
@@ -255,7 +256,7 @@ trait BotHelpers {
               nextPriority(cs, fs) // Filter entire list by next priority
             case rs  =>
               if (allowBotLog)
-                botLog(s"topPriority ($f) [${rs.map(_.name).mkString(", ")}]")
+                botLog(s"topPriority ($f) [${rs.map(_.itemDesc).mkString(", ")}]")
               nextPriority(rs, fs) // Filter matched list by next priority
           }
       }

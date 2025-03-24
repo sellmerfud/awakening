@@ -77,5 +77,10 @@ object Card_357 extends Card(357, "Peace Dividend", Unassociated, 3, NoRemove, N
   override
   def executeEvent(role: Role): Unit = {
     askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236, 356))
+      .foreach { cardNum =>
+        val cardDisplay = deck(cardNum).numAndName
+        log(s"\n$role selects $cardDisplay", Color.Event)
+        displayLine(s"\nAdd $cardDisplay to your ($role) hand", Color.Info)
+      }
   }
 }

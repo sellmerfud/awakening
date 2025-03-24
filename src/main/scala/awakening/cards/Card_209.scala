@@ -117,6 +117,17 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
         askCountry("Select country with militia: ", getMilitiaCandidates)
       case Cells =>
         USBot.disruptPriority(getCellCandidates).get
+      case Militia if game.botEnhancements =>
+        // Priority to MJP, then Poor, then highest Res, then most militia.
+        val priorities = List(
+          JihadistBot.IsMajorJihadPriority,
+          JihadistBot.PoorPriority,
+          JihadistBot.HighestResourcePriority,
+          JihadistBot.MostMilitiaPriority
+        )
+        JihadistBot.topPriority(getMilitiaCandidates.map(game.getCountry), priorities)
+          .map(_.name)
+          .get
       case Militia =>
         JihadistBot.minorJihadTarget(getMilitiaCandidates).get
     }

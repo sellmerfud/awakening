@@ -357,6 +357,16 @@ object LabyrinthAwakening {
     (posture, hardSoftDelta.abs min 3)
   }
 
+  // Return true if setting/flipping a country to opposite
+  // of US posture would move the GWOT marker.
+  def postureChangeWouldMoveGwot: Boolean = {
+    val newDelta = if (game.usPosture == Hard)
+      game.hardSoftDelta - 1
+    else
+      game.hardSoftDelta + 1
+    getGwot(game.hardSoftDelta) != getGwot(newDelta)
+  }
+
   val GovernanceUntested = 0
   val Good               = 1
   val Fair               = 2
@@ -856,6 +866,10 @@ object LabyrinthAwakening {
   val AutoTrigger   = true
   val NoAutoTrigger = false
 
+  trait PriorityItem {
+    def itemDesc: String
+  }
+
   class Card(
     val number: Int,
     val cardName: String,
@@ -863,8 +877,9 @@ object LabyrinthAwakening {
     val printedOps: Int,
     val remove: CardRemoval,
     val lapsing: CardLapsing,
-    val autoTrigger: Boolean = false) {
+    val autoTrigger: Boolean = false) extends PriorityItem {
 
+    def itemDesc = numAndName
     // Used by the US Bot to determine if the executing the event would alert a plot
     // in the given country
     def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
@@ -1127,8 +1142,7 @@ object LabyrinthAwakening {
     game = game.copy(turnActions = newActions)
   }
 
-
-  sealed trait Country {
+  sealed trait Country extends PriorityItem {
     val name: String
     val governance: Int
     val sleeperCells: Int
@@ -1139,6 +1153,7 @@ object LabyrinthAwakening {
     val markers: List[String]
     val wmdCache: Int        // Number of WMD plots cached
 
+    def itemDesc = name
     def isMuslim: Boolean
     def isNonMuslim: Boolean = !isMuslim
 
@@ -3324,7 +3339,7 @@ object LabyrinthAwakening {
   // "box" (Lapsing or 1st Plot)
   // This method manages that process.
   // The caller should display a message about which cards should be prohibited.
-  def askCardDrawnFromDiscardOrBox(role: Role, prohibited: Set[Int]): Unit = {
+  def askCardDrawnFromDiscardOrBox(role: Role, prohibited: Set[Int]): List[Int] = {
     val sources = new ListBuffer[CardDrawSource]()
     if (game.cardsDiscarded.nonEmpty)
       sources += FromDiscard
@@ -3334,10 +3349,11 @@ object LabyrinthAwakening {
       sources += From1stPlot
 
     if (sources.isEmpty)
-      log("\nThere are no cards in the Discard pile, Lapsing box, or First Plot box.", Color.Event)
+      Nil
     else {
       displayLine(s"\nSelect a card from the ${orList(sources.map(_.name).toList)} and add it to your hand.")
       askCardsDrawnFull(role, 1, sources.toList, except = prohibited)
+        .flatMap(_.toSeq)
     }
   }
 

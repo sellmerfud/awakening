@@ -72,6 +72,12 @@ object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, No
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => true
+
+    // Playable if Prestige>1 and Arab Winter not active
+    case Jihadist if game.botEnhancements =>
+      game.prestige > 1 &&
+      (lapsingEventNotInPlay(ArabWinter) && getReactionCandidates.nonEmpty)
+
     case Jihadist =>
       game.prestige > 1 ||
       (lapsingEventNotInPlay(ArabWinter) && getReactionCandidates.nonEmpty) ||

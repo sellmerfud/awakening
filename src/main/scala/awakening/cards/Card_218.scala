@@ -65,13 +65,19 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
     isCandidate(m) && m.totalCells > m.militia
 
   val isJihadistCandidate = (m: MuslimCountry) =>
-    isCandidate(m) && m.militia > m.totalCells
+    isCandidate(m) && m.militia - m.totalCells > 0
+
+  val isEnhJihadistCandidate = (m: MuslimCountry) =>
+    isCandidate(m) && m.militia - m.totalCells > 1
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   def getUSCandidates = countryNames(game.muslims.filter(isUSCandidate))
 
+  // Enh Bot will only play if it would result in removing 2 or more militia
   def getJihadistCandidates = countryNames(game.muslims.filter(isJihadistCandidate))
+
+  def getEnhJihadistCandidates = countryNames(game.muslims.filter(isEnhJihadistCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -83,6 +89,7 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => getUSCandidates.nonEmpty
+    case Jihadist if game.botEnhancements => getEnhJihadistCandidates.nonEmpty
     case Jihadist => getJihadistCandidates.nonEmpty
   }
 
@@ -93,9 +100,23 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     val target = role match {
-      case _ if isHuman(role) => askCountry("Select country: ", getCandidates)
-      case US => USBot.disruptPriority(USBot.highestCellsMinusTandM(getUSCandidates)).get
-      case Jihadist => JihadistBot.minorJihadTarget(getJihadistCandidates).get
+      case _ if isHuman(role) =>
+        askCountry("Select country: ", getCandidates)
+      case US =>
+        USBot.disruptPriority(USBot.highestCellsMinusTandM(getUSCandidates)).get
+      case Jihadist if game.botEnhancements =>
+        // Priority to MJP, then Poor, then highest Res, then most militia.
+        val priorites = List(
+          JihadistBot.IsMajorJihadPriority,
+          JihadistBot.PoorPriority,
+          JihadistBot.HighestResourcePriority,
+          JihadistBot.MostMilitiaPriority
+        )
+        JihadistBot.topPriority(game.getCountries(getEnhJihadistCandidates), priorites)
+          .map(_.name)
+          .get
+      case Jihadist =>
+        JihadistBot.minorJihadTarget(getJihadistCandidates).get
     }
 
     addEventTarget(target)

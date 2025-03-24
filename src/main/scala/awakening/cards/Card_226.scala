@@ -65,6 +65,17 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
     }
   )
 
+  // Playable in non-RC, 2 resource* countries with reaction-awakening<1.
+  // Priority to worst reaction-awakening, then most cells.
+  def enhJihadistBotCandidates = game.getCountries(African).filter {
+    case m: MuslimCountry =>
+      m.isPoor &&
+      JihadistBot.enhBotResourceValue(m) == 2 &&
+      !m.inRegimeChange &&
+      (m.reaction - m.awakening < 1)
+    case _ => false
+  }
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
@@ -84,6 +95,10 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
           (game.militiaAvailable > 0 && target.canTakeMilitia)
         }
         .getOrElse(false)
+        
+    case Jihadist if game.botEnhancements =>
+      enhJihadistBotCandidates.nonEmpty
+
     case Jihadist =>
       // Will play if it can place a cell or start a Civil War
       game.cellsAvailable > 0 ||
@@ -123,6 +138,13 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
     else {  // Jihadist
       val name = if (isHuman(role))
         askCountry("Select country: ", getCandidates)
+      else if (game.botEnhancements) {
+        // Priority to worst reaction-awakening, then most cells.
+        val priorities = List(JihadistBot.WorstReactionMinusAwakening, JihadistBot.MostCellsPriority)
+        JihadistBot.topPriority(enhJihadistBotCandidates, priorities)
+          .map(_.name)
+          .get
+      }
       else
         JihadistBot.minorJihadTarget(getCandidates).get
 

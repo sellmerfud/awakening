@@ -72,6 +72,15 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
 
   def getJihadistBotCandidates = countryNames(game.muslims.filter(isJihadistBotCandidate))
 
+  // Playable in non-adversary countries with 2-4 cells.
+  val isEnhJihadistBotCandidate = (m: MuslimCountry) =>
+    isCandidate(m) &&
+    !m.isAdversary &&
+    m.cells >= 2 &&
+    m.cells <= 4
+
+  def getEnhJihadistBotCandidates = game.muslims.filter(isEnhJihadistBotCandidate)
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
@@ -88,8 +97,12 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
   //  will be able to affect alignment/governance
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => false  // US Bot treats this as unplayable
-    case Jihadist => game.funding < 9 || getJihadistBotCandidates.nonEmpty
+    case US =>
+      false  // US Bot treats this as unplayable
+    case Jihadist if game.botEnhancements =>
+      getEnhJihadistBotCandidates.nonEmpty
+    case Jihadist =>
+      game.funding < 9 || getJihadistBotCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -113,6 +126,24 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
         ).flatten
         val action = askMenu("Choose one:", choices).headOption
         (name, cells, action)
+
+      case Jihadist if game.botEnhancements =>
+        // Priority to Neutral, then Fair, then RC, then highest Res.
+        // If a poor country is chosen, shift alignment, else worsen governance.
+        val priorities = List(
+          JihadistBot.NeutralPriority,
+          JihadistBot.FairMuslimFilter,
+          JihadistBot.RegimeChangePriority,
+          JihadistBot.HighestResourcePriority
+        )
+        val target = JihadistBot.topPriority(getEnhJihadistBotCandidates, priorities)
+          .get
+        val action = if (target.isPoor)
+          Alignment
+        else
+          Governance
+        val cells = JihadistBot.chooseCellsToRemove(target.name, target.totalCells - 1)
+        (target.name, cells, action)
 
       case _ => // Jihadist Bot
         // If funding < 9 then there may not be a preferred candidate

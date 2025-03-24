@@ -70,8 +70,16 @@ object Card_237 extends Card(237, "Osama bin Ladin", Unassociated, 3, USRemove, 
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.funding > 1 || game.prestige < 12
-    case Jihadist => game.prestige > 1 && game.hasMuslim(isJihadCandidate)
+    case US =>
+      game.funding > 1 || game.prestige < 12
+
+    case Jihadist if game.botEnhancements =>
+      // Playable if Prestige would drop at least two steps
+      // (i.e. Prestige>2 and 2+ IR/CW countries on board)
+      game.prestige > 2 && game.muslims.filter(isJihadCandidate).size >= 2
+
+    case Jihadist =>
+      game.prestige > 1 && game.hasMuslim(isJihadCandidate)
   }
 
   // Carry out the event for the given role.

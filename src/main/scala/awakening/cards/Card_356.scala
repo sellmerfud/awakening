@@ -73,6 +73,11 @@ object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemo
   override
   def executeEvent(role: Role): Unit = {
     askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236, 357))
+      .foreach { cardNum =>
+        val cardDisplay = deck(cardNum).numAndName
+        log(s"\n$role selects $cardDisplay", Color.Event)
+        displayLine(s"\nAdd $cardDisplay to your ($role) hand", Color.Info)
+      }
     log("\nThe Resource value of each Oil Exporter is reduced by 1 for the rest of the turn.", Color.Event)
   }
 }

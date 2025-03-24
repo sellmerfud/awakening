@@ -50,16 +50,16 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
 
   val CandidateCountries = List(Turkey, Serbia, Iraq, Caucasus, Syria, Iran).sorted
 
-  def muslimCandidates() = CandidateCountries.filter(game.isMuslim)
+  def muslimCandidates = CandidateCountries.filter(game.isMuslim)
 
-  def nonMuslimCandidates() = CandidateCountries.filter(game.isNonMuslim)
+  def nonMuslimCandidates = CandidateCountries.filter(game.isNonMuslim)
 
-  def awakeReactCandidates() = if (lapsingEventInPlay(ArabWinter))
+  def awakeReactCandidates = if (lapsingEventInPlay(ArabWinter))
     Nil
   else
-    muslimCandidates().filter(name => game.getMuslim(name).canTakeAwakeningOrReactionMarker)
+    muslimCandidates.filter(name => game.getMuslim(name).canTakeAwakeningOrReactionMarker)
 
-  def removeCellsCandidates() = CandidateCountries.filter(game.getCountry(_).totalCells > 0)
+  def removeCellsCandidates = CandidateCountries.filter(game.getCountry(_).totalCells > 0)
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
@@ -70,20 +70,69 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-        removeCellsCandidates().exists(name => USBot.wouldRemoveLastCell(name, 2))
+        removeCellsCandidates.exists(name => USBot.wouldRemoveLastCell(name, 2))
 
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
 
+
+  def removeAwakeningCandidates =
+    muslimCandidates
+      .filter(name => game.getMuslim(name).awakening > 0)
+
+  def removeTwoMilitiaCandidates =
+    muslimCandidates
+      .filter(name => game.getMuslim(name).militia > 1)
+
+  def removeHardPostureCandidates = if (game.usPosture == Hard)
+    nonMuslimCandidates
+      .filter(name => game.getNonMuslim(name).isHard)
+  else
+    Nil
+
+  def removeSoftPostureCandidates = if (game.usPosture == Soft)
+    nonMuslimCandidates
+      .filter(name => game.getNonMuslim(name).isSoft)
+  else
+    Nil
+
+  def removeAidCandidates =
+    muslimCandidates
+      .filter(name => game.getMuslim(name).aidMarkers > 0)
+
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  // Enhanced Jihadist Bot:
+  //   Place reaction marker.
+  //   Next, remove awakening marker.
+  //   Next, remove 2 Militia.
+  //   Next, if US hard, remove a hard posture marker.
+  //   Next, place cell(s).
+  //   Next, remove AID.
+  //   Next, if US soft, remove a soft posture marker.
+  //   Else unplayable.
+  //   Priority to MJP, then highest Res.
+
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => removeCellsCandidates().nonEmpty || awakeReactCandidates().nonEmpty
-    case Jihadist => game.cellsAvailable > 0 || awakeReactCandidates().nonEmpty
+    case US =>
+      removeCellsCandidates.nonEmpty || awakeReactCandidates.nonEmpty
+    
+    case Jihadist if game.botEnhancements =>
+      awakeReactCandidates.nonEmpty ||
+      removeAwakeningCandidates.nonEmpty ||
+      removeTwoMilitiaCandidates.nonEmpty ||
+      removeHardPostureCandidates.nonEmpty ||
+      game.cellsAvailable > 0 ||
+      removeAidCandidates.nonEmpty ||
+      removeSoftPostureCandidates.nonEmpty
+
+    case Jihadist =>
+      game.cellsAvailable > 0 || awakeReactCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -91,23 +140,23 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    // See Event Instructions table
+    sealed trait Choice
+    case object AddAid extends Choice
+    case object DelAid extends Choice
+    case object AddBesieged extends Choice
+    case object DelBesieged extends Choice
+    case object AddAwakening extends Choice
+    case object DelAwakening extends Choice
+    case object AddReaction extends Choice
+    case object DelReaction extends Choice
+    case object AddMilitia extends Choice
+    case object DelMilitia extends Choice
+    case object AddCells extends Choice
+    case object DelCells extends Choice
+    case object AddPosture extends Choice
+    case object DelPosture extends Choice
+
     if (isHuman(role)) {
-      sealed trait Choice
-      case object AddAid extends Choice
-      case object DelAid extends Choice
-      case object AddBesieged extends Choice
-      case object DelBesieged extends Choice
-      case object AddAwakening extends Choice
-      case object DelAwakening extends Choice
-      case object AddReaction extends Choice
-      case object DelReaction extends Choice
-      case object AddMilitia extends Choice
-      case object DelMilitia extends Choice
-      case object AddCells extends Choice
-      case object DelCells extends Choice
-      case object AddPosture extends Choice
-      case object DelPosture extends Choice
       val name = askCountry("Select country: ", CandidateCountries)
       val choices = game.getCountry(name) match {
         case m: MuslimCountry =>
@@ -167,6 +216,51 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
         }
       }
     }
+    else if (role == Jihadist && game.botEnhancements) {
+      val priorites = List(
+        JihadistBot.IsMajorJihadPriority,
+        JihadistBot.HighestResourcePriority
+      )
+      def priorityTarget(candidates: List[String]) = JihadistBot.topPriority(candidates.map(game.getCountry), priorites)
+        .map(_.name)
+        .get
+
+      if (awakeReactCandidates.nonEmpty) {
+        val target = priorityTarget(awakeReactCandidates)
+        addEventTarget(target)
+        addReactionMarker(target)
+      }
+      else if (removeAwakeningCandidates.nonEmpty) {
+        val target = priorityTarget(removeAwakeningCandidates)
+        addEventTarget(target)
+        removeReactionMarker(target)
+      }
+      else if (removeTwoMilitiaCandidates.nonEmpty) {
+        val target = priorityTarget(removeTwoMilitiaCandidates)
+        addEventTarget(target)
+        removeMilitiaFromCountry(target, 2)
+      }
+      else if (removeHardPostureCandidates.nonEmpty) {
+        val target = priorityTarget(removeHardPostureCandidates)
+        addEventTarget(target)
+        setCountryToUntested(target)
+      }
+      else if (game.cellsAvailable > 0) {
+        val target = priorityTarget(muslimCandidates)
+        addEventTarget(target)
+        addSleeperCellsToCountry(target, 2 max game.cellsAvailable)
+      }
+      else if (removeAidCandidates.nonEmpty) {
+        val target = priorityTarget(removeAidCandidates)
+        addEventTarget(target)
+        removeAidMarker(target, 1)
+      }
+      else {
+        val target = priorityTarget(removeSoftPostureCandidates)
+        addEventTarget(target)
+        setCountryToUntested(target)
+      }
+    }
     else if (role == Jihadist ) {
       // Jihadist Bot only affects cells or reaction markers.
       if (game.cellsAvailable > 0) {
@@ -175,15 +269,15 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
         addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
       }
       else {
-        val name = JihadistBot.markerTarget(awakeReactCandidates()).get
+        val name = JihadistBot.markerTarget(awakeReactCandidates).get
         addEventTarget(name)
         addReactionMarker(name)
       }
     }
     else {  // US Bot
-      removeCellsCandidates() match {
+      removeCellsCandidates match {
         case Nil =>
-          val name = USBot.markerAlignGovTarget(awakeReactCandidates()).get
+          val name = USBot.markerAlignGovTarget(awakeReactCandidates).get
           addEventTarget(name)
           removeReactionMarker(name)
 

@@ -90,8 +90,8 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
   override
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
-    if (role == Jihadist) {
-      if (isHuman(role)) {
+    role match {
+      case Jihadist if isHuman(role) =>
         sealed trait Choice
         case object PlaceCell extends Choice
         case object PlacePlot extends Choice
@@ -106,8 +106,17 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
           case PlaceCell => addActiveCellsToCountry(name, 1)
           case PlacePlot => addAvailablePlotToCountry(name, Plot1)
         }
-      }
-      else {  // Jihadist Bot
+
+      case Jihadist if game.botEnhancements => // Enhanced Bot
+        // Place plot 1 in US, if Plot 1 available.
+        // Otherwise, place active cell in the US
+        addEventTarget(UnitedStates)
+        if (game.availablePlots.contains(Plot1))
+          addAvailablePlotToCountry(UnitedStates, Plot1, visible = true)
+        else
+          addActiveCellsToCountry(UnitedStates, 1)
+
+      case Jihadist => // Standard Bot
         // If we have both a cell and a Plot1 available:
         // Place a cell if an WMD plot is available or if funding >= 8
         // Otherwise place a Plot1
@@ -122,10 +131,8 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
           case _ =>
             addAvailablePlotToCountry(UnitedStates, Plot1, visible = true)
         }
-      }
-    }
-    else {  // US
-      if (isHuman(role)) {
+
+      case US if isHuman(role) =>
         sealed trait Choice
         case object RemoveCell extends Choice
         case object RemoveCadre extends Choice
@@ -149,8 +156,8 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
           case AlertPlot =>
             performAlert(name, humanPickPlotToAlert(name))
         }
-      }
-      else {  // US Bot
+        
+      case US =>  // Standard Bot
         // Top priority is removing last cell on the map if possible
         if (eventRemovesLastCell()) {
           val c = game.getCountry(getRemoveCellCandidates.head)
@@ -173,9 +180,7 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
           }
           else
             removeCadresFromCountry(name, 1)
-
         }
-      }
-    }
+    }      
   }
 }

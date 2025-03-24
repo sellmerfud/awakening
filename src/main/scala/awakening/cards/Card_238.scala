@@ -1,3 +1,4 @@
+
 //  _          _                _       _   _
 // | |    __ _| |__  _   _ _ __(_)_ __ | |_| |__
 // | |   / _` | '_ \| | | | '__| | '_ \| __| '_ \
@@ -56,9 +57,22 @@ object Card_238 extends Card(238, "Revolution", Unassociated, 3, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(
-    game.muslims.filter(m => m.isPoor && m.awakening > 0 && m.reaction > 0)
-  )
+  val isCandidate = (m: MuslimCountry) =>
+    m.isPoor &&
+    m.awakening > 0 &&
+    m.reaction > 0
+
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
+
+    // Playable in non-RC, 2+ resource* countries with reaction-awakening<1.
+  def enhJihadistBotCandidates = game.muslims
+    .filter { m =>
+      isCandidate(m) &&
+      !m.inRegimeChange &&
+      JihadistBot.enhBotResourceValue(m) >= 2 &&
+      m.reaction - m.awakening < 1
+    }
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
@@ -67,7 +81,12 @@ object Card_238 extends Card(238, "Revolution", Unassociated, 3, NoRemove, NoLap
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements =>
+      enhJihadistBotCandidates.nonEmpty
+    case _ =>
+      true // Standard Bot always play the event
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -76,9 +95,25 @@ object Card_238 extends Card(238, "Revolution", Unassociated, 3, NoRemove, NoLap
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     val name = role match {
-      case _ if isHuman(role) => askCountry("Select country: ", getCandidates)
-      case US => USBot.revolutionTarget(getCandidates).get
-      case Jihadist => JihadistBot.revolutionTarget(getCandidates).get
+      case _ if isHuman(role) =>
+        askCountry("Select country: ", getCandidates)
+
+      case US =>
+        USBot.revolutionTarget(getCandidates).get
+
+      case Jihadist if game.botEnhancements =>
+        // Priority to highest resource*, then worst reaction-awakening, then most cells.
+        val priorities = List(
+          JihadistBot.HighestPrintedResourcePriority,
+          JihadistBot.WorstReactionMinusAwakening,
+          JihadistBot.MostCellsPriority,
+        )
+        JihadistBot.topPriority(enhJihadistBotCandidates, priorities)
+          .map(_.name)
+          .get
+
+      case Jihadist =>
+        JihadistBot.revolutionTarget(getCandidates).get
     }
     addEventTarget(name)
     startCivilWar(name)

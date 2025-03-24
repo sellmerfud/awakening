@@ -248,7 +248,7 @@ object JihadistBot extends BotHelpers {
 
     lazy val hardNonMuslims = nonMuslims.filter(_.isHard)
 
-    lazy val fair3ResourceMuslimes = muslims.filter(m => m.isFair && m.resourceValue >= 3)
+    lazy val fair3ResourceMuslims = muslims.filter(m => m.isFair && m.resourceValue >= 3)
 
     lazy val fairPakistan = muslims.exists(m => m.name == Pakistan && m.isFair)
 
@@ -291,8 +291,8 @@ object JihadistBot extends BotHelpers {
         new HighestScorePriority("Highest Governance Value", _.governance))
       topPriority(nonMuslims, priorities).map(_.name)
     }
-    else if (fair3ResourceMuslimes.nonEmpty)
-      topPriority(fair3ResourceMuslimes, plotPriorities).map(_.name)
+    else if (fair3ResourceMuslims.nonEmpty)
+      topPriority(fair3ResourceMuslims, plotPriorities).map(_.name)
     else if (fairPakistan)
       Some(Pakistan)
     else if (martyrdom && game.funding < 8 && poorMuslims.nonEmpty) {
@@ -581,6 +581,23 @@ object JihadistBot extends BotHelpers {
     muslimTest(m => (m.isPoor || m.isUntested) && enhBotResourceValue(m) >= 2)
   )
 
+  val MostMilitiaPriority = new HighestScorePriority(
+    "Most Militia",
+    muslimScore(m => m.militia)
+  )
+
+  val IsMajorJihadPriority = new CriteriaFilter(
+    "Is Major Jihad Priority",
+    c => Some(c.name) == JihadistBot.majorJihadPriorityCountry
+  )
+
+  val AdjacentToMajorJihadPriority = new CriteriaFilter(
+    "Adjacent to Major Jihad Priority",
+    c => JihadistBot.majorJihadPriorityCountry
+      .map(mjp => areAdjacent(mjp, c.name))
+      .getOrElse(false)
+  )
+
   val HighestGovernance = new HighestScorePriority(
     "Highest Governance",
     muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)
@@ -641,6 +658,11 @@ object JihadistBot extends BotHelpers {
   val AutoRecruitNoTandMFilter = new CriteriaFilter(
     "Auto recruit with no TandM",
     muslimTest(m => m.autoRecruit && m.totalTroopsAndMilitia == 0)
+  )
+
+  val WorstReactionMinusAwakening = new LowestScorePriority(
+    "Worst reaction - awakening delta",
+    muslimScore(m => m.reaction - m.awakening)
   )
 
   // Used with botEnhancements
@@ -817,7 +839,7 @@ object JihadistBot extends BotHelpers {
         case ns =>
           ns
       }
-      val narrowed = narrowCountries(candidates, priorities)
+      val narrowed = narrowCandidates(candidates, priorities)
       shuffle(narrowed).map(_.name).headOption
     }
     else
@@ -1197,7 +1219,7 @@ object JihadistBot extends BotHelpers {
         // If we still have  more than one candidate, then select the
         // first one alphabetically.  (Note: countryNames alphabetizes the list)
         // We do this so that we always select same target.
-        countryNames(narrowCountries(candidates, priorities, allowBotLog = false)).headOption
+        countryNames(narrowCandidates(candidates, priorities, allowBotLog = false)).headOption
     }
   }
 
@@ -1792,22 +1814,6 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
 
     botLog("Find \"UN Ceasefire\" target", Color.Debug)
-    topPriority(game.getCountries(names), priorities).map(_.name)
-  }
-
-  // Bot will not execute this in the Caliphate capital
-  def qadhafiCandidates: List[String] =
-    game.muslims
-      .filter(m => m.civilWar && !m.caliphateCapital && m.totalCells > m.totalTroopsAndMilitia)
-      .map(_.name)
-
-  def qadhafiTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      new CriteriaFilter("Not Caliphate Capital", muslimTest(!_.caliphateCapital)),
-      new CriteriaFilter("Cells > TandM", muslimTest(m => m.totalCells > m.totalTroopsAndMilitia)),
-      HighestResourcePriority)
-
-    botLog("Find \"Qadhafi\" target", Color.Debug)
     topPriority(game.getCountries(names), priorities).map(_.name)
   }
 

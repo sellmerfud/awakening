@@ -68,6 +68,7 @@ object Card_216 extends Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2, USRemove
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => game.prestige < 12 || game.funding > 1
+    case Jihadist if game.botEnhancements => game.funding < 8
     case Jihadist => game.funding < 9
   }
 

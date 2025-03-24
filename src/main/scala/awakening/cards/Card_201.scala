@@ -74,6 +74,7 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => canPlaceMilitia
+    case Jihadist if game.botEnhancements => game.cellsAvailable > 1 && canPlaceCells
     case Jihadist => canPlaceCells
   }
 

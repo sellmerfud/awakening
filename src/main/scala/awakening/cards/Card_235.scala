@@ -59,6 +59,23 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
 
   def getCandidates = countryNames(game.muslims.filter(_.civilWar))
 
+  def usBotQadhafiCandidates =
+    game.muslims
+      .filter(m => m.civilWar && m.totalTroopsAndMilitia > m.totalCells)
+    
+  // Bot will not execute this in the Caliphate capital
+  def jihadistBotQadhafiCandidates =
+    game.muslims
+      .filter(m => m.civilWar && !m.caliphateCapital && m.totalCells > m.totalTroopsAndMilitia)
+
+  def enhJihadistBotCandidates = game.muslims
+    .filter { m =>
+      m.civilWar &&
+      JihadistBot.enhBotResourceValue(m) >= 2 &&
+      !m.isAdversary &&
+      !game.isCaliphateMember(m.name) &&
+      m.totalCells > m.totalTroopsAndMilitia
+    }
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
@@ -69,8 +86,13 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => USBot.qadhafiCandidates.nonEmpty
-    case Jihadist => JihadistBot.qadhafiCandidates.nonEmpty
+    case US =>
+      usBotQadhafiCandidates.nonEmpty
+    case Jihadist if game.botEnhancements =>
+      // Playable in 2+ resource*, non-adversary, non-Caliphate CW countries with Cells>TandM available.
+      enhJihadistBotCandidates.nonEmpty
+    case Jihadist =>
+      jihadistBotQadhafiCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -79,9 +101,42 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
   override
   def executeEvent(role: Role): Unit = {
     val name = role match {
-      case _ if isHuman(role) => askCountry("Select country in Civil War: ", getCandidates)
-      case US => USBot.qadhafiTarget(USBot.qadhafiCandidates).get
-      case Jihadist => JihadistBot.qadhafiTarget(JihadistBot.qadhafiCandidates).get
+      case _ if isHuman(role) =>
+        askCountry("Select country in Civil War: ", getCandidates)
+      case US =>
+        val priorities = List(
+          new USBot.CriteriaFilter(
+            "TandM > Cells",
+            USBot.muslimTest(m => m.totalTroopsAndMilitia > m.totalCells)),
+          USBot.HighestResourcePriority)
+      
+        USBot.topPriority(usBotQadhafiCandidates, priorities)
+          .map(_.name)
+          .get
+
+      case Jihadist if game.botEnhancements =>
+        val priorities = List(
+          JihadistBot.IsMajorJihadPriority,
+          JihadistBot.FairPriority,
+          JihadistBot.MostMilitiaPriority,
+        )
+        JihadistBot.topPriority(jihadistBotQadhafiCandidates, priorities)
+          .map(_.name)
+          .get
+
+      case Jihadist =>
+        val priorities = List(
+          new JihadistBot.CriteriaFilter(
+            "Not Caliphate Capital",
+            JihadistBot.muslimTest(!_.caliphateCapital)),
+          new JihadistBot.CriteriaFilter(
+            "Cells > TandM",
+            JihadistBot.muslimTest(m => m.totalCells > m.totalTroopsAndMilitia)),
+          JihadistBot.HighestResourcePriority)
+
+        JihadistBot.topPriority(jihadistBotQadhafiCandidates, priorities)
+          .map(_.name)
+          .get
     }
 
     val m = game.getMuslim(name)

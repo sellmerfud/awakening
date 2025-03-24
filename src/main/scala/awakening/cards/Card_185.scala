@@ -99,8 +99,8 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
 
       // When triggered during US turn preferred canidates may be empty
       val candidates = getBotCandidates match {
-        case Nil => JihadistBot.narrowCandidates(getCandidates, eventPriorities, allowBotLog = false)
-        case c => JihadistBot.narrowCandidates(c, eventPriorities, allowBotLog = false)
+        case Nil => JihadistBot.narrowCountries(getCandidates, eventPriorities, allowBotLog = false)
+        case c => JihadistBot.narrowCountries(c, eventPriorities, allowBotLog = false)
       }
 
       JihadistBot.troopsMilitiaTarget(candidates).get

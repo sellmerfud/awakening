@@ -66,7 +66,15 @@ object Card_223 extends Card(223, "Iranian Elections", Unassociated, 2, Remove, 
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements =>
+      // Playable if no Reaction markers on board and Arab Winter not active
+      lapsingEventNotInPlay(ArabWinter) && !game.hasMuslim(_.reaction > 1)
+
+    case _ =>
+      // Standard Bots always play the event
+      true
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

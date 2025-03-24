@@ -49,7 +49,29 @@ object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLaps
 
   val ValidCards = List(37, 39, 165, 188, 234, 133, 226, 238, 167, 152, 272, 277, 293)
 
-  def cardCandidates() = game.cardsDiscarded.filter(ValidCards.contains)
+  def cardCandidates = game.cardsDiscarded.filter(ValidCards.contains)
+
+  // Priority from top to bottom:
+  // #234 Free Syrian Army (if Syria [Good])
+  // #188 ISIL
+  // #238 Revolution
+  // #152 Congress Acts
+  // #167 Houthi Rebels (if 2+ cells on track,Yemen [Poor and Reaction-Awakening<1] and Iran not Ally)
+  def enhJihadistBotCandidates = {
+    List(234, 188, 238, 152, 167)
+      .filter {
+        case 234 =>
+          game.getMuslim(Syria).isGood
+        case 167 =>
+          val yemen = game.getMuslim(Yemen)
+          game.cellsAvailable > 1 &&
+          yemen.isPoor &&
+          yemen.reaction - yemen.awakening < 1 &&
+          (game.isNonMuslim(Iran) || !game.getMuslim(Iran).isAlly)
+        case _ =>
+          true
+      }
+  }
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
@@ -63,13 +85,16 @@ object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLaps
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = cardCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = cardCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements => enhJihadistBotCandidates.nonEmpty
+    case _ => true
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -80,16 +105,22 @@ object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLaps
     log(s"\nThe $role player draws from the discard pile a card that either", Color.Event)
     log(s"causes Civil War or allows a Regime change.", Color.Event)
     if (isHuman(role)) {
-      askCardDrawnFromDiscardPile(role, only = cardCandidates().toSet)
+      askCardDrawnFromDiscardPile(role, only = cardCandidates.toSet)
         .map(deck(_).numAndName)
         .foreach { cardDisplay =>
           log(s"\nAdd $cardDisplay to your hand.", Color.Event)
         }
     }
     else {
-      // Bot take candidate card nearest the bottom of the discard pile
-      val candidates = cardCandidates().toSet
-      val cardNum = game.cardsDiscarded.reverse.find(candidates.contains).get
+      // Enhanced Bot will take first availabe card in its priority list
+      // Other Bots take candidate card nearest the bottom of the discard pile
+      val cardNum = if (role == Jihadist && game.botEnhancements)
+        enhJihadistBotCandidates.head
+      else {
+        val candidates = cardCandidates.toSet
+        game.cardsDiscarded.reverse.find(candidates.contains).get
+      }
+      
       processCardDrawn(role, cardNum, FromDiscard)
       log(s"\nTake ${cardNumAndName(cardNum)} from the discard pile and", Color.Event)
       if (role == Jihadist && game.botEnhancements)

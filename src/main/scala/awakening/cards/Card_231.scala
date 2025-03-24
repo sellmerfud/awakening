@@ -125,6 +125,20 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
             removeMilitiaFromCountry(name, 2 min (game getMuslim name).militia)
         }
 
+      case Militia if game.botEnhancements =>
+        // Priority to MJP, then Poor, then highest Res, then most militia.
+        val priorities = List(
+          JihadistBot.IsMajorJihadPriority,
+          JihadistBot.PoorPriority,
+          JihadistBot.HighestPrintedResourcePriority,
+          JihadistBot.MostMilitiaPriority,
+        )
+        val name = JihadistBot.topPriority(game.getCountries(getMilitiaCandidates), priorities)
+          .map(_.name)
+          .get
+        addEventTarget(name)
+        removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
+
       case Militia =>
         val name = JihadistBot.minorJihadTarget(getMilitiaCandidates).get
         addEventTarget(name)

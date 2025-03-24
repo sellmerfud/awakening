@@ -77,6 +77,20 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
 
   def getJihadistAlignCandidates = countryNames(game.muslims.filter(isJihadistAlignCandidate))
 
+  // Enhanced Bot requires canidates to be either:
+  //   - The Major Jihad Priority
+  //   - Adjacent to the Major Jihad Priority
+  //   - In Civil War
+  def enhJihadistBotCellCandidates = {
+    val isEnhCandidate = (m: MuslimCountry) =>
+      isCandidate(Jihadist)(m) && (
+        Some(m.name) == JihadistBot.majorJihadPriorityCountry ||
+        JihadistBot.majorJihadPriorityCountry.map(mjp => areAdjacent(mjp, m.name)).getOrElse(false) ||
+        m.civilWar
+      )
+    game.muslims.filter(isCandidate(Jihadist))
+  }
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates(role).nonEmpty
@@ -87,6 +101,8 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => getUSAlignCandidates.nonEmpty || getUSAwakeningCandidates.nonEmpty
+    case Jihadist if game.botEnhancements =>
+      getJihadistAlignCandidates.nonEmpty || enhJihadistBotCellCandidates.nonEmpty
     case Jihadist => true
   }
 
@@ -149,6 +165,34 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
 
           case (candidates, _)  =>
             (USBot.markerAlignGovTarget(candidates).get, Some(ShiftLeft), Nil)
+        }
+
+      case Jihadist if game.botEnhancements => // Enhanced Bot
+        if (getJihadistAlignCandidates.nonEmpty) {
+          // priority to MJP, then Neutral, then RC, then CW, then continue with Recruit/Travel To column of Priorities Table
+          val priorities = List(
+            JihadistBot.IsMajorJihadPriority,
+            JihadistBot.NeutralPriority,
+            JihadistBot.RegimeChangePriority,
+            JihadistBot.CivilWarPriority
+          )
+          val cadidates = JihadistBot.narrowCandidates(game.getMuslims(getJihadistAlignCandidates), priorities).map(_.name)
+          val target = JihadistBot.recruitTravelToPriority(cadidates).get
+          (target, Some(ShiftRight), Nil)
+        }
+        else {
+          val priorities = List(
+            JihadistBot.IsMajorJihadPriority,
+            JihadistBot.AdjacentToMajorJihadPriority,
+            JihadistBot.CivilWarPriority,
+          )
+          val target = JihadistBot.topPriority(enhJihadistBotCellCandidates, priorities)
+            .map(_.name)
+            .get
+          val isFromCandidate = (c: Country) => JihadistBot.hasCellForTravel(c, target, placement = true)
+          val fromCandidates = countryNames(game.countries.filter(isFromCandidate))
+          val from = JihadistBot.selecCellsToPlace(target, fromCandidates, 2)
+            (target, Some(Cells), from)
         }
 
       case Jihadist => // Bot

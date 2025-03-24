@@ -39,6 +39,7 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 import awakening.{ USBot, JihadistBot }
+import awakening.cards.Card_198.getPostureCandidates
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -77,13 +78,23 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
       }
   }
 
+  def removeCadreCandidates = game.countries.filter(_.hasCadre)
+
+  def enhPlaceCadreCandidates = game.nonMuslims.filter(_.isUntested)
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.reserves.jihadist > 0 || getBotPostureCandidates(US).nonEmpty
-    case Jihadist => game.reserves.us > 0 || getBotPostureCandidates(Jihadist).nonEmpty
+    case US =>
+      game.reserves.jihadist > 0 || getBotPostureCandidates(US).nonEmpty
+    case Jihadist if game.botEnhancements => 
+      game.reserves.us > 0 ||
+      (getBotPostureCandidates(Jihadist).nonEmpty && postureChangeWouldMoveGwot) ||
+      (game.usPosture == Hard && enhPlaceCadreCandidates.nonEmpty)
+    case Jihadist =>
+      game.reserves.us > 0 || getBotPostureCandidates(Jihadist).nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -102,10 +113,10 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
       game.reserves.us
     val cadres = game.hasCountry(_.hasCadre)
     val choices = List(
-      choice(resValue > 0, Reserves, s"Steal opponent's ${amountOf(resValue,"reserve Op")}"),
-      choice(true,         Posture,  "Set the posture of China, Russia, or India"),
-      choice(true,         PlaceCadre,    "Place a cadre"),
-      choice(cadres,       RemoveCadre,   "Remove a cadre")
+      choice(resValue > 0,                   Reserves,   s"Steal opponent's ${amountOf(resValue,"reserve Op")}"),
+      choice(true,                           Posture,     "Set the posture of China, Russia, or India"),
+      choice(true,                           PlaceCadre,  "Place a cadre"),
+      choice(removeCadreCandidates.nonEmpty, RemoveCadre, "Remove a cadre")
     ).flatten
 
     if (isHuman(role)) {
@@ -121,16 +132,54 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
           setCountryPosture(name, posture)
 
         case PlaceCadre =>
-          val candidates = countryNames(game.countries.filter(c => !c.hasCadre))
+          val candidates = countryNames(game.countries)
           val name = askCountry("Place a cadre in which country? ", candidates)
           addEventTarget(name)
           addCadreToCountry(name)
 
         case RemoveCadre =>
-          val candidates = countryNames(game.countries.filter(c => c.hasCadre ))
+          val candidates = countryNames(removeCadreCandidates)
           val name = askCountry("Remove cadre from which country? ", candidates)
           addEventTarget(name)
           removeCadresFromCountry(name, 1)
+      }
+    }
+    else if (role == US) {
+      // US Bot
+      if (resValue > 0) {
+        clearReserves(role.opponent)
+        addToReserves(role, resValue)
+      }
+      else {
+        val name = USBot.markerAlignGovTarget(getBotPostureCandidates(role)).get
+        addEventTarget(name)
+        setCountryPosture(name, game.usPosture)
+      }
+    }
+    else if (game.botEnhancements) {
+      if (resValue > 0) {
+        clearReserves(role.opponent)
+        addToReserves(role, resValue)
+      }
+      else if (getBotPostureCandidates(Jihadist).nonEmpty && postureChangeWouldMoveGwot) {
+        // priority to biggest shift of GWOT marker, then highest Gov.
+        val priorities = List(
+          new JihadistBot.CriteriaFilter("Untested Non-Muslim", JihadistBot.nonMuslimTest(_.isUntested)),
+          JihadistBot.HighestGovernance
+        )
+        val target = JihadistBot.topPriority(game.getNonMuslims(getBotPostureCandidates(Jihadist)), priorities)
+          .map(_.name)
+          .get
+        addEventTarget(target)
+        setCountryPosture(target, oppositePosture(game.usPosture))
+      }
+      else {
+        val priorities = List(JihadistBot.HighestGovernance)
+        val target = JihadistBot.topPriority(enhPlaceCadreCandidates, priorities)
+          .map(_.name)
+          .get
+        addEventTarget(target)
+        addCadreToCountry(target)
       }
     }
     else {
@@ -140,11 +189,6 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
         case Nil =>
           clearReserves(role.opponent)
           addToReserves(role, resValue)
-
-        case candidates if role == US =>
-          val name = USBot.markerAlignGovTarget(candidates).get
-          addEventTarget(name)
-          setCountryPosture(name, game.usPosture)
 
         case candidates =>
           val name = JihadistBot.alignGovTarget(candidates).get

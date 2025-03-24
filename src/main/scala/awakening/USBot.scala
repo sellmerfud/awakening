@@ -1070,20 +1070,6 @@ object USBot extends BotHelpers {
     topPriority(game getMuslims names, priorities).map(_.name)
   }
   
-  def qadhafiCandidates: List[String] =
-    game.muslims
-      .filter(m => m.civilWar && m.totalTroopsAndMilitia > m.totalCells)
-      .map(_.name)
-    
-  def qadhafiTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      new CriteriaFilter("TandM > Cells", muslimTest(m => m.totalTroopsAndMilitia > m.totalCells)),
-      HighestResourcePriority)
-      
-    botLog("Find \"Qadhafi\" target", Color.Debug)
-    topPriority(game getMuslims names, priorities).map(_.name)
-  }
-  
   def revolutionTarget(names: List[String]): Option[String] = {
     val priorities = List(
       new HighestScorePriority("Highest reaction - awakening", muslimScore(_.reactionDelta)),

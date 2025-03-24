@@ -95,6 +95,7 @@ object Card_233 extends Card(233, "UN Ceasefire", Unassociated, 2, NoRemove, NoL
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => getUSBotCandidates.nonEmpty
+    case Jihadist if game.botEnhancements => false
     case Jihadist => getJihadistBotCandidates.nonEmpty
   }
 

@@ -161,7 +161,7 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
   def botCardDraw(role: Role): Unit = {
     val enhCandidates = enhancedJihadistBotEntries()
     val cardNum = if (role == Jihadist && game.botEnhancements && enhCandidates.nonEmpty)
-      Some(enhancedJihadistBotEntries().head)
+      Some(enhCandidates.head)
     else if (candidateCards(role).nonEmpty) {
       val highOps = candidateCards(role).map(_.printedOps).max
       Some(shuffle(candidateCards(role).filter(_.printedOps == highOps).map(_.number)).head)
@@ -224,6 +224,11 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
     if (isHuman(role)) {
       if (game.cardsDiscarded.nonEmpty || game.cardsLapsing().nonEmpty || game.firstPlotCard().nonEmpty)
         askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236))
+          .foreach { cardNum =>
+            val cardDisplay = deck(cardNum).numAndName
+            log(s"\n$role selects $cardDisplay", Color.Event)
+            displayLine(s"\nAdd $cardDisplay to your ($role) hand", Color.Info)
+          }
     }
     else
       botCardDraw(role)
