@@ -57,7 +57,7 @@ object Card_258 extends Card(258, "75th Ranger Regiment", US, 2, NoRemove, NoLap
   def eventRemovesLastCell(): Boolean =
     getCandidates.exists(name => USBot.wouldRemoveLastCell(name, 2))
 
-  def getCandidates = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar && m.totalCells > 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override

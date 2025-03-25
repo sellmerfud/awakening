@@ -53,9 +53,9 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def removeCellCandidates() = countryNames(game.countries.filter(_.totalCells > 0))
+  def removeCellCandidates() = countryNames(game.countries.filter(c => !c.truce && c.totalCells > 0))
 
-  def placeCellCandidates() = countryNames(game.muslims)
+  def placeCellCandidates() = countryNames(game.muslims.filter(!_.truce))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.

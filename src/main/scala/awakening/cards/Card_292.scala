@@ -58,13 +58,13 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
 
   // Note: The code only allows 1 cadre marker per country.
   // I have since realized that this is incorrect.
-  def getCandidates = countryNames(game.countries)
+  def getCandidates = countryNames(game.countries.filter(!_.truce))
 
   def getBotCandidates = {
     val isCandidate = if (game.botEnhancements)
-      (c: Country) => !c.hasCadre && c.totalCells == 0 && !JihadistBot.isCadreRemovalCandidate(c)
+      (c: Country) => !c.truce && !c.hasCadre && c.totalCells == 0 && !JihadistBot.isCadreRemovalCandidate(c)
     else
-      (c: Country) => !c.hasCadre && c.totalCells == 0
+      (c: Country) => !c.truce && !c.hasCadre && c.totalCells == 0
     countryNames(game.countries.filter(isCandidate))
   }
 

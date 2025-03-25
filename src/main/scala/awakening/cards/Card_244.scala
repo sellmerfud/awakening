@@ -56,18 +56,17 @@ object Card_244 extends Card(244, "Foreign Internal Defense", US, 1, NoRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val meetsCriteria = (m: MuslimCountry) =>
-    m.alignment != Adversary &&
-    m.totalCells > 0
-
   val isCandidate = (m: MuslimCountry) =>
-    meetsCriteria(m) && m.canTakeMilitia
+    !m.truce &&
+    m.alignment != Adversary &&
+    m.totalCells > 0 &&
+    m.canTakeMilitia
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = game.hasMuslim(meetsCriteria)
+  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

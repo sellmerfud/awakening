@@ -73,7 +73,7 @@ object Card_134 extends Card(134, "Civil Resistance", US, 2, NoRemove, NoLapsing
   override
   def executeEvent(role: Role): Unit = {
     var markerPlaced = false
-    val sunnis = countryNames(game.muslims.filter(m => m.isSunni && m.canTakeAwakeningOrReactionMarker))
+    val sunnis = countryNames(game.muslims.filter(m => !m.truce && m.isSunni && m.canTakeAwakeningOrReactionMarker))
     if (sunnis.nonEmpty) {  // This should never happen, but let's be defensive
       val sunniTarget = if (isHuman(role))
         askCountry("Select a Sunni country: ", sunnis)
@@ -86,9 +86,11 @@ object Card_134 extends Card(134, "Civil Resistance", US, 2, NoRemove, NoLapsing
       markerPlaced = true
     }
 
-    if (randomShiaMixList.exists(_.canTakeAwakeningOrReactionMarker)) {
+    val shiaMixTest = (m: MuslimCountry) => !m.truce && m.canTakeAwakeningOrReactionMarker
+
+    if (randomShiaMixList.exists(shiaMixTest)) {
       if (game.manualDieRolls) {
-        val candidates = countryNames(randomShiaMixList.filter(_.canTakeAwakeningOrReactionMarker))
+        val candidates = countryNames(randomShiaMixList.filter(shiaMixTest))
         val shiaMix = askCountry(
           "Select \"Random Shia Mix\" country to receive Awakening marker: ",
           candidates,
@@ -101,7 +103,7 @@ object Card_134 extends Card(134, "Civil Resistance", US, 2, NoRemove, NoLapsing
       else {
         def doRandomShiaMix: Unit = {
           val shiaMix = randomShiaMixCountry
-          if (shiaMix.canTakeAwakeningOrReactionMarker) {
+          if (shiaMixTest(shiaMix)) {
             println()
             addEventTarget(shiaMix.name)
             addAwakeningMarker(shiaMix.name)

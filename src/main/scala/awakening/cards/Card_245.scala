@@ -60,8 +60,8 @@ object Card_245 extends Card(245, "Green Movement 2.0", US, 1, NoRemove, NoLapsi
   override
   def eventConditionsMet(role: Role) =
     game.getCountry(Iran) match {
-      case m: MuslimCountry => !(m.isIslamistRule || game.isCaliphateMember(Iran))
-      case n: NonMuslimCountry => false // Iran is special cas
+      case m: MuslimCountry => !m.truce && !(m.isIslamistRule || game.isCaliphateMember(Iran))
+      case n: NonMuslimCountry => false // Iran is special case
     }
 
   // Returns true if the Bot associated with the given role will execute the event

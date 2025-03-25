@@ -83,8 +83,13 @@ object Card_290 extends Card(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoL
     log(s"\nDie roll: $die - ${resultMsgs((die - 1) / 2)}", Color.Event)
     die match {
       case 1 | 2 =>
-        addEventTarget(CentralAsia)
-        addReactionMarker(CentralAsia)
+        if (game.getMuslim(CentralAsia).truce) {
+          log(s"\nCannot place reaction marker in $CentralAsia because it is under TRUCE.", Color.Event)
+        }
+        else {
+          addEventTarget(CentralAsia)
+          addReactionMarker(CentralAsia)
+        }
 
       case 3 | 4 =>
         if (game.cellsAvailable > 0) {

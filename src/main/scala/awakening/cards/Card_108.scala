@@ -61,6 +61,7 @@ object Card_108 extends Card(108, "Musharraf", Unassociated, 2, NoRemove, NoLaps
   override
   def eventConditionsMet(role: Role) =
     countryEventNotInPlay(Pakistan, BenazirBhutto) &&
+    !game.getMuslim(Pakistan).truce &&
     game.getMuslim(Pakistan).totalCells > 0
 
   // Returns true if the Bot associated with the given role will execute the event

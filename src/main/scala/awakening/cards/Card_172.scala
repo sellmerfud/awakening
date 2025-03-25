@@ -74,10 +74,12 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
     c.asInstanceOf[MuslimCountry].canTakeBesiegedRegimeMarker
 
   val isCandidate = (c: Country) =>
-    game.cellsAvailable > 0 ||
-    game.availablePlots.exists(p => p == Plot1 || p == Plot2) ||
-    canPlaceBesiegedRegime(c) ||
-    canPlaceReaction(c)
+    !c.truce && (
+      game.cellsAvailable > 0 ||
+      game.availablePlots.exists(p => p == Plot1 || p == Plot2) ||
+      canPlaceBesiegedRegime(c) ||
+      canPlaceReaction(c)
+    )
 
   def getCandidates = PossibleCountries.filter(name => isCandidate(game.getCountry(name)))
 

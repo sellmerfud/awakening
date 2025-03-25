@@ -59,6 +59,9 @@ object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLa
 
   def getCandidates = (game.targetsThisPhase.disrupted ++ game.targetsLastPhase.disrupted).toList.sorted
 
+  def cellCandidates = getCandidates
+    .filter(name => !game.getCountry(name).truce)
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
@@ -77,16 +80,18 @@ object Card_061 extends Card(61, "Detainee Release", Jihadist, 2, NoRemove, NoLa
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (game.cellsAvailable > 0) {
+    if (cellCandidates.isEmpty)
+      log(s"\nCannot place cell in ${getCandidates.head} because of TRUCE", Color.Event)
+    else if (game.cellsAvailable == 0)
+      log(s"\nThere are no cells available to place on the map", Color.Event)
+    else {
       val name = if (isHuman(role))
-        askCountry("Select country where disrupt occurred: ", getCandidates)
+        askCountry("Select country where disrupt occurred: ", cellCandidates)
       else
-        JihadistBot.cellPlacementPriority(false)(getCandidates).get
+        JihadistBot.cellPlacementPriority(false)(cellCandidates).get
       addEventTarget(name)
       addSleeperCellsToCountry(name, 1)
     }
-    else
-      log(s"\nThere are no cells available to place on the map", Color.Event)
 
     log(s"\nThe $role player draws a card.", Color.Event)
     askCardDrawnFromDrawPile(role)

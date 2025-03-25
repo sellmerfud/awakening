@@ -47,7 +47,7 @@ object Card_022 extends Card(22, "Mossad & Shin Bet", US, 2, NoRemove, NoLapsing
 
   def getCandidates = countryNames(
     game.getCountries(Israel::Jordan::Lebanon::Nil)
-      .filter(_.totalCells > 0)
+      .filter(c => !c.truce && c.totalCells > 0)
   )
 
   // Used by the US Bot to determine if the executing the event would alert a plot

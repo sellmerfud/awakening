@@ -53,7 +53,7 @@ object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLap
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   def getCandidates = countryNames(
-    game.muslims.filter(m => !m.isIslamistRule && m.totalCells > 0)
+    game.muslims.filter(m => !m.truce && !m.isIslamistRule && m.totalCells > 0)
   )
 
   // Used by the US Bot to determine if the executing the event would remove

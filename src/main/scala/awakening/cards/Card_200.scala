@@ -61,8 +61,8 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
   def eventRemovesLastCell(): Boolean = false
 
   def isCandidate(role: Role) = role match {
-    case US => (m: MuslimCountry) => m.isFair && m.resourceValue > 1
-    case Jihadist => (m: MuslimCountry) => m.isPoor && m.resourceValue < 3
+    case US => (m: MuslimCountry) => !m.truce && m.isFair && m.resourceValue > 1
+    case Jihadist => (m: MuslimCountry) => !m.truce && m.isPoor && m.resourceValue < 3
   }
 
   val isUSAlignCandidate = (m: MuslimCountry) => isCandidate(US)(m) && !m.isAlly

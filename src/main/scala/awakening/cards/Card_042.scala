@@ -58,6 +58,7 @@ object Card_042 extends Card(42, "Pakistani Offensive", US, 3, NoRemove, NoLapsi
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
+    !game.getMuslim(Pakistan).truce &&
     game.getMuslim(Pakistan).isAlly &&
     countryEventInPlay(Pakistan, FATA)
 

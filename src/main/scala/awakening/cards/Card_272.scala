@@ -72,7 +72,7 @@ object Card_272 extends Card(272, "Fire and Fury", US, 3, Remove, NoLapsing, NoA
   def botWillPlayEvent(role: Role): Boolean = false // Unplayable by Bot
 
   def getCandidates = countryNames(
-      game.muslims.filter(m => m.name != Iran && (m.civilWar || m.isAdversary))
+      game.muslims.filter(m => !m.truce && m.name != Iran && (m.civilWar || m.isAdversary))
   )
 
   // Carry out the event for the given role.

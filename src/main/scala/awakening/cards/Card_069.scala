@@ -61,6 +61,7 @@ object Card_069 extends Card(69, "Kazakh Strain", Jihadist, 2, Remove, NoLapsing
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
+    !game.getCountry(CentralAsia).truce &&
     game.getCountry(CentralAsia).totalCells > 0 &&
     countryEventNotInPlay(CentralAsia, CTR)
 

@@ -75,6 +75,7 @@ object Card_331 extends Card(331, "JASTA", Unassociated, 1, Remove, NoLapsing, N
   def shiftCandidates() = countryNames(
     game.muslims
       .filter { c =>
+        !c.truce &&
         c.alignment != Adversary &&
         (NamedTargets(c.name) || c.totalCells > 1)
       }

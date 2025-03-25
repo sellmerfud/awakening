@@ -55,7 +55,7 @@ object Card_257 extends Card(257, "Women's Rights Activism", US, 1, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(_.reaction > 0))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.reaction > 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override

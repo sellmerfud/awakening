@@ -61,7 +61,9 @@ object Card_220 extends Card(220, "Daraa", Unassociated, 2, Remove, NoLapsing, N
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = !game.getMuslim(Syria).isIslamistRule
+  def eventConditionsMet(role: Role) =
+    !underTruce(Syria) &&
+    !game.getMuslim(Syria).isIslamistRule
 
   def isEffective(role: Role) = {
     val syria = game.getMuslim(Syria)

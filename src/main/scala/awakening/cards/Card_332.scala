@@ -65,9 +65,12 @@ object Card_332 extends Card(332, "Khan Shaykhun Chemical Attack", Unassociated,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.getMuslim(Syria).wmdCache > 0
-    case Jihadist => game.getMuslim(Syria).militia > 0
+  def botWillPlayEvent(role: Role): Boolean = {
+    val syria = game.getMuslim(Syria) 
+    role match {
+    case US => !syria.truce && syria.wmdCache > 0
+    case Jihadist => !syria.truce && syria.militia > 0
+  }
   }
 
   // Carry out the event for the given role.
@@ -75,6 +78,8 @@ object Card_332 extends Card(332, "Khan Shaykhun Chemical Attack", Unassociated,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = role match {
+    case _ if game.getMuslim(Syria).truce =>
+      log(s"\nCannot modify $Syria because it is under TRUCE.", Color.Event)
     case US =>
       addEventTarget(Syria)
       val numWMDs = game.getMuslim(Syria).wmdCache

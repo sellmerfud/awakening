@@ -67,16 +67,19 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
         .filter(x => game.isMuslim(x) && x != Iran)
         .map(game.getMuslim)
       val newCandidates = (gulfCountry :: adjacent)
-        .filter(_.canTakeMilitia)
+        .filter(m => !m.truce && m.canTakeMilitia)
         .map(_.name)
       candidates ++ newCandidates
     }.toList.sorted
 
-  def getRepoCandidates: List[String] =
-    GulfUnionCountries.filter(name => game.getMuslim(name).canTakeMilitia)
+  def getReposCandidates: List[String] =
+    GulfUnionCountries.filter { name =>
+      val gulfCountry = game.getMuslim(name)
+      !gulfCountry.truce && gulfCountry.canTakeMilitia
+    }
 
   def militiaInGulfUnion =
-    GulfUnionCountries.exists(name => game.getMuslim(name).militia > 0)
+    GulfUnionCountries.exists(name => !game.getMuslim(name).truce && game.getMuslim(name).militia > 0)
 
   def getBotPlaceCandidates = getPlaceCandidates
     .filter { name =>
@@ -88,7 +91,7 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
   override
   def eventConditionsMet(role: Role) =
     (game.militiaAvailable > 0 && getPlaceCandidates.nonEmpty) ||
-    (militiaInGulfUnion && getRepoCandidates.size > 1)
+    (militiaInGulfUnion && getReposCandidates.size > 1)
 
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -109,7 +112,7 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
     if (isHuman(role)) {
       // Card allows placing militia or repositioning militia in the Gulf Union countries.
       val place = game.militiaAvailable > 0 && getPlaceCandidates.nonEmpty
-      val repo = militiaInGulfUnion && getRepoCandidates.size > 1
+      val repo = militiaInGulfUnion && getReposCandidates.size > 1
       sealed trait Choice
       case object Place extends Choice
       case object Reposition extends Choice
@@ -132,7 +135,7 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
 
           println("\nThe Gulf Union countries that can take militia are:")
           println(separator())
-          for (name <- getRepoCandidates; num = game.getMuslim(name).militia)
+          for (name <- getReposCandidates; num = game.getMuslim(name).militia)
             println(s"$name: $num militia")
           println()
           println(s"There are a total of $totalMilitia militia in these countries.")
@@ -155,7 +158,7 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
             }
           }
 
-          val placements = nextCountry(getRepoCandidates, totalMilitia)
+          val placements = nextCountry(getReposCandidates, totalMilitia)
           if (placements.forall(_.delta == 0))
             log("\nNo change to the position of the existing militia in the Gulf Union", Color.Event)
           else {

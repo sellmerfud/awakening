@@ -58,6 +58,7 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) => {
+    !m.truce &&
     (m.name == Jordan || m.name == Morocco || (m.isTested && m.isShiaMix)) &&
     !(m.isGood || m.isIslamistRule || m.civilWar || m.inRegimeChange)
   }

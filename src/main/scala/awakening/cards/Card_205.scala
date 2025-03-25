@@ -50,7 +50,7 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
 
   val CandidateCountries = List(Turkey, Serbia, Iraq, Caucasus, Syria, Iran).sorted
 
-  def muslimCandidates = CandidateCountries.filter(game.isMuslim)
+  def muslimCandidates = CandidateCountries.filter(name => !underTruce(name) && game.isMuslim(name))
 
   def nonMuslimCandidates = CandidateCountries.filter(game.isNonMuslim)
 

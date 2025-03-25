@@ -61,6 +61,7 @@ object Card_181 extends Card(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemov
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
+    !underTruce(Iran) &&
     countryEventNotInPlay(Iran, TradeEmbargoUS) &&
     game.getCountry(Iran).totalCells > 0 &&
     game.getCountry(Iran).wmdCache   > 0

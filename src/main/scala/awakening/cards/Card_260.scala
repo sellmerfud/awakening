@@ -61,7 +61,10 @@ object Card_260 extends Card(260, "Imran Khan", US, 2, Remove, NoLapsing, NoAuto
   override
   def eventConditionsMet(role: Role) = {
     val pakistan = game.getMuslim(Pakistan)
-    !pakistan.isIslamistRule && pakistan.totalCells == 0 && !game.isCaliphateMember(Pakistan)
+    !pakistan.truce &&
+    !pakistan.isIslamistRule &&
+    pakistan.totalCells == 0 &&
+    !game.isCaliphateMember(Pakistan)
   }
 
   override

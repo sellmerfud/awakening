@@ -64,6 +64,12 @@ object Card_013 extends Card(13, "Anbar Awakening", US, 2, NoRemove, NoLapsing, 
       .filter(_.totalTroops > 0)
   )
 
+  def getAidCandidates = countryNames(
+    getCandidates
+      .map(game.getMuslim)
+      .filter(!_.truce)
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
@@ -79,13 +85,16 @@ object Card_013 extends Card(13, "Anbar Awakening", US, 2, NoRemove, NoLapsing, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val name = if (isHuman(role))
-      askCountry("Select country: ", getCandidates)
-    else
-      USBot.markerAlignGovTarget(getCandidates).get
+    if (getAidCandidates.nonEmpty) {
+      val name = if (isHuman(role))
+        askCountry("Select country: ", getCandidates)
+      else
+        USBot.markerAlignGovTarget(getCandidates).get
+      
+      addEventTarget(name)
+      addAidMarker(name)
+    }
     
-    addEventTarget(name)
-    addAidMarker(name)
     increasePrestige(1)
     addGlobalEventMarker(AnbarAwakening)
   }

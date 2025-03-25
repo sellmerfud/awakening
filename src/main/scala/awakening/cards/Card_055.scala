@@ -57,7 +57,8 @@ object Card_055 extends Card(55, "Uyghur Jihad", Jihadist, 1, Remove, NoLapsing,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    !(game.getNonMuslim(China).isHard && game.getMuslim(CentralAsia).truce)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

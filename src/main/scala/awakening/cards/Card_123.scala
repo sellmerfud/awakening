@@ -55,7 +55,10 @@ object Card_123 extends Card(123, "Humanitarian Aid", US, 1, NoRemove, NoLapsing
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val isCandidate = (m: MuslimCountry) => m.canTakeAidMarker && m.totalCells > 0
+  val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
+    m.canTakeAidMarker &&
+    m.totalCells > 0
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 

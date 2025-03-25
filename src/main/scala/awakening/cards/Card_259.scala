@@ -66,6 +66,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
      game.adjacentMuslims(Turkey).map(_.name)).sorted.distinct
 
   val ispPlacementCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.canTakeMilitia &&
     (m.name == GulfStates || (m.name != Iran && (m.isSunni || game.adjacentToSunni(m.name))))
 
@@ -75,7 +76,10 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
     game.militiaAvailable > 0 &&
     getPlacementCandidates.nonEmpty
 
-  def getReposCandidates = reposCountries.filter(name => game.getMuslim(name).canTakeMilitia)
+  def getReposCandidates = reposCountries.filter { name =>
+    val m = game.getMuslim(name)
+    !m.truce && m.canTakeMilitia
+  }
 
   def canReposition =
     getReposCandidates.size > 1 &&

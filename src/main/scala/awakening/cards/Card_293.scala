@@ -58,6 +58,7 @@ object Card_293 extends Card(293, "Attempted Coup", Jihadist, 2, NoRemove, NoLap
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     !m.civilWar &&
     m.totalCells >= 2 &&
     ((m.isAlly && m.isPoor) || (game.adjacentToCivilWar(m.name) && !m.isGood))

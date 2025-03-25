@@ -60,10 +60,13 @@ object Card_141 extends Card(141, "Malala Yousafzai", US, 2, Remove, NoLapsing, 
   override
   def eventConditionsMet(role: Role) = globalEventNotInPlay(ThreeCupsOfTea)
 
-  def isEffective =
+  def isEffective = {
+    val pakistan = game.getMuslim(Pakistan)
     game.prestige < 12 ||
     game.funding > 1   ||
-    game.getMuslim(Pakistan).canTakeAwakeningOrReactionMarker
+    (!pakistan.truce && pakistan.canTakeAwakeningOrReactionMarker)
+
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -79,8 +82,12 @@ object Card_141 extends Card(141, "Malala Yousafzai", US, 2, Remove, NoLapsing, 
     println()
     increasePrestige(1)
     decreaseFunding(1)
-    addEventTarget(Pakistan)
-    addAwakeningMarker(Pakistan)
+    if (!underTruce(Pakistan))
+      log(s"\nCannot place awakening marker in Pakistan because it is under TRUCE.", Color.Event)
+    else {
+      addEventTarget(Pakistan)
+      addAwakeningMarker(Pakistan)
+    }
   }
   else
     log("\nThe event has no effect.", Color.Event)

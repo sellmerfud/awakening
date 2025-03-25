@@ -72,7 +72,7 @@ object Card_261 extends Card(261, "Intel Community", US, 2, NoRemove, NoLapsing,
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
     log("\nUS player does not inspect the Jihadist hand in the solo game.", Color.Event)
-    countryNames(game.countries.filter(_.hasCadre)) match {
+    countryNames(game.countries.filter(c => !c.truce && c.hasCadre)) match {
       case Nil =>
         log("\nNo cadres on the map to remove.", Color.Event)
       case candidates =>

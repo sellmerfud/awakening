@@ -57,10 +57,21 @@ object Card_146 extends Card(146, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTr
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def besiegedCandidates = countryNames(
+    game.muslims.filter(m => !m.truce && m.besiegedRegime && m.canTakeAwakeningOrReactionMarker)
+  )
+
+  def awakeningCandidates = countryNames(
+    game.muslims.filter(m => !m.truce && m.canTakeAwakeningOrReactionMarker)
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    game.hasMuslim(m => m.besiegedRegime || m.canTakeAwakeningOrReactionMarker)
+    if (game.hasMuslim(m => !m.truce && m.besiegedRegime))
+      besiegedCandidates.nonEmpty
+    else
+      awakeningCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -73,16 +84,12 @@ object Card_146 extends Card(146, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTr
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    // Get candidates in this priority order:
-    // 1. Muslims with besieged regime markers that can take an awakening marker
-    // 2. Muslims with besieged regime markers (cannot take awakening because of Civil War)
-    // 3. Muslims that can take an awakening marker.
-    val possibles = List(
-      game.muslims.filter(m => m.besiegedRegime && m.canTakeAwakeningOrReactionMarker),
-      game.muslims.filter(_.besiegedRegime),
-      game.muslims.filter(_.canTakeAwakeningOrReactionMarker)
-    )
-    val candidates = countryNames((possibles.dropWhile(_.isEmpty)).head)
+
+    val candidates = if (game.hasMuslim(m => !m.truce && m.besiegedRegime))
+      besiegedCandidates
+    else
+      awakeningCandidates
+
     val target = if (isHuman(role))
       askCountry("Select country: ", candidates)
     else

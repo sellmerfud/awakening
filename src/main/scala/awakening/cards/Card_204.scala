@@ -93,7 +93,7 @@ object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLaps
       else if (isHuman(role))
         selectTroopsToPutOffMap(1).head.country
       else {
-        val withTroops = countryNames(game.countries.filter(_.troops > 0))
+        val withTroops = countryNames(game.countries.filter(c => !c.truce && c.troops > 0))
         USBot.ebolaScareTarget(withTroops).get
       }
 

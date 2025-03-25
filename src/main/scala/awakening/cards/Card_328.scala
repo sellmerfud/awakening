@@ -61,7 +61,7 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
   val Countries = List(Afghanistan, Pakistan, India)
 
   val isCandidate = (c: Country) => c match {
-    case m: MuslimCountry => m.inRegimeChange || m.isAdversary
+    case m: MuslimCountry => !m.truce && m.inRegimeChange || m.isAdversary
     case n: NonMuslimCountry => n.totalCells > 0
   }
 

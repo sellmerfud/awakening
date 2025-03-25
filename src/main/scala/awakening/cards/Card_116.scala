@@ -50,12 +50,12 @@ import awakening.cards.Card_107.enhBotTarget
 // ------------------------------------------------------------------
 object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, NoAutoTrigger) {
   def getUSCandidates = countryNames(
-    (game.nonMuslims ::: game.muslims.filter(_.isAlly))
+    (game.nonMuslims ::: game.muslims.filter(m => !m.truce && m.isAlly))
       .filter(_.plots.nonEmpty)
   )
 
   def getJihadistCandidates = countryNames(
-    (game.nonMuslims ::: game.muslims.filter(!_.isIslamistRule))
+    (game.nonMuslims ::: game.muslims.filter(m => !m.truce && !m.isIslamistRule))
       .filter(_.totalCells > 0)
   )
 

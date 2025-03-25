@@ -53,9 +53,9 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getSunniUSCandidates = countryNames(game.muslims.filter(m => m.isSunni && m.totalCells > 0))
+  def getSunniUSCandidates = countryNames(game.muslims.filter(m => !m.truce && m.isSunni && m.totalCells > 0))
 
-  def getShiaUSCandidates = countryNames(game.muslims.filter(m => m.isShiaMix && m.totalCells > 0))
+  def getShiaUSCandidates = countryNames(game.muslims.filter(m => !m.truce && m.isShiaMix && m.totalCells > 0))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.

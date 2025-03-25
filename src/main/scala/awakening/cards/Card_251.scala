@@ -91,13 +91,19 @@ object Card_251 extends Card(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    def convergenceTarget: String = {
+      randomConvergenceTarget match {
+        case m if m.truce => convergenceTarget
+        case m => m.name
+      }
+    }
     def logNotZero(value: Int, msg: String): Unit =
       if (value != 0)
         log(f"$value%+2d $msg")
 
     def removeAidTarget: Option[String] =
       if (isHuman(role))
-        countryNames(game.muslims.filter(_.aidMarkers > 0)) match {
+        countryNames(game.muslims.filter(m => !m.truce && m.aidMarkers > 0)) match {
           case Nil => None
           case candidates =>
             Some(askCountry("Remove an aid marker from which country: ", candidates))
@@ -106,7 +112,7 @@ object Card_251 extends Card(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, No
         USBot.removeAidTarget
 
     def addAidTarget: Option[String] = {
-      countryNames(game.muslims.filter(_.canTakeAidMarker)) match {
+      countryNames(game.muslims.filter(m => !m.truce && m.canTakeAidMarker)) match {
         case Nil =>
           None
         case candidates if isHuman(role) =>
@@ -134,7 +140,7 @@ object Card_251 extends Card(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, No
     modRoll match {
       case 0 =>
         log("\nPlace a random reaction marker.", Color.Event)
-        val target = randomConvergenceTarget.name
+        val target = convergenceTarget
         addEventTarget(target)
         addReactionMarker(target)
 
@@ -176,7 +182,7 @@ object Card_251 extends Card(251, "Trump Tweets", US, 1, NoRemove, NoLapsing, No
 
       case _ =>
         log("\nPlace a random awakening marker.", Color.Event)
-        val target = randomConvergenceTarget.name
+        val target = convergenceTarget
         addEventTarget(target)
         addAwakeningMarker(target)
     }

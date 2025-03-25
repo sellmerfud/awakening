@@ -47,11 +47,14 @@ import awakening.USBot
 // -1 Prestige.
 // ------------------------------------------------------------------
 object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTrigger) {
+
+  def plotTargets = game.countries.filter(c => !c.truce && c.hasPlots)
+
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean =
-    game.hasCountry(_.hasPlots) // The event alerts ALL plot on the map.
+    plotTargets.nonEmpty // The event alerts ALL plot on the map.
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
@@ -67,7 +70,8 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    game.hasCountry(_.hasPlots) || game.sleeperCellsOnMap >= 5
+    plotTargets.nonEmpty ||
+    (game.sleeperCellsOnMap >= 5 && game.hasCountry(c => !c.truce && c.sleeperCells > 0))
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -92,7 +96,7 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
             val numToFlip = (game.sleeperCellsOnMap + 1) / 2  // half rounded up
             // Ask which cells to activate
             val withSleepers = game.countries
-              .filter(_.sleeperCells > 0)
+              .filter(c => !c.truce && c.sleeperCells > 0)
               .map(c => MapItem(c.name, c.sleeperCells))
 
             println(s"Activate a total of ${amountOf(numToFlip, "sleeper cell")}")
@@ -113,7 +117,7 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
             flipNextBatch(toFlip)
 
           case Alert =>
-            for (c <- game.countries; p <- c.plots)  {// Alert all plots on the map
+            for (c <- plotTargets; p <- c.plots)  {// Alert all plots on the map
               addEventTarget(c.name)
               performAlert(c.name, humanPickPlotToAlert(c.name))
             }
@@ -125,8 +129,8 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
     }
     else {
       // See Event Instructions table
-      if (game hasCountry (_.hasPlots))
-        for (c <- game.countries; p <- c.plots)  {// Alert all plots on the map
+      if (plotTargets.nonEmpty)
+        for (c <- plotTargets; p <- c.plots)  {// Alert all plots on the map
           addEventTarget(c.name)
           performAlert(c.name, humanPickPlotToAlert(c.name))
         }

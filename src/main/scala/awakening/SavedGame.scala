@@ -263,7 +263,8 @@ object SavedGame {
           "caliphateCapital" -> m.caliphateCapital,
           "awakening"        -> m.awakening,
           "reaction"         -> m.reaction,
-          "wmdCache"         -> m.wmdCache
+          "wmdCache"         -> m.wmdCache,
+          "truce"            -> m.truce
         ))
       case n: NonMuslimCountry =>
         ("NonMuslimCountry", Map(
@@ -309,7 +310,8 @@ object SavedGame {
           asBoolean(params("caliphateCapital")),
           asInt(params("awakening")),
           asInt(params("reaction")),
-          asInt(params("wmdCache"))
+          asInt(params("wmdCache")),
+          asBoolean(params("truce"))
         )
       case "NonMuslimCountry" =>
         NonMuslimCountry(

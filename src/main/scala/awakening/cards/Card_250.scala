@@ -52,7 +52,7 @@ object Card_250 extends Card(250, "Special Forces", US, 1, NoRemove, NoLapsing, 
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   def getCandidates = countryNames(
-    game.countries.filter(c => c.totalCells > 0 && (c.totalTroops > 0 || c.numAdvisors > 0))
+    game.countries.filter(c => !c.truce && c.totalCells > 0 && (c.totalTroops > 0 || c.numAdvisors > 0))
   )
 
   // Used by the US Bot to determine if the executing the event would remove

@@ -56,7 +56,7 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(m => m.name != Iran && m.isUntested))
+  def getCandidates = countryNames(game.muslims.filter(m => m.name != Iran && !m.truce && m.isUntested))
 
   // Returns true if the printed conditions of the event are satisfied
   override

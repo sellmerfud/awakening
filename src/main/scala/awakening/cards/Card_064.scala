@@ -73,12 +73,15 @@ object Card_064 extends Card(64, "Hariri Killed", Jihadist, 2, Remove, NoLapsing
     val syria = game.getMuslim(Syria)
 
     if (game.botEnhancements) {
-      syria.isGood ||
-      (syria.isFair && !syria.isAdversary) ||
-      (syria.isFair && syria.isAdversary && JihadistBot.currentIRResources == 4)
+      !syria.truce && (
+        syria.isGood ||
+        (syria.isFair && !syria.isAdversary) ||
+        (syria.isFair && syria.isAdversary && JihadistBot.currentIRResources == 4)
+      )
     }
     else
-      lebanon.isUntested || !syria.isAdversary || syria.isGood || syria.isFair
+      (!lebanon.truce && lebanon.isUntested) ||
+      !syria.truce && (!syria.isAdversary || syria.isGood || syria.isFair)
   }
 
   // Carry out the event for the given role.
@@ -86,12 +89,16 @@ object Card_064 extends Card(64, "Hariri Killed", Jihadist, 2, Remove, NoLapsing
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    addEventTarget(Lebanon)
-    testCountry(Lebanon)
-    addEventTarget(Syria)
-    testCountry(Syria)
-    setAlignment(Syria, Adversary)
-    if (game.getMuslim(Syria).isGood || game.getMuslim(Syria).isFair)
-      worsenGovernance(Syria, 1, canShiftToIR = false)
+    if (!game.getCountry(Lebanon).truce) {
+      addEventTarget(Lebanon)
+      testCountry(Lebanon)
+    }
+    if (!game.getCountry(Syria).truce) {
+      addEventTarget(Syria)
+      testCountry(Syria)
+      setAlignment(Syria, Adversary)
+      if (game.getMuslim(Syria).isGood || game.getMuslim(Syria).isFair)
+        worsenGovernance(Syria, 1, canShiftToIR = false)
+    }
   }
 }

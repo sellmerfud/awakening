@@ -70,9 +70,12 @@ object Card_343 extends Card(343, "JCPOA", Unassociated, 2, JihadistRemove, NoLa
   override
   def eventConditionsMet(role: Role) = role match {
     case US =>
-      game.worldPosture == game.usPosture || game.worldPosture == Even
+      !underTruce(Iran) &&
+      (game.worldPosture == game.usPosture || game.worldPosture == Even)
     case Jihadist =>
-      (isIranSpecialCase || game.getMuslim(Iran).isAdversary) && game.getCountry(Iran).totalCells > 0
+      !underTruce(Iran) &&
+      (isIranSpecialCase || game.getMuslim(Iran).isAdversary) &&
+      game.getCountry(Iran).totalCells > 0
   }
 
   // Returns true if the Bot associated with the given role will execute the event

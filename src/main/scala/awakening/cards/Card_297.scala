@@ -79,14 +79,19 @@ object Card_297 extends Card(297, "Early Exit", Jihadist, 2, Remove, NoLapsing, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val target = if (isHuman(role))
-      askCountry("Which country: ", getCandidates)
-    else
-      JihadistBot.earlyExitPriority(getCandidates).get
-
-    addEventTarget(target)
-    removeAllTroopsFromCountry(target)
-    removeAllAdvisorsFromCountry(target)
+    val removeCandidates = getCandidates.filter(name => !game.getCountry(name).truce)
+    if (removeCandidates.isEmpty)
+      log(s"\nCannot remove troops/advisors from ${getCandidates.head} because it is under TRUCE.", Color.Event)
+    else {
+      val target = if (isHuman(role))
+        askCountry("Which country: ", removeCandidates)
+      else
+        JihadistBot.earlyExitPriority(removeCandidates).get
+  
+      addEventTarget(target)
+      removeAllTroopsFromCountry(target)
+      removeAllAdvisorsFromCountry(target)
+    }
     decreasePrestige(1)
     addGlobalEventMarker(EarlyExit)
     setTrumpTweetsOFF()

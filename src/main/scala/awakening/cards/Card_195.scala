@@ -58,7 +58,9 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
-    (m.civilWar || m.inRegimeChange) && m.totalCells >= 3
+    !m.truce &&
+    (m.civilWar || m.inRegimeChange) &&
+    m.totalCells >= 3
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 

@@ -57,7 +57,9 @@ object Card_165 extends Card(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAu
   def eventRemovesLastCell(): Boolean = false
 
   def isCandidate = (m: MuslimCountry) =>
-    m.resourceValue == 1 && m.totalCells >= 2
+    !m.truce &&
+    m.resourceValue == 1 &&
+    m.totalCells >= 2
 
   def isBotCandidate = (m: MuslimCountry) =>
     isCandidate(m) &&

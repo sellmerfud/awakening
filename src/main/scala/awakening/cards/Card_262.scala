@@ -82,12 +82,21 @@ object Card_262 extends Card(262, "MOAB", US, 2, NoRemove, NoLapsing, NoAutoTrig
       (name, askCells(name, 1, true))
     }
     else {
-      val name = USBot.disruptPriority(getCandidates).get
+      val nonTruce = getCandidates.filter(name => !game.getCountry(name).truce)
+      val name = nonTruce match {
+        case Nil => USBot.disruptPriority(getCandidates).get
+        case candidates => USBot.disruptPriority(candidates).get
+      }
       (name, USBot.chooseCellsToRemove(name, 1))
     }
 
-    addEventTarget(target)
-    removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    if (game.getCountry(target).truce)
+      log(s"\nCannot remove cell from $target because it is under a TRUCE.", Color.Event)
+    else {
+      addEventTarget(target)
+      removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    }
+    
     increasePrestige(1)
   }
 }

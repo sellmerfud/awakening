@@ -77,7 +77,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
   }
 
   def enhGoodMuslimCadidates = game.muslims
-    .filter(m => m.isGood && m.totalTroops == 0)
+    .filter(m => !m.truce && m.isGood && m.totalTroops == 0)
     .sortBy(-_.resourceValue)  // Highest resources values first
     .map(_.name)
 
@@ -105,7 +105,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
   }
 
   def enhFairMuslimCandidates = game.muslims
-    .filter(m => m.isFair && m.totalTroops == 0 && JihadistBot.enhBotResourceValue(m) == 3)
+    .filter(m => !m.truce && m.isFair && m.totalTroops == 0 && JihadistBot.enhBotResourceValue(m) == 3)
     .sortWith { case (l, r) => l.aidMarkers > 0 && r.aidMarkers == 0}
     .map(_.name)
 
@@ -132,6 +132,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
   override
   def executeEvent(role: Role): Unit = if (isHuman(role)) {
     val allCountries = countryNames(game.countries)
+    val destCountries = countryNames(game.countries.filter(!_.truce))
     val num = 2 min game.cellsOnMap
     val travellers = if (num == 1) {
       for (c <- game.countries; if c.cells > 0)
@@ -144,13 +145,13 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
     var i = 1
     for (CellsItem(from, actives, sleepers) <- travellers) {
       for (a <- 1 to actives) {
-        val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
+        val to = askCountry(s"Select ${ordinal(i)} destination country: ", destCountries)
         addEventTarget(to)
         moveCellsBetweenCountries(from, to, 1, true, forTravel = true)
         i += 1
       }
       for (a <- 1 to sleepers) {
-        val to = askCountry(s"Select ${ordinal(i)} destination country: ", allCountries)
+        val to = askCountry(s"Select ${ordinal(i)} destination country: ", destCountries)
         addEventTarget(to)
         moveCellsBetweenCountries(from, to, 1, false, forTravel = true)
         i += 1

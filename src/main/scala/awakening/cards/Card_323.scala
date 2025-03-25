@@ -59,7 +59,9 @@ object Card_323 extends Card(323, "Blasphemy", Unassociated, 1, NoRemove, NoLaps
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
-    m.totalCells > 0 && m.canTakeAwakeningOrReactionMarker
+    !m.truce &&
+    m.totalCells > 0 &&
+    m.canTakeAwakeningOrReactionMarker
 
   def isBotCandidate(role: Role) = (m: MuslimCountry) =>
     isCandidate(m) &&

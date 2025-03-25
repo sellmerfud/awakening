@@ -91,7 +91,7 @@ object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, N
 
       askMenu("Choose one:", choices).head match {
         case Plot =>
-          val target = askCountry("Place plot in which country: ", countryNames(game.countries))
+          val target = askCountry("Place plot in which country: ", countryNames(game.countries.filter(!_.truce)))
           val plot  = askPlots(plotsMarkers(), 1).head
           addEventTarget(target)
           addAvailablePlotToCountry(target, plot)

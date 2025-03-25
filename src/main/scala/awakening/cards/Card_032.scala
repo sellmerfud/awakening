@@ -59,7 +59,7 @@ object Card_032 extends Card(32, "Back Channel", US, 3, NoRemove, NoLapsing, NoA
 
   //  Oil price spike can make 3 resource countries unplayable this turn
   def getCandidates = countryNames(
-    game.muslims.filter(m => m.isAdversary && m.resourceValue < 4)
+    game.muslims.filter(m => !m.truce && m.isAdversary && m.resourceValue < 4)
   )
 
   // Returns true if the printed conditions of the event are satisfied

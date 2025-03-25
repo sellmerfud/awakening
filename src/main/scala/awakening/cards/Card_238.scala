@@ -58,6 +58,7 @@ object Card_238 extends Card(238, "Revolution", Unassociated, 3, NoRemove, NoLap
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.isPoor &&
     m.awakening > 0 &&
     m.reaction > 0

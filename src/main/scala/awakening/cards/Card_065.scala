@@ -61,7 +61,7 @@ object Card_065 extends Card(65, "HEU", Jihadist, 2, Remove, NoLapsing, NoAutoTr
   def getCandidates = countryNames(
     List(Russia, CentralAsia)
       .map(game.getCountry)
-      .filter(c => c.totalCells > 0 && !c.hasMarker(CTR))
+      .filter(c => !c.truce && c.totalCells > 0 && !c.hasMarker(CTR))
   )
 
   // Returns true if the printed conditions of the event are satisfied

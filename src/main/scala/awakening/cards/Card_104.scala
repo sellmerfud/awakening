@@ -53,14 +53,19 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   def getBotCellCandidates = {
-    val iran = if ((game getCountry Iran).totalCells > 0) List(Iran) else Nil
-    iran ::: countryNames(
-      game.muslims.filter(m => m.isShiaMix && m.totalCells > 0) // Bot only cares if cell can be removed
+    val iran = game.getCountry(Iran)
+    val iranList = if (!iran.truce && iran.totalCells > 0)
+      List(Iran)
+    else
+      Nil
+    iranList ::: countryNames(
+      game.muslims.filter(m => !m.truce && m.isShiaMix && m.totalCells > 0) // Bot only cares if cell can be removed
     )
   }
 
   def getBotJihadCandidates = {
     val jihadTest   = (m: MuslimCountry) =>
+      !m.truce &&
       m.isShiaMix &&
       (m.isUntested || m.isGood || m.isFair || m.aidMarkers > 0)
     countryNames(game.muslims.filter(jihadTest))

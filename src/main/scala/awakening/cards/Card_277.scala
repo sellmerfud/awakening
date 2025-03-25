@@ -61,10 +61,10 @@ object Card_277 extends Card(277, "Regime Change Policy", US, 3, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getHumanCandidates = countryNames(game.muslims)
+  def getHumanCandidates = countryNames(game.muslims.filter(!_.truce))
 
   // The Bot will only choose IR countries
-  def getBotCandidates = countryNames(game.muslims.filter(_.isIslamistRule))
+  def getBotCandidates = countryNames(game.muslims.filter(m => !m.truce && m.isIslamistRule))
 
   // Returns true if the printed conditions of the event are satisfied
   override

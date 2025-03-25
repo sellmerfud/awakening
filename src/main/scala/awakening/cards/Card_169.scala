@@ -61,7 +61,7 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
   def eventRemovesLastCell(): Boolean = false
 
   val CandidateCountries = Set(Libya, AlgeriaTunisia, Morocco, Mali, Nigeria)
-  val isCandidate = (c: Country) => CandidateCountries(c.name) && c.isPoor
+  val isCandidate = (c: Country) => CandidateCountries(c.name) && !c.truce && c.isPoor
   val isImprovedCandidate = (c: Country) => c match {
     case _: NonMuslimCountry => false
     case m: MuslimCountry => m.civilWar || game.isCaliphateMember(m.name)

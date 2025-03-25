@@ -59,17 +59,12 @@ object Card_206 extends Card(206, "Friday of Anger", Unassociated, 1, NoRemove, 
   def getAwakeCandidates = if (lapsingEventInPlay(ArabWinter))
     Nil
   else
-    countryNames(game.muslims.filter(_.reaction > 0))
+    countryNames(game.muslims.filter(m => !m.truce && m.reaction > 0))
 
   def getReactCandidates = if (lapsingEventInPlay(ArabWinter))
     Nil
   else
-    countryNames(game.muslims.filter(_.awakening > 0))
-
-  def getCandidates = if (lapsingEventInPlay(ArabWinter))
-    Nil
-  else
-    countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
+    countryNames(game.muslims.filter(m => !m.truce && m.awakening > 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override

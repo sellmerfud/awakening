@@ -86,7 +86,7 @@ object Card_044 extends Card(44, "Renditions", US, 3, NoRemove, NoLapsing, NoAut
         log(s"The $Jihadist has no card to discard.", Color.Event)
     }
     else {
-      val target  = USBot.disruptTarget(game disruptTargets 3) foreach { target =>
+      val target  = USBot.disruptTarget(game.disruptTargets(3)) foreach { target =>
         log(s"$US performs a Disrupt operation in $target")
         performDisrupt(target)
       }

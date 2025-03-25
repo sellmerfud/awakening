@@ -58,6 +58,7 @@ object Card_248 extends Card(248, "Patriotic Arab Democracies Movement", US, 1, 
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.alignment != Adversary &&
     m.canTakeAwakeningOrReactionMarker &&
     !game.isCaliphateMember(m.name)

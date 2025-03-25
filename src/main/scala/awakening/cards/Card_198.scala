@@ -64,6 +64,7 @@ object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLaps
     (m.civilWar || m.inRegimeChange)
 
   val isAlignCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.totalTroops > 0 &&
     (m.civilWar || m.inRegimeChange) &&
     !m.isAdversary

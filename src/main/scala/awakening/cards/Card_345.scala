@@ -52,7 +52,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  val isCandidate = (m: MuslimCountry) => m.civilWar && areAdjacent(m.name, Turkey)
+  val isCandidate = (m: MuslimCountry) => !m.truce && m.civilWar && areAdjacent(m.name, Turkey)
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 

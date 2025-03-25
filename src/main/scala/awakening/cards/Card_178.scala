@@ -57,7 +57,7 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
   def eventRemovesLastCell(): Boolean = false
 
   def getCandidates = countryNames(
-    game.muslims.filter(m => m.militia > 0 && (m.civilWar || m.inRegimeChange))
+    game.muslims.filter(m => !m.truce && m.militia > 0 && (m.civilWar || m.inRegimeChange))
   )
 
   // Returns true if the printed conditions of the event are satisfied

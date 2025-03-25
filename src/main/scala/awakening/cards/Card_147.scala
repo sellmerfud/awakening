@@ -63,6 +63,7 @@ object Card_147 extends Card(147, "Strike Eagle", US, 2, NoRemove, NoLapsing, No
   val forbidden = Set(Pakistan, Russia, CentralAsia)
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     !forbidden(m.name) &&
     m.isPoor &&
     !m.isAlly &&

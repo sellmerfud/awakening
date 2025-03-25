@@ -95,7 +95,7 @@ object Card_084 extends Card(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAut
     log()
     rollPrestige()
     log()
-    val candidates = countryNames(game.muslims.filter(_.isAlly))
+    val candidates = countryNames(game.muslims.filter(m => !m.truce && m.isAlly))
     if (candidates.isEmpty)
       log("There are no Ally Muslim countries.  Shift not possible.", Color.Event)
     else {

@@ -59,7 +59,7 @@ object Card_041 extends Card(41, "NATO", US, 3, NoRemove, NoLapsing, NoAutoTrigg
 
   // Added civilWar condition for when playing in a campaign game
   def getCandidates = countryNames(
-    game.muslims.filter(m => m.inRegimeChange || m.civilWar)
+    game.muslims.filter(m => !m.truce && (m.inRegimeChange || m.civilWar))
   )
 
   // Returns true if the printed conditions of the event are satisfied

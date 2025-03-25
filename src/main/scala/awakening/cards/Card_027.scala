@@ -57,7 +57,10 @@ object Card_027 extends Card(27, "Saddam Captured", US, 2, Remove, NoLapsing, No
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = game.getMuslim(Iraq).totalTroops > 0
+  def eventConditionsMet(role: Role) = {
+    val iraq = game.getMuslim(Iraq)
+    !iraq.truce && iraq.totalTroops > 0
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

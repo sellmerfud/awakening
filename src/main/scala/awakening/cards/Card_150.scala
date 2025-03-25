@@ -57,7 +57,8 @@ object Card_150 extends Card(150, "UNSCR 1973", US, 2, NoRemove, NoLapsing, NoAu
   // Or in any other civil war country that does not have the maker.
   def getCandidates = countryNames(
     game.muslims.filter { m =>
-      (m.hasMarker(UNSCR_1973) && m.totalCells > 0) || (m.civilWar && !m.hasMarker(UNSCR_1973))
+      !m.truce &&
+      ((m.hasMarker(UNSCR_1973) && m.totalCells > 0) || (m.civilWar && !m.hasMarker(UNSCR_1973)))
     }
   )
   // Used by the US Bot to determine if the executing the event would remove

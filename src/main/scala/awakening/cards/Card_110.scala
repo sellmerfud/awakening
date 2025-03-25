@@ -60,10 +60,16 @@ object Card_110 extends Card(110, "Zarqawi", Unassociated, 2, USRemove, NoLapsin
   def getCandidates = List(Iraq, Syria, Lebanon, Jordan)
     .filter(name => game.getMuslim(name).totalTroops > 0)
 
+  def placementCandidates = getCandidates
+    .filter(name => !game.getCountry(name).truce)
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
-
+  def eventConditionsMet(role: Role) = role match {
+    case US => getCandidates.nonEmpty
+    case Jihadist => placementCandidates.nonEmpty
+  }
+    
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -81,7 +87,7 @@ object Card_110 extends Card(110, "Zarqawi", Unassociated, 2, USRemove, NoLapsin
     if (role == US)
       increasePrestige(3)
     else { // Jihadist
-      val candidates = getCandidates
+      val candidates = placementCandidates
       val canWinByDeclaringCaliphate =
         game.cellsAvailable >= 3 &&
         game.islamistResources == 5 &&

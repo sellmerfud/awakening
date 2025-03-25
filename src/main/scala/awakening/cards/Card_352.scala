@@ -70,7 +70,7 @@ object Card_352 extends Card(352, "al-Baghdadi", Unassociated, 3, USRemove, NoLa
     case Jihadist => true
   }
 
-  def placeCellsCandidates() = countryNames(game.muslims.filter(_.isPoor))
+  def placeCellsCandidates() = countryNames(game.muslims.filter(m => !m.truce && m.isPoor))
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

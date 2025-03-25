@@ -59,9 +59,9 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val isCellsSource = (c: Country) => c.totalCells > 0
+  val isCellsSource = (c: Country) => !c.truce && c.totalCells > 0
   val isReactionSource = (c: Country) => c match {
-    case m: MuslimCountry => m.reaction > 0
+    case m: MuslimCountry => !m.truce && m.reaction > 0
     case n: NonMuslimCountry => false
   }
   val isSource = (c: Country) => isCellsSource(c) || isReactionSource(c)
@@ -71,7 +71,8 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
   def getReactionSources = countryNames(game.muslims.filter(isReactionSource))
 
   val isCandidate = (m: MuslimCountry) =>
-    m.civilWar || m.inRegimeChange || game.isCaliphateMember(m.name)
+    !m.truce &&
+    (m.civilWar || m.inRegimeChange || game.isCaliphateMember(m.name))
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
@@ -111,7 +112,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
 
     case Jihadist =>
       val target = getJihadistBotTarget
-      val numTravelers = game.countries.count(c => JihadistBot.hasCellForTravel(c, target, placement = true))
+      val numTravelers = game.countries.count(c => !c.truce && JihadistBot.hasCellForTravel(c, target, placement = true))
       // Enhanced bot will only select the event if it can remove 3 cells
       // Normal bot only requires 1
       if (game.botEnhancements)
@@ -180,7 +181,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
     else if (role == Jihadist) {
       // Jihadist Bot removes only "cells""
       val target = getJihadistBotTarget
-      val cellSources = countryNames(game.countries.filter (c => JihadistBot.hasCellForTravel(c, target, placement = true)))
+      val cellSources = countryNames(game.countries.filter (c => !c.truce && JihadistBot.hasCellForTravel(c, target, placement = true)))
       val countries = if (cellSources.size <= 3)
         cellSources
       else {

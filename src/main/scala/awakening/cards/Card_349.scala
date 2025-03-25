@@ -60,8 +60,10 @@ object Card_349 extends Card(349, "Turkish Coup", Unassociated, 2, JihadistRemov
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    globalEventInPlay(GulenMovement) && game.getMuslim(Turkey).isTested
+  def eventConditionsMet(role: Role) = {
+    val turkey = game.getMuslim(Turkey)
+    globalEventInPlay(GulenMovement) && !turkey.truce && turkey.isTested
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

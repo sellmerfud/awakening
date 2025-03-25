@@ -54,7 +54,7 @@ object Card_067 extends Card(67, "Islamic Jihad Union", Jihadist, 2, Remove, NoL
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean = false
-
+    
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
@@ -74,9 +74,11 @@ object Card_067 extends Card(67, "Islamic Jihad Union", Jihadist, 2, Remove, NoL
   override
   def executeEvent(role: Role): Unit = {
     val candidates = List(CentralAsia, Afghanistan)
-    val targets = if (game.cellsAvailable == 0)
+      .filter(name => !game.getCountry(name).truce)
+    val maxTargets = candidates.size min game.cellsAvailable
+    val targets = if (maxTargets == 0)
       Nil
-    else if (game.cellsAvailable > 1)
+    else if (maxTargets > 1 || game.cellsAvailable >= maxTargets)
       candidates
     else if (isBot(role))
       JihadistBot.cellPlacementPriority(false)(candidates).toList
@@ -85,12 +87,11 @@ object Card_067 extends Card(67, "Islamic Jihad Union", Jihadist, 2, Remove, NoL
       askCountry("Select country for cell: ", candidates)::Nil
     }
 
-    addEventTarget(CentralAsia)
-    addEventTarget(Afghanistan)
-
     if (targets.nonEmpty)
-      for (name <- targets)
+      for (name <- targets) {
+        addEventTarget(name)
         addSleeperCellsToCountry(name, 1)
+      }
     else
       log(s"\nThere are no available cells. The event has no effect.", Color.Event)
   }

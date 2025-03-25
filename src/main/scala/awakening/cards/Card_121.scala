@@ -61,6 +61,7 @@ object Card_121 extends Card(121, "Advisors", US, 1, NoRemove, NoLapsing, NoAuto
   def eventRemovesLastCell(): Boolean = false
 
   val advisorsCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     !m.isAdversary &&
     m.civilWar &&
     m.totalTroops == 0

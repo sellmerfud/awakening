@@ -48,9 +48,9 @@ object USBot extends BotHelpers {
   // The Bot will not consider WoI in an untested muslim country unless
   // it has 3 Ops to work with.
   def woiMuslimTargets(ops: Int): List[MuslimCountry] = if (ops >= 3)
-    game.muslims.filter(_.warOfIdeasOK(ops))
+    game.muslims.filter(m => !m.truce && m.warOfIdeasOK(ops))
   else
-    game.muslims.filter(m => m.isTested && m.warOfIdeasOK(ops))
+    game.muslims.filter(m => !m.truce && m.isTested && m.warOfIdeasOK(ops))
   def woiNonMuslimTargets(ops: Int): List[NonMuslimCountry] = game.nonMuslims.filter(_.warOfIdeasOK(ops))
   
   // Pick sleepers before actives
@@ -1167,7 +1167,7 @@ object USBot extends BotHelpers {
       performCardEvent(card, US)
     else {
       val maxOps = maxOpsPlusReserves(card)
-      val plots = for (country <- game.countries; plot <- country.plots)
+      val plots = for (country <- game.countries.filter(!_.truce); plot <- country.plots)
         yield PlotInCountry(plot, country)
     
     
@@ -1574,7 +1574,9 @@ object USBot extends BotHelpers {
   // Returns the number of ops used
   def hsDisruptMuslimCadre(cardOps: Int): Int = {
     val priorities = List(ClosestToUSPriority)              
-    val candidates = game.disruptMuslimTargets(cardOps).map(game.getMuslim)
+    val candidates = game.disruptMuslimTargets(cardOps)
+      .map(game.getMuslim)
+      .filter(_.cadres > 0)
     val target  = topPriority(candidates, priorities).get
     val opsUsed = target.governance
     log()

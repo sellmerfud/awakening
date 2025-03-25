@@ -60,6 +60,7 @@ object Card_162 extends Card(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrig
   }
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.name != Iran &&
     m.name != Syria &&
     m.awakening > 0 &&

@@ -56,7 +56,7 @@ object Card_344 extends Card(344, "Media Manipulation", Unassociated, 2, NoRemov
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val isCandidate = (m: MuslimCountry) => m.civilWar && m.militia > 0 && m.totalCells > 0
+  val isCandidate = (m: MuslimCountry) => !m.truce && m.civilWar && m.militia > 0 && m.totalCells > 0
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 

@@ -59,6 +59,7 @@ object Card_039 extends Card(39, "Libyan WMD", US, 3, Remove, NoLapsing, NoAutoT
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
+    !game.getMuslim(Libya).truce &&
     game.getMuslim(Libya).isAdversary &&
     game.usPosture == Hard &&
     countryEventNotInPlay(Libya, "Libyan Deal")

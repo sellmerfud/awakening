@@ -60,7 +60,10 @@ object Card_003 extends Card(3, "CTR", US, 1, NoRemove, NoLapsing) {
   
   def centralAsiaOK = {
     val cAsia  = game.getMuslim(CentralAsia)
-    cAsia.isTested && (cAsia.isAlly || cAsia.isNeutral) && !cAsia.hasMarker(CTR)
+    !cAsia.truce &&
+    cAsia.isTested &&
+    (cAsia.isAlly || cAsia.isNeutral) &&
+    !cAsia.hasMarker(CTR)
   }
 
   // Returns true if the printed conditions of the event are satisfied

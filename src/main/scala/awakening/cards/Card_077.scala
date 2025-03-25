@@ -58,7 +58,7 @@ object Card_077 extends Card(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing,
 
   def getCandidates: List[String] = {
     val possibles = game.getMuslim(SaudiArabia)::game.adjacentMuslims(SaudiArabia)
-    countryNames(possibles.filter(m => m.totalTroops > 0 && !m.isAdversary))
+    countryNames(possibles.filter(m => !m.truce && m.totalTroops > 0 && !m.isAdversary))
   }
 
   // Ehanced Bot: Playable if any non-Good non-Adversary countries qualify.

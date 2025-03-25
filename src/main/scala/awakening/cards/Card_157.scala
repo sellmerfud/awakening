@@ -57,10 +57,10 @@ object Card_157 extends Card(157, "Limited Deployment", US, 3, NoRemove, NoLapsi
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(_.civilWar))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar))
 
   def awakeningCandidates(civilWarName: String) =
-    countryNames(game.adjacentMuslims(civilWarName).filter(_.canTakeAwakeningOrReactionMarker))
+    countryNames(game.adjacentMuslims(civilWarName).filter(m => !m.truce && m.canTakeAwakeningOrReactionMarker))
 
   // Returns true if the printed conditions of the event are satisfied
   override

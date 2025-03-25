@@ -56,9 +56,9 @@ object Card_227 extends Card(227, "Popular Support", Unassociated, 2, NoRemove, 
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getAwakeningCandidates = countryNames(game.muslims.filter(_.awakening > 0))
+  def getAwakeningCandidates = countryNames(game.muslims.filter(m => !m.truce && m.awakening > 0))
 
-  def getReactionCandidates = countryNames(game.muslims.filter(_.reaction > 0))
+  def getReactionCandidates = countryNames(game.muslims.filter(m => !m.truce && m.reaction > 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override

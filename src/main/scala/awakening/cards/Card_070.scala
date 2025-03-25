@@ -42,7 +42,7 @@ import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
-// Place a cell each in Pakistan and Inda.
+// Place a cell each in Pakistan and India.
 // Blocked by Indo-Pakistani Talks .
 // ------------------------------------------------------------------
 object Card_070 extends Card(70, "Lashkar-e-Tayyiba", Jihadist, 2, NoRemove, NoLapsing, NoAutoTrigger) {
@@ -64,7 +64,7 @@ object Card_070 extends Card(70, "Lashkar-e-Tayyiba", Jihadist, 2, NoRemove, NoL
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.cellsAvailable > 1
+    !game.getCountry(IndonesiaMalaysia).truce && game.cellsAvailable > 1
   else
     game.cellsAvailable > 0
 
@@ -74,10 +74,12 @@ object Card_070 extends Card(70, "Lashkar-e-Tayyiba", Jihadist, 2, NoRemove, NoL
   override
   def executeEvent(role: Role): Unit = {
     val candidates = List(Pakistan, India)
+      .filter(name => !game.getCountry(name).truce)
+    val maxTargets = candidates.size min game.cellsAvailable
 
-    val targets = if (game.cellsAvailable == 0)
+    val targets = if (maxTargets == 0)
       Nil
-    else if (game.cellsAvailable > 1)
+    else if (maxTargets > 1 && game.cellsAvailable >= maxTargets)
       candidates
     else if (isBot(role))
       JihadistBot.cellPlacementPriority(false)(candidates).toList

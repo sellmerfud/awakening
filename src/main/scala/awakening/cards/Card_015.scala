@@ -59,7 +59,7 @@ object Card_015 extends Card(15, "Ethiopia Strikes", US, 2, Remove, NoLapsing, N
   def getCandidates = countryNames(
     List(Somalia, Sudan)
       .map(game.getMuslim)
-      .filter(_.isIslamistRule)
+      .filter(m => !m.truce && m.isIslamistRule)
   )
   // Returns true if the printed conditions of the event are satisfied
   override

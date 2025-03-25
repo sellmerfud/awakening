@@ -55,7 +55,7 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
   def getCandidates = {
     val possibles = game.getCountries(IndonesiaMalaysia :: getAdjacent(IndonesiaMalaysia))
     countryNames(possibles.filter {
-      case m: MuslimCountry    => m.totalCells > 0 && m.isAlly
+      case m: MuslimCountry    => !m.truce && m.totalCells > 0 && m.isAlly
       case n: NonMuslimCountry => n.totalCells > 0 && n.isHard
     })
   }

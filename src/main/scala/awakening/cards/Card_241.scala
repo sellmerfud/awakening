@@ -62,7 +62,9 @@ object Card_241 extends Card(241, "Abdel Fattah el-Sisi", US, 1, Remove, NoLapsi
   def eventConditionsMet(role: Role) = globalEventNotInPlay(PoliticalIslamismJihadist)
 
   def getCandidates = countryNames(game.muslims.filter { m =>
-    m.canTakeAwakeningOrReactionMarker && (m.name == Egypt || m.militia > 0)
+    !m.truce &&
+    m.canTakeAwakeningOrReactionMarker &&
+    (m.name == Egypt || m.militia > 0)
   })
 
   def arabWinter = lapsingEventInPlay(ArabWinter)

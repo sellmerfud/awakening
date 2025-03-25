@@ -78,9 +78,9 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
       }
   }
 
-  def removeCadreCandidates = game.countries.filter(_.hasCadre)
+  def removeCadreCandidates = game.countries.filter(c => !c.truce && c.hasCadre)
 
-  def enhPlaceCadreCandidates = game.nonMuslims.filter(_.isUntested)
+  def enhPlaceCadreCandidates = game.nonMuslims.filter(m => !m.truce && m.isUntested)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -132,7 +132,7 @@ object Card_202 extends Card(202, "Cyber Warfare", Unassociated, 1, NoRemove, No
           setCountryPosture(name, posture)
 
         case PlaceCadre =>
-          val candidates = countryNames(game.countries)
+          val candidates = countryNames(game.countries.filter(!_.truce))
           val name = askCountry("Place a cadre in which country? ", candidates)
           addEventTarget(name)
           addCadreToCountry(name)

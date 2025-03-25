@@ -46,7 +46,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 object Card_028 extends Card(28, "Sharia", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
 
-  def getCandidates = countryNames(game.muslims.filter(_.besiegedRegime))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.besiegedRegime))
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country

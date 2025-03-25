@@ -58,6 +58,7 @@ object Card_083 extends Card(83, "Kashmir", Jihadist, 3, NoRemove, NoLapsing, No
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
+    !game.getMuslim(Pakistan).truce &&
     countryEventNotInPlay(Pakistan, Indo_PakistaniTalks)
 
   // Returns true if the Bot associated with the given role will execute the event

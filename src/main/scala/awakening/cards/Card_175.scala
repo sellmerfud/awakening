@@ -71,9 +71,9 @@ object Card_175 extends Card(175, "Censorship", Jihadist, 2, NoRemove, NoLapsing
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val candidates = countryNames(game.muslims.filter(_.awakening > 0))
+    val candidates = countryNames(game.muslims.filter(m => !m.truce && m.awakening > 0))
     if (candidates.isEmpty)
-      log(s"\nThere are no awakening markers on the map", Color.Event)
+      log(s"\nThere are no awakening markers that can be removed.", Color.Event)
     else {
       val target = if (isHuman(role))
         askCountry("Select country: ", candidates)

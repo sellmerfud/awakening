@@ -819,6 +819,7 @@ object LabyrinthAwakening {
   val USConsulateAttacked = 199
   val EbolaScare          = 204
   val OilPriceSpike3      = 236
+  val Truce               = 239
   val ExpandedROE         = 271
   val FullyResourcedCOIN  = 273
   val SiegeofMosul        = 278
@@ -1152,6 +1153,7 @@ object LabyrinthAwakening {
     val plots: List[PlotOnMap]
     val markers: List[String]
     val wmdCache: Int        // Number of WMD plots cached
+    val truce: Boolean
 
     def itemDesc = name
     def isMuslim: Boolean
@@ -1199,7 +1201,8 @@ object LabyrinthAwakening {
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
     def recruitOK(madrassas: Boolean): Boolean =
-      hasCadre || totalCells > 0 || (madrassas && (isPoor || isIslamistRule))
+      !truce &&
+      (hasCadre || totalCells > 0 || (madrassas && (isPoor || isIslamistRule)))
     def autoRecruit: Boolean
     def recruitSucceeds(die: Int): Boolean
     def canTakeMilitia: Boolean
@@ -1224,6 +1227,7 @@ object LabyrinthAwakening {
     iranSpecialCase: Boolean   = false
   ) extends Country {
 
+    override val truce: Boolean = false  // Never Truce in Non-Muslim country
     override def isMuslim: Boolean = false
 
     override def isUntested = posture == PostureUntested &&
@@ -1292,7 +1296,8 @@ object LabyrinthAwakening {
     caliphateCapital: Boolean  = false,
     awakening: Int             = 0,  // number of awakening markers
     reaction: Int              = 0,  // number of reaction markers
-    wmdCache: Int              = 0   // Number of WMD plots cached
+    wmdCache: Int              = 0,  // Number of WMD plots cached
+    truce: Boolean             = false,
   ) extends Country {
 
     override def isMuslim: Boolean = true
@@ -1342,7 +1347,7 @@ object LabyrinthAwakening {
     def canTakeAidMarker = true  // All Muslim countries can take an Aid marker by event
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
-    def canDeployTo(ops: Int) = isAlly && !isIslamistRule && ops >= governance
+    def canDeployTo(ops: Int) = !truce && isAlly && !isIslamistRule && ops >= governance
 
     // To deploy troops out of a regime change country, we must leave behind
     // at least five more troops than cells.  Those troops that are left
@@ -1357,6 +1362,7 @@ object LabyrinthAwakening {
     def jihadDRM = -reactionDelta
     def jihadOK = !isIslamistRule && totalCells > 0 && !(name == Pakistan && hasMarker(BenazirBhutto))
     def majorJihadOK(ops: Int) =
+      !truce &&
       !(name == Pakistan && hasMarker(BenazirBhutto)) &&
       totalCells - totalTroopsAndMilitia >= 5 && (
         (isPoor && (ops  > 1 || besiegedRegime)) ||
@@ -1489,16 +1495,25 @@ object LabyrinthAwakening {
   // We use this class to keep track of this.
 
   case class LapsingEntry(cardNumber: Int, discarded: Boolean = false) {
+    def display = {
+      val suffix = if (cardNumber == Truce)
+        game.countries
+          .find(_.truce)
+          .map(c => s"[${c.name}]")
+          .getOrElse("")
+      else
+        ""
+      s"${cardNumAndName(cardNumber)}$suffix"
+    }
     override def toString() = (cardNumber, discarded) match {
       case (0, true) => "(marker)" // Zero card number for 1st Plot box marker
-      case (n, true) => s"${cardNumAndName(n)} (marker)"
-      case _ => cardNumAndName(cardNumber)
+      case (n, true) => s"$display (marker)"
+      case _ => display
     }
   }
 
   implicit val LapsingEventOrdering: Ordering[LapsingEntry] =
     Ordering.by { e: LapsingEntry => e.cardNumber }
-
 
   case class SummaryEntry(text: String, color: Option[Color])
 
@@ -1828,9 +1843,11 @@ object LabyrinthAwakening {
 
       val targets = countryNames(
         muslims.filter { m =>
-          (m.isIslamistRule && isAllowed(m))         ||
-          (m.name == Iraq  && m.hasMarker(IraqiWMD)) ||
-          (m.name == Libya && m.hasMarker(LibyanWMD))
+          !m.truce && (
+            (m.isIslamistRule && isAllowed(m))         ||
+            (m.name == Iraq  && m.hasMarker(IraqiWMD)) ||
+            (m.name == Libya && m.hasMarker(LibyanWMD))
+          )
         }
       )
       // Only a valid target if there is a source of troops available
@@ -1842,11 +1859,11 @@ object LabyrinthAwakening {
     }
 
     def withdrawFromTargets: List[String] = countryNames(
-      muslims.filter(m => m.inRegimeChange && m.troops > 0)
+      muslims.filter(m => !m.truce && m.inRegimeChange && m.troops > 0)
     )
 
     def withdrawToTargets: List[String] =
-      "track" :: countryNames(countries.filter(_.canDeployTo(3)))
+      "track" :: countryNames(countries.filter(c => !c.truce && c.canDeployTo(3)))
 
     def withdrawPossible(ops: Int) =
         ops >= 3 && usPosture == Soft && withdrawFromTargets.nonEmpty
@@ -1881,7 +1898,7 @@ object LabyrinthAwakening {
         (m.hasCadre || m.cells > 0)
       val fataCheck = m.name != Pakistan || countryEventNotInPlay(Pakistan, FATA) || m.inRegimeChange
       val opsCheck  = ops >= (m.governance min Poor) // Treat IslamicRule same as Poor for ops value
-      !m.isIslamistRule && hasTarget && fataCheck && opsCheck && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
+      !m.truce && !m.isIslamistRule && hasTarget && fataCheck && opsCheck && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
     })
 
     def disruptNonMuslimTargets(ops: Int): List[String] = countryNames(nonMuslims.filter { n =>
@@ -1891,11 +1908,11 @@ object LabyrinthAwakening {
     })
 
     def disruptTargets(ops: Int): List[String] =
-      disruptMuslimTargets(ops) ::: disruptNonMuslimTargets(ops)
+      disruptMuslimTargets(ops).filter(!underTruce(_)) ::: disruptNonMuslimTargets(ops)
 
     def alertPossible(ops: Int) = ops >= 3 && alertTargets.nonEmpty
 
-    def alertTargets: List[String] = countryNames(countries.filter(_.hasPlots))
+    def alertTargets: List[String] = countryNames(countries.filter(c => !c.truce && c.hasPlots))
 
     def warOfIdeasMuslimTargets(ops: Int): List[String] =
       countryNames(muslims.filter(_.warOfIdeasOK(ops)))
@@ -1904,29 +1921,32 @@ object LabyrinthAwakening {
       countryNames(nonMuslims.filter(_.warOfIdeasOK(ops)))
 
     def warOfIdeasTargets(ops: Int): List[String] =
-      warOfIdeasMuslimTargets(ops) ::: warOfIdeasNonMuslimTargets(ops)
+      warOfIdeasMuslimTargets(ops).filter(!underTruce(_)) ::: warOfIdeasNonMuslimTargets(ops)
 
 
     def recruitTargets(madrassas: Boolean): List[String] =
-      countryNames(countries.filter(_.recruitOK(madrassas)))
+      countryNames(countries.filter(c => !c.truce && c.recruitOK(madrassas)))
 
     def recruitPossible = lapsingEventNotInPlay(GTMO) &&
                           cellsToRecruit > 0 &&
                           recruitTargets(madrassas = false).nonEmpty
 
-    def jihadTargets: List[String] = countryNames(muslims.filter(_.jihadOK))
+    def jihadTargets: List[String] = countryNames(muslims.filter(m => !m.truce && m.jihadOK))
     def jihadPossible = jihadTargets.nonEmpty
 
     def majorJihadTargets(ops: Int) = countryNames(muslims.filter(_.majorJihadOK(ops)))
     def majorJihadPossible(ops: Int) = majorJihadTargets(ops).nonEmpty
 
     def plotTargets: List[String] = {
-      val muslimTargets = muslims.filter(m => !m.isIslamistRule && m.totalCells > 0)
+      val muslimTargets = muslims.filter(m => !m.truce && !m.isIslamistRule && m.totalCells > 0)
       val nonMuslimTargets = nonMuslims.filter(_.totalCells > 0)
       countryNames(muslimTargets ::: nonMuslimTargets)
     }
     def plotsAvailableWith(ops: Int) = availablePlots.filter(_.opsToPlace <= ops)
     def plotPossible(ops: Int) = plotsAvailableWith(ops).nonEmpty && plotTargets.nonEmpty
+
+    def travelSources = game.countries
+      .filter(c => !c.truce && c.cells > 0)
 
     // --- Summaries --------------------------------------
     def actionSummary: Summary = {
@@ -2112,8 +2132,9 @@ object LabyrinthAwakening {
           val autoRecruit = if (m.autoRecruit) List("Auto-Recruit") else Nil
           val desc = (gov :: resDisp :: oil ::: autoRecruit).mkString(", ")
           val muslimType = if (m.isShiaMix) "Shia-Mix" else "Sunni"
+          val truce = if (m.truce) "  ** TRUCE **" else ""
           summary.add("")
-          summary.add(s"$name  (Muslim, $muslimType)")
+          summary.add(s"$name  (Muslim, $muslimType)$truce")
           summary.add(separator(length = 54))
           summary.add(desc)
           numItem(m.activeCells, "Active cell")
@@ -5315,9 +5336,12 @@ object LabyrinthAwakening {
       var convergers = List.empty[Converger]
       for (name <- names; m = game.getMuslim(name)) {
         m.awakeningDelta match {
-          case 0  =>  // Nothing happens
-          case 2  => addAwakeningMarker(name)
-          case -2 => addReactionMarker(name)
+          case _ if m.truce  =>
+            log(s"\nPolarization skipped in $name because it is under TRUCE.", Color.Info)
+          case 2 =>
+            addAwakeningMarker(name)
+          case -2 =>
+            addReactionMarker(name)
           case x if x > 2 =>
             log()
             if (m.isAlly) {
@@ -5327,7 +5351,6 @@ object LabyrinthAwakening {
             }
             else
               shiftAlignmentLeft(name)
-            pause()
 
           case _ => // x < -2
             log()
@@ -5338,8 +5361,8 @@ object LabyrinthAwakening {
             }
             else
               shiftAlignmentRight(name)
-            pause()
         }
+        pause()
       }
 
       // Now perform convergence for each country that became Good or Islamist Rule.
@@ -5498,125 +5521,129 @@ object LabyrinthAwakening {
   def civilWarAttrition(name: String, hamaOffensive: Boolean, endOfTurn: Boolean): Unit = {
     assert(game.getMuslim(name).civilWar, s"civilWarAttrition() called on non-Civil War country: $name")
 
-    val siegeOfMosul = lapsingEventInPlay(SiegeofMosul)
-    val hamaOffensiveDisplay = if (hamaOffensive)
-      " (Hama Offensive)"
-    else
-      ""
-    // Get the fresh instance of the Muslim country
-    val m = game.getMuslim(name)
-    // If Siege of Mosul in play then cells are halved and (troops + militia)
-    // are doubled
-    val usPresence = List(
-      if (m.militia > 0) Some(s"${m.militia} militia") else None,
-      if (m.numAdvisors > 0) Some(amountOf(m.numAdvisors, "Advisors marker")) else None,
-      if (m.troops > 0) Some(amountOf(m.troops, "troop")) else None,
-    ).flatten ::: m.troopsMarkers
-    val jihadistPresence = List(
-        if (m.cells > 0) Some(amountOf(m.cells, "cell")) else None,
-        if (m.hasSadr) Some("Sadr marker") else None,
-    ).flatten
-    val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
-    val totalTroopsAndMilitia = if (siegeOfMosul) m.totalTroopsAndMilitia * 2 else m.totalTroopsAndMilitia
-    val usPresenceString = usPresence match {
-      case Nil => "none"
-      case _ => usPresence.mkString(", ") + (
-                  if (siegeOfMosul)
-                    s" [doubled] = $totalTroopsAndMilitia"
-                  else
-                    s" = $totalTroopsAndMilitia"
-                )
-    }
-    val jihadistPresenceString = jihadistPresence match {
-      case Nil => "none"
-      case _ => jihadistPresence.mkString(", ") + (
-                  if (siegeOfMosul)
-                    s" [halved] = $totalCells"
-                  else
-                    s" = $totalCells"
-                )
-    }
+    if (underTruce(name))
+      log(s"\nNo attrition in $name because it is under TRUCE.", Color.Info)
+    else {
+      val siegeOfMosul = lapsingEventInPlay(SiegeofMosul)
+      val hamaOffensiveDisplay = if (hamaOffensive)
+        " (Hama Offensive)"
+      else
+        ""
+      // Get the fresh instance of the Muslim country
+      val m = game.getMuslim(name)
+      // If Siege of Mosul in play then cells are halved and (troops + militia)
+      // are doubled
+      val usPresence = List(
+        if (m.militia > 0) Some(s"${m.militia} militia") else None,
+        if (m.numAdvisors > 0) Some(amountOf(m.numAdvisors, "Advisors marker")) else None,
+        if (m.troops > 0) Some(amountOf(m.troops, "troop")) else None,
+      ).flatten ::: m.troopsMarkers
+      val jihadistPresence = List(
+          if (m.cells > 0) Some(amountOf(m.cells, "cell")) else None,
+          if (m.hasSadr) Some("Sadr marker") else None,
+      ).flatten
+      val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
+      val totalTroopsAndMilitia = if (siegeOfMosul) m.totalTroopsAndMilitia * 2 else m.totalTroopsAndMilitia
+      val usPresenceString = usPresence match {
+        case Nil => "none"
+        case _ => usPresence.mkString(", ") + (
+                    if (siegeOfMosul)
+                      s" [doubled] = $totalTroopsAndMilitia"
+                    else
+                      s" = $totalTroopsAndMilitia"
+                  )
+      }
+      val jihadistPresenceString = jihadistPresence match {
+        case Nil => "none"
+        case _ => jihadistPresence.mkString(", ") + (
+                    if (siegeOfMosul)
+                      s" [halved] = $totalCells"
+                    else
+                      s" = $totalCells"
+                  )
+      }
 
-    log()
-    log(s"Attrition: $name$hamaOffensiveDisplay")
-    log(separator())
-    if (siegeOfMosul) {
-      log(s"Siege of Mosul is in effect: cells are halved, troops/militia are doubled", Color.Info)
-    }
-    log(s"US presence: $usPresenceString")
-    log(s"Jihadist presence: $jihadistPresenceString")
-
-
-    val jihadDie = getDieRoll(s"Enter Jihadist attrition die roll for $name: ")
-    val usDie = getDieRoll(s"Enter US attrition die roll for $name: ")
-    val jihadHits = totalCells / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
-    val usHits    = totalTroopsAndMilitia / 6 + (if (usDie <= totalTroopsAndMilitia % 6) 1 else 0)
-
-    if (totalCells > 0 || totalTroopsAndMilitia > 0) {
-      if (totalTroopsAndMilitia > 0 && totalTroopsAndMilitia % 6 != 0)
-        log(s"\nUS die roll : $usDie")
-      else if (totalTroopsAndMilitia > 0)
-        log(s"\nUS die roll : not necessary")
-
-      if (totalCells > 0 && totalCells % 6 != 0)
-        log(s"Jihadist die roll: $jihadDie")
-      else if (totalCells > 0)
-        log(s"Jihadist die roll: not necessary")
-
-      log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
-      log(s"\nThe Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
-
-      if (jihadHits + usHits > 0) {
-        val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits, hamaOffensive)
-        val unfulfilledUSHits    = jihadistCivilWarLosses(m, usHits)
-
-        //  Make sure the country (ie. Nigeria) is still a Non Muslim country
-        if (game.isMuslim(name)) {
-          val delta = unfulfilledJihadHits - unfulfilledUSHits
-          if (delta == 0) {
-            if (unfulfilledJihadHits != 0)
-              log(s"\nBoth sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No further effects.")
-          }
-          else {
-            log()
-            if (unfulfilledJihadHits > 0)
-              log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
-            if (unfulfilledUSHits > 0)
-              log(s"${amountOf(unfulfilledUSHits, "unfulfilled US hit")} against the Jihadist")
-            if (delta > 0) {
-              val (shifts, newAlign) = (delta, m.alignment) match {
-                case (_, Adversary) => (0, Adversary)
-                case (1, Ally)      => (1, Neutral)
-                case (_, Neutral)   => (1, Adversary)
-                case _              => (2, Adversary)
-              }
+      log()
+      log(s"Attrition: $name$hamaOffensiveDisplay")
+      log(separator())
+      if (siegeOfMosul) {
+        log(s"Siege of Mosul is in effect: cells are halved, troops/militia are doubled", Color.Info)
+      }
+      log(s"US presence: $usPresenceString")
+      log(s"Jihadist presence: $jihadistPresenceString")
 
 
-              if (shifts > 0)
-                setAlignment(m.name, newAlign)
+      val jihadDie = getDieRoll(s"Enter Jihadist attrition die roll for $name: ")
+      val usDie = getDieRoll(s"Enter US attrition die roll for $name: ")
+      val jihadHits = totalCells / 6 + (if (jihadDie <= totalCells % 6) 1 else 0)
+      val usHits    = totalTroopsAndMilitia / 6 + (if (usDie <= totalTroopsAndMilitia % 6) 1 else 0)
 
-              val steps = delta - shifts
-              if (steps > 0)
-                worsenGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = endOfTurn)
+      if (totalCells > 0 || totalTroopsAndMilitia > 0) {
+        if (totalTroopsAndMilitia > 0 && totalTroopsAndMilitia % 6 != 0)
+          log(s"\nUS die roll : $usDie")
+        else if (totalTroopsAndMilitia > 0)
+          log(s"\nUS die roll : not necessary")
+
+        if (totalCells > 0 && totalCells % 6 != 0)
+          log(s"Jihadist die roll: $jihadDie")
+        else if (totalCells > 0)
+          log(s"Jihadist die roll: not necessary")
+
+        log(s"The US inflicts ${amountOf(usHits, "hit")} on the Jihadist")
+        log(s"\nThe Jihadist inflicts ${amountOf(jihadHits, "hit")} on the US")
+
+        if (jihadHits + usHits > 0) {
+          val unfulfilledJihadHits = usCivilWarLosses(m, jihadHits, hamaOffensive)
+          val unfulfilledUSHits    = jihadistCivilWarLosses(m, usHits)
+
+          //  Make sure the country (ie. Nigeria) is still a Non Muslim country
+          if (game.isMuslim(name)) {
+            val delta = unfulfilledJihadHits - unfulfilledUSHits
+            if (delta == 0) {
+              if (unfulfilledJihadHits != 0)
+                log(s"\nBoth sides have ${amountOf(unfulfilledJihadHits, "unfulfilled hit")}.  No further effects.")
             }
             else {
-              // Shift toward Ally/Improve governance
-              val (shifts, newAlign) = (-delta, m.alignment) match {
-                case (_, Ally)      => (0, Ally)
-                case (1, Adversary) => (1, Neutral)
-                case (_, Neutral)   => (1, Ally)
-                case _              => (2, Ally)
-              }
+              log()
+              if (unfulfilledJihadHits > 0)
+                log(s"${amountOf(unfulfilledJihadHits, "unfulfilled Jihadist hit")} against the US")
+              if (unfulfilledUSHits > 0)
+                log(s"${amountOf(unfulfilledUSHits, "unfulfilled US hit")} against the Jihadist")
+              if (delta > 0) {
+                val (shifts, newAlign) = (delta, m.alignment) match {
+                  case (_, Adversary) => (0, Adversary)
+                  case (1, Ally)      => (1, Neutral)
+                  case (_, Neutral)   => (1, Adversary)
+                  case _              => (2, Adversary)
+                }
 
-              if (shifts > 0)
-                setAlignment(m.name, newAlign)
 
-              //  Make sure the country (ie. Nigeria) is still a Non Muslim country
-              //  It may have just shifted to Ally with no cells present!
-              if (game.isMuslim(name)) {
-                val steps = -delta - shifts
+                if (shifts > 0)
+                  setAlignment(m.name, newAlign)
+
+                val steps = delta - shifts
                 if (steps > 0)
-                  improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = endOfTurn)
+                  worsenGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = endOfTurn)
+              }
+              else {
+                // Shift toward Ally/Improve governance
+                val (shifts, newAlign) = (-delta, m.alignment) match {
+                  case (_, Ally)      => (0, Ally)
+                  case (1, Adversary) => (1, Neutral)
+                  case (_, Neutral)   => (1, Ally)
+                  case _              => (2, Ally)
+                }
+
+                if (shifts > 0)
+                  setAlignment(m.name, newAlign)
+
+                //  Make sure the country (ie. Nigeria) is still a Non Muslim country
+                //  It may have just shifted to Ally with no cells present!
+                if (game.isMuslim(name)) {
+                  val steps = -delta - shifts
+                  if (steps > 0)
+                    improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = endOfTurn)
+                }
               }
             }
           }
@@ -7693,16 +7720,36 @@ object LabyrinthAwakening {
 
     if (game.eventsLapsing.nonEmpty) {
       needPause = true
+      val truceRemoved = game.eventsLapsing.exists(_.cardNumber == Truce)
       log()
       log("Lapsing Events")
       log(separator())
       removeLapsingEvents(game.eventsLapsing.map(_.cardNumber), endOfTurn = true)
+      if (truceRemoved)
+        game.countries
+          .find(_.truce)
+          .foreach(muslim => removeTruceMarker(muslim.name))
     }
     if (needPause)
       pause()
   }
 
+  def placeTruceMarker(muslimName: String): Unit = {
+    val muslim = game.getMuslim(muslimName)
 
+    game = game.updateCountry(muslim.copy(truce = true))
+    log(s"\nPlace Truce marker in ${muslim.name}", Color.Event)
+  }
+
+  def removeTruceMarker(muslimName: String): Unit = {
+    val muslim = game.getMuslim(muslimName)
+
+    game = game.updateCountry(muslim.copy(truce = false))
+    log(s"\nRemove Truce marker from ${muslim.name}", Color.Event)
+  }
+
+  def underTruce(name: String) = game.getCountry(name).truce
+  
   // Note that the end of turn sequence is different depending on whether
   // or not the Awakening expansion rules are in effect.
   def endTurn(): Unit = {
@@ -7831,7 +7878,7 @@ object LabyrinthAwakening {
 
     if (numFromMap > 0) {
       val candidates = game.countries
-        .filter(_.troops > 0)
+        .filter(m => !m.truce && m.troops > 0)
         .map(c => MapItem(c.name, c.troops))
         .sortBy(_.country)
 
@@ -7862,6 +7909,7 @@ object LabyrinthAwakening {
       case _ =>
     }
   }
+
 
   //  If a Lapsing card that removed troops to the off map box is removed by an event
   //  (eg. 353 Bowling Green Massacre) then the troops should  be moved back to the
@@ -7901,6 +7949,12 @@ object LabyrinthAwakening {
             log(s"\nThe $Jihadist player no longer plays cards at random.", Color.Event)
           else
             log(s"\nThe $Jihadist Bot may again play Non-US associated events.", Color.Event)
+
+        case Truce =>
+          // Find and remove the Truce marker from the map
+          game.countries
+            .find(_.truce)
+            .foreach(muslim => removeTruceMarker(muslim.name))
 
         case _ =>
           returnOffMapTroopsForLapsingCard(cardNum)
@@ -8877,15 +8931,26 @@ object LabyrinthAwakening {
   def playGame(): Unit = {
 
     @tailrec def actionLoop(lastAction: Option[UserAction]): Unit = {
-      checkAutomaticVictory() // Will Exit game if auto victory has been achieved
-      if (getActiveRole() == Jihadist && isBot(Jihadist) && game.botEnhancements)
-        if (JihadistBot.voluntaryCadreRemoval())
-          saveGameState()
+      val activeRole = getActiveRole()
 
+      checkAutomaticVictory() // Will Exit game if auto victory has been achieved
+      JihadistBot.resetStaticData()
+      USBot.resetStaticData()
+
+      if (isBot(Jihadist)) {
+        // If it is the Jihadist Bot's turn it may
+        // voluntarily remove cadres
+        if (activeRole == Jihadist)
+          JihadistBot.voluntaryCadreRemoval()
+        // The #239 Truce card does not specify
+        // that the Truce must be ended on the
+        // player's own turn so we check at the
+        // start of any turn.
+        JihadistBot.endTruceInMajorJihadPriority()
+      }
 
       // If we are at the end of the action phase allow the user
       // to bypass the menu
-      val activeRole = getActiveRole()
       val numCardsPlayed = numCardsPlayedInCurrentPhase()
       val numInHand = numCardsInHand(activeRole)
       val owner = if (isHuman(activeRole))
@@ -9721,7 +9786,7 @@ object LabyrinthAwakening {
       val actions = List(
         choice(eventPlayable && reservesUsed == 0, ExecuteEvent, ExecuteEvent),
         choice(game.recruitPossible,               Recruit, Recruit),
-        choice(true,                               Travel, Travel), // Travel must be possible or the Jihadist has lost
+        choice(game.travelSources.nonEmpty,        Travel, Travel),
         choice(game.jihadPossible,                 Jihad, Jihad),
         choice(game.plotPossible(opsAvailable),    PlotAction, PlotAction),
         choice(card.ops < 3 && inReserve < 2,      AddReserves, AddReserves),
@@ -9909,8 +9974,7 @@ object LabyrinthAwakening {
     val numAttempts = askInt("How many attempts do you wish to make?", 1, maxRolls, Some(maxRolls))
     // Keep track of where cells have been selected. They can only be selected once!
     case class Source(name: String, sleepers: Int, actives: Int)
-    var sourceCountries = game.countries
-      .filter(_.cells > 0)
+    var sourceCountries = game.travelSources
       .map(c => c.name -> Source(c.name, c.sleeperCells, c.activeCells))
       .toMap
 
@@ -9944,7 +10008,7 @@ object LabyrinthAwakening {
         if (isTravelBanCountry(src.name))
           names = names.filterNot(_ == UnitedStates)
 
-        names
+        names.filter(!underTruce(_))
       }
 
       val dest = askCountry(s"$ord Travel to which destination country: ", destCandidates.sorted)
@@ -9999,7 +10063,7 @@ object LabyrinthAwakening {
     val Active  = true
     log(s"\n$Jihadist performs a Jihad operation with ${opsString(ops)}")
     log(separator())
-    val jihadCountries = game.muslims.filter(_.jihadOK)
+    val jihadCountries = game.getMuslims(game.jihadTargets)
     val maxDice = ops min jihadCountries.map(_.totalCells).sum
     var candidates = countryNames(jihadCountries)
 
@@ -10512,6 +10576,11 @@ object LabyrinthAwakening {
                 case FromLapsing =>
                   val newLapsing = game.eventsLapsing.filterNot(_.cardNumber == cardNum)
                   game = game.copy(eventsLapsing = newLapsing)
+                  if (cardNum == Truce) {
+                    game.countries
+                      .find(_.truce)
+                      .foreach(muslim => removeTruceMarker(muslim.name))
+                  }
                 case From1stPlot =>
                   game = game.copy(firstPlotEntry = None)
                 case FromRemoved =>
@@ -10524,6 +10593,10 @@ object LabyrinthAwakening {
                   game = game.copy(cardsDiscarded = cardNum::game.cardsDiscarded)
                 case FromLapsing =>
                   game = game.copy(eventsLapsing = LapsingEntry(cardNum)::game.eventsLapsing)
+                  if (cardNum == Truce) {
+                    val target = askCountry("\nSelect country for Truce: ", countryNames(game.muslims))
+                    placeTruceMarker(target)
+                  }
                 case From1stPlot =>
                   game = game.copy(firstPlotEntry = Some(LapsingEntry(cardNum)))
                 case FromRemoved =>
@@ -10628,6 +10701,10 @@ object LabyrinthAwakening {
               val marker = LapsingEntry(n, true)
               game = game.copy(eventsLapsing = marker::game.eventsLapsing)
               displayLine(s"\n$marker added", Color.Info)
+              if (n == Truce) {
+                val target = askCountry("\nSelect country for Truce: ", countryNames(game.muslims))
+                placeTruceMarker(target)
+              }
           }
           nextAdjustment()
 
@@ -10641,6 +10718,11 @@ object LabyrinthAwakening {
               val marker = LapsingEntry(n, true)
               game = game.copy(eventsLapsing = game.eventsLapsing.filterNot(_ == marker))
               displayLine(s"\n$marker removed", Color.Info)
+              if (n == Truce) {
+                game.countries
+                  .find(_.truce)
+                  .foreach(muslim => removeTruceMarker(muslim.name))
+              }
           }
           nextAdjustment()
 

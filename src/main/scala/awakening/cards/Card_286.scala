@@ -56,7 +56,7 @@ object Card_286 extends Card(286, "Palestinian Peace", Jihadist, 1, NoRemove, No
   def eventRemovesLastCell(): Boolean = false
 
   def getCandidates = countryNames(
-    game.adjacentMuslims(Israel).filter(_.canTakeAwakeningOrReactionMarker)
+    game.adjacentMuslims(Israel).filter(m => !m.truce && m.canTakeAwakeningOrReactionMarker)
   )
 
   // Returns true if the printed conditions of the event are satisfied

@@ -57,6 +57,7 @@ object Card_125 extends Card(125, "Peshmerga", US, 1, NoRemove, NoLapsing, NoAut
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     (m.name == Iraq || m.name == Syria) &&
     m.totalCells > 0 &&
     m.canTakeMilitia

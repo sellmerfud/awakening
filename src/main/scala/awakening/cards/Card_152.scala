@@ -59,7 +59,7 @@ object Card_152 extends Card(152, "Congress Acts", US, 3, NoRemove, NoLapsing, N
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCivilWars = countryNames(game.muslims.filter(_.civilWar))
+  def getCivilWars = countryNames(game.muslims.filter(m => !m.truce && m.civilWar))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -68,8 +68,8 @@ object Card_152 extends Card(152, "Congress Acts", US, 3, NoRemove, NoLapsing, N
     (game.troopsAvailable >= 6 && getCivilWars.nonEmpty)
 
 
-  def botCandidates() = countryNames(
-    game.muslims.filter(m => m.civilWar && m.totalCells > m.totalTroopsAndMilitia)
+  def botCandidates = countryNames(
+    game.muslims.filter(m => !m.truce && m.civilWar && m.totalCells > m.totalTroopsAndMilitia)
   )
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -78,7 +78,7 @@ object Card_152 extends Card(152, "Congress Acts", US, 3, NoRemove, NoLapsing, N
   def botWillPlayEvent(role: Role): Boolean =
     game.numIslamistRule > 2 &&
     game.usPosture == Soft &&
-    botCandidates().nonEmpty
+    botCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -97,7 +97,7 @@ object Card_152 extends Card(152, "Congress Acts", US, 3, NoRemove, NoLapsing, N
       }
     }
     else {
-      val target = shuffle(USBot.highestCellsMinusTandM(botCandidates())).head
+      val target = shuffle(USBot.highestCellsMinusTandM(botCandidates)).head
       addEventTarget(target)
       performRegimeChange("track", target, 6)  // Bot always uses exactly 6 troops for regime change
     }

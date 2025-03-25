@@ -58,7 +58,10 @@ object Card_158 extends Card(158, "Mass Turnout", US, 3, NoRemove, NoLapsing, No
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
-    m.inRegimeChange && m.awakening > 0 && !game.isCaliphateMember(m.name)
+    !m.truce &&
+    m.inRegimeChange &&
+    m.awakening > 0 &&
+    !game.isCaliphateMember(m.name)
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 

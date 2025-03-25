@@ -60,19 +60,30 @@ object Card_239 extends Card(239, "Truce", Unassociated, 3, NoRemove, Lapsing, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def truceCandidates = countryNames(
+    game.muslims
+      .filter { m =>
+        !game.isCaliphateMember(m.name) &&
+        (m.civilWar || m.inRegimeChange || (m.awakening > 0 && m.reaction > 0))
+      }
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = false  // Unplayable in solo game.
+  def eventConditionsMet(role: Role) = truceCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = false
+  def botWillPlayEvent(role: Role): Boolean = false  // Bots never play this event
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
-  def executeEvent(role: Role): Unit = ()
+  def executeEvent(role: Role): Unit = {
+    val target = askCountry("\nSelect country for Truce: ", truceCandidates)
+    placeTruceMarker(target)
+  }
 }

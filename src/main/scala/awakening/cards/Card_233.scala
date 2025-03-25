@@ -56,7 +56,9 @@ object Card_233 extends Card(233, "UN Ceasefire", Unassociated, 2, NoRemove, NoL
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
-    m.civilWar && !game.isCaliphateMember(m.name)
+    !m.truce &&
+    m.civilWar &&
+    !game.isCaliphateMember(m.name)
 
   def getCandidates = countryNames(game.muslims.filter(_.civilWar))
 

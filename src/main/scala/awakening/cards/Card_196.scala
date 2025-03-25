@@ -61,7 +61,7 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val isCandidate = (m: MuslimCountry) => m.isTested && !m.isGood
+  val isCandidate = (m: MuslimCountry) => !m.truce && m.isTested && !m.isGood
   val isBotCandidate = (m: MuslimCountry) => isCandidate(m) && !m.autoRecruit
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))

@@ -54,6 +54,7 @@ object Card_350 extends Card(350, "UN Peace Envoy", Unassociated, 2, NoRemove, N
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.civilWar &&
     m.totalCells > 0 &&
     m.totalTroopsAndMilitia > 0 &&

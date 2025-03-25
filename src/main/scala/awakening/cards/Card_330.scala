@@ -53,8 +53,8 @@ object Card_330 extends Card(330, "IRGC", Unassociated, 1, NoRemove, NoLapsing, 
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   def getCandidates(role: Role) = role match {
-    case US => countryNames(game.adjacentCountries(Iran).filter(_.totalCells > 0))
-    case Jihadist => countryNames(game.adjacentMuslims(Iran).filter(_.militia > 0))
+    case US => countryNames(game.adjacentCountries(Iran).filter(c => !c.truce && c.totalCells > 0))
+    case Jihadist => countryNames(game.adjacentMuslims(Iran).filter(m => !m.truce && m.militia > 0))
   }
 
   // Used by the US Bot to determine if the executing the event would remove

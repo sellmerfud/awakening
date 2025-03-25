@@ -45,6 +45,7 @@ import awakening.LabyrinthAwakening._
 // ------------------------------------------------------------------
 object Card_004 extends Card(4, "Moro Talks", US, 1, Remove, NoLapsing) {
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.plots.exists(p => !p.backlashed) &&
     !game.isCaliphateMember(m.name)
 

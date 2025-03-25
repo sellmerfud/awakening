@@ -58,7 +58,7 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val isCandidate = (c: Country) => c.totalTroops > 0
+  val isCandidate = (c: Country) => !c.truce && c.totalTroops > 0
 
   def getCandidates = countryNames(game.countries.filter(isCandidate))
 

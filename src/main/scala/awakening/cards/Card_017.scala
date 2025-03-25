@@ -55,7 +55,7 @@ object Card_017 extends Card(17, "FSB", US, 2, NoRemove, NoLapsing, NoAutoTrigge
   def getCandidates = countryNames(
     game
       .getCountries(Russia::CentralAsia::Nil)
-      .filter(_.totalCells > 0)
+      .filter(c => !c.truce && c.totalCells > 0)
   )
 
   // Used by the US Bot to determine if the executing the event would remove

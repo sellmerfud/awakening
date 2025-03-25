@@ -60,9 +60,18 @@ object Card_322 extends Card(322, "Amnesty International", Unassociated, 1, NoRe
  def getCandidates(role: Role) = {
   val isCandidate = role match {
     case US =>
-      (m: MuslimCountry) => m.isAdversary && m.canTakeAwakeningOrReactionMarker && !game.isCaliphateMember(m.name)
+      (m: MuslimCountry) =>
+        !m.truce &&
+        m.isAdversary &&
+        m.canTakeAwakeningOrReactionMarker &&
+        !game.isCaliphateMember(m.name)
+
     case Jihadist =>
-      (m: MuslimCountry) => m.isAlly && m.canTakeAwakeningOrReactionMarker && !game.isCaliphateMember(m.name)
+      (m: MuslimCountry) =>
+        !m.truce &&
+        m.isAlly &&
+        m.canTakeAwakeningOrReactionMarker &&
+        !game.isCaliphateMember(m.name)
   }
   countryNames(game.muslims.filter(isCandidate))
  }

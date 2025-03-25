@@ -59,7 +59,11 @@ object Card_264 extends Card(264, "Personal Security Contractors", US, 2, NoRemo
   def eventRemovesLastCell(): Boolean = false
 
   def getCandidates = countryNames(
-    game.muslims.filter(m => m.canTakeMilitia && (m.civilWar || m.inRegimeChange || m.totalCells > m.governance))
+    game.muslims.filter{ m =>
+      !m.truce &&
+      m.canTakeMilitia &&
+      (m.civilWar || m.inRegimeChange || m.totalCells > m.governance)
+    }
   )
 
   // Returns true if the printed conditions of the event are satisfied

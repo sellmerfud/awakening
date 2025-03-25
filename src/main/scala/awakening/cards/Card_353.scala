@@ -59,10 +59,14 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def lapsingCandidates = game.eventsLapsing
+    .filter { entry => entry.cardNumber != Truce }
+    
+
   def bowlingGreenTargetEventInPlay: Boolean =
     game.markers.nonEmpty ||
     game.countries.exists(c => c.markers.nonEmpty && !game.isCaliphateMember(c.name)) ||
-    game.eventsLapsing.nonEmpty
+    lapsingCandidates.nonEmpty
 
   def bowlingGreenBotMarkers(role: Role): List[String] = {
     val globalMarkers = game.markers
@@ -76,7 +80,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   }
 
   def bowlingGreenBotLapsing(role: Role): List[Int] =
-    game.eventsLapsing
+    lapsingCandidates
       .filter { event =>
         val card = deck(event.cardNumber)
         (role == US && card.association == Jihadist || card.lapsing == JihadistLapsing) ||
@@ -107,7 +111,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
       .sorted
       .distinct
       .map(m => m -> m)
-    val lapsingChoices = game.eventsLapsing
+    val lapsingChoices = lapsingCandidates
       .map(event => event.cardNumber -> deck(event.cardNumber).numAndName)
     sealed trait Choice
     case object Marker extends Choice

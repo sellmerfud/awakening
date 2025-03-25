@@ -52,11 +52,11 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   def getNonCaliphateCandidates = countryNames(
-    game.muslims.filter(m => m.totalCells > 0 && (m.civilWar || m.inRegimeChange))
+    game.muslims.filter(m => !m.truce && m.totalCells > 0 && (m.civilWar || m.inRegimeChange))
   )
 
   def getCaliphateCandidates = countryNames(
-    game.muslims.filter(m => m.totalCells > 0 && game.isCaliphateMember(m.name))
+    game.muslims.filter(m => !m.truce && m.totalCells > 0 && game.isCaliphateMember(m.name))
   )
 
   // Used by the US Bot to determine if the executing the event would remove

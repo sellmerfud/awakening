@@ -59,15 +59,19 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = canPlaceMilitia || canPlaceCells
 
-  def getMilitiaCandidates = African.filter(name => game.getCountry(name).canTakeMilitia)
+  val isMilitaCandidate = (c: Country) =>
+    !c.truce && c.canTakeMilitia
 
-  def getCellsCandidates = African
+  def getMilitiaCandidates = countryNames(game.getCountries(African).filter(isMilitaCandidate))
+
+  def getCellsCandidates = countryNames(game.getCountries(African).filter(!_.truce))
 
   def canPlaceMilitia = game.militiaAvailable > 0 && getMilitiaCandidates.nonEmpty
 
   def canPlaceCells = game.cellsAvailable > 0 && getCellsCandidates.nonEmpty
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

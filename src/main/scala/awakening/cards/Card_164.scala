@@ -60,7 +60,7 @@ object Card_164 extends Card(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoLa
   override
   def eventConditionsMet(role: Role) = true
 
-  def getCandidates = countryNames(game.muslims.filter(_.awakening > 0))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.awakening > 0))
 
   def isEventEffective = globalEventNotInPlay(BloodyThursday) || getCandidates.nonEmpty
   // Returns true if the Bot associated with the given role will execute the event
@@ -76,12 +76,11 @@ object Card_164 extends Card(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoLa
   def executeEvent(role: Role): Unit = {
     if (isEventEffective) {
       addGlobalEventMarker(BloodyThursday)
-      val candidates = countryNames(game.muslims.filter(_.awakening > 0))
-      if (candidates.nonEmpty) {
+      if (getCandidates.nonEmpty) {
         val target = if (isHuman(role))
-          askCountry("Select country with awakening marker: ", candidates)
+          askCountry("Select country with awakening marker: ", getCandidates)
         else
-          JihadistBot.markerTarget(candidates).get
+          JihadistBot.markerTarget(getCandidates).get
 
         addEventTarget(target)
         removeAwakeningMarker(target)

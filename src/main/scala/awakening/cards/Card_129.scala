@@ -59,6 +59,7 @@ object Card_129 extends Card(129, "Special Forces", US, 1, NoRemove, NoLapsing, 
     // within two of a country with forces.
     countryNames(game.countries
       .filter { country =>
+          !country.truce &&
           country.totalCells > 0 &&
           (withForces.exists(forces => distance(forces, country.name) <= 2))
       }

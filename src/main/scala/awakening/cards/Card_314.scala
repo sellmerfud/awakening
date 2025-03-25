@@ -75,6 +75,7 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    val africanCandidates = African.filter(name => !game.getCountry(name).truce)
     if (game.availablePlots.nonEmpty || game.cellsAvailable > 0) {
       case class Action(name: String, item: Either[Unit, Plot])
 
@@ -105,7 +106,7 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
             }
           }
         }
-        nextAction(1, game.cellsAvailable, game.availablePlots, African)
+        nextAction(1, game.cellsAvailable, game.availablePlots, africanCandidates)
       }
       else {
         // Bot
@@ -129,7 +130,7 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
           }
         }
 
-        nextAction(numCells, plotsToPlace, African)
+        nextAction(numCells, plotsToPlace, africanCandidates)
       }
 
       println()

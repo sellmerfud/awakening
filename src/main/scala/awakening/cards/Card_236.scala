@@ -46,7 +46,7 @@ import awakening.JihadistBot
 // Select, reveal, and draw a card other than Oil Price Spike from the
 // discard pile or a box. Add +1 to the Resources of each Oil Export
 // country for the turn.
-//Cancel effects of Fracking.
+// Cancel effects of Fracking.
 // ------------------------------------------------------------------
 object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot

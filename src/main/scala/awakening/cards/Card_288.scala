@@ -107,7 +107,12 @@ object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRe
           log("\nThere are no available level 1 plots.", Color.Event)
 
       case 3 =>
-          val target = randomConvergenceTarget.name
+          def convergenceTarget: String = 
+            randomConvergenceTarget match {
+              case m if m.truce => convergenceTarget
+              case m => m.name
+            }
+          val target = convergenceTarget
           addEventTarget(target)
           addReactionMarker(target)
 
@@ -128,7 +133,7 @@ object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRe
           log("\nThere are no Fair Non-Muslim countries.", Color.Event)
 
       case 5 =>
-        val candidates = countryNames(game.muslims.filter(_.aidMarkers > 0))
+        val candidates = countryNames(game.muslims.filter(m => !m.truce && m.aidMarkers > 0))
         if (candidates.nonEmpty) {
           val target = if (isHuman(role))
             askCountry("Remove Aid marker from which country: ", candidates)
@@ -139,10 +144,10 @@ object Card_288 extends Card(288, "Soldiers of the Caliphate", Jihadist, 1, NoRe
           removeAidMarker(target)
         }
         else
-          log("\nThere are no Aid markers on the map.", Color.Event)
+          log("\nThere are no Aid markers that can be removed.", Color.Event)
 
       case _ => // 6
-        val candidates = countryNames(game.muslims.filter(_.canTakeBesiegedRegimeMarker))
+        val candidates = countryNames(game.muslims.filter(m => !m.truce && m.canTakeBesiegedRegimeMarker))
         if (candidates.nonEmpty) {
           val target = if (isHuman(role))
             askCountry("Place a Besieged Regime marker in which country: ", candidates)

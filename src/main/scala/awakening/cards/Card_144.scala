@@ -55,7 +55,10 @@ object Card_144 extends Card(144, "Operation New Dawn", US, 2, NoRemove, NoLapsi
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val isCandidate = (m: MuslimCountry) => m.troops > 0 && m.canTakeMilitia
+  val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
+    m.troops > 0 &&
+    m.canTakeMilitia
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 

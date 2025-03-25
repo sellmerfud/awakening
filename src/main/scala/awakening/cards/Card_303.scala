@@ -64,7 +64,7 @@ object Card_303 extends Card(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, N
   override
   def eventConditionsMet(role: Role) = {
     val iran = game.getCountry(Iran)
-    game.usPosture == Hard && iran.wmdCache > 0 && iran.totalCells > 0
+    !iran.truce && game.usPosture == Hard && iran.wmdCache > 0 && iran.totalCells > 0
   }
 
   // Returns true if the Bot associated with the given role will execute the event

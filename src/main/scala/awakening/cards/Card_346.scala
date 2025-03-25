@@ -55,12 +55,12 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
 
   val isMilitiaCandidate = (c: Country) => c match {
     case n: NonMuslimCountry => false   // Militia can never be place in Non muslim countries
-    case m: MuslimCountry => m.canTakeMilitia
+    case m: MuslimCountry => !m.truce && m.canTakeMilitia
   }
 
   val isCellCandidate = (c: Country) => c match {
     case n: NonMuslimCountry => !n.iranSpecialCase
-    case m: MuslimCountry => true
+    case m: MuslimCountry => !m.truce
   }
 
   def possibleCountries =

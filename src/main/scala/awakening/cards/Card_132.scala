@@ -51,8 +51,8 @@ object Card_132 extends Card(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing,
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(m => m.civilWar))
-  def getCandidatesWithCells = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar))
+  def getCandidatesWithCells = countryNames(game.muslims.filter(m => !m.truce && m.civilWar && m.totalCells > 0))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.

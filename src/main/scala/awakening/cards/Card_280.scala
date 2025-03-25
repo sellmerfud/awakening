@@ -58,7 +58,7 @@ object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, N
   def getCandidates = {
     val adjOther = (m: MuslimCountry) =>
       (m.isSunni && game.adjacentToShiaMix(m.name)) || (m.isShiaMix && game.adjacentToSunni(m.name))
-    countryNames(game.muslims.filter(m => m.totalCells > 0 && adjOther(m)))
+    countryNames(game.muslims.filter(m => !m.truce && m.totalCells > 0 && adjOther(m)))
   }
 
   def maxCellsToRemove = game.getMuslims(getCandidates).map(_.totalCells).sum min 3

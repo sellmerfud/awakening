@@ -59,6 +59,7 @@ object Card_188 extends Card(188, "ISIL", Jihadist, 3, Remove, NoLapsing, NoAuto
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+      !m.truce          &&
       !m.civilWar       &&
       !m.isIslamistRule &&
       !m.isGood         &&

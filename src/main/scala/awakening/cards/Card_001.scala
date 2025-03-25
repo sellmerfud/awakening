@@ -49,6 +49,7 @@ import awakening.USBot
 // ------------------------------------------------------------------
 object Card_001 extends Card(1, "Backlash", US, 1, NoRemove, NoLapsing) {
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.plots.exists(p => !p.backlashed) &&
     !game.isCaliphateMember(m.name)
 

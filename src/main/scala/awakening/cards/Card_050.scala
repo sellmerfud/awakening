@@ -75,8 +75,11 @@ object Card_050 extends Card(50, "Ansar al-Islam", Jihadist, 1, Remove, NoLapsin
     // If no cells available, the event was trigger simply so the
     // card can be removed.
     val candidates = List(Iraq, Iran)
+      .filter(!game.getCountry(_).truce)
     val  iraq = game.getMuslim(Iraq)
-    val name = if (isHuman(role))
+    val name = if (candidates.size == 1)
+      candidates.head
+    else if (isHuman(role))
       askCountry("Place cell in which country: ", candidates)
     else if (game.botEnhancements && (iraq.isGood || iraq.isFair))
       Iraq

@@ -67,7 +67,7 @@ object Card_339 extends Card(339, "Erdogan Dance", Unassociated, 2, NoRemove, No
 
     targets
       .toList
-      .filter(name => name != Iran && name != UnitedStates && distance(name, Turkey) <= 2)
+      .filter(name => !underTruce(name) && name != Iran && name != UnitedStates && distance(name, Turkey) <= 2)
       .sorted
   }
 

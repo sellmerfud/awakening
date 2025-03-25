@@ -65,27 +65,34 @@ object Card_315 extends Card(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLap
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    game.prestige > 3 || !game.getMuslim(SaudiArabia).isAdversary
+  def botWillPlayEvent(role: Role): Boolean = {
+    val saudi = game.getMuslim(SaudiArabia)
+    game.prestige > 3 || (!saudi.truce && !saudi.isAdversary)
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    addEventTarget(Turkey)
-    testCountry(Turkey) // Event specifically says to test
-    addEventTarget(SaudiArabia)
-    testCountry(SaudiArabia) // Event specifically says to test
+    if (!game.getCountry(Turkey).truce) {
+      addEventTarget(Turkey)
+      testCountry(Turkey) // Event specifically says to test
+    }
+    val saudiTruce = game.getCountry(SaudiArabia).truce
+    if (!saudiTruce) {
+      addEventTarget(SaudiArabia)
+      testCountry(SaudiArabia) // Event specifically says to test
+    }
 
     if (isHuman(role)) {
       sealed trait Choice
       case object Shift extends Choice
       case object Prestige extends Choice
       val choices = List(
-        Shift    -> "Shift alignment of Saudi Arabia toward Adversary",
-        Prestige -> "Decrease prestige by 2",
-      )
+        choice(!saudiTruce, Shift, "Shift alignment of Saudi Arabia toward Adversary"),
+        choice(true, Prestige, "Decrease prestige by 2"),
+      ).flatten
       askMenu("Choose one:", choices).head match {
         case Shift    => shiftAlignmentRight(SaudiArabia)
         case Prestige => decreasePrestige(2)
@@ -94,6 +101,6 @@ object Card_315 extends Card(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLap
     else if (game.prestige > 3)
       decreasePrestige(2)
     else
-        shiftAlignmentRight(SaudiArabia)
+      shiftAlignmentRight(SaudiArabia)
   }
 }

@@ -48,7 +48,7 @@ import awakening.{ USBot, JihadistBot }
 object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsing, NoAutoTrigger) {
 
  def getCandidates = countryNames(
-    game.muslims.filter(m => m.inRegimeChange && m.totalCells > 1)
+    game.muslims.filter(m => !m.truce && m.inRegimeChange && m.totalCells > 1)
   )
 
   // Used by the US Bot to determine if the executing the event would alert a plot

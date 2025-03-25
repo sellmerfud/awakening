@@ -57,10 +57,11 @@ object Card_359 extends Card(359, "Quick Win/Bad Intel", Unassociated, 3, NoRemo
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getUSCandidates = countryNames(game.muslims.filter(_.inRegimeChange))
+  def getUSCandidates = countryNames(game.muslims.filter(m => !m.truce && m.inRegimeChange))
 
   def getJihadistCandidates = countryNames(
     game.muslims.filter { m =>
+      !m.truce && 
       m.inRegimeChange &&
       (!m.besiegedRegime || (lapsingEventNotInPlay(ArabWinter) && m.canTakeAwakeningOrReactionMarker))
     }

@@ -58,7 +58,7 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = !game.getCountry(Nigeria).truce
 
   def havePlots = game.availablePlots.exists(p => p == Plot2 || p == Plot3)
   def havePlot3 = game.availablePlots.exists(_ == Plot3)

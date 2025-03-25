@@ -54,11 +54,13 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
 
   val IraqSyria = List(Iraq, Syria)
 
+  def candidates = IraqSyria.filter(name => !game.getMuslim(name).truce)
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    ((game.getMuslims(IraqSyria).map(_.totalCells)).sum min 3) match {
+    ((game.getMuslims(candidates).map(_.totalCells)).sum min 3) match {
       case n => (n == game.totalCellsOnMap )
     }
 
@@ -80,9 +82,9 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Place militia and Advisors in which country: ", IraqSyria)
+      askCountry("Place militia and Advisors in which country: ", candidates)
     else
-      USBot.deployToPriority(IraqSyria).get
+      USBot.deployToPriority(candidates).get
 
     addEventTarget(target)
     if (game.militiaAvailable > 0)
@@ -95,10 +97,10 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
     else
       log(s"\nAll three Advisors are already on the map.", Color.Event)
 
-    val removeCandidates = countryNames(game.getMuslims(IraqSyria).filter(_.totalCells > 0))
+    val removeCandidates = countryNames(game.getMuslims(candidates).filter(_.totalCells > 0))
 
     if (removeCandidates.isEmpty)
-      log("\nThere are no cells to remove in either Iraq or Syria.", Color.Event)
+      log(s"\nThere are no cells to remove in ${orList(candidates)}.", Color.Event)
     else if (isHuman(role)) {
       val removed = askToRemoveCells(3, true, removeCandidates, sleeperFocus = true)
       for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {

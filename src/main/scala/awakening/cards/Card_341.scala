@@ -66,10 +66,12 @@ object Card_341 extends Card(341, "Gulen Movement", Unassociated, 2, NoRemove, N
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
+      !underTruce(Turkey) &&
       globalEventNotInPlay(GulenMovement) &&
       lapsingEventNotInPlay(ArabWinter) &&
       game.getMuslim(Turkey).canTakeAwakeningOrReactionMarker
     case Jihadist =>
+      !underTruce(Turkey) &&
       globalEventNotInPlay(GulenMovement) &&
       game.cellsAvailable > 0
   }
@@ -80,20 +82,24 @@ object Card_341 extends Card(341, "Gulen Movement", Unassociated, 2, NoRemove, N
   override
   def executeEvent(role: Role): Unit = {
     addGlobalEventMarker(GulenMovement)
-    addEventTarget(Turkey)
-
-    if (role == US)
-      addAwakeningMarker(Turkey)
-    else if (game.cellsAvailable > 0) {
-      // Jihadist
-      val maxNum = 2 min game.cellsAvailable
-      val num = if (isHuman(role))
-        askInt("Place how many cells", 0, maxNum, Some(maxNum))
+    if (underTruce(Turkey))
+      log(s"\nCannot modify $Turkey because it is under TRUCE.", Color.Event)
+    else {
+      addEventTarget(Turkey)
+  
+      if (role == US)
+        addAwakeningMarker(Turkey)
+      else if (game.cellsAvailable > 0) {
+        // Jihadist
+        val maxNum = 2 min game.cellsAvailable
+        val num = if (isHuman(role))
+          askInt("Place how many cells", 0, maxNum, Some(maxNum))
+        else
+          maxNum
+        addSleeperCellsToCountry(Turkey, num)
+      }
       else
-        maxNum
-      addSleeperCellsToCountry(Turkey, num)
+        log("\nThere are no available cells to place in Turkey.", Color.Event)
     }
-    else
-      log("\nThere are no available cells to place in Turkey.", Color.Event)
   }
 }

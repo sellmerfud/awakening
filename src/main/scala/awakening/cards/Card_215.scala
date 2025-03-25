@@ -114,8 +114,14 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
       if (isHuman(role)) {
         println("\nPlace up to 3 cells in Syria and/or Iraq.")
         println(separator())
-        val inSyria = askInt("How many cells do you wish to place in Syria? ", 0, 3)
-        val inIraq = askInt("How many cells do you wish to place in Iraq? ", 0, 3 - inSyria)
+        val inSyria = if (underTruce(Syria))
+          0
+        else
+          askInt("How many cells do you wish to place in Syria? ", 0, 3)
+        val inIraq = if (underTruce(Iraq))
+          0
+        else
+          askInt("How many cells do you wish to place in Iraq? ", 0, 3 - inSyria)
         val targets = List((Syria, inSyria),(Iraq, inIraq)).filterNot(_._2 == 0)
         for ((target, num) <- targets) {
           addEventTarget(target)
@@ -161,7 +167,8 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
       else if (game.botEnhancements) {
         // Enhanced Bot will move cells using Travel From priorities once all
         // cells on the track have been used.
-        val target = JihadistBot.cellPlacementPriority(true)(Syria::Iraq::Nil).get
+        val targets = List(Syria, Iran).filterNot(underTruce)
+        val target = JihadistBot.cellPlacementPriority(true)(targets).get
         val sourceCountries = countryNames(game.countries.filter(c => JihadistBot.hasCellForTravel(c, target, placement = true)))
         addEventTarget(target)
 
@@ -190,7 +197,8 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         }
       }
       else {
-        val target = JihadistBot.cellPlacementPriority(true)(Syria::Iraq::Nil).get
+        val targets = List(Syria, Iran).filterNot(underTruce)
+        val target = JihadistBot.cellPlacementPriority(true)(targets).get
         addEventTarget(target)
         val num = 3 min game.cellsAvailable
         addSleeperCellsToCountry(target, num)

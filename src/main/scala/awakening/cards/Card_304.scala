@@ -63,7 +63,10 @@ object Card_304 extends Card(304, "Loose Chemicals", Jihadist, 2, NoRemove, NoLa
   override
   def eventConditionsMet(role: Role) = {
     val syria = game.getMuslim(Syria)
-    syria.civilWar && syria.wmdCache > 0 && syria.totalCells > 0
+    !syria.truce &&
+    syria.civilWar &&
+    syria.wmdCache > 0 &&
+    syria.totalCells > 0
   }
 
   // Returns true if the Bot associated with the given role will execute the event

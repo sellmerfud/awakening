@@ -57,7 +57,7 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(_.inRegimeChange))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.inRegimeChange))
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty

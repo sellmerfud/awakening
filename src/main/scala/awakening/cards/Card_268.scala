@@ -59,7 +59,10 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
   def eventRemovesLastCell(): Boolean = false
 
   def getAlignmentCandidates = countryNames(
-    game.muslims.filter(m => !(m.isIslamistRule || m.isAlly || game.isCaliphateMember(m.name)))
+    game.muslims.filter { m =>
+      !m.truce &&
+      !(m.isIslamistRule || m.isAlly || game.isCaliphateMember(m.name))
+    }
   )
   def getPostureCandidates = countryNames(
     game.nonMuslims.filter(n => n.canChangePosture && n.posture != game.usPosture)

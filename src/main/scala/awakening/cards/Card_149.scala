@@ -58,6 +58,7 @@ object Card_149 extends Card(149, "UN Nation Building", US, 2, NoRemove, NoLapsi
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     (m.inRegimeChange || m.civilWar) &&
     !game.isCaliphateMember(m.name) &&
     !m.isAdversary &&       // Cannot perform WoI in adversary

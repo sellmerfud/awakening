@@ -71,12 +71,14 @@ object Card_234 extends Card(234, "Free Syrian Army", Unassociated, 3, Remove, N
 
     role match {
       case US =>
+        !syria.truce &&
         !syria.isGood &&
         syria.awakening <= syria.reaction &&
         !(game.militiaAvailable == 0 && game.cellsAvailable > 0)
       case Jihadist if game.botEnhancements =>
-        syria.isGood || (!syria.autoRecruit && syria.reaction - syria.awakening < 1)
+        !syria.truce && (syria.isGood || (!syria.autoRecruit && syria.reaction - syria.awakening < 1))
       case Jihadist =>
+        !syria.truce &&
         !syria.isIslamistRule &&
         syria.reaction <= syria.awakening &&
         !(game.cellsAvailable == 0 && game.militiaAvailable > 0)
@@ -97,23 +99,32 @@ object Card_234 extends Card(234, "Free Syrian Army", Unassociated, 3, Remove, N
     )
     val orderedChoices = if (role == US) choices else choices.reverse
 
-    addEventTarget(Syria)
-    startCivilWar(Syria)
-
-    val (cells, militia) = role match {
-      case _ if isHuman(role) =>
-        if (askMenu("Choose one:", choices).head == Cells)
-          (2, 1)
-        else
-          (1, 2)
-
-      case US => (1, 2)
-      case Jihadist => (2, 1)
+    if (underTruce(Syria))
+      log(s"\nbCannot modify $Syria because it is under TRUCE.", Color.Event)
+    else {
+      addEventTarget(Syria)
+      startCivilWar(Syria)
+  
+      val (cells, militia) = role match {
+        case _ if isHuman(role) =>
+          if (askMenu("Choose one:", choices).head == Cells)
+            (2, 1)
+          else
+            (1, 2)
+  
+        case US => (1, 2)
+        case Jihadist => (2, 1)
+      }
+  
+      addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
+      addMilitiaToCountry(Syria, militia min game.militiaAvailable)
     }
-
-    addSleeperCellsToCountry(Syria, cells min game.cellsAvailable)
-    addMilitiaToCountry(Syria, militia min game.militiaAvailable)
-    addEventTarget(Turkey)
-    addAidMarker(Turkey)
+    
+    if (underTruce(Turkey))
+      log(s"\nbCannot modify $Turkey because it is under TRUCE.", Color.Event)
+    else {
+      addEventTarget(Turkey)
+      addAidMarker(Turkey)
+    }
   }
 }

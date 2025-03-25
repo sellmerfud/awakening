@@ -69,8 +69,7 @@ object Card_133 extends Card(133, "Benghazi Falls", US, 2, Remove, NoLapsing, No
   def botWillPlayEvent(role: Role): Boolean = {
     val libya = game.getMuslim(Libya)
     val italy = game.getNonMuslim(Italy)
-    !libya.civilWar ||
-    (libya.canTakeMilitia && game.militiaAvailable > 0) ||
+    (!libya.truce && (!libya.civilWar || (libya.canTakeMilitia && game.militiaAvailable > 0))) ||
     (game.usPosture == Hard && italy.posture != Hard)
   }
 
@@ -80,9 +79,13 @@ object Card_133 extends Card(133, "Benghazi Falls", US, 2, Remove, NoLapsing, No
   override
   def executeEvent(role: Role): Unit = {
     println()
-    addEventTarget(Libya)
-    startCivilWar(Libya)
-    addMilitiaToCountry(Libya, game.militiaAvailable min 2)
+    if (underTruce(Libya)) 
+      log(s"\nCannot modify Libya because it is under TRUCE.", Color.Event)
+    else {
+      addEventTarget(Libya)
+      startCivilWar(Libya)
+      addMilitiaToCountry(Libya, game.militiaAvailable min 2)
+    }
     setCountryPosture(Italy, Hard)
   }
 }

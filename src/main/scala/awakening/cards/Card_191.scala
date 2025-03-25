@@ -56,7 +56,11 @@ object Card_191 extends Card(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoL
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.canTakeAwakeningOrReactionMarker))
+
+  def egyptOK = game.getMuslim(Egypt) match {
+    case m => !m.truce && m.canTakeAwakeningOrReactionMarker
+  }
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -76,7 +80,7 @@ object Card_191 extends Card(191, "Muslim Brotherhood", Jihadist, 3, Remove, NoL
   override
   def executeEvent(role: Role): Unit = {
     log()
-    if (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker) {
+    if (egyptOK) {
       addEventTarget(Egypt)
       addReactionMarker(Egypt)
     }

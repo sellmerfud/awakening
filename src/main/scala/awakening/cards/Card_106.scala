@@ -54,7 +54,7 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
 
   def getCandidates = countryNames(
     game.muslims
-      .filter(m => m.isShiaMix && m.totalCells > 0 && m.totalTroops > 0)
+      .filter(m => !m.truce && m.isShiaMix && m.totalCells > 0 && m.totalTroops > 0)
   )
 
   def getJihadistBotCandidates = getCandidates

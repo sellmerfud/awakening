@@ -58,6 +58,7 @@ object Card_167 extends Card(167, "Houthi Rebels", Jihadist, 1, Remove, NoLapsin
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
+    !game.getMuslim(Yemen).truce &&
     game.getMuslim(Yemen).isPoor &&
     (game.isNonMuslim(Iran) || !game.getMuslim(Iran).isAlly)
 

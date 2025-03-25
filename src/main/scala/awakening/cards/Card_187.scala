@@ -57,7 +57,7 @@ object Card_187 extends Card(187, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val isCandidate = (m: MuslimCountry) => m.inRegimeChange || m.civilWar
+  val isCandidate = (m: MuslimCountry) => !m.truce && (m.inRegimeChange || m.civilWar)
 
   val isNoCellsCandidate = (m: MuslimCountry) =>
     isCandidate(m) &&

@@ -51,7 +51,7 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(_.totalCells > 0))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.totalCells > 0))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
@@ -62,15 +62,14 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) =
+    getCandidates.nonEmpty || hasCardInHand(Jihadist)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    getCandidates.nonEmpty ||
-    hasCardInHand(Jihadist)
+  def botWillPlayEvent(role: Role): Boolean = true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

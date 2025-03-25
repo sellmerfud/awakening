@@ -85,11 +85,14 @@ object Card_035 extends Card(35, "Hijab", US, 3, Remove, NoLapsing, NoAutoTrigge
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    addEventTarget(Turkey)
-    testCountry(Turkey)
+    if (!game.getMuslim(Turkey).truce) {
+      addEventTarget(Turkey)
+      testCountry(Turkey)
 
-    if (!game.getMuslim(Turkey).isGood)
-      improveGovernance(Turkey, 1, canShiftToGood = true)
+      if (!game.getMuslim(Turkey).isGood)
+        improveGovernance(Turkey, 1, canShiftToGood = true)
+    }
+
     val newPosture = if (isHuman(role))
       askPosture(France)
     else

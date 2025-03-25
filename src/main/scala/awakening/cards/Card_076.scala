@@ -86,7 +86,7 @@ object Card_076 extends Card(76, "Abu Ghurayb", Jihadist, 3, Remove, NoLapsing, 
     }
 
     decreasePrestige(2)
-    val candidates = countryNames(game.muslims.filter(_.isAlly))
+    val candidates = countryNames(game.muslims.filter(m => !m.truce && m.isAlly))
     if (candidates.isEmpty)
       log("\nThere are no Ally Muslim countries. No shift possible.", Color.Event)
     val name = if (isHuman(role))

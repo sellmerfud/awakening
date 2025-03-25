@@ -76,27 +76,33 @@ object Card_317 extends Card(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    addEventTarget(GulfStates)
-    testCountry(GulfStates) // Event specifically says to test
-    val m = game.getMuslim(GulfStates)
-    if (m.isGood || m.isFair || !m.isAdversary) {
-      if (isHuman(role)) {
-        sealed trait Choice
-        case object Worsen extends Choice
-        case object Shift extends Choice
-        val choices = List(
-          choice(m.isGood || m.isFair, Worsen, "Worsen governance of Gulf States"),
-          choice(!m.isAdversary,       Shift,  "Shift alignment of Gulf States towards Adversary")
-        ).flatten
-        askMenu("Choose one:", choices).head match {
-          case Worsen => worsenGovernance(GulfStates, 1, canShiftToIR = false)
-          case Shift  => shiftAlignmentRight(GulfStates)
+    if (game.getMuslim(GulfStates).truce)
+      log(s"\nCannot affect $GulfStates because it is under TRUCE.", Color.Event)
+    else {
+      addEventTarget(GulfStates)
+      testCountry(GulfStates) // Event specifically says to test
+      val gulfStates = game.getMuslim(GulfStates)
+      val canWorsenGov = gulfStates.isGood || gulfStates.isFair
+      val canShift = !gulfStates.isAdversary
+      if (canWorsenGov && canShift) {
+        if (isHuman(role)) {
+          sealed trait Choice
+          case object Worsen extends Choice
+          case object Shift extends Choice
+          val choices = List(
+            choice(gulfStates.isGood || gulfStates.isFair, Worsen, "Worsen governance of Gulf States"),
+            choice(!gulfStates.isAdversary, Shift,  "Shift alignment of Gulf States towards Adversary")
+          ).flatten
+          askMenu("Choose one:", choices).head match {
+            case Worsen => worsenGovernance(GulfStates, 1, canShiftToIR = false)
+            case Shift  => shiftAlignmentRight(GulfStates)
+          }
         }
+        else if (canWorsenGov)
+          worsenGovernance(GulfStates, 1, canShiftToIR = false)
+        else if (canShift)
+          shiftAlignmentRight(GulfStates)
       }
-      else if (m.isGood || m.isFair)
-        worsenGovernance(GulfStates, 1, canShiftToIR = false)
-      else
-        shiftAlignmentRight(GulfStates)
     }
 
     log("\nIran, Gulf States, Saudi Arabia and Yemen are all now adjacent.", Color.Event)

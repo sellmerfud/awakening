@@ -58,7 +58,9 @@ object Card_072 extends Card(72, "Opium", Jihadist, 2, NoRemove, NoLapsing, NoAu
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = game.getCountry(Afghanistan).totalCells > 0
+  def eventConditionsMet(role: Role) =
+    !game.getCountry(Afghanistan).truce &&
+    game.getCountry(Afghanistan).totalCells > 0
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

@@ -57,7 +57,11 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
   def eventRemovesLastCell(): Boolean = false
 
   def getCandidates = countryNames(
-    game.muslims.filter(m => m.militia > 0 && (m.inRegimeChange || m.civilWar))
+    game.muslims.filter { m =>
+      !m.truce &&
+      m.militia > 0 &&
+      (m.inRegimeChange || m.civilWar)
+    }
   )
 
   // Returns true if the printed conditions of the event are satisfied

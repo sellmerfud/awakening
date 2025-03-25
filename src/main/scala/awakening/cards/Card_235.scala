@@ -57,25 +57,27 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(_.civilWar))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar))
 
   def usBotQadhafiCandidates =
     game.muslims
-      .filter(m => m.civilWar && m.totalTroopsAndMilitia > m.totalCells)
-    
+      .filter(m => !m.truce && m.civilWar && m.totalTroopsAndMilitia > m.totalCells)
+
   // Bot will not execute this in the Caliphate capital
   def jihadistBotQadhafiCandidates =
     game.muslims
-      .filter(m => m.civilWar && !m.caliphateCapital && m.totalCells > m.totalTroopsAndMilitia)
+      .filter(m => !m.truce && m.civilWar && !m.caliphateCapital && m.totalCells > m.totalTroopsAndMilitia)
 
   def enhJihadistBotCandidates = game.muslims
     .filter { m =>
+      !m.truce &&
       m.civilWar &&
       JihadistBot.enhBotResourceValue(m) >= 2 &&
       !m.isAdversary &&
       !game.isCaliphateMember(m.name) &&
       m.totalCells > m.totalTroopsAndMilitia
     }
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
@@ -109,7 +111,7 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
             "TandM > Cells",
             USBot.muslimTest(m => m.totalTroopsAndMilitia > m.totalCells)),
           USBot.HighestResourcePriority)
-      
+
         USBot.topPriority(usBotQadhafiCandidates, priorities)
           .map(_.name)
           .get

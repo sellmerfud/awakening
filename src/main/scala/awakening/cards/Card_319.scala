@@ -66,7 +66,8 @@ object Card_319 extends Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Re
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    !game.getCountry(Iran).truce || game.funding < 9
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -74,10 +75,14 @@ object Card_319 extends Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Re
   override
   def executeEvent(role: Role): Unit = {
     increaseFunding(3)
-    addEventTarget(Iran)
-    addEventMarkersToCountry(Iran, TehranBeirutLandCorridor)
-    log("\nIran is now a 3 Resource country and will remain so as long as", Color.Event)
-    log("none of Iran, Syria nor Lebanon become Ally or Civil War", Color.Event)
-    log("and at least one of Iraq and Turkey are not Ally or Civil War", Color.Event)
+    if (game.getCountry(Iran).truce)
+      log(s"\nCannot modify Iran because it is under TRUCE.", Color.Event)
+    else {
+      addEventTarget(Iran)
+      addEventMarkersToCountry(Iran, TehranBeirutLandCorridor)
+      log("\nIran is now a 3 Resource country and will remain so as long as", Color.Event)
+      log("none of Iran, Syria nor Lebanon become Ally or Civil War", Color.Event)
+      log("and at least one of Iraq and Turkey are not Ally or Civil War", Color.Event)
+    }
   }
 }

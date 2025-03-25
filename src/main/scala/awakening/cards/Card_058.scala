@@ -78,11 +78,13 @@ object Card_058 extends Card(58, "Al-Anbar", Jihadist, 2, Remove, NoLapsing, NoA
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    addEventTarget(Iraq)
+    if (!game.getMuslim(Iraq).truce) {
+      addEventTarget(Iraq)
+      if (game.cellsAvailable > 0)
+        addSleeperCellsToCountry(Iraq, 1)
+      else
+        log(s"\nThere are no cells available to place in $Iraq", Color.Event)
+    }
     addGlobalEventMarker(AlAnbar)
-    if (game.cellsAvailable > 0)
-      addSleeperCellsToCountry(Iraq, 1)
-    else
-      log(s"\nThere are no cells available to place in $Iraq", Color.Event)
   }
 }

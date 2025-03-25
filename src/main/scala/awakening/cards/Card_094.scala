@@ -57,7 +57,7 @@ object Card_094 extends Card(94, "The door of Itjihad was closed", Jihadist, 3, 
   def getCandidates = {
     val isFairOrGood = (name: String) =>
       game.getCountry(name) match {
-        case m: MuslimCountry => m.isFair || m.isGood
+        case m: MuslimCountry => !m.truce && (m.isFair || m.isGood)
         case _ => false
       }
     (game.targetsThisPhase.testedOrImprovedToFairOrGood ++ game.targetsLastPhase.testedOrImprovedToFairOrGood)

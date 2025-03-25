@@ -59,6 +59,7 @@ object Card_203 extends Card(203, "Day of Rage", Unassociated, 1, Remove, NoLaps
   override
   def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(ArabWinter) &&
+    !game.getMuslim(Yemen).truce
     game.getMuslim(Yemen).canTakeAwakeningOrReactionMarker
 
   // Returns true if the Bot associated with the given role will execute the event

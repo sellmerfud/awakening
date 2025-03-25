@@ -45,7 +45,7 @@ import awakening.{ USBot, JihadistBot }
 // Play in a Poor, 1 or 2 Resource African country.
 // If US play, place Serval there. Serval is 1 Troop. Remove if played
 // again elsewhere. Also place 1 Militia.
-// If Jibadist, place in Civil War and place 1 Cell (2 if Mali).
+// If Jihadist, place in Civil War and place 1 Cell (2 if Mali).
 // ------------------------------------------------------------------
 object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
@@ -60,7 +60,7 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
 
   def getCandidates = countryNames(
     game.getCountries(African).filter {
-      case m: MuslimCountry => m.resourceValue < 3 && m.isPoor
+      case m: MuslimCountry => !m.truce && m.resourceValue < 3 && m.isPoor
       case _ => false
     }
   )

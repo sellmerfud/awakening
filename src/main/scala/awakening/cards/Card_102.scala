@@ -57,7 +57,7 @@ object Card_102 extends Card(102, "Former Soviet Union", Unassociated, 2, NoRemo
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = !game.getCountry(CentralAsia).truce
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

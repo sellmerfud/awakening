@@ -50,7 +50,7 @@ object Card_021 extends Card(21, "Let’s Roll!", US, 2, NoRemove, NoLapsing, No
   def getCandidates: List[String] = countryNames(
     game.countries.filter {
       case m: MuslimCountry =>
-        m.plots.nonEmpty && (m.isGood || m.isAlly)
+        !m.truce && m.plots.nonEmpty && (m.isGood || m.isAlly)
       case n: NonMuslimCountry =>
         n.plots.nonEmpty && n.isGood
     }

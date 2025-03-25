@@ -64,14 +64,14 @@ object Card_062 extends Card(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoA
     countryEventInPlay(Russia, CTR) ||
     game.getNonMuslim(Caucasus).isUntested ||
     game.getNonMuslim(Caucasus).posture == game.usPosture ||
-    !game.getMuslim(CentralAsia).isAdversary
+    (!game.getMuslim(CentralAsia).truce && !game.getMuslim(CentralAsia).isAdversary)
 
   // Shift Central Asia if [Fair ally], then Set Caucasus to Soft if [US hard and Caucasus not soft], else unplayable
   def enhBotWillWillPlay = {
     val cAsia = game.getMuslim(CentralAsia)
     val caucasus = game.getNonMuslim(Caucasus)
     !countryEventInPlay(Russia, CTR) && (
-      (cAsia.isFair && cAsia.isAlly) || (!caucasus.isSoft && game.usPosture == Hard)
+      (!cAsia.truce && cAsia.isFair && cAsia.isAlly) || (!caucasus.isSoft && game.usPosture == Hard)
     )
   }
 
@@ -92,10 +92,10 @@ object Card_062 extends Card(62, "Ex-KGB", Jihadist, 2, NoRemove, NoLapsing, NoA
     if (willHaveEffect) {
       val cAsia = game.getMuslim(CentralAsia)
       val caucasus = game.getNonMuslim(Caucasus)
-      val canShift = !cAsia.isAdversary
+      val canShift = !cAsia.truce && !cAsia.isAdversary
       val canPosture = caucasus.isUntested || caucasus.posture == game.usPosture
       val botWillShift = if (game.botEnhancements)
-        (cAsia.isFair && cAsia.isAlly) || (canShift && !canPosture)
+        (!cAsia.truce && cAsia.isFair && cAsia.isAlly) || (canShift && !canPosture)
       else
         canShift
 

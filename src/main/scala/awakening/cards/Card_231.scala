@@ -52,11 +52,11 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(_.civilWar))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar))
 
-  def getCellsCandidates = countryNames(game.muslims.filter(m => m.civilWar && m.totalCells > 0))
+  def getCellsCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar && m.totalCells > 0))
 
-  def getMilitiaCandidates = countryNames(game.muslims.filter(m => m.civilWar && m.militia > 0))
+  def getMilitiaCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar && m.militia > 0))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.

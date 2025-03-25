@@ -60,15 +60,23 @@ object Card_287 extends Card(287, "Sayyed Hassan Nasrallah", Jihadist, 1, NoRemo
   def eventRemovesLastCell(): Boolean = false
 
   def getReactionCandidates = countryNames(
-    game.muslims.filter(m => m.canTakeAwakeningOrReactionMarker && distance(Lebanon, m.name) <= 2)
+    game.muslims.filter { m =>
+      !m.truce &&
+      m.canTakeAwakeningOrReactionMarker &&
+      distance(Lebanon, m.name) <= 2
+    }
   )
 
    def getBesiegedRegimeCandidates = countryNames(
-     game.muslims.filter(m => m.canTakeBesiegedRegimeMarker && distance(Lebanon, m.name) <= 2)
+     game.muslims.filter { m =>
+      !m.truce &&
+      m.canTakeBesiegedRegimeMarker &&
+      distance(Lebanon, m.name) <= 2
+     }
    )
 
    def getCellCandidates = countryNames(
-     game.countries.filter(c => distance(Lebanon, c.name) <= 2)
+     game.countries.filter(c => !c.truce && distance(Lebanon, c.name) <= 2)
    )
 
    def canPlaceReaction = lapsingEventNotInPlay(ArabWinter) && getReactionCandidates.nonEmpty

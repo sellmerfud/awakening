@@ -56,7 +56,12 @@ object Card_148 extends Card(148, "Tahrir Square", US, 2, NoRemove, NoLapsing, N
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def egyptOK = game.getMuslim(Egypt) match {
+    case egypt => !egypt.truce && egypt.canTakeAwakeningOrReactionMarker
+  }
+
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.name != Egypt &&
     m.canTakeAwakeningOrReactionMarker &&
     m.awakening == 0
@@ -68,7 +73,7 @@ object Card_148 extends Card(148, "Tahrir Square", US, 2, NoRemove, NoLapsing, N
   override
   def eventConditionsMet(role: Role) =
     lapsingEventNotInPlay(ArabWinter) &&  // Prevents placing Awakening/Reaction markers
-    (game.getMuslim(Egypt).canTakeAwakeningOrReactionMarker || getCandidates.nonEmpty)
+    (egyptOK || getCandidates.nonEmpty)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -81,9 +86,11 @@ object Card_148 extends Card(148, "Tahrir Square", US, 2, NoRemove, NoLapsing, N
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    addEventTarget(Egypt)
-    addAwakeningMarker(Egypt, 2)
-    addReactionMarker(Egypt)
+    if (egyptOK) {
+      addEventTarget(Egypt)
+      addAwakeningMarker(Egypt, 2)
+      addReactionMarker(Egypt)
+    }
 
     if (getCandidates.nonEmpty) {
       val target = if (isHuman(role))

@@ -58,7 +58,7 @@ object Card_171 extends Card(171, "Abu Ghraib Jail Break", Jihadist, 2, Remove, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = !game.getCountry(Iraq).truce
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

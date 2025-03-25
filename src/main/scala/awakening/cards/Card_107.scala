@@ -64,7 +64,7 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
   def getJihadistCandidates = List(Iraq, Turkey)
     .filter { name =>
       val m = game.getMuslim(name)
-      !m.isPoor && !m.isIslamistRule
+      !m.truce && !m.isPoor && !m.isIslamistRule
     }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -73,11 +73,12 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
-      true
+      !game.getCountry(Iraq).truce
     case Jihadist if game.botEnhancements =>
-      game.getMuslim(Turkey).isGood ||
-      game.getMuslim(Iraq).isGood ||
-      game.getMuslim(Iraq).isFair
+      val turkey = game.getMuslim(Turkey)
+      val iraq = game.getMuslim(Iraq)
+      (!turkey.truce && turkey.isGood) ||
+      (!iraq.truce && (iraq.isGood || iraq.isFair))
     case Jihadist =>
       getJihadistCandidates.nonEmpty
   }
@@ -97,16 +98,22 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
   override
   def executeEvent(role: Role): Unit = {
     if (role == US) {
-      addEventTarget(Iraq)
-      addAidMarker(Iraq)
+      if (game.getMuslim(Iraq).truce)
+        log("\nIraq under TRUCE. The event has not effect", Color.Event)
+      else {
+        addEventTarget(Iraq)
+        addAidMarker(Iraq)
+      }
     }
     else { // Jihadist
-      addEventTarget(Turkey)
-      testCountry(Turkey)  // Specifically called for by event
+      if (!game.getMuslim(Turkey).truce) {
+        addEventTarget(Turkey)
+        testCountry(Turkey)  // Specifically called for by event
+      }
       val candidates = countryNames(
         List(Turkey, Iraq)
           .map(game.getMuslim)
-          .filter(m => !(m.isPoor || m.isIslamistRule))
+          .filter(m => !m.truce && !(m.isPoor || m.isIslamistRule))
       )
       // candidates could be empty if Iraq is Poor and Turkey just tested to Poor
       if (getJihadistCandidates.nonEmpty) {

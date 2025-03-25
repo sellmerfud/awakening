@@ -60,7 +60,7 @@ object Card_214 extends Card(214, "3 Cups of Tea", Unassociated, 2, NoRemove, No
   override
   def eventConditionsMet(role: Role) = true
 
-  def getCandidates = countryNames(game.muslims.filter(_.isUntested))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.isUntested))
 
   def isEffective(role: Role) = role match {
     case US =>

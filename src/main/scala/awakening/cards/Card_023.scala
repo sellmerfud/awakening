@@ -47,7 +47,7 @@ import awakening.USBot
 object Card_023 extends Card(23, "Predator", US, 2, NoRemove, NoLapsing, NoAutoTrigger) {
   def getCandidates = countryNames(
     game.muslims
-      .filter(m => m.name != Iran && m.totalCells > 0)
+      .filter(m => m.name != Iran && !m.truce && m.totalCells > 0)
   )
 
   // Used by the US Bot to determine if the executing the event would alert a plot

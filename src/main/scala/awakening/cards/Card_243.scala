@@ -60,7 +60,9 @@ object Card_243 extends Card(243, "Backlash", US, 1, NoRemove, NoLapsing, NoAuto
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
-    m.plots.exists(!_.backlashed) && !game.isCaliphateMember(m.name)
+    !m.truce &&
+    m.plots.exists(!_.backlashed) &&
+    !game.isCaliphateMember(m.name)
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 

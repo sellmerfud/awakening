@@ -57,7 +57,7 @@ object Card_040 extends Card(40, "Mass Turnout", US, 3, NoRemove, NoLapsing, NoA
   def eventRemovesLastCell(): Boolean = false
 
   def getCandidates = countryNames(game.muslims
-    .filter(m => m.inRegimeChange && !game.isCaliphateMember(m.name)) 
+    .filter(m => !m.truce && m.inRegimeChange && !game.isCaliphateMember(m.name)) 
   )
     
 

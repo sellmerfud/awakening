@@ -52,7 +52,7 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
 
   def getCandidates = countryNames(
     game.muslims
-      .filter(m => m.isShiaMix && m.totalCells > 0 && distance(m.name, Lebanon) <= 3)
+      .filter(m => !m.truce && m.isShiaMix && m.totalCells > 0 && distance(m.name, Lebanon) <= 3)
   )
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
@@ -73,10 +73,11 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
     case US => getCandidates.nonEmpty
     case Jihadist if game.botEnhancements =>
       val lebanon = game.getMuslim(Lebanon)
-      lebanon.isGood ||
-      (lebanon.isFair && lebanon.isAlly)
+      !lebanon.truce &&
+      (lebanon.isGood || (lebanon.isFair && lebanon.isAlly))
     case Jihadist =>
       val lebanon = game.getMuslim(Lebanon)
+      !lebanon.truce &&
       !lebanon.isAdversary &&
       !lebanon.isIslamistRule &&
       !(lebanon.isPoor && lebanon.isNeutral)
@@ -102,6 +103,9 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
     case US =>
       log("\nThere are no Shia-Mix countries will a cell within three countries of Lebanon.", Color.Event)
       log("The event has no effect.", Color.Event)
+
+    case Jihadist if game.getMuslim(Lebanon).truce =>
+      log("\nLebanon is under TRUCE. The event has no effect.", Color.Event)
 
     case Jihadist if !game.getMuslim(Lebanon).isPoor || !game.getMuslim(Lebanon).isNeutral =>
       addEventTarget(Lebanon)

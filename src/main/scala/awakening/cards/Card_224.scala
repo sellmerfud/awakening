@@ -42,7 +42,7 @@ import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
-// Play if a Plot was resolved in a non-Mus-lim country last Resolve Plots phase.
+// Play if a Plot was resolved in a non-Muslim country last Resolve Plots phase.
 // If US play, Select Posture of 1 Schengen and 1 non-Schengen country (not US).
 // If Jihadist, Set US Posture to opposite of World (N/A if World at 0),
 // OR roll 1 die; Prestige reduced by half that number rounded up.

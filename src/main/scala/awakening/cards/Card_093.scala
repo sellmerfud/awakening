@@ -95,17 +95,24 @@ object Card_093 extends Card(93, "Taliban", Jihadist, 3, NoRemove, NoLapsing, No
     else {
       val afghanistan = game.getMuslim(Afghanistan)
       val pakistan    = game.getMuslim(Pakistan)
-      addEventTarget(Afghanistan)
-      addEventTarget(Pakistan)
 
-      if (!afghanistan.besiegedRegime)
-        addBesiegedRegimeMarker(Afghanistan)
+      if (!afghanistan.truce) {
+        addEventTarget(Afghanistan)
+        if (!afghanistan.besiegedRegime)
+          addBesiegedRegimeMarker(Afghanistan)
+      }
+
+      if (!pakistan.truce)
+        addEventTarget(Pakistan)
+
+      val cellTargets = List(Afghanistan, Pakistan)
+        .filter(name => !game.getCountry(name).truce)
 
       if (game.cellsAvailable == 0)
         log("\nNo cells available for placement", Color.Event)
-      else if (game.cellsAvailable > 1) {
-        addSleeperCellsToCountry(Afghanistan, 1)
-        addSleeperCellsToCountry(Pakistan, 1)
+      else if (game.cellsAvailable >= cellTargets.size) {
+        for (target <- cellTargets)
+        addSleeperCellsToCountry(target, 1)
       }
       else if (isHuman(role)) {
         displayLine("There is only 1 cell available for placement", Color.Event)

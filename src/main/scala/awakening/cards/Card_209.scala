@@ -57,14 +57,14 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    countryNames(game.muslims.filter(m => m.isSunni && m.totalCells > 0))
+    countryNames(game.muslims.filter(m => !m.truce && m.isSunni && m.totalCells > 0))
       .exists(name => USBot.wouldRemoveLastCell(name, 1)) ||
-    countryNames(game.muslims.filter(m => m.isShiaMix && m.totalCells > 0))
+    countryNames(game.muslims.filter(m => !m.truce && m.isShiaMix && m.totalCells > 0))
       .exists(name => USBot.wouldRemoveLastCell(name, 2))
 
-  def getMilitiaCandidates = countryNames(game.muslims.filter(_.militia > 0))
+  def getMilitiaCandidates = countryNames(game.muslims.filter(m => !m.truce && m.militia > 0))
 
-  def getCellCandidates = countryNames(game.muslims.filter(_.totalCells > 0))
+  def getCellCandidates = countryNames(game.muslims.filter(m => !m.truce && m.totalCells > 0))
 
   def iranNotAlly = game.getCountry(Iran).isNonMuslim || !game.getMuslim(Iran).isAlly
 

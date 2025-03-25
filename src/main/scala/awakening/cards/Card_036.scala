@@ -59,8 +59,10 @@ object Card_036 extends Card(36, "Indo-Pakistani Talks", US, 3, Remove, NoLapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    game.getMuslim(Pakistan).isGood || game.getMuslim(Pakistan).isFair
+  def eventConditionsMet(role: Role) = {
+    val pakistan = game.getMuslim(Pakistan)
+    !pakistan.truce && (pakistan.isGood || pakistan.isFair)
+  }
 
 
   // Returns true if the Bot associated with the given role will execute the event

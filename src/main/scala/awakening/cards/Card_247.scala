@@ -58,6 +58,7 @@ object Card_247 extends Card(247, "Nadia Murad", US, 1, NoRemove, NoLapsing, NoA
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     (m.name == Iraq || areAdjacent(m.name, Iraq)) &&
     m.canTakeAwakeningOrReactionMarker &&
     !game.isCaliphateMember(m.name)

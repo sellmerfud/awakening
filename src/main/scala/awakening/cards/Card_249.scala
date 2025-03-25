@@ -54,6 +54,7 @@ object Card_249 extends Card(249, "Saudi Air Strikes", US, 1, NoRemove, NoLapsin
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.totalCells > 0 &&
     (m.name == SaudiArabia ||
     (areAdjacent(m.name, SaudiArabia) && (m.civilWar || m.inRegimeChange || m.isIslamistRule)))

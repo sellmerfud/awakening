@@ -58,6 +58,7 @@ object Card_131 extends Card(131, "Arab Spring Fallout", US, 2, NoRemove, NoLaps
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.canTakeAwakeningOrReactionMarker &&
     m.awakening == 0 &&
     game.adjacentMuslims(m.name).forall(_.awakening == 0)

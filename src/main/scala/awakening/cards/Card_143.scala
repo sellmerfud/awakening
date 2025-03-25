@@ -90,11 +90,11 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
   def awakeingCandidates = if (lapsingEventInPlay(ArabWinter))
     Nil
   else
-    countryNames(game.muslims.filter(_.canTakeAwakeningOrReactionMarker))
+    countryNames(game.muslims.filter(m => !m.truce && m.canTakeAwakeningOrReactionMarker))
 
   def canPlaceAwakening = awakeingCandidates.nonEmpty
 
-  def aidCandidates = countryNames(game.muslims)
+  def aidCandidates = countryNames(game.muslims.filter(!_.truce))
   
   val DiscardTargets = Set(121, 126, 127, 128, 144)
   def cardDrawCandidates = game.cardsDiscarded

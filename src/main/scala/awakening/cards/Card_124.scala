@@ -57,6 +57,7 @@ object Card_124 extends Card(124, "Pearl Roundabout", US, 1, NoRemove, NoLapsing
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
+    !game.getMuslim(GulfStates).truce &&
     globalEventNotInPlay(BloodyThursday) &&
     lapsingEventNotInPlay(ArabWinter)
 

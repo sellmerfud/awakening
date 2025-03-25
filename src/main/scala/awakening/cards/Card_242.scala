@@ -57,16 +57,16 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    game.muslims.exists(m => USBot.wouldRemoveLastCell(m.name, 2))
+    game.muslims.exists(m => !m.truce && USBot.wouldRemoveLastCell(m.name, 2))
 
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
 
-  def getCandidates = countryNames(game.muslims.filter(_.totalCells > 0))
+  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.totalCells > 0))
 
-  def getBotPreferred = countryNames(game.muslims.filter(m => m.totalCells - m.totalTroopsAndMilitia > 4))
+  def getBotPreferred = countryNames(game.muslims.filter(m => !m.truce && m.totalCells - m.totalTroopsAndMilitia > 4))
 
   def eventEffective =
     getCandidates.nonEmpty || hasCardInHand(Jihadist)

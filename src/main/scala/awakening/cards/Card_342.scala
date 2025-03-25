@@ -67,13 +67,15 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
     game.countries.filter(c => c.name != target && c.cells > 0)
   )
 
+  def jihadistCandidates = countryNames(game.muslims.filter(!_.truce))
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => game.prestige < 12 || game.funding > 1
-    case Jihadist => true
+    case Jihadist => jihadistCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -85,8 +87,10 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
       increasePrestige(1)
       decreaseFunding(1)
     }
+    else if (game.jihadTargets.isEmpty)
+      log("\nThere are no Muslim countries where Jihad may be performed.", Color.Event)
     else { // Jihadist
-      val candidates = countryNames(game.muslims)
+      val candidates = jihadistCandidates
       val (target, cells) = if (isHuman(role)) {
         val name = askCountry("Which country: ", candidates)
         val cells = askCellsFromAnywhere(2, true, cellSources(name), sleeperFocus = false)

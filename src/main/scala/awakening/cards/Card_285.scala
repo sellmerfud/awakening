@@ -58,7 +58,11 @@ object Card_285 extends Card(285, "Mohamed Morsi Supporters", Jihadist, 1, Remov
   def eventRemovesLastCell(): Boolean = false
 
   def getCandidates = countryNames(
-    game.muslims.filter(m => (m.name == Egypt || m.militia > 0) && m.canTakeAwakeningOrReactionMarker)
+    game.muslims.filter { m =>
+      !m.truce &&
+      (m.name == Egypt || m.militia > 0) &&
+      m.canTakeAwakeningOrReactionMarker
+    }
   )
 
   // Returns true if the printed conditions of the event are satisfied

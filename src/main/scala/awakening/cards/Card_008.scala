@@ -49,7 +49,7 @@ object Card_008 extends Card(8, "Special Forces", US, 1, NoRemove, NoLapsing) {
 
   def specialForcesCandidates: List[String] = {
     // First find all muslim countries with troops or "Advisors"
-    val withTroops = countryNames(game.countries.filter(c => c.totalTroops > 0))
+    val withTroops = countryNames(game.countries.filter(c => !c.truce && c.totalTroops > 0))
     // Next get all countries that contain any cells and filter out the ones are are not 
     // within two of a country with forces.
     countryNames(game.countries filter { country =>

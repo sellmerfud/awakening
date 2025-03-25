@@ -57,7 +57,12 @@ object Card_265 extends Card(265, "Popular Mobilization Forces", US, 2, NoRemove
   def eventRemovesLastCell(): Boolean = false
 
   def getCandidates = countryNames(
-    game.muslims.filter(m => m.civilWar && m.totalCells > m.totalTroopsAndMilitia && m.canTakeMilitia)
+    game.muslims.filter { m =>
+      !m.truce &&
+      m.civilWar &&
+      m.totalCells > m.totalTroopsAndMilitia &&
+      m.canTakeMilitia
+    }
   )
 
   // Returns true if the printed conditions of the event are satisfied

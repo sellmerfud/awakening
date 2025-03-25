@@ -59,6 +59,7 @@ object Card_153 extends Card(153, "Facebook", US, 3, NoRemove, NoLapsing, NoAuto
 
   // Countries with an awakening marker or adjacent to a country with an awakening marker.
   val isCandidate = (m: MuslimCountry) =>
+    !m.truce &&
     m.canTakeAwakeningOrReactionMarker &&
     (m.awakening > 0 || (game.adjacentMuslims(m.name).exists(_.awakening > 0)))
 

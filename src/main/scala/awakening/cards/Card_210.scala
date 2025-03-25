@@ -55,13 +55,13 @@ object Card_210 extends Card(210, "Sectarian Violence", Unassociated, 1, NoRemov
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getAwakeningCandidates = countryNames(game.muslims.filter(_.awakening > 0))
+  def getAwakeningCandidates = countryNames(game.muslims.filter(m => !m.truce && m.awakening > 0))
 
-  def getReactionCandidates = countryNames(game.muslims.filter(_.reaction > 0))
+  def getReactionCandidates = countryNames(game.muslims.filter(m => !m.truce && m.reaction > 0))
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = getAwakeningCandidates.nonEmpty || getReactionCandidates.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
