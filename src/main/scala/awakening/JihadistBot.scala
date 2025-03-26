@@ -1163,10 +1163,10 @@ object JihadistBot extends BotHelpers {
     nextCategory(TravelFromOptions)
   }
 
-  def travelFromTarget(toCountry: String, names: List[String]): Option[String] = if (game.botEnhancements)
-    enhancedTravelFromTarget(toCountry, names, autoSuccess = false)
+  def travelFromTarget(toCountry: String, names: List[String], forPlacement: Boolean = false): Option[String] = if (game.botEnhancements)
+    enhancedTravelFromTarget(toCountry, names, autoSuccess = forPlacement)
   else
-    standardTravelFromTarget(toCountry, names, inPlaceOk = true)
+    standardTravelFromTarget(toCountry, names, inPlaceOk = !forPlacement)
     
 
   // This is used for some events where we want to check the priorities only,
@@ -3563,7 +3563,7 @@ object JihadistBot extends BotHelpers {
       if (remaining == 0 || countries.isEmpty)
         Nil
       else
-        JihadistBot.travelFromTarget(destination, countries) match {
+        JihadistBot.travelFromTarget(destination, countries, forPlacement = true) match {
           case Some(name) =>
             val c = game.getCountry(name)
             val n = remaining min JihadistBot.numCellsForTravel(c, destination)
