@@ -1985,7 +1985,7 @@ object JihadistBot extends BotHelpers {
         .foreach { name =>
           val muslim = game.getMuslim(name)
           if (game.funding >= muslim.resourceValue) {
-            log(s"\nThe $Jihadist Bot chooses to end the TRUCE in $name.")
+            log(s"\nThe $Jihadist chooses to end the TRUCE in $name.")
             decreaseFunding(muslim.resourceValue)
             removeTruceMarker(name)
             pause()

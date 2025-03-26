@@ -8925,6 +8925,28 @@ object LabyrinthAwakening {
     }
   }
 
+  def askEndTruce(): Unit = {
+    game.muslims.find(_.truce)
+      .foreach { truceCountry =>
+        val name = truceCountry.name
+        val cost = truceCountry.resourceValue
+        val (hasResources, resourceName) = game.humanRole match {
+          case US => (game.prestige >= cost, "prestige")
+          case Jihadist => (game.funding >= cost, "funding")
+        }
+        val prompt = s"\nDo you wish to decrease $resourceName by $cost to end the TRUCE in $name? (y/n) "
+        if (hasResources && askYorN(prompt)) {          
+            log(s"\nThe $US chooses to end the TRUCE in $name.")
+            if (game.humanRole == Jihadist)
+              decreaseFunding(cost)
+            else
+              decreasePrestige(cost)
+            removeTruceMarker(name)
+            pause()
+        }
+      }
+  }
+
   // ---------------------------------------------
   // Process user actions until the user quits the game
   // Assumes the global `game` variable has been initialized!
@@ -8937,17 +8959,24 @@ object LabyrinthAwakening {
       JihadistBot.resetStaticData()
       USBot.resetStaticData()
 
-      if (isBot(Jihadist)) {
-        // If it is the Jihadist Bot's turn it may
-        // voluntarily remove cadres
-        if (activeRole == Jihadist)
-          JihadistBot.voluntaryCadreRemoval()
-        // The #239 Truce card does not specify
-        // that the Truce must be ended on the
-        // player's own turn so we check at the
-        // start of any turn.
+      // The #239 Truce card does not specify
+      // that the Truce must be ended on the
+      // player's own turn so we check at the
+      // start of any turn.
+      // First we give the Bot a chance to end the Truce
+      // (Currently only the Enhanced Jihadist Bot will do so)
+      // Then we ask the Human player.
+      if (game.botRole == Jihadist && game.botEnhancements)
         JihadistBot.endTruceInMajorJihadPriority()
-      }
+
+      // If there is still a truce in effect then give the user
+      // a chance to end it.
+      askEndTruce()
+
+      // If it is the Jihadist Bot's turn it may
+      // voluntarily remove cadres
+      if (activeRole == Jihadist && isBot(Jihadist))
+        JihadistBot.voluntaryCadreRemoval()
 
       // If we are at the end of the action phase allow the user
       // to bypass the menu
