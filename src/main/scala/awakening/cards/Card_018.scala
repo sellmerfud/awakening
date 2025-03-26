@@ -72,16 +72,23 @@ object Card_018 extends Card(18, "Intel Community", US, 2, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
-    if (game.botEnhancements)
-      log(s"\nYou may inspect the $Jihadist Bot's hand and then shuffle it.", Color.Event)
-    else
-      log("US player does not inspect the Jihadist hand in the solo game.", Color.Event)
-
-    // US player conducts a 1 Op operations.
-    log("\nUS player conducts an operation with 1 Op")
-    humanExecuteOperation(1)
-    println()
-    if (askYorN("Do you wish to play an extra card now during this action phase? (y/n) "))
-      usCardPlay(None, additional = true)
+    // Will only be played by the Bot if it was triggered during US player turn.
+    // For now, we just treat is as having no effect.
+    if (isBot(role))
+      log(s"\nThe $US Bot treats this event as unplayable.  It has no effect.", Color.Event)
+    else {
+      if (game.botEnhancements)
+        log(s"\nYou may inspect the $Jihadist Bot's hand and then shuffle it.", Color.Event)
+      else
+        log("US player does not inspect the Jihadist hand in the solo game.", Color.Event)
+  
+      // US player conducts a 1 Op operations.
+      log("\nUS player conducts an operation with 1 Op")
+      humanExecuteOperation(1)
+      println()
+      
+      if (hasCardInHand(US) && askYorN("Do you wish to play an extra card now during this action phase? (y/n) "))
+        usCardPlay(None, additional = true)
+    }
   }
 }

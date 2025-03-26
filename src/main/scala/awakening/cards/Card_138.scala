@@ -96,7 +96,7 @@ object Card_138 extends Card(138, "Intel Community", US, 2, NoRemove, NoLapsing,
       log("\nUS player conducts an operation with 1 Op", Color.Event)
       humanExecuteOperation(1)
 
-      if (askYorN("\nDo you wish to play an extra card now during this action phase? (y/n) "))
+      if (hasCardInHand(US) && askYorN("\nDo you wish to play an extra card now during this action phase? (y/n) "))
         usCardPlay(None, additional = true)
     }
   }
