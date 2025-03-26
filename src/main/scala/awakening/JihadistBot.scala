@@ -43,6 +43,7 @@ import scala.annotation.tailrec
 import LabyrinthAwakening._
 import awakening.scenarios.LetsRoll
 import awakening.scenarios.YouCanCallMeAl
+import awakening.JihadistBot.EnhancedEvoTable.TravelToUnmarkedNonMuslim.{priorities => priorities}
 
 object JihadistBot extends BotHelpers {
 
@@ -2693,17 +2694,34 @@ object JihadistBot extends BotHelpers {
     log()
     log(s"$Jihadist Places cells in random Muslim countries")
     log(separator())
-    log("The Bot does this when there are no cells anywhere on the map.", Color.Event)
+    log("When there are no cells on the map, the Enhanced Bot places cells using", Color.Event)
+    log("available Ops randomly in Muslim countries using the following priorites:", Color.Event)
+    log("Islamist Rule, Poor, Unmarked.  (max 1 cell per country)", Color.Event)
 
-    val numPlacements = maxOpsPlusReserves(card)
+    val maxPlacements = maxOpsPlusReserves(card)
 
-    for (_ <- 1 to numPlacements) {
-      val target = randomMuslimCountry.name
-      addOpsTarget(target)
-      testCountry(target)
-      addCellsToCountry(target, active = false, num = 1)
-    }
+    // We place no more than one cell per Muslim country.
+    val priorites = List(
+      IslamistRulePriority,
+      PoorPriority,
+      UnmarkedPriority,
+      FairPriority,
+    )
 
+    def placeCell(numPlaced: Int, candidates: List[MuslimCountry]): Int =
+      if (numPlaced < maxPlacements && candidates.nonEmpty) {
+        val target = topPriority(candidates, priorities)
+          .map(_.name)
+          .get
+        addOpsTarget(target)
+        testCountry(target)
+        addCellsToCountry(target, active = false, num = 1)
+        placeCell(numPlaced + 1, candidates.filterNot(_.name == target))
+      }
+      else
+        numPlaced
+
+    val numPlacements = placeCell(0, game.muslims.filter(!_.truce))
     if (card.ops < numPlacements)
       expendBotReserves(numPlacements - card.ops)
     numPlacements
