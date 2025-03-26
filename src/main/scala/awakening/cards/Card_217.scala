@@ -59,6 +59,7 @@ object Card_217 extends Card(217, "Agitators", Unassociated, 2, NoRemove, NoLaps
   // #167 Houthi Rebels (if 2+ cells on track,Yemen [Poor and Reaction-Awakening<1] and Iran not Ally)
   def enhJihadistBotCandidates = {
     List(234, 188, 238, 152, 167)
+      .filter(game.cardDiscarded)
       .filter {
         case 234 =>
           game.getMuslim(Syria).isGood
