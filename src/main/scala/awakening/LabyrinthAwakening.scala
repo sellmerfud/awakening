@@ -2205,7 +2205,7 @@ object LabyrinthAwakening {
 
     def deckSummary: Summary = {
       val summary = new Summary
-      summary.add("Cards in the deck (or in player/bot hand)", Color.Info)
+      summary.add("Cards in the draw pile (or in player/bot hand)", Color.Info)
       summary.add(separator(char = '='), Color.Info)
       summary.addSeq(wrapInColumns("", cardsInDrawPileOrHands().map(deck(_).numAndName), maxWidth = 120))
       summary
