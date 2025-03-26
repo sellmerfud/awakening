@@ -69,8 +69,10 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
   // Always can play to allow facebook (event if smartphones is already in effect)
   override
   def eventConditionsMet(role: Role) =
-    game.targetsThisPhase.testedOrImprovedToFairOrGood.nonEmpty ||
-    game.targetsLastPhase.testedOrImprovedToFairOrGood.nonEmpty
+    game.targetsThisPhase.ops.nonEmpty ||
+    game.targetsThisPhase.event.nonEmpty ||
+    game.targetsLastPhase.ops.nonEmpty ||
+    game.targetsLastPhase.event.nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
