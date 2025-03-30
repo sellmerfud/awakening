@@ -185,7 +185,6 @@ object FUtil {
     val file = new File(path)
     if (file.isFile)
       try {
-        System.err.println(s"Deleting file: $path")
         Files.delete(file.toPath)
         true
       }
@@ -203,7 +202,6 @@ object FUtil {
     val file = new File(path)
     if (file.isDirectory)
       try {
-        System.err.println(s"Deleting directory: $path")
         Files.delete(file.toPath)
         true
       }
@@ -271,6 +269,7 @@ object FUtil {
       }
     }
     read1Line
+    reader.close()
     sb.toString
   }
 
