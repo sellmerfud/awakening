@@ -185,6 +185,7 @@ object FUtil {
     val file = new File(path)
     if (file.isFile)
       try {
+        System.err.println(s"Deleting file: $path")
         Files.delete(file.toPath)
         true
       }
@@ -202,6 +203,7 @@ object FUtil {
     val file = new File(path)
     if (file.isDirectory)
       try {
+        System.err.println(s"Deleting directory: $path")
         Files.delete(file.toPath)
         true
       }
@@ -1294,10 +1296,7 @@ object FUtil {
       
       // Fold Right so that leaves are deleted before their parents!
       find()
-        .foldRight(true) { (p, result) => 
-          p.delete()
-          true
-        }
+        .foldRight(true) { (p, result) => result && p.delete() }
     }
     
     
