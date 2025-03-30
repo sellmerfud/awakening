@@ -41,6 +41,7 @@ package awakening
 import java.io.{File, FilenameFilter, BufferedReader, FileReader, FileWriter, ByteArrayOutputStream,
                 InputStream, OutputStream, FileInputStream, FileOutputStream, Reader, Writer, IOException}
 import java.util.Date
+import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.{ Vector, BitSet }
 import scala.util.Properties.{lineSeparator, propOrEmpty, isWin}
@@ -182,12 +183,36 @@ object FUtil {
 
   def rm(path: String): Boolean = {
     val file = new File(path)
-    if (file.isFile) file.delete else false
+    if (file.isFile)
+      try {
+        Files.delete(file.toPath)
+        true
+      }
+      catch {
+        case e: IOException =>
+          val msg = Option(e.getMessage).getOrElse("")
+          System.err.println(s"Error deleting file ($path): $msg")
+        false
+      }
+    else
+      false
   }
 
   def rmdir(path: String): Boolean = {
     val file = new File(path)
-    if (file.isDirectory) file.delete else false
+    if (file.isDirectory)
+      try {
+        Files.delete(file.toPath)
+        true
+      }
+      catch {
+        case e: IOException =>
+          val msg = Option(e.getMessage).getOrElse("")
+          System.err.println(s"Error deleting directory ($path): $msg")
+        false
+      }
+    else
+      false
   }
 
   def mv(oldName: String, newName: String): Boolean = {
@@ -1268,7 +1293,11 @@ object FUtil {
         throw new IllegalStateException("rmtree called for empty pathname")
       
       // Fold Right so that leaves are deleted before their parents!
-      find().foldRight(true) ((p, result) => p.delete() && result)
+      find()
+        .foldRight(true) { (p, result) => 
+          p.delete()
+          true
+        }
     }
     
     
