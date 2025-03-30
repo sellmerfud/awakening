@@ -82,7 +82,7 @@ object Card_141 extends Card(141, "Malala Yousafzai", US, 2, Remove, NoLapsing, 
     println()
     increasePrestige(1)
     decreaseFunding(1)
-    if (!underTruce(Pakistan))
+    if (underTruce(Pakistan))
       log(s"\nCannot place awakening marker in Pakistan because it is under TRUCE.", Color.Event)
     else {
       addEventTarget(Pakistan)
