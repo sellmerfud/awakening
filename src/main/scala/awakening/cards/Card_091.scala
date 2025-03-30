@@ -111,9 +111,12 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
       }
     }
 
-    for (Target(name, num) <- getTargets(game.cellsAvailable, getCandidates, Vector.empty)) {
-      addEventTarget(name)
-      addSleeperCellsToCountry(name, num)
-    }
+    if (game.cellsAvailable == 0)
+      log("There are no available cells on the funding Track.  The event has not effect.", Color.Event)
+    else
+      for (Target(name, num) <- getTargets(game.cellsAvailable, getCandidates, Vector.empty)) {
+        addEventTarget(name)
+        addSleeperCellsToCountry(name, num)
+      }
   }
 }

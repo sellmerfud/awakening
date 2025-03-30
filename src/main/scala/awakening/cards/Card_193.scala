@@ -41,7 +41,7 @@ import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
 
 // -------------------------------------
-// This card is a duplicate of Card 97
+// This card is a duplicate of Card 91
 // -------------------------------------
 object Card_193 extends Card(193, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
