@@ -101,6 +101,16 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       }
       .getOrElse(JihadistBot.cellPlacementPriority(false)(getCandidates).get)
   }
+
+  // Enhanced bot ignores normal bot prefereances about immovable cells
+  def getJihadistCellSources(target: String) = {
+    val countries = if (game.botEnhancements)
+      game.countries.filter(c => c.name != target && !c.truce && c.cells > 0)
+    else
+      game.countries.filter(c => !c.truce && JihadistBot.hasCellForTravel(c, target, placement = true))
+    countryNames(countries)
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -110,15 +120,12 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       val target = getUSBotTarget
       game.hasCountry(c => c.name != target && isSource(c))
 
-    case Jihadist =>
-      val target = getJihadistBotTarget
-      val numTravelers = game.countries.count(c => !c.truce && JihadistBot.hasCellForTravel(c, target, placement = true))
+    case Jihadist if game.botEnhancements =>
       // Enhanced bot will only select the event if it can remove 3 cells
-      // Normal bot only requires 1
-      if (game.botEnhancements)
-        numTravelers > 2
-      else
-        numTravelers > 0
+      getJihadistCellSources(getJihadistBotTarget).size >= 3
+
+    case Jihadist =>
+      getJihadistCellSources(getJihadistBotTarget).size >= 1
   }
 
 
@@ -181,7 +188,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
     else if (role == Jihadist) {
       // Jihadist Bot removes only "cells""
       val target = getJihadistBotTarget
-      val cellSources = countryNames(game.countries.filter (c => !c.truce && JihadistBot.hasCellForTravel(c, target, placement = true)))
+      val cellSources = getJihadistCellSources(target)
       val countries = if (cellSources.size <= 3)
         cellSources
       else {
