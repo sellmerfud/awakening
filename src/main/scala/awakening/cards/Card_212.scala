@@ -40,7 +40,7 @@ package awakening.cards
 import awakening.LabyrinthAwakening._
 
 // -------------------------------------
-// This card is a duplicate of Card 6
+// This card is a duplicate of Card 211
 // -------------------------------------
 object Card_212 extends Card(212, "Smartphones", Unassociated, 1, NoRemove, NoLapsing, NoAutoTrigger) {
   // Used by the US Bot to determine if the executing the event would alert a plot
