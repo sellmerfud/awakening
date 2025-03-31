@@ -64,23 +64,51 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
+  // Playable in [Fair countries] OR [Poor countries with 5+ cells AND Funding<8]. Priority to Fair, then RC.
+  def enhBotCandidates = game.muslims
+    .filter { m =>
+      isCandidate(m) &&
+      m.isFair || (m.isPoor && m.cells >= 5 && game.funding < 8)
+    }
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
+
+  def standardBotTarget: Option[String] = {
+    val priorities = List(
+      JihadistBot.GoodPriority,
+      JihadistBot.FairPriority,
+      new JihadistBot.CriteriaFilter("Poor with Troops and US Prestige > 1",
+           JihadistBot.muslimTest(m => m.isPoor && game.prestige > 1)))
+
+    val candidates = countryNames(JihadistBot.selectCandidates(game.getCountries(getCandidates), priorities))
+    JihadistBot.minorJihadTarget(candidates)
+  }
+
+  def enhancedBotTarget: Option[String] = {
+    val priorities = List(
+      JihadistBot.FairPriority,
+      JihadistBot.RegimeChangePriority,
+    )
+
+    JihadistBot.topPriority(enhBotCandidates, priorities).map(_.name)
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    JihadistBot.talibanResurgentTarget(getCandidates).nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    enhancedBotTarget.nonEmpty
+  else
+    standardBotTarget.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    // See Event Instructions table
     val (target, plots, (actives, sleepers, sadr)) = if (isHuman(role)) {
       val name = askCountry("Select country: ", getCandidates)
       val plots = askPlots(game.availablePlots.filterNot(_ == PlotWMD), 2)
@@ -94,12 +122,14 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
     }
     else {
       // If event triggered during US turn then preferred target may not exist.
-      val name = JihadistBot.talibanResurgentTarget(getCandidates) match {
-        case Some(name) => name
-        case None => JihadistBot.minorJihadTarget(getCandidates).get
-      }
+      // Enhanced Bot falls back to standard bot if necessary
+      val target = if (game.botEnhancements)
+        (enhancedBotTarget orElse standardBotTarget orElse JihadistBot.minorJihadTarget(getCandidates)).get
+      else
+        (standardBotTarget orElse JihadistBot.minorJihadTarget(getCandidates)).get
+
       val plots = JihadistBot.preparePlots(game.availablePlots.filterNot(_ == PlotWMD)).take(2)
-      (name, plots, JihadistBot.chooseCellsToRemove(name, 3))
+      (target, plots, JihadistBot.chooseCellsToRemove(target, 3))
     }
 
     addEventTarget(target)

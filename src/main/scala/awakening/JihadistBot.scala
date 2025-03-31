@@ -1799,20 +1799,6 @@ object JihadistBot extends BotHelpers {
       topPriority(candidates, priorities).map(_.name)
   }
 
-  // ------------------------------------------------------------------
-  // Get target for the Status Quo event
-  def talibanResurgentTarget(names: List[String]): Option[String] = {
-    val flowchart = List(
-      GoodPriority,
-      FairPriority,
-      new CriteriaFilter("Poor with Troops and US Prestige > 1",
-           muslimTest(m => m.isPoor && game.prestige > 1)))
-
-    botLog("Find \"Taliban Resurgent\" target", Color.Debug)
-    val candidates = countryNames(selectCandidates(game.getCountries(names), flowchart))
-    minorJihadTarget(candidates)
-  }
-
   def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
     val flowchart = List(
       new CriteriaFilter("Not Adversary", muslimTest(m => !m.isAdversary)),
