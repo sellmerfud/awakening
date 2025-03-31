@@ -91,10 +91,16 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   def botBesiegeCandidates = getBesiegeCandidates.filter(name => !game.getMuslim(name).isIslamistRule)
 
   def enhGoodMuslimPlotCandidates = PossibleCountries
-      .filter(name => game.isMuslim(name) && game.getMuslim(name).isGood)
+      .filter { name =>
+        val m = game.getMuslim(name)
+        !m.truce && m.isGood
+      }
 
   def enhFairMuslimPlotCandidates = PossibleCountries
-      .filter(name => game.isMuslim(name) && game.getMuslim(name).isFair)
+      .filter { name =>
+        val m = game.getMuslim(name)
+        !m.truce && m.isFair
+      }
 
   val Pirates1 = 73  // From base game
   val Pirates2 = 183 // From Awakening expansion
