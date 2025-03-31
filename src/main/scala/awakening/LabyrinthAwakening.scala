@@ -8076,9 +8076,10 @@ object LabyrinthAwakening {
     val hardDesc = Seq(
       s"$human associated events are never triggered during the $bot turn.")
     val choices = List(
-      EnhBotEasy   -> ("Easy", easyDesc),
-      EnhBotMedium -> ("Medium", mediumDesc),
-      EnhBotHard   -> ("Hard", hardDesc))
+      EnhBotHard   -> ("Normal", hardDesc),
+      EnhBotMedium -> ("Easier", mediumDesc),
+      EnhBotEasy   -> ("Easiest", easyDesc),
+    )
     askMenuWithWrap(s"\nSelect enhanced $bot Bot difficulty level:", choices, delim = "  ", sameLine = false, allowAbort = false)
   }
 
