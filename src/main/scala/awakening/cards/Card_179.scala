@@ -60,7 +60,9 @@ object Card_179 extends Card(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = globalEventNotInPlay(USNKSummit)
+  def eventConditionsMet(role: Role) =
+    canPutTroopsInOffMapBox &&
+    globalEventNotInPlay(USNKSummit)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -78,13 +80,16 @@ object Card_179 extends Card(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsin
     val items = if (isHuman(role))
       selectTroopsToPutOffMap(2)
     else {
-      val numFromTrack = 2 min game.troopsAvailable
-      val numFromMap   = 2 - numFromTrack
+      val toRemove = (2 min maxTroopsToOffMap)
+      val numFromTrack = toRemove min game.troopsAvailable
+      val numFromMap   = toRemove - numFromTrack
       val botItems = new ListBuffer[MapItem]
       if (numFromTrack > 0)
         botItems += MapItem("track", numFromTrack)
-      if (numFromMap > 0)
-        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries.filter(c => !c.truce && c.troops > 0)))
+      if (numFromMap > 0) {
+        val withTroops = countryNames(game.countries.filter(c => !c.truce && c.troops > 0))
+        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, withTroops)
+      }
       botItems.toList
     }
 
@@ -93,6 +98,7 @@ object Card_179 extends Card(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsin
         addEventTarget(name)
       putTroopsInOffMapBox(name, num)
     }
+
     addEventTarget(China)
     setCountryPosture(China, oppositePosture(game.usPosture))
   }

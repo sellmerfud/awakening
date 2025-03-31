@@ -60,7 +60,7 @@ object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLaps
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = role match {
-    case US => game.prestige < 12
+    case US => canPutTroopsInOffMapBox
     case Jihadist => hasCardInHand(US)
   }
 
@@ -68,7 +68,10 @@ object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLaps
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => game.prestige < 12
+    case Jihadist => true
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -93,8 +96,12 @@ object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLaps
       else if (isHuman(role))
         selectTroopsToPutOffMap(1).head.country
       else {
-        val withTroops = countryNames(game.countries.filter(c => !c.truce && c.troops > 0))
-        USBot.ebolaScareTarget(withTroops).get
+        if (game.troopsAvailable > 0)
+          "track"
+        else {
+          val withTroops = countryNames(game.countries.filter(c => !c.truce && c.troops > 0))
+          USBot.ebolaScareTarget(withTroops).get
+        }
       }
 
       if (source != "track")

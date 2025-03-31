@@ -62,16 +62,17 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = trumpTweetsON
+  def eventConditionsMet(role: Role) = role match {
+    case US => trumpTweetsON && canPutTroopsInOffMapBox
+    case Jihadist => trumpTweetsON && hasCardInHand(US)
+  }
+    
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => true
-    case Jihadist => hasCardInHand(US)
-  }
+  def botWillPlayEvent(role: Role): Boolean = true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -80,7 +81,7 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
   def executeEvent(role: Role): Unit = if (role == US) {
     setTrumpTweetsOFF()
 
-    val withTroops = countryNames(game.countries.filter(_.troops > 0))
+    val withTroops = countryNames(game.countries.filter(c => !c.truce && c.troops > 0))
     val source = if (game.troopsAvailable > 0)
       "track"
     else if (isHuman(role))

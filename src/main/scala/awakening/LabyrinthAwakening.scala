@@ -1196,7 +1196,7 @@ object LabyrinthAwakening {
 
     def canDeployTo(ops: Int): Boolean
     def maxDeployFrom: Int
-    def canDeployFrom(ops: Int) = maxDeployFrom > 0
+    def canDeployFrom(ops: Int) = !truce && maxDeployFrom > 0
 
     def hasPlots = plots.nonEmpty
     def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false): Boolean
@@ -1269,7 +1269,11 @@ object LabyrinthAwakening {
 
     // Normally troops cannot deploy to a non-Muslim country.
     // The exception is the Abu Sayyaf event in the Philippines.
-    def canDeployTo(ops: Int) = ops >= governance && name == Philippines && hasMarker(AbuSayyaf)
+    def canDeployTo(ops: Int) =
+      !truce  &&
+      ops >= governance &&
+      name == Philippines &&
+      hasMarker(AbuSayyaf)
     def maxDeployFrom = totalDeployableTroops
     def disruptAffectsPrestige = totalTroopsThatAffectPrestige > 1
 
@@ -1347,7 +1351,11 @@ object LabyrinthAwakening {
     def canTakeAidMarker = true  // All Muslim countries can take an Aid marker by event
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
 
-    def canDeployTo(ops: Int) = !truce && isAlly && !isIslamistRule && ops >= governance
+    def canDeployTo(ops: Int) =
+      !truce &&
+      isAlly &&
+      !isIslamistRule &&
+      ops >= governance
 
     // To deploy troops out of a regime change country, we must leave behind
     // at least five more troops than cells.  Those troops that are left
@@ -6775,6 +6783,17 @@ object LabyrinthAwakening {
     removeAllTroopsMarkers(name)
   }
 
+  def maxTroopsToOffMap: Int =
+    game.troopsAvailable +
+    game.countries
+      .filter(!_.truce)
+      .map(_.troops)
+      .sum
+
+  // Test for the unlikely case that all troops are currently in 
+  // a country under truce.
+  def canPutTroopsInOffMapBox: Boolean = maxTroopsToOffMap > 0
+
   def putTroopsInOffMapBox(source: String, num: Int): Unit = {
     if (num > 0) {
       val startingCommitment = game.troopCommitment
@@ -7868,7 +7887,8 @@ object LabyrinthAwakening {
 
   // Take troops from available if possible, otherwise we must
   // ask the user where to take them from.
-  def selectTroopsToPutOffMap(numToRemove: Int): List[MapItem] = {
+  def selectTroopsToPutOffMap(numRequested: Int): List[MapItem] = {
+    val numToRemove = numRequested min maxTroopsToOffMap
     val numFromTrack = numToRemove min game.troopsAvailable
     val numFromMap   = numToRemove - numFromTrack
     val items = new ListBuffer[MapItem]()

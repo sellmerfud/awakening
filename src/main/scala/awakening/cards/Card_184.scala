@@ -64,7 +64,8 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = game.usPosture == Soft
+  def eventConditionsMet(role: Role) =
+    game.usPosture == Soft && canPutTroopsInOffMapBox
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -96,7 +97,7 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    def cardName(num: Int) = deck(num).numAndName
+      def cardName(num: Int) = deck(num).numAndName
 
     if (game.cardsDiscarded.isEmpty)
       log("\nThere are no cards in the discard pile.", Color.Event)
@@ -123,15 +124,18 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
     }
 
     val items = if (isHuman(role))
-      selectTroopsToPutOffMap(3)
+      selectTroopsToPutOffMap(3 min maxTroopsToOffMap)
     else {
-      val numFromTrack = 3 min game.troopsAvailable
-      val numFromMap   = 3 - numFromTrack
+      val toRemove = (3 min maxTroopsToOffMap)
+      val numFromTrack = toRemove min game.troopsAvailable
+      val numFromMap   = toRemove - numFromTrack
       val botItems = new ListBuffer[MapItem]
       if (numFromTrack > 0)
         botItems += MapItem("track", numFromTrack)
-      if (numFromMap > 0)
-        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, countryNames(game.countries.filter(c => !c.truce && c.troops > 0)))
+      if (numFromMap > 0) {
+        val withTroops = countryNames(game.countries.filter(c => !c.truce && c.troops > 0))
+        botItems ++= JihadistBot.troopsToTakeOffMap(numFromMap, withTroops)
+      }
       botItems.toList
     }
 
