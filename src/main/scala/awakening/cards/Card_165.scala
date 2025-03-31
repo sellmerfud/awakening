@@ -67,9 +67,18 @@ object Card_165 extends Card(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAu
     !m.isIslamistRule &&
     !(game.botEnhancements && m.inRegimeChange) // Enhanced Bot does not play in regime change country
 
+  // Playable in non-RC, non-IR countries with r-a<1
+  def isEnhBotCandidate = (m: MuslimCountry) =>
+    isCandidate(m) &&
+    !m.inRegimeChange &&
+    !m.isIslamistRule &&
+    (m.reaction - m.awakening < 1)
+
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   def getBotCandidates = countryNames(game.muslims.filter(isBotCandidate))
+
+  def getEnhBotCandidates = countryNames(game.muslims.filter(isEnhBotCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -79,7 +88,10 @@ object Card_165 extends Card(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAu
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotCandidates.nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    getEnhBotCandidates.nonEmpty
+  else
+    getBotCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -90,6 +102,8 @@ object Card_165 extends Card(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAu
     // was triggere during the US player's turn.
     val target = if (isHuman(role))
       askCountry("Select country: ", getCandidates)
+    else if (game.botEnhancements && getEnhBotCandidates.nonEmpty)
+      JihadistBot.goodThenFairThenPoorPriority(getEnhBotCandidates).get
     else if (getBotCandidates.nonEmpty)
       JihadistBot.goodThenFairThenPoorPriority(getBotCandidates).get
     else
