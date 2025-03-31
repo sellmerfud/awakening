@@ -72,13 +72,21 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
 
   def getBotCandidates = countryNames(game.countries.filter(isBotCandidate))
 
+  // Playable in [poor, non-RC] countries.
+  def getEnhBotCandidates = countryNames(
+    game.muslims.filter(m => isCandidate(m) && m.isPoor && !m.inRegimeChange)
+  )
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   //
   // Bot will not play this in Caliphate Capital or in a country under Regime Change
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotCandidates.nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    getEnhBotCandidates.nonEmpty
+  else
+    getBotCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -97,13 +105,17 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
         JihadistBot.NeutralPriority
       )
 
-      // When triggered during US turn preferred canidates may be empty
-      val candidates = getBotCandidates match {
-        case Nil => JihadistBot.narrowCountries(getCandidates, eventPriorities, allowBotLog = false)
-        case c => JihadistBot.narrowCountries(c, eventPriorities, allowBotLog = false)
-      }
+      // When triggered during US turn preferred candidates may be empty
+      val candidates = if (game.botEnhancements && getEnhBotCandidates.nonEmpty)
+        getEnhBotCandidates
+      else if (getBotCandidates.nonEmpty)
+        getBotCandidates
+      else
+        getCandidates
+      
+      val narrowedCandidates = JihadistBot.narrowCountries(candidates, eventPriorities, allowBotLog = false)
 
-      JihadistBot.troopsMilitiaTarget(candidates).get
+      JihadistBot.troopsMilitiaTarget(narrowedCandidates).get
     }
 
     addEventTarget(target)
