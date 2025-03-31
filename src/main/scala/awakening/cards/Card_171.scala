@@ -64,10 +64,18 @@ object Card_171 extends Card(171, "Abu Ghraib Jail Break", Jihadist, 2, Remove, 
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    game.cellsAvailable > 0 ||
-    (lapsingEventNotInPlay(ArabWinter) && game.getMuslim(Iraq).canTakeAwakeningOrReactionMarker) ||
-    game.prestige > 1
+  def botWillPlayEvent(role: Role): Boolean = {
+    val iraq = game.getMuslim(Iraq)
+    val isEffective = 
+      game.cellsAvailable > 0 ||
+      (lapsingEventNotInPlay(ArabWinter) && iraq.canTakeAwakeningOrReactionMarker) ||
+      game.prestige > 1
+
+    if (game.botEnhancements)
+      isEffective && !(iraq.isGood && iraq.totalTroops > 0)  // Playable unless Iraq [Good and with troops].
+    else
+      isEffective
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
