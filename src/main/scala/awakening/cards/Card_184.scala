@@ -71,7 +71,7 @@ object Card_184 extends Card(184, "Sequestration", Jihadist, 2, Remove, NoLapsin
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = !game.botEnhancements // Enh bot treats as unplayable
 
   val ObamaDoctrine = 143
   val CongressActs = 152
