@@ -66,8 +66,13 @@ object Card_164 extends Card(164, "Bloody Thursday", Jihadist, 1, NoRemove, NoLa
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  //
+  // Enhanced Bot will only play if it can remove an Awakening marker
   override
-  def botWillPlayEvent(role: Role): Boolean = isEventEffective
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    getCandidates.nonEmpty
+  else
+    isEventEffective
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
