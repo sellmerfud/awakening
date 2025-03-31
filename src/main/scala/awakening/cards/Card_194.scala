@@ -64,7 +64,9 @@ object Card_194 extends Card(194, "Snowden", Jihadist, 3, Remove, NoLapsing, NoA
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.prestige > 1 // Enhanced Bot only plays if it affects prestige
+  else
     game.prestige > 1 ||
     game.usPosture != game.getNonMuslim(Russia).posture ||
     game.usPosture != game.getNonMuslim(Germany).posture
