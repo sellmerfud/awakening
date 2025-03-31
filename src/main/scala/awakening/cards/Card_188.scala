@@ -74,8 +74,19 @@ object Card_188 extends Card(188, "ISIL", Jihadist, 3, Remove, NoLapsing, NoAuto
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+  //
   override
-  def botWillPlayEvent(role: Role): Boolean =
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if at least 1 country would be placed into Civil War AND
+    // the following is true for any country placed into Civil War:
+    //  1. reaction-awakening<2
+    //  2. no RC marker present.
+    getCandidates.nonEmpty &&
+    getCandidates
+      .map(game.getMuslim)
+      .forall(m => !m.inRegimeChange && m.reaction - m.awakening < 2)
+  }
+  else
     getCandidates.nonEmpty || game.prestige > 1
 
   // Carry out the event for the given role.
