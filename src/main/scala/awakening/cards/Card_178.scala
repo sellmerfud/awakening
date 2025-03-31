@@ -56,9 +56,13 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(
-    game.muslims.filter(m => !m.truce && m.militia > 0 && (m.civilWar || m.inRegimeChange))
-  )
+  val isCandidate = (m: MuslimCountry) =>
+    !m.truce && m.militia > 0 && (m.civilWar || m.inRegimeChange)
+
+  def getCandidates = countryNames(game.muslims.filter(isCandidate))
+
+  // Bot will only pick candidate where it can remove 2 or more militia
+  def getEnhBotCandidates = game.muslims.filter(m => isCandidate(m) && (m.militia + 1)/2 >= 2)
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -68,7 +72,12 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if 2+ Militia could be removed. Priority to MJP, then most militia, then highest res, then poor.
+    getEnhBotCandidates.nonEmpty
+  }
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -77,6 +86,21 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
       askCountry("Select country: ", getCandidates)
+    else if (game.botEnhancements) {
+      val priorities = List(
+        JihadistBot.IsMajorJihadPriority,
+        JihadistBot.MostMilitiaPriority,
+        JihadistBot.HighestResourcePriority,
+        JihadistBot.PoorPriority,
+      )
+      val candidates = if (getEnhBotCandidates.nonEmpty)
+        getEnhBotCandidates
+      else
+        game.getMuslims(getCandidates)
+      JihadistBot.topPriority(candidates, priorities)
+        .map(_.name)
+        .get
+    }
     else
       JihadistBot.troopsMilitiaTarget(getCandidates).get
 
