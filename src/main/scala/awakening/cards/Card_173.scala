@@ -64,7 +64,12 @@ object Card_173 extends Card(173, "Arab Winter", Jihadist, 2, NoRemove, Lapsing,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if at least 1 Awakening marker could be Removed.
+    getCandidates.nonEmpty
+  }
+  else
+    true  // Standard Bot always plays the event
 
   def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.awakening > 0))
 
