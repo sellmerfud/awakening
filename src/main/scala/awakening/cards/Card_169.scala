@@ -82,7 +82,10 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.funding < 8 || game.cellsAvailable > 0
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.usPosture == Soft && game.funding < 9 // Playable if US soft and Funding<9. Always raise Funding.
+  else
+    game.funding < 8 || game.cellsAvailable > 0
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -115,10 +118,12 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
       }
       val target = JihadistBot.cellPlacementPriority(false)(candidates).get
       val action = (game.cellsAvailable > 0, game.funding) match {
-        case (false, 9)         => None
-        case (false, _)         => Some(Funding)
-        case (true, f) if f < 8 => Some(Funding)
-        case _                  => Some(Cells)
+        case (false, 9) => None
+        case (false, _) => Some(Funding)
+        case (_, f) if game.botEnhancements && f < 9 => Some(Funding)
+        case (_, f) if f < 8 => Some(Funding) // Standard Bot
+        case (true, _) => Some(Cells)
+        case _ => None
       }
       (target, action)
     }
