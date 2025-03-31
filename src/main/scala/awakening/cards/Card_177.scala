@@ -63,7 +63,9 @@ object Card_177 extends Card(177, "Gaza Rockets", Jihadist, 2, NoRemove, NoLapsi
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.availablePlots.contains(Plot1) && game.funding < 8
+  else
     game.availablePlots.contains(Plot1) && game.funding < 9
 
   // Carry out the event for the given role.
