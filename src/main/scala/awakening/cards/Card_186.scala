@@ -38,6 +38,7 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -62,26 +63,39 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
 
   def havePlots = game.availablePlots.exists(p => p == Plot2 || p == Plot3)
   def havePlot3 = game.availablePlots.exists(_ == Plot3)
-  def havePlot2 = game.availablePlots.exists(_ == Plot2)
   def haveCells = game.cellsAvailable > 0
+
+  def enhBotWillPlaceCells = if (game.getCountry(Nigeria).isMuslim) {
+    val nigeria = game.getMuslim(Nigeria)
+    game.cellsAvailable >= 3 && (JihadistBot.willDeclareCaliphate(Nigeria) || !nigeria.isIslamistRule)
+  }
+  else
+    false
+
+  def enhBotWillPLot = havePlots && game.funding < 8
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+
   override
-  def botWillPlayEvent(role: Role): Boolean = havePlots || haveCells
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    enhBotWillPlaceCells || enhBotWillPLot
+  else
+     havePlots || haveCells
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    sealed trait Choice
+    case object PlacePlot extends Choice
+    case object PlaceCells extends Choice
+
     addEventTarget(Nigeria)
     if (havePlots || haveCells) {
       if (isHuman(role)) {
-        sealed trait Choice
-        case object PlacePlot extends Choice
-        case object PlaceCells extends Choice
         val choices = List(
           choice(havePlots, PlacePlot,  "Place a level 2 or level 3 Plot in Nigeria"),
           choice(haveCells, PlaceCells, "Place up to 3 cells in Nigeria")
@@ -108,23 +122,32 @@ object Card_186 extends Card(186, "Boko Haram", Jihadist, 3, NoRemove, NoLapsing
       }
       else {
         // Bot
-        sealed trait Choice
-        case object PlacePlot3 extends Choice
-        case object PlacePlot2 extends Choice
-        case object PlaceCells extends Choice
-        val choices = if (game.getCountry(Nigeria).isNonMuslim)
-          List((havePlot3, PlacePlot3), (havePlot2, PlacePlot2), (haveCells, PlaceCells))
-        else
-          List((haveCells, PlaceCells), (havePlot3, PlacePlot3), (havePlot2, PlacePlot2))
-
-        val action = choices.dropWhile(_._1 == false).head._2
+        // Enhanced Bot:
+        // If Nigeria is muslim and we can establish a Caliphate, then place cells.
+        // else If Nigeria non-Muslim and Funding <8, place plot.
+        // else if If Nigeria Muslim and non-IR and 3+ cells on  track, place cells.
+        // Else unplayable.
+        val action = if (game.botEnhancements && enhBotWillPlaceCells)
+          PlaceCells
+        else if (game.botEnhancements && enhBotWillPLot)
+          PlacePlot
+        else if (game.getCountry(Nigeria).isNonMuslim) {
+          if (havePlots)
+            PlacePlot
+          else
+            PlaceCells
+        }
+        else { // Muslim
+          if (haveCells)
+            PlaceCells
+          else
+            PlacePlot
+        }
 
         action match {
-          case PlacePlot3 =>
-            addAvailablePlotToCountry(Nigeria, Plot3)
-
-          case PlacePlot2 =>
-            addAvailablePlotToCountry(Nigeria, Plot2)
+          case PlacePlot =>
+            val plot = if (havePlot3) Plot3 else Plot2
+            addAvailablePlotToCountry(Nigeria, plot)
 
           case PlaceCells =>
             val num = 3 min game.cellsAvailable
