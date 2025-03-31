@@ -67,8 +67,13 @@ object Card_167 extends Card(167, "Houthi Rebels", Jihadist, 1, Remove, NoLapsin
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    if (game.botEnhancements)
-      !game.getMuslim(Yemen).civilWar
+    if (game.botEnhancements) {
+      // Enhanced Bot Playable if no RC marker, r-a<1 and 2+ cells on track.
+      val yemen = game.getMuslim(Yemen)
+      !yemen.civilWar &&
+      game.cellsAvailable >= 2 &&
+      (yemen.reaction - yemen.awakening) < 1
+    }
     else
       !game.getMuslim(Yemen).civilWar || game.cellsAvailable > 0
 
