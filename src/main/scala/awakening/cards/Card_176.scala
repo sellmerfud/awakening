@@ -68,6 +68,48 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
 
   def getBotCandidates = countryNames(game.muslims.filter(isBotCandidate))
 
+  // Playable in non-adversary, non-Training Camps countries.
+  // - Fair 2+ res country with [awakening-reaction>1] or [awakening-reaction=0 or 1 AND less than 3 cells],
+  //   priority to highest res, then highest awakening-reaction, then aid, then ally.
+  def getEnhBotFairCandidates = game.muslims
+    .filter { m =>
+      val delta = m.awakening - m.reaction
+      m.isFair &&
+      isCandidate(m) &&
+      !m.isAdversary &&
+      !game.isTrainingCamp(m.name) &&
+      m.resourceValue >= 2 &&
+      (delta > 1 || (delta >= 0 && m.cells < 3))
+    }
+  
+  val enhBotFairPriorities = List(
+    JihadistBot.HighestResourcePriority,
+    JihadistBot.HighestAwakeningMinusReactionPriority,
+    JihadistBot.WithAidPriority,
+    JihadistBot.AllyPriority,
+  )
+
+  // Playable in non-adversary, non-Training Camps countries.
+  // - Poor 2+ res country with [awakening-reaction>1]
+  //   priority to highest awakening-reaction, then highest res, then aid, then ally).
+  def getEnhBotPoorCandidates = game.muslims
+    .filter { m =>
+      m.isPoor &&
+      isCandidate(m) &&
+      !m.isAdversary &&
+      !game.isTrainingCamp(m.name) &&
+      m.resourceValue >= 2 &&
+      m.awakening - m.reaction > 1
+    }
+
+
+  val enhBotPoorPriorities = List(
+    JihadistBot.HighestAwakeningMinusReactionPriority,
+    JihadistBot.HighestResourcePriority,
+    JihadistBot.WithAidPriority,
+    JihadistBot.AllyPriority,    
+  )
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
@@ -76,7 +118,10 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotCandidates.nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    getEnhBotFairCandidates.nonEmpty || getEnhBotPoorCandidates.nonEmpty
+  else
+    getBotCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -85,9 +130,13 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
       askCountry("Select country: ", getCandidates)
+    else if (game.botEnhancements && getEnhBotFairCandidates.nonEmpty)
+      JihadistBot.topPriority(getEnhBotFairCandidates, enhBotFairPriorities).map(_.name).get
+    else if (game.botEnhancements && getEnhBotPoorCandidates.nonEmpty)
+      JihadistBot.topPriority(getEnhBotPoorCandidates, enhBotPoorPriorities).map(_.name).get
     else if (getBotCandidates.nonEmpty)
       JihadistBot.changeOfStateTarget(getBotCandidates).get
-      else
+    else
       JihadistBot.changeOfStateTarget(getCandidates).get
 
     addEventTarget(target)
