@@ -9283,15 +9283,17 @@ object LabyrinthAwakening {
 
       logCardPlay(US, card)
       try {
+        def cancelForFerguson = if (isBot(Jihadist))
+          JihadistBot.willCancelUSEventForFerguson(card)
+        else
+          askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")
+
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
         // If the JihadistBot is playing it will cancel the next one played by the US.
-        if (lapsingEventInPlay(Ferguson)    &&
-            card.association == US          &&
-            (game.botRole == Jihadist ||
-             askYorN("Do you wish to cancel the play of this US associated card? (y/n) "))) {
-
-          log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
+        if (lapsingEventInPlay(Ferguson) &&card.association == US && cancelForFerguson) {
+          log(s"\nThe Jihadist chooses to use Ferguson to cancel ${card.numAndName}.", Color.Info)
+          log(s"It is discarded without effect.", Color.Info)
           addCardToDiscardPile(card.number)
           removeLapsingEvent(Ferguson)
         }

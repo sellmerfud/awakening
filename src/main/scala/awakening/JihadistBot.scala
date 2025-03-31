@@ -2148,6 +2148,17 @@ object JihadistBot extends BotHelpers {
     opsAdded
   }
 
+  def willCancelUSEventForFerguson(card: Card): Boolean = if (game.botEnhancements) {
+    // If card has 3 Ops always block it.
+    // If 1 Op or 2 Ops and US has at least two more cards in hand, roll a die: 1-3 = block the event, 4-6 do not block the event.
+    // If 1 Ops or  2 Ops and US has one or zero cards in hand, block the event.
+    // card.association == US &&
+    lazy val die = getDieRoll(s"Enter die roll for Ferguson to cancel event (1-3) to block: ")
+    card.ops == 3 || numCardsInHand(US) < 2 || die < 4
+  }
+  else
+    true  // Standard Bot always cancels the first played US associated event
+
   // Attempt to recruit as many times as possible up to 3
   // If we run out of card ops and there are still cells available, use reserves
   // If we run out of cells and still have card ops (not reserves), then use the
