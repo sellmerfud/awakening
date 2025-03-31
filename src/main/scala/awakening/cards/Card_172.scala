@@ -40,6 +40,7 @@ package awakening.cards
 import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
+import scala.collection.mutable.ListBuffer
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -87,16 +88,29 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
 
   def getBesiegeCandidates = getCandidates.filter(name => canPlaceBesiegedRegime(game.getCountry(name)))
 
-  def candidateCards() = {
-    val targets = List(73, 183, 186, 169)
+  def botBesiegeCandidates = getBesiegeCandidates.filter(name => !game.getMuslim(name).isIslamistRule)
+
+  def enhGoodMuslimPlotCandidates = PossibleCountries
+      .filter(name => game.isMuslim(name) && game.getMuslim(name).isGood)
+
+  def enhFairMuslimPlotCandidates = PossibleCountries
+      .filter(name => game.isMuslim(name) && game.getMuslim(name).isFair)
+
+  val Pirates1 = 73  // From base game
+  val Pirates2 = 183 // From Awakening expansion
+  val BokoHaram = 186
+  val IslamicMaghreb = 169
+  def candidateCards = {
+    // The order here is important because the Enhanced Bot will
+    // take the first one in this list that is available
+    val targets = List(Pirates2, Pirates1, BokoHaram, IslamicMaghreb)
     targets.filter(game.cardsDiscarded.contains)
   }
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
-    getCandidates.nonEmpty ||
-    candidateCards().nonEmpty
+    getCandidates.nonEmpty || candidateCards.nonEmpty
 
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -105,18 +119,86 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   override
   def botWillPlayEvent(role: Role): Boolean = true
 
+  sealed trait Action
+  case object PlaceReaction extends Action
+  case object PlaceCell extends Action
+  case object PlacePlot1 extends Action
+  case object PlacePlot2 extends Action
+  case object PlotInGoodMuslim extends Action
+  case object PlotInFairMuslim extends Action
+  case object PlotInKenya extends Action
+  case object Besiege extends Action
+  case object Draw extends Action
+
+  // See Event Instructions table
+  def standardBotActions: List[Action] = {
+    val actions = new ListBuffer[Action]()
+    var havePlot = game.availablePlots.exists(p => p == Plot1 || p == Plot2)
+    
+    if (botBesiegeCandidates.nonEmpty)
+      actions.append(Besiege)
+
+    if (game.cellsAvailable > 0)
+      actions.append(PlaceCell)
+
+    if (getReactionCandidates.nonEmpty)
+      actions.append(PlaceReaction)
+
+    if (havePlot && getCandidates.nonEmpty)
+      actions.append(PlacePlot2)
+
+    if (candidateCards.nonEmpty) 
+      actions.append(Draw)
+
+    actions.toList.take(2)
+  }
+
+  // If possible, draw Boko Haram, then Pirates, then Islamic Maghreb from discard pile.
+  // If Somalia and/or adjacent Muslim country at Good, place highest plot possible there (priority to Troops).
+  // Place highest plot possible in Kenya if [Funding <9] and/or [US hard and Kenya hard].
+  // Place reaction marker in Muslim (priority to highest # of reaction markers present, then highest awakening-reaction, then highest # of cells, then Yemen)
+  // Place cell (same priorities as in no.4)
+  // Place Besieged regime marker in Muslim (same priorities as in no.4)
+  // If Somalia and/or adjacent Muslim country at Fair, place highest plot possible there (priority to Troops).
+  def enhBotActions: List[Action] = {
+    val actions = new ListBuffer[Action]()
+    var havePlot = game.availablePlots.exists(p => p == Plot1 || p == Plot2)
+    val plotInKenya = game.funding < 9 || (game.usPosture == Hard && game.getNonMuslim(KenyaTanzania).isHard)
+
+    // First draw one or two cards if possible
+    if (candidateCards.nonEmpty)
+      actions.append(Draw)
+
+    if (havePlot && enhGoodMuslimPlotCandidates.nonEmpty) {
+      actions.append(PlotInGoodMuslim)
+      havePlot = false
+    }
+
+    if (havePlot && plotInKenya) {
+      actions.append(PlotInKenya)
+      havePlot = false
+    }
+    
+    if (getReactionCandidates.nonEmpty)
+      actions.append(PlaceReaction)
+
+    if (game.cellsAvailable > 0)
+      actions.append(PlaceCell)
+      
+    if (getBesiegeCandidates.nonEmpty)
+      actions.append(Besiege)
+
+    if (havePlot && enhFairMuslimPlotCandidates.nonEmpty)
+      actions.append(PlotInFairMuslim)
+
+    actions.toList.take(2)
+  }
+
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-      sealed trait Choice
-      case object PlaceReaction extends Choice
-      case object PlaceCell extends Choice
-      case object PlacePlot1 extends Choice
-      case object PlacePlot2 extends Choice
-      case object Besiege extends Choice
-      case object Draw extends Choice
 
     if (isHuman(role)) {
       val canReaction = getReactionCandidates.nonEmpty
@@ -124,7 +206,7 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
       val canPlot1    = game.availablePlots.contains(Plot1)
       val canPlot2    = game.availablePlots.contains(Plot2)
       val canBesiege  = getBesiegeCandidates.nonEmpty
-      val canDraw     = candidateCards().nonEmpty
+      val canDraw     = candidateCards.nonEmpty
       val choices = List(
         choice(canReaction,PlaceReaction, "Place 1 Reaction marker"),
         choice(canCell,    PlaceCell,     "Place 1 cell"),
@@ -159,58 +241,101 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
             addBesiegedRegimeMarker(target)
           case Draw =>
             log(s"\nThe $role player draws one of the listed cards from the discard pile.", Color.Event)
-            askCardDrawnFromDiscardPile(role, only = candidateCards().toSet)
+            askCardDrawnFromDiscardPile(role, only = candidateCards.toSet)
               .map(deck(_).numAndName)
               .foreach { cardDisplay =>
                 log(s"\nAdd $cardDisplay to your hand.", Color.Event)
               }
+          case _ => // Avoid compiler warning
         }
       }
     }
     else {
-      // See Event Instructions table
-      val besiegeTarget = JihadistBot.markerTarget(
-        getBesiegeCandidates.filter(name => !game.getMuslim(name).isIslamistRule)
+      def bestPlot = (game.availablePlots.sorted.dropWhile(p => p != Plot1 && p != Plot2)).head
+      // (priority to highest # of reaction markers present, then highest awakening-reaction, then highest # of cells, then Yemen)
+      val enhBotMarkerCellPriorities = List(
+        JihadistBot.MostReactionMarkersPriority,
+        JihadistBot.HighestAwakeningMinusReactionPriority,
+        JihadistBot.MostCellsPriority,
+        new JihadistBot.CriteriaFilter( "Is Yemen", _.name == Yemen)
       )
-      val cellTarget = if (game.cellsAvailable > 0)
-        JihadistBot.cellPlacementPriority(false)(getCandidates)
+      def enhMarkerCellTarget(candidates: List[String]): String =
+        JihadistBot.topPriority(game.getCountries(candidates), enhBotMarkerCellPriorities)
+          .map(_.name)
+          .get
+      val enhBotPlotPriorities = List(JihadistBot.WithTroopsPriority)
+      def enhPlotTarget(candidates: List[String]): String =
+        JihadistBot.topPriority(game.getCountries(candidates), enhBotPlotPriorities)
+          .map(_.name)
+          .get
+
+      val actions = if (game.botEnhancements)
+        enhBotActions
       else
-        None
-      val reactionTarget = JihadistBot.markerTarget(getReactionCandidates)
-      val plotTarget = if (game.availablePlots.exists(p => p == Plot1 || p == Plot2))
-        JihadistBot.plotTarget(getCandidates, game.funding >= 7)
-      else
-        None
-      val actions = List(
-        besiegeTarget.map(_ => Besiege),
-        cellTarget.map(_ => PlaceCell),
-        reactionTarget.map(_ => PlaceReaction),
-        plotTarget.map(_ => PlacePlot2),
-        if (candidateCards().nonEmpty) Some("draw") else None,
-      ).flatten.take(2)
+        standardBotActions
 
       actions foreach { action =>
         println()
         action match {
-          case Besiege  =>
-            addEventTarget(besiegeTarget.get)
-            addBesiegedRegimeMarker(besiegeTarget.get)
+          case Besiege =>
+            val target = if (game.botEnhancements)
+              enhMarkerCellTarget(getBesiegeCandidates)
+            else
+              JihadistBot.markerTarget(getBesiegeCandidates).get
+            addEventTarget(target)
+            addBesiegedRegimeMarker(target)
+
           case PlaceCell =>
-            addEventTarget(cellTarget.get)
-            addSleeperCellsToCountry(cellTarget.get, 1)
+            val target = if (game.botEnhancements)
+              enhMarkerCellTarget(getCandidates)
+            else
+              JihadistBot.cellPlacementPriority(false)(getCandidates).get
+            addEventTarget(target)
+            addSleeperCellsToCountry(target, 1)
+
           case PlaceReaction =>
-            addEventTarget(reactionTarget.get)
-            addReactionMarker(reactionTarget.get)
-          case PlacePlot1|PlacePlot2 =>
-            // Use Plot 2 if available otherwise Plot 1
-            val plot = (game.availablePlots.sorted.dropWhile(p => p != Plot1 && p != Plot2)).head
-            addEventTarget(plotTarget.get)
-            addAvailablePlotToCountry(plotTarget.get, plot)
+            val target = if (game.botEnhancements)
+              enhMarkerCellTarget(getReactionCandidates)
+            else
+              JihadistBot.markerTarget(getReactionCandidates).get
+            addEventTarget(target)
+            addReactionMarker(target)
+
+          case PlacePlot2|PlacePlot1 =>
+            // Standard bot only
+            val target = JihadistBot.plotTarget(getCandidates, game.funding >= 7).get
+            addEventTarget(target)
+            addAvailablePlotToCountry(target, bestPlot)
+
+          case PlotInGoodMuslim =>
+            // Enhanced Bot only
+            val target = enhPlotTarget(enhGoodMuslimPlotCandidates)
+            addEventTarget(target)
+            addAvailablePlotToCountry(target, bestPlot)
+
+          case PlotInFairMuslim =>
+            // Enhanced Bot only
+            val target = enhPlotTarget(enhFairMuslimPlotCandidates)
+            addEventTarget(target)
+            addAvailablePlotToCountry(target, bestPlot)
+
+          case PlotInKenya =>
+            // Enhanced Bot only
+            addEventTarget(KenyaTanzania)
+            addAvailablePlotToCountry(KenyaTanzania, bestPlot)
+
           case Draw =>
-            val cardNum = shuffle(candidateCards()).head
-            log(s"\nThe $role player draws one of the listed cards from the discard pile.", Color.Event)
+            // The enhanced bot take the first one in the list
+            val cardNum = if (game.botEnhancements)
+              candidateCards.head  // Enhanced bot take first in list sorted by priority
+            else
+              shuffle(candidateCards).head  // Standard Bot take one at random
+            val display = cardNumAndName(cardNum)
+
+            log(s"\nThe $role Bot draws $display from the discard pile.", Color.Event)
             processCardDrawn(role, cardNum, FromDiscard)
-            log(s"\nTake ${cardNumAndName(cardNum)} from the discard pile and", Color.Event)
+
+            log(s"\nTake $display from the discard pile and", Color.Event)
             if (game.botEnhancements)
               log(s"shuffle it into the $role Bot's hand.", Color.Event)
             else

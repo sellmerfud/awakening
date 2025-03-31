@@ -722,6 +722,18 @@ object JihadistBot extends BotHelpers {
     )
   )
 
+  val MostReactionMarkersPriority = new HighestScoreNode(
+    "Most reaction markers present",
+    _.isMuslim,
+    muslimScore(m => m.reaction)
+  )
+
+  val HighestAwakeningMinusReactionPriority = new HighestScoreNode(
+    "Highest awakening - reaction",
+    _.isMuslim,
+    muslimScore(m => m.awakening - m.reaction)
+  )
+
 
   // Best DRM but Islamist Rule last.
   // I'm assuming that if there are any Civil War or Regime change countries (even with negative DRMs)
