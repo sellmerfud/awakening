@@ -2661,7 +2661,7 @@ object JihadistBot extends BotHelpers {
             val m = game.getMuslim(name)
             // In a Fair country with the Training Camps marker, preserve
             // the last cell unless Sadr is present and we are not allowed to use Sadr
-            val limit = if (m.isFair && game.isTrainingCamp(m.name) && !(m.hasSadr && allowSadr == false))
+            val limit = if (m.isFair && game.isTrainingCamp(m.name) && (!m.hasSadr || allowSadr))
               remaining min (m.totalCells - 1)
             else
               remaining
