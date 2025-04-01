@@ -656,6 +656,12 @@ object JihadistBot extends BotHelpers {
     "Auto recruit",
     muslimTest(_.autoRecruit)
   )
+
+  val NoTandMFilter = new CriteriaFilter(
+    "No TandM",
+    muslimTest(m => m.totalTroopsAndMilitia == 0)
+  )
+
   val AutoRecruitNoTandMFilter = new CriteriaFilter(
     "Auto recruit with no TandM",
     muslimTest(m => m.autoRecruit && m.totalTroopsAndMilitia == 0)
@@ -732,6 +738,12 @@ object JihadistBot extends BotHelpers {
     "Highest awakening - reaction",
     _.isMuslim,
     muslimScore(m => m.awakening - m.reaction)
+  )
+
+  val HighestReactionMinusAwakeningPriority = new HighestScoreNode(
+    "Highest reaction - awakening",
+    _.isMuslim,
+    muslimScore(m => m.reaction - m.awakening)
   )
 
 

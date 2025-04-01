@@ -37,8 +37,10 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
+import awakening.USBot.MuslimAlertResult
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -62,11 +64,74 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) => !m.truce && m.isTested && !m.isGood
-  val isBotCandidate = (m: MuslimCountry) => isCandidate(m) && !m.autoRecruit
+  val isNonAutoRecruitCandidate = (m: MuslimCountry) => isCandidate(m) && !m.autoRecruit
+  val isAutoRecruitCandidate = (m: MuslimCountry) => isCandidate(m) && m.autoRecruit
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getBotCandidates = countryNames(game.muslims.filter(isBotCandidate))
+  def getNonAutoRecruitCandidates = countryNames(game.muslims.filter(isNonAutoRecruitCandidate))
+
+  // If MJP marked and not auto-recruit, place in MJP.
+  // Next, place in non-auto-recruit Poor Muslim, priority to no TandM, then best r-a, then highest res.
+  // Next, place in MJP if auto-recruit.
+  // Next, place in auto-recruit Poor Muslim, priority to no TandM, then best r-a, then highest res.
+  // Else unplayable.
+  def getEnhBotTarget: Option[String] = {
+    val priorities = List(
+      JihadistBot.NoTandMFilter,
+      JihadistBot.HighestReactionMinusAwakeningPriority,
+      JihadistBot.HighestResourcePriority,
+    )
+
+    // Pick the best target from a list of candidates by narrowing them
+    // using the our priorities.  Then pick a random target from the final
+    // narrowed list.
+    // Exception: If the Training Camp marker is on the map, and it's current location
+    // makes the final narrowed list, then we choose it to indicate that
+    // the camp should not be moved.
+    def bestLocation(candidates: List[MuslimCountry]): Option[String] = {
+      JihadistBot.narrowCandidates(candidates, priorities) match {
+        case Nil => None  // Only if original candidate list was empty
+        case narrowed =>
+          game.trainingCamp match {
+            case Some(name) if narrowed.exists(_.name == name) =>
+              game.trainingCamp
+            case _ =>
+              // Either no existing Training Camp or we found
+              // a higher priority location
+              shuffle(narrowed).headOption.map(_.name)
+          }
+      }
+    }
+
+    val poorNonAutoRecruitCandidates = game.muslims.filter(m => m.isPoor && isNonAutoRecruitCandidate(m))
+    val poorAutoRecruitCandidates = game.muslims.filter(m => m.isPoor && isAutoRecruitCandidate(m))
+
+    // If the Training Camp is already in the MJP, then we don't
+    // want to change its location
+    if (JihadistBot.majorJihadPriorityCountry == game.trainingCamp)
+      game.trainingCamp
+    else {
+      val mjpNonAutoRecruit = JihadistBot.majorJihadPriorityCountry
+        .filter( name => isNonAutoRecruitCandidate(game.getMuslim(name)))
+
+      val mjpAutoRecruit = JihadistBot.majorJihadPriorityCountry
+        .filter( name => isAutoRecruitCandidate(game.getMuslim(name)))
+
+      JihadistBot.botLog(s"MJP (non-auto-recruit) Training Camps target: $mjpNonAutoRecruit", Color.Debug)  
+      JihadistBot.botLog(s"MJP (auto-recruit) Training Camps target: $mjpAutoRecruit", Color.Debug)  
+
+      JihadistBot.botLog("Find Poor (non-auto-recruit) Training Camps candidates", Color.Debug)
+      val poorNonAutoRecruit = bestLocation(poorNonAutoRecruitCandidates)
+      JihadistBot.botLog(s"Poor (non-auto-recruit) Training Camps target: $poorNonAutoRecruit", Color.Debug)
+
+      JihadistBot.botLog("Find Poor (auto-recruit) Training Camps candidates", Color.Debug)
+      val poorAutoRecruit = bestLocation(poorAutoRecruitCandidates)
+      JihadistBot.botLog(s"Poor (auto-recruit) Training Camps target: $poorAutoRecruit", Color.Debug)
+
+      mjpNonAutoRecruit orElse poorNonAutoRecruit orElse mjpAutoRecruit orElse poorAutoRecruit
+    }  
+  }
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -79,30 +144,34 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
   // The Enhanced Bot will not play if it would place and exising training camps
   // marker in the same country where it already exists.
   override
-  def botWillPlayEvent(role: Role): Boolean = {
-    getBotCandidates.nonEmpty &&
-    (game.trainingCamp match {
-      case Some(currentCamp) if game.botEnhancements =>
-        currentCamp != JihadistBot.cellPlacementPriority(false)(getBotCandidates).get
-      case _ => true
-    })
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // If we have a valid target and the Training Camp is not already there.
+    getEnhBotTarget.nonEmpty && getEnhBotTarget != game.trainingCamp
   }
+  else
+    true // Standard Bot will always play the event
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    lazy val enhBotTarget = getEnhBotTarget
     val target = if (isHuman(role))
       askCountry("Place Training Camps in which country: ", getCandidates)
+    else if (game.botEnhancements && enhBotTarget.nonEmpty)
+      enhBotTarget.get
     else
-      getBotCandidates match {
+      getNonAutoRecruitCandidates match {
         case Nil => JihadistBot.cellPlacementPriority(false)(getCandidates).get
-        case preferred => JihadistBot.cellPlacementPriority(false)(preferred).get
+        case nonAutoRecruit => JihadistBot.cellPlacementPriority(false)(nonAutoRecruit).get
       }
 
-    println()
+    println() 
     addEventTarget(target)
+    
+    // This call handles the case where the Training Camp
+    // is already in the given target location.
     playExtraCellsEvent(TrainingCamps, target)
 
     val cellsToAdd = game.cellsAvailable min 2
