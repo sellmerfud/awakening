@@ -97,6 +97,19 @@ object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLaps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
+    // Enhanced Bot muslim selection priorities: to RC, then Neutral, then highest res. 
+    // Enhance Bot non-muslim selection priorities: Poor-->Fair-->Good.
+    val enhBotMuslimPriorities = List(
+      JihadistBot.RegimeChangePriority,
+      JihadistBot.NeutralPriority,
+      JihadistBot.HighestResourcePriority,
+    )
+    val enhBotNonMuslimPriorities = List(
+      JihadistBot.PoorPriority,
+      JihadistBot.FairPriority,
+      JihadistBot.GoodPriority,
+    )
+
     if (getAlignCandidates.isEmpty && getPostureCandidates.isEmpty && game.prestige == 1)
       log("\nThe event has no effect.", Color.Event)
     else {
@@ -108,19 +121,29 @@ object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLaps
         case candidates if isHuman(role) =>
           Some(askCountry(s"Select country for alignment shift: ", candidates))
 
+        case candidates if game.botEnhancements =>
+          JihadistBot.topPriority(game.getMuslims(candidates), enhBotMuslimPriorities)
+            .map(_.name)
+
         case candidates =>
           JihadistBot.alignGovTarget(candidates)
       }
 
       val postureTarget = getPostureCandidates match {
         case Nil =>
-          log("\nThere are unmarked non-Schengen countries.", Color.Event)
+          log("\nThere are no unmarked non-Schengen countries.", Color.Event)
           None
 
         case candidates if isHuman(role) =>
           val name = askCountry(s"Select posture of which country: ", candidates)
           val posture = askPosture(name)
           Some((name, posture))
+
+        case candidates if game.botEnhancements =>
+          val target = JihadistBot.topPriority(game.getNonMuslims(candidates), enhBotNonMuslimPriorities)
+            .map(_.name)
+            .get
+          Some(target, oppositePosture(game.usPosture))
 
         case candidates =>
           Some((shuffle(candidates).head, oppositePosture(game.usPosture)))
