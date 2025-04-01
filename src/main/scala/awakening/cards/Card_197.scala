@@ -48,9 +48,35 @@ import awakening.LabyrinthAwakening._
 // REMOVE
 // ------------------------------------------------------------------
 object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing, NoAutoTrigger) {
-  val UnconfirmedCandidates = List(215, 216, 219, 225, 237)
+  val AbuBakralBaghdadi = 215
+  val AbuSayyafISIL = 216
+  val AymanalZawahiri = 219
+  val JihadiJohn = 225
+  val OsamaBinLadin = 237
 
-  def getCandidates = game.cardsRemoved.filter(UnconfirmedCandidates.contains)
+  // This list order is significant as it is the priority order
+  // used by the enhanced Bot:
+  // Enhanced draws using this priority: Abu Bakr al-Baghdadi-->Osama Bin Ladin-->Jihadi John-->Ayman al-Zawahiri-->Abu Sayyaf (ISIL)
+  val UnconfirmedCandidates = List(
+    AbuBakralBaghdadi,
+    OsamaBinLadin,
+    JihadiJohn,
+    AymanalZawahiri,
+    AbuSayyafISIL,
+  )
+
+
+
+  // This returns the cards such that the most recently removed are at the
+  // front of the list.
+  def getRemovedCandidates = game.cardsRemoved.filter(UnconfirmedCandidates.contains)
+
+  // This should not be called if getRemovedCandidates returns an empty list!
+  // Returns the first entry in the UnconfirmedCandidates list that 
+  def enhBotCardPick(candidates: List[Int]) = UnconfirmedCandidates
+    .find(candidates.contains)
+    .get
+
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -61,6 +87,7 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
   override
   def eventRemovesLastCell(): Boolean = false
 
+  
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
@@ -69,7 +96,7 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getCandidates.nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = getRemovedCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -77,22 +104,25 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
   override
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
-    if (getCandidates.isEmpty && game.prestige == 1) {
+    if (getRemovedCandidates.isEmpty && game.prestige == 1) {
       log("\nNone of the listed cards is in the removed cards pile and US prestige is 1.", Color.Event)
       log("The event has no effect.", Color.Event)
     }
     else {
-      if (getCandidates.nonEmpty) {
+      if (getRemovedCandidates.nonEmpty) {
         log(s"\nThe $role player draws one of the listed cards from the removed pile:", Color.Event)
         if (isHuman(role)) {
-          askCardDrawnFromRemovedPile(role, only = getCandidates.toSet)
+          askCardDrawnFromRemovedPile(role, only = getRemovedCandidates.toSet)
             .map(deck(_).numAndName)
             .foreach { cardDisplay =>
               log(s"\nAdd $cardDisplay to your hand.", Color.Event)
             }
         }
-        else { // Bot takes the card closest to the top of the removed pile.
-          val cardNum = getCandidates.head
+        else {
+          val cardNum = if (game.botEnhancements)
+            enhBotCardPick(getRemovedCandidates)
+          else
+            getRemovedCandidates.head // Standard Bot takes the card closest to the top of the removed pile.
           processCardDrawn(role, cardNum, FromRemoved)       
           log(s"\nTake [${cardNumAndName(cardNum)}] from the removed pile and", Color.Event)
           if (role == Jihadist && game.botEnhancements)
