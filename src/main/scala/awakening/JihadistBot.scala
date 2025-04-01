@@ -44,6 +44,7 @@ import LabyrinthAwakening._
 import awakening.scenarios.LetsRoll
 import awakening.scenarios.YouCanCallMeAl
 import awakening.JihadistBot.EnhancedEvoTable.TravelToUnmarkedNonMuslim.{priorities => priorities}
+import awakening.LabyrinthAwakening.Color.all
 
 object JihadistBot extends BotHelpers {
 
@@ -333,10 +334,12 @@ object JihadistBot extends BotHelpers {
 
   // Enhanced Bot will always peform minor Jihad in a good country
   // But in Fair country there are some further condtions to consider.
+  // Don't allow using the last cell in a Fair country with the Training Camps
+  // marker.  Don't want to risk losing the marker!
   val minorJihadGovTest = (m: MuslimCountry) =>
     if (game.botEnhancements)
       m.isGood ||
-      (m.isFair && (
+      (m.isFair && !(game.isTrainingCamp(m.name) && m.totalCells < 2) && (
         m.name == Pakistan || m.totalTroops > 0 || m.isAlly ||
         m.resourceValue == 3 || m.autoRecruit || m.aidMarkers > 0 ||
         m.cells > 2
@@ -2656,7 +2659,13 @@ object JihadistBot extends BotHelpers {
           case None => Nil   // No more candidates
           case Some(name) =>
             val m = game.getMuslim(name)
-            val numAttempts = totalUnused(m, includeSadr = allowSadr) min remaining
+            // In a Fair country with the Training Camps marker, preserve
+            // the last cell unless Sadr is present and we are not allowed to use Sadr
+            val limit = if (m.isFair && game.isTrainingCamp(m.name) && !(m.hasSadr && allowSadr == false))
+              remaining min (m.totalCells - 1)
+            else
+              remaining
+            val numAttempts = totalUnused(m, includeSadr = allowSadr) min limit
             val actives  = numAttempts min activeCells(m)
             val sleepers = (numAttempts - actives) min sleeperCells(m)
             val sadr     = numAttempts - actives - sleepers > 0
