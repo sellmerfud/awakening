@@ -33,7 +33,7 @@ to_florian:
 @dump_log path:
   jq -r '.log[].text' '{{path}}'
 
-# Shows the software-version, anbd file-version of a save-nnn file
+# Shows the software-version, and file-version of a save-nnn file
 [no-cd]
 save_info path:
   #! /usr/bin/env bash
