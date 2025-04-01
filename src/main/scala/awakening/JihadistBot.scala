@@ -336,11 +336,11 @@ object JihadistBot extends BotHelpers {
   val minorJihadGovTest = (m: MuslimCountry) =>
     if (game.botEnhancements)
       m.isGood ||
-      m.isFair && (
+      (m.isFair && (
         m.name == Pakistan || m.totalTroops > 0 || m.isAlly ||
         m.resourceValue == 3 || m.autoRecruit || m.aidMarkers > 0 ||
         m.cells > 2
-      )
+      ))
     else
       (m.isGood || m.isFair)
 
