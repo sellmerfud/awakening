@@ -64,7 +64,10 @@ object Card_199 extends Card(199, "US Consulate Attacked", Jihadist, 3, NoRemove
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.prestige > 1 // Only if we can affect US prestige
+  else
+    true  // Standard bot will always play the event
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
