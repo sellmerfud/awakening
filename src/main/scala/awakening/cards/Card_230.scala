@@ -140,9 +140,9 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
         val target = JihadistBot.topPriority(getEnhJihadistBotCandidates, priorities)
           .get
         val action = if (target.isPoor)
-          Alignment
+          Some(Alignment)
         else
-          Governance
+          Some(Governance)
         val cells = JihadistBot.chooseCellsToRemove(target.name, target.totalCells - 1)
         (target.name, cells, action)
 
