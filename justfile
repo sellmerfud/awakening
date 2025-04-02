@@ -14,7 +14,8 @@ default:
 # Build a release for Florian and copy it to Dropbox
 to_florian:
   #! /usr/bin/env bash
-  VERS="6.0"
+  # VERS="6.0"
+  VERS="$(grep -E 'version\s*:=' build.sbt | sed -e '/ *version/s/^ *version *:= *"\([^"]*\)".*$/\1/')"
   if test -n "$(git status --porcelain)"; then
     echo "Working directory is not clean!"
     exit
