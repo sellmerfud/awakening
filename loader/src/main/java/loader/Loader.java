@@ -26,7 +26,6 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.security.Policy;
 
 // This is a boostrap loader for loading the main application.
 // To simplify loading the server this lightweight class
@@ -107,16 +106,6 @@ public class Loader {
     // context loader for the current thread.
     ClassLoader cl = cp.getClassLoader();
     Thread.currentThread().setContextClassLoader(cl);
-    // re-eval the policy now that the environment is set
-    try {
-       Policy policy = Policy.getPolicy();
-       if (policy != null)
-       policy.refresh();
-    }
-    catch (Exception e) {
-      error("Unable refresh security policy: " + e.getMessage());
-    }
-
     Class<?> applicationClass = null;
     try { applicationClass = cl.loadClass(app_class); }
     catch (ClassNotFoundException e) {
