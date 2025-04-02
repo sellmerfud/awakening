@@ -75,9 +75,15 @@ object LabyrinthAwakening {
     }
 
     // For the florian version we append the commit if the commit_xxxxxxxxxx file exists.
-    Pathname.glob(Pathname.userDir / "commit_*").headOption match {
+    // Cannot use Pathname.glob() because it does not work on Windows
+    val commitFile = Pathname.userDir.file
+      .list
+      .toSeq
+      .find { name => name.startsWith("commit_") }
+
+    commitFile match {
       case None => version
-      case Some(commit) => s"$version - ${commit.basename}"
+      case Some(commit) => s"$version - $commit"
     }
   }
 
@@ -8252,10 +8258,7 @@ object LabyrinthAwakening {
   case object AbortAction extends Exception
   case object CancelledByFerguson extends Exception
 
-  def versionString = {
-    val versionSuffix  = if (SOFTWARE_VERSION.startsWith("0")) " - BETA" else ""
-    s"Labyrinth Awakening: Bot Software (version $SOFTWARE_VERSION$versionSuffix)"
-  }
+  def versionString = s"Labyrinth Awakening: Bot Software (version $SOFTWARE_VERSION)"
   def displayVersion() = displayLine(s"\n$versionString", Color.Info)
 
   // def doWarOfIdeas(country: Country)
@@ -8387,7 +8390,8 @@ object LabyrinthAwakening {
           c.copy(showConfigLoc = true)
         }
         flag("-v", "--version", "Display program version and exit") { (c) =>
-          println(versionString)
+          // The version is displayed when the program runs
+          // So we just exit
           throw ExitProgram(0)
         }
       }.parse(args, UserParams())

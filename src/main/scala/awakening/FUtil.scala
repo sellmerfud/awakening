@@ -885,7 +885,7 @@ object FUtil {
     */
     override def equals(other: Any): Boolean =
         other match {
-          case that: Pathname if that canEqual this => path == that.path
+          case that: Pathname if that.canEqual(this) => path == that.path
           case _ => false
         }
     def canEqual(other: Any): Boolean = other.isInstanceOf[Pathname]
