@@ -1352,7 +1352,7 @@ object LabyrinthAwakening {
     def disruptAffectsPrestige = totalTroopsAndMilitia > 1 && totalTroopsThatAffectPrestige > 0
 
 
-    def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar)
+    def canTakeAwakeningOrReactionMarker = !(isGood || isIslamistRule || civilWar || underTruce(name))
     def canTakeBesiegedRegimeMarker = !besiegedRegime  // At most one besiegedRegime marker per country
     def canTakeAidMarker = true  // All Muslim countries can take an Aid marker by event
     def caliphateCandidate = civilWar || isIslamistRule || inRegimeChange
@@ -7170,8 +7170,17 @@ object LabyrinthAwakening {
             game = game.updateCountry(fresh.copy(reaction = fresh.reaction + num))
             log(s"Add ${amountOf(num, "reaction marker")} to $target", Color.MapPieces)
           }
-          else
-            log(s"\n$target cannot take a reaction marker.", Color.Event)
+          else {
+            val reason = if (underTruce(target))
+              "it is under TRUCE"
+            else if (m.isGood)
+              "it has Good governance"
+            else if (m.civilWar)
+              "it is in Civil War"
+            else
+              "it is under Islamist Rule"
+            log(s"\n$target cannot take a reaction marker because $reason.", Color.Event)
+          }
 
         case _ =>
             log(s"$target cannot take a reaction marker because it is Non-Muslim.", Color.Event)
