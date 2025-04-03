@@ -57,16 +57,17 @@ object Card_203 extends Card(203, "Day of Rage", Unassociated, 1, Remove, NoLaps
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    lapsingEventNotInPlay(ArabWinter) &&
-    !game.getMuslim(Yemen).truce
-    game.getMuslim(Yemen).canTakeAwakeningOrReactionMarker
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean =
+    !underTruce(Yemen) &&
+    lapsingEventNotInPlay(ArabWinter) &&
+    game.getMuslim(Yemen).canTakeAwakeningOrReactionMarker
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
