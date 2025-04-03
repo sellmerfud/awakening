@@ -73,6 +73,8 @@ object Card_166 extends Card(166, "Ferguson", Jihadist, 1, NoRemove, Lapsing, No
   def executeEvent(role: Role): Unit =
     if (isHuman(role))
       log("\nYou (Jihadist) may block 1 US associated card played later this turn.", Color.Event)
+    else if (game.botEnhancements)
+      log("\nThe Jihadist may block 1 US associated card played later this turn.", Color.Event)
     else
-      log("\nThe Jihadist Bot will cancel the NEXT US associated card played by the US player", Color.Event)
+      log("\nThe Jihadist Bot will cancel the NEXT US associated card played by the US player.", Color.Event)
 }
