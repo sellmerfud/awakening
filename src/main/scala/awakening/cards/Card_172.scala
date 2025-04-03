@@ -91,12 +91,14 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   def botBesiegeCandidates = getBesiegeCandidates.filter(name => !game.getMuslim(name).isIslamistRule)
 
   def enhGoodMuslimPlotCandidates = PossibleCountries
+      .filter(isMuslim)
       .filter { name =>
         val m = game.getMuslim(name)
         !m.truce && m.isGood
       }
 
   def enhFairMuslimPlotCandidates = PossibleCountries
+      .filter(isNonMuslim)
       .filter { name =>
         val m = game.getMuslim(name)
         !m.truce && m.isFair

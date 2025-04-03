@@ -7783,6 +7783,8 @@ object LabyrinthAwakening {
   }
 
   def underTruce(name: String) = game.getCountry(name).truce
+  def isMuslim(name: String) = game.getCountry(name).isMuslim
+  def isNonMuslim(name: String) = game.getCountry(name).isNonMuslim
   
   // Note that the end of turn sequence is different depending on whether
   // or not the Awakening expansion rules are in effect.
