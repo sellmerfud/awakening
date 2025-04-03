@@ -85,9 +85,12 @@ object Card_211 extends Card(211, "Smartphones", Unassociated, 1, NoRemove, NoLa
     case US =>
       globalEventNotInPlay(Smartphones) || lapsingEventNotInPlay(ArabWinter)
     case Jihadist if game.botEnhancements =>
-      globalEventInPlay(Smartphones) && lapsingEventNotInPlay(ArabWinter)
+      globalEventInPlay(Smartphones) &&
+      lapsingEventNotInPlay(ArabWinter) &&
+      getPlacementCandidates.nonEmpty
     case Jihadist =>
-      lapsingEventNotInPlay(ArabWinter)
+      lapsingEventNotInPlay(ArabWinter) &&
+      getPlacementCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
