@@ -36,7 +36,7 @@ to_florian:
 
 # Shows the software-version, and file-version of a save-nnn file
 [no-cd]
-save_info path:
+game_info path:
   #! /usr/bin/env bash
    jq '{ "software-version",
          "file-version",
