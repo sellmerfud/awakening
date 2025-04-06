@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -57,43 +57,45 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.inRegimeChange))
+  val isCandidate = (m: MuslimCountry) => !m.truce && m.inRegimeChange
+
+  def getCandidates = countryNames(game.muslims.filter(isCandidate)
+  )
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
-  def withAidCandidates = getCandidates
-    .filter(name => game.getMuslim(name).aidMarkers > 0)
+  def getAidCandidates = game.muslims.filter { m =>
+    isCandidate(m) && m.aidMarkers > 0
+  }
+
+  def getNoCellCandidates = countryNames(
+    game.muslims.filter { m =>
+      isCandidate(m) &&
+      ( m.aidMarkers > 0 || !m.besiegedRegime)
+    }
+  )
+
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
     // Playable if [any RC has AID (priority to highest Resource)] or 3+ cells available
-    withAidCandidates.nonEmpty || game.cellsAvailable > 2
-  }
-  else {
-    val haveTarget = game.getMuslims(getCandidates)
-      .exists (m => m.aidMarkers > 0 || !m.besiegedRegime)
+    game.cellsAvailable >= 3 || getAidCandidates.nonEmpty
+  else
+    game.cellsAvailable > 0 || getNoCellCandidates.nonEmpty
 
-    game.cellsAvailable > 0 || haveTarget
-  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = if (isHuman(role)) {
-    val candidates = if (game.cellsAvailable > 0)
-      countryNames(game.muslims
-        .filter(_.inRegimeChange))
-    else
-      countryNames(game.muslims
-        .filter(m => m.inRegimeChange && (m.aidMarkers > 0 || !m.besiegedRegime)))
-    val target = askCountry("Select country: ", candidates)
-
+    val target = askCountry("Select country: ", getCandidates)
     addEventTarget(target)
+    log(s"\nJihadist selects $target as the event target.", Color.Info)
     val m = game.getMuslim(target)
     val numCells = 5 min game.cellsAvailable
     if (numCells > 0)
@@ -105,6 +107,8 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
       removeAidMarker(target, 1)
     else if (!m.besiegedRegime)
       addBesiegedRegimeMarker(target)
+    else
+      log(s"No Aid marker present and already a besieged regime.", Color.Event)
 
     if (jihadistChoosesToDeclareCaliphate(target, numCells))
       declareCaliphate(target)
@@ -112,27 +116,25 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
   else {  // Bot
     val numCells = 5 min game.cellsAvailable
     val target = if (game.botEnhancements) {
-      if (withAidCandidates.nonEmpty)
-        withAidCandidates
-          .sortBy(name => -game.getMuslim(name).resourceValue) // Highest resource first
-          .head
+      val priorities = List(JihadistBot.HighestResourcePriority)
+      if (getAidCandidates.nonEmpty)
+        JihadistBot.topPriority(getAidCandidates, priorities)
+          .map(_.name)
+          .get
       else
         JihadistBot.cellPlacementPriority(numCells >= 3)(getCandidates).get
     }
     else {
-      val regimeChange = game.muslims.filter(_.inRegimeChange)
-      val withAid = game.muslims.filter(m => m.inRegimeChange && m.aidMarkers > 0)
-      val notBesieged = game.muslims.filter(m => m.inRegimeChange && !m.besiegedRegime)
-
       if (game.cellsAvailable > 0)
-        JihadistBot.cellPlacementPriority(numCells >= 3)(countryNames(regimeChange)).get
-      else if (withAid.nonEmpty)
-        JihadistBot.markerTarget(countryNames(withAid)).get
+        JihadistBot.cellPlacementPriority(numCells >= 3)(getCandidates).get
+      else if (getAidCandidates.nonEmpty)
+        JihadistBot.markerTarget(countryNames(getAidCandidates)).get
       else
-        JihadistBot.minorJihadTarget(countryNames(notBesieged)).get
+        JihadistBot.minorJihadTarget(getCandidates).get
     }
 
     addEventTarget(target)
+    log(s"\nJihadist selects $target as the event target.", Color.Info)
     val m = game.getMuslim(target)
     if (numCells > 0)
       addSleeperCellsToCountry(target, numCells)
@@ -143,8 +145,10 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
       removeAidMarker(target, 1)
     else if (!m.besiegedRegime)
       addBesiegedRegimeMarker(target)
-    
+    else
+      log(s"No Aid marker present and already a besieged regime.", Color.Event)
+
     if (jihadistChoosesToDeclareCaliphate(target, numCells))
-      declareCaliphate(target)    
+      declareCaliphate(target)
   }
 }
