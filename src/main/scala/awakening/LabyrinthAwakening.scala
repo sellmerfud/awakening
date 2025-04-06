@@ -240,12 +240,12 @@ object LabyrinthAwakening {
     override def toString() = name
   }
 
-  case object EnhBotEasy extends EnhBotDifficulty("easy")
-  case object EnhBotMedium extends EnhBotDifficulty("medium")
-  case object EnhBotHard extends EnhBotDifficulty("hard")
+  case object EnhBotEasiest extends EnhBotDifficulty("Easiest")
+  case object EnhBotEasier extends EnhBotDifficulty("Easier")
+  case object EnhBotNormal extends EnhBotDifficulty("Normal")
 
   object EnhBotDifficulty {
-    lazy val All = List(EnhBotEasy, EnhBotMedium, EnhBotHard)
+    lazy val All = List(EnhBotEasiest, EnhBotEasier, EnhBotNormal)
 
     def fromStringOpt(name: String): Option[EnhBotDifficulty] = All.find(_.name == name)
 
@@ -255,9 +255,9 @@ object LabyrinthAwakening {
       }
   }
 
-  def enhBotEasy()   = game.botEnhancements && game.enhBotDifficulty == EnhBotEasy
-  def enhBotMedium() = game.botEnhancements && game.enhBotDifficulty == EnhBotMedium
-  def enhBotHard()   = game.botEnhancements && game.enhBotDifficulty == EnhBotHard
+  def enhBotEasiest()   = game.botEnhancements && game.enhBotDifficulty == EnhBotEasiest
+  def enhBotEasier() = game.botEnhancements && game.enhBotDifficulty == EnhBotEasier
+  def enhBotNormal()   = game.botEnhancements && game.enhBotDifficulty == EnhBotNormal
 
   trait Plot {
     val number: Int        // Dice rolled against governance in muslim countries
@@ -927,7 +927,7 @@ object LabyrinthAwakening {
 
     def eventWillTrigger(opponentRole: Role): Boolean = {
       association  == opponentRole &&
-      (opponentRole == game.botRole || enhBotEasy() || enhBotMedium()) &&
+      (opponentRole == game.botRole || enhBotEasiest() || enhBotEasier()) &&
       eventConditionsMet(opponentRole)
     }
 
@@ -1580,7 +1580,7 @@ object LabyrinthAwakening {
     ignoreVictory: Boolean               = false,
     botLogging: Boolean                  = false,
     botEnhancements: Boolean             = false, // Use enhancements to official Awakening bot algorithms
-    enhBotDifficulty: EnhBotDifficulty   = EnhBotHard,
+    enhBotDifficulty: EnhBotDifficulty   = EnhBotNormal,
     manualDieRolls: Boolean              = false,  // Overrides humanAutoRoll
     history: Vector[GameSegment]         = Vector.empty,
     description: String                  = "",
@@ -2331,7 +2331,7 @@ object LabyrinthAwakening {
     Muddled :: Nil,
     !scala.util.Properties.isWin,
     false,
-    EnhBotHard
+    EnhBotNormal
   )
 
   // For display purposes only
@@ -8093,9 +8093,9 @@ object LabyrinthAwakening {
     val hardDesc = Seq(
       s"$human associated events are never triggered during the $bot turn.")
     val choices = List(
-      EnhBotHard   -> ("Normal", hardDesc),
-      EnhBotMedium -> ("Easier", mediumDesc),
-      EnhBotEasy   -> ("Easiest", easyDesc),
+      EnhBotNormal   -> ("Normal", hardDesc),
+      EnhBotEasier -> ("Easier", mediumDesc),
+      EnhBotEasiest   -> ("Easiest", easyDesc),
     )
     askMenuWithWrap(s"\nSelect enhanced $bot Bot difficulty level:", choices, delim = "  ", sameLine = false, allowAbort = false)
   }
@@ -8214,7 +8214,7 @@ object LabyrinthAwakening {
           params.enhBotDifficulty
             .getOrElse(askEnhBotDifficulty(US))
         case (_, false) =>
-          EnhBotHard
+          EnhBotNormal
       }
 
       val humanAutoRoll = params.autoDice

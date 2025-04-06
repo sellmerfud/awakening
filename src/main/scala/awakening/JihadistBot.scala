@@ -2073,12 +2073,12 @@ object JihadistBot extends BotHelpers {
         addToReserves(Jihadist, card.ops)
     }
     else {
-      val eventTriggerOption = if (card.association == US && (enhBotEasy() || enhBotMedium())) {
+      val eventTriggerOption = if (card.association == US && (enhBotEasiest() || enhBotEasier())) {
         // If the event conditions are not currently met, then
         // the bot will carry out the event first since it will have
         // no effect.  If difficulty is medium and we will subtract from reserves,
         // then alwasy evvaluate the event after conduction operations.
-        if (card.eventConditionsMet(US) || (enhBotMedium() && game.reserves.jihadist > 0)) {
+        if (card.eventConditionsMet(US) || (enhBotEasier() && game.reserves.jihadist > 0)) {
           log(s"\nThe $Jihadist Bot will evaluate the $US associated event after peforming operations.", Color.Info)
           EventTriggerAfter
         }
@@ -2147,7 +2147,7 @@ object JihadistBot extends BotHelpers {
 
       if (eventTriggerOption == EventTriggerAfter) {
         pause()
-        if (enhBotMedium() && game.reserves.jihadist > 0) {
+        if (enhBotEasier() && game.reserves.jihadist > 0) {
           // Its possible that the event conditions are no longer satisfied
           if (card.eventConditionsMet(US)) {
             log(s"\n$Jihadist reserves are not empty so the \"${card.cardName}\" event does not trigger.", Color.Info)
