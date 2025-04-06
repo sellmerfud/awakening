@@ -72,6 +72,12 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
 
   def canPlaceCells = game.cellsAvailable > 0 && getCellsCandidates.nonEmpty
 
+  def goodNoTroopsCandidates = getCellsCandidates
+    .map(game.getCountry)
+    .collect {
+      case m: MuslimCountry if m.isGood && m.totalTroops == 0 => m
+    }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -112,6 +118,20 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
       case US => // US Bot
         val name = shuffle(USBot.highestCellsMinusTandM(getMilitiaCandidates)).head
         (name, Some(MilitiaAction))
+
+      case Jihadist if game.botEnhancements =>  // Enhanced Jihadist Bot
+        val name = if (goodNoTroopsCandidates.nonEmpty) {
+          val priorities = List(JihadistBot.HighestResourcePriority)
+          JihadistBot.topPriority(goodNoTroopsCandidates, priorities)
+            .map(_.name)
+            .get
+        }
+        else
+          JihadistBot.caliphatePriorityTarget(Mali::Nigeria::Nil) match {
+            case Some(name) if game.cellsAvailable >= 3 => name
+            case _ => JihadistBot.cellPlacementPriority(false)(getCellsCandidates).get
+          }
+        (name, Some(CellsAction))
 
       case Jihadist => // Jihadist Bot
         val name = JihadistBot.caliphatePriorityTarget(Mali::Nigeria::Nil) match {
