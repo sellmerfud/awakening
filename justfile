@@ -23,9 +23,9 @@ to_florian:
     sbt stage
     rm -f target/awakening-"$VERS"/commit_*
     COMMIT=$(cat .git/refs/heads/florian | head -c 10)
-    COMMIT_FILE="target/awakening-"$VERS"/commit_$COMMIT"
-    echo "$COMMIT" > "$COMMIT_FILE"
-    zip -j target/awakening-"$VERS".zip "$COMMIT_FILE"
+    COMMIT_FILE="awakening-"$VERS"/commit_$COMMIT"
+    echo "$COMMIT" > target/"$COMMIT_FILE"
+    (cd target; zip awakening-"$VERS".zip "$COMMIT_FILE")
     cp target/awakening-"$VERS".zip ~/Dropbox/Public/
   fi
 
