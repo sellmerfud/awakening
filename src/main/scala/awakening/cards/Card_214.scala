@@ -65,6 +65,8 @@ object Card_214 extends Card(214, "3 Cups of Tea", Unassociated, 2, NoRemove, No
   def isEffective(role: Role) = role match {
     case US =>
       lapsingEventNotInPlay(ArabWinter) && getCandidates.nonEmpty
+    case Jihadist if game.botEnhancements =>
+      (lapsingEventNotInPlay(ArabWinter) && getCandidates.nonEmpty)
     case Jihadist =>
       (lapsingEventNotInPlay(ArabWinter) && getCandidates.nonEmpty) || globalEventNotInPlay(ThreeCupsOfTea)
   }
