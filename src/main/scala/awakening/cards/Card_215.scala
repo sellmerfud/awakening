@@ -167,7 +167,7 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
       else if (game.botEnhancements) {
         // Enhanced Bot will move cells using Travel From priorities once all
         // cells on the track have been used.
-        val targets = List(Syria, Iran).filterNot(underTruce)
+        val targets = List(Syria, Iraq).filterNot(underTruce)
         val target = JihadistBot.cellPlacementPriority(true)(targets).get
         val sourceCountries = countryNames(game.countries.filter(c => JihadistBot.hasCellForTravel(c, target, placement = true)))
         addEventTarget(target)
@@ -197,7 +197,7 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         }
       }
       else {
-        val targets = List(Syria, Iran).filterNot(underTruce)
+        val targets = List(Syria, Iraq).filterNot(underTruce)
         val target = JihadistBot.cellPlacementPriority(true)(targets).get
         addEventTarget(target)
         val num = 3 min game.cellsAvailable
