@@ -98,7 +98,7 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
       }
 
   def enhFairMuslimPlotCandidates = PossibleCountries
-      .filter(isNonMuslim)
+      .filter(isMuslim)
       .filter { name =>
         val m = game.getMuslim(name)
         !m.truce && m.isFair
@@ -142,7 +142,7 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   def standardBotActions: List[Action] = {
     val actions = new ListBuffer[Action]()
     var havePlot = game.availablePlots.exists(p => p == Plot1 || p == Plot2)
-    
+
     if (botBesiegeCandidates.nonEmpty)
       actions.append(Besiege)
 
@@ -155,7 +155,7 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
     if (havePlot && getCandidates.nonEmpty)
       actions.append(PlacePlot2)
 
-    if (candidateCards.nonEmpty) 
+    if (candidateCards.nonEmpty)
       actions.append(Draw)
 
     actions.toList.take(2)
@@ -186,13 +186,13 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
       actions.append(PlotInKenya)
       havePlot = false
     }
-    
+
     if (getReactionCandidates.nonEmpty)
       actions.append(PlaceReaction)
 
     if (game.cellsAvailable > 0)
       actions.append(PlaceCell)
-      
+
     if (getBesiegeCandidates.nonEmpty)
       actions.append(Besiege)
 
