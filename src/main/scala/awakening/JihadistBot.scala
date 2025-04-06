@@ -701,17 +701,33 @@ object JihadistBot extends BotHelpers {
     "Poor, Auto-recruit Muslim country without TandM",
     muslimTest(m => m.isPoor && m.autoRecruit && m.totalTroopsAndMilitia == 0)
   )
-  val PoorMuslimNoAutoRecruitIfTamdM = new CriteriaFilter(
-    "Poor Muslim country (not Auto-Recruit if TandM)",
-    muslimTest(m => m.isPoor && !(m.autoRecruit && m.totalTroopsAndMilitia > 0))
-  )
-  val UnmarkedOrPoorMuslimNoAutoRecruitIfTamdM = new CriteriaFilter(
-    "Unmarked or Poor Muslim country (not Auto-Recruit if TandM)",
+
+  // val PoorMuslimNoAutoRecruitIfTamdM = new CriteriaFilter(
+  //   "Poor Muslim country (not Auto-Recruit if TandM)",
+  //   muslimTest(m => m.isPoor && !(m.autoRecruit && m.totalTroopsAndMilitia > 0))
+  // )
+
+  // val UnmarkedOrPoorMuslimNoAutoRecruitIfTamdM = new CriteriaFilter(
+  //   "Unmarked or Poor Muslim country (not Auto-Recruit if TandM)",
+  //   muslimTest( m =>
+  //     m.isUntested ||
+  //     (m.isPoor && !(m.autoRecruit && m.totalTroopsAndMilitia > 0))
+  //   )
+  // )
+
+  val UnmarkedOrPoorLessThan2TamdM = new CriteriaFilter(
+    "Unmarked OR Poor Muslim with < 2 TandM",
     muslimTest( m =>
       m.isUntested ||
-      (m.isPoor && !(m.autoRecruit && m.totalTroopsAndMilitia > 0))
+      (m.isPoor && m.totalTroopsAndMilitia < 0)
     )
   )
+
+  val PoorLessThan2TamdM = new CriteriaFilter(
+    "Poor Muslim with < 2 TandM",
+    muslimTest( m => m.isPoor && m.totalTroopsAndMilitia < 0)
+  )
+
   val AutoRecruitPriorityCountry = new CriteriaFilter(
     "Auto-recruit priority country",
     c => PriorityCountries.autoRecruitPrioritySet && Some(c.name) == autoRecruitPriorityCountry
@@ -962,7 +978,7 @@ object JihadistBot extends BotHelpers {
 
   def RecruitFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
-         PoorMuslimNoAutoRecruitIfTamdM,
+         PoorLessThan2TamdM,
          AutoRecruitPriorityCountry,
          IslamistRulePriority
     )
@@ -976,8 +992,7 @@ object JihadistBot extends BotHelpers {
 
   def TravelToFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
-         PoorAutoRecruitNoTandM,
-         UnmarkedOrPoorMuslimNoAutoRecruitIfTamdM)
+         UnmarkedOrPoorLessThan2TamdM)
   else
     List(PoorNeedCellsforMajorJihad,
          GoodMuslimFilter,
@@ -1101,7 +1116,7 @@ object JihadistBot extends BotHelpers {
         .filter(wouldMoveOrTravelWithinToSleep)
     val candidates = selectCandidates(withCells, flowchart)
     topPriority(candidates, priorities).map(_.name)
-    
+
   }
 
   // Enhanced Bot rules
@@ -1113,7 +1128,7 @@ object JihadistBot extends BotHelpers {
   // If the target destination is GOOD/FAIR, then only allow travel from
   // adjacent countries
   def enhancedTravelFromTarget(toCountry: String, names: List[String], autoSuccess: Boolean): Option[String] = {
-    val fromAdjacentOnly = 
+    val fromAdjacentOnly =
       game.getCountry(toCountry) match {
         case m: MuslimCountry => (m.isGood || m.isFair) && autoSuccess == false
         case _ => false
@@ -1195,7 +1210,7 @@ object JihadistBot extends BotHelpers {
     enhancedTravelFromTarget(toCountry, names, autoSuccess = forPlacement)
   else
     standardTravelFromTarget(toCountry, names, inPlaceOk = !forPlacement)
-    
+
 
   // This is used for some events where we want to check the priorities only,
   // and skip the flowchart.
