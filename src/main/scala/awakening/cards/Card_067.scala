@@ -78,13 +78,13 @@ object Card_067 extends Card(67, "Islamic Jihad Union", Jihadist, 2, Remove, NoL
     val maxTargets = candidates.size min game.cellsAvailable
     val targets = if (maxTargets == 0)
       Nil
-    else if (maxTargets > 1 || game.cellsAvailable >= maxTargets)
+    else if (maxTargets == 2 && game.cellsAvailable >= maxTargets)
       candidates
     else if (isBot(role))
       JihadistBot.cellPlacementPriority(false)(candidates).toList
     else {
       println("\nThere is only one cell available to be placed")
-      askCountry("Select country for cell: ", candidates)::Nil
+      askCountry("Select a country for the cell: ", candidates)::Nil
     }
 
     if (targets.nonEmpty)
