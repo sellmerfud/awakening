@@ -78,7 +78,7 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
     val msgs = new ListBuffer[String]
     val numCards = numCardsInHand(US) min 2
     msgs += "" // Blank line spacer
-    (numCards, isHuman(US)) match {
+    (numCardsInHand(US), isHuman(US)) match {
       case (0, _) => msgs += s"The $US does not have any cards to discard."
       case (1, true) => msgs += s"You ($US) must discard your last card."
       case (1, false) => msgs += s"Discard the last card in the $US Bot's hand."
