@@ -6052,26 +6052,40 @@ object LabyrinthAwakening {
     showNext(plots.toList, 1)
   }
 
-  case class JihadTarget(name: String, actives: Int, sleepers: Int, sadr: Boolean, major: Boolean)
+  // Some event allow Jihad rolls even when there are no cells present, ignoring failed rolls.
+  // In these cases, all of the cells in the JihadTarget may not actually be present in the
+  // country and a treated as phantom cells.
+  case class JihadTarget(
+    name: String,
+    major: Boolean,
+    actives: Int,
+    sleepers: Int,
+    sadr: Boolean,
+    phantoms: Int = 0,
+    ignoreFailures: Boolean = false)
 
   // Perform Jihads on the given targets.
   // Return a List of (name, successes, success with Sadr) to indicate the number of success achieved in
   // each target.
-  def performJihads(targets: List[JihadTarget], ignoreFailures: Boolean = false): List[(String, Int, Boolean)] = {
+  def performJihads(targets: List[JihadTarget]): List[(String, Int, Boolean)] = {
     targets match {
       case Nil => Nil
-      case JihadTarget(name, actives, sleepers, sadr, major)::remaining =>
+      case JihadTarget(name, major, actives, sleepers, sadr, phantoms, ignoreFailures)::remaining =>
         val m = game.getMuslim(name)
         val jihad = if (major) "Major Jihad" else "Jihad"
         assert(!m.isIslamistRule, s"Cannot perform $jihad in Islamist Rule country")
         assert(!(major && m.isGood), s"Cannot perform $jihad in country with Good governance")
-        val numAttempts = actives + sleepers + (if (sadr) 1 else 0)
+        val numAttempts = actives + sleepers + phantoms + (if (sadr) 1 else 0)
         log()
         log(s"Conduct $jihad in $name")
         log(separator())
         testCountry(name)  // It is possible that the country was reverted to untested by an event.
         if (major) {
-          log(s"Rolling ${diceString(numAttempts)}")
+          val failureMsg = if (ignoreFailures)
+            ", ignoring failures"
+          else
+            ""
+          log(s"Rolling ${diceString(numAttempts)}$failureMsg")
           if (m.sleeperCells > 0)
             flipAllSleepersCells(name)
         }
@@ -6080,7 +6094,15 @@ object LabyrinthAwakening {
           if (actives > 0)  disp += amountOf(actives, "active cell")
           if (sleepers > 0) disp += amountOf(sleepers, "sleeper cell")
           if (sadr)         disp += "Sadr"
-          log(s"Rolling ${diceString(numAttempts)}, using ${disp.mkString(", ")}")
+          val usingMsg = if (disp.nonEmpty)
+            s", using ${disp.mkString(", ")}"
+          else
+            ""
+          val failureMsg = if (ignoreFailures)
+            ", ignoring failures"
+          else
+            ""
+          log(s"Rolling ${diceString(numAttempts)}$usingMsg$failureMsg")
           if (sleepers > 0)
             flipSleeperCells(name, sleepers)
         }
@@ -10122,7 +10144,7 @@ object LabyrinthAwakening {
       else if (m.activeCells == 0 && !m.hasSadr)  (0, numRolls, false)
       else if (m.sleeperCells == 0 && !m.hasSadr) (numRolls, 0, false)
       else askCells(name, numRolls, sleeperFocus = false)
-      val target = JihadTarget(name, actives, sleepers, sadr, majorJihad)
+      val target = JihadTarget(name, majorJihad, actives, sleepers, sadr)
       target :: getHumanJihadTargets(diceLeft - numRolls, candidates.filterNot(_ == name))
     }
   }

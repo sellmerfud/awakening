@@ -142,6 +142,6 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
     // It is possible that the country is no longer a Muslim country.
     // For example: Target is Nigeria and we jsut removed the last cell (rule 11.3.3.3)
     if (game.isMuslim(target))
-      performJihads(JihadTarget(target, 2, 0, sadr = false, major = false)::Nil, ignoreFailures = true)
+      performJihads(JihadTarget(target, false, 0, 0, false, phantoms = 2, ignoreFailures = true)::Nil)
   }
 }

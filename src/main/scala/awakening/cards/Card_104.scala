@@ -157,6 +157,6 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
 
       addEventTarget(name)
       testCountry(name) // Event specifically says to test
-      performJihads(JihadTarget(name, 2, 0, false, major = false)::Nil, ignoreFailures = true)
+      performJihads(JihadTarget(name, false, 0, 0, false, phantoms = 2, ignoreFailures = true)::Nil)
   }
 }

@@ -2684,14 +2684,14 @@ object JihadistBot extends BotHelpers {
             val actives  = numAttempts min activeCells(m)
             val sleepers = (numAttempts - actives) min sleeperCells(m)
             val sadr     = numAttempts - actives - sleepers > 0
-            val target = JihadTarget(name, actives, sleepers, sadr, major = false)
+            val target = JihadTarget(name, false, actives, sleepers, sadr)
             target :: nextJihadTarget(completed + numAttempts, alreadyTried + name)
         }
       }
     }
 
     val targets = nextJihadTarget(0, Set.empty)
-    val opsUsed = (for (JihadTarget(_, a, s, sadr, _) <- targets)
+    val opsUsed = (for (JihadTarget(_, _, a, s, sadr, _, _) <- targets)
       yield(a + s + (if (sadr) 1 else 0))).sum
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
@@ -2723,7 +2723,7 @@ object JihadistBot extends BotHelpers {
         if (card.ops < opsUsed)
           expendBotReserves(opsUsed - card.ops)
         addOpsTarget(name)
-        val target = JihadTarget(name, opsUsed, 0, false, major = true)
+        val target = JihadTarget(name, true, opsUsed, 0, false)
         for ((_, successes, _) <- performJihads(target::Nil))
               usedCells(name).addActives(successes)
         opsUsed

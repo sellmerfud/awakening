@@ -10,10 +10,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2010-2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -100,18 +100,13 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
         val target = JihadistBot.cellPlacementPriority(false)(candidates).get
         (target, JihadistBot.selecCellsToPlace(target, cellSources(target), 2))
       }
-            
+
       addEventTarget(target)
       moveCellsToTarget(target, cells)
-      
-      val m = game.getMuslim(target)
-      if (m.jihadOK) {
-        val actives  = 2 min m.activeCells
-        val sleepers = (2 - actives) min m.sleeperCells
-        val sadr = (m.hasSadr && (actives + sleepers < 2))
 
-        performJihads(JihadTarget(target, actives, sleepers, sadr, false)::Nil, ignoreFailures = true)
-      }        
+      val m = game.getMuslim(target)
+      if (m.jihadOK)
+        performJihads(JihadTarget(target, false, 0, 0, false, phantoms = 2, ignoreFailures = true)::Nil)
     }
   }
 }

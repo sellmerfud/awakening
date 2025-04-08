@@ -96,7 +96,10 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
           case Some(name) if botMajorJihadCandidates().contains(name) => name
           case _ => JihadistBot.majorJihadTarget(botMajorJihadCandidates()).get
         }
-        List(JihadTarget(target, 2, 0, false, true))
+        val m = game.getMuslim(target)
+        val active = m.activeCells min 2
+        val sleeper = (2 - active) min 2
+        List(JihadTarget(target, true, active, sleeper, false))
       }
       else {
         def nextTarget(opsLeft: Int, candidates: List[String], targets: Vector[JihadTarget]): Vector[JihadTarget] = {
@@ -107,7 +110,7 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
             val country = game.getCountry(name)
             val active = opsLeft min country.activeCells
             val sleeper = ((opsLeft - active) max 0) min country.sleeperCells
-            val target = JihadTarget(name, active, sleeper, false, false)
+            val target = JihadTarget(name, false, active, sleeper, false)
             val remainingCandidates = candidates.filterNot(_ == name)
             nextTarget(opsLeft - active - sleeper, remainingCandidates, targets :+ target)
           }
