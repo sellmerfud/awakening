@@ -141,7 +141,7 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   //
-  // The Enhanced Bot will not play if it would place and exising training camps
+  // The Enhanced Bot will not play if it would place an exising training camps
   // marker in the same country where it already exists.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
