@@ -151,8 +151,10 @@ object LabyrinthAwakening {
       case _ => throw new IllegalArgumentException(s"Invalid game mode name: $name")
     }
 
-    def next(current: GameMode) = ALL.dropWhile(_ != current).headOption
-
+    def next(current: GameMode) = ALL
+      .dropWhile(_ != current)
+      .drop(1)
+      .headOption
   }
 
 
