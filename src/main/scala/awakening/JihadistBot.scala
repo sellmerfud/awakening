@@ -719,7 +719,7 @@ object JihadistBot extends BotHelpers {
     "Unmarked OR Poor Muslim with < 2 TandM",
     muslimTest( m =>
       m.isUntested ||
-      (m.isPoor && m.totalTroopsAndMilitia < 0)
+      (m.isPoor && m.totalTroopsAndMilitia < 2)
     )
   )
 
