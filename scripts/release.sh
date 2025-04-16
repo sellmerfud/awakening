@@ -164,7 +164,12 @@ if repo_dirty; then
 fi
 
 
-CURRENT_VERSION=$(grep '^\s*version' build.sbt | tr '"' , | cut -d, -f2)
+CURRENT_VERSION="$(sed -n -e \
+'/^ *version *:=/ {
+  s/^[^"]*"\([^"]*\)".*$/\1/
+  p
+}' \
+build.sbt)"
 
 printf "\nCurrent version is %s\n" "$CURRENT_VERSION"
 if [[ $CURRENT_VERSION =~ ^([[:digit:]]+)\.([[:digit:]]+)$ ]]; then
