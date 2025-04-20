@@ -1661,12 +1661,6 @@ object LabyrinthAwakening {
       .find(_.caliphateCapital)
       .map(_.name)
     def caliphateDeclared = caliphateCapital.nonEmpty
-    def isCaliphateMember(name: String): Boolean = {
-      caliphateCapital match {
-        case None => false  // No Caliphate declared
-        case Some(capital) => caliphateDaisyChain(capital) contains name
-      }
-    }
 
     // Return a list of countries comprising the daisy chain of caliphate candidates
     // that are adjacent to the given country.
@@ -1686,6 +1680,15 @@ object LabyrinthAwakening {
       else
         Nil
     }
+
+    def allCaliphateMembers: List[String] = {
+      caliphateCapital match {
+        case None => Nil
+        case Some(capital) => capital :: caliphateDaisyChain(capital)
+      }
+    }
+
+    def isCaliphateMember(name: String) = allCaliphateMembers.contains(name)
 
     def updateCountry(changed: Country): GameState =
       this.copy(countries = changed :: countries.filterNot(_.name == changed.name))
@@ -4235,14 +4238,12 @@ object LabyrinthAwakening {
   // Check to see if there are any sleeper cells in any caliphate members
   // and flip them to active
   def flipCaliphateSleepers(): Unit = {
-    for {
-      capital <- game.caliphateCapital
-      member  <- game.caliphateDaisyChain(capital)
-      m       =  game.getMuslim(member)
-      if m.sleeperCells > 0
-    } {
-      game = game.updateCountry(m.copy(sleeperCells = 0, activeCells = m.cells))
-      log(s"$member is now a caliphate member, flip all sleeper cells to active", Color.FlipPieces)
+    game.allCaliphateMembers.foreach { member =>
+      val m = game.getMuslim(member)
+      if (m.sleeperCells > 0) {
+        game = game.updateCountry(m.copy(sleeperCells = 0, activeCells = m.cells))
+        log(s"$member is now a caliphate member, flip all sleeper cells there to active.", Color.FlipPieces)
+      }
     }
   }
 
