@@ -9105,8 +9105,10 @@ object LabyrinthAwakening {
           case Target(target) =>
             val num = askInt(s"\nRemove how many cadres from $target:", 0, game.getCountry(target).cadres)
             if (num > 0) {
-              if (firstOne)
-                log(s"\n$Jihadist voluntarily cadre removal.", Color.Info)
+              if (firstOne) {
+                log(s"\n$Jihadist voluntary cadre removal", Color.Info)
+                log(separator(), Color.Info)
+              }
               firstOne = false
               removeCadresFromCountry(target, num)
             }

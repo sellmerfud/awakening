@@ -1995,7 +1995,8 @@ object JihadistBot extends BotHelpers {
       game.countries.filter(c=> c.hasCadre && isCadreRemovalCandidate(c)) match {
         case Nil =>
         case candidates =>
-          log(s"\n$Jihadist voluntarily cadre removal.", Color.Info)
+          log(s"\n$Jihadist voluntary cadre removal", Color.Info)
+          log(separator(), Color.Info)
           val total = candidates.map(_.cadres).sum
           for (country <- candidates)
             removeCadresFromCountry(country.name, country.cadres)
