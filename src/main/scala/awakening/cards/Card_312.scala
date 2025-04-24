@@ -92,13 +92,10 @@ object Card_312 extends Card(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLap
     println()
     addSleeperCellsToCountry(target, 2 min game.cellsAvailable)
 
-    val caliphateCapital = game.getMuslim(target).caliphateCapital
-
-    civilWarAttrition(target, hamaOffensive = true, endOfTurn = false)
-
-    // Check to see if the Caliphate Capital has been displaced
-    // because its country was improved to Good governance.
-    if (caliphateCapital && !game.getMuslim(target).caliphateCapital)
-        displaceCaliphateCapital(target)
+    // If the civil war ends it could affect the caliphate if
+    // it has been delcared.
+    evaluateCaliphateChanges {
+      civilWarAttrition(target, hamaOffensive = true)      
+    }
   }
 }

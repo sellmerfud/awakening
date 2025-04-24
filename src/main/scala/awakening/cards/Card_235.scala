@@ -66,7 +66,12 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
   // Bot will not execute this in the Caliphate capital
   def jihadistBotQadhafiCandidates =
     game.muslims
-      .filter(m => !m.truce && m.civilWar && !m.caliphateCapital && m.totalCells > m.totalTroopsAndMilitia)
+      .filter(m =>
+        !m.truce &&
+        m.civilWar &&
+        !game.isCaliphateCapital(m.name) &&
+        m.totalCells > m.totalTroopsAndMilitia
+      )
 
   def enhJihadistBotCandidates = game.muslims
     .filter { m =>
@@ -130,7 +135,7 @@ object Card_235 extends Card(235, "Qadhafi", Unassociated, 3, NoRemove, NoLapsin
         val priorities = List(
           new JihadistBot.CriteriaFilter(
             "Not Caliphate Capital",
-            JihadistBot.muslimTest(!_.caliphateCapital)),
+            JihadistBot.muslimTest(m => !game.isCaliphateCapital(m.name))),
           new JihadistBot.CriteriaFilter(
             "Cells > TandM",
             JihadistBot.muslimTest(m => m.totalCells > m.totalTroopsAndMilitia)),

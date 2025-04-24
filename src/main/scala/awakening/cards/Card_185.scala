@@ -68,7 +68,7 @@ object Card_185 extends Card(185, "al-Maliki", Jihadist, 3, Remove, NoLapsing, N
 
   val isBotCandidate = (c: Country) =>
     isCandidate(c) &&
-    !JihadistBot.muslimTest(m => m.caliphateCapital || m.inRegimeChange)(c)
+    !JihadistBot.muslimTest(m => m.inRegimeChange || game.isCaliphateCapital(m.name))(c)
 
   def getBotCandidates = countryNames(game.countries.filter(isBotCandidate))
 

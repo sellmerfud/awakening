@@ -1305,7 +1305,6 @@ object LabyrinthAwakening {
     regimeChange: String       = NoRegimeChange,
     besiegedRegime: Boolean    = false,
     civilWar: Boolean          = false,
-    caliphateCapital: Boolean  = false,
     awakening: Int             = 0,  // number of awakening markers
     reaction: Int              = 0,  // number of reaction markers
     wmdCache: Int              = 0,  // Number of WMD plots cached
@@ -1417,6 +1416,7 @@ object LabyrinthAwakening {
     val offMapTroops: Int
     val notes: Seq[String] = Seq.empty
     val allowsCampaign: Boolean
+    val caliphateCapital: Option[String] = None
 
     // Override this if the scenario requires any special setup such
     // as the Jihadist player choosing countries in which to place cells.
@@ -1545,6 +1545,16 @@ object LabyrinthAwakening {
       list.foreach(text => this.add(text, None))
   }
 
+  // Orders caliphate members such that those closest to the
+  // capital come first.  By definition the capital will always
+  // be the first in the list.
+  val CaliphateOrdering: Ordering[String] = new Ordering[String] {
+    def compare(x: String, y: String) = {
+      val capital = game.caliphateCapital.get
+      distance(capital, x) - distance(capital, y)
+    }
+  }
+
 
   // A game segment containing the save point number for the segment,
   // and a summary of the segment.
@@ -1579,6 +1589,7 @@ object LabyrinthAwakening {
     cardsRemoved: List[Int]              = Nil,         // Card numbers removed from the game.
     targetsThisPhase: PhaseTargets       = PhaseTargets(),
     targetsLastPhase: PhaseTargets       = PhaseTargets(),
+    caliphateCapital: Option[String]     = None,
     ignoreVictory: Boolean               = false,
     botLogging: Boolean                  = false,
     botEnhancements: Boolean             = false, // Use enhancements to official Awakening bot algorithms
@@ -1657,9 +1668,6 @@ object LabyrinthAwakening {
     // Return true if the given country is adjacent to at least on Shi Mix Muslim Country
     def adjacentToShiaMix(name: String) = adjacentMuslims(name).exists(_.isShiaMix)
 
-    def caliphateCapital: Option[String] = muslims
-      .find(_.caliphateCapital)
-      .map(_.name)
     def caliphateDeclared = caliphateCapital.nonEmpty
 
     // Return a list of countries comprising the daisy chain of caliphate candidates
@@ -1683,10 +1691,14 @@ object LabyrinthAwakening {
 
     def allCaliphateMembers: List[String] = {
       caliphateCapital match {
-        case None => Nil
-        case Some(capital) => capital :: caliphateDaisyChain(capital)
+        case None =>
+          Nil
+        case Some(capital) =>
+          caliphateDaisyChain(capital).sorted(CaliphateOrdering)
       }
     }
+
+    def isCaliphateCapital(name: String) = Some(name) == caliphateCapital
 
     def isCaliphateMember(name: String) = allCaliphateMembers.contains(name)
 
@@ -2176,7 +2188,7 @@ object LabyrinthAwakening {
             item(s"Regime Change (${m.regimeChange})")
           if (m.civilWar)
             item("Civil War")
-          if (m.caliphateCapital)
+          if (game.isCaliphateCapital(m.name))
             item("Caliphate Capital")
           else if (isCaliphateMember(m.name))
             item("Caliphate member")
@@ -2250,14 +2262,14 @@ object LabyrinthAwakening {
       val summary = new Summary
       summary.add("Caliphate", Color.Info)
       summary.add(separator(char = '='), Color.Info)
-      caliphateCapital match {
-        case Some(capital) =>
-          // Add the capital first
-          summary.add(s"${capital}  (Capital)")
-          for (member <- caliphateDaisyChain(capital).sorted.filterNot(_ == capital))
-            summary.add(member)
-        case None =>
+      game.allCaliphateMembers match {
+        case Nil =>
           summary.add("There is no Caliphate declared")
+
+        case capital::others =>
+          summary.add(s"${capital}  (Capital)")
+          for (member <- others)
+            summary.add(member)
       }
       summary
     }
@@ -3887,7 +3899,7 @@ object LabyrinthAwakening {
 
     if (game.manualDieRolls) {
       val candidates = countryNames(game.muslims)
-      game.getMuslim(askCountry("Select \"Random\" country: ", candidates, allowAbort = false))
+      game.getMuslim(askCountry("Select \"Random Muslim\" country: ", candidates, allowAbort = false))
     }
     else {
       val row = dieRoll - 1        // tan die
@@ -4133,118 +4145,156 @@ object LabyrinthAwakening {
 
 
   // Throws an exception if a Caliphate already exists
-  def declareCaliphate(capital: String): Unit = {
+  def declareCaliphate(name: String): Unit = {
     val side = if (isHuman(Jihadist)) "Player" else "Bot"
     val prevGameState = game
     assert(!game.caliphateDeclared, "declareCaliphate() called and a Caliphate Capital already on the map")
-    log(s"\nJihadist $side declares $capital as the Caliphate Capital.", Color.Event)
-    setCaliphateCapital(capital)
+    assert(game.isMuslim(name), s"setCaliphateCapital() called on non-muslim country: $name")
+    assert(game.getMuslim(name).caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
+
+    log(s"\nJihadist $side declares $name as the Caliphate Capital.", Color.Event)
+    log(separator(), Color.Event)
+
+    game = game.copy(caliphateCapital = Some(name))
+    for (memberName <- game.allCaliphateMembers) {
+      if (memberName == name)
+        log(s"Place Caliphate capital marker in $memberName", Color.MapPieces)
+      else
+        log(s"Place Caliphate member marker in $memberName", Color.MapPieces)
+
+      val member = game.getMuslim(memberName)
+      flipAllSleepersCells(memberName)
+    }
+
     logExtraCellCapacityChange(prevGameState)
     increaseFunding(2)
     logSummary(game.caliphateSummary)
   }
 
-  def setCaliphateCapital(name: String): Unit = {
-    assert(game.isMuslim(name), s"setCaliphateCapital() called on non-muslim country: $name")
-    val capital = game.getMuslim(name);
-    assert(capital.caliphateCandidate, s"setCaliphateCapital() called on invalid country: $name")
-    // First make sure there is no country marked as the capital
-    game = game.updateCountries(game.muslims.map(_.copy(caliphateCapital = false)))
-    val daisyChain = game.caliphateDaisyChain(name).map { memberName =>
-      val member = game.getMuslim(memberName)
-      if (member.sleeperCells > 0)
-        log(s"Activate all sleeper cells in $memberName", Color.MapPieces)
-      member.copy(
-        caliphateCapital = member.name == name,
-        activeCells      = member.cells,  // All cells go active in caliphate members
-        sleeperCells     = 0
-      )
-    }
-    log(s"Place Caliphate capital marker in ${capital.name}", Color.MapPieces)
-    game = game.updateCountries(daisyChain)
-  }
+  // Used to detect nested calls to evaluateCaliphateChanges()
+  var evaluatingCaliphateChanges = false
 
+  // This function is used to evaluate when some code has changed the game
+  // state in a way that changes the makeup of the `existing` Caliphate.
+  // Do not use this function to determine if a new Calipate should be established.
+  // This function will determine if the members of the existing caliphate have changed,
+  // including the displacement of the caliphate capital which may disolve the caliphate
+  // altogether.
+  //
+  // Calls to this function may be nested.  Only the outermost call of the function will
+  // evalauate the caliphate changes.
+  def evaluateCaliphateChanges(code: => Unit): Unit = {
+    if (evaluatingCaliphateChanges)
+      code
+    else
+      try {
+        val prevGame = game
+        evaluatingCaliphateChanges = true
 
-  // Important: Assumes that the game has already been updated, such that the
-  // previousCapital is no longer a caliphateCandidate! Otherwise the caliphate
-  // size comparisons for the new capital candidate would include the old
-  // capital, which is wrong.
-  def displaceCaliphateCapital(previousCapital: String): Unit = {
-    // Used when the Bot is selecting new caliphate capital
-    case class CaliphateCapitalCandidate(m: MuslimCountry) {
-      val size = game.caliphateDaisyChain(m.name).size
-    }
-    // Sort first by daisy chain size large to small
-    // then by non Ally before Ally
-    // then by worse governance before better governance
-    // then by worst WoI drm before better WoI drm
-    def compareCapitalCandidates(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = {
-      if (x.size != y.size)
-        y.size compare x.size // y first: to sort large to small.
-      else if (x.m.isAlly != y.m.isAlly)
-        x.m.isAlly compare y.m.isAlly // x first: nonAlly before Ally
-      else if (x.m.governance != y.m.governance)
-        y.m.governance compare x.m.governance // y first: because Good < Islamist Rule
-      else {
-        val (xMod, yMod) = (modifyWoiRoll(1, x.m, false, true), modifyWoiRoll(1, y.m, false, true))
-        xMod compare yMod
-      }
-    }
-    implicit val CaliphateCapitalCandidateOrdering = new Ordering[CaliphateCapitalCandidate] {
-      def compare(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = compareCapitalCandidates(x, y)
-    }
-    // Caliphate capital displaced.  Attempt to move it to adjacent caliphate country.
-    val adjacents = game.adjacentMuslims(previousCapital).filter(_.caliphateCandidate)
-    log()
-    log("The Caliphate capital has been displaced!")
-    log(separator())
-    if (adjacents.size == 0) {
-      log(s"There are no adjacent Caliphate candidates")
-      log(s"Remove the Caliphate capital marker from $previousCapital", Color.MapPieces)
-      decreaseFunding(2)
-      increasePrestige(2)
-    }
-    else {
-      // If Jihadist is human, ask them to pick the new capital.
-      // If Jihadist is a bot, the country that connects to the
-      // largest number of daisy chained caliphate members.
-      // Then pick one at random among any ties.
-      val newCapitalName = if (adjacents.size == 1)
-        adjacents.head.name
-      else if (game.humanRole == Jihadist) {
-        val choices = adjacents.map(_.name)
-        askCountry(s"Choose new Caliphate capital (${orList(choices)}): ", choices, allowAbort = false)
-      }
-      else {
-        // The Bot pick the best candidate for the new capital based on
-        // the set of conditions outlined by compareCapitalCandidates().
-        // We sort the best to worst.  If more than one has the best score, then
-        // we choose randomly among them.
-        val sorted = adjacents.map(CaliphateCapitalCandidate).sorted
-        val best   = sorted
-          .takeWhile(compareCapitalCandidates(_, sorted.head) == 0)
-          .map(_.m.name)
-        shuffle(best).head
-      }
+        // Run the code
+        code
 
-      log(s"Remove Caliphate member marker from $newCapitalName", Color.MapPieces)
-      setCaliphateCapital(newCapitalName)
-      decreaseFunding(1)
-      increasePrestige(1)
-      logSummary(game.caliphateSummary)
-    }
-  }
+        val prevCaliphate = prevGame.allCaliphateMembers.toSet
+        val newCaliphate = game.allCaliphateMembers.toSet
 
-  // Check to see if there are any sleeper cells in any caliphate members
-  // and flip them to active
-  def flipCaliphateSleepers(): Unit = {
-    game.allCaliphateMembers.foreach { member =>
-      val m = game.getMuslim(member)
-      if (m.sleeperCells > 0) {
-        game = game.updateCountry(m.copy(sleeperCells = 0, activeCells = m.cells))
-        log(s"$member is now a caliphate member, flip all sleeper cells there to active.", Color.FlipPieces)
+        // Determine if the caliphate has been changed by the preceeding code.
+        prevGame.caliphateCapital match {
+          case Some(previousCapital) if !game.isMuslim(previousCapital) || !game.getMuslim(previousCapital).caliphateCandidate =>
+            // The previous capital has been displaced
+            // The previous Caliphate capital has been displaced.
+            // Attempt to move it to adjacent caliphate country.
+            val candidates = game.adjacentMuslims(previousCapital)
+              .filter(_.caliphateCandidate)
+              .map(_.name)
+
+            log(s"\nThe Caliphate capital in $previousCapital has been displaced!", Color.Info)
+            log(separator(), Color.Info)
+            log(s"Remove the Caliphate capital marker from $previousCapital", Color.MapPieces)
+
+            if (candidates.size == 0) {
+              log(s"There are no adjacent countries that can become the new Caliphate capital.", Color.Info)
+              log(s"\nDisplacing the Caliphate capital affects funding and prestige.", Color.Info)
+              decreaseFunding(2)
+              increasePrestige(2)
+              pause()
+            }
+            else {
+              // If Jihadist is human, ask them to pick the new capital.
+              // If Jihadist is a bot, the country that connects to the
+              // largest number of daisy chained caliphate members.
+              // Then pick one at random among any ties.
+              val newCapitalName = if (candidates.size == 1)
+                candidates.head
+              else if (game.humanRole == Jihadist)
+                askSimpleMenu("Choose the new Caliphate capital:", candidates.sorted)
+              else
+                JihadistBot.pickNewCaliphateCapital(previousCapital)
+
+              // Replace member marker with capital marker in new Capital.
+              log(s"Remove Caliphate member marker from $newCapitalName", Color.MapPieces)
+              log(s"Place the Caliphate capital marker in $newCapitalName", Color.MapPieces)
+              game = game.copy(caliphateCapital = Some(newCapitalName))
+
+              // Get new caliphate now that we have updated the capital
+              val newCaliphate = game.allCaliphateMembers.toSet
+              // We've already handled the previous and new captial markers
+              // so remove them from the lists
+              val removedMembers = (prevCaliphate -- newCaliphate)
+                .toSeq
+                .filter(name => name != previousCapital && name != newCapitalName)
+                .sorted(CaliphateOrdering)
+              val newMembers = (newCaliphate -- prevCaliphate)
+                .toSeq
+                .filter(name => name != previousCapital && name != newCapitalName)
+                .sorted(CaliphateOrdering)
+
+              // Check to see if any of the caliphate members are no longer eligible, or
+              // if any new countries are now eligible and log messages accordingly
+              for (member <- removedMembers)
+                log(s"Remove the Caliphate member marker from $member", Color.MapPieces)
+
+              for (member <- newMembers) {
+                log(s"Place a Caliphate member marker in $member", Color.MapPieces)
+                flipAllSleepersCells(member)
+              }
+
+              log(s"\nDisplacing the Caliphate capital affects funding and prestige.", Color.Info)
+              decreaseFunding(1)
+              increasePrestige(1)
+              logExtraCellCapacityChange(prevGame)
+              logSummary(game.caliphateSummary)
+              pause()
+            }
+
+          case Some(prevCapital) if prevCaliphate != newCaliphate =>
+            val removedMembers = (prevCaliphate -- newCaliphate)
+              .toSeq
+              .sorted(CaliphateOrdering)
+            val newMembers = (newCaliphate -- prevCaliphate)
+              .toSeq
+              .sorted(CaliphateOrdering)
+
+            // Check to see if any of the caliphate members are no longer eligible, or
+            // if any new countries are now eligible and log messages accordingly
+            for (member <- removedMembers)
+              log(s"Remove the Caliphate member marker from $member", Color.MapPieces)
+
+            for (member <- newMembers) {
+              log(s"Place a Caliphate member marker in $member", Color.MapPieces)
+              flipAllSleepersCells(member)
+            }
+
+            logExtraCellCapacityChange(prevGame)
+            logSummary(game.caliphateSummary)
+            pause()
+
+          case _ =>
+            // There was not caliphate or there were no changes to the caliphate members
+        }
       }
-    }
+      finally {
+        evaluatingCaliphateChanges = false
+      }
   }
 
   // Select a random county to take an awakening or reaction marker
@@ -5187,12 +5237,17 @@ object LabyrinthAwakening {
       showM(fromM, toM, _.reaction, "reaction markers")
       showM(fromM, toM, _.besiegedRegime, "besieged regime marker")
       showM(fromM, toM, _.regimeChange, "Regime Change")
-      showM(fromM, toM, _.caliphateCapital, "Caliphate capital marker")
+
       toM foreach { t =>
-        val fromVal = from.isCaliphateMember(fromM.name)
-        val toVal   = to.isCaliphateMember(t.name)
-        if (fromVal != toVal)
-          b += s"${if (toVal) "Add" else "Remove"} Caliphate member marker"
+        val fromCap = from.isCaliphateCapital(fromM.name)
+        val toCap = to.isCaliphateCapital(t.name)
+        val fromMem = from.isCaliphateMember(fromM.name)
+        val toMem   = to.isCaliphateMember(t.name)
+
+        if (fromCap != toCap)
+          b += s"${if (toCap) "Add" else "Remove"} Caliphate Capital marker"
+        if (fromMem != toMem)
+          b += s"${if (toMem) "Add" else "Remove"} Caliphate member marker"
       }
       showC(fromM, toM orElse toN, _.wmdCache, "WMD cache")
       (toM orElse toN) foreach { t =>
@@ -5332,74 +5387,62 @@ object LabyrinthAwakening {
       log("No countries affected", Color.Info)
       pause()
     }
-    else {
-      // Remember any Caliphate capital in case it is displaced.
-      val prevCaliphateCapital = candidates.find(_.caliphateCapital).map(_.name)
-      val priorGameState = game
-      // Work with names, because the underlying state of the countries will
-      // undergo multiple changes, thus we will need to get the current copy of
-      // the country from the game each time we use it.
-      val names = candidates.map(_.name)
-      case class Converger(name: String, awakening: Boolean)
-      implicit val ConvererOrdering = new Ordering[Converger] {
-        def compare(x: Converger, y: Converger) = {
-          // Awakening first, then order by name
-          if (x.awakening == y.awakening) x.name compare y.name else -(x.awakening compare y.awakening)
+    else
+      evaluateCaliphateChanges {  // This could displace the caliphate captial
+        // Work with names, because the underlying state of the countries will
+        // undergo multiple changes, thus we will need to get the current copy of
+        // the country from the game each time we use it.
+        val names = candidates.map(_.name)
+        case class Converger(name: String, awakening: Boolean)
+        implicit val ConvererOrdering = new Ordering[Converger] {
+          def compare(x: Converger, y: Converger) = {
+            // Awakening first, then order by name
+            if (x.awakening == y.awakening) x.name compare y.name else -(x.awakening compare y.awakening)
+          }
         }
-      }
 
-      // Keep track of countries that cause convergence and do the convergence at the
-      // end so it does not affect the polarization in progress.
-      var convergers = List.empty[Converger]
-      for (name <- names; m = game.getMuslim(name)) {
-        m.awakeningDelta match {
-          case _ if m.truce  =>
-            log(s"\nPolarization skipped in $name because it is under TRUCE.", Color.Info)
-          case 2 =>
-            addAwakeningMarker(name)
-          case -2 =>
-            addReactionMarker(name)
-          case x if x > 2 =>
-            log()
-            if (m.isAlly) {
-              improveGovernance(name, 1, canShiftToGood = true, endOfTurn = true, convergenceOK = false)
-              if (game.getMuslim(name).isGood)
-                convergers = Converger(name, awakening = true) :: convergers
-            }
-            else
-              shiftAlignmentLeft(name)
+        // Keep track of countries that cause convergence and do the convergence at the
+        // end so it does not affect the polarization in progress.
+        var convergers = List.empty[Converger]
+        for (name <- names; m = game.getMuslim(name)) {
+          m.awakeningDelta match {
+            case _ if m.truce  =>
+              log(s"\nPolarization skipped in $name because it is under TRUCE.", Color.Info)
+            case 2 =>
+              addAwakeningMarker(name)
+            case -2 =>
+              addReactionMarker(name)
+            case x if x > 2 =>
+              log()
+              if (m.isAlly) {
+                improveGovernance(name, 1, canShiftToGood = true, convergenceOK = false)
+                if (game.getMuslim(name).isGood)
+                  convergers = Converger(name, awakening = true) :: convergers
+              }
+              else
+                shiftAlignmentLeft(name)
 
-          case _ => // x < -2
-            log()
-            if (m.isAdversary) {
-              worsenGovernance(name, levels = 1, canShiftToIR = true, endOfTurn = true, convergenceOK = false)
-              if (game.getMuslim(name).isIslamistRule)
-                convergers = Converger(name, awakening = false) :: convergers
-            }
-            else
-              shiftAlignmentRight(name)
+            case _ => // x < -2
+              log()
+              if (m.isAdversary) {
+                worsenGovernance(name, levels = 1, canShiftToIR = true, convergenceOK = false)
+                if (game.getMuslim(name).isIslamistRule)
+                  convergers = Converger(name, awakening = false) :: convergers
+              }
+              else
+                shiftAlignmentRight(name)
+          }
+          pause()
         }
-        pause()
-      }
 
-      // Now perform convergence for each country that became Good or Islamist Rule.
-      if (convergers.nonEmpty) {
-        log()
-        for (Converger(name, awakening) <- convergers.sorted)
-          performConvergence(forCountry = name, awakening)
-        pause()
-      }
-
-      // Check to see if the Caliphate Capital has been displaced because its country
-      // was improved to Good governance.
-      prevCaliphateCapital foreach { prevName =>
-        if (game.getMuslim(prevName).caliphateCapital == false) {
-          displaceCaliphateCapital(prevName)
-          logExtraCellCapacityChange(priorGameState)
+        // Now perform convergence for each country that became Good or Islamist Rule.
+        if (convergers.nonEmpty) {
+          log()
+          for (Converger(name, awakening) <- convergers.sorted)
+            performConvergence(forCountry = name, awakening)
           pause()
         }
       }
-    }
   }
 
 
@@ -5535,7 +5578,7 @@ object LabyrinthAwakening {
   //  We must check for this after removing cell AND after any shift to Ally
   //  due to unfulfilled hits on the Jihadist.
 
-  def civilWarAttrition(name: String, hamaOffensive: Boolean, endOfTurn: Boolean): Unit = {
+  def civilWarAttrition(name: String, hamaOffensive: Boolean): Unit = {
     assert(game.getMuslim(name).civilWar, s"civilWarAttrition() called on non-Civil War country: $name")
 
     if (underTruce(name))
@@ -5640,7 +5683,7 @@ object LabyrinthAwakening {
 
                 val steps = delta - shifts
                 if (steps > 0)
-                  worsenGovernance(m.name, levels = steps, canShiftToIR = true, endOfTurn = endOfTurn)
+                  worsenGovernance(m.name, levels = steps, canShiftToIR = true)
               }
               else {
                 // Shift toward Ally/Improve governance
@@ -5659,7 +5702,7 @@ object LabyrinthAwakening {
                 if (game.isMuslim(name)) {
                   val steps = -delta - shifts
                   if (steps > 0)
-                    improveGovernance(m.name, steps, canShiftToGood = true, endOfTurn = endOfTurn)
+                    improveGovernance(m.name, steps, canShiftToGood = true)
                 }
               }
             }
@@ -5680,74 +5723,64 @@ object LabyrinthAwakening {
       pause()
     }
     else {
-      val prevCaliphateCapital = civilWars.find(_.caliphateCapital).map(_.name)
-      val priorGameState = game
-      val totalAdvisors = civilWars.map(_.numAdvisors).sum
-      // Add militia for any Advisors present
-      if (civilWars.exists(_.numAdvisors > 0)) {
-        log("\nAdvisors")
-        log(separator())
-        if (game.militiaAvailable == 0) {
-          log("There are no available militia")
-          pause()
-        }
-        else if (game.militiaAvailable >= totalAdvisors) {
-          for (m <- civilWars; num = m.numAdvisors; if num > 0)
-            addMilitiaToCountry(m.name, num)
-          pause()
-        }
-        else {
-          //  There are not enough available militia for all Advisors so
-          //  ask where to place them.
-          if (game.humanRole == US) {
-            var advisorMap: Map[String, Int] = civilWars
-              .filter(_.numAdvisors > 0)
-              .map(m => (m.name, m.numAdvisors)).toMap
-            def nextMilita(numLeft: Int): Unit = if (numLeft > 0) {
-              val unfulfilled = advisorMap.values.sum
-              val target      = askCountry("Place militia in which country: ", advisorMap.keys.toList.sorted)
-              val numAdvisors = advisorMap(target)
-              val maxNum      = numAdvisors min numLeft
-              val num         = askInt(s"Place how many militia in $target", 1, maxNum)
-              addMilitiaToCountry(target, num)
-              if (num == numAdvisors)
-                advisorMap -= target
-              else
-                advisorMap += (target -> (numAdvisors - num))
-              nextMilita(numLeft - num)
-
-            }
-            println("\nThere are more Advisors markers than available militia")
-            nextMilita(game.militiaAvailable)
-
-          }
-          else {
-            def nextMilita(numLeft: Int, candidates: List[String]): Unit = if (numLeft > 0) {
-              val target = USBot.deployToPriority(candidates).get
-              val m = game.getMuslim(target)
-              val num = m.numAdvisors min game.militiaAvailable
-              addMilitiaToCountry(target, num)
-              nextMilita(numLeft - num, candidates.filterNot(_ == target))
-            }
-            nextMilita(game.militiaAvailable, countryNames(civilWars.filter(_.numAdvisors > 0)))
+      evaluateCaliphateChanges {  // This could affect the caliphate
+        val totalAdvisors = civilWars.map(_.numAdvisors).sum
+        // Add militia for any Advisors present
+        if (civilWars.exists(_.numAdvisors > 0)) {
+          log("\nAdvisors")
+          log(separator())
+          if (game.militiaAvailable == 0) {
+            log("There are no available militia")
             pause()
           }
+          else if (game.militiaAvailable >= totalAdvisors) {
+            for (m <- civilWars; num = m.numAdvisors; if num > 0)
+              addMilitiaToCountry(m.name, num)
+            pause()
+          }
+          else {
+            //  There are not enough available militia for all Advisors so
+            //  ask where to place them.
+            if (game.humanRole == US) {
+              var advisorMap: Map[String, Int] = civilWars
+                .filter(_.numAdvisors > 0)
+                .map(m => (m.name, m.numAdvisors)).toMap
+              def nextMilita(numLeft: Int): Unit = if (numLeft > 0) {
+                val unfulfilled = advisorMap.values.sum
+                val target      = askCountry("Place militia in which country: ", advisorMap.keys.toList.sorted)
+                val numAdvisors = advisorMap(target)
+                val maxNum      = numAdvisors min numLeft
+                val num         = askInt(s"Place how many militia in $target", 1, maxNum)
+                addMilitiaToCountry(target, num)
+                if (num == numAdvisors)
+                  advisorMap -= target
+                else
+                  advisorMap += (target -> (numAdvisors - num))
+                nextMilita(numLeft - num)
+
+              }
+              println("\nThere are more Advisors markers than available militia")
+              nextMilita(game.militiaAvailable)
+
+            }
+            else {
+              def nextMilita(numLeft: Int, candidates: List[String]): Unit = if (numLeft > 0) {
+                val target = USBot.deployToPriority(candidates).get
+                val m = game.getMuslim(target)
+                val num = m.numAdvisors min game.militiaAvailable
+                addMilitiaToCountry(target, num)
+                nextMilita(numLeft - num, candidates.filterNot(_ == target))
+              }
+              nextMilita(game.militiaAvailable, countryNames(civilWars.filter(_.numAdvisors > 0)))
+              pause()
+            }
+
+          }
 
         }
 
-      }
-
-      for (name <- civilWars.map(_.name))
-        civilWarAttrition(name, hamaOffensive = false, endOfTurn = true)
-
-      // Check to see if the Caliphate Capital has been displaced because its country
-      // was improved to Good governance.
-      prevCaliphateCapital foreach { prevName =>
-        if (game.getMuslim(prevName).caliphateCapital == false) {
-          displaceCaliphateCapital(prevName)
-          logExtraCellCapacityChange(priorGameState)
-          pause()
-        }
+        for (name <- civilWars.map(_.name))
+          civilWarAttrition(name, hamaOffensive = false)
       }
     }
   }
@@ -5813,40 +5846,35 @@ object LabyrinthAwakening {
   // • Shift any Sleeper cells there to Active (4.7.4.1).
   // • Roll Prestige
   def performRegimeChange(source: String, dest: String, numTroops: Int): Unit = {
-    val caliphateMember = game.isCaliphateMember(dest)
-    log()
-    moveTroops(source, dest, numTroops)
-    val m = game.getMuslim(dest)
-    val die = getDieRoll(s"Enter governance die roll for $dest: ", Some(US))
-    log(s"Governance die roll: $die")
-    val newGov = if (die < 5) Poor else Fair
-    addOpsTarget(dest)
-    game = game.updateCountry(m.copy(
-      governance   = newGov,
-      alignment    = Ally,
-      regimeChange = GreenRegimeChange,
-      activeCells  = m.activeCells + m.sleeperCells,
-      sleeperCells = 0
-    ))
-    if (newGov == Fair)
-      addTestedOrImprovedToFairOrGood(dest)
-    log(s"Place a green regime change marker in $dest", Color.MapPieces)
-    log(s"Set governance of ${m.name} ${govToString(newGov)}", Color.MapPieces)
-    log(s"Set alignment of ${m.name} Ally", Color.MapPieces)
-    if (!caliphateMember && game.isCaliphateMember(dest))
-      log(s"Place a Caliphate member marker in $dest", Color.MapPieces)
-    if (m.sleeperCells > 0)
-      log(s"Flip the ${amountOf(m.sleeperCells, "sleeper cell")} in ${m.name} to active", Color.FlipPieces)
-    rollPrestige()
-    endCivilWar(dest)  // Can't have civil war in regime change performed due to event, etc.
-    flipCaliphateSleepers()
-    if (dest == Iraq)
-      removeEventMarkersFromCountry(Iraq, "Iraqi WMD")
-    if (dest == Libya)
-      removeEventMarkersFromCountry(Libya, "Libyan WMD")
+    evaluateCaliphateChanges {
+      log()
+      moveTroops(source, dest, numTroops)
+      val m = game.getMuslim(dest)
+      val die = getDieRoll(s"Enter governance die roll for $dest: ", Some(US))
+      log(s"Governance die roll: $die")
+      val newGov = if (die < 5) Poor else Fair
+      addOpsTarget(dest)
+      game = game.updateCountry(m.copy(
+        governance   = newGov,
+        alignment    = Ally,
+        regimeChange = GreenRegimeChange,
+        activeCells  = m.activeCells + m.sleeperCells,
+        sleeperCells = 0
+      ))
+      if (newGov == Fair)
+        addTestedOrImprovedToFairOrGood(dest)
+      log(s"Place a green regime change marker in $dest", Color.MapPieces)
+      log(s"Set governance of ${m.name} ${govToString(newGov)}", Color.MapPieces)
+      log(s"Set alignment of ${m.name} Ally", Color.MapPieces)
+      rollPrestige()
+      endCivilWar(dest)  // Can't have civil war in regime change performed due to event, etc.
+      if (dest == Iraq)
+        removeEventMarkersFromCountry(Iraq, "Iraqi WMD")
+      if (dest == Libya)
+        removeEventMarkersFromCountry(Libya, "Libyan WMD")
+    }
 
     logSummary(game.scoringSummary)
-    log()
   }
 
   // • Deploy any number troops out of the Regime Change country (regardless of cells present).
@@ -6087,8 +6115,7 @@ object LabyrinthAwakening {
           else
             ""
           log(s"Rolling ${diceString(numAttempts)}$failureMsg")
-          if (m.sleeperCells > 0)
-            flipAllSleepersCells(name)
+          flipAllSleepersCells(name)
         }
         else {
           val disp = new ListBuffer[String]
@@ -6247,11 +6274,9 @@ object LabyrinthAwakening {
 
   // Note: The caller is responsible for handling convergence and the possible
   //       displacement of the caliphate capital.
-  def improveGovernance(name: String, levels: Int, canShiftToGood: Boolean, endOfTurn: Boolean = false,
-                        convergenceOK: Boolean = true): Unit = {
+  def improveGovernance(name: String, levels: Int, canShiftToGood: Boolean, convergenceOK: Boolean = true): Unit = {
     if (levels > 0) {
       val m = game.getMuslim(name)
-      val caliphateMember = game.isCaliphateMember(name)
       assert(!m.isGood, s"improveGovernance() called on Good country - $name")
       val minGov = if (canShiftToGood) Good else Fair
       val newGov = (m.governance - levels) max minGov
@@ -6267,14 +6292,15 @@ object LabyrinthAwakening {
           if (m.awakening > 0 ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name", Color.MapPieces)
           if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name", Color.MapPieces)
           if (m.militia > 0   ) log(s"Remove ${m.militia} militia from $name", Color.MapPieces)
-          if (caliphateMember ) log(s"Remove Caliphate member marker from $name", Color.MapPieces)
 
-          val improved = m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
-                 militia = 0, besiegedRegime = false)
-          game = game.updateCountry(improved)
-          removeTrainingCamp_?(name)
-          endRegimeChange(name, noDisplacement = endOfTurn)
-          endCivilWar(name, noDisplacement = endOfTurn)
+          evaluateCaliphateChanges {
+            val improved = m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
+                  militia = 0, besiegedRegime = false)
+            game = game.updateCountry(improved)
+            removeTrainingCamp_?(name)
+          }
+          endRegimeChange(name)
+          endCivilWar(name)
           if (convergenceOK)
             performConvergence(forCountry = name, awakening = true)
         }
@@ -6283,9 +6309,12 @@ object LabyrinthAwakening {
           if (m.awakening > 0)
             log(s"Remove ${amountOf(delta min m.awakening, "awakening marker")} from $name", Color.MapPieces)
           val improved = m.copy(governance = newGov,
-                 awakening  = (m.awakening - delta) max 0) // Rempove one awakening for each level actually improved
-          game = game.updateCountry(improved)
+                awakening  = (m.awakening - delta) max 0) // Rempove one awakening for each level actually improved
+          evaluateCaliphateChanges {
+            game = game.updateCountry(improved)
+          }
         }
+
         if (newGov == Good || newGov == Fair)
           addTestedOrImprovedToFairOrGood(name)
 
@@ -6300,10 +6329,8 @@ object LabyrinthAwakening {
 
   // Degrade the governance of the given country and log the results.
   // Note: The caller is responsible for handling convergence!
-  def worsenGovernance(name: String, levels: Int, canShiftToIR: Boolean, endOfTurn: Boolean = false,
-                       convergenceOK: Boolean = true): Unit = {
+  def worsenGovernance(name: String, levels: Int, canShiftToIR: Boolean, convergenceOK: Boolean = true): Unit = {
     if (levels > 0) {
-      val wasCaliphateMember = game.isCaliphateMember(name)
       val m = game.getMuslim(name)
       assert(!m.isIslamistRule, s"worsenGovernance() called on Islamist Rule country - $name")
       val maxGov = if (canShiftToIR) IslamistRule else Poor
@@ -6329,14 +6356,13 @@ object LabyrinthAwakening {
           val degraded = m.copy(
             governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0,
             aidMarkers = 0, militia = 0, besiegedRegime = false)
-          game = game.updateCountry(degraded)
+          evaluateCaliphateChanges {
+            game = game.updateCountry(degraded)
+          }
           moveWMDCacheToAvailable(name, m.wmdCache)
           removeAllAdvisorsFromCountry(name) // Country becomes Adversary
-          endRegimeChange(name, noDisplacement = endOfTurn)
-          endCivilWar(name, noDisplacement = endOfTurn)
-          if (!wasCaliphateMember && game.isCaliphateMember(name))
-            log(s"Place a Caliphate Country marker in $name", Color.MapPieces)
-          flipCaliphateSleepers()
+          endRegimeChange(name)
+          endCivilWar(name)
           if (convergenceOK)
             performConvergence(forCountry = name, awakening = false)
           checkAutomaticVictory() // Will Exit game if auto victory has been achieved
@@ -6349,7 +6375,9 @@ object LabyrinthAwakening {
             log(s"Remove ${amountOf(delta min m.reaction, "reaction marker")} from $name", Color.MapPieces)
           // Remove One reaction for each level actually degraded
           val degraded = m.copy(governance = newGov, reaction = (m.reaction - delta)  max 0)
-          game = game.updateCountry(degraded)
+          evaluateCaliphateChanges {
+            game = game.updateCountry(degraded)
+          }
         }
       }
     }
@@ -6435,12 +6463,12 @@ object LabyrinthAwakening {
       removeAidMarker(name, m.aidMarkers)
       removeAwakeningMarker(name, m.awakening)
       removeReactionMarker(name, m.reaction)
-      // Ending the regime change or civil war will also remove the caliphateCapital
-      // status if it is in effect
-      endRegimeChange(name)
-      endCivilWar(name)
-      game = game.updateCountry(game.getMuslim(name).copy(governance = GovernanceUntested))
-      log(s"Remove the ${govToString(m.governance)} governance marker from $name", Color.MapPieces)
+      evaluateCaliphateChanges {
+        endRegimeChange(name)
+        endCivilWar(name)
+        game = game.updateCountry(game.getMuslim(name).copy(governance = GovernanceUntested))
+        log(s"Remove the ${govToString(m.governance)} governance marker from $name", Color.MapPieces)
+      }
     }
     else {
       val n = game.getNonMuslim(name)
@@ -6682,90 +6710,62 @@ object LabyrinthAwakening {
   // If it does, but no longer meets the requirements for housing
   // the "Training Camps", the remove it and log all necessary
   // changes to the game.
-  def removeTrainingCamp_?(name: String, endOfTurn: Boolean = false): Unit = {
+  def removeTrainingCamp_?(name: String): Unit = {
     if (game.isTrainingCamp(name)) {
       val m = game.getMuslim(name)
       if (m.isGood || (m.totalCells == 0 && !m.hasCadre)) {
         val priorGameState = game
         removeEventMarkersFromCountry(name, TrainingCamps)
-
-        if (!endOfTurn)
-          logExtraCellCapacityChange(priorGameState)
+        logExtraCellCapacityChange(priorGameState)
       }
     }
   }
 
 
   def startCivilWar(name: String): Unit = {
-    val wasCaliphateMember = game.isCaliphateMember(name)
     val orig = game getMuslim name
     if (!orig.civilWar) {
-      testCountry(name)
-      if (orig.isGood)
-        worsenGovernance(name, levels = 1, canShiftToIR = true)
-      else if (orig.isIslamistRule)
-        improveGovernance(name, 1, canShiftToGood = true)
-      val m = game.getMuslim(name)
-      game = game.updateCountry(m.copy(civilWar = true, regimeChange = NoRegimeChange))
-      log(s"Add civil war marker to $name", Color.MapPieces)
-      if (m.inRegimeChange)
-        log(s"Remove regime change marker from $name", Color.MapPieces)
-      if (!wasCaliphateMember && game.isCaliphateMember(name))
-        log(s"Place a Caliphate Country marker in $name", Color.MapPieces)
-      removeAwakeningMarker(name, m.awakening)
-      addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
-      removeReactionMarker(name, m.reaction)
-      val newSleepers = m.reaction min game.cellsAvailable
-      addSleeperCellsToCountry(name, newSleepers)
-      flipCaliphateSleepers()
+      evaluateCaliphateChanges {
+        testCountry(name)
+        if (orig.isGood)
+          worsenGovernance(name, levels = 1, canShiftToIR = true)
+        else if (orig.isIslamistRule)
+          improveGovernance(name, 1, canShiftToGood = true)
+        val m = game.getMuslim(name)
+        game = game.updateCountry(m.copy(civilWar = true, regimeChange = NoRegimeChange))
+        log(s"Add civil war marker to $name", Color.MapPieces)
+        if (m.inRegimeChange)
+          log(s"Remove regime change marker from $name", Color.MapPieces)
+        removeAwakeningMarker(name, m.awakening)
+        addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
+        removeReactionMarker(name, m.reaction)
+        val newSleepers = m.reaction min game.cellsAvailable
+        addSleeperCellsToCountry(name, newSleepers)
 
-      //  This civil war may disrupt the Tehran Beirut Land Corridor
-      checkTehranBeirutLandCorridor()
-    }
-  }
-
-  def endCivilWar(name: String, noDisplacement: Boolean = false): Unit = {
-    val m = game.getMuslim(name)
-    val priorGameState = game
-
-    if (m.civilWar) {
-      game = game.updateCountry(m.copy(civilWar = false))
-      log(s"Remove civil war marker from $name", Color.MapPieces)
-      removeMilitiaFromCountry(name, m.militia)
-      removeEventMarkersFromCountry(name, UNSCR_1973)
-      removeAllAdvisorsFromCountry(name)
-      if (m.caliphateCapital && !m.isIslamistRule && !m.inRegimeChange) {
-        game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
-        log(s"Remove the Caliphate Capital marker from $name", Color.MapPieces)
-        if (noDisplacement == false) {
-          // During end of turn we defer this until all countries have been adjusted
-          displaceCaliphateCapital(m.name)
-          logExtraCellCapacityChange(priorGameState)
-        }
+        //  This civil war may disrupt the Tehran Beirut Land Corridor
+        checkTehranBeirutLandCorridor()
       }
-      else if (priorGameState.isCaliphateMember(name) && !game.isCaliphateMember(name))
-        log(s"Remove Caliphate member marker from $name", Color.MapPieces)
     }
   }
 
-  def endRegimeChange(name: String, noDisplacement: Boolean = false): Unit = {
-    val m = game.getMuslim(name)
-    val priorGameState = game
+  def endCivilWar(name: String): Unit = {
+    evaluateCaliphateChanges {
+      val m = game.getMuslim(name)
+      if (m.civilWar) {
+        game = game.updateCountry(m.copy(civilWar = false))
+        log(s"Remove civil war marker from $name", Color.MapPieces)
+        removeMilitiaFromCountry(name, m.militia)
+        removeEventMarkersFromCountry(name, UNSCR_1973)
+        removeAllAdvisorsFromCountry(name)
+      }
+    }
+  }
 
+  def endRegimeChange(name: String): Unit = {
+    val m = game.getMuslim(name)
     if (m.inRegimeChange) {
       game = game.updateCountry(m.copy(regimeChange = NoRegimeChange))
       log(s"Remove regime change marker from $name", Color.MapPieces)
-      if (m.caliphateCapital && !m.isIslamistRule && !m.civilWar) {
-        game = game.updateCountry(game.getMuslim(name).copy(caliphateCapital = false))
-        log(s"Remove the Caliphate Capital marker from $name", Color.MapPieces)
-        if (noDisplacement == false) {
-          // During end of turn we defer this until all countries have been adjusted
-          displaceCaliphateCapital(m.name)
-          logExtraCellCapacityChange(priorGameState)
-        }
-      }
-      else if (priorGameState.isCaliphateMember(name) && !game.isCaliphateMember(name))
-        log(s"Remove Caliphate member marker from $name", Color.MapPieces)
     }
   }
 
@@ -6821,7 +6821,7 @@ object LabyrinthAwakening {
       .map(_.troops)
       .sum
 
-  // Test for the unlikely case that all troops are currently in 
+  // Test for the unlikely case that all troops are currently in
   // a country under truce.
   def canPutTroopsInOffMapBox: Boolean = maxTroopsToOffMap > 0
 
@@ -7062,7 +7062,7 @@ object LabyrinthAwakening {
     if (c.sleeperCells > 0) {
       log(s"Flip all sleeper cells in $name to active", Color.FlipPieces)
       c match {
-        case m: MuslimCountry    => game = game.updateCountry(
+        case m: MuslimCountry => game = game.updateCountry(
           m.copy(sleeperCells = 0, activeCells  = m.activeCells + m.sleeperCells))
         case n: NonMuslimCountry => game = game.updateCountry(
           n.copy(sleeperCells = 0, activeCells  = n.activeCells + n.sleeperCells))
@@ -7810,7 +7810,7 @@ object LabyrinthAwakening {
   def underTruce(name: String) = game.getCountry(name).truce
   def isMuslim(name: String) = game.getCountry(name).isMuslim
   def isNonMuslim(name: String) = game.getCountry(name).isNonMuslim
-  
+
   // Note that the end of turn sequence is different depending on whether
   // or not the Awakening expansion rules are in effect.
   def endTurn(): Unit = {
@@ -8336,7 +8336,7 @@ object LabyrinthAwakening {
       case ExitProgram(code) =>
         // Ignoring the code as calling System.exit() from within
         // sbt causes sbt to exit and is a pain when testing.
-        // System.exit(code) 
+        // System.exit(code)
 
       case t: Throwable =>
         System.err.println(t.stackTrace)
@@ -8996,7 +8996,7 @@ object LabyrinthAwakening {
           case Jihadist => (game.funding >= cost, "funding")
         }
         val prompt = s"\nDo you wish to decrease $resourceName by $cost to end the TRUCE in $name? (y/n) "
-        if (hasResources && askYorN(prompt)) {          
+        if (hasResources && askYorN(prompt)) {
             log(s"\nThe $US chooses to end the TRUCE in $name.")
             if (game.humanRole == Jihadist)
               decreaseFunding(cost)
@@ -11188,23 +11188,27 @@ object LabyrinthAwakening {
           //  aid, besiege regime, civil war, regime change, awakening, reaction
           // Further when the country becomes Good, it cannot be the Caliphate Capital.
           val goodOrIslamist = newGov == Good || newGov == IslamistRule
-          val nixCapital      = newGov == IslamistRule && m.caliphateCapital
           val nixAid          = goodOrIslamist && m.aidMarkers != 0
           val nixBesieged     = goodOrIslamist && m.besiegedRegime
           val nixCivilWar     = goodOrIslamist && m.civilWar
           val nixRegimeChange = goodOrIslamist && m.inRegimeChange
+          val nixCapital      = game.isCaliphateCapital(name) && (nixCivilWar || nixRegimeChange || newGov != IslamistRule)
+          val nixMember       = game.isCaliphateMember(name) && (nixCivilWar || nixRegimeChange || newGov != IslamistRule)
           val nixAwakening    = goodOrIslamist && m.awakening != 0
           val nixReaction     = goodOrIslamist && m.reaction != 0
           val nixTrainingCamps= newGov == Good && m.hasMarker(TrainingCamps)
           val anyWarnings     = nixCapital || nixAid || nixBesieged || nixCivilWar ||
                                 nixRegimeChange || nixAwakening || nixRegimeChange || nixTrainingCamps
           def warn(condition: Boolean, message: String): Unit = if (condition) println(message)
-          warn(nixCapital, s"$name will no longer be the Caliphate Capital.\n" +
-                           "The Caliphate will be removed completely.")
+
           warn(nixAid, "The aid markers will be removed.")
           warn(nixBesieged, "The besieged regime marker will be removed.")
           warn(nixCivilWar, "The civil war marker will be removed.")
           warn(nixRegimeChange, "The regime change marker will be removed.")
+          if (nixCapital)
+            s"$name will no longer be the Caliphate Capital and the Caliphate will be removed completely."
+          else if (nixMember)
+            s"$name will no longer be a member of the Caliphate."
           warn(nixAwakening, "The awakening markers will be removed.")
           warn(nixReaction, "The reaction markers will be removed.")
           warn(nixTrainingCamps, "The Training Camps marker will be removed")
@@ -11215,10 +11219,6 @@ object LabyrinthAwakening {
             if (updated.governance == IslamistRule && updated.alignment != Adversary) {
               logAdjustment(name, "Alignment", updated.alignment, Adversary)
               updated = updated.copy(alignment = Adversary)
-            }
-            if (nixCapital) {
-              log(s"$name lost Caliphate Capital status.  Caliphate no longer declared.")
-              updated = updated.copy(caliphateCapital = false)
             }
             if (nixAid) {
               logAdjustment(name, "Aid", updated.aidMarkers, 0)
@@ -11244,8 +11244,10 @@ object LabyrinthAwakening {
               logAdjustment(name, "Reaction markers", updated.reaction, 0)
               updated = updated.copy(reaction = 0)
             }
-            game = game.updateCountry(updated)
-            removeTrainingCamp_?(name)
+            evaluateCaliphateChanges {
+              game = game.updateCountry(updated)
+              removeTrainingCamp_?(name)
+            }
             saveAdjustment(name, "Governance")
           }
         }
@@ -11437,18 +11439,15 @@ object LabyrinthAwakening {
         val choices = (NoRegimeChange::GreenRegimeChange::TanRegimeChange::Nil).filterNot(_ == m.regimeChange)
         val prompt = s"New regime change value (${orList(choices)}): "
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newValue =>
-          val nixCapital = newValue == NoRegimeChange && m.caliphateCapital
+          val nixCapital = newValue == NoRegimeChange && game.isCaliphateCapital(name)
           if (nixCapital)
-            println(s"$name will no longer be the Caliphate Capital.\n" +
-                     "The Caliphate will be removed completely.")
+            displayLine(s"\n$name will no longer be the Caliphate Capital and the Caliphate will be removed completely.", Color.Info)
           if (!nixCapital || askYorN(s"Do you wish continue (y/n)? ")) {
             logAdjustment(name, "Regime change", m.regimeChange, newValue)
-            var updated = m.copy(regimeChange = newValue)
-            if (nixCapital) {
-              log(s"$name lost Caliphate Capital status.  Caliphate no longer declared.")
-              updated = updated.copy(caliphateCapital = false)
+            evaluateCaliphateChanges {
+              var updated = m.copy(regimeChange = newValue)
+              game = game.updateCountry(updated)
             }
-            game = game.updateCountry(updated)
             saveAdjustment(name, "Regime Change")
           }
         }
@@ -11477,7 +11476,6 @@ object LabyrinthAwakening {
   }
 
   def adjustCaliphateCapital(name: String): Unit = {
-    val priorGameState = game
     game.getCountry(name) match {
       case _: NonMuslimCountry =>
         throw new IllegalArgumentException(s"Non-Muslim cannot be the Caliphate capital: $name")
@@ -11485,21 +11483,51 @@ object LabyrinthAwakening {
         println(s"$name is not a valid Caliphate country.  Must be one of: Islamist Rule, Regime Change, Civil War")
         pause()
       case m: MuslimCountry =>
-        (m.caliphateCapital, game.caliphateCapital) match {
+        (game.isCaliphateCapital(name), game.caliphateCapital) match {
           case (true, _) =>
             logAdjustment(name, "Caliphate Capital", true, false)
-            game = game.updateCountry(m.copy(caliphateCapital = false))
+            game = game.copy(caliphateCapital = None)
           case (false, None) =>
             logAdjustment(name, "Caliphate Capital", false, true)
-            game = game.updateCountry(m.copy(caliphateCapital = true))
+            game = game.copy(caliphateCapital = Some(name))
+            for (member <- game.allCaliphateMembers) {
+              if (member == name)
+                log(s"Place Caliphate capital marker in $member.")
+                else
+                  log(s"Place Caliphate member marker in $member.")
+              flipAllSleepersCells(member)
+            }
+
           case (false, Some(previousCapitalName)) =>
-            val previousCapital = game.getMuslim(previousCapitalName)
             logAdjustment(previousCapitalName, "Caliphate Capital", true, false)
             logAdjustment(name, "Caliphate Capital", false, true)
-            game = game.updateCountries(previousCapital.copy(caliphateCapital = false)::m.copy(caliphateCapital = true)::Nil)
+            val oldCaliphate = game.allCaliphateMembers.toSet
+            game = game.copy(caliphateCapital = Some(name))
+            val newCaliphate = game.allCaliphateMembers.toSet
+            val removedMembers = (oldCaliphate -- newCaliphate)
+              .toSeq
+              .sorted(CaliphateOrdering)
+            val addedMembers = (newCaliphate -- oldCaliphate - name)
+              .toSeq
+              .sorted(CaliphateOrdering)
+
+            for (member <- removedMembers) {
+              if (member == previousCapitalName)
+                log(s"Remove Caliphate capital marker from $member.")
+              else
+                log(s"Remove Caliphate member marker from $member.")
+            }
+            if (oldCaliphate.contains(name))
+                log(s"Remove Caliphate member marker from $name.")
+            log(s"Place Caliphate capital marker in $name.")
+            flipAllSleepersCells(name)
+
+            for (member <- addedMembers) {
+              log(s"Place Caliphate member marker in $member.")
+              flipAllSleepersCells(member)
+            }
         }
         saveAdjustment(name, "Caliphate Capital")
-        logExtraCellCapacityChange(priorGameState)
     }
   }
 

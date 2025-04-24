@@ -260,7 +260,6 @@ object SavedGame {
           "regimeChange"     -> m.regimeChange,
           "besiegedRegime"   -> m.besiegedRegime,
           "civilWar"         -> m.civilWar,
-          "caliphateCapital" -> m.caliphateCapital,
           "awakening"        -> m.awakening,
           "reaction"         -> m.reaction,
           "wmdCache"         -> m.wmdCache,
@@ -307,7 +306,6 @@ object SavedGame {
           asString(params("regimeChange")),
           asBoolean(params("besiegedRegime")),
           asBoolean(params("civilWar")),
-          asBoolean(params("caliphateCapital")),
           asInt(params("awakening")),
           asInt(params("reaction")),
           asInt(params("wmdCache")),
@@ -364,6 +362,7 @@ object SavedGame {
       "cardsRemoved"         -> gameState.cardsRemoved,
       "targetsThisPhase"     -> phaseTargetsToMap(gameState.targetsThisPhase),
       "targetsLastPhase"     -> phaseTargetsToMap(gameState.targetsLastPhase),
+      "caliphateCapital"     -> game.caliphateCapital.getOrElse(null),
       "ignoreVictory"        -> game.ignoreVictory,
       "botLogging"           -> gameState.botLogging,
       "botEnhancements"      -> gameState.botEnhancements,
@@ -391,6 +390,10 @@ object SavedGame {
   }
   // Note: We no longer support save file versions less than 3.
   private def gameFromCurrentVersion(data: Map[String, Any]): GameState = {
+    val caliphateCapital = if (data("caliphateCapital") == null)
+      None
+    else
+      Some(asString(data("caliphateCapital")))
     val firstPlotEntry = if (data("firstPlotEntry") == null)
       None
     else
@@ -425,6 +428,7 @@ object SavedGame {
       asList(data("cardsRemoved")).map(asInt),
       phaseTargetsFromMap(asMap(data("targetsThisPhase"))),
       phaseTargetsFromMap(asMap(data("targetsLastPhase"))),
+      caliphateCapital,
       asBoolean(data("ignoreVictory")),
       asBoolean(data("botLogging")),
       asBoolean(data("botEnhancements")),

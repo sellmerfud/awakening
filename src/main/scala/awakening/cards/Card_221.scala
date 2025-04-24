@@ -95,7 +95,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
     JihadistBot.caliphatePriorityTarget(getCandidates)
       .filter { name =>
         game.botEnhancements &&
-        game.caliphateCapital.isEmpty &&
+        !game.caliphateDeclared &&
         game.islamistResources == 5 &&
         game.countries.count(c => JihadistBot.hasCellForTravel(c, name, placement = true)) > 2
       }
@@ -239,7 +239,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       // The US Bot does not want to allow a caliphate to be declared
       // so it will limit removals to 2 unless there are not available cells
       // or if the caliphate already exists.
-      val numReactions = if (game.caliphateCapital.nonEmpty || (getReactionSources.size >= 3 && game.cellsAvailable < 3))
+      val numReactions = if (game.caliphateDeclared || (getReactionSources.size >= 3 && game.cellsAvailable < 3))
         3
       else
         2

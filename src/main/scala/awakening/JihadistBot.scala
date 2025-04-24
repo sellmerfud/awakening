@@ -110,6 +110,50 @@ object JihadistBot extends BotHelpers {
   // Sadr cannot travel
   def unusedCellsOnMapForTravel = game.countries.map(unusedCells).sum
 
+  // This is called when the current Caliphate capital has been displaced
+  // and the Bot must choose the best candidate among those that are adjacent
+  // to the previous capital.
+  def pickNewCaliphateCapital(previousCapital: String): String = {
+    case class CaliphateCapitalCandidate(m: MuslimCountry) {
+      val size = game.caliphateDaisyChain(m.name).size
+    }
+    // Sort first by daisy chain size large to small
+    // then by non Ally before Ally
+    // then by worse governance before better governance
+    // then by worst WoI drm before better WoI drm
+    val CapitalOrdering = new Ordering[CaliphateCapitalCandidate] {
+      def compare(x: CaliphateCapitalCandidate, y: CaliphateCapitalCandidate) = {
+        if (x.size != y.size)
+          y.size compare x.size // y first: to sort large to small.
+        else if (x.m.isAlly != y.m.isAlly)
+          x.m.isAlly compare y.m.isAlly // x first: nonAlly before Ally
+        else if (x.m.governance != y.m.governance)
+          y.m.governance compare x.m.governance // y first: because Good < Islamist Rule
+        else {
+          val (xMod, yMod) = (modifyWoiRoll(1, x.m, false, true), modifyWoiRoll(1, y.m, false, true))
+          xMod compare yMod
+        }
+      }
+    }
+
+    val candidates = game.adjacentMuslims(previousCapital).filter(_.caliphateCandidate)
+    assert(candidates.nonEmpty, s"pickNewCaliphateCapital() - no caliphate canidates adjacent to $previousCapital")
+
+    // The Bot pick the best candidate for the new capital based on
+    // the set of conditions outlined by compareCapitalCandidates().
+    // We sort the best to worst.  If more than one has the best score, then
+    // we choose randomly among them.
+    val sortedCandidates = candidates
+      .map(CaliphateCapitalCandidate)
+      .sorted(CapitalOrdering)
+    
+    val best = sortedCandidates
+      .takeWhile(CapitalOrdering.compare(_, sortedCandidates.head) == 0)
+      .map(_.m.name)
+    shuffle(best).head
+  }
+
+
   def poorMuslimWhereMajorJihadPossible(m: MuslimCountry): Boolean =
     m.isPoor &&
     majorJihadSuccessPossible(m)
@@ -162,7 +206,7 @@ object JihadistBot extends BotHelpers {
           muslimTest(m => m.isPoor && m.inRegimeChange),
           muslimScore(m => m.resourceValue)),
         new CriteriaFilter("Poor Caliphate Capital",
-          muslimTest(m => m.isPoor && m.caliphateCapital)),
+          muslimTest(m => m.isPoor && game.isCaliphateCapital(m.name))),
         new HighestScoreNode(
           "Poor Caliphate country w/ highest resource value",
           muslimTest(m => m.isPoor && game.isCaliphateMember(m.name)),
@@ -174,7 +218,7 @@ object JihadistBot extends BotHelpers {
           muslimTest(m => m.isPoor && m.civilWar),
           muslimScore(m => m.resourceValue)),
         new CriteriaFilter("Islamist Rule Caliphate Capital",
-          muslimTest(m => m.isIslamistRule && m.caliphateCapital)),
+          muslimTest(m => m.isIslamistRule && game.isCaliphateCapital(m.name))),
         new HighestScoreNode(
           "Islamist Rule country w/ highest resource value",
           muslimTest(m => m.isIslamistRule),

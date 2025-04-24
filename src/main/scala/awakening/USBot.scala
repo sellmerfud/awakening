@@ -527,7 +527,7 @@ object USBot extends BotHelpers {
   
   //  3. Caliphate Capital
   val CaliphateCaptialPriority = new CriteriaFilter("Caliphate Capital",
-                  muslimTest(_.caliphateCapital))
+                  muslimTest(m => game.isCaliphateCapital(m.name)))
 
   //  4. Pakistan Arsenal
   val PakistanPriority = new CriteriaFilter("Pakistan arsenal",

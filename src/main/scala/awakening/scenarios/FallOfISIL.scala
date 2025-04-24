@@ -49,10 +49,11 @@ object FallOfISIL extends Scenario {
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
   val removedPlots   = List.fill(3)(PlotWMD)  // 3 extra
+  override val caliphateCapital = Some(Syria)
   val countries = List(
     DefaultMuslimNigeria.copy(governance = Poor, alignment = Ally, sleeperCells = 1),
     DefaultSyria.copy(isSunni = false, governance = Fair, alignment = Neutral, civilWar = true,
-                      militia = 2, activeCells = 4, caliphateCapital = true, wmdCache = 1),
+                      militia = 2, activeCells = 4, wmdCache = 1),
     DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 2, 
                      activeCells = 3, markers = Advisors :: Nil), // cells active because part of caliphate
     DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),

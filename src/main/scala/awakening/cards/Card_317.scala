@@ -106,7 +106,8 @@ object Card_317 extends Card(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsin
     }
 
     log("\nIran, Gulf States, Saudi Arabia and Yemen are all now adjacent.", Color.Event)
-    addGlobalEventMarker(QatariCrisis)
-    flipCaliphateSleepers() // The caliphate members could have changed due to new adjacency
+    evaluateCaliphateChanges {
+      addGlobalEventMarker(QatariCrisis)
+    }
   }
 }
