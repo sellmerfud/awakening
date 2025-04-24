@@ -71,20 +71,30 @@ object Card_261 extends Card(261, "Intel Community", US, 2, NoRemove, NoLapsing,
   override
   def executeEvent(role: Role): Unit = {
     // See Event Instructions table
-    log("\nUS player does not inspect the Jihadist hand in the solo game.", Color.Event)
-    countryNames(game.countries.filter(c => !c.truce && c.hasCadre)) match {
-      case Nil =>
-        log("\nNo cadres on the map to remove.", Color.Event)
-      case candidates =>
-        val target = askCountry("Select country with cadre: ", candidates)
-        addEventTarget(target)
-        removeCadresFromCountry(target, 1)
-    }
+    if (isBot(role))
+      log(s"\nThe $US Bot treats this event as unplayable.  It has no effect.", Color.Event)
+    else {
+      if (game.botEnhancements)
+        log(s"\nYou may inspect the $Jihadist Bot's hand and then shuffle it.", Color.Event)
+      else
+        log("US player does not inspect the Jihadist hand in the solo game.", Color.Event)
 
-    // US player conducts a 1 Op operations.
-    log("\nUS player conducts an operation with 1 Op.", Color.Event)
-    humanExecuteOperation(1)
-    if (askYorN("\nDo you wish to play an extra card now during this action phase? (y/n) "))
-      usCardPlay(None, additional = true)
+      countryNames(game.countries.filter(c => !c.truce && c.hasCadre)) match {
+        case Nil =>
+          log("\nNo cadres on the map to remove.", Color.Event)
+        case candidates =>
+          val target = askCountry("Select country with cadre: ", candidates)
+          addEventTarget(target)
+          removeCadresFromCountry(target, 1)
+      }
+  
+      // US player conducts a 1 Op operations.
+      log("\nUS player conducts an operation with 1 Op.", Color.Event)
+      humanExecuteOperation(1)
+      if (hasCardInHand(US) && askYorN("Do you wish to play an extra card now during this action phase? (y/n) ")) {
+        println()
+        usCardPlay(None, additional = true)
+      }
+    }
   }
 }

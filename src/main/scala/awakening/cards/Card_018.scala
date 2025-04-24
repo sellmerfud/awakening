@@ -85,10 +85,10 @@ object Card_018 extends Card(18, "Intel Community", US, 2, NoRemove, NoLapsing, 
       // US player conducts a 1 Op operations.
       log("\nUS player conducts an operation with 1 Op")
       humanExecuteOperation(1)
-      println()
-      
-      if (hasCardInHand(US) && askYorN("Do you wish to play an extra card now during this action phase? (y/n) "))
+      if (hasCardInHand(US) && askYorN("Do you wish to play an extra card now during this action phase? (y/n) ")) {
+        println()
         usCardPlay(None, additional = true)
+      }
     }
   }
 }
