@@ -89,37 +89,42 @@ object Card_313 extends Card(313, "Hayat Tahir al-Sham", Jihadist, 3, Remove, No
     val mapCells     = ((3 - trackCells) min numAdjacentCells) max 0
 
     addEventTarget(Syria)
-    addSleeperCellsToCountry(Syria, trackCells)
 
-    // If there were not enough cells on the track
-    // then we must make up the difference from adjacent
-    // countries as much as possible.
-    if (mapCells > 0) {
-      println()
-      val cellItems = if (isHuman(role))
-        askCellsFromAnywhere(mapCells, false, adjWithCells, sleeperFocus = false)
-      else {
-        def nextAdjacent(cellsLeft: Int, candidates: List[String]): List[CellsItem] = {
-          if (cellsLeft == 0 || candidates.isEmpty)
-            Nil
-          else {
-            val target = JihadistBot.hayatTahirTarget(candidates).get
-            val m = game.getMuslim(target)
-            val actives  = cellsLeft min m.activeCells
-            val sleepers = (cellsLeft - actives) min m.sleeperCells
-            val remain   = cellsLeft - actives - sleepers
-            CellsItem(target, actives, sleepers) :: nextAdjacent(remain, candidates.filterNot(_ == target))
+    if (trackCells + mapCells == 0)
+      log(s"\nThere are no cells on the track or adjacent to Syria. The event has no effect.", Color.Event)
+    else {
+      addSleeperCellsToCountry(Syria, trackCells)
+  
+      // If there were not enough cells on the track
+      // then we must make up the difference from adjacent
+      // countries as much as possible.
+      if (mapCells > 0) {
+        println()
+        val cellItems = if (isHuman(role))
+          askCellsFromAnywhere(mapCells, false, adjWithCells, sleeperFocus = false)
+        else {
+          def nextAdjacent(cellsLeft: Int, candidates: List[String]): List[CellsItem] = {
+            if (cellsLeft == 0 || candidates.isEmpty)
+              Nil
+            else {
+              val target = JihadistBot.hayatTahirTarget(candidates).get
+              val m = game.getMuslim(target)
+              val actives  = cellsLeft min m.activeCells
+              val sleepers = (cellsLeft - actives) min m.sleeperCells
+              val remain   = cellsLeft - actives - sleepers
+              CellsItem(target, actives, sleepers) :: nextAdjacent(remain, candidates.filterNot(_ == target))
+            }
           }
+  
+          nextAdjacent(mapCells, adjWithCells)
         }
-
-        nextAdjacent(mapCells, adjWithCells)
+  
+        moveCellsToTarget(Syria, cellItems)
       }
-
-      moveCellsToTarget(Syria, cellItems)
+  
+      // Finally see if the caliphate will be declared
+      if (jihadistChoosesToDeclareCaliphate(Syria, trackCells + mapCells))
+        declareCaliphate(Syria)
     }
-
-    // Finally see if the caliphate will be declared
-    if (jihadistChoosesToDeclareCaliphate(Syria, trackCells + mapCells))
-      declareCaliphate(Syria)
   }
 }
