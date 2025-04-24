@@ -939,14 +939,61 @@ object JihadistBot extends BotHelpers {
     topPriority(game.getCountries(names), markerAlignGovPriorities()).map(_.name)
   }
 
-  // Prepare plots for selection.
-  // Normal rule simply randomizes the plots.
-  // Enhanced rules will sort the plots with the highest plot numbers first, unless
-  // there are WMD plots in the mix, in which case the plots are ramdomized.
-  def preparePlots(plots: List[Plot]) = if (game.botEnhancements && !plots.exists(_ == PlotWMD))
-    plots.sorted
-  else
-    shuffle(plots)
+  def selectPlotMarkers(target: String, numPlots: Int, plotCandidates: List[Plot]): List[Plot] =
+    if (game.botEnhancements) {
+      // The Enhanced Bot uses the following rules:
+      //
+      // target       condition           instructions
+      // -------      --------------      ----------------------
+      // US           WMD available       select randomly
+      // US           WMD NOT available   lowest plot marker
+      // Non-Muslim   Funding > 7         lowest plot marker
+      // Non-Muslim   Funding <= 7        highest plot marker (not WMD)
+      // Muslim       WMD available       select randomly
+      // Muslim       WMD NOT available   highest plot marker
+
+      target match {
+        case UnitedStates if plotCandidates.contains(PlotWMD) =>
+          // Random
+          shuffle(plotCandidates)
+            .take(numPlots)  
+
+        case UnitedStates =>
+          // Lowest Plot number
+          plotCandidates
+            .sorted
+            .reverse
+            .take(numPlots)
+
+        case _ if game.isNonMuslim(target) && game.funding > 7 =>
+          // Lowest Plot number
+          plotCandidates
+            .sorted
+            .reverse
+            .take(numPlots)
+
+        case _ if game.isNonMuslim(target) =>
+          // Highest Plot number (not WMD unless that is all that is left)
+          val (wmd, others) = plotCandidates.partition(_ == PlotWMD)
+          (others.sorted ::: wmd)
+            .take(numPlots)
+
+        case _ if plotCandidates.contains(PlotWMD) =>
+          // Random
+          shuffle(plotCandidates)
+            .take(numPlots)  
+
+        case _ =>
+          // Highest Plot number
+          plotCandidates
+            .sorted
+            .take(numPlots)
+      }
+    }
+    else {
+      // The Standard Bot simply selects plots at random
+      shuffle(plotCandidates).take(numPlots)  
+    }
 
   def plotPriorities: List[CountryFilter] =
     game.currentMode match {

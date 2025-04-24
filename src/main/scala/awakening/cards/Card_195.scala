@@ -128,7 +128,7 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
       else
         (standardBotTarget orElse JihadistBot.minorJihadTarget(getCandidates)).get
 
-      val plots = JihadistBot.preparePlots(game.availablePlots.filterNot(_ == PlotWMD)).take(2)
+      val plots = JihadistBot.selectPlotMarkers(target, 2, game.availablePlots.filterNot(_ == PlotWMD))
       (target, plots, JihadistBot.chooseCellsToRemove(target, 3))
     }
 

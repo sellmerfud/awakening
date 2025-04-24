@@ -79,7 +79,7 @@ object Card_308 extends Card(308, "Battle of Marawi City", Jihadist, 3, Remove, 
     else if (isHuman(role))
       Some(askPlots(game.availablePlots, 1).head)
     else
-      Some(JihadistBot.preparePlots(game.availablePlots).head)
+      Some(JihadistBot.selectPlotMarkers(Philippines, 1, game.availablePlots).head)
 
     println()
     if (game.cellsAvailable > 0)

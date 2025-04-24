@@ -111,26 +111,31 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
       else {
         // Bot
         val plotsFirst = game.funding < 9
-        val plotsToPlace = if (plotsFirst)
-          JihadistBot.preparePlots(game.availablePlots).take(3)
+        val numPlotsToPlace = if (plotsFirst)
+          game.availablePlots.size min 3
         else
-          JihadistBot.preparePlots(game.availablePlots).take((3 - game.cellsAvailable) max 0)
-        val numCells = (3 - plotsToPlace.size) min game.cellsAvailable
+          (3 - game.cellsAvailable) max 0
+        val numCellsToPlace = (3 - numPlotsToPlace) min game.cellsAvailable
 
-        def nextAction(cellsLeft: Int, plots: List[Plot], candidates: List[String]): List[Action] = {
-          if (cellsLeft == 0 && plots.isEmpty)
+        def nextAction(cellsRemaining: Int, plotsRemaining: Int, plotMarkers: List[Plot], candidates: List[String]): List[Action] = {
+          if ((cellsRemaining == 0 && plotsRemaining == 0) || candidates.isEmpty)
             Nil
-          else if (plots.nonEmpty && (plotsFirst || cellsLeft == 0)) {
+          else if (plotsRemaining > 0 && (plotsFirst || cellsRemaining == 0)) {
             val target = JihadistBot.plotPriority(candidates).get
-            Action(target, Right(plots.head)) :: nextAction(cellsLeft, plots.tail, candidates.filterNot(_ == target))
+            val marker = JihadistBot.selectPlotMarkers(target, 1, plotMarkers).head
+            val idx = plotMarkers.indexOf(marker)
+            val remainingMarkers = plotMarkers.patch(idx, Nil, 1)
+            val action = Action(target, Right(marker)) 
+            action :: nextAction(cellsRemaining, plotsRemaining - 1, remainingMarkers, candidates.filterNot(_ == target))
           }
           else {
             val target = JihadistBot.cellPlacementPriority(false)(candidates).get
-            Action(target, Left(())) :: nextAction(cellsLeft - 1, plots, candidates.filterNot(_ == target))
+            val action = Action(target, Left(())) 
+            action :: nextAction(cellsRemaining - 1, plotsRemaining, plotMarkers, candidates.filterNot(_ == target))
           }
         }
 
-        nextAction(numCells, plotsToPlace, africanCandidates)
+        nextAction(numCellsToPlace, numPlotsToPlace, game.availablePlots, africanCandidates)
       }
 
       println()

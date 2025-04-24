@@ -127,12 +127,12 @@ object Card_116 extends Card(116, "KSM", Unassociated, 3, USRemove, NoLapsing, N
         (name, askAvailablePlots(1, ops = 3).head)
       }
       else if (enhBotTarget.nonEmpty)
-        (enhBotTarget.get, JihadistBot.preparePlots(game.availablePlots).head)
+        (enhBotTarget.get, JihadistBot.selectPlotMarkers(enhBotTarget.get, 1, game.availablePlots).head)
       else if (getJihadistCandidates.contains(UnitedStates))
-        (UnitedStates, JihadistBot.preparePlots(game.availablePlots).head)
+        (UnitedStates, JihadistBot.selectPlotMarkers(UnitedStates, 1, game.availablePlots).head)
       else {
         val name = JihadistBot.plotPriority(getJihadistCandidates).get
-        (name, JihadistBot.preparePlots(game.availablePlots).head)
+        (name, JihadistBot.selectPlotMarkers(name, 1, game.availablePlots).head)
       }
 
       addEventTarget(name)

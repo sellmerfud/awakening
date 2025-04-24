@@ -6058,10 +6058,10 @@ object LabyrinthAwakening {
             askAvailablePlots(1, ops)
           else if (game.jihadistIdeology(Attractive)) {
             log(s"$Jihadist Bot with Attractive Ideology places two plots")
-            JihadistBot.preparePlots(game.availablePlots).take(2)
+            JihadistBot.selectPlotMarkers(name, 2, game.availablePlots)
           }
           else
-            JihadistBot.preparePlots(game.availablePlots).take(1)
+            JihadistBot.selectPlotMarkers(name, 1, game.availablePlots)
 
           for (plot <- plots)
             addAvailablePlotToCountry(name, plot)

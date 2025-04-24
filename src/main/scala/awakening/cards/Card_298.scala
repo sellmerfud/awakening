@@ -56,7 +56,7 @@ object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, N
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def plotsMarkers() = game.availablePlots.filterNot(_ == PlotWMD).sorted
+  def plotsMarkers = game.availablePlots.filterNot(_ == PlotWMD).sorted
 
   def removePostureCandidates() = countryNames(game.nonMuslims.filter(_.canRemovePosture))
 
@@ -66,13 +66,13 @@ object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, N
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = plotsMarkers().nonEmpty || removePostureCandidates().nonEmpty
+  def eventConditionsMet(role: Role) = plotsMarkers.nonEmpty || removePostureCandidates().nonEmpty
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = plotsMarkers().nonEmpty || botPreferredRemovePosture().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = plotsMarkers.nonEmpty || botPreferredRemovePosture().nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -85,14 +85,14 @@ object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, N
       case object Plot extends Choice
       case object Posture extends Choice
       val choices = List(
-        choice(plotsMarkers().nonEmpty,            Plot,    "Place non-WMD plot in any country"),
+        choice(plotsMarkers.nonEmpty,            Plot,    "Place non-WMD plot in any country"),
         choice(removePostureCandidates().nonEmpty, Posture, "Remove posture marker from non-Muslim country")
       ).flatten
 
       askMenu("Choose one:", choices).head match {
         case Plot =>
           val target = askCountry("Place plot in which country: ", countryNames(game.countries.filter(!_.truce)))
-          val plot  = askPlots(plotsMarkers(), 1).head
+          val plot  = askPlots(plotsMarkers, 1).head
           addEventTarget(target)
           addAvailablePlotToCountry(target, plot)
 
@@ -104,9 +104,9 @@ object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, N
     }
     else {
       // Bot
-      if (plotsMarkers().nonEmpty) {
+      if (plotsMarkers.nonEmpty) {
         addEventTarget(UnitedStates)
-        addAvailablePlotToCountry(UnitedStates, JihadistBot.preparePlots(plotsMarkers()).head)
+        addAvailablePlotToCountry(UnitedStates, JihadistBot.selectPlotMarkers(UnitedStates, 1, plotsMarkers).head)
       }
       else {
         val target = botPreferredRemovePosture() match {

@@ -141,7 +141,7 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
             enhBotTarget(getCandidates)
           else
             JihadistBot.plotPriority(getCandidates).get
-          (name, JihadistBot.preparePlots(game.availablePlots).head)
+          (name, JihadistBot.selectPlotMarkers(name, 1, game.availablePlots).head)
         }
 
         addEventTarget(name)

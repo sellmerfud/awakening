@@ -81,26 +81,29 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
     lazy val enhBotTarget = JihadistBot.enhMartyrdomKSMTarget(getCandidates, martyrdom = true)
     if (candidates.nonEmpty) {
       val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
-        val target = askCountry("Select country: ", candidates)
-        val cell = askCells(target, 1, sleeperFocus = false)
-        (target, cell, askAvailablePlots(2, ops = 3))
+        val targetName = askCountry("Select country: ", candidates)
+        val cell = askCells(targetName, 1, sleeperFocus = false)
+        (targetName, cell, askAvailablePlots(2, ops = 3))
       }
       else if (game.botEnhancements && enhBotTarget.nonEmpty) {
         // The enhBotTarget will only come up empty, if we were triggered
         // during the US turn.  Fall back to normal Bot code.
+        val targetName = enhBotTarget.get
         val c = game.getCountry(enhBotTarget.get)
         val cell = if (c.activeCells > 0) (1, 0, false)
                    else                   (0, 1, false)
-        (enhBotTarget.get, cell, JihadistBot.preparePlots(game.availablePlots).take(2))
+        (targetName, cell, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))
+                    
+
       }
       else {
         // See Event Instructions table
-        val target = JihadistBot.plotPriority(candidates).get
-        val c = game.getCountry(target)
+        val targetName = JihadistBot.plotPriority(candidates).get
+        val c = game.getCountry(targetName)
         val cell = if (c.activeCells > 0) (1, 0, false)
                    else if (c.hasSadr)    (0, 0, true)
                    else                   (0, 1, false)
-        (target, cell, JihadistBot.preparePlots(game.availablePlots).take(2))
+        (targetName, cell, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))
       }
 
       addEventTarget(target)

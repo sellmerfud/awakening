@@ -146,14 +146,9 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
       else
         log(s"\n$Jihadist places an available Plot-1 in a Non-Islamist Rule muslim country.", Color.Event)
 
-      val plot = plotCandidates match {
-        case p::Nil => p
-        case plots if isHuman(Jihadist) => askPlots(plots, 1).head
-        case plots => JihadistBot.preparePlots(plots).head
-      }
       val candidates = countryNames(game.muslims.filter(m => !m.truce && !m.isIslamistRule))
-      val name = if (isHuman(Jihadist))
-        askCountry(s"Place $plot in which country: ", candidates)
+      val name: String = if (isHuman(Jihadist))
+        askCountry(s"Place a plot in which country: ", candidates)
       else if (game.botEnhancements) {
         val (candidates, priorities) = enhBotCandidates.get
         JihadistBot.topPriority(candidates, priorities)
@@ -162,6 +157,12 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
       }
       else
         JihadistBot.plotPriority(candidates).get
+
+      val plot = plotCandidates match {
+        case p::Nil => p
+        case plots if isHuman(Jihadist) => askPlots(plots, 1).head
+        case plots => JihadistBot.selectPlotMarkers(name, 1, plots).head
+      }
 
       addEventTarget(name)
       addAvailablePlotToCountry(name, plot)
