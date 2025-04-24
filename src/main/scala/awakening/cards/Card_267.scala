@@ -73,7 +73,10 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
   def executeEvent(role: Role): Unit = {
     if (isHuman(role)) {
       log(s"\nTake the top two cards from the $Jihadist hand.", Color.Event)
-      log(s"Keep one and return the other to the top of the $Jihadist hand.")
+      if (game.botEnhancements)
+        log(s"Discard one and shuffle the other into the $Jihadist hand.")
+      else
+        log(s"Discard one and return the other to the top of the $Jihadist hand.")
       // This will decrease the Jihadist hand size by 2
       val cards = askCardsDrawnFull(US, 2, List(FromRole(role.opponent)))
       // In Avenger is drawn then  it will have been activated and automatically
@@ -84,7 +87,11 @@ object Card_267 extends Card(267, "Third Offset Strategy", US, 2, NoRemove, NoLa
       val taken = cards.collect { case Right(num) => num }
       val actions = taken match {
         case num::Nil =>
-          val choices = List(Discard(num) -> "Discard it", Return(num) -> s"Return it to $Jihadist hand")
+          val returnMsg = if (game.botEnhancements)
+            s"Shuffle it into the $Jihadist hand"
+          else
+            s"Return it to the top of the $Jihadist hand"
+          val choices = List(Discard(num) -> "Discard it", Return(num) -> returnMsg)
           askMenu(s"\nWhat happens to ${cardNumAndName(num)}:", choices)
 
         case nums =>

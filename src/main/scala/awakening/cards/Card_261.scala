@@ -83,7 +83,7 @@ object Card_261 extends Card(261, "Intel Community", US, 2, NoRemove, NoLapsing,
         case Nil =>
           log("\nNo cadres on the map to remove.", Color.Event)
         case candidates =>
-          val target = askCountry("Select country with cadre: ", candidates)
+          val target = askCountry("\nSelect country with cadre: ", candidates)
           addEventTarget(target)
           removeCadresFromCountry(target, 1)
       }
@@ -91,7 +91,7 @@ object Card_261 extends Card(261, "Intel Community", US, 2, NoRemove, NoLapsing,
       // US player conducts a 1 Op operations.
       log("\nUS player conducts an operation with 1 Op.", Color.Event)
       humanExecuteOperation(1)
-      if (hasCardInHand(US) && askYorN("Do you wish to play an extra card now during this action phase? (y/n) ")) {
+      if (hasCardInHand(US) && askYorN("\nDo you wish to play an extra card now during this action phase? (y/n) ")) {
         println()
         usCardPlay(None, additional = true)
       }
