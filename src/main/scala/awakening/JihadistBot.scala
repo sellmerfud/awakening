@@ -385,7 +385,7 @@ object JihadistBot extends BotHelpers {
       m.isGood ||
       (m.isFair && !(game.isTrainingCamp(m.name) && m.totalCells < 2) && (
         m.name == Pakistan || m.totalTroops > 0 || m.isAlly ||
-        m.resourceValue == 3 || m.autoRecruit || m.aidMarkers > 0 ||
+        enhBotResourceValue(m) == 3 || m.autoRecruit || m.aidMarkers > 0 ||
         m.cells > 2
       ))
     else
