@@ -54,21 +54,28 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
 
   val IraqSyria = List(Iraq, Syria)
 
-  def candidates = IraqSyria.filter(name => !game.getMuslim(name).truce)
+  def advisorCandidates = IraqSyria.filter { name =>
+    val m = game.getMuslim(name)
+    m.civilWar && !m.truce
+  }
+
+  def cellCandidates = IraqSyria.filter { name =>
+    val m = game.getMuslim(name)
+    m.totalCells > 0 && !m.truce
+  }
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    ((game.getMuslims(candidates).map(_.totalCells)).sum min 3) match {
+    ((game.getMuslims(advisorCandidates).map(_.totalCells)).sum min 3) match {
       case n => (n == game.totalCellsOnMap )
     }
 
 
   override
   def eventConditionsMet(role: Role) =
-    game.getMuslims(IraqSyria).exists(_.civilWar) &&
-    globalEventNotInPlay(EarlyExit)
+    advisorCandidates.nonEmpty && globalEventNotInPlay(EarlyExit)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -82,9 +89,9 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Place militia and Advisors in which country: ", candidates)
+      askCountry("Place militia and Advisors in which country: ", advisorCandidates)
     else
-      USBot.deployToPriority(candidates).get
+      USBot.deployToPriority(advisorCandidates).get
 
     addEventTarget(target)
     if (game.militiaAvailable > 0)
@@ -97,12 +104,10 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
     else
       log(s"\nAll three Advisors are already on the map.", Color.Event)
 
-    val removeCandidates = countryNames(game.getMuslims(candidates).filter(_.totalCells > 0))
-
-    if (removeCandidates.isEmpty)
-      log(s"\nThere are no cells to remove in ${orList(candidates)}.", Color.Event)
+    if (cellCandidates.isEmpty)
+      log(s"\nThere are no cells to remove in ${orList(advisorCandidates)}.", Color.Event)
     else if (isHuman(role)) {
-      val removed = askToRemoveCells(3, true, removeCandidates, sleeperFocus = true)
+      val removed = askToRemoveCells(3, true, cellCandidates, sleeperFocus = true)
       for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
         addEventTarget(name)
         removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
@@ -113,9 +118,9 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
       // We will select the cells one at a time, because
       // removal of a cell could change the Bots priorities
      def nextRemoval(remaining: Int): Unit = {
-        val withCells = removeCandidates.filter(name => game.getMuslim(name).totalCells > 0)
-        if (remaining > 0 && withCells.nonEmpty) {
-          val target = USBot.disruptPriority(withCells).get
+        val withCells = cellCandidates.filter(name => game.getMuslim(name).totalCells > 0)
+        if (remaining > 0 && cellCandidates.nonEmpty) {
+          val target = USBot.disruptPriority(cellCandidates).get
           val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 1)
 
           addEventTarget(target)
