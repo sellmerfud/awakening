@@ -1528,11 +1528,11 @@ object JihadistBot extends BotHelpers {
 
 
     object MajorJihadInPoorDecision extends OperationDecision {
-      def desc = "Major Jihad Success possible at Poor?"
+      def desc = "Major Jihad Success possible at Poor (regardless of Ops)?"
       def yesPath = MajorJihadInPoorDesireableDecision
       def noPath  = CellInGoodFairWhereJSP
       def condition(ops: Int) =  {
-        game.majorJihadTargets(ops)
+        game.majorJihadTargets(3) // regardless of Ops available
           .map(game.getMuslim)
           .exists { m =>
             !m.truce &&
@@ -1553,25 +1553,20 @@ object JihadistBot extends BotHelpers {
       def noPath  = AddToReservesOp
       // Note: ops already accounts for any availabe reserves
       def condition(ops: Int) =  {
-        val validTarget = (muslim: MuslimCountry) =>
-          !muslim.truce &&
+        val sufficentOps = (muslim: MuslimCountry) =>
           (muslim.besiegedRegime || (ops >= 3) || (ops >= 2 && muslim.jihadDRM < 0))
 
-        val candidates = game.majorJihadTargets(ops)
-          .map(game.getMuslim)
-          .filter { m =>
+        val candidates = game.muslims
+          .filter { m => 
             m.isPoor &&
-            totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5 &&
-            majorJihadSuccessPossible(m)
+            m.majorJihadOK(ops) &&  // Passes game criteria for given ops
+            majorJihadSuccessPossible(m)  && // Bot deems success possible
+            sufficentOps(m) // Sufficent Ops for the current card
           }
           .map(_.name)
-        majorJihadTarget(candidates).map(game.getMuslim) match {
-          case Some(muslim) if validTarget(muslim) =>
-            designatedTarget = Some(muslim.name)
-            true
-          case _ =>
-            false
-        }
+
+        designatedTarget = majorJihadTarget(candidates)
+        designatedTarget.nonEmpty
       }
     }
 
