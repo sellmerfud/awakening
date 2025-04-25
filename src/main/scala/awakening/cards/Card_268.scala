@@ -61,7 +61,7 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
   def getAlignmentCandidates = countryNames(
     game.muslims.filter { m =>
       !m.truce &&
-      !(m.isIslamistRule || game.isCaliphateMember(m.name))
+      !game.isCaliphateMember(m.name)
     }
   )
 
