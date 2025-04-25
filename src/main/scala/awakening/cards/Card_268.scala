@@ -61,9 +61,13 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
   def getAlignmentCandidates = countryNames(
     game.muslims.filter { m =>
       !m.truce &&
-      !(m.isIslamistRule || m.isAlly || game.isCaliphateMember(m.name))
+      !(m.isIslamistRule || game.isCaliphateMember(m.name))
     }
   )
+
+  def getBotAlignmentCandidates = getAlignmentCandidates
+    .filter(name => !game.getMuslim(name).isAlly)
+
   def getPostureCandidates = countryNames(
     game.nonMuslims.filter(n => n.canChangePosture && n.posture != game.usPosture)
   )
@@ -76,7 +80,7 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = getBotAlignmentCandidates.nonEmpty || getPostureCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -93,7 +97,7 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
       ).flatten
       askMenu("Choose one:", choices).head
     }
-    else if (getAlignmentCandidates.nonEmpty)  // Bot
+    else if (getBotAlignmentCandidates.nonEmpty || getPostureCandidates.isEmpty)  // Bot
       Alignment
     else
       Posture
@@ -106,7 +110,20 @@ object Card_268 extends Card(268, "Trump Trip", US, 2, NoRemove, NoLapsing, NoAu
           USBot.markerAlignGovTarget(getAlignmentCandidates).get
         addEventTarget(target)
         testCountry(target)  // Must be tested in order to shift
-        shiftAlignmentLeft(target)
+        val shiftFunction = game.getMuslim(target).alignment match {
+          case Ally => shiftAlignmentRight _
+          case Adversary => shiftAlignmentLeft _
+          case _ if isBot(role) =>
+            shiftAlignmentLeft _
+          case _ =>
+            val options = List(
+              (shiftAlignmentLeft _, "Shift alignment to Ally"),
+              (shiftAlignmentRight _, "Shift alignment to Adversary"),
+            )
+            askMenu("\nChoose one:", options).head
+        }
+
+        shiftFunction(target)
 
       case Posture =>
         val target = if (isHuman(role))
