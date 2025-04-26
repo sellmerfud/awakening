@@ -2327,6 +2327,7 @@ object LabyrinthAwakening {
       countries,
       scenario.markersInPlay.sorted,
       PlotData(availablePlots = scenario.availablePlots.sorted, removedPlots = scenario.removedPlots),
+      caliphateCapital = scenario.caliphateCapital,
       cardsInUse = scenario.startingMode.cardRange,
       cardsRemoved = scenario.cardsRemoved,
       showColor = showColor,
