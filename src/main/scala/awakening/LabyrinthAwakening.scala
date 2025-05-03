@@ -8977,7 +8977,7 @@ object LabyrinthAwakening {
       displayLine(display)
     displayLine(separator(lineLen), Color.Info)
     displayLine(otherChoices.keysIterator.mkString(" | "))
-    displayLine(separator(lineLen), Color.Info)
+    displayLine(separator(lineLen, char = '='), Color.Info)
     val numericItem = if (canPlay) Some(PlayCard) else None
     getResponse("Action: ", options, allowInt = canPlay) match {
       case Some((actionName, param)) =>
