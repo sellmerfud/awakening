@@ -30,7 +30,7 @@ the `java` command is on your `PATH`
 There are two scripts provided that will start the program.
 
 * `awakening` -- As bash script used on Mac and Linux
-* `awakening.cmd` -- A Windows command file for use on Windoze
+* `awakening.cmd` -- A Windows command file for use on Windows
 
 ## Using the program
 
@@ -42,53 +42,104 @@ When you first run the program, it will prompt you to enter:
 4. The difficulty level
 5. A name for your game (so your progress can be saved)
 
-Your game is saved after each card play, plot resolution, etc.  You can use the 
-`show plays` command to see the cards that have been played during the current turn.
+Your game is saved after each action: card play, plot resolution, etc.  You can use the 
+`show actions` command to see the actions that have been performed during the current turn.
 
-The next time you run the program, it will ask if you want to resume a saved game.
+When you run the program after you have one or more saved games then you will be asked
+if you want to resume a saved game.
 
-## Entering commands
-To enter a card play for the Jihadist side simply enter `j 121`.  This indicates that the
-Jihadist plays card #121.  For a US card play you would enter `u 200`.
+## Action Prompt
+The program displays a prompt allowing you to enter the action that you wish to perform.
+At the start of a new game the prompt will look this this:
+```
+========================================================
+| Jihadist Bot's 1st action phase               Turn 1 |
+| 0 Cards played                             9 in hand |
+| 0 Ops in reserve                    102 in draw pile |
+========================================================
 
-Use the `help` command to see all the available commands.  You can get further help for 
-a specific command by typing its name after `help`. For example for help on the `show` 
-command, type `help show`.
+Play card
+--------------------------------------------------------
+Show | History | Adjust | Quit | ?
+========================================================
+Action:
+```
+Here we can see that we are in the first turn of the game and it is the Jihadist Bot's
+action phase.  Next we see the available actions.  The action(s) above the single dashed line are those
+that pertain to game play.  The actions below the line allow you to view and manage the game status.
 
-The `show` command allows you to inspect the current state of the board.
+To enter a command you type its name.  And for convenience you can simply type the first character of
+the command name.  Most commands accept arguments which can be typed following the command name.  If you
+enter a command without any arguments, then you will be prompted to enter the necessary values.
+You can get help for any command by following the entering the single argument *help* or *?*. For example
+to get help for the *History* command you would type: `history help` or more simply `h ?`.
 
-The `history` command allows you to review the current turn, previous turns or the 
-entire game log.
+Normally, the only command above the dashed line is the *Play card* command.  This allows you to enter
+the next card to be played for the for the active side (*Jihadist in our example*).  So to have the
+Jihadist play a card you would enter `p` followed by the number of the card. 
+The *Play card* command is the most common command used in the game, so for this command you can omit the command name
+and simply enter the card number.  
 
-The `rollback` command will let you restart the game from:
+For example the following are all ways to play the *Leak* card which is card number 85.
+```
+play 85
+p 85
+85
+```
 
-* the beginning of a previous card during the current turn
-* the beginning of a previous turn
+Once two cards have been played during an action round you will be asked if the action phase should
+be ended.  Normally you will answer yes so that the game is advanced to the next action round for the
+opposing side.  If you answer no, then you will be shown the action prompt allowing you to inspect game
+state, roll back the last card play, etc.
+In this case the only command available above the dashed line will be to end the action phase.
+```
+Two cards have been played.
+End the current Jihadist action phase? (y/n) n
 
-You can also abort the current card that you are playing at most prompts by entering `abort`.
+========================================================
+| Jihadist Bot's 1st action phase               Turn 1 |
+| 2 Cards played                             7 in hand |
+| 0 Ops in reserve                    102 in draw pile |
+========================================================
 
+End action phase
+--------------------------------------------------------
+Show | History | Rollback | Inspect | Adjust | Quit | ?
+========================================================
+Action:
+```
 
-All commands can be shortened to the prefix of the command name that is unique.  The `j 121` 
-command is actually shorthand for `jihadist 121`.
+## Entering Country names
 
-In fact this use of abbreviated prefixes works at every prompt in the game.  So if you are
-choosing the country where you want to conduct a Jihad, you can enter `sau` to indicate 
-`Saudi Arabia` or `uk` for `United Kingdom`.  If the prefix you type is not unique, the 
-program will display the valid choices.
+When the game prompts for the name of a country, you can abbreviate the name of the country
+by using the shortest unique prefix.  For example you can shorten `Saudi Arabia` to `sau`.
+(Upper and lower case letters are matched equally).
+For the `United States` and `United Kingdom` you can use `us` and `uk` respectively.
 
-There is a `resolve plots` command, but you will rarely need to use it.  The program will
-detect when a new action phase has started and if there are unresolved plots, they will be
-resolved.
+If the prefix you type is not unique, the program will display a menu with the valid choices:
+```
+'ca' is ambiguous.  Choose one:
+------------------------------------------------------------------------
+1: Canada
+2: Caucasus
+3: None of the above
+------------------------------------------------------------------------
+Selection:
+```
 
-When all cards for a turn have been played, use the `end turn` command to perform the
-end of turn housekeeping.
+In fact this abbreviation of values is not limited to country names.  It works for all of the prompts used in the game.
+
+## Multi Deck and Campaign Games
+
+When playing a multi-deck game the software detects when the draw pile does not have enough cards to fill
+both hands and will instruct you to reshuffle the discard pile.  When you reach the end of the last
+deck the software will display the Victory information.
 
 When playing a campaign game and you come to the end of a particular deck of cards,
-you must enter the appropriate command to let the software know that this has occurred:
+the software will instruct you to add the next deck for the appropriate expansion.
+When moving from the *Labyrinth* deck to the *Awakening* deck, the software will begin to
+enforce the appropriate rule changes associated with the *Awakening* expansion.
 
-    add awakening - The game starts using the Awakeing expansion rules.
-                    The Bots use the appropriate priorities for Awakening.
-    add forever   - The Bots use the appropriate priorities for Forever War.
 
 
 ## License
