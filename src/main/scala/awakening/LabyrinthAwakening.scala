@@ -6728,20 +6728,25 @@ object LabyrinthAwakening {
     if (!orig.civilWar) {
       evaluateCaliphateChanges {
         testCountry(name)
+        log(s"Add civil war marker to $name", Color.MapPieces)
         if (orig.isGood)
           worsenGovernance(name, levels = 1, canShiftToIR = true)
         else if (orig.isIslamistRule)
           improveGovernance(name, 1, canShiftToGood = true)
         val m = game.getMuslim(name)
         game = game.updateCountry(m.copy(civilWar = true, regimeChange = NoRegimeChange))
-        log(s"Add civil war marker to $name", Color.MapPieces)
         if (m.inRegimeChange)
           log(s"Remove regime change marker from $name", Color.MapPieces)
-        removeAwakeningMarker(name, m.awakening)
-        addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
-        removeReactionMarker(name, m.reaction)
-        val newSleepers = m.reaction min game.cellsAvailable
-        addSleeperCellsToCountry(name, newSleepers)
+        if (m.awakening > 0) {
+          log(s"${amountOf(m.awakening, "awakening marker")} replaced by militia", Color.Info)
+          removeAwakeningMarker(name, m.awakening)
+          addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
+        }
+        if (m.reaction > 0) {
+          log(s"${amountOf(m.reaction, "reaction marker")} replaced by cells", Color.Info)
+          removeReactionMarker(name, m.reaction)
+          addSleeperCellsToCountry(name, m.reaction min game.cellsAvailable)
+        }
 
         //  This civil war may disrupt the Tehran Beirut Land Corridor
         checkTehranBeirutLandCorridor()
