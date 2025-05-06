@@ -72,7 +72,7 @@ object Card_311 extends Card(311, "Gaza Border Protests", Jihadist, 3, NoRemove,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = !game.botEnhancements
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

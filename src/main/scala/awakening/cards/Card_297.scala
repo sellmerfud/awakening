@@ -59,20 +59,46 @@ object Card_297 extends Card(297, "Early Exit", Jihadist, 2, Remove, NoLapsing, 
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(
-    game.countries.filter(c => (c.hasCadre || c.totalCells > 0) && (c.totalTroops > 0 || c.numAdvisors > 0))
-  )
+  val isCandidate = (c: Country) =>
+    (c.hasCadre || c.totalCells > 0) &&
+    (c.totalTroops > 0 || c.numAdvisors > 0)
+
+  def getCandidates = countryNames(game.countries.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) =
     !game.caliphateDeclared && trumpTweetsON && getCandidates.nonEmpty
 
+  // Enh Bot will only play in non-RC countries.
+  def enhBotPreferred = game.countries.filter{ c =>
+    isCandidate(c) &&
+    !c.truce &&
+    (c.isNonMuslim || !game.getMuslim(c.name).inRegimeChange)
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    enhBotPreferred.nonEmpty
+  else
+    true
+
+  // Priority to highest number of Advisor markers present, then CW, then highest res*, then most troops.
+  def botTarget(candidates: List[Country]): String = {
+    val priorities = List(
+      new JihadistBot.HighestScorePriority("Most Advisors markers", _.numAdvisors),
+      JihadistBot.CivilWarPriority,
+      JihadistBot.HighestPrintedResourcePriority,
+      JihadistBot.MostTroopsPriority,
+    )
+
+    JihadistBot.topPriority(enhBotPreferred, priorities)
+      .map(_.name)
+      .get
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -85,8 +111,10 @@ object Card_297 extends Card(297, "Early Exit", Jihadist, 2, Remove, NoLapsing, 
     else {
       val target = if (isHuman(role))
         askCountry("Which country: ", removeCandidates)
+      else if (game.botEnhancements && enhBotPreferred.nonEmpty)
+        botTarget(enhBotPreferred)
       else
-        JihadistBot.earlyExitPriority(removeCandidates).get
+        botTarget(game.getCountries(removeCandidates))
   
       addEventTarget(target)
       removeAllTroopsFromCountry(target)

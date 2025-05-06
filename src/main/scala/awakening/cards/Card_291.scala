@@ -71,7 +71,10 @@ object Card_291 extends Card(291, "Vehicle-ramming Attacks", Jihadist, 1, NoRemo
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.availablePlots.contains(Plot1)
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.availablePlots.contains(Plot1) && (game.usPosture == Hard || game.funding < 9)
+  else
+    game.availablePlots.contains(Plot1)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

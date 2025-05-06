@@ -80,8 +80,119 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    false
+  else
     botMajorJihadCandidates().nonEmpty || botMinorJihadCandidates().nonEmpty
+
+  def getStandardBotJihadTargets: List[JihadTarget] = {
+    if (botMajorJihadCandidates().nonEmpty) {
+      val target = JihadistBot.majorJihadPriorityCountry match {
+        case Some(name) if botMajorJihadCandidates().contains(name) => name
+        case _ => JihadistBot.majorJihadTarget(botMajorJihadCandidates()).get
+      }
+      val m = game.getMuslim(target)
+      val active = m.activeCells min 2
+      val sleeper = (2 - active) min 2
+      List(JihadTarget(target, true, active, sleeper, false))
+    }
+    else {
+      def nextTarget(opsLeft: Int, candidates: List[String], targets: Vector[JihadTarget]): Vector[JihadTarget] = {
+        if (opsLeft == 0 || candidates.isEmpty)
+          targets
+        else {
+          val name = JihadistBot.minorJihadTarget(candidates).get
+          val country = game.getCountry(name)
+          val active = opsLeft min country.activeCells
+          val sleeper = ((opsLeft - active) max 0) min country.sleeperCells
+          val target = JihadTarget(name, false, active, sleeper, false)
+          val remainingCandidates = candidates.filterNot(_ == name)
+          nextTarget(opsLeft - active - sleeper, remainingCandidates, targets :+ target)
+        }
+      }
+
+      val possibles = botMinorJihadCandidates() match {
+        case Nil => getCandidates
+        case preferred => preferred
+      }
+      nextTarget(2, possibles, Vector.empty).toList
+    }
+  }
+
+  // The enhance bot will only be executing this event if it was triggered
+  // during the US turn.
+  // Priority to Good country with highest res*,
+  // then Fair 2+ res* country with a-r<2 (priority to highest res*, then best r-a),
+  // then Poor country with AID and a-r< 3,
+  // then Poor country with best r-a,
+  // then Non-auto-recuit, non-MJP country with 1 cell
+  def getEnhancedBotJihadTargets: List[JihadTarget] = {
+    def nextTarget(opsLeft: Int, candidates: List[MuslimCountry], targets: Vector[JihadTarget]): Vector[JihadTarget] = {
+      if (opsLeft == 0 || candidates.isEmpty)
+          targets
+      else {
+        val goodCandidates = candidates.filter(_.isGood)
+        val fairCandidates = candidates.filter(m => m.isFair && JihadistBot.enhBotResourceValue(m) > 1 &&  m.awakening - m.reaction < 2)
+        val poorAidCandidates = candidates.filter(m => m.isPoor && m.aidMarkers > 0 && m.awakening - m.reaction < 3)
+        val poorCandidates = candidates.filter(_.isPoor)
+        val nonMJPWith1Cell = candidates.filter {m =>
+          !m.autoRecruit &&
+          Some(m.name) != JihadistBot.majorJihadPriorityCountry &&
+          m.cells == 1
+        }
+        val goodPriorities = List(JihadistBot.HighestPrintedResourcePriority)
+        val fairPriorities = List(JihadistBot.HighestPrintedResourcePriority, JihadistBot.HighestReactionMinusAwakeningPriority)
+        val poorPriorities = List(JihadistBot.HighestReactionMinusAwakeningPriority)
+        def logCandidates(muslims: List[MuslimCountry], desc: String) =
+          JihadistBot.botLog(s"$desc: [${muslims.map(_.name).mkString(", ")}]")
+
+        val (preferred, priorities) = if (goodCandidates.nonEmpty) {
+          logCandidates(goodCandidates, "Good Muslims")
+          (goodCandidates, goodPriorities)
+        }
+        else if (fairCandidates.nonEmpty) {
+          logCandidates(fairCandidates, "Fair 2+ Res* Muslims with a-r < 2")
+          (fairCandidates, fairPriorities)
+        }
+        else if (poorAidCandidates.nonEmpty) {
+          logCandidates(poorAidCandidates, "Poor Muslims with aid and a-r < 3")
+          (poorAidCandidates, poorPriorities)
+        }
+        else if (poorCandidates.nonEmpty) {
+          logCandidates(poorCandidates, "Poor Muslims")
+          (poorCandidates, poorPriorities)
+        }
+        else if (nonMJPWith1Cell.nonEmpty) {
+          logCandidates(nonMJPWith1Cell, "Non-auto-recuit, non-MJP country with 1 cell")
+          (nonMJPWith1Cell, poorPriorities)
+        }
+        else {
+          logCandidates(candidates, "Muslims")
+          (candidates, Nil)
+        }
+
+        val muslim = JihadistBot.topPriority(preferred, priorities)
+          .get
+          .asInstanceOf[MuslimCountry]
+
+        if (muslim.isPoor && muslim.majorJihadOK(opsLeft) && JihadistBot.majorJihadSuccessPossible(muslim)) {
+          val active = muslim.activeCells min opsLeft
+          val sleeper = (opsLeft - active) min opsLeft
+          val target = JihadTarget(muslim.name, true, active, sleeper, false)
+          nextTarget(0, Nil, targets :+ target)
+        }
+        else {
+          val active = opsLeft min muslim.activeCells
+          val sleeper = ((opsLeft - active) max 0) min muslim.sleeperCells
+          val target = JihadTarget(muslim.name, false, active, sleeper, false)
+          val remainingCandidates = candidates.filterNot(_.name == muslim.name)
+          nextTarget(opsLeft - active - sleeper, remainingCandidates, targets :+ target)
+        }
+      }
+    }
+
+    nextTarget(2, game.getMuslims(getCandidates), Vector.empty).toList
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -90,39 +201,10 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
   def executeEvent(role: Role): Unit = {
     val targets = if (isHuman(role))
       getHumanJihadTargets(2, getCandidates)
-    else {  // Bot
-      if (botMajorJihadCandidates().nonEmpty) {
-        val target = JihadistBot.majorJihadPriorityCountry match {
-          case Some(name) if botMajorJihadCandidates().contains(name) => name
-          case _ => JihadistBot.majorJihadTarget(botMajorJihadCandidates()).get
-        }
-        val m = game.getMuslim(target)
-        val active = m.activeCells min 2
-        val sleeper = (2 - active) min 2
-        List(JihadTarget(target, true, active, sleeper, false))
-      }
-      else {
-        def nextTarget(opsLeft: Int, candidates: List[String], targets: Vector[JihadTarget]): Vector[JihadTarget] = {
-          if (opsLeft == 0 || candidates.isEmpty)
-            targets
-          else {
-            val name = JihadistBot.minorJihadTarget(candidates).get
-            val country = game.getCountry(name)
-            val active = opsLeft min country.activeCells
-            val sleeper = ((opsLeft - active) max 0) min country.sleeperCells
-            val target = JihadTarget(name, false, active, sleeper, false)
-            val remainingCandidates = candidates.filterNot(_ == name)
-            nextTarget(opsLeft - active - sleeper, remainingCandidates, targets :+ target)
-          }
-        }
-
-        val possibles = botMinorJihadCandidates() match {
-          case Nil => getCandidates
-          case preferred => preferred
-        }
-        nextTarget(2, possibles, Vector.empty).toList
-      }
-    }
+    else if (game.botEnhancements)
+      getEnhancedBotJihadTargets
+    else
+      getStandardBotJihadTargets
 
     for (t <- targets)
       addEventTarget(t.name)

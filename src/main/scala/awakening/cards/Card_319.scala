@@ -66,8 +66,21 @@ object Card_319 extends Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Re
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    !game.getCountry(Iran).truce || game.funding < 9
+  def botWillPlayEvent(role: Role): Boolean = {
+    val iran = game.getCountry(Iran)
+    val iranPoorMuslimOrIR = if (iran.isMuslim) {
+      val muslim = game.getMuslim(Iran)
+      muslim.isPoor || muslim.isIslamistRule
+    }
+    else
+      false
+
+    // Plyable if either Iran Special case and Funding <7, or Iran Poor Muslim or IR.
+    if (game.botEnhancements)
+      !iran.truce && ((isIranSpecialCase && game.funding < 7) || iranPoorMuslimOrIR)
+    else
+      !iran.truce || game.funding < 9
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

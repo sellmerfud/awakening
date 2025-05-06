@@ -67,8 +67,10 @@ object Card_318 extends Card(318, "South China Sea Crisis", Jihadist, 3, Remove,
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
+
+  // Enhanced Bot will not play the event.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = !game.botEnhancements
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

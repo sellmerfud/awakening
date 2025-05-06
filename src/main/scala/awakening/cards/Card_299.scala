@@ -74,9 +74,25 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.cellsAvailable > 1 &&
+    getGoodCandidates.nonEmpty &&
+    getFairCandidates.nonEmpty
+  else
     game.cellsAvailable > 0 &&
     (getGoodCandidates.nonEmpty || getFairCandidates.nonEmpty)
+
+  // If US hard, priority to Unmarked. If US soft, priority to Soft, then Hard.
+  def enhBotTarget(candidates: List[String]): Option[String] = {
+    val priorities = if (game.usPosture == Hard)
+      List(JihadistBot.UnmarkedPriority, JihadistBot.HardPosturePriority, JihadistBot.SoftPosturePriority)
+    else
+      List(JihadistBot.SoftPosturePriority, JihadistBot.HardPosturePriority, JihadistBot.UnmarkedPriority)
+
+    JihadistBot.topPriority(game.getCountries(candidates), priorities)
+      .map(_.name)
+  }
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -92,6 +108,8 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
         case Nil => None
         case candidates if isHuman(role) =>
           Some(askCountry("Place a cell in which Good Non-Muslim country: ", candidates))
+        case candidates if game.botEnhancements =>
+          enhBotTarget(candidates)
         case candidates =>
           JihadistBot.cellPlacementPriority(false)(candidates)
       }
@@ -100,6 +118,8 @@ object Card_299 extends Card(299, "Foreign Fighters Return", Jihadist, 2, Remove
         case Nil => None
         case candidates if isHuman(role) =>
           Some(askCountry("Place a cell in which Fair Non-Muslim country: ", candidates))
+        case candidates if game.botEnhancements =>
+          enhBotTarget(candidates)
         case candidates =>
           JihadistBot.cellPlacementPriority(false)(candidates)
       }

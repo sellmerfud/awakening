@@ -72,7 +72,15 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if 3 Militia would be removed.
+    val totalMilitia = game.getMuslims(getCandidates)
+      .map(_.militia)
+      .sum
+    totalMilitia >= 3
+  }
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

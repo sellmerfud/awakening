@@ -71,7 +71,10 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    //Playable if Funding <8 and 2+ Level 1 Plots available.
+    game.funding < 8 && game.availablePlots.count(_ == Plot1) > 1
+  else
     game.availablePlots.contains(Plot1)
 
   // Carry out the event for the given role.

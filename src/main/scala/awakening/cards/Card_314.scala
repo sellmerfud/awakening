@@ -39,6 +39,8 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
+import awakening.LabyrinthAwakening.GameMode.next
+import java.awt.RenderingHints.Key
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -58,15 +60,126 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def africanCandidates = African.filter(name => !game.getCountry(name).truce)
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = true
+
+  case object Cell
+  case class EventAction(name: String, item: Either[Cell.type, Plot])
+
+  def getStandardBotActions: List[EventAction] = {
+    val plotsFirst = game.funding < 9
+    val numPlotsToPlace = if (plotsFirst)
+      game.availablePlots.size min 3
+    else
+      (3 - game.cellsAvailable) max 0
+    val numCellsToPlace = (3 - numPlotsToPlace) min game.cellsAvailable
+
+    def nextAction(cellsRemaining: Int, plotsRemaining: Int, plotMarkers: List[Plot], candidates: List[String]): List[EventAction] = {
+      if ((cellsRemaining == 0 && plotsRemaining == 0) || candidates.isEmpty)
+        Nil
+      else if (plotsRemaining > 0 && (plotsFirst || cellsRemaining == 0)) {
+        val target = JihadistBot.plotPriority(candidates).get
+        val marker = JihadistBot.selectPlotMarkers(target, 1, plotMarkers).head
+        val idx = plotMarkers.indexOf(marker)
+        val remainingMarkers = plotMarkers.patch(idx, Nil, 1)
+        val action = EventAction(target, Right(marker))
+        action :: nextAction(cellsRemaining, plotsRemaining - 1, remainingMarkers, candidates.filterNot(_ == target))
+      }
+      else {
+        val target = JihadistBot.cellPlacementPriority(false)(candidates).get
+        val action = EventAction(target, Left(Cell))
+        action :: nextAction(cellsRemaining - 1, plotsRemaining, plotMarkers, candidates.filterNot(_ == target))
+      }
+    }
+
+    nextAction(numCellsToPlace, numPlotsToPlace, game.availablePlots, africanCandidates).reverse
+  }
+
+
+  // Ehanced Bot instructions:
+  // Playable if at least 2 plot markers available and the following procedure yields any valid targets in this priority order:
+  // a) Place plot markers (if depleted: place cell, if available) in a Good Muslim country (priority to highest res*, then with troops).
+  // b) if Funding <8, place plots in Nigeria, then Kenya, then poor Muslim (priority to troops, then AID), then Fair Muslim (priority to troops, then AID).
+  // c) if at least one plot marker has been placed so far: place cells, if available, using Recruit/Travel to priority table.
+  // If no plotmarkers have been legally placed following a-c, the event is unplayable.
+  def getEnhancedBotActions: List[EventAction] = {
+    def nextAction(actionNum: Int, cellsRemaining: Int, plots: List[Plot], candidateNames: List[String], actions: Vector[EventAction]): List[EventAction] = {
+      if (actionNum > 3 || (cellsRemaining == 0 && plots.isEmpty))
+        actions.toList
+      else {
+        val havePlotted = actions.exists(_.item.isRight)
+        val muslims = candidateNames.filter(isMuslim).map(game.getMuslim)
+        val goodMuslims = muslims.filter(_.isGood)
+        val fairMuslims = muslims.filter(_.isFair)
+        val poorMuslims = muslims.filter(_.isPoor)
+        val nigeriaOrKenya = candidateNames.contains(Nigeria) || candidateNames.contains(KenyaTanzania)
+
+        val action = if (goodMuslims.nonEmpty) {
+          val priorites = List(JihadistBot.HighestPrintedResourcePriority, JihadistBot.WithTroopsPriority)
+          val target = JihadistBot.topPriority(goodMuslims, priorites)
+            .map(_.name)
+            .get
+
+          val item = plots match {
+            case Nil => Left(Cell)
+            case _   => Right(JihadistBot.selectPlotMarkers(target, 1, plots).head)
+          }
+          Some(EventAction(target, item))
+        }
+        else if (game.funding < 8 && plots.nonEmpty && (nigeriaOrKenya || poorMuslims.nonEmpty || fairMuslims.nonEmpty)) {
+          val priorities = List(JihadistBot.WithTroopsPriority, JihadistBot.WithAidPriority)
+          val target = if (candidateNames.contains(Nigeria))
+            Nigeria
+          else if (candidateNames.contains(KenyaTanzania))
+            KenyaTanzania
+          else if (poorMuslims.nonEmpty)
+            JihadistBot.topPriority(poorMuslims, priorities).map(_.name).get
+          else
+            JihadistBot.topPriority(fairMuslims, priorities).map(_.name).get
+          Some(EventAction(target, Right(JihadistBot.selectPlotMarkers(target, 1, plots).head)))
+        }
+        else if (havePlotted && cellsRemaining > 0) {
+          val target = JihadistBot.recruitTravelToPriority(candidateNames).get
+          Some(EventAction(target, Left(Cell)))
+        }
+        else
+          None
+
+        action match {
+          case None => // No more targets found
+            actions.toList
+
+          case Some(action @ EventAction(target, Right(plot))) =>
+            val idx = plots.indexOf(plot)
+            val remainingPlots = plots.patch(idx, Nil, 1)
+            val remainingCadidates = candidateNames.filterNot(_ == target)
+            nextAction(actionNum + 1, cellsRemaining, remainingPlots, remainingCadidates, actions :+ action)
+
+          case Some(action @ EventAction(target, _)) => // Place cell
+            val remainingCadidates = candidateNames.filterNot(_ == target)
+            nextAction(actionNum + 1, cellsRemaining - 1, plots, remainingCadidates, actions :+ action)
+        }
+      }
+    }
+
+    // If we have not placed at least one Plot then disregard the whole lot
+    nextAction(1, game.cellsAvailable, game.availablePlots, africanCandidates, Vector.empty) match {
+      case actions if actions.exists(_.item.isRight) => actions
+      case _ => Nil
+    }
+  }
+
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.availablePlots.size > 1 && getEnhancedBotActions.nonEmpty
+  else
     game.availablePlots.nonEmpty || game.cellsAvailable > 0
 
 
@@ -75,76 +188,51 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val africanCandidates = African.filter(name => !game.getCountry(name).truce)
     if (game.availablePlots.nonEmpty || game.cellsAvailable > 0) {
-      case class Action(name: String, item: Either[Unit, Plot])
+      lazy val enhancedActions = getEnhancedBotActions 
 
       val actions = if (isHuman(role)) {
-        def nextAction(actionNum: Int, cellsRemaining: Int, plots: List[Plot], candidates: List[String]): List[Action] = {
+        def nextAction(actionNum: Int, cellsRemaining: Int, plots: List[Plot], candidates: List[String]): List[EventAction] = {
           if (actionNum > 3 || (cellsRemaining == 0 && plots.isEmpty))
             Nil
           else {
             sealed trait Choice
-            case object Cell extends Choice
-            case object Plot extends Choice
+            case object CellChoice extends Choice
+            case object PlotChoice extends Choice
             val choices = List(
-              choice(cellsRemaining > 0, Cell, "Place a Cell"),
-              choice(plots.nonEmpty,     Plot, "Place a Plot")
+              choice(cellsRemaining > 0, CellChoice, "Place a Cell"),
+              choice(plots.nonEmpty,     PlotChoice, "Place a Plot")
             ).flatten
             println()
-            askMenu(s"${ordinal(actionNum)} action:", choices).head match {
-              case Cell =>
-                val target = askCountry("Place a cell in which country: ", candidates)
-                Action(target, Left(())) :: nextAction(actionNum + 1, cellsRemaining - 1, plots, candidates.filterNot(_ == target))
 
-              case Plot =>
+            askMenu(s"${ordinal(actionNum)} action:", choices).head match {
+              case CellChoice =>
+                val target = askCountry("Place a cell in which country: ", candidates)
+                EventAction(target, Left(Cell)) :: nextAction(actionNum + 1, cellsRemaining - 1, plots, candidates.filterNot(_ == target))
+
+              case PlotChoice =>
                 val target = askCountry("Place a plot in which country: ", candidates)
                 val plot   = askPlots(plots, 1).head
                 val index  = plots.indexOf(plot)
                 val others = plots.take(index) ::: plots.drop(index + 1)
-                Action(target, Right(plot)) :: nextAction(actionNum + 1, cellsRemaining, others, candidates.filterNot(_ == target))
+                EventAction(target, Right(plot)) :: nextAction(actionNum + 1, cellsRemaining, others, candidates.filterNot(_ == target))
             }
           }
         }
-        nextAction(1, game.cellsAvailable, game.availablePlots, africanCandidates)
+        nextAction(1, game.cellsAvailable, game.availablePlots, africanCandidates).reverse
       }
-      else {
-        // Bot
-        val plotsFirst = game.funding < 9
-        val numPlotsToPlace = if (plotsFirst)
-          game.availablePlots.size min 3
-        else
-          (3 - game.cellsAvailable) max 0
-        val numCellsToPlace = (3 - numPlotsToPlace) min game.cellsAvailable
-
-        def nextAction(cellsRemaining: Int, plotsRemaining: Int, plotMarkers: List[Plot], candidates: List[String]): List[Action] = {
-          if ((cellsRemaining == 0 && plotsRemaining == 0) || candidates.isEmpty)
-            Nil
-          else if (plotsRemaining > 0 && (plotsFirst || cellsRemaining == 0)) {
-            val target = JihadistBot.plotPriority(candidates).get
-            val marker = JihadistBot.selectPlotMarkers(target, 1, plotMarkers).head
-            val idx = plotMarkers.indexOf(marker)
-            val remainingMarkers = plotMarkers.patch(idx, Nil, 1)
-            val action = Action(target, Right(marker)) 
-            action :: nextAction(cellsRemaining, plotsRemaining - 1, remainingMarkers, candidates.filterNot(_ == target))
-          }
-          else {
-            val target = JihadistBot.cellPlacementPriority(false)(candidates).get
-            val action = Action(target, Left(())) 
-            action :: nextAction(cellsRemaining - 1, plotsRemaining, plotMarkers, candidates.filterNot(_ == target))
-          }
-        }
-
-        nextAction(numCellsToPlace, numPlotsToPlace, game.availablePlots, africanCandidates)
-      }
+      else if (game.botEnhancements && enhancedActions.nonEmpty)
+        enhancedActions
+      else 
+        getStandardBotActions
 
       println()
       actions foreach {
-        case Action(name, Left(_)) =>
+        case EventAction(name, Left(_)) =>
           addEventTarget(name)
           addSleeperCellsToCountry(name, 1)
 
-        case Action(name, Right(plot)) =>
+        case EventAction(name, Right(plot)) =>
           addEventTarget(name)
           addAvailablePlotToCountry(name, plot)
       }

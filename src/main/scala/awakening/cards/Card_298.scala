@@ -72,7 +72,10 @@ object Card_298 extends Card(298, "False Flag Attacks", Jihadist, 2, NoRemove, N
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = plotsMarkers.nonEmpty || botPreferredRemovePosture().nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    plotsMarkers.nonEmpty
+  else
+    plotsMarkers.nonEmpty || botPreferredRemovePosture().nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

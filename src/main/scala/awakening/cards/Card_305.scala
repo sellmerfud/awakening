@@ -66,10 +66,10 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    // Enhanced Jihad Bot will not play unless it will force
-    // the US player to discard at least one card
-    (!game.botEnhancements && game.getNonMuslim(Caucasus).isUntested && game.usPosture == Hard) ||
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    (game.prestigeModifier - game.gwotPenalty < 0 && hasCardInHand(US))
+  else
+    (game.getNonMuslim(Caucasus).isUntested && game.usPosture == Hard) ||
     (game.prestigeModifier - game.gwotPenalty < 0 && hasCardInHand(US))
 
   // Carry out the event for the given role.

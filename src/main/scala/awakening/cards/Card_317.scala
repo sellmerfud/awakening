@@ -69,7 +69,13 @@ object Card_317 extends Card(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsin
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if Gulf States not IR and not Poor Adversary.
+    val gulf = game.getMuslim(GulfStates)
+    !gulf.isIslamistRule && !(gulf.isPoor && gulf.isAdversary)
+  }
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -97,6 +103,13 @@ object Card_317 extends Card(317, "Qatari Crisis", Jihadist, 3, Remove, NoLapsin
             case Worsen => worsenGovernance(GulfStates, 1, canShiftToIR = false)
             case Shift  => shiftAlignmentRight(GulfStates)
           }
+        }
+        else if (game.botEnhancements) {
+          // If Gulf States [Good] or [Fair ally] or [Fair Adversary], worsen governance, else shift Alignment.
+          if (gulfStates.isGood || (gulfStates.isFair && !gulfStates.isNeutral))
+            worsenGovernance(GulfStates, 1, canShiftToIR = false)
+          else
+            shiftAlignmentRight(GulfStates)
         }
         else if (canWorsenGov)
           worsenGovernance(GulfStates, 1, canShiftToIR = false)

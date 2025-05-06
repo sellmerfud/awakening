@@ -67,11 +67,27 @@ object Card_321 extends Card(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, No
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
+  def newCaliphateCandidates = if (game.cellsAvailable >= 3)
+    getCandidates.filter(canDeclareCaliphate)
+  else
+    Nil
+
+  def mjpCandidate = JihadistBot.majorJihadPriorityCountry
+    .filter(getCandidates.contains)
+
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if 3+ cells available and if the placement of those cells would either
+    // establish the Caliphate Capital, or if they would be put in the current MJP.
+    game.cellsAvailable >= 3 &&
+    (newCaliphateCandidates.nonEmpty || mjpCandidate.nonEmpty)
+  }
+  else
+    game.cellsAvailable > 0
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -79,14 +95,22 @@ object Card_321 extends Card(321, "Ungoverned Spaces", Jihadist, 3, NoRemove, No
   override
   def executeEvent(role: Role): Unit = {
     if (game.cellsAvailable > 0) {
-      val (target, num) = if (isHuman(role))
-        (askCountry("Which country: ", getCandidates),
-         askInt("Place how many cells", 1, game.cellsAvailable min 3))
-      else if (game.cellsAvailable >= 3 && (game.botEnhancements || game.islamistResources == 5)) {
+      val (target, num) = if (isHuman(role)) {
+        val target = askCountry("Which country: ", getCandidates)
+        val num = askInt("Place how many cells", 1, game.cellsAvailable min 3)
+        (target, num)
+      }
+      else if (game.botEnhancements && game.cellsAvailable >= 3 && (newCaliphateCandidates.nonEmpty || mjpCandidate.nonEmpty)) {
+        val target = JihadistBot.caliphatePriorityTarget(newCaliphateCandidates)
+          .orElse(mjpCandidate)
+          .get
+        (target, 3)
+      }
+      else if (game.cellsAvailable >= 3 && game.islamistResources == 5) {
           // If we are placing 3 cells and we can declare caliphate then
           // select that country
-          val t = JihadistBot.cellPlacementPriority(true)(getCandidates).get
-          (t, game.cellsAvailable min 3)
+          val target = JihadistBot.cellPlacementPriority(true)(getCandidates).get
+          (target, 3)
         }
       else
         (JihadistBot.cellPlacementPriority(false)(getCandidates).get, game.cellsAvailable min 3)

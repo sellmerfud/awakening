@@ -56,16 +56,21 @@ object Card_310 extends Card(310, "Forever War", Jihadist, 3, NoRemove, NoLapsin
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def tandM_Minus_Cells = game.totalTroopsOnMap + game.militiaOnMap - game.cellsOnMap
+
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    (game.totalTroopsOnMap + game.militiaOnMap) > game.cellsOnMap
+  def eventConditionsMet(role: Role) = tandM_Minus_Cells > 0
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.prestige > 1
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    // Playable if Prestige >2 and if it would drop at least 2 steps.
+    game.prestige > 2 && tandM_Minus_Cells > 1
+  else
+     game.prestige > 1
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -76,8 +81,8 @@ object Card_310 extends Card(310, "Forever War", Jihadist, 3, NoRemove, NoLapsin
     log(f"\n${game.totalTroopsOnMap}%2d troops on map", Color.Event)
     log(f"${game.militiaOnMap}%2d militia on map", Color.Event)
     log(f"${game.cellsOnMap}%2d cells on map", Color.Event)
-    if (difference > 0)
-      decreasePrestige(difference min 3)
+    if (tandM_Minus_Cells > 0)
+      decreasePrestige(tandM_Minus_Cells min 3)
     else
       log("No change to US Prestige.", Color.MapMarker)
   }

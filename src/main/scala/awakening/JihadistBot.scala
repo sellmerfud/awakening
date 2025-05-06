@@ -43,7 +43,6 @@ import scala.annotation.tailrec
 import LabyrinthAwakening._
 import awakening.scenarios.LetsRoll
 import awakening.scenarios.YouCanCallMeAl
-import awakening.JihadistBot.EnhancedEvoTable.TravelToUnmarkedNonMuslim.{priorities => priorities}
 import awakening.LabyrinthAwakening.Color.all
 
 object JihadistBot extends BotHelpers {
@@ -258,6 +257,11 @@ object JihadistBot extends BotHelpers {
   }
 
 
+  val SoftPosturePriority = new CriteriaFilter("Posture is Soft", nonMuslimTest(_.isSoft))
+  val HardPosturePriority = new CriteriaFilter("Posture is Hard", nonMuslimTest(_.isHard))
+  val SchengenPriority = new CriteriaFilter("Schengen", nonMuslimTest(_.isSchengen))
+  val HighestGovernance = new HighestScorePriority("Highest Governance Value", _.governance)
+
   // Return the best candidate for replacing a cell with a plot.
   // This is used by the Martyrdom Operations and KSM events.
   // Priorities
@@ -320,21 +324,21 @@ object JihadistBot extends BotHelpers {
     }
     else if (game.usPosture == Hard && game.funding < 7 && nonMuslims.nonEmpty) {
       val priorities = List(
-        new CriteriaFilter("Schengen", nonMuslimTest(_.isSchengen)),
-        new CriteriaFilter("Posture is Hard", nonMuslimTest(_.isHard)),
-        new HighestScorePriority("Highest Governance Value", _.governance))
+        SchengenPriority,
+        HardPosturePriority,
+        HighestGovernance)
       topPriority(nonMuslims, priorities).map(_.name)
     }
     else if (game.usPosture == Hard && game.gwotPenalty == 0 && hardNonMuslims.nonEmpty) {
       val priorities = List(
-        new CriteriaFilter("Schengen", nonMuslimTest(_.isSchengen)),
-        new HighestScorePriority("Highest Governance Value", _.governance))
+        SchengenPriority,
+        HighestGovernance)
       topPriority(hardNonMuslims, priorities).map(_.name)
     }
     else if (game.usPosture == Soft && game.funding < 7 && nonMuslims.nonEmpty) {
       val priorities = List(
-        new CriteriaFilter("Posture is Soft", nonMuslimTest(_.isSoft)),
-        new HighestScorePriority("Highest Governance Value", _.governance))
+        SoftPosturePriority,
+        HighestGovernance)
       topPriority(nonMuslims, priorities).map(_.name)
     }
     else if (fair3ResourceMuslims.nonEmpty)
@@ -530,6 +534,8 @@ object JihadistBot extends BotHelpers {
   // 13. With Troops
   val WithTroopsPriority = new CriteriaFilter("With troops", muslimTest(_.totalTroops > 0))
 
+  val MostTroopsPriority = new HighestScorePriority("Most troops", _.totalTroops)
+
   // 14. Iran with Arsenal
   val IranPriority = new CriteriaFilter("Iran arsenal", c => c.name == Iran && c.wmdCache > 0)
 
@@ -644,11 +650,6 @@ object JihadistBot extends BotHelpers {
     c => JihadistBot.majorJihadPriorityCountry
       .map(mjp => areAdjacent(mjp, c.name))
       .getOrElse(false)
-  )
-
-  val HighestGovernance = new HighestScorePriority(
-    "Highest Governance",
-    muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)
   )
 
   val HighestCellsMinusTandM = new HighestScorePriority(
@@ -1151,23 +1152,6 @@ object JihadistBot extends BotHelpers {
     topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
-  // For the Early Exit event, Forever War card #297
-  def earlyExitPriority(names: List[String]): Option[String] = {
-    val withAdvisors = game.getCountries(names).filter(_.numAdvisors > 0)
-
-    if (withAdvisors.nonEmpty)
-      topPriority(
-        withAdvisors,
-        List(new HighestScorePriority("Most Advisors", (_.numAdvisors)))
-      ).map(_.name)
-    else
-      topPriority(
-        game.getCountries(names),
-        List(new LowestScorePriority("Fewest Troops", (_.totalTroops)))
-      ).map(_.name)
-  }
-
-
   def recruitTarget(names: List[String]): Option[String] = {
     botLog("Find \"Recruit\" target", Color.Debug)
     val candidates = selectCandidates(game.getCountries(names), RecruitFlowchart)
@@ -1243,8 +1227,8 @@ object JihadistBot extends BotHelpers {
 
     val autoRecruitPriorities = List(
       new CriteriaFilter("Training Camps", c => game.isTrainingCamp(c.name)),
-      new CriteriaFilter("Islamist Rule", _.isIslamistRule),
-      new CriteriaFilter("Civil War", muslimTest(_.civilWar)),
+      IslamistRulePriority,
+      CivilWarPriority,
       new CriteriaFilter("Regime Change", muslimTest(_.inRegimeChange)),
       new CriteriaFilter("Poor", _.isPoor),
       new HighestScorePriority("Most cells", _.totalCells),
@@ -1506,6 +1490,15 @@ object JihadistBot extends BotHelpers {
     }
   }
 
+  val EnhUnmarkedNonMuslimTravelPriorities = List(
+    new HighestScorePriority("Highest Governance Value", _.governance),
+    new CriteriaFilter("Caucasus", _.name == Caucasus),
+    new CriteriaFilter("Russia", _.name == Russia),
+    new CriteriaFilter("Philippines", _.name == Philippines),
+    new CriteriaFilter("Thailand", _.name == Thailand),
+    SchengenPriority,
+  )
+
   // ------------------------------------------------------
   // EvO table for enhanced Bot as designed
   // by Florian Ottich
@@ -1640,14 +1633,6 @@ object JihadistBot extends BotHelpers {
     }
 
     object TravelToUnmarkedNonMuslim extends OperationDecision {
-      val priorities = List(
-        new HighestScorePriority("Highest Governance Value", _.governance),
-        new CriteriaFilter("Caucasus", _.name == Caucasus),
-        new CriteriaFilter("Russia", _.name == Russia),
-        new CriteriaFilter("Philippines", _.name == Philippines),
-        new CriteriaFilter("Thailand", _.name == Thailand),
-        new CriteriaFilter("Schengen", nonMuslimTest(_.isSchengen)),
-      )
       var designatedTarget: Option[String] = None
       var adjacentOnly: Boolean = false
       def desc = "US Hard, prestige>low, GWOT penalty is 0, Hard - Soft countries <2, and can travel to Umarked Non-Muslim?"
@@ -1673,11 +1658,11 @@ object JihadistBot extends BotHelpers {
             case Nil =>
               adjacentOnly = false
               botLog("No candidates can be reached by an adjacent traveling cell")
-              designatedTarget = topPriority(candidates, priorities).map(_.name)
+              designatedTarget = topPriority(candidates, EnhUnmarkedNonMuslimTravelPriorities).map(_.name)
             case _ =>
                 adjacentOnly = true
                 botLog("Considering only targets that can be reached by an adjacent traveling cell")
-              designatedTarget = topPriority(adjacentCandidates, priorities).map(_.name)
+              designatedTarget = topPriority(adjacentCandidates, EnhUnmarkedNonMuslimTravelPriorities).map(_.name)
           }
           true
         }
@@ -1939,15 +1924,6 @@ object JihadistBot extends BotHelpers {
       HighestResourcePriority)
 
     botLog("Find \"Revolution\" target", Color.Debug)
-    topPriority(game.getCountries(names), priorities).map(_.name)
-  }
-
-  def hamaOffensiveTarget(names: List[String]): Option[String] = {
-    val priorities = List(
-      new HighestScorePriority("Largest Cells - TandM", muslimScore(m => m.totalCells - m.totalTroopsAndMilitia)),
-      HighestResourcePriority)
-
-    botLog("Find \"Hama Offensive\" target", Color.Debug)
     topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
@@ -2842,7 +2818,7 @@ object JihadistBot extends BotHelpers {
 
     def placeCell(numPlaced: Int, candidates: List[MuslimCountry]): Int =
       if (numPlaced < maxPlacements && candidates.nonEmpty) {
-        val target = topPriority(candidates, priorities)
+        val target = topPriority(candidates, EnhUnmarkedNonMuslimTravelPriorities)
           .map(_.name)
           .get
         addOpsTarget(target)

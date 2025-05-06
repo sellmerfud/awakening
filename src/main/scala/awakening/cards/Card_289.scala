@@ -67,13 +67,17 @@ object Card_289 extends Card(289, "Strait of Hormuz", Jihadist, 1, NoRemove, Lap
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = {
-    // First field of tuple is IR, second is Good
     val irDown = persianGulfExporters.count(_.isIslamistRule)
     val goodDown = persianGulfExporters.count(_.isGood)
     val irUp = nonPersianGulfExporters.count(_.isIslamistRule)
     val goodUp = nonPersianGulfExporters.count(_.isGood)
-    // Bot only plays if it would increase IR resources and not increase Good resources
-    (irUp - irDown) > 0 && (goodUp - goodDown) <= 0
+
+    if (game.botEnhancements)
+      // Playable if triggering the event would result in an instant game win.
+      (game.islamistResources - irDown + irUp >= 6) && (game.goodResources - goodDown + goodUp < 12)
+    else
+      // Bot only plays if it would increase IR resources and not increase Good resources
+      (irUp - irDown) > 0 && (goodUp - goodDown) <= 0
   }
 
 

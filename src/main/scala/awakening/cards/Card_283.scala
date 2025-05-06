@@ -65,7 +65,45 @@ object Card_283 extends Card(283, "Lone Wolf", Jihadist, 1, NoRemove, NoLapsing,
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.cellsAvailable > 0
+  else
+    true
+
+  // Test-priority: If US hard, priority to Unmarked, then Scandinavia, then Canada.
+  // If US soft, priority to Soft, then Hard, then Scandinavia, then Canada.
+  def enhBotTestTarget: String = {
+    val ScandinaviaPriority = new JihadistBot.CriteriaFilter("Is Scandinavia?", _.name == Scandinavia)
+    val CanadaPriority = new JihadistBot.CriteriaFilter("Is Canada?", _.name == Canada)
+    val candidates = game.getNonMuslims(Canada::Scandinavia::India::Nil)
+    val priorities = if (game.usPosture == Hard)
+      List(
+        JihadistBot.UnmarkedPriority, ScandinaviaPriority, CanadaPriority)
+    else
+      List(
+        JihadistBot.SoftPosturePriority, JihadistBot.HardPosturePriority,
+        ScandinaviaPriority, CanadaPriority)
+
+    JihadistBot.topPriority(candidates, priorities)
+      .map(_.name)
+      .get
+  }
+  
+  // If US hard, in US.
+  // If US soft, priority to hard country with highest governance and no cells present.
+  def enhBotCellPlacementTarget: String = if (game.usPosture == Hard)
+    UnitedStates
+  else {
+    val candidates = game.nonMuslims.filter(_.isHard)
+    val priorities = List(
+      new JihadistBot.CriteriaFilter("No Cells present", JihadistBot.nonMuslimTest(n => n.totalCells == 0)),
+      JihadistBot.HighestGovernance,
+    )
+
+    JihadistBot.topPriority(candidates, priorities)
+      .map(_.name)
+      .get
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -76,8 +114,10 @@ object Card_283 extends Card(283, "Lone Wolf", Jihadist, 1, NoRemove, NoLapsing,
 
     val testTarget = if (isHuman(role))
       askCountry("Test which country: ", testCountries)
+    else if (game.botEnhancements)
+      enhBotTestTarget
     else {
-      // The Bot will only select and untested country if the GWOT penalty is zero
+      // The Standard Bot will only select an untested country if the GWOT penalty is zero
       // (or if there are no tested countries)
       val (untested, tested) = game.getNonMuslims(testCountries).partition(_.isUntested)
       game.gwotPenalty match {
@@ -102,6 +142,8 @@ object Card_283 extends Card(283, "Lone Wolf", Jihadist, 1, NoRemove, NoLapsing,
       println()
       val cellTarget = if (isHuman(role))
         askCountry("Place a cell in which country: ", hardCountries)
+      else if (game.botEnhancements)
+        enhBotCellPlacementTarget
       else
         JihadistBot.cellPlacementPriority(false)(hardCountries).get
 

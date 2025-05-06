@@ -59,8 +59,9 @@ object Card_290 extends Card(290, "Uyghur Nationalism", Jihadist, 1, Remove, NoL
   def eventRemovesLastCell(): Boolean = false
 
   // Returns true if the printed conditions of the event are satisfied
+  // Enhanced Bot never plays the event.  Standard Bot always plays it.
   override
-  def eventConditionsMet(role: Role) = true
+  def eventConditionsMet(role: Role) = !game.botEnhancements
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

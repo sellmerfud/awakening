@@ -75,7 +75,7 @@ object Card_313 extends Card(313, "Hayat Tahir al-Sham", Jihadist, 3, Remove, No
   // auto recruit country so simply placing cells there is not a priority.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    !game.caliphateDeclared && game.cellsAvailable + numAdjacentCells >= 3
+    game.cellsAvailable + numAdjacentCells >= 3 && JihadistBot.willDeclareCaliphate(Syria)
   else
     game.cellsAvailable + numAdjacentCells >= 3
 

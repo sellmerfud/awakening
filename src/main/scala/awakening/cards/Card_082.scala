@@ -100,10 +100,10 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
         val maxTargets = game.cellsAvailable min 3
 
         if (num < 3 && (nonMuslim.nonEmpty || forRecruit.nonEmpty)) {
-          import JihadistBot.EnhancedEvoTable.TravelToUnmarkedNonMuslim.priorities
+          import JihadistBot.EnhUnmarkedNonMuslimTravelPriorities
           import JihadistBot.{ topPriority, recruitAndTravelToPriorities }
           if (nonMuslim.nonEmpty)
-            nextTarget(num + 1, topPriority(nonMuslim, priorities).map(_.name).get::targets)
+            nextTarget(num + 1, topPriority(nonMuslim, EnhUnmarkedNonMuslimTravelPriorities).map(_.name).get::targets)
           else
             nextTarget(num + 1, topPriority(forRecruit, recruitAndTravelToPriorities).map(_.name).get::targets)
         }

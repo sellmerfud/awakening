@@ -63,13 +63,27 @@ object Card_293 extends Card(293, "Attempted Coup", Jihadist, 2, NoRemove, NoLap
     m.totalCells >= 2 &&
     ((m.isAlly && m.isPoor) || (game.adjacentToCivilWar(m.name) && !m.isGood))
 
-  val isBotPreferred = (m: MuslimCountry) =>
-    isCandidate(m) &&
-    !(game.botEnhancements && m.isIslamistRule)
-
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def getBotPreferred = countryNames(game.muslims.filter(isBotPreferred))
+  // Playable in non-auto recruit countries with r-a<2
+  val isEnhBotPreferred = (m: MuslimCountry) =>
+    isCandidate(m) &&
+    !m.autoRecruit &&
+    (m.reaction - m.awakening < 2)
+
+  def getEnhBotPreferred = countryNames(game.muslims.filter(isEnhBotPreferred))
+
+  // Priority to highest res*, then highest a-r, then Fair.
+  def enhBotTarget(candidates: List[String]): String = {
+    val priorities = List(
+      JihadistBot.HighestPrintedResourcePriority,
+      JihadistBot.HighestAwakeningMinusReactionPriority,
+      JihadistBot.FairMuslimFilter,
+    )
+    JihadistBot.topPriority(game.getCountries(candidates), priorities)
+      .map(_.name)
+      .get
+  }
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -79,7 +93,10 @@ object Card_293 extends Card(293, "Attempted Coup", Jihadist, 2, NoRemove, NoLap
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotPreferred.nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    getEnhBotPreferred.nonEmpty
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -89,10 +106,10 @@ object Card_293 extends Card(293, "Attempted Coup", Jihadist, 2, NoRemove, NoLap
     val target = if (isHuman(role))
       askCountry("Place which country into Civil War: ", getCandidates)
     else
-      getBotPreferred match {
+      getEnhBotPreferred match {
         // When triggered during US turn preferred candidates may be empty
         case Nil => JihadistBot.fewestCellsPriority(getCandidates).get
-        case preferred => JihadistBot.fewestCellsPriority(preferred).get
+        case preferred => enhBotTarget(preferred)
       }
 
     addEventTarget(target)

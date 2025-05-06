@@ -56,8 +56,6 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
   override
   def eventRemovesLastCell(): Boolean = false
 
-  // Note: The code only allows 1 cadre marker per country.
-  // I have since realized that this is incorrect.
   def getCandidates = countryNames(game.countries.filter(!_.truce))
 
   def getBotCandidates = {
@@ -76,7 +74,30 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = getBotCandidates.nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.usPosture == Hard && game.gwotPenalty == 0 && getBotCandidates.nonEmpty
+  else
+    getBotCandidates.nonEmpty
+
+  // Place cadre markers in Unmarked non-Muslim countries using EnhUnmarkedNonMuslimTravelPriorities
+  // If less than 3 cadre markers can be legally placed this way, continue with Travel to Priorities.
+
+  def enhBotCadreTarget(candidates: List[String]): String = {
+    val unmarkedCandidates = candidates
+      .filter(isNonMuslim)
+      .map(game.getNonMuslim)
+      .filter(_.isUntested)
+
+    if (unmarkedCandidates.nonEmpty)
+      JihadistBot.topPriority(unmarkedCandidates, JihadistBot.EnhUnmarkedNonMuslimTravelPriorities)
+        .map(_.name)
+        .get
+    else
+      JihadistBot.topPriority(game.getCountries(candidates), JihadistBot.recruitAndTravelToPriorities)
+        .map(_.name)
+        .get
+  }
+
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -92,6 +113,8 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
       if (num <= numCadres && candidates.nonEmpty) {
         val target = if (isHuman(role))
           askCountry(s"Place ${ordinal(num)} cadre is which country: ", candidates)
+        else if (game.botEnhancements)
+          enhBotCadreTarget(candidates)
         else
           JihadistBot.recruitTravelToPriority(candidates).get
 

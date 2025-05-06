@@ -58,24 +58,51 @@ object Card_312 extends Card(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar))
+  def getCandidates = game.muslims.filter(m => !m.truce && m.civilWar)
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
+  // Only in countries with no Troops/Militia and if 4+ cells
+  // would be present for the attrition phase (including those added by this event)
+  def enhBotCandidates = {
+    val addedCells = 2 min game.cellsAvailable
+
+    getCandidates
+      .filter { m =>
+        m.totalTroopsAndMilitia == 0 &&
+        m.totalCells + addedCells > 3
+      }
+  }
+  
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   //
-  // Bot execute event only if civil war countries with more cells
-  // (included any added by this event) than troops/militia.
   override
-  def botWillPlayEvent(role: Role): Boolean = {
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    enhBotCandidates.nonEmpty
+  else {
+    // Standard Bot playable only if civil war countries with more cells
+    // (included any added by this event) than troops/militia.
     val addedCells = 2 min game.cellsAvailable
     game.hasMuslim { m =>
       m.civilWar && (m.totalCells + addedCells > m.totalTroopsAndMilitia)
     }
+  }
+
+  def botTarget(candidates: List[MuslimCountry]): String = {
+    // Enh Bot uses printed reource(*) value which considers Tehran-Beirut Land Corridor
+    val priorities = if (game.botEnhancements)
+      List(JihadistBot.HighestCellsMinusTandM, JihadistBot.HighestPrintedResourcePriority);
+    else
+      List(JihadistBot.HighestCellsMinusTandM, JihadistBot.HighestResourcePriority);
+
+    JihadistBot.botLog("Find \"Hama Offensive\" target", Color.Debug)
+    JihadistBot.topPriority(candidates, priorities)
+      .map(_.name)
+      .get
   }
 
   // Carry out the event for the given role.
@@ -84,9 +111,11 @@ object Card_312 extends Card(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLap
   override
   def executeEvent(role: Role): Unit = {
     val target = if (isHuman(role))
-      askCountry("Which country: ", getCandidates)
+      askCountry("Which country: ", countryNames(getCandidates))
+    else if (game.botEnhancements && enhBotCandidates.nonEmpty)
+      botTarget(enhBotCandidates)
     else
-      JihadistBot.hamaOffensiveTarget(getCandidates).get
+      botTarget(getCandidates)
 
     addEventTarget(target)
     println()

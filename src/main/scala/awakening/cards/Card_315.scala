@@ -67,7 +67,15 @@ object Card_315 extends Card(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLap
   override
   def botWillPlayEvent(role: Role): Boolean = {
     val saudi = game.getMuslim(SaudiArabia)
-    game.prestige > 3 || (!saudi.truce && !saudi.isAdversary)
+
+    // If Saudi Arabia [ally] or [adversary] AND prestige >2, drop prestige.
+    // If Saudi Arabia [neutral], shift alignment.
+    // Else unplayable.
+    if (game.botEnhancements)
+      ((saudi.isAlly || saudi.isAdversary) && game.prestige > 2) ||
+      (saudi.isNeutral && !saudi.truce)    
+    else
+      game.prestige > 3 || (!saudi.truce && !saudi.isAdversary)
   }
 
   // Carry out the event for the given role.
@@ -79,11 +87,14 @@ object Card_315 extends Card(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLap
       addEventTarget(Turkey)
       testCountry(Turkey) // Event specifically says to test
     }
+
     val saudiTruce = game.getCountry(SaudiArabia).truce
     if (!saudiTruce) {
       addEventTarget(SaudiArabia)
       testCountry(SaudiArabia) // Event specifically says to test
     }
+
+    val saudi = game.getMuslim(SaudiArabia)
 
     if (isHuman(role)) {
       sealed trait Choice
@@ -97,6 +108,14 @@ object Card_315 extends Card(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLap
         case Shift    => shiftAlignmentRight(SaudiArabia)
         case Prestige => decreasePrestige(2)
       }
+    }
+    else if (saudiTruce)
+      decreasePrestige(2)
+    else if (game.botEnhancements) {
+      if (game.prestige > 2 && (saudi.isAlly || saudi.isAdversary))
+        decreasePrestige(2)
+      else
+        shiftAlignmentRight(SaudiArabia)
     }
     else if (game.prestige > 3)
       decreasePrestige(2)

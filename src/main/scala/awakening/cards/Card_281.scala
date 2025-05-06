@@ -66,8 +66,17 @@ object Card_281 extends Card(281, "Drone Swarms", Jihadist, 1, NoRemove, NoLapsi
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.availablePlots.contains(Plot1)
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.funding < 9 && game.availablePlots.contains(Plot1)
+  else
+    game.availablePlots.contains(Plot1)
 
+  // Priority to troops, then AID, then Fair.
+  val enhBotPriorities = List(
+    JihadistBot.WithTroopsPriority,
+    JihadistBot.WithAidPriority,
+    JihadistBot.FairPriority,
+  )
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
@@ -76,6 +85,10 @@ object Card_281 extends Card(281, "Drone Swarms", Jihadist, 1, NoRemove, NoLapsi
     if (game.availablePlots.contains(Plot1)) {
       val target = if (isHuman(role))
         askCountry("Place plot in which country: ", getCandidates)
+      else if (game.botEnhancements)
+        JihadistBot.topPriority(game.getCountries(getCandidates), enhBotPriorities)
+          .map(_.name)
+          .get
       else
         JihadistBot.plotPriority(getCandidates).get
 

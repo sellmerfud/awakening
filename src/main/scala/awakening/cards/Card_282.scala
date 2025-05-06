@@ -69,16 +69,52 @@ object Card_282 extends Card(282, "Executive Order 13492", Jihadist, 1, Remove, 
     (game.usPosture == Hard && game.prestige > 1) ||
     (game.usPosture == Soft && game.cellsAvailable > 0)
 
+  // Place in the US if a WMD plot is available
+  // then in Good country with no troops (priority to highest res*),
+  // then in Fair 3+ res* country with a-r<1 (priority to highest res*, then best r-a),
+  // finally use PRIORITY TABLE, Recruit/Travel To priorities
+  def enhBotCellPlacementTarget: String = {
+    val goodCandidates = game.muslims.filter(m => m.isGood && m.totalTroops == 0)
+    val fairCandidates = game.muslims.filter { muslim =>
+      muslim.isFair &&
+      JihadistBot.enhBotResourceValue(muslim) > 2 &&
+      muslim.awakening - muslim.reaction < 1
+    }
+
+    if (game.availablePlots.contains(PlotWMD))
+      UnitedStates
+    else if (goodCandidates.nonEmpty) {
+      val priorities = List(JihadistBot.HighestPrintedResourcePriority)
+      JihadistBot.topPriority(goodCandidates, priorities)
+        .map(_.name)
+        .get      
+    }
+    else if (fairCandidates.nonEmpty) {
+      val priorities = List(
+        JihadistBot.HighestPrintedResourcePriority,
+        JihadistBot.HighestReactionMinusAwakeningPriority,
+      )
+      JihadistBot.topPriority(fairCandidates, priorities)
+        .map(_.name)
+        .get      
+    }
+    else
+      JihadistBot.recruitTravelToPriority(countryNames(game.countries))
+        .get
+  }
+
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (game.usPosture == Hard)
+    if (game.usPosture == Hard && game.prestige > 1)
       decreasePrestige(1)
     else if (game.cellsAvailable > 0) {
       val target = if (isHuman(role))
         askCountry("Place a cell in which country: ", countryNames(game.countries))
+      else if (game.botEnhancements)
+        enhBotCellPlacementTarget
       else
         JihadistBot.cellPlacementPriority(false)(countryNames(game.countries)).get
 
