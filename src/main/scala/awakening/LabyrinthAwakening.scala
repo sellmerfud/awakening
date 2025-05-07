@@ -9411,7 +9411,6 @@ object LabyrinthAwakening {
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
   def humanUsCardPlay(card: Card, ignoreEvent: Boolean): Unit = {
-    val eventPlayable = !ignoreEvent && card.eventIsPlayable(US)
     val ExecuteEvent = "Execute event"
     val WarOfIdeas   = "War of ideas"
     val Deploy       = "Deploy"
@@ -9421,30 +9420,13 @@ object LabyrinthAwakening {
     val Alert        = "Alert"
     val Reassess     = "Reassessment"
     val AddReserves  = "Add to reserves"
-    val UseReserves  = "Expend reserves"
     val AbortCard    = "Abort card"
     var reservesUsed = 0
-    var card1EventValid = false
-    var cardEventTriggered = false
+    var secondCard: Option[Card] = None  // For reassessment only
     def inReserve    = game.reserves.us
     def opsAvailable = (card.ops + reservesUsed) min 3
+    def maxOps       = (card.ops + inReserve) min 3
 
-    val firstCardCanTrigger = card.autoTrigger || card.association  == Jihadist
-    val canReassess = firstCardOfPhase(US) && card.ops == 3 && hasCardInHand(US)
-
-    sealed trait PerformOption {
-      def menuText: String
-    }
-    case object PerformCardActivity extends PerformOption {
-      override def menuText = "Operations"
-    }
-    case object PerformReassess extends PerformOption {
-      override def menuText = "Perform Reassessment"
-    }
-    case class TriggerOpponentEvent(card: Card) extends PerformOption {
-      override def menuText = s"Trigger event [${card.cardName}]"
-
-    }
 
     def promptForSecondCard(): Card = {
       println("\nYou must play a second 3 Ops card.")
@@ -9484,150 +9466,187 @@ object LabyrinthAwakening {
       }
     }
 
-
-    @tailrec def getUsActivity(): Either[String, List[PerformOption]] = {
-      // The US must announce reassessment before triggering an event
-      // so if the event was triggered then reassessment is not allowed.
-      val showReassess = canReassess && reservesUsed == 0
+    // Prompt for which activity the US player wishes to conduct.
+    // Event (if possible) or a specific type of Operation.
+    @tailrec def getCardActivity(): String = {
+      val oppEventCanTrigger = card.eventWillTrigger(Jihadist) 
+      val eventPlayable = !ignoreEvent && card.eventIsPlayable(US)
+      val showDeploy = game.deployPossible(maxOps)
+      val showRegimeChange = maxOps >= 3 && game.usPosture == Hard && (game.regimeChangeTargets.nonEmpty || oppEventCanTrigger)
+      val showWithdraw = maxOps >= 3 && game.usPosture == Soft && (game.withdrawFromTargets.nonEmpty || oppEventCanTrigger)
+      val showDisrupt = game.disruptTargets(maxOps).nonEmpty || oppEventCanTrigger
+      val showAlert = game.alertPossible(maxOps) || oppEventCanTrigger
+      val showReassess = firstCardOfPhase(US) && card.ops == 3 && hasCardInHand(US)
+      val showAddReserves = card.ops < 3 && inReserve < 2
       val actions = List(
-        choice(eventPlayable && reservesUsed == 0,         ExecuteEvent, ExecuteEvent),
-        choice(true,                                       WarOfIdeas, WarOfIdeas),
-        choice(game.deployPossible(opsAvailable),          Deploy, Deploy),
-        choice(game.regimeChangePossible(opsAvailable),    RegimeChg, RegimeChg),
-        choice(game.withdrawPossible(opsAvailable),        Withdraw, Withdraw),
-        choice(game.disruptTargets(opsAvailable).nonEmpty, Disrupt, Disrupt),
-        choice(game.alertPossible(opsAvailable),           Alert, Alert),
-        choice(showReassess,                               Reassess, Reassess),
-        choice(card.ops < 3 && inReserve < 2,              AddReserves, AddReserves),
-        choice(opsAvailable < 3 && inReserve > 0,          UseReserves, UseReserves),
-        choice(true,                                       AbortCard, AbortCard),
+        choice(eventPlayable,    ExecuteEvent, ExecuteEvent),
+        choice(true,             WarOfIdeas, WarOfIdeas),
+        choice(showDeploy,       Deploy, Deploy),
+        choice(showRegimeChange, RegimeChg, RegimeChg),
+        choice(showWithdraw,     Withdraw, Withdraw),
+        choice(showDisrupt,      Disrupt, Disrupt),
+        choice(showAlert,        Alert, Alert),
+        choice(showReassess,     Reassess, Reassess),
+        choice(showAddReserves,  AddReserves, AddReserves),
+        choice(true,             AbortCard, AbortCard),
       ).flatten
 
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
-
       askMenu(s"$US action: ", actions).head match {
         case AbortCard =>
           if (askYorN("Really abort (y/n)? "))
             throw AbortAction
           else
-            getUsActivity()
-
-        case UseReserves =>
-          reservesUsed = inReserve
-          log(s"$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
-          game = game.copy(reserves = game.reserves.copy(us = 0))
-          getUsActivity()
+            getCardActivity()
 
         case Reassess =>
-            val card2 = promptForSecondCard()
-            val newOptions = new ListBuffer[PerformOption]()
-            if (firstCardCanTrigger && !cardEventTriggered)
-              newOptions += TriggerOpponentEvent(card)
-            if (card2.autoTrigger || card2.association == Jihadist)
-              newOptions += TriggerOpponentEvent(card2)
-
-            if (newOptions.isEmpty)
-              Left(Reassess)
-            else {
-              newOptions.prepend(PerformReassess)
-              Right(newOptions.toList)
-            }
+            secondCard = Some(promptForSecondCard())
+            Reassess
 
         case action =>
-          Left(action)
+          action
       }
     }
 
-    def performCardActivity(activity: String): Unit = {
-      activity match {
-        case AddReserves  => addToReserves(US, card.ops)
-        case ExecuteEvent => performCardEvent(card, US)
-        case WarOfIdeas   => humanWarOfIdeas(opsAvailable)
-        case Deploy       => humanDeploy(opsAvailable)
-        case Disrupt      => humanDisrupt(opsAvailable)
-        case Reassess     => humanReassess()
-        case RegimeChg    => humanRegimeChange()
-        case Withdraw     => humanWithdraw()
-        case Alert        => humanAlert()
-        case _ => throw new IllegalStateException(s"performCardActivity() - Invalid US activity: $activity")
+    def performCardActivity(activity: String): Boolean = {
+      def doit(condition: Boolean, code: => Unit, msg: String): Boolean = {
+        if (condition)
+          code
+        else
+          log(msg, Color.Info)
+        condition
+      }
+
+      val result = activity match {
+        case AddReserves =>
+          addToReserves(US, card.ops)
+          true
+        case ExecuteEvent =>
+          performCardEvent(card, US)
+          true
+        case WarOfIdeas =>
+          humanWarOfIdeas(opsAvailable)
+          true
+        case Deploy =>
+          doit(
+            game.deployPossible(opsAvailable),
+            humanDeploy(opsAvailable),
+            s"A deploy operation is not currently possible with ${opsString(opsAvailable)}."
+          )
+        case Disrupt =>
+          doit(
+            game.disruptTargets(opsAvailable).nonEmpty,
+            humanDisrupt(opsAvailable),
+            s"A disrupt operation is not currently possible with ${opsString(opsAvailable)}."
+          )
+        case Reassess =>
+          humanReassess()
+          true
+        case RegimeChg =>
+          doit(
+            game.regimeChangePossible(opsAvailable),
+            humanRegimeChange(),
+            s"A regime change operation is not currently possible with ${opsString(opsAvailable)}."
+          )
+        case Withdraw =>
+          doit(
+            game.withdrawPossible(opsAvailable),
+            humanWithdraw(),
+            s"A withdraw operation is not currently possible with ${opsString(opsAvailable)}."
+          )
+        case Alert =>
+          doit(
+            game.alertPossible(opsAvailable),
+            humanAlert(),
+            s"An alert operation is not currently possible with ${opsString(opsAvailable)}."
+          )
+        case _ =>
+          throw new IllegalStateException(s"performCardActivity() - Invalid US activity: $activity")
       }
       pause()
+      result
     }
 
-    def processOptions(options: List[PerformOption]): Unit = options match {
-      case Nil =>
-        // End the processOptions recursive loop
-      case option :: Nil =>
-        option match {
-          case PerformCardActivity =>
-            getUsActivity() match {
-              case Left(activity) =>
-                performCardActivity(activity)
-              case Right(moreOptions) =>
-                processOptions(moreOptions)
-            }
+    sealed trait PerformOption {
+      def menuText: String
+    }
+    case class PerformCardActivity(action: String) extends PerformOption {
+      override def menuText = if (action == ExecuteEvent)
+        s"Execute the ${card.cardName} event"
+      else
+        s"Perform $action operation with ${opsString(opsAvailable)}"
+    }
+    case object UseReserves extends PerformOption {
+      override def menuText = s"Expend ${opsString(game.reserves.us)} from reserves"
+    }
+    case class TriggerCardEvent(card: Card) extends PerformOption {
+      override def menuText = if (card.association == Jihadist)
+        s"Trigger $Jihadist event [${card.cardName}]"
+      else
+        s"Trigger automatic event [${card.cardName}]"
 
-          case TriggerOpponentEvent(c) =>
-            performTriggeredEvent(Jihadist, c)
-            cardEventTriggered = true
+    }
+    case object AbortOption extends PerformOption {
+      override def menuText = s"Abort card"
+    }
 
-          case PerformReassess =>
-            performCardActivity(Reassess)
-        }
-
-      case options =>
+    def processOptions(options: List[PerformOption]): Unit = {
+      // If there is only one option in the list then it is the AbortOption
+      // so we are finished.
+      if (options.size > 1) {
         // Ask what happens next
-        val choices = options.map(o => Some(o) -> o.menuText) :+
-          (None, s"Abort card")
+        val choices = options.map(o => o -> o.menuText)
+        val option = askMenu("What happens next:", choices).head
 
-        val newOptions = askMenu("What happens next:", choices).head match {
-          case None =>
-            if (askYorN("Really abort (y/n)? "))
-              throw AbortAction
+        val updatedOptions = option match {
+          case PerformCardActivity(activity) =>
+            // If the activity was peformed or if there is no trigger option
+            // then remove this option
+            val haveTrigger = options.exists {
+              case TriggerCardEvent(_) => true
+              case _ => false
+            }
+            if (performCardActivity(activity) || !haveTrigger)
+              options.filterNot(opt => opt == option || opt == UseReserves)
             else
               options
 
-          case Some(PerformCardActivity) =>
-            getUsActivity() match {
-              case Left(activity) =>
-                performCardActivity(activity)
-                options
-                  .filter {
-                    case PerformCardActivity => false
-                    case _ => true
-                  }
-
-              case Right(moreOptions) =>
-                moreOptions
-            }
-
-          case Some(PerformReassess) =>
-            performCardActivity(Reassess)
-            options.filterNot(_ == PerformReassess)
-
-          case Some(TriggerOpponentEvent(c)) =>
+          case TriggerCardEvent(c) =>
             performTriggeredEvent(Jihadist, c)
-            cardEventTriggered = true
+            options.filterNot(_ == option)
+
+          case UseReserves =>
+            reservesUsed = inReserve
+            log(s"\n$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
+            game = game.copy(reserves = game.reserves.copy(us = 0))
+            options.filterNot(_ == option)
+          
+          case AbortOption =>
+            if (askYorN("Really abort (y/n)? "))
+              throw AbortAction
             options
-              .filter {
-                case TriggerOpponentEvent(x) => x.number != c.number
-                case _ => true
-              }
         }
-        processOptions(newOptions)
+        
+        processOptions(updatedOptions)
+      }
     }
+    
+    val activity = getCardActivity()
+    
+    val initialOptions = new ListBuffer[PerformOption]
+    
+    initialOptions += PerformCardActivity(activity)
+    if (opsAvailable < 3 && inReserve > 0 && activity != ExecuteEvent && activity != AddReserves)
+      initialOptions += UseReserves
+    if (card.autoTrigger || card.association  == Jihadist)
+      initialOptions += TriggerCardEvent(card)
+    secondCard.foreach { card =>
+      if (card.autoTrigger || card.association  == Jihadist)
+        initialOptions += TriggerCardEvent(card)
+    }
+    initialOptions += AbortOption
 
-    // If the the event will auto trigger or if it is a Jihadist associated event
-    // that will trigger, then Ask if user up front if the wish to perform
-    // Reassessment.  This is done because the player must "announce" that they
-    // wish to do Reassessment before seeing the results of any triggered event form
-    // the first 3 Ops card played.
-    val initialOptions = if (firstCardCanTrigger)
-      List(PerformCardActivity, TriggerOpponentEvent(card))
-    else
-      List(PerformCardActivity)
-
-    try processOptions(initialOptions)
+    try processOptions(initialOptions.toList)
     catch {
       // If cancelled then we just return from this function.
       case CancelledByFerguson =>
@@ -9869,117 +9888,219 @@ object LabyrinthAwakening {
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
   def humanJihadistCardPlay(card: Card, ignoreEvent: Boolean): Unit = {
-    val eventPlayable =
-      !ignoreEvent &&
-      lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks al Non-US events
-      card.eventIsPlayable(Jihadist)
     val ExecuteEvent = "Execute event"
     val Recruit      = "Recruit"
     val Travel       = "Travel"
     val Jihad        = "Jihad"
     val PlotAction   = "Plot"
     val AddReserves  = "Add to reserves"
-    val UseReserves  = "Expend reserves"
     val RemoveCadre  = "Remove cadre"
     val AbortCard    = "Abort Card"
     var reservesUsed = 0
     var firstPlotUsed = false
     def inReserve    = game.reserves.jihadist
     def opsAvailable = (card.ops + reservesUsed) min 3
+    def maxOps       = (card.ops + inReserve) min 3
 
-    @tailrec def getJihadistActivity(): String = {
+    @tailrec def getCardActivity(): String = {
+      val oppEventCanTrigger = card.eventWillTrigger(US) 
+      val eventPlayable =
+        !ignoreEvent &&
+        lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks al Non-US events
+        card.eventIsPlayable(Jihadist)
+      val showRecruit = game.recruitPossible || oppEventCanTrigger
+      val showTravel = game.travelSources.nonEmpty || oppEventCanTrigger
+      val showJihad = game.jihadPossible || oppEventCanTrigger
+      val showPlot = game.plotPossible(maxOps) || oppEventCanTrigger
+      val showAddReserves = card.ops < 3 && inReserve < 2
+      val showRemoveCadre = game.hasCountry(_.hasCadre)
       val actions = List(
-        choice(eventPlayable && reservesUsed == 0, ExecuteEvent, ExecuteEvent),
-        choice(game.recruitPossible,               Recruit, Recruit),
-        choice(game.travelSources.nonEmpty,        Travel, Travel),
-        choice(game.jihadPossible,                 Jihad, Jihad),
-        choice(game.plotPossible(opsAvailable),    PlotAction, PlotAction),
-        choice(card.ops < 3 && inReserve < 2,      AddReserves, AddReserves),
-        choice(opsAvailable < 3 && inReserve > 0,  UseReserves, UseReserves),
-        choice(game.hasCountry(_.hasCadre),        RemoveCadre, RemoveCadre),
-        choice(true,                               AbortCard, AbortCard),
+        choice(eventPlayable,   ExecuteEvent, ExecuteEvent),
+        choice(showRecruit,     Recruit, Recruit),
+        choice(showTravel,      Travel, Travel),
+        choice(showJihad,       Jihad, Jihad),
+        choice(showPlot,        PlotAction, PlotAction),
+        choice(showAddReserves, AddReserves, AddReserves),
+        choice(showRemoveCadre, RemoveCadre, RemoveCadre),
+        choice(true,            AbortCard, AbortCard),
       ).flatten
 
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
       askMenu(s"$Jihadist action: ", actions).head match {
-        case UseReserves =>
-          reservesUsed = inReserve
-          log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
-          game = game.copy(reserves = game.reserves.copy(jihadist = 0))
-          getJihadistActivity()
-
-        case RemoveCadre =>
-          humanVoluntarilyRemoveCadre()
-          getJihadistActivity()
-
         case AbortCard =>
             if (askYorN("Really abort (y/n)? "))
               throw AbortAction
             else
-              getJihadistActivity()
-        case action => action
+              getCardActivity()
+
+        case RemoveCadre =>
+          humanVoluntarilyRemoveCadre()
+          getCardActivity()
+
+        case action =>
+          action
       }
     }
 
-    def performCardActivity(activity: String): Unit = {
-      activity match {
-        case AddReserves  => addToReserves(Jihadist, card.ops)
-        case ExecuteEvent => performCardEvent(card, Jihadist)
-        case Recruit      => humanRecruit(opsAvailable)
-        case Travel       => humanTravel(opsAvailable)
-        case Jihad        => humanJihad(opsAvailable)
-        case PlotAction   =>
-          humanPlot(opsAvailable)
-          // The first plot used in a turn is placed in the 1st plot box
-          // The Ruthless US bot resolve does not allow this.
-          if (game.firstPlotEntry.isEmpty && !game.usResolve(Ruthless)) {
-            firstPlotUsed = true
-            log(s"\nPlace the $card card in the first plot box", Color.Info)
-            game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
-          }
+    def performCardActivity(activity: String): Boolean = {
+      def doit(condition: Boolean, code: => Unit, msg: String): Boolean = {
+        if (condition)
+          code
+        else
+          log(msg, Color.Info)
+        condition
+      }
 
+      val result = activity match {
+        case AddReserves =>
+          addToReserves(Jihadist, card.ops)
+          true
+        case ExecuteEvent =>
+          performCardEvent(card, Jihadist)
+          true
+        case Recruit =>
+          doit(
+            game.recruitPossible,
+            humanRecruit(opsAvailable),
+            s"A recruit operation is not currently possible."
+          )
+        case Travel =>
+          doit(
+            game.travelSources.nonEmpty,
+            humanTravel(opsAvailable),
+            s"A travel operation is not currently possible."
+          )
+        case Jihad =>
+          doit(
+            game.jihadPossible,
+            humanJihad(opsAvailable),
+            s"A jihad operation is not currently possible."
+          )
+        case PlotAction =>
+          doit(
+            game.plotPossible(maxOps),
+            {
+              humanPlot(opsAvailable)
+              // The first plot used in a turn is placed in the 1st plot box
+              // The Ruthless US bot resolve does not allow this.
+              if (game.firstPlotEntry.isEmpty && !game.usResolve(Ruthless)) {
+                firstPlotUsed = true
+                log(s"\nPlace the $card card in the first plot box", Color.Info)
+                game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
+              }
+            },
+            s"A plot operation is not currently possible with ${opsString(opsAvailable)}."
+          )
 
-        case other => throw new IllegalStateException(s"Invalid Jihadist action: $other")
+        case _ => throw new IllegalStateException(s"Invalid Jihadist action: $activity")
       }
       pause()
+      result
     }
 
+    sealed trait PerformOption {
+      def menuText: String
+    }
+    case class PerformCardActivity(action: String) extends PerformOption {
+      override def menuText = if (action == ExecuteEvent)
+        s"Execute the ${card.cardName} event"
+      else
+        s"Perform $action operation with ${opsString(opsAvailable)}"
+    }
+    case object UseReserves extends PerformOption {
+      override def menuText = s"Expend ${opsString(game.reserves.jihadist)} from reserves"
+    }
+    case class TriggerCardEvent(card: Card) extends PerformOption {
+      override def menuText = if (card.association == US)
+        s"Trigger $Jihadist event [${card.cardName}]"
+      else
+        s"Trigger automatic event [${card.cardName}]"
+    }
+    case object CadreOption extends PerformOption {
+      override def menuText = s"Remove cadre"
+    }
+    case object FinishedOption extends PerformOption {
+      override def menuText = s"Finished with card"
+    }
+    case object AbortOption extends PerformOption {
+      override def menuText = s"Abort card"
+    }
 
-    if (card.autoTrigger || card.association == US) {
-      sealed trait Choice
-      case object Ops extends Choice
-      case object Trigger extends Choice
-      case object Abort extends Choice
-      val choices = List(
-        Ops     -> "Operations",
-        Trigger -> s"Trigger event [${card.cardName}]",
-        Abort   -> "Abort card",
-      )
+    // If there is only one option in the list then it is the AbortOption
+    // so we are finished.
+    def processOptions(options: List[PerformOption]): Unit = {
+    
+      // If only one option remains it is the AbortOption so we are done
+      if (options.size > 1) {
+        // Ask what happens next
+        val choices = options.map(o => o -> o.menuText)
+        val option = askMenu("What happens next:", choices).head
 
-      def performActions(): Unit = {
-        askMenu("What happens next:", choices).head match {
-          case Ops =>
-            performCardActivity(getJihadistActivity())
-            if (card.association == US && firstPlotUsed)
+        val updatedOptions = option match {
+          case PerformCardActivity(activity) =>
+            // If the activity was peformed or if there is no trigger option
+            // then remove this option
+            val haveTrigger = options.exists {
+              case TriggerCardEvent(_) => true
+              case _ => false
+            }
+            if (performCardActivity(activity) || !haveTrigger)
+              options.filterNot(opt => opt == option || opt == UseReserves)
+            else
+              options
+
+          case CadreOption =>
+            humanVoluntarilyRemoveCadre()
+            if (game.hasCountry(_.hasCadre))
+              options
+            else
+              options.filterNot(opt => opt == option || opt == FinishedOption)
+
+          case TriggerCardEvent(c) =>
+            if (firstPlotUsed)
               log(s"\nThe First plot option prevents the US associated \"${card.cardName}\" event from triggering", Color.Info)
             else
               performTriggeredEvent(US, card)
+            options.filterNot(_ == option)
 
-          case Trigger =>
-            performTriggeredEvent(US, card)
-            performCardActivity(getJihadistActivity())
+          case UseReserves =>
+            reservesUsed = inReserve
+            log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
+            game = game.copy(reserves = game.reserves.copy(jihadist = 0))
+            options.filterNot(_ == option)
+          
+          case FinishedOption =>
+            Nil
 
-          case Abort =>
+          case AbortOption =>
             if (askYorN("Really abort (y/n)? "))
               throw AbortAction
-            else
-              performActions()
+            options
         }
+
+        // If the only options remaining are CadreOption and AbortOption
+        // Then insert a Finished Option
+        if (updatedOptions == List(CadreOption, AbortOption))
+          processOptions(List(FinishedOption, CadreOption, AbortOption))
+        else
+          processOptions(updatedOptions)
       }
-      performActions()
     }
-    else
-      performCardActivity(getJihadistActivity())
+
+    val activity = getCardActivity()
+
+    val initialOptions = new ListBuffer[PerformOption]
+    
+    initialOptions += PerformCardActivity(activity)
+    if (opsAvailable < 3 && inReserve > 0 && activity != ExecuteEvent && activity != AddReserves)
+      initialOptions += UseReserves
+    if (card.autoTrigger || card.association  == US)
+      initialOptions += TriggerCardEvent(card)
+    if (game.hasCountry(_.hasCadre))
+      initialOptions += CadreOption
+    initialOptions += AbortOption
+
+    processOptions(initialOptions.toList)
   }
 
   def humanRecruit(ops: Int, ignoreFunding: Boolean = false, madrassas: Boolean = false): Unit = {
