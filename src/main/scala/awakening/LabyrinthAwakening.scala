@@ -9469,7 +9469,7 @@ object LabyrinthAwakening {
     // Prompt for which activity the US player wishes to conduct.
     // Event (if possible) or a specific type of Operation.
     @tailrec def getCardActivity(): String = {
-      val oppEventCanTrigger = card.eventWillTrigger(Jihadist) 
+      val oppEventCanTrigger = card.eventWillTrigger(Jihadist)
       val eventPlayable = !ignoreEvent && card.eventIsPlayable(US)
       val showDeploy = game.deployPossible(maxOps)
       val showRegimeChange = maxOps >= 3 && game.usPosture == Hard && (game.regimeChangeTargets.nonEmpty || oppEventCanTrigger)
@@ -9591,50 +9591,48 @@ object LabyrinthAwakening {
     }
 
     def processOptions(options: List[PerformOption]): Unit = {
-      // If there is only one option in the list then it is the AbortOption
-      // so we are finished.
-      if (options.size > 1) {
-        // Ask what happens next
-        val choices = options.map(o => o -> o.menuText)
-        val option = askMenu("What happens next:", choices).head
+      // Ask what happens next
+      val choices = options.map(o => o -> o.menuText)
+      val option = askMenu("What happens next:", choices).head
 
-        val updatedOptions = option match {
-          case PerformCardActivity(activity) =>
-            // If the activity was peformed or if there is no trigger option
-            // then remove this option
-            val haveTrigger = options.exists {
-              case TriggerCardEvent(_) => true
-              case _ => false
-            }
-            if (performCardActivity(activity) || !haveTrigger)
-              options.filterNot(opt => opt == option || opt == UseReserves)
-            else
-              options
-
-          case TriggerCardEvent(c) =>
-            performTriggeredEvent(Jihadist, c)
-            options.filterNot(_ == option)
-
-          case UseReserves =>
-            reservesUsed = inReserve
-            log(s"\n$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
-            game = game.copy(reserves = game.reserves.copy(us = 0))
-            options.filterNot(_ == option)
-          
-          case AbortOption =>
-            if (askYorN("Really abort (y/n)? "))
-              throw AbortAction
+      val updatedOptions = option match {
+        case PerformCardActivity(activity) =>
+          // If the activity was peformed or if there is no trigger option
+          // then remove this option
+          val haveTrigger = options.exists {
+            case TriggerCardEvent(_) => true
+            case _ => false
+          }
+          if (performCardActivity(activity) || !haveTrigger)
+            options.filterNot(opt => opt == option || opt == UseReserves)
+          else
             options
-        }
-        
-        processOptions(updatedOptions)
+
+        case TriggerCardEvent(c) =>
+          performTriggeredEvent(Jihadist, c)
+          options.filterNot(_ == option)
+
+        case UseReserves =>
+          reservesUsed = inReserve
+          log(s"\n$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
+          game = game.copy(reserves = game.reserves.copy(us = 0))
+          options.filterNot(_ == option)
+
+        case AbortOption =>
+          if (askYorN("Really abort (y/n)? "))
+            throw AbortAction
+          options
       }
+
+        // If only abort is left then we are finished.
+      if (updatedOptions.nonEmpty && updatedOptions != List(AbortOption))
+          processOptions(updatedOptions)
     }
-    
+
     val activity = getCardActivity()
-    
+
     val initialOptions = new ListBuffer[PerformOption]
-    
+
     initialOptions += PerformCardActivity(activity)
     if (opsAvailable < 3 && inReserve > 0 && activity != ExecuteEvent && activity != AddReserves)
       initialOptions += UseReserves
@@ -9644,7 +9642,8 @@ object LabyrinthAwakening {
       if (card.autoTrigger || card.association  == Jihadist)
         initialOptions += TriggerCardEvent(card)
     }
-    initialOptions += AbortOption
+    if (initialOptions.size > 1)
+      initialOptions += AbortOption
 
     try processOptions(initialOptions.toList)
     catch {
@@ -9903,7 +9902,7 @@ object LabyrinthAwakening {
     def maxOps       = (card.ops + inReserve) min 3
 
     @tailrec def getCardActivity(): String = {
-      val oppEventCanTrigger = card.eventWillTrigger(US) 
+      val oppEventCanTrigger = card.eventWillTrigger(US)
       val eventPlayable =
         !ignoreEvent &&
         lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks al Non-US events
@@ -10029,55 +10028,53 @@ object LabyrinthAwakening {
     // If there is only one option in the list then it is the AbortOption
     // so we are finished.
     def processOptions(options: List[PerformOption]): Unit = {
-    
-      // If only one option remains it is the AbortOption so we are done
-      if (options.size > 1) {
-        // Ask what happens next
-        val choices = options.map(o => o -> o.menuText)
-        val option = askMenu("What happens next:", choices).head
+      val choices = options.map(o => o -> o.menuText)
+      val option = askMenu("What happens next:", choices).head
 
-        val updatedOptions = option match {
-          case PerformCardActivity(activity) =>
-            // If the activity was peformed or if there is no trigger option
-            // then remove this option
-            val haveTrigger = options.exists {
-              case TriggerCardEvent(_) => true
-              case _ => false
-            }
-            if (performCardActivity(activity) || !haveTrigger)
-              options.filterNot(opt => opt == option || opt == UseReserves)
-            else
-              options
-
-          case CadreOption =>
-            humanVoluntarilyRemoveCadre()
-            if (game.hasCountry(_.hasCadre))
-              options
-            else
-              options.filterNot(opt => opt == option || opt == FinishedOption)
-
-          case TriggerCardEvent(c) =>
-            if (firstPlotUsed)
-              log(s"\nThe First plot option prevents the US associated \"${card.cardName}\" event from triggering", Color.Info)
-            else
-              performTriggeredEvent(US, card)
-            options.filterNot(_ == option)
-
-          case UseReserves =>
-            reservesUsed = inReserve
-            log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
-            game = game.copy(reserves = game.reserves.copy(jihadist = 0))
-            options.filterNot(_ == option)
-          
-          case FinishedOption =>
-            Nil
-
-          case AbortOption =>
-            if (askYorN("Really abort (y/n)? "))
-              throw AbortAction
+      val updatedOptions = option match {
+        case PerformCardActivity(activity) =>
+          // If the activity was peformed or if there is no trigger option
+          // then remove this option
+          val haveTrigger = options.exists {
+            case TriggerCardEvent(_) => true
+            case _ => false
+          }
+          if (performCardActivity(activity) || !haveTrigger)
+            options.filterNot(opt => opt == option || opt == UseReserves)
+          else
             options
-        }
 
+        case CadreOption =>
+          humanVoluntarilyRemoveCadre()
+          if (game.hasCountry(_.hasCadre))
+            options
+          else
+            options.filterNot(opt => opt == option || opt == FinishedOption)
+
+        case TriggerCardEvent(c) =>
+          if (firstPlotUsed)
+            log(s"\nThe First plot option prevents the US associated \"${card.cardName}\" event from triggering", Color.Info)
+          else
+            performTriggeredEvent(US, card)
+          options.filterNot(_ == option)
+
+        case UseReserves =>
+          reservesUsed = inReserve
+          log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
+          game = game.copy(reserves = game.reserves.copy(jihadist = 0))
+          options.filterNot(_ == option)
+
+        case FinishedOption =>
+          Nil
+
+        case AbortOption =>
+          if (askYorN("Really abort (y/n)? "))
+            throw AbortAction
+          options
+      }
+
+      // If only abort is left then we are finished.
+      if (updatedOptions.nonEmpty && updatedOptions != List(AbortOption)) {
         // If the only options remaining are CadreOption and AbortOption
         // Then insert a Finished Option
         if (updatedOptions == List(CadreOption, AbortOption))
@@ -10090,7 +10087,7 @@ object LabyrinthAwakening {
     val activity = getCardActivity()
 
     val initialOptions = new ListBuffer[PerformOption]
-    
+
     initialOptions += PerformCardActivity(activity)
     if (opsAvailable < 3 && inReserve > 0 && activity != ExecuteEvent && activity != AddReserves)
       initialOptions += UseReserves
@@ -10098,7 +10095,8 @@ object LabyrinthAwakening {
       initialOptions += TriggerCardEvent(card)
     if (game.hasCountry(_.hasCadre))
       initialOptions += CadreOption
-    initialOptions += AbortOption
+    if (initialOptions.size > 1)
+      initialOptions += AbortOption
 
     processOptions(initialOptions.toList)
   }
