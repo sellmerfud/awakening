@@ -2540,7 +2540,7 @@ object LabyrinthAwakening {
             case input                  => testResponse(Some(input))
           }
         case Some(AbortCard) if allowAbort =>
-          if (askYorN("Really abort (y/n)? ")) throw AbortAction else testResponse(None)
+          if (askYorN("Really abort? (y/n) ")) throw AbortAction else testResponse(None)
         case s => s
       }
     }
@@ -2951,7 +2951,7 @@ object LabyrinthAwakening {
             case null | "" if allowNone => None
             case null | "" => testResponse(None)
             case ABORT() if allowAbort =>
-              if (askYorN("Really abort (y/n)? "))
+              if (askYorN("Really abort? (y/n) "))
                 throw AbortAction
               else
                 testResponse(None)
@@ -4142,7 +4142,7 @@ object LabyrinthAwakening {
     game.getMuslim(capital).caliphateCandidate
 
   def askDeclareCaliphate(capital: String): Boolean =
-    askYorN(s"Do you wish to declare a Caliphate with $capital as the Capital (y/n)? ")
+    askYorN(s"Do you wish to declare a Caliphate with $capital as the Capital? (y/n) ")
 
 
   // Throws an exception if a Caliphate already exists
@@ -4964,7 +4964,7 @@ object LabyrinthAwakening {
         case VALID_NAME(name) =>
           if ((gamesDir/name).exists) {
             displayLine(s"\nA game called '$name' already exists.", Color.Info)
-            if (askYorN(s"Do you want to overwrite the existing game (y/n)? ")) {
+            if (askYorN(s"Do you want to overwrite the existing game? (y/n) ")) {
               (gamesDir/name).rmtree()
               Some(name)
             }
@@ -5795,8 +5795,28 @@ object LabyrinthAwakening {
         log()
         testCountry(name)
         val tested = game.getMuslim(name)
-        if (ops < tested.governance)
+        // It is possible that after testing the country, the player does not have enough Ops
+        // to continue.  If the player has not already used their reserves, they may do so now.
+        // The Bot will never do this.
+        val usReserves = game.reserves.us
+        val addReserves = if (ops < tested.governance && isHuman(US) && ops + usReserves >= tested.governance) {
+          displayLine(s"\n${opsString(ops)} is not enough to complete the War of Ideas in $name.", Color.Info)
+          askYorN(s"\nWould you like to expend your reserves of ${opsString(usReserves)}? (y/n) ")
+        }
+        else
+          false
+        
+        val totalOps = if (addReserves) {
+          log(s"\n$US player expends their reserves of ${opsString(usReserves)}", Color.Info)
+          game = game.copy(reserves = game.reserves.copy(us = 0))
+          ops + usReserves
+        }
+        else
+          ops
+
+        if (totalOps < tested.governance) {
           log(s"Not enough Ops to complete War of Ideas in $name")
+        }
         else {
           log(s"$US performs War of Ideas in $name")
           log(separator())
@@ -8178,7 +8198,7 @@ object LabyrinthAwakening {
       case Delete =>
         askMenuWithWrap("Delete which game:", gameChoices(), sameLine = false, allowAbort = false)
           .foreach { name =>
-            if (askYorN(s"\nReally delete game [$name] (y/n)? "))
+            if (askYorN(s"\nReally delete game [$name]? (y/n) "))
               (gamesDir/name).rmtree()
           }
         programMainMenu(params)
@@ -8249,7 +8269,7 @@ object LabyrinthAwakening {
       }
 
       val humanAutoRoll = params.autoDice
-        .getOrElse(!askYorN("\nDo you wish to roll your own dice (y/n)? "))
+        .getOrElse(!askYorN("\nDo you wish to roll your own dice? (y/n) "))
 
       val saveName = askGameName("\nEnter a name for your new game (blank to cancel): ")
         .getOrElse(throw CancelNewGame)
@@ -9494,7 +9514,7 @@ object LabyrinthAwakening {
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
       askMenu(s"$US action: ", actions).head match {
         case AbortCard =>
-          if (askYorN("Really abort (y/n)? "))
+          if (askYorN("Really abort? (y/n) "))
             throw AbortAction
           else
             getCardActivity()
@@ -9619,7 +9639,7 @@ object LabyrinthAwakening {
           options.filterNot(_ == option)
 
         case AbortOption =>
-          if (askYorN("Really abort (y/n)? "))
+          if (askYorN("Really abort? (y/n) "))
             throw AbortAction
           options
       }
@@ -9927,7 +9947,7 @@ object LabyrinthAwakening {
       println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
       askMenu(s"$Jihadist action: ", actions).head match {
         case AbortCard =>
-            if (askYorN("Really abort (y/n)? "))
+            if (askYorN("Really abort? (y/n) "))
               throw AbortAction
             else
               getCardActivity()
@@ -10068,7 +10088,7 @@ object LabyrinthAwakening {
           Nil
 
         case AbortOption =>
-          if (askYorN("Really abort (y/n)? "))
+          if (askYorN("Really abort? (y/n) "))
             throw AbortAction
           options
       }
@@ -10260,7 +10280,7 @@ object LabyrinthAwakening {
       val name = askCountry(s"Jihad in which country: ", candidates)
       val m    = game.getMuslim(name)
       val majorJihad = if (m.majorJihadOK(diceLeft))
-        askYorN(s"Conduct Major Jihad in $name (y/n)? ")
+        askYorN(s"Conduct Major Jihad in $name? (y/n) ")
       else
         false
       val numRolls = if (majorJihad) {
@@ -11337,7 +11357,7 @@ object LabyrinthAwakening {
           warn(nixAwakening, "The awakening markers will be removed.")
           warn(nixReaction, "The reaction markers will be removed.")
           warn(nixTrainingCamps, "The Training Camps marker will be removed")
-          if (!anyWarnings || askYorN(s"Do you wish to continue (y/n)? ")) {
+          if (!anyWarnings || askYorN(s"Do you wish to continue? (y/n) ")) {
             var updated = m
             logAdjustment(name, "Governance", govToString(updated.governance), govToString(newGov))
             updated = updated.copy(governance = newGov)
@@ -11567,7 +11587,7 @@ object LabyrinthAwakening {
           val nixCapital = newValue == NoRegimeChange && game.isCaliphateCapital(name)
           if (nixCapital)
             displayLine(s"\n$name will no longer be the Caliphate Capital and the Caliphate will be removed completely.", Color.Info)
-          if (!nixCapital || askYorN(s"Do you wish continue (y/n)? ")) {
+          if (!nixCapital || askYorN(s"Do you wish continue? (y/n) ")) {
             logAdjustment(name, "Regime change", m.regimeChange, newValue)
             evaluateCaliphateChanges {
               var updated = m.copy(regimeChange = newValue)

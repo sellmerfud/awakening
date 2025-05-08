@@ -1257,7 +1257,7 @@ object USBot extends BotHelpers {
       // Reassessment is desired. Ask if the next US card has enough Ops
       val opsNeeded = 6 - card.ops - game.reserves.us
 
-      if (opsNeeded == 1 || askYorN(s"Does the next card in the $US Bot hand have at least $opsNeeded Ops (y/n)? ")) {
+      if (opsNeeded == 1 || askYorN(s"Does the next card in the $US Bot hand have at least $opsNeeded Ops? (y/n) ")) {
         val prompt = "Enter the next card in the US hand. Card # "
         val cardNum = askCardNumber(FromRole(US)::Nil, prompt, allowNone = false).get
         val card2 = deck(cardNum)
