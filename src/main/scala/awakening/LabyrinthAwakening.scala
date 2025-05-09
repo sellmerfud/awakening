@@ -9431,21 +9431,23 @@ object LabyrinthAwakening {
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
   def humanUsCardPlay(card: Card, ignoreEvent: Boolean): Unit = {
-    val ExecuteEvent = "Execute event"
-    val WarOfIdeas   = "War of ideas"
-    val Deploy       = "Deploy"
-    val RegimeChg    = "Regime change"
-    val Withdraw     = "Withdraw"
-    val Disrupt      = "Disrupt"
-    val Alert        = "Alert"
-    val Reassess     = "Reassessment"
-    val AddReserves  = "Add to reserves"
-    val AbortCard    = "Abort card"
-    var reservesUsed = 0
+    val maxOps        = (card.ops + game.reserves.us) min 3
+    val ExecuteEvent  = "Execute event"
+    val WarOfIdeas    = "War of ideas"
+    val Deploy        = "Deploy"
+    val RegimeChg     = "Regime change"
+    val RegimeChgDisp = if (card.ops == 3) RegimeChg else s"$RegimeChg (using reserves)"
+    val Withdraw      = "Withdraw"
+    val Disrupt       = "Disrupt"
+    val Alert         = "Alert"
+    val AlertDisp     = if (card.ops == 3) Alert else s"$Alert (using reserves)"
+    val Reassess      = "Reassessment"
+    val AddReserves   = "Add to reserves"
+    val AbortCard     = "Abort card"
+    
+    var reservesUsed  = 0
     var secondCard: Option[Card] = None  // For reassessment only
-    def inReserve    = game.reserves.us
     def opsAvailable = (card.ops + reservesUsed) min 3
-    def maxOps       = (card.ops + inReserve) min 3
 
 
     def promptForSecondCard(): Card = {
@@ -9495,23 +9497,23 @@ object LabyrinthAwakening {
       val showRegimeChange = maxOps >= 3 && game.usPosture == Hard && (game.regimeChangeTargets.nonEmpty || oppEventCanTrigger)
       val showWithdraw = maxOps >= 3 && game.usPosture == Soft && (game.withdrawFromTargets.nonEmpty || oppEventCanTrigger)
       val showDisrupt = game.disruptTargets(maxOps).nonEmpty || oppEventCanTrigger
-      val showAlert = game.alertPossible(maxOps) || oppEventCanTrigger
+      val showAlert = maxOps >= 3 && (game.alertTargets.nonEmpty || oppEventCanTrigger)
       val showReassess = firstCardOfPhase(US) && card.ops == 3 && hasCardInHand(US)
-      val showAddReserves = card.ops < 3 && inReserve < 2
+      val showAddReserves = card.ops < 3 && game.reserves.us < 2
       val actions = List(
         choice(eventPlayable,    ExecuteEvent, ExecuteEvent),
         choice(true,             WarOfIdeas, WarOfIdeas),
         choice(showDeploy,       Deploy, Deploy),
-        choice(showRegimeChange, RegimeChg, RegimeChg),
+        choice(showRegimeChange, RegimeChg, RegimeChgDisp),
         choice(showWithdraw,     Withdraw, Withdraw),
         choice(showDisrupt,      Disrupt, Disrupt),
-        choice(showAlert,        Alert, Alert),
+        choice(showAlert,        Alert, AlertDisp),
         choice(showReassess,     Reassess, Reassess),
         choice(showAddReserves,  AddReserves, AddReserves),
         choice(true,             AbortCard, AbortCard),
       ).flatten
 
-      println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
+      println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(game.reserves.us)} in reserve")
       askMenu(s"$US action: ", actions).head match {
         case AbortCard =>
           if (askYorN("Really abort? (y/n) "))
@@ -9633,7 +9635,7 @@ object LabyrinthAwakening {
           options.filterNot(_ == option)
 
         case UseReserves =>
-          reservesUsed = inReserve
+          reservesUsed = game.reserves.us
           log(s"\n$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
           game = game.copy(reserves = game.reserves.copy(us = 0))
           options.filterNot(_ == option)
@@ -9651,10 +9653,22 @@ object LabyrinthAwakening {
 
     val activity = getCardActivity()
 
+    // Regime Change and Alert always require 3 Ops.
+    // If the card does not have three Ops then we go ahead and
+    // and have the player expend the reserves as a convenience.
+
+    if ((activity == RegimeChg || activity == Alert) && card.ops < 3) {    
+      displayLine(s"\nThe $activity operation requires 3 Ops.", Color.Info)
+      reservesUsed = game.reserves.us
+      log(s"$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
+      game = game.copy(reserves = game.reserves.copy(us = 0))
+    }
+
+
     val initialOptions = new ListBuffer[PerformOption]
 
     initialOptions += PerformCardActivity(activity)
-    if (opsAvailable < 3 && inReserve > 0 && activity != ExecuteEvent && activity != AddReserves)
+    if (opsAvailable < 3 && game.reserves.us > 0 && activity != ExecuteEvent && activity != AddReserves)
       initialOptions += UseReserves
     if (card.autoTrigger || card.association  == Jihadist)
       initialOptions += TriggerCardEvent(card)
@@ -9907,6 +9921,7 @@ object LabyrinthAwakening {
   // abort the command in progress they must type 'abort' at any prompt during the turn.
   // We will then roll back to the game state as it was before the card play.
   def humanJihadistCardPlay(card: Card, ignoreEvent: Boolean): Unit = {
+    val maxOps       = (card.ops + game.reserves.jihadist) min 3
     val ExecuteEvent = "Execute event"
     val Recruit      = "Recruit"
     val Travel       = "Travel"
@@ -9917,9 +9932,7 @@ object LabyrinthAwakening {
     val AbortCard    = "Abort Card"
     var reservesUsed = 0
     var firstPlotUsed = false
-    def inReserve    = game.reserves.jihadist
     def opsAvailable = (card.ops + reservesUsed) min 3
-    def maxOps       = (card.ops + inReserve) min 3
 
     @tailrec def getCardActivity(): String = {
       val oppEventCanTrigger = card.eventWillTrigger(US)
@@ -9931,7 +9944,7 @@ object LabyrinthAwakening {
       val showTravel = game.travelSources.nonEmpty || oppEventCanTrigger
       val showJihad = game.jihadPossible || oppEventCanTrigger
       val showPlot = game.plotPossible(maxOps) || oppEventCanTrigger
-      val showAddReserves = card.ops < 3 && inReserve < 2
+      val showAddReserves = card.ops < 3 && game.reserves.jihadist < 2
       val showRemoveCadre = game.hasCountry(_.hasCadre)
       val actions = List(
         choice(eventPlayable,   ExecuteEvent, ExecuteEvent),
@@ -9944,7 +9957,7 @@ object LabyrinthAwakening {
         choice(true,            AbortCard, AbortCard),
       ).flatten
 
-      println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(inReserve)} in reserve")
+      println(s"\nYou have ${opsString(opsAvailable)} available and ${opsString(game.reserves.jihadist)} in reserve")
       askMenu(s"$Jihadist action: ", actions).head match {
         case AbortCard =>
             if (askYorN("Really abort? (y/n) "))
@@ -10079,7 +10092,7 @@ object LabyrinthAwakening {
           options.filterNot(_ == option)
 
         case UseReserves =>
-          reservesUsed = inReserve
+          reservesUsed = game.reserves.jihadist
           log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
           game = game.copy(reserves = game.reserves.copy(jihadist = 0))
           options.filterNot(_ == option)
@@ -10109,7 +10122,7 @@ object LabyrinthAwakening {
     val initialOptions = new ListBuffer[PerformOption]
 
     initialOptions += PerformCardActivity(activity)
-    if (opsAvailable < 3 && inReserve > 0 && activity != ExecuteEvent && activity != AddReserves)
+    if (opsAvailable < 3 && game.reserves.jihadist > 0 && activity != ExecuteEvent && activity != AddReserves)
       initialOptions += UseReserves
     if (card.autoTrigger || card.association  == US)
       initialOptions += TriggerCardEvent(card)
@@ -11773,8 +11786,8 @@ object LabyrinthAwakening {
 
       val countryChanged = origCountry != ToAvail.candidates
       val availableChanged = origAvail != FromAvail.candidates
-      val resolvedChanged = origResolved != ToResolved.candidates
-      val removedChanged = origRemoved != ToRemoved.candidates
+      val resolvedChanged = origResolved != FromResolved.candidates
+      val removedChanged = origRemoved != FromRemoved.candidates
       if (countryChanged || availableChanged || resolvedChanged || removedChanged) {
         if (countryChanged)
           logAdjustment(name, "plots", mapPlotsDisplay(origCountry), mapPlotsDisplay(ToAvail.candidates))
