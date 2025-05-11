@@ -92,15 +92,14 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
         val card = deck(cardNum)
         val cardDisplay = card.numAndName
         val eventName = s""""${card.cardName}""""
-
         // Clear this in case it is need by the event that was drawn.
         cachedEventPlayableAnswer = None
         val action = if (isHuman(role)) {
           val choices = List(
-            choice(card.eventIsPlayable(role), Event,  s"Play the $cardDisplay event"),
-            choice(!card.autoTrigger,          Discard,s"Discard $cardDisplay"),
-            choice(true,                       Return, s"Return $cardDisplay to the $opponent hand"),
-            choice(true,                       Keep,   s"Keep $cardDisplay and give another card to the $opponent")
+            choice(true,              Event,  s"Play the $cardDisplay event"),
+            choice(!card.autoTrigger, Discard,s"Discard $cardDisplay"),
+            choice(true,              Return, s"Return $cardDisplay to the $opponent hand"),
+            choice(true,              Keep,   s"Keep $cardDisplay and give another card to the $opponent")
           ).flatten
           askMenu("Choose one:", choices).head
         }
@@ -126,17 +125,28 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
             askCardDrawnFromOpponent(role.opponent, Some(s"What is the # of the card given: "), except = Set(cardNum))
 
           case Event =>
+            val eventRole = if (card.association == role ||  card.association == Unassociated)
+              role
+            else
+              role.opponent
+
             addAdditionalCardToPlayedCard(card.number)
             decreaseCardsInHand(role, 1)
             log(s"\n$role executes the $cardDisplay event")
             log(separator())
-            card.executeEvent(role)
-            if (card.markLapsingAfterExecutingEvent(role))
-              putCardInLapsingBox(card.number)
-            else if (card.removeAfterExecutingEvent(role))
-              removeCardFromGame(card.number)
-            else
-              addCardToDiscardPile(card.number)
+            if (card.eventConditionsMet(eventRole)) {
+              card.executeEvent(eventRole)
+              if (card.markLapsingAfterExecutingEvent(role))
+                putCardInLapsingBox(card.number)
+              else if (card.removeAfterExecutingEvent(role))
+                removeCardFromGame(card.number)
+              else
+                addCardToDiscardPile(card.number)
+              }
+              else {
+                log(s"The event conditions are not satisfied.  The event has no effect.", Color.Event)                
+                addCardToDiscardPile(card.number)
+            }
         }
       }
   }
