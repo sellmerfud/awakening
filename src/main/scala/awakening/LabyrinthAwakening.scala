@@ -9438,6 +9438,7 @@ object LabyrinthAwakening {
     val RegimeChg     = "Regime change"
     val RegimeChgDisp = if (card.ops == 3) RegimeChg else s"$RegimeChg (using reserves)"
     val Withdraw      = "Withdraw"
+    val WithdrawDisp = if (card.ops == 3) Withdraw else s"$Withdraw (using reserves)"
     val Disrupt       = "Disrupt"
     val Alert         = "Alert"
     val AlertDisp     = if (card.ops == 3) Alert else s"$Alert (using reserves)"
@@ -9505,7 +9506,7 @@ object LabyrinthAwakening {
         choice(true,             WarOfIdeas, WarOfIdeas),
         choice(showDeploy,       Deploy, Deploy),
         choice(showRegimeChange, RegimeChg, RegimeChgDisp),
-        choice(showWithdraw,     Withdraw, Withdraw),
+        choice(showWithdraw,     Withdraw, WithdrawDisp),
         choice(showDisrupt,      Disrupt, Disrupt),
         choice(showAlert,        Alert, AlertDisp),
         choice(showReassess,     Reassess, Reassess),
@@ -9657,7 +9658,7 @@ object LabyrinthAwakening {
     // If the card does not have three Ops then we go ahead and
     // and have the player expend the reserves as a convenience.
 
-    if ((activity == RegimeChg || activity == Alert) && card.ops < 3) {    
+    if ((activity == RegimeChg || activity == Alert || activity == Withdraw) && card.ops < 3) {    
       displayLine(s"\nThe $activity operation requires 3 Ops.", Color.Info)
       reservesUsed = game.reserves.us
       log(s"$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
