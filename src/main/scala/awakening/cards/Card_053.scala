@@ -58,10 +58,8 @@ object Card_053 extends Card(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing, 
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    firstCardOfPhase(Jihadist) &&
-    hasCardInHand(Jihadist)
-
+  def eventConditionsMet(role: Role) = firstCardOfPhase(Jihadist)
+    
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -78,18 +76,23 @@ object Card_053 extends Card(53, "Madrassas", Jihadist, 1, NoRemove, NoLapsing, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val  prompt = if (isHuman(role))
-      "\nEnter card # of card you wish to use for recruiting: "
-    else
-      s"\nEnter card # of the next card in the $Jihadist Bot's hand: "
+    val totalOps = if (hasCardInHand(Jihadist)) {
+      val  prompt = if (isHuman(role))
+        "\nEnter card # of card you wish to use for recruiting: "
+      else
+        s"\nEnter card # of the next card in the $Jihadist Bot's hand: "
+      
+      val card = deck(askCardNumber(FromRole(role)::Nil, prompt, allowNone = false).get)
+      decreaseCardsInHand(Jihadist, 1)
+      addSecondCardToPlayedCard(card.number)
+      logCardPlay(Jihadist, card, opsOnly = true, allowOpponentTrigger = false)
+      card.ops + this.ops  // Ops on the Madrassas card and 2nd card
+    }
+    else {
+      log(s"\nThe $Jihadist does not have another card in hand.", Color.Event)
+      this.ops  // Ops on the Madrassas card only
+    }
     
-    val card = deck(askCardNumber(FromRole(role)::Nil, prompt, allowNone = false).get)
-    decreaseCardsInHand(Jihadist, 1)
-    addSecondCardToPlayedCard(card.number)
-    logCardPlay(Jihadist, card, opsOnly = true, allowOpponentTrigger = false)
-    
-    // Add Ops on the Madrassas card.
-    val totalOps = card.ops + this.ops
     
     if (isHuman(role))
       humanRecruit(totalOps, ignoreFunding = true, madrassas = true)
