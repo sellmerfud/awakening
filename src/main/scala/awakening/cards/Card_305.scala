@@ -95,7 +95,7 @@ object Card_305 extends Card(305, "Presidential Whistleblower", Jihadist, 2, NoR
         log(s"You ($US) must discard cards until the combined Operational value")
         log(s"is at least $opsPoints")
       }
-      askCardsDiscardedByOps(US, opsPoints) 
+      askCardsDiscardedByOps(US, opsPoints, triggerRole = Some(Jihadist)) 
     }
     else
       log(s"\nThe $US has not cards to discard.", Color.Event)
