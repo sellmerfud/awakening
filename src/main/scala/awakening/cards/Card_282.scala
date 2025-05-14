@@ -122,6 +122,6 @@ object Card_282 extends Card(282, "Executive Order 13492", Jihadist, 1, Remove, 
       addSleeperCellsToCountry(target, 1)
     }
     else
-      log("\nThere are no available cells.  The event has not effect.", Color.Event)
+      log("\nThere are no available cells.  The event has no effect.", Color.Event)
   }
 }
