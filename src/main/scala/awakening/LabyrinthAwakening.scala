@@ -4190,14 +4190,13 @@ object LabyrinthAwakening {
     else
       try {
         val prevGame = game
-        evaluatingCaliphateChanges = true
 
-        // Run the code
-        code
+        evaluatingCaliphateChanges = true        
+        code  // Run the code
 
         val prevCaliphate = prevGame.allCaliphateMembers.toSet
         val newCaliphate = game.allCaliphateMembers.toSet
-
+        
         // Determine if the caliphate has been changed by the preceeding code.
         prevGame.caliphateCapital match {
           case Some(previousCapital) if !game.isMuslim(previousCapital) || !game.getMuslim(previousCapital).caliphateCandidate =>
@@ -6319,9 +6318,9 @@ object LabyrinthAwakening {
                   militia = 0, besiegedRegime = false)
             game = game.updateCountry(improved)
             removeTrainingCamp_?(name)
+            endRegimeChange(name)
+            endCivilWar(name)
           }
-          endRegimeChange(name)
-          endCivilWar(name)
           if (convergenceOK)
             performConvergence(forCountry = name, awakening = true)
         }
@@ -6379,11 +6378,11 @@ object LabyrinthAwakening {
             aidMarkers = 0, militia = 0, besiegedRegime = false)
           evaluateCaliphateChanges {
             game = game.updateCountry(degraded)
+            endRegimeChange(name)
+            endCivilWar(name)
           }
           moveWMDCacheToAvailable(name, m.wmdCache)
           removeAllAdvisorsFromCountry(name) // Country becomes Adversary
-          endRegimeChange(name)
-          endCivilWar(name)
           if (convergenceOK)
             performConvergence(forCountry = name, awakening = false)
           checkAutomaticVictory() // Will Exit game if auto victory has been achieved
@@ -9600,7 +9599,7 @@ object LabyrinthAwakening {
         s"Perform $action operation with ${opsString(opsAvailable)}"
     }
     case object UseReserves extends PerformOption {
-      override def menuText = s"Expend ${opsString(game.reserves.us)} from reserves"
+      override def menuText = s"Expend reserves (${opsString(game.reserves.us)})"
     }
     case class TriggerCardEvent(card: Card) extends PerformOption {
       override def menuText = if (card.association == Jihadist)
@@ -10041,7 +10040,7 @@ object LabyrinthAwakening {
         s"Perform $action operation with ${opsString(opsAvailable)}"
     }
     case object UseReserves extends PerformOption {
-      override def menuText = s"Expend ${opsString(game.reserves.jihadist)} from reserves"
+      override def menuText = s"Expend reserves (${opsString(game.reserves.us)})"
     }
     case class TriggerCardEvent(card: Card) extends PerformOption {
       override def menuText = if (card.association == US)
