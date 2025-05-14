@@ -2134,7 +2134,7 @@ object LabyrinthAwakening {
         case n: NonMuslimCountry =>
           val specialCase = if (n.iranSpecialCase) ", Special Case" else ""
           summary.add("")
-          summary.add(s"$name  (Non-Muslim$specialCase)")
+          summary.add(s"$name - Non-Muslim$specialCase")
           summary.add(separator(length = 54))
           summary.add(s"${govToString(n.governance)}, ${n.posture}, Recruit ${n.recruitNumber}")
           numItem(n.activeCells, "Active cell")
@@ -2153,21 +2153,41 @@ object LabyrinthAwakening {
 
 
         case m: MuslimCountry =>
-          val gov = if (m.isUntested) "Untested" else s"${govToString(m.governance)} ${m.alignment}"
-          val res = amountOf(m.resourceValue, "resource")
-          val resDisp = if (m.resourceValue == m.printedResources)
-            res
+          val nameItems = new ListBuffer[String]
+          val descItems = new ListBuffer[String]
+          if (m.isUntested)
+            descItems += "Untested"
           else
-            s"$res (${m.printedResources})"
-          val oil = if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) List("Oil exporter") else Nil
-          val autoRecruit = if (m.autoRecruit) List("Auto-Recruit") else Nil
-          val desc = (gov :: resDisp :: oil ::: autoRecruit).mkString(", ")
+            descItems += s"${govToString(m.governance)} ${m.alignment}"
+          if (m.resourceValue == m.printedResources)
+            descItems += amountOf(m.resourceValue, "resource")
+          else
+            descItems += s"${amountOf(m.resourceValue, "resource")} (${m.printedResources})"
+          if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) 
+            descItems += "Oil exporter"
+
+          if (m.autoRecruit)
+            descItems += "Auto-Recruit"
+
+          if (m.inRegimeChange)
+            descItems += s"Regime Change (${m.regimeChange})"
+          if (m.civilWar)
+             descItems += "Civil War"
+
           val muslimType = if (m.isShiaMix) "Shia-Mix" else "Sunni"
-          val truce = if (m.truce) "  ** TRUCE **" else ""
+          nameItems += name
+          nameItems += "-"
+          nameItems += s"Muslim, $muslimType" 
+          if (isCaliphateCapital(name))
+            nameItems += "(Caliphate capital)"
+          else if (isCaliphateMember(name))
+            nameItems += "(Caliphate member)"
+          if (m.truce)
+            nameItems += " ** TRUCE **"
           summary.add("")
-          summary.add(s"$name  (Muslim, $muslimType)$truce")
+          summary.add(nameItems.mkString(" "))
           summary.add(separator(length = 54))
-          summary.add(desc)
+          summary.add(descItems.mkString(", "))
           numItem(m.activeCells, "Active cell")
           numItem(m.sleeperCells, "Sleeper cell")
           numItem(m.cadres, "Cadre")
@@ -2183,16 +2203,6 @@ object LabyrinthAwakening {
             item("Besieged regime")
           addItems()
 
-          items.clear()
-          if (m.inRegimeChange)
-            item(s"Regime Change (${m.regimeChange})")
-          if (m.civilWar)
-            item("Civil War")
-          if (game.isCaliphateCapital(m.name))
-            item("Caliphate Capital")
-          else if (isCaliphateMember(m.name))
-            item("Caliphate member")
-          addItems()
           if (m.hasPlots)
             summary.add(s"Plots: ${mapPlotsDisplay(m.plots, humanRole == Jihadist)}")
           if (m.markers.size > 0)
