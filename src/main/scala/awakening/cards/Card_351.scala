@@ -103,7 +103,7 @@ object Card_351 extends Card(351, "Advanced Persistent Threat (APT)", Unassociat
           ).flatten
           askMenu("Choose one:", choices).head
         }
-        else if (card.eventIsPlayable(role))
+        else if (card.eventIsPlayable(role) && (!game.botEnhancements || card.botWillPlayEvent(role)))
           Event  // Bot will play event if possible
         else
           Discard // Otherwise Bot will discard (which will trigger any auto-event)
