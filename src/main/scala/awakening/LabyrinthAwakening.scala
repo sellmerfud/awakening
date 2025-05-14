@@ -6720,7 +6720,7 @@ object LabyrinthAwakening {
         case 0                => s"There is no longer an event in play that grants extra cells"
         case 5 if alBaghdadi  => s"$AlBaghdadi is in play and a Caliphate has been declared"
         case 5                => s"$TrainingCamps is in a Caliphate country"
-        case 3 if alBaghdadi  => s"$AlBaghdadi is in play but no Caliphate has been declared"
+        case 3 if alBaghdadi  => s"$AlBaghdadi is in play and no Caliphate has been declared"
         case 3                => s"$TrainingCamps is in play in a non-Caliphate country"
         case x => throw new IllegalStateException(s"Invalid training camp capacity: $x")
       }

@@ -1994,7 +1994,7 @@ object JihadistBot extends BotHelpers {
         "Poor Regime Change w/ highest resource value",
         muslimTest(m => m.isPoor && m.inRegimeChange),
         muslimScore(m => m.resourceValue)),
-    )
+    ) ::: recruitAndTravelToPriorities
 
     if (game.caliphateDeclared)
       None
@@ -2007,12 +2007,13 @@ object JihadistBot extends BotHelpers {
 
   // Find target for cell placement by event
   def cellPlacementPriority(canDeclareCaliphate: Boolean)(candidates: List[String]): Option[String] = {
-    if (canDeclareCaliphate && game.cellsAvailable >= 3) {
-      // If we are placing 3 cells and we can declare caliphate then
-      // select that country
+    val caliphatePossible =
+      canDeclareCaliphate &&
+      !game.caliphateDeclared &&
+      game.cellsAvailable >= 3 &&
+      candidates.exists(willDeclareCaliphate)
+    if (caliphatePossible)
       JihadistBot.caliphatePriorityTarget(candidates)
-        .orElse(JihadistBot.recruitTravelToPriority(candidates))
-    }
     else
       JihadistBot.recruitTravelToPriority(candidates)
   }
