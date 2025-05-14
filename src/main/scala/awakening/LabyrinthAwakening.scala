@@ -4276,9 +4276,11 @@ object LabyrinthAwakening {
 
             // Check to see if any of the caliphate members are no longer eligible, or
             // if any new countries are now eligible and log messages accordingly
+            log()
             for (member <- removedMembers)
               log(s"Remove the Caliphate member marker from $member", Color.MapPieces)
 
+            log()
             for (member <- newMembers) {
               log(s"Place a Caliphate member marker in $member", Color.MapPieces)
               flipAllSleepersCells(member)
