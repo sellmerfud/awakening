@@ -102,9 +102,10 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
   // Ehanced Bot instructions:
   // Playable if at least 2 plot markers available and the following procedure yields any valid targets in this priority order:
   // a) Place plot markers (if depleted: place cell, if available) in a Good Muslim country (priority to highest res*, then with troops).
-  // b) if Funding <8, place plots in Nigeria, then Kenya, then poor Muslim (priority to troops, then AID), then Fair Muslim (priority to troops, then AID).
-  // c) if at least one plot marker has been placed so far: place cells, if available, using Recruit/Travel to priority table.
-  // If no plotmarkers have been legally placed following a-c, the event is unplayable.
+  // b) if Funding <8, place plots in Non-Muslim Nigeria, then Kenya, then poor Muslim (priority to troops, then AID), then Fair Muslim (priority to troops, then AID).
+  // c) if at least one plot marker has been placed so far: IF US HARD, PLACE PLOT MARKERS IN HARD NON-MUSLIM COUNTRIES, PRIORITY TO HIGHEST GOV.
+  // d) if at least one plot marker has been placed so far: place cells, if available, using Recruit/Travel to priority table.
+  // If no plotmarkers have been legally placed following a-d, the event is unplayable.
   def getEnhancedBotActions: List[EventAction] = {
     def nextAction(actionNum: Int, cellsRemaining: Int, plots: List[Plot], candidateNames: List[String], actions: Vector[EventAction]): List[EventAction] = {
       if (actionNum > 3 || (cellsRemaining == 0 && plots.isEmpty))
@@ -112,12 +113,15 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
       else {
         val havePlotted = actions.exists(_.item.isRight)
         val muslims = candidateNames.filter(isMuslim).map(game.getMuslim)
+        val nonMuslims = candidateNames.filter(isNonMuslim).map(game.getNonMuslim)
         val goodMuslims = muslims.filter(_.isGood)
         val fairMuslims = muslims.filter(_.isFair)
         val poorMuslims = muslims.filter(_.isPoor)
-        val nigeriaOrKenya = candidateNames.contains(Nigeria) || candidateNames.contains(KenyaTanzania)
+        val hardNonMuslims = nonMuslims.filter(_.isHard)
+        val nigeriaOrKenya = (candidateNames.contains(Nigeria) && isNonMuslim(Nigeria)) || candidateNames.contains(KenyaTanzania)
 
         val action = if (goodMuslims.nonEmpty) {
+          // (a)
           val priorites = List(JihadistBot.HighestPrintedResourcePriority, JihadistBot.WithTroopsPriority)
           val target = JihadistBot.topPriority(goodMuslims, priorites)
             .map(_.name)
@@ -130,8 +134,9 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
           Some(EventAction(target, item))
         }
         else if (game.funding < 8 && plots.nonEmpty && (nigeriaOrKenya || poorMuslims.nonEmpty || fairMuslims.nonEmpty)) {
+          // (b)
           val priorities = List(JihadistBot.WithTroopsPriority, JihadistBot.WithAidPriority)
-          val target = if (candidateNames.contains(Nigeria))
+          val target = if (candidateNames.contains(Nigeria) && isNonMuslim(Nigeria))
             Nigeria
           else if (candidateNames.contains(KenyaTanzania))
             KenyaTanzania
@@ -141,7 +146,14 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
             JihadistBot.topPriority(fairMuslims, priorities).map(_.name).get
           Some(EventAction(target, Right(JihadistBot.selectPlotMarkers(target, 1, plots).head)))
         }
+        else if (havePlotted && plots.nonEmpty && game.usPosture == Hard && hardNonMuslims.nonEmpty) {
+          // (c)
+          val priorities = List(JihadistBot.HighestGovernance)
+          val target = JihadistBot.topPriority(hardNonMuslims, priorities).map(_.name).get
+          Some(EventAction(target, Right(JihadistBot.selectPlotMarkers(target, 1, plots).head)))
+        }
         else if (havePlotted && cellsRemaining > 0) {
+          // (d)
           val target = JihadistBot.recruitTravelToPriority(candidateNames).get
           Some(EventAction(target, Left(Cell)))
         }
