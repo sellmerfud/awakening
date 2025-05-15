@@ -73,7 +73,7 @@ object Card_315 extends Card(315, "Khashoggi Crisis", Jihadist, 3, Remove, NoLap
     // Else unplayable.
     if (game.botEnhancements)
       ((saudi.isAlly || saudi.isAdversary) && game.prestige > 2) ||
-      (saudi.isNeutral && !saudi.truce)    
+      (saudi.isUntested || (saudi.isNeutral && !saudi.truce))    
     else
       game.prestige > 3 || (!saudi.truce && !saudi.isAdversary)
   }
