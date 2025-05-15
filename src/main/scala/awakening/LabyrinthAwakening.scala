@@ -4224,6 +4224,7 @@ object LabyrinthAwakening {
             if (candidates.size == 0) {
               log(s"There are no adjacent countries that can become the new Caliphate capital.", Color.Info)
               log(s"\nDisplacing the Caliphate capital affects funding and prestige.", Color.Info)
+              game = game.copy(caliphateCapital = None)
               decreaseFunding(2)
               increasePrestige(2)
               pause()
@@ -6340,8 +6341,10 @@ object LabyrinthAwakening {
           log(s"Improve the governance of $name to ${govToString(newGov)}", Color.MapPieces)
           if (m.awakening > 0)
             log(s"Remove ${amountOf(delta min m.awakening, "awakening marker")} from $name", Color.MapPieces)
-          val improved = m.copy(governance = newGov,
-                awakening  = (m.awakening - delta) max 0) // Rempove one awakening for each level actually improved
+          val improved = m.copy(
+              governance = newGov,
+              awakening  = (m.awakening - delta) max 0 // Remove one awakening for each level actually improved
+          )
           evaluateCaliphateChanges {
             game = game.updateCountry(improved)
           }
