@@ -10296,8 +10296,94 @@ object LabyrinthAwakening {
     performTravels(attempts.toList)
   }
 
-      // All of the jihad cells must be declared before rolling any dice.
-  def getHumanJihadTargets(diceLeft: Int, candidates: List[String]): List[JihadTarget] = {
+  // All of the jihad cells must be declared before rolling any dice.
+  // Note: According to Volko, the player does not have to choose enough
+  // countires to ensure all Ops are used.  For example, the player may not
+  // wish to perform Jihads in Poor countries where it risks losing the cell
+  // to failure.
+  def getHumanJihadTargets(totalDice: Int, candidates: List[String]): List[JihadTarget] = if (candidates.nonEmpty) {
+    val maxCountries = totalDice min candidates.size
+    val countryDisp = (name: String) => {
+      val numCells = game.getCountry(name).totalCells
+      s"$name (${amountOf(numCells, "cell")})"
+    }
+    val targetCountries = if (candidates.size > 1) {
+      // Ask which countries will be targeted.  The must select at least one and can
+      // select up to as many as there are dice to roll.
+      def nextCountry(candidatesRemaining: List[String], targets: Vector[String]): List[String] = {
+        if (targets.size == maxCountries || candidatesRemaining.isEmpty)
+          targets.toList
+        else {
+          val countryChoices = candidatesRemaining.map(name => Some(name) -> countryDisp(name))
+          // If at least one target has been selected, then allow the user to stop.
+          val choices = if (targets.isEmpty)
+            countryChoices
+          else
+            countryChoices :+ (None -> "Finished selecting countries")
+          val prompt = if (totalDice == 1)
+            "Select Jihad target:"
+          else
+            "Select next Jihad target:"
+          askMenu(prompt, choices).head match {
+            case None =>
+              targets.toList
+            case Some(name) =>
+              nextCountry(candidatesRemaining.filterNot(_ == name), targets :+ name)
+          }
+        }
+      }
+
+      nextCountry(candidates.sorted, Vector.empty)
+        .map(game.getMuslim)
+    }
+    else
+      candidates.sorted
+        .map(game.getMuslim)
+
+
+    // Next we must determine which cells will be used in each target country
+    // At least one cell must be used in each country.  If there are more Ops (dice rolls) than
+    // there are countries, then one of the countries must must the excess dice unless none
+    // of the countries has more than one cell.
+    val totalCells = targetCountries.map(_.totalCells).sum
+
+    case class TargetRolls(country: MuslimCountry, numRolls: Int)
+    val targetRolls = if (targetCountries.size == 1)
+      targetCountries.map(country => TargetRolls(country, country.totalCells min totalDice))
+    else if (totalCells <= totalDice)
+      targetCountries.map(country => TargetRolls(country, country.totalCells))
+    else if (targetCountries.size == totalDice)
+      targetCountries.map(country => TargetRolls(country, 1))
+    else {
+      val (single, multi) = targetCountries.partition(_.totalCells == 1)
+      val singles = single.map(TargetRolls(_, 1))
+      val multis = if (multi.size == 1)
+        multi.map(TargetRolls(_, 2))
+      else {
+        val choices = multi.map(c => c -> c.name)
+        val two = askMenu("Roll two dice in which country:", choices).head
+        multi.map(c => if (c.name == two.name) TargetRolls(c, 2) else TargetRolls(c, 1))
+      }
+      singles ::: multis  
+    }
+
+    for (TargetRolls(country, numRolls) <- targetRolls) yield {
+      val name = country.name
+      val major = country.majorJihadOK(numRolls) && askYorN(s"\nConduct Major Jihad in $name? (y/n) ")
+      val (actives, sleepers, sadr) =
+      if (major) (numRolls, 0, country.hasSadr)  // All sleeping will be active
+      else if (country.totalCells == numRolls) (country.activeCells, country.sleeperCells, country.hasSadr)
+      else if (country.activeCells == 0 && !country.hasSadr)  (0, numRolls, false)
+      else if (country.sleeperCells == 0 && !country.hasSadr) (numRolls, 0, false)
+      else askCells(name, numRolls, sleeperFocus = false)
+
+      JihadTarget(name, major, actives, sleepers, sadr)
+    }
+  }
+  else
+    Nil
+
+  def getHumanJihadTargetsOld(diceLeft: Int, candidates: List[String]): List[JihadTarget] = {
     if (diceLeft == 0 || candidates.isEmpty)
       Nil
     else {
@@ -10326,6 +10412,7 @@ object LabyrinthAwakening {
       target :: getHumanJihadTargets(diceLeft - numRolls, candidates.filterNot(_ == name))
     }
   }
+
   // When ever a country is targeted and is a candidate for Major Jihad
   // ask the user if they want to do Major Jihad.
   def humanJihad(ops: Int): Unit = {
