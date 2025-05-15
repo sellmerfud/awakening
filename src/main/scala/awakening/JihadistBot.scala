@@ -3535,8 +3535,12 @@ object JihadistBot extends BotHelpers {
         val maxOps = cardOps + reserveOps
         val target = if (canRecruitInMjp)
           majorJihadPriorityCountry.get
-        else
-          recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
+        else {
+          val candidates = game.getCountries(botRecruitTargets(muslimWithCadreOnly = false))
+          topPriority(candidates, recruitAndTravelToPriorities)
+            .map(_.name)
+            .get
+        }
         addOpsTarget(target)
         val m = game getMuslim target
         def nextAttempt(completed: Int): Int = {
