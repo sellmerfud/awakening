@@ -65,16 +65,24 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
      game.adjacentMuslims(GulfStates).map(_.name) :::
      game.adjacentMuslims(Turkey).map(_.name)).sorted.distinct
 
-  val ispPlacementCandidate = (m: MuslimCountry) =>
-    !m.truce &&
-    m.canTakeMilitia &&
-    (m.name == GulfStates || (m.name != Iran && (m.isSunni || game.adjacentToSunni(m.name))))
+  val canPlaceMililta = (m: MuslimCountry) =>
+    !m.truce && m.canTakeMilitia && m.name != Iran
 
-  def getPlacementCandidates = countryNames(game.muslims.filter(ispPlacementCandidate))
+  // Can place in or adjacent to this country
+  val isTarget = (m: MuslimCountry) =>
+    (m.isSunni || m.name == GulfStates) &&
+    (canPlaceMililta(m) || game.adjacentMuslims(m.name).exists(canPlaceMililta))
+
+
+  val ispPlacementCandidate = (m: MuslimCountry) =>
+    canPlaceMililta(m) &&
+    (m.name == GulfStates || areAdjacent(m.name, GulfStates) || m.isSunni || game.adjacentToSunni(m.name))
+
+  def getAllPlacementCandidates = countryNames(game.muslims.filter(m => ispPlacementCandidate(m)))
 
   def canPlace =
     game.militiaAvailable > 0 &&
-    getPlacementCandidates.nonEmpty
+    getAllPlacementCandidates.nonEmpty
 
   def getReposCandidates = reposCountries.filter { name =>
     val m = game.getMuslim(name)
@@ -116,51 +124,32 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
 
       if (askMenu("Choose one:", actionChoices).head == Place) {
         val numMilita  = game.militiaAvailable min 2
-        val candidates = getPlacementCandidates
-        val sunniCandidates = candidates.filter(_ != GulfStates)
-        val inSunni = sunniCandidates.nonEmpty
-        val inGulfStates = candidates.contains(GulfStates)
-        sealed trait Where
-        case object Gulf extends Where
-        case object Sunni extends Where
-        val targetChoices = List(
-          choice(inGulfStates, Gulf,  "Place milita in Gulf States"),
-          choice(inSunni,      Sunni, "Place milita in or adjacent to a Sunni country")
-        ).flatten
+        val targetCandidates = countryNames(game.muslims.filter(isTarget))
+        val placementTarget = askCountry("\nPlace militia in or adjacent to which country: ", targetCandidates)
+        val candidates = countryNames(
+          (game.getMuslim(placementTarget) :: game.adjacentMuslims(placementTarget)).filter(canPlaceMililta)
+        )
 
-        if (askMenu("Choose one", targetChoices).head == Gulf) {
-          addEventTarget(GulfStates)
-          addMilitiaToCountry(GulfStates, game.militiaAvailable min 2)
+        if (candidates.size == 1) {
+          addEventTarget(candidates.head)
+          addMilitiaToCountry(candidates.head, game.militiaAvailable min 2)
         }
         else {
-          val sunni = askCountry("Place in or adjacent to which Sunni country: ", sunniCandidates)
-          val adjacent = game.adjacentMuslims(sunni).filter(_.canTakeMilitia)
-          val candidates = countryNames(
-            (game.getMuslim(sunni) :: game.adjacentMuslims(sunni)).filter(_.canTakeMilitia)
-          )
-
-          if (candidates.size == 1) {
-            addEventTarget(candidates.head)
-            addMilitiaToCountry(candidates.head, game.militiaAvailable min 2)
-          }
-          else {
-            def placeMilitia(remaining: Int, candidates: List[String]): Unit = {
-              remaining match {
-                case 0 =>
-                case x =>
-                  println()
-                  val target = askCountry("Place militia in which country: ", candidates)
-                  val num    = askInt(s"Place how many militia in $target", 1, remaining)
-                  if (num > 0) {
-                    addEventTarget(target)
-                    addMilitiaToCountry(target, num)
-                    placeMilitia(remaining - num, candidates)
-                  }
-              }
+          def placeMilitia(remaining: Int, candidates: List[String]): Unit = {
+            remaining match {
+              case 0 =>
+              case x =>
+                val target = askCountry("\nPlace militia in which country: ", candidates)
+                val num    = askInt(s"Place how many militia in $target", 1, remaining)
+                if (num > 0) {
+                  addEventTarget(target)
+                  addMilitiaToCountry(target, num)
+                  placeMilitia(remaining - num, candidates)
+                }
             }
-
-            placeMilitia(game.militiaAvailable min 2, candidates)
           }
+
+          placeMilitia(game.militiaAvailable min 2, candidates)
         }
       }
       else {
@@ -218,7 +207,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
     }
     else {
       // Bot
-      val target = USBot.deployToPriority(getPlacementCandidates).get
+      val target = USBot.deployToPriority(getAllPlacementCandidates).get
       addEventTarget(target)
       addMilitiaToCountry(target, game.militiaAvailable min 2)
     }
