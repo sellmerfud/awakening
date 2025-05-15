@@ -120,7 +120,8 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
   }
 
   // The enhance bot will only be executing this event if it was triggered
-  // during the US turn.
+  // during the US turn.  The Bot will only select a single country even
+  // if it means wasting a Op.
   // Priority to Good country with highest res*,
   // then Fair 2+ res* country with a-r<2 (priority to highest res*, then best r-a),
   // then Poor country with AID and a-r< 3,
@@ -128,7 +129,9 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
   // then Non-auto-recuit, non-MJP country with 1 cell
   def getEnhancedBotJihadTargets: List[JihadTarget] = {
     def nextTarget(opsLeft: Int, candidates: List[MuslimCountry], targets: Vector[JihadTarget]): Vector[JihadTarget] = {
-      if (opsLeft == 0 || candidates.isEmpty)
+      // CWS: I'm leaving this code such that it could select multiple targets in case Florian
+      //      changes his mind and wishes to allow that.
+      if (opsLeft == 0 || candidates.isEmpty || targets.nonEmpty)
           targets
       else {
         val goodCandidates = candidates.filter(_.isGood)
