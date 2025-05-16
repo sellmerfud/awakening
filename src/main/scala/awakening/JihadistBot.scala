@@ -944,14 +944,14 @@ object JihadistBot extends BotHelpers {
     if (game.botEnhancements) {
       // The Enhanced Bot uses the following rules:
       //
-      // target       condition           instructions
-      // -------      --------------      ----------------------
-      // US           WMD available       select randomly
-      // US           WMD NOT available   lowest plot marker
-      // Non-Muslim   Funding > 7         lowest plot marker
-      // Non-Muslim   Funding <= 7        highest plot marker (not WMD)
-      // Muslim       WMD available       select randomly
-      // Muslim       WMD NOT available   highest plot marker
+      // target       condition                       instructions
+      // -------      --------------                  ----------------------
+      // US           WMD available                   select randomly
+      // US           WMD NOT available               lowest plot marker
+      // Non-Muslim   Funding > 7                     lowest plot marker
+      // Non-Muslim   Funding <= 7                    highest plot marker (not WMD)
+      // Muslim       WMD available & Troops present  select randomly
+      // Muslim                                       highest plot marker (Not WMD)
 
       target match {
         case UnitedStates if plotCandidates.contains(PlotWMD) =>
@@ -979,7 +979,7 @@ object JihadistBot extends BotHelpers {
           (others.sorted ::: wmd)
             .take(numPlots)
 
-        case _ if plotCandidates.contains(PlotWMD) =>
+        case _ if game.getCountry(target).totalTroops > 0 && plotCandidates.contains(PlotWMD) =>
           // Random
           shuffle(plotCandidates)
             .take(numPlots)
