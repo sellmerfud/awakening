@@ -9653,7 +9653,13 @@ object LabyrinthAwakening {
           reservesUsed = game.reserves.us
           log(s"\n$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
           game = game.copy(reserves = game.reserves.copy(us = 0))
-          options.filterNot(_ == option)
+          // After spending reserves is there is an option to trigger an event
+          // then remove the UseReserves option.  If not, then the only relevent option
+          // left is the card activity which will be the first option in the list.
+          if (options.exists(o => o.isInstanceOf[TriggerCardEvent]))
+            options.filterNot(_ == option)
+          else
+            options.take(1)
 
         case AbortOption =>
           if (askYorN("Really abort? (y/n) "))
@@ -10111,6 +10117,14 @@ object LabyrinthAwakening {
           log(s"$Jihadist player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
           game = game.copy(reserves = game.reserves.copy(jihadist = 0))
           options.filterNot(_ == option)
+
+          // After spending reserves is there is an option to trigger an event or remove a cadre
+          // then remove the UseReserves option.  If not, then the only relevent option
+          // left is the card activity which will be the first option in the list.
+          if (options.exists(o => o.isInstanceOf[TriggerCardEvent] || o == CadreOption))
+            options.filterNot(_ == option)
+          else
+            options.take(1)
 
         case FinishedOption =>
           Nil
