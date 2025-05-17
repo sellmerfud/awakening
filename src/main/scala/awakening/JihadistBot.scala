@@ -2791,6 +2791,7 @@ object JihadistBot extends BotHelpers {
       else {
         val canJihad = (m: MuslimCountry) =>
           !alreadyTried(m.name) &&
+          m.jihadOK &&
           minorJihadSuccessPossible(m) &&
           totalUnused(m, includeSadr = allowSadr) > 0 &&
           minorJihadGovTest(m)
@@ -3382,18 +3383,85 @@ object JihadistBot extends BotHelpers {
       }
     }
 
+    case object PerformMinorJihadIfPossible extends RadicalizationAction {
+
+      val canJihad = (m: MuslimCountry) =>
+        m.jihadOK &&
+        minorJihadGovTest(m) &&
+        minorJihadSuccessPossible(m) &&
+        totalUnused(m, includeSadr = false) > 0
+
+      override
+      def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = game.hasMuslim(canJihad)
+
+      // Travel 1 cell to the US from an adjacent country.
+      // cardsOps   - The number of unused Ops remaining from the card
+      // reserveOps - The number of unused Ops remaining from reserves
+      // Returns the number of ops used
+      override
+      def perform(cardOps: Int, reserveOps: Int): Int = {
+        val maxJihad = cardOps + reserveOps
+
+        // Return number of Ops used
+        def nextJihad(cardOpsRemaining: Int, resOpsRemaining: Int, alreadyTried: Set[String]): Int = {
+          val opsRemaining = cardOpsRemaining + resOpsRemaining
+          val candidates = countryNames(
+            game.jihadTargets
+              .map(game.getMuslim)
+              .filter(m => !alreadyTried(m.name) && canJihad(m))
+          )
+          if (opsRemaining > 0 && candidates.nonEmpty) {
+            val name = minorJihadTarget(candidates).get
+              val m = game.getMuslim(name)
+              // In a Fair country with the Training Camps marker, preserve
+              // the last cell unless Sadr is present and we are not allowed to use Sadr
+              val limit = if (m.isFair && game.isTrainingCamp(m.name) && !m.hasSadr)
+                opsRemaining min (m.totalCells - 1)
+              else
+                opsRemaining min m.totalCells
+              val numAttempts = totalUnused(m, includeSadr = false) min limit
+              val actives  = numAttempts min activeCells(m)
+              val sleepers = (numAttempts - actives) min sleeperCells(m)
+              val target = JihadTarget(name, false, actives, sleepers, false)
+              val opsUsed = actives + sleepers
+              val cardOpsUsed = cardOpsRemaining min opsUsed
+              val resOpsUsed = opsUsed - cardOpsUsed
+
+              if (resOpsUsed > 0)
+                expendBotReserves(resOpsUsed)
+
+              addOpsTarget(name)
+              for ((name, successes, _) <- performJihads(target::Nil))
+                usedCells(name).addActives(successes)
+        
+              opsUsed + nextJihad(cardOpsRemaining - cardOpsUsed,  resOpsRemaining - resOpsUsed, alreadyTried + name)
+          }
+          else
+            0
+        }
+    
+        log(s"\nRadicalization: Minor Jihad")
+        log(separator())
+        nextJihad(cardOps, reserveOps, Set.empty)
+      }
+    }
+
     // -----------------------------------------------------------
     // Radicalization Action -  Adjacent Travel to Good Muslim countries with no Troops.
-    // Travel as many cells as possible to one or more counties in priority order.
+    // IF the current War of Ideas modifier low US prestige or GWOT penalty is negative:
+    // Travel as many adjacent cells as possible to one or more counties in priority order.
+  
     case object AdjacentTravelToGoodMuslims extends RadicalizationAction {
       val destCandidate = (m: MuslimCountry) =>
         m.isGood &&
         m.totalTroops == 0 &&
         !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
-        canAdjacentTravelTo(m)
+        canAdjacentTravelTo(m) &&
+        modifyWoiRoll(6, m, silent = true) >= 5
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
+        // game.prestigeModifier - game.gwotPenalty < 0 &&  
         game.muslims.filter(destCandidate).nonEmpty
 
       // Travel 1 cell to the US from an adjacent country.
@@ -3689,6 +3757,7 @@ object JihadistBot extends BotHelpers {
       List(
         addAction(true, EnhancedRadicalizationActions.PlotWMDInUS),
         addAction(!biometrics, EnhancedRadicalizationActions.TravelToUSForWMD),
+        addAction(!biometrics, EnhancedRadicalizationActions.PerformMinorJihadIfPossible),
         addAction(!biometrics, EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims),
         addAction(true, EnhancedRadicalizationActions.Recruit),
         addAction(true, EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry),

@@ -1375,7 +1375,7 @@ object LabyrinthAwakening {
       totalDeployableTroops
 
     def jihadDRM = -reactionDelta
-    def jihadOK = !isIslamistRule && totalCells > 0 && !(name == Pakistan && hasMarker(BenazirBhutto))
+    def jihadOK = !truce && !isIslamistRule && totalCells > 0 && !(name == Pakistan && hasMarker(BenazirBhutto))
     def majorJihadOK(ops: Int) =
       !truce &&
       !(name == Pakistan && hasMarker(BenazirBhutto)) &&
