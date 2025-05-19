@@ -65,8 +65,15 @@ object Card_334 extends Card(334, "Novichok Agent", Unassociated, 1, Remove, NoL
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => newUKPosture == game.usPosture
-    case Jihadist => newUKPosture != game.usPosture
+    case US =>
+      newUKPosture == game.usPosture
+    case Jihadist if game.botEnhancements =>
+      // Playable if Russia and US hard and UK not soft.
+      game.usPosture == Hard &&
+      game.getNonMuslim(Russia).isHard &&
+      (game.getNonMuslim(UnitedKingdom).isHard || game.getNonMuslim(UnitedKingdom).isUntested)
+    case Jihadist =>
+      newUKPosture != game.usPosture
   }
 
   // Carry out the event for the given role.

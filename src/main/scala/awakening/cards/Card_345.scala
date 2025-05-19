@@ -56,12 +56,20 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
-  def jihadBotCandidates() = {
-    val botTest = (m: MuslimCountry) =>
+  val isStdJihadBotCandidate = (m: MuslimCountry) =>
+    isCandidate(m) && (
       m.militia > 0 ||
       (!m.besiegedRegime && JihadistBot.hasCellForTravel(m, "", placement = true)) // Target is "" here because the cell will be removed
-    countryNames(game.muslims.filter(m => isCandidate(m) && botTest(m)))
-  }
+    )
+
+  def stdJihadBotCandidates = game.muslims.filter(isStdJihadBotCandidate)
+
+  // Play in a poor CW country if a Militia can be removed. Priority to highest res*.
+  val isEnhJihadBotCandidate = (m: MuslimCountry) =>
+    isCandidate(m) && m.isPoor && m.militia > 0
+
+  def enhJihadBotCandidates = game.muslims.filter(isEnhJihadBotCandidate)
+
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
@@ -77,8 +85,12 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => true
-    case Jihadist => jihadBotCandidates().nonEmpty
+    case US =>
+      true
+    case Jihadist if game.botEnhancements =>
+      enhJihadBotCandidates.nonEmpty
+    case Jihadist =>
+      stdJihadBotCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -130,9 +142,17 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
           (USBot.markerAlignGovTarget(getCandidates).get, Militia)
         (target, removeAction, Aid)
 
+        case Jihadist if game.botEnhancements =>
+          // Play in a poor CW country if a Militia can be removed. Priority to highest res*.
+          val target = JihadistBot.topPriority(enhJihadBotCandidates, List(JihadistBot.HighestPrintedResourcePriority))
+            .map(_.name)
+            .get
+          val placeAction = if (game.getMuslim(target).besiegedRegime) Aid else Besiege
+          (target, Militia, placeAction)
+        
       case Jihadist =>
-        val withMilitiaCandidates = jihadBotCandidates().filter(name => game.getMuslim(name).militia > 0)
-        val notBesieged = jihadBotCandidates().filter(name => !game.getMuslim(name).besiegedRegime)
+        val withMilitiaCandidates = countryNames(stdJihadBotCandidates.filter(_.militia > 0))
+        val notBesieged = countryNames(stdJihadBotCandidates.filter(!_.besiegedRegime))
         val (target, removeAction) =  if (withMilitiaCandidates.nonEmpty)
           (JihadistBot.troopsMilitiaTarget(withMilitiaCandidates).get, Militia)
         else

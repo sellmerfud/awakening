@@ -710,6 +710,11 @@ object JihadistBot extends BotHelpers {
     muslimTest(m => m.totalTroopsAndMilitia == 0)
   )
 
+  val NoTroopsFilter = new CriteriaFilter(
+    "No Troops",
+    muslimTest(m => m.totalTroops == 0)
+  )
+
   val AutoRecruitNoTandMFilter = new CriteriaFilter(
     "Auto recruit with no TandM",
     muslimTest(m => m.autoRecruit && m.totalTroopsAndMilitia == 0)
@@ -1886,7 +1891,9 @@ object JihadistBot extends BotHelpers {
     val priorities = List(
       new CriteriaFilter("Same posture as US",
         nonMuslimTest(n => n.isTested && n.canChangePosture && n.posture == game.usPosture)),
-      new CriteriaFilter("Untested Non-Muslim", nonMuslimTest(_.isUntested)))
+      new CriteriaFilter("Untested Non-Muslim", nonMuslimTest(_.isUntested)),
+      HighestGovernance,
+      )
     topPriority(game getNonMuslims names, priorities).map(_.name)
   }
 
@@ -2032,13 +2039,15 @@ object JihadistBot extends BotHelpers {
     }
   }
 
+  def possibleToDeclareCaliphate(candidates: List[String]): Boolean = 
+    !game.caliphateDeclared &&
+    game.cellsAvailable >= 3 &&
+    candidates.exists(willDeclareCaliphate)
+
   // Find target for cell placement by event
   def cellPlacementPriority(canDeclareCaliphate: Boolean)(candidates: List[String]): Option[String] = {
     val caliphatePossible =
-      canDeclareCaliphate &&
-      !game.caliphateDeclared &&
-      game.cellsAvailable >= 3 &&
-      candidates.exists(willDeclareCaliphate)
+      canDeclareCaliphate && possibleToDeclareCaliphate(candidates)
     if (caliphatePossible)
       JihadistBot.caliphatePriorityTarget(candidates)
     else
@@ -3448,16 +3457,20 @@ object JihadistBot extends BotHelpers {
 
     // -----------------------------------------------------------
     // Radicalization Action -  Adjacent Travel to Good Muslim countries with no Troops.
-    // IF the current War of Ideas modifier low US prestige or GWOT penalty is negative:
-    // Travel as many adjacent cells as possible to one or more counties in priority order.
+    // Travel as many adjacent cells as possible to one or more Good counties where a WoI
+    // roll would not be possible if the country were worsened to Fair.
   
     case object AdjacentTravelToGoodMuslims extends RadicalizationAction {
+      // We must subtract 1 from the value calculated by modifyWoiRoll()
+      // because the country is currently at Good governance, but if it
+      // were at Fair then there would be -1 modifier for trying to improve
+      // it to Good.
       val destCandidate = (m: MuslimCountry) =>
         m.isGood &&
         m.totalTroops == 0 &&
         !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
         canAdjacentTravelTo(m) &&
-        modifyWoiRoll(6, m, silent = true) >= 5
+        modifyWoiRoll(6, m, silent = true) - 1 >= 5
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =

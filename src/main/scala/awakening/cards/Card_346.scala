@@ -63,6 +63,12 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
     case m: MuslimCountry => !m.truce
   }
 
+  // Playable if Pakistan or an adjacent country is in Civil War with at
+  // least 1 Militia present and a cell is available.
+  // Priority to highest res*.
+  val isEnhJihadCandidate = (m: MuslimCountry) =>
+    !m.truce && m.civilWar && m.militia > 0
+
   def possibleCountries =
     game.getMuslim(Pakistan) :: game.adjacentCountries(Pakistan)
 
@@ -71,6 +77,11 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
 
   def getCellCandidates =
     countryNames(possibleCountries.filter(isCellCandidate))
+
+  def getEnhJihadCandidates = possibleCountries
+    .collect {
+      case m: MuslimCountry if isEnhJihadCandidate(m) => m.asInstanceOf[MuslimCountry]
+    }
 
   def canPlaceMilitia = game.militiaAvailable > 0 && getMilitiaCandidates.nonEmpty
 
@@ -92,8 +103,12 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => canPlaceMilitia
-    case Jihadist => canPlaceCell
+    case US =>
+      canPlaceMilitia
+    case Jihadist if game.botEnhancements =>
+      game.cellsAvailable > 0 && getEnhJihadCandidates.nonEmpty
+    case Jihadist =>
+      canPlaceCell
   }
 
   // Carry out the event for the given role.
@@ -123,6 +138,11 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
           USBot.deployToPriority(getMilitiaCandidates).get
         (target, Militia)
 
+      case Jihadist if game.botEnhancements =>
+        val target = JihadistBot.topPriority(getEnhJihadCandidates, List(JihadistBot.HighestPrintedResourcePriority))
+          .map(_.name)
+          .get
+        (target, Cell) 
       case Jihadist =>
         val target = JihadistBot.cellPlacementPriority(false)(getCellCandidates).get
         (target, Cell)

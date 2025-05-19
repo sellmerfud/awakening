@@ -48,6 +48,8 @@ import awakening.{ USBot, JihadistBot }
 // +1 Funding. Blocks play of Abdel Fattah el-Sisi.
 // ------------------------------------------------------------------
 object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Unassociated, 3, Remove, NoLapsing, NoAutoTrigger) {
+
+  val AbdelFattahel_Sisi = 241
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -82,7 +84,18 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US =>
+      true
+    case Jihadist if game.botEnhancements => 
+      // Playable if 2+ cells on track, Funding<9 and #241 Abdel Fattah al-Sisi not in discard pile.
+      game.cellsAvailable > 1 &&
+      game.funding < 8 &&
+      cardFoundIn(FromDrawPile::Nil, AbdelFattahel_Sisi)
+
+    case Jihadist => 
+      true
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

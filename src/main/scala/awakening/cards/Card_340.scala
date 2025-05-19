@@ -62,13 +62,19 @@ object Card_340 extends Card(340, "EU Bolsters Iran Deal", Unassociated, 2, Jiha
   override
   def eventConditionsMet(role: Role) = game.getCountry(Iran).wmdCache > 0
 
+  val TargetCounties = List(France, Germany)
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.gwotPenalty > 0
-    case Jihadist => true
+    case US =>
+      game.gwotPenalty > 0
+    case Jihadist if game.botEnhancements => 
+      // Play if US hard and at least one of France/Germany are not soft.
+      game.usPosture == Hard && TargetCounties.exists(name => game.getNonMuslim(name).posture != Soft)
+    case Jihadist =>
+      true
   }
 
   // Carry out the event for the given role.
@@ -78,7 +84,7 @@ object Card_340 extends Card(340, "EU Bolsters Iran Deal", Unassociated, 2, Jiha
   def executeEvent(role: Role): Unit = {
     val drm = if (role == US) 2 else -1
 
-    for (name <- List(France, Germany)) {
+    for (name <- TargetCounties) {
       addEventTarget(name)
       rollCountryPosture(name, drm)
     }

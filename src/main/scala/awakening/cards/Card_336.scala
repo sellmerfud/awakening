@@ -67,8 +67,12 @@ object Card_336 extends Card(336, "US/NK Summit", Unassociated, 1, NoRemove, NoL
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => true
-    case Jihadist => game.getNonMuslim(China).posture != oppositePosture(game.usPosture)
+    case US =>
+      true
+    case Jihadist if game.botEnhancements =>
+      game.usPosture == Hard && game.getNonMuslim(China).posture != Soft
+    case Jihadist =>
+      game.getNonMuslim(China).posture != oppositePosture(game.usPosture)
   }
 
   // Carry out the event for the given role.

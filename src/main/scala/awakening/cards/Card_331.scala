@@ -38,6 +38,7 @@
 package awakening.cards
 
 import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -51,6 +52,8 @@ import awakening.LabyrinthAwakening._
 // REMOVE
 // ------------------------------------------------------------------
 object Card_331 extends Card(331, "JASTA", Unassociated, 1, Remove, NoLapsing, NoAutoTrigger) {
+  val NamedTargets = Set(Libya, SaudiArabia, Pakistan)
+
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country
   override
@@ -65,52 +68,78 @@ object Card_331 extends Card(331, "JASTA", Unassociated, 1, Remove, NoLapsing, N
   override
   def eventConditionsMet(role: Role) = game.worldPosture == Hard && game.usPosture == Soft
 
+  val isShiftCandidate = (m: MuslimCountry) =>
+    !m.truce &&
+    m.alignment != Adversary &&
+    (NamedTargets(m.name) || m.totalCells > 1)
+
+  def shiftCandidates() = countryNames(game.muslims.filter(isShiftCandidate))
+
+  val isEnhJihadBotCandidate = (m: MuslimCountry) =>
+    isShiftCandidate(m) &&
+    JihadistBot.enhBotResourceValue(m) >= 3
+
+  def enhJihadBotCandidates = countryNames(game.muslims.filter(isEnhJihadBotCandidate))
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = false   // Unplayable by the Bots
-
-  val NamedTargets = Set(Libya, SaudiArabia, Pakistan)
-  def shiftCandidates() = countryNames(
-    game.muslims
-      .filter { c =>
-        !c.truce &&
-        c.alignment != Adversary &&
-        (NamedTargets(c.name) || c.totalCells > 1)
-      }
-  )
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => false  // Unplayable by the stanbdard Bots
+    case Jihadist if game.botEnhancements => enhJihadBotCandidates.nonEmpty
+    case Jihadist =>  false // Unplayable by the stanbdard Bots
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val targetCards = Set(207, 283, 182, 291, 294, 298)
+    val EventCards = Set(207, 283, 182, 291, 294, 298)
+    def targetCards = EventCards
       .filter(cardNum => cardFoundIn(List(FromDrawPile), cardNum))
 
-    // This event is only playable by the Human player, and the Bot's hand is not
-    // inspected, so the Bot is never forced to discard cards.  The Human player
-    // must still discard any of the target cards.
+    // The standard Bots do not play this event and if a Human player plays it
+    // when playing against a standard Bot, the Bot's t hand is not inspected.
+    // When playing against the enhanced Jihadist Bot, the bot's hand is inspected
+    // and then reshuffled.
+
     val candidates = shiftCandidates()
     if (candidates.isEmpty)
       log(s"\nNone of the candidate countries can be shifted towards Adversary.", Color.Info)
     else {
-      val target = askCountry("Select country to shift toward Adversary: ", candidates)
+      val target = if (isHuman(role))
+        askCountry("Select country to shift toward Adversary: ", candidates)
+      else
+        JihadistBot.alignGovTarget(enhJihadBotCandidates).get
       shiftAlignmentRight(target)
     }
+    
+    if (targetCards.isEmpty)
+      log(s"\nNone of the cards targeted by the event are in the draw pile.", Color.Info)
+    else {
+      // This event is only playable by the Human player, and the Bot's hand is not
+      // inspected, so the Bot is never forced to discard cards.  The Human player
+      // must still discard any of the target cards.
 
-    if (hasCardInHand(role) && targetCards.nonEmpty) {
-      displayLine(s"\nYou ($role) must discard any the listed cards from your hand.", Color.Info)
-      askCardsDiscarded(role, targetCards.size, only = targetCards, lessOk = true)
+      if (hasCardInHand(game.humanRole)) {
+        displayLine(s"\nYou (${game.humanRole}) must discard from your hand any of the cards mentioned in the event.", Color.Info)
+        askCardsDiscarded(game.humanRole, targetCards.size, only = targetCards, lessOk = true)
+      }
+      else
+        log(s"\nThe ${game.humanRole} does not have a card to discard.", Color.Event)
+  
+      if (game.botRole == Jihadist && game.botEnhancements && hasCardInHand(game.botRole) && targetCards.nonEmpty) {
+        displayLine(s"\nInspect the ${game.botRole} Bot's hand and discard any of the cards mentioned in the event.", Color.Info)
+        askCardsDiscarded(game.botRole, targetCards.size, only = targetCards, lessOk = true)
+        displayLine(s"\nShuffle the ${game.botRole} Bot's hand.", Color.Info)
+
+      }
+      else {
+        log(s"\nIn the solitaire game you may not inspect the ${game.botRole} Bot's hand", Color.Info)
+        log(s"so the ${game.botRole} Bot does not discard andy cards.", Color.Info)
+      }
     }
-    else if (targetCards.isEmpty)
-      log(s"\nNone of the target cards are in the $role Hand.", Color.Event)
-    else
-      log(s"\nThe $role does not have a card to discard.", Color.Event)
-
-    log(s"\nIn the solitaire game you may not inspect the ${role.opponent} Bot's hand", Color.Info)
-    log(s"so the ${role.opponent} Bot does not discard andy cards.", Color.Info)
-
   }
 }

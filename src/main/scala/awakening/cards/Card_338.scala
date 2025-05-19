@@ -53,15 +53,15 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def removeCellCandidates() = countryNames(game.countries.filter(c => !c.truce && c.totalCells > 0))
+  def removeCellCandidates = countryNames(game.countries.filter(c => !c.truce && c.totalCells > 0))
 
-  def placeCellCandidates() = countryNames(game.muslims.filter(!_.truce))
+  def placeCellCandidates = countryNames(game.muslims.filter(!_.truce))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
   override
   def eventRemovesLastCell(): Boolean =
-    removeCellCandidates().exists(name => USBot.wouldRemoveLastCell(name, 1))
+    removeCellCandidates.exists(name => USBot.wouldRemoveLastCell(name, 1))
 
 
   // Returns true if the printed conditions of the event are satisfied
@@ -73,8 +73,12 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => removeCellCandidates().nonEmpty || game.prestige < 12
-    case Jihadist => game.cellsAvailable > 0
+    case US =>
+      removeCellCandidates.nonEmpty || game.prestige < 12
+    case Jihadist if game.botEnhancements =>      
+      game.cellsAvailable > 1  // Playable if 2+ cells available. Priority to MJP.
+    case Jihadist =>
+      game.cellsAvailable > 0
   }
 
   // Carry out the event for the given role.
@@ -83,13 +87,13 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
   override
   def executeEvent(role: Role): Unit = {
     if (role == US) {
-      if (removeCellCandidates().nonEmpty) {
+      if (removeCellCandidates.nonEmpty) {
         val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
-          val t = askCountry("Remove a Cell from which country: ", removeCellCandidates())
+          val t = askCountry("Remove a Cell from which country: ", removeCellCandidates)
           (t, askCells(t, 1, true))
         }
         else {
-          val t = USBot.disruptPriority(removeCellCandidates()).get
+          val t = USBot.disruptPriority(removeCellCandidates).get
           (t, USBot.chooseCellsToRemove(t, 1))
         }
 
@@ -106,18 +110,20 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
     else { // Jihadist
       val maxCells = game.cellsAvailable min 3
       val (target, num) = if (isHuman(role)) {
-        val name = askCountry("Place cells in which country: ", placeCellCandidates())
+        val name = askCountry("Place cells in which country: ", placeCellCandidates)
         val num  = askInt("Place how many cells", 1, maxCells, Some(maxCells))
         (name, num)
       }
-      else if (maxCells == 3 && (game.botEnhancements || game.islamistResources == 5)) {
-          // If we are placing 3 cells and we can declare caliphate then
-          // select that country
-          val t = JihadistBot.cellPlacementPriority(true)(placeCellCandidates()).get
+      else if (maxCells == 3 && game.islamistResources == 5 && JihadistBot.possibleToDeclareCaliphate(placeCellCandidates)) {
+          // If we are placing 3 cells and we can declare caliphate for the win
+          // then select that country
+          val t = JihadistBot.cellPlacementPriority(true)(placeCellCandidates).get
           (t, maxCells)
         }
+      else if (game.botEnhancements && placeCellCandidates.exists(name => Some(name) == JihadistBot.majorJihadPriorityCountry))
+        (JihadistBot.majorJihadPriorityCountry.get, maxCells)
       else
-        (JihadistBot.cellPlacementPriority(false)(placeCellCandidates()).get, maxCells)
+        (JihadistBot.cellPlacementPriority(maxCells == 3 && game.botEnhancements)(placeCellCandidates).get, maxCells)
 
       addEventTarget(target)
       addSleeperCellsToCountry(target, num)

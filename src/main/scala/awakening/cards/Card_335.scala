@@ -79,8 +79,19 @@ object Card_335 extends Card(335, "Rohingya Genocide", Unassociated, 1, NoRemove
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getBotPostureCandidates(US).nonEmpty
-    case Jihadist => game.cellsAvailable > 0 || getBotPostureCandidates(Jihadist).nonEmpty
+    case US =>
+      getBotPostureCandidates(US).nonEmpty
+
+    case Jihadist if game.botEnhancements => 
+      // Playable if US hard AND
+      // at least one of India's/Thailand's posture is hard or unmarked AND
+      // GWOT marker would move. 
+      game.usPosture == Hard &&
+      Countries.exists(name => game.getNonMuslim(name).posture != Soft) &&
+      postureChangeWouldMoveGwot
+
+    case Jihadist =>
+      game.cellsAvailable > 0 || getBotPostureCandidates(Jihadist).nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -108,6 +119,20 @@ object Card_335 extends Card(335, "Rohingya Genocide", Unassociated, 1, NoRemove
 
       case US =>
         (Posture, USBot.posturePriority(getBotPostureCandidates(US)).get, game.usPosture)
+
+      case Jihadist if game.botEnhancements => 
+        // Always select posture, never place cell. Priority to biggest shift of GWOT marker, then Thailand.
+        val thailand = game.getNonMuslim(Thailand)
+        val india = game.getNonMuslim(India)
+        val target = if (thailand.isHard)
+          Thailand
+        else if (india.isHard)
+          India
+        else if (thailand.isUntested)
+          Thailand
+        else
+          India
+        (Posture, target, Soft)
 
       case Jihadist if game.cellsAvailable > 0 =>
         (Cell, JihadistBot.cellPlacementPriority(false)(Countries).get, "")

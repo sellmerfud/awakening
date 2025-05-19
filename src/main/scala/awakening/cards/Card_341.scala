@@ -70,6 +70,11 @@ object Card_341 extends Card(341, "Gulen Movement", Unassociated, 2, NoRemove, N
       globalEventNotInPlay(GulenMovement) &&
       lapsingEventNotInPlay(ArabWinter) &&
       game.getMuslim(Turkey).canTakeAwakeningOrReactionMarker
+    case Jihadist if game.botEnhancements =>
+      // Play if Turkey Good or Poor and 2+ cells available.      
+      !underTruce(Turkey) &&
+      game.cellsAvailable > 1 &&
+      (game.getMuslim(Turkey).isGood || game.getMuslim(Turkey).isPoor)
     case Jihadist =>
       !underTruce(Turkey) &&
       globalEventNotInPlay(GulenMovement) &&

@@ -68,9 +68,13 @@ object Card_332 extends Card(332, "Khan Shaykhun Chemical Attack", Unassociated,
   def botWillPlayEvent(role: Role): Boolean = {
     val syria = game.getMuslim(Syria) 
     role match {
-    case US => !syria.truce && syria.wmdCache > 0
-    case Jihadist => !syria.truce && syria.militia > 0
-  }
+      case US =>
+        !syria.truce && syria.wmdCache > 0
+      case Jihadist if game.botEnhancements =>
+        false
+      case Jihadist =>
+        !syria.truce && syria.militia > 0
+    }
   }
 
   // Carry out the event for the given role.

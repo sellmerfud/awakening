@@ -64,18 +64,33 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
   def eventConditionsMet(role: Role) = game.caliphateDeclared
 
   def cellSources(target: String) = countryNames(
-    game.countries.filter(c => c.name != target && c.cells > 0)
+    game.countries.filter(c => !c.truce && c.name != target && c.cells > 0)
   )
 
   def jihadistCandidates = countryNames(game.muslims.filter(!_.truce))
+
+  // Cell placement: Priority to Good (priority to highest res*, then without Troops),
+  // then Fair with a-r<2 (priority to highest res*, then best r-a),
+  // then poor with Aid (priority to highest res*).
+  // Else unplayable.
+  def isEnhBotCandidate = (m: MuslimCountry) =>
+    !m.truce && (
+      m.isGood ||
+      (m.isFair && m.awakening - m.reaction < 2) ||
+      (m.isPoor && m.aidMarkers > 0)
+    )
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.prestige < 12 || game.funding > 1
-    case Jihadist => jihadistCandidates.nonEmpty
+    case US =>
+      game.prestige < 12 || game.funding > 1
+    case Jihadist if game.botEnhancements =>
+      game.muslims.exists(isEnhBotCandidate)
+    case Jihadist =>
+      jihadistCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -96,7 +111,29 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
         val cells = askCellsFromAnywhere(2, true, cellSources(name), sleeperFocus = false)
         (name, cells)
       }
+      else if (game.botEnhancements) {
+        // Enhanced Jihad Bot
+        // Cell placement: Priority to Good (priority to highest res*, then without Troops),
+        // then Fair with a-r<2 (priority to highest res*, then best r-a),
+        // then poor with Aid (priority to highest res*).
+        // Else unplayable.
+        val goodCandidates = game.muslims.filter(m => m.isGood && isEnhBotCandidate(m))
+        val fairCandidates = game.muslims.filter(m => m.isFair && isEnhBotCandidate(m))
+        val poorCandidates = game.muslims.filter(m => m.isPoor && isEnhBotCandidate(m))
+        val goodPriorities = List(JihadistBot.HighestPrintedResourcePriority, JihadistBot.NoTroopsFilter)
+        val fairPriorities = List(JihadistBot.HighestPrintedResourcePriority, JihadistBot.HighestReactionMinusAwakeningPriority)
+        val poorPriorities = List(JihadistBot.HighestPrintedResourcePriority)
+        val target = if (goodCandidates.nonEmpty)
+          JihadistBot.topPriority(goodCandidates, goodPriorities).map(_.name).get
+        else if (fairCandidates.nonEmpty)
+          JihadistBot.topPriority(fairCandidates, fairPriorities).map(_.name).get
+        else
+          JihadistBot.topPriority(poorCandidates, poorPriorities).map(_.name).get
+          
+        (target, JihadistBot.selecCellsToPlace(target, cellSources(target), 2))
+      }
       else {
+        // Standard Jihad Bot
         val target = JihadistBot.cellPlacementPriority(false)(candidates).get
         (target, JihadistBot.selecCellsToPlace(target, cellSources(target), 2))
       }

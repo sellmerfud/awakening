@@ -59,13 +59,19 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   override
   def eventRemovesLastCell(): Boolean = false
 
+  // Has country marker and can be targeted (not truce or caliphate member)
+  def hasCountryMarker(marker: String) = (c: Country) =>
+    c.hasMarker(marker) &&
+    !c.truce &&
+    !game.isCaliphateMember(c.name)
+
   def lapsingCandidates = game.eventsLapsing
     .filter { entry => entry.cardNumber != Truce }
-    
+
 
   def bowlingGreenTargetEventInPlay: Boolean =
     game.markers.nonEmpty ||
-    game.countries.exists(c => c.markers.nonEmpty && !game.isCaliphateMember(c.name)) ||
+    game.countries.exists(c => c.markers.nonEmpty && !c.truce && !game.isCaliphateMember(c.name)) ||
     lapsingCandidates.nonEmpty
 
   def bowlingGreenBotMarkers(role: Role): List[String] = {
@@ -73,7 +79,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
       .filter(GlobalMarkers(_) == role.opponent)
     val countryMarkers =
       game.countries
-      .filterNot(c => game.isCaliphateMember(c.name))
+      .filterNot(c => c.truce || game.isCaliphateMember(c.name))
       .flatMap(_.markers)
       .filter(CountryMarkers(_) == role.opponent)
     (globalMarkers ::: countryMarkers).sorted.distinct
@@ -88,6 +94,38 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
       }
       .map(_.cardNumber)
 
+  // Enhanced Jihadist Bot Priority to the following events (if active):
+  // 1. Strait of Homuz if cancelling it would end the game via Jihadist resource victory (Lapsing)
+  // 2. US China Trade War (Global Marker)
+  // 3. Siege of Mosul (Lapsing)
+  // 4. Fully Reserved Coin (Lapsing)
+  // 5. Trump Tweets (Global Marker)
+  // 6. Expanded ROE (Lapsing)
+  // 7. Advisors. (Country Marker)
+  def enhJihadBotPriorityEvent: Option[Either[String, Int]] = {
+    def removingHormuzIsJihadistVictory = {
+      val newLapsing = game.eventsLapsing.filterNot(e => e.cardNumber == StraitofHormuz)
+      val newGame = game.copy(eventsLapsing = newLapsing)
+      newGame.islamistResources >= 6
+    }
+    if (lapsingEventInPlay(StraitofHormuz) && removingHormuzIsJihadistVictory)
+      Some(Right(StraitofHormuz))
+    else if (globalEventInPlay(USChinaTradeWar))
+      Some(Left(USChinaTradeWar))
+    else if (lapsingEventInPlay(SiegeofMosul))
+      Some(Right(SiegeofMosul))
+    else if (lapsingEventInPlay(FullyResourcedCOIN))
+      Some(Right(FullyResourcedCOIN))
+    else if (globalEventInPlay(TrumpTweetsON))
+      Some(Left(TrumpTweetsON))
+    else if (lapsingEventInPlay(ExpandedROE))
+      Some(Right(ExpandedROE))
+    else if (game.countries.exists(hasCountryMarker(Advisors)))
+      Some(Left(Advisors))
+    else
+      None
+  }
+
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = bowlingGreenTargetEventInPlay
@@ -96,8 +134,15 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    bowlingGreenBotMarkers(role).nonEmpty || bowlingGreenBotLapsing(role).nonEmpty
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements =>
+      enhJihadBotPriorityEvent.nonEmpty ||
+      bowlingGreenBotMarkers(role).nonEmpty ||
+      bowlingGreenBotLapsing(role).nonEmpty
+    case _ =>
+      bowlingGreenBotMarkers(role).nonEmpty ||
+      bowlingGreenBotLapsing(role).nonEmpty
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -130,6 +175,8 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
           Right(askMenu[Int]("Remove which lapsing card: ", lapsingChoices).head)
       }
     }
+    else if (role == Jihadist && game.botEnhancements && enhJihadBotPriorityEvent.nonEmpty)
+      enhJihadBotPriorityEvent.get
     else { // Bot will choose event marker first, then lapsing event
       val markers = bowlingGreenBotMarkers(role)
       val lapsing = bowlingGreenBotLapsing(role)
@@ -145,7 +192,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
 
       case Left(marker) =>
         // Advisors marker can exist in multiple countries
-        val target = countryNames(game.countries.filter(_.hasMarker(marker))) match {
+        val target = countryNames(game.countries.filter(hasCountryMarker(marker))) match {
           case single::Nil => single
           case candidates if isHuman(role) => askCountry(s"""Remove "$marker" from which country: """, candidates)
           case candidates => JihadistBot.troopsMilitiaTarget(candidates).get

@@ -74,8 +74,12 @@ object Card_330 extends Card(330, "IRGC", Unassociated, 1, NoRemove, NoLapsing, 
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
-
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US => true
+    case Jihadist if game.botEnhancements => false
+    case Jihadist => true
+  }
+  
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.

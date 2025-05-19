@@ -37,13 +37,14 @@
 
 package awakening.cards
 
+import scala.util.Random.shuffle
 import awakening.LabyrinthAwakening._
 import awakening.{ USBot, JihadistBot }
 
 // Card Text:
 // ------------------------------------------------------------------
 // Play in Afghanistan or Pakistan if Regime Change or Adversary,
-/// or in India if there is a Cell.
+// or in India if there is a Cell.
 // If US play: Shift Alignment one box towards Ally or Set to Hard. REMOVE
 // If Jihadist: Place 1 Cell or a Level 1 Plot there.
 // ------------------------------------------------------------------
@@ -61,15 +62,39 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
   val Countries = List(Afghanistan, Pakistan, India)
 
   val isCandidate = (c: Country) => c match {
-    case m: MuslimCountry => !m.truce && m.inRegimeChange || m.isAdversary
-    case n: NonMuslimCountry => n.totalCells > 0
+    case m: MuslimCountry => !m.truce && (m.inRegimeChange || m.isAdversary)
+    case n: NonMuslimCountry => !n.truce && n.totalCells > 0
   }
 
   def getCandidates = Countries.filter(name => isCandidate(game.getCountry(name)))
 
+  // a) if possible, select India if US hard and India hard, 
+  // b) then, if possible, select RC country, 
+  // c) then, if Funding<9, select a country randomly.
+  // Else unplayable.
+  def enhJihadBotTarget: Option[String] = {
+    val india = game.getNonMuslim(India)
+    val rcCandidates = game.getMuslims(List(Afghanistan, Pakistan))
+      .filter(m => isCandidate(m) && m.inRegimeChange)
+    if (isCandidate(india) && india.posture == Hard && game.usPosture == Hard)
+      Some(India)
+    else if (rcCandidates.nonEmpty)
+      shuffle(rcCandidates)
+        .headOption
+        .map(_.name)
+    else if (game.funding < 9)
+      shuffle(getCandidates)
+        .headOption
+    else
+      None
+    
+  }
+
   val isUSBotCandidate = (c: Country) => c match {
-    case m: MuslimCountry => (m.inRegimeChange && !m.isAlly) || (m.isAdversary && !m.isIslamistRule)
-    case n: NonMuslimCountry => n.totalCells > 0 && n.posture == Soft && game.usPosture == Hard
+    case m: MuslimCountry =>
+      isCandidate(m) && ((m.inRegimeChange && !m.isAlly) || (m.isAdversary && !m.isIslamistRule))
+    case n: NonMuslimCountry =>
+      isCandidate(n) && n.posture == Soft && game.usPosture == Hard
   }
 
   def getUSBotCandidates = Countries.filter(name => isUSBotCandidate(game.getCountry(name)))
@@ -87,8 +112,14 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getUSBotCandidates.nonEmpty
-    case Jihadist => game.cellsAvailable > 0 || game.availablePlots.contains(Plot1)
+    case US =>
+      getUSBotCandidates.nonEmpty
+
+    case Jihadist if game.botEnhancements => 
+      game.availablePlots.contains(Plot1) && enhJihadBotTarget.nonEmpty
+
+    case Jihadist =>
+      game.cellsAvailable > 0 || game.availablePlots.contains(Plot1)
   }
 
   // Carry out the event for the given role.
@@ -121,6 +152,9 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
           choice(game.cellsAvailable > 0,            Cell, "Place a Cell")
         ).flatten
         (name, askMenu("Choose one:", choices).head)
+      }
+      else if (game.botEnhancements) {
+        (enhJihadBotTarget.get, Plot)
       }
       else if (game.availablePlots.contains(Plot1))
         (JihadistBot.plotPriority(getCandidates).get, Plot)

@@ -70,11 +70,24 @@ object Card_348 extends Card(348, "Travel Ban", Unassociated, 2, NoRemove, NoLap
     case Jihadist => trumpTweetsON
   }
 
+  def getAwakeningCandidates = countryNames(
+    game.muslims.filter(m => !m.truce && m.awakening > 0)
+  )
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US =>
+      true
+    case Jihadist if game.botEnhancements =>
+      // Playable if an Awakening marker can be removed
+      getAwakeningCandidates.nonEmpty
+      true
+    case Jihadist =>
+      true
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -89,7 +102,7 @@ object Card_348 extends Card(348, "Travel Ban", Unassociated, 2, NoRemove, NoLap
       List(PatriotAct, BREXIT)
         .foreach(removeCountryEventMarkerAnywhere)
       removeLapsingEvents(List(Biometrics, IslamicMaghreb))
-      val candidates = countryNames(game.muslims.filter(m => !m.truce && m.awakening > 0))
+      val candidates = getAwakeningCandidates
       if (candidates.nonEmpty) {
         val target = if (isHuman(role))
           askCountry("Remove awakening marker from which country: ", candidates)

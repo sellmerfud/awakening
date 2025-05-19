@@ -71,9 +71,15 @@ object Card_360 extends Card(360, "US China Trade War", Unassociated, 3, NoRemov
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => (game.usPosture == game.worldPosture)
-    case Jihadist if game.botEnhancements => false // Enh Jihad Bot never plays this
-    case Jihadist => game.usPosture != game.worldPosture && game.worldPosture != Even
+    case US =>
+      (game.usPosture == game.worldPosture)
+    case Jihadist if game.botEnhancements =>
+      globalEventInPlay(USChinaTradeWar)
+    case Jihadist =>
+      if (game.usPosture != game.worldPosture && game.worldPosture != Even)
+        globalEventNotInPlay(USChinaTradeWar)
+      else
+        globalEventInPlay(USChinaTradeWar)
   }
 
   // Carry out the event for the given role.

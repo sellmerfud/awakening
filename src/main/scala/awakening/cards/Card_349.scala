@@ -72,8 +72,13 @@ object Card_349 extends Card(349, "Turkish Coup", Unassociated, 2, JihadistRemov
   def botWillPlayEvent(role: Role): Boolean = {
     val turkey = game.getMuslim(Turkey)
     role match {
-      case US => !turkey.isGood || !turkey.isAlly
-      case Jihadist => !turkey.isAdversary || !turkey.isIslamistRule
+      case US =>
+        !turkey.isGood || !turkey.isAlly
+      case Jihadist if game.botEnhancements =>
+        // Playable if Turkey not at IR.
+        !turkey.isIslamistRule
+      case Jihadist =>
+        !turkey.isAdversary || !turkey.isIslamistRule
     }
   }
 
@@ -100,12 +105,30 @@ object Card_349 extends Card(349, "Turkish Coup", Unassociated, 2, JihadistRemov
       ).flatten
 
     val action = role match {
-      case _  if isHuman(role) && choices.isEmpty => None
-      case _  if isHuman(role)                    => askMenu("Choose one:", choices).head
-      case US if !turkey.isGood                   => Some(Improve)
-      case US                                     => Some(ShiftLeft)
-      case Jihadist if !turkey.isIslamistRule     => Some(Worsen)
-      case Jihadist                               => Some(ShiftRight)
+      case _  if isHuman(role) =>
+        if (choices.isEmpty)
+          None
+        else
+          askMenu("Choose one:", choices).head
+
+      case US  =>
+        if (!turkey.isGood)
+          Some(Improve)
+        else
+        Some(ShiftLeft)
+
+      case Jihadist if game.botEnhancements =>
+        // If poor, worsen Government; then, if Neutral, Shift Alignment; then worsen Government.
+        if (turkey.isPoor || !turkey.isNeutral)
+          Some(Worsen)
+        else
+          Some(ShiftRight)
+
+      case Jihadist =>
+        if (!turkey.isIslamistRule)
+          Some(Worsen)
+        else
+          Some(ShiftRight)
     }
 
     addEventTarget(Turkey)
