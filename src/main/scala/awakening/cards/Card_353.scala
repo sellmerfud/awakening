@@ -96,20 +96,29 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
 
   // Enhanced Jihadist Bot Priority to the following events (if active):
   // 1. Strait of Homuz if cancelling it would end the game via Jihadist resource victory (Lapsing)
-  // 2. US China Trade War (Global Marker)
-  // 3. Siege of Mosul (Lapsing)
-  // 4. Fully Reserved Coin (Lapsing)
-  // 5. Trump Tweets (Global Marker)
-  // 6. Expanded ROE (Lapsing)
-  // 7. Advisors. (Country Marker)
+  // 2. OPEC Production Cut if cancellling it would end game via Jihadist resource victory (Lapsing)
+  // 3. US China Trade War (Global Marker)
+  // 4. Siege of Mosul (Lapsing)
+  // 5. Fully Reserved Coin (Lapsing)
+  // 6. Trump Tweets (Global Marker)
+  // 7. Expanded ROE (Lapsing)
+  // 8. Advisors. (Country Marker)
   def enhJihadBotPriorityEvent: Option[Either[String, Int]] = {
     def removingHormuzIsJihadistVictory = {
       val newLapsing = game.eventsLapsing.filterNot(e => e.cardNumber == StraitofHormuz)
       val newGame = game.copy(eventsLapsing = newLapsing)
       newGame.islamistResources >= 6
     }
+    def removingOPECProductionCutIsJihadistVictory = {
+      val newLapsing = game.eventsLapsing.filterNot(e => e.cardNumber == OPECProductionCut)
+      val newGame = game.copy(eventsLapsing = newLapsing)
+      newGame.islamistResources >= 6
+    }
+
     if (lapsingEventInPlay(StraitofHormuz) && removingHormuzIsJihadistVictory)
       Some(Right(StraitofHormuz))
+    else if (lapsingEventInPlay(OPECProductionCut) && removingOPECProductionCutIsJihadistVictory)
+      Some(Right(OPECProductionCut))
     else if (globalEventInPlay(USChinaTradeWar))
       Some(Left(USChinaTradeWar))
     else if (lapsingEventInPlay(SiegeofMosul))
@@ -136,9 +145,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case Jihadist if game.botEnhancements =>
-      enhJihadBotPriorityEvent.nonEmpty ||
-      bowlingGreenBotMarkers(role).nonEmpty ||
-      bowlingGreenBotLapsing(role).nonEmpty
+      enhJihadBotPriorityEvent.nonEmpty
     case _ =>
       bowlingGreenBotMarkers(role).nonEmpty ||
       bowlingGreenBotLapsing(role).nonEmpty
