@@ -65,7 +65,7 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = getCandidates.nonEmpty
+  def eventConditionsMet(role: Role) = true
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -73,8 +73,11 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
     //Playable if Funding <8 and 2+ Level 1 Plots available.
-    game.funding < 8 && game.availablePlots.count(_ == Plot1) > 1
+    game.funding < 8 &&
+    getCandidates.nonEmpty &&
+    game.availablePlots.count(_ == Plot1) > 1
   else
+    getCandidates.nonEmpty &&
     game.availablePlots.contains(Plot1)
 
   // Carry out the event for the given role.
@@ -82,21 +85,25 @@ object Card_309 extends Card(309, "Easter Bombings", Jihadist, 3, Remove, NoLaps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (game.availablePlots.contains(Plot1)) {
-      val maxPlots = game.availablePlots.count(_ == Plot1)
-      val (target, numPlots) = if (isHuman(role)) {
-          val t = askCountry("Place plots in which country: ", getCandidates)
-          val n = askInt(s"Place how many Level 1 Plots in $t", 1, maxPlots, Some(maxPlots))
-          (t, n)
+    if (getCandidates.nonEmpty) {
+      if (game.availablePlots.contains(Plot1)) {
+        val maxPlots = game.availablePlots.count(_ == Plot1)
+        val (target, numPlots) = if (isHuman(role)) {
+            val t = askCountry("Place plots in which country: ", getCandidates)
+            val n = askInt(s"Place how many Level 1 Plots in $t", 1, maxPlots, Some(maxPlots))
+            (t, n)
+        }
+        else
+          (JihadistBot.plotPriority(getCandidates).get, maxPlots)
+  
+        addEventTarget(target)
+        for (i <- 1 to numPlots)
+          addAvailablePlotToCountry(target, Plot1, visible = true)
       }
       else
-        (JihadistBot.plotPriority(getCandidates).get, maxPlots)
-
-      addEventTarget(target)
-      for (i <- 1 to numPlots)
-        addAvailablePlotToCountry(target, Plot1, visible = true)
+        log("\nThere are no available level 1 plots.  The event has no effect.", Color.Event)
     }
     else
-      log("\nThere no available level 1 plots.  The event has no effect.", Color.Event)
+      log("\nThere are valid countries that can be targeted. The event has no effect.", Color.Event)
   }
 }

@@ -67,28 +67,33 @@ object Card_285 extends Card(285, "Mohamed Morsi Supporters", Jihadist, 1, Remov
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) =
-    lapsingEventNotInPlay(ArabWinter) &&
-    globalEventNotInPlay(PoliticalIslamismUS) &&
-    getCandidates.nonEmpty
+  def eventConditionsMet(role: Role) = globalEventNotInPlay(PoliticalIslamismUS)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = 
+    lapsingEventNotInPlay(ArabWinter) &&
+    getCandidates.nonEmpty
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val target = if (isHuman(role))
-      askCountry("Place reaction marker in which country: ", getCandidates)
-    else
-      JihadistBot.markerTarget(getCandidates).get
-
-    addEventTarget(target)
-    addReactionMarker(target)
+    if (lapsingEventInPlay(ArabWinter))
+      log(s"\nReaction markers cannot be place due to [Arab Winter]", Color.Event)
+    else if (getCandidates.isEmpty)
+      log(s"\nThere are no valid target countries.  The event has no effect.", Color.Event)
+    else {
+      val target = if (isHuman(role))
+        askCountry("Place reaction marker in which country: ", getCandidates)
+      else
+        JihadistBot.markerTarget(getCandidates).get
+  
+      addEventTarget(target)
+      addReactionMarker(target)
+    }
   }
 }
