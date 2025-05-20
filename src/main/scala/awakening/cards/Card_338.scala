@@ -114,16 +114,19 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
         val num  = askInt("Place how many cells", 1, maxCells, Some(maxCells))
         (name, num)
       }
-      else if (maxCells == 3 && game.islamistResources == 5 && JihadistBot.possibleToDeclareCaliphate(placeCellCandidates)) {
-          // If we are placing 3 cells and we can declare caliphate for the win
-          // then select that country
-          val t = JihadistBot.cellPlacementPriority(true)(placeCellCandidates).get
-          (t, maxCells)
-        }
-      else if (game.botEnhancements && placeCellCandidates.exists(name => Some(name) == JihadistBot.majorJihadPriorityCountry))
-        (JihadistBot.majorJihadPriorityCountry.get, maxCells)
-      else
-        (JihadistBot.cellPlacementPriority(maxCells == 3 && game.botEnhancements)(placeCellCandidates).get, maxCells)
+      else {
+        // If we are placing 3 cells and we can declare caliphate for the win
+        // then select that country
+        val botTarget = if (maxCells == 3 && JihadistBot.possibleToDeclareCaliphate(placeCellCandidates))
+            JihadistBot.cellPlacementPriority(true)(placeCellCandidates).get
+        else if (game.botEnhancements && placeCellCandidates.exists(name => Some(name) == JihadistBot.majorJihadPriorityCountry))
+          JihadistBot.majorJihadPriorityCountry.get
+        else
+          JihadistBot.cellPlacementPriority(false)(placeCellCandidates).get
+
+        (botTarget, maxCells)
+
+      }
 
       addEventTarget(target)
       addSleeperCellsToCountry(target, num)
