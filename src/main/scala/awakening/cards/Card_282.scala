@@ -108,20 +108,26 @@ object Card_282 extends Card(282, "Executive Order 13492", Jihadist, 1, Remove, 
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (game.usPosture == Hard && game.prestige > 1)
-      decreasePrestige(1)
-    else if (game.cellsAvailable > 0) {
-      val target = if (isHuman(role))
-        askCountry("Place a cell in which country: ", countryNames(game.countries))
-      else if (game.botEnhancements)
-        enhBotCellPlacementTarget
+    if (game.usPosture == Hard) {
+      if (game.prestige > 1)
+        decreasePrestige(1)
       else
-        JihadistBot.cellPlacementPriority(false)(countryNames(game.countries)).get
-
-      addEventTarget(target)
-      addSleeperCellsToCountry(target, 1)
+        log("\nUS prestige is 1.  The event has no effect.", Color.Event)
     }
-    else
-      log("\nThere are no available cells.  The event has no effect.", Color.Event)
+    else {
+      if (game.cellsAvailable > 0) {
+        val target = if (isHuman(role))
+          askCountry("Place a cell in which country: ", countryNames(game.countries))
+        else if (game.botEnhancements)
+          enhBotCellPlacementTarget
+        else
+          JihadistBot.cellPlacementPriority(false)(countryNames(game.countries)).get
+  
+        addEventTarget(target)
+        addSleeperCellsToCountry(target, 1)
+      }
+      else
+        log("\nThere are no available cells.  The event has no effect.", Color.Event)
+    }
   }
 }
