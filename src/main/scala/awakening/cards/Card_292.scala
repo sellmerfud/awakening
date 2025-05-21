@@ -124,34 +124,34 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
       if (numCadres > 0)
         nextCadre(1, getCandidates)
       else
-        log(s"\nThe Jihadist chooses to not place any cadres.", Color.Event)
+        log(s"\nThe Jihadist does not place any cadres.", Color.Event)
     }
     else if (game.botEnhancements) {
       // Enhanced Bot
       val targets = new ListBuffer[String]
 
-      if (getEnhBotNonMuslimCandidates.nonEmpty || getEnhBotMuslimCandidates.nonEmpty) {
-        def nextMuslimTarget(remaining: Int, candidates: List[String]): Unit =
-          if (remaining > 0 && candidates.nonEmpty) {
-            val target = JihadistBot.recruitTravelToPriority(candidates).get
-            targets += target
-            nextMuslimTarget(remaining - 1, candidates.filterNot(_ == target))
-          }
-        
-        // Place one cadre in an unmarked Non-Muslim country
-        if (getEnhBotNonMuslimCandidates.nonEmpty)
-          targets += JihadistBot.topPriority(getEnhBotNonMuslimCandidates, JihadistBot.EnhUnmarkedNonMuslimTravelPriorities)
-              .map(_.name)
-              .get
-        // Place the remaining cadres in qualifiying Muslim countries
-        nextMuslimTarget(3 - targets.size, countryNames(getEnhBotMuslimCandidates))
+      def nextMuslimTarget(remaining: Int, candidates: List[String]): Unit =
+        if (remaining > 0 && candidates.nonEmpty) {
+          val target = JihadistBot.recruitTravelToPriority(candidates).get
+          targets += target
+          nextMuslimTarget(remaining - 1, candidates.filterNot(_ == target))
+        }
+      
+      // Place one cadre in an unmarked Non-Muslim country
+      if (getEnhBotNonMuslimCandidates.nonEmpty)
+        targets += JihadistBot.topPriority(getEnhBotNonMuslimCandidates, JihadistBot.EnhUnmarkedNonMuslimTravelPriorities)
+            .map(_.name)
+            .get
+      // Place the remaining cadres in qualifiying Muslim countries
+      nextMuslimTarget(3 - targets.size, countryNames(getEnhBotMuslimCandidates))
+
+      if (targets.isEmpty)
+        log(s"\nThe Jihadist Bot does not place any cadres.", Color.Event)
+      else
         for (target <- targets.toList) {
           addEventTarget(target)
           addCadreToCountry(target)
         }
-      }
-      else
-        log(s"\nThe Jihadist Bot chooses to not place any cadres.", Color.Event)
     }
     else {
       // Standard Bot
@@ -166,7 +166,7 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
       if (getStandardBotCandidates.nonEmpty)
         nextCadre(1, getStandardBotCandidates)
       else
-        log(s"\nThe Jihadist Bot chooses to not place any cadres.", Color.Event)
+        log(s"\nThe Jihadist Bot does not place any cadres.", Color.Event)
     }
   }
 }
