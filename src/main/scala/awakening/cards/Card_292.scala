@@ -39,6 +39,7 @@ package awakening.cards
 
 import awakening.LabyrinthAwakening._
 import awakening.JihadistBot
+import scala.collection.mutable.ListBuffer
 
 // Card Text:
 // ------------------------------------------------------------------
@@ -58,12 +59,32 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
 
   def getCandidates = countryNames(game.countries.filter(!_.truce))
 
-  def getBotCandidates = {
-    val isCandidate = if (game.botEnhancements)
-      (c: Country) => !c.truce && !c.hasCadre && c.totalCells == 0 && !JihadistBot.isCadreRemovalCandidate(c)
-    else
+  def getStandardBotCandidates = {
+    val isCandidate =
       (c: Country) => !c.truce && !c.hasCadre && c.totalCells == 0
     countryNames(game.countries.filter(isCandidate))
+  }
+
+  // Untested Non-Muslims (only if US posture is Hard)
+  def getEnhBotNonMuslimCandidates = if (game.usPosture == Hard) {
+    val isCandidate = (n: NonMuslimCountry) =>
+      n.isUntested &&
+      !n.truce &&
+      !JihadistBot.isCadreRemovalCandidate(n)
+
+    game.nonMuslims.filter(isCandidate)
+  }
+  else
+    Nil
+
+  def getEnhBotMuslimCandidates = {
+    val isCandidate = (m: MuslimCountry) =>
+      !m.truce &&
+      !m.hasCadre &&
+      m.totalCells == 0 &&
+      !JihadistBot.isCadreRemovalCandidate(m)
+
+    game.muslims.filter(isCandidate)
   }
 
   // Returns true if the printed conditions of the event are satisfied
@@ -75,28 +96,12 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.usPosture == Hard && game.gwotPenalty == 0 && getBotCandidates.nonEmpty
+    game.usPosture == Hard &&
+    game.hardSoftDelta < 2 &&
+    game.gwotPenalty == 0 &&
+    (getEnhBotNonMuslimCandidates.nonEmpty || getEnhBotMuslimCandidates.nonEmpty)
   else
-    getBotCandidates.nonEmpty
-
-  // Place cadre markers in Unmarked non-Muslim countries using EnhUnmarkedNonMuslimTravelPriorities
-  // If less than 3 cadre markers can be legally placed this way, continue with Travel to Priorities.
-
-  def enhBotCadreTarget(candidates: List[String]): String = {
-    val unmarkedCandidates = candidates
-      .filter(isNonMuslim)
-      .map(game.getNonMuslim)
-      .filter(_.isUntested)
-
-    if (unmarkedCandidates.nonEmpty)
-      JihadistBot.topPriority(unmarkedCandidates, JihadistBot.EnhUnmarkedNonMuslimTravelPriorities)
-        .map(_.name)
-        .get
-    else
-      JihadistBot.topPriority(game.getCountries(candidates), JihadistBot.recruitAndTravelToPriorities)
-        .map(_.name)
-        .get
-  }
+    getStandardBotCandidates.nonEmpty
 
 
   // Carry out the event for the given role.
@@ -104,36 +109,64 @@ object Card_292 extends Card(292, "Amaq News Agency", Jihadist, 2, NoRemove, NoL
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val numCadres = if (isHuman(role))
-      askInt("Place how many cadres", 1, 3, Some(3))
-    else
-      3
+    if (isHuman(role)) {
+      val numCadres = askInt("Place how many cadres", 0, 3, Some(3))
 
-    def nextCadre(num: Int, candidates: List[String]): Unit =
-      if (num <= numCadres && candidates.nonEmpty) {
-        val target = if (isHuman(role))
-          askCountry(s"Place ${ordinal(num)} cadre is which country: ", candidates)
-        else if (game.botEnhancements)
-          enhBotCadreTarget(candidates)
-        else
-          JihadistBot.recruitTravelToPriority(candidates).get
+      def nextCadre(num: Int, candidates: List[String]): Unit =
+        if (num <= numCadres && candidates.nonEmpty) {
+          val target = askCountry(s"Place ${ordinal(num)} cadre is which country: ", candidates)
+  
+          addEventTarget(target)
+          addCadreToCountry(target)
+          nextCadre(num + 1, candidates.filterNot(_ == target))
+        }
 
-        addEventTarget(target)
-        addCadreToCountry(target)
-        nextCadre(num + 1, candidates.filterNot(_ == target))
+      if (numCadres > 0)
+        nextCadre(1, getCandidates)
+      else
+        log(s"\nThe Jihadist chooses to not place any cadres.", Color.Event)
+    }
+    else if (game.botEnhancements) {
+      // Enhanced Bot
+      val targets = new ListBuffer[String]
+
+      if (getEnhBotNonMuslimCandidates.nonEmpty || getEnhBotMuslimCandidates.nonEmpty) {
+        def nextMuslimTarget(remaining: Int, candidates: List[String]): Unit =
+          if (remaining > 0 && candidates.nonEmpty) {
+            val target = JihadistBot.recruitTravelToPriority(candidates).get
+            targets += target
+            nextMuslimTarget(remaining - 1, candidates.filterNot(_ == target))
+          }
+        
+        // Place one cadre in an unmarked Non-Muslim country
+        if (getEnhBotNonMuslimCandidates.nonEmpty)
+          targets += JihadistBot.topPriority(getEnhBotNonMuslimCandidates, JihadistBot.EnhUnmarkedNonMuslimTravelPriorities)
+              .map(_.name)
+              .get
+        // Place the remaining cadres in qualifiying Muslim countries
+        nextMuslimTarget(3 - targets.size, countryNames(getEnhBotMuslimCandidates))
+        for (target <- targets.toList) {
+          addEventTarget(target)
+          addCadreToCountry(target)
+        }
       }
-
-    // Used when the event was triggered during US turn
-    val botCriteria = List(
-      new JihadistBot.CriteriaFilter("No Cadre present", _.hasCadre == false),
-      new JihadistBot.CriteriaFilter("No cells present", _.totalCells == 0)
-    )
-
-    if (isHuman(role))
-      nextCadre(1, getCandidates)
-      else if (getBotCandidates.nonEmpty)
-        nextCadre(1, getBotCandidates)
       else
         log(s"\nThe Jihadist Bot chooses to not place any cadres.", Color.Event)
+    }
+    else {
+      // Standard Bot
+      def nextCadre(num: Int, candidates: List[String]): Unit =
+        if (num <= 3 && candidates.nonEmpty) {
+          val target = JihadistBot.recruitTravelToPriority(candidates).get
+          addEventTarget(target)
+          addCadreToCountry(target)
+          nextCadre(num + 1, candidates.filterNot(_ == target))
+        }
+      
+      if (getStandardBotCandidates.nonEmpty)
+        nextCadre(1, getStandardBotCandidates)
+      else
+        log(s"\nThe Jihadist Bot chooses to not place any cadres.", Color.Event)
+    }
   }
 }
