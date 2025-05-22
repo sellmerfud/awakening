@@ -3403,7 +3403,6 @@ object JihadistBot extends BotHelpers {
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = game.hasMuslim(canJihad)
 
-      // Travel 1 cell to the US from an adjacent country.
       // cardsOps   - The number of unused Ops remaining from the card
       // reserveOps - The number of unused Ops remaining from reserves
       // Returns the number of ops used
@@ -3770,7 +3769,7 @@ object JihadistBot extends BotHelpers {
       List(
         addAction(true, EnhancedRadicalizationActions.PlotWMDInUS),
         addAction(!biometrics, EnhancedRadicalizationActions.TravelToUSForWMD),
-        addAction(!biometrics, EnhancedRadicalizationActions.PerformMinorJihadIfPossible),
+        addAction(true, EnhancedRadicalizationActions.PerformMinorJihadIfPossible),
         addAction(!biometrics, EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims),
         addAction(true, EnhancedRadicalizationActions.Recruit),
         addAction(true, EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry),
