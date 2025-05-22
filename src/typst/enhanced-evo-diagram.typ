@@ -8,31 +8,21 @@
   flipped: false, // portrait orientation
 )
 
+#let box-background = blue.lighten(80%)
+
 // Title
 #place(
   top + center,
   float: true,
   scope: "parent",
   clearance: 1em,
-  box(stroke: none, inset :1em, fill: blue.lighten(80%),
+  box(stroke: none, inset :1em, fill: box-background,
     text(size: 17pt)[
       Enhanced Jihadist Bot EvO
     ]
   )
 )
 
-// // Definitions
-// #place(
-//   bottom + left,
-//   float: true,
-//   scope: "parent",
-//   clearance: 1em,
-//   box(stroke: none, inset: 0.5em, fill: blue.lighten(80%))[
-//     ARP = Auto-Recruit Priority Country \
-//     MJP = Major Jihad Priority Country \
-//     JSP = Jihad Success Possible
-//   ]
-// )
 
 #set text(
   font: "Libertinus Serif",
@@ -159,14 +149,12 @@ crossing-thickness: 8,
 
 })
 
-// Definitions
-#pad(top: 4em,
-  box(
-    stroke: none, inset: 0.5em, fill: blue.lighten(80%),
-    text(font: "Consolas Nerd Font", size: 9pt)[
-      ARP = Auto-Recruit Priority Country \
-      MJP = Major Jihad Priority Country \
-      JSP = Jihad Success Possible
-    ]
-  )
+#v(4em)
+#box(
+  stroke: none, inset: 0.8em, fill: box-background,
+  text(font: "Consolas Nerd Font", size: 9pt)[
+    ARP = Auto-Recruit Priority Country \
+    MJP = Major Jihad Priority Country \
+    JSP = Jihad Success Possible
+  ]
 )
