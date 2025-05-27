@@ -849,7 +849,7 @@ object LabyrinthAwakening {
   val OilSpikeCards = Set(OilPriceSpike1, OilPriceSpike2, OilPriceSpike3)
 
   // From page 4 of Forever War manual.
-  val PersonalityCards = Set(110, 111, 112, 115, 116, 215, 219, 225, 237, 328, 329, 338, 352)
+  val PersonalityCards = Set(110, 111, 112, 115, 116, 215, 216, 219, 225, 237, 328, 329, 338, 342, 352)
 
   type CardEvent            = (Role, Boolean) => Unit
   type EventConditions      = (Role, Boolean) => Boolean
