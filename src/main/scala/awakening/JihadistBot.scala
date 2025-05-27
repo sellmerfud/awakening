@@ -984,15 +984,19 @@ object JihadistBot extends BotHelpers {
           (others.sorted ::: wmd)
             .take(numPlots)
 
-        case _ if game.getCountry(target).totalTroops > 0 && plotCandidates.contains(PlotWMD) =>
+        case _ if game.isMuslim(target) && game.getCountry(target).totalTroops > 0 && plotCandidates.contains(PlotWMD) =>
           // Random
           shuffle(plotCandidates)
             .take(numPlots)
 
+        // If we get here we have either:
+        // - non-muslime with funding <= 7
+        // - muslim without troops
+        // - muslime with troops but no WMD available
         case _ =>
-          // Highest Plot number
-          plotCandidates
-            .sorted
+          // Highest Plot number (not WMD unless that is all that is left)
+          val (wmd, others) = plotCandidates.partition(_ == PlotWMD)
+          (others.sorted ::: wmd)
             .take(numPlots)
       }
     }
