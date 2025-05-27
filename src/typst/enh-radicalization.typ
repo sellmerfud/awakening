@@ -53,7 +53,7 @@ Operation on the current card (12.4.1, 4th bullet). Likewise, a Cell
 may only participate in one Radicalization Operation.
 
 = Radicalization Steps
-+ / Plot in US:Plot as many times as possible in the US as long as there are unused cells there.
++ / Plot in US: If a WMD plot is available, plot as many times as possible in the US as long as there are unused cells there.
 + / Adjacent Travel to US: If a WMD plot is available and there are no cells in the US and there is an unused cell adjacent to the US, travel 1 _(max)_ adjacent cell to the US. (Skip if _Biometrics_ is in play)
 + / Minor Jihad: Perform one or more Minor Jihads if possible. (In a Fair country with the _Training Camps_ marker, preserve the last cell in the country unless _Sadr_ is also present.)
 + / Adjacent Travel to Good Muslim countries with no Troops: Travel a single adjacent cell to as many Good countries without troops as possible where a _War of Ideas_ roll would not succeed if the country were worsened to Fair. (Skip if _Biometrics_ is in play)
