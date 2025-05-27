@@ -52,7 +52,9 @@ crossing-thickness: 8,
   edge(<mJihad-poor-desired>, <add-reserve>, "-|>", [No])
   edge(<mJihad-poor-ok>, <from-afghan>, "-|>", [No])
 
-  node((0, 3), name: <from-afghan>, shape: diamond)[Travel 1 cell from\ Afghanistan?]
+  node((0, 3), name: <from-afghan>, shape: diamond)[Travel 1 cell from\ Afghanistan?#footnote[
+    Only in these scenarios: _Fall Of ISIL_,_ Trump Takes Command_, _Islamic State of Iraq & the Levant (ISIL)_
+  ]]
   node((1, 3), name: <travel-from-afghan>, shape: pill)[Travel 1 cell to\ C. Asia/Iran/Pakistan]
   edge(<from-afghan>, <travel-from-afghan>, "-|>", [Yes])
   edge(<from-afghan>, <cell-jsp>, "-|>", [No])
