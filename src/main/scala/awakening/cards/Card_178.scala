@@ -90,7 +90,7 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
       val priorities = List(
         JihadistBot.IsMajorJihadPriority,
         JihadistBot.MostMilitiaPriority,
-        JihadistBot.HighestResourcePriority,
+        JihadistBot.HighestPrintedResourcePriority,
         JihadistBot.PoorPriority,
       )
       val candidates = if (getEnhBotCandidates.nonEmpty)

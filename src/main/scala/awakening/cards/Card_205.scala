@@ -219,7 +219,7 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
     else if (role == Jihadist && game.botEnhancements) {
       val priorites = List(
         JihadistBot.IsMajorJihadPriority,
-        JihadistBot.HighestResourcePriority
+        JihadistBot.HighestPrintedResourcePriority
       )
       def priorityTarget(candidates: List[String]) = JihadistBot.topPriority(candidates.map(game.getCountry), priorites)
         .map(_.name)

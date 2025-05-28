@@ -135,7 +135,7 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
           JihadistBot.NeutralPriority,
           JihadistBot.FairMuslimFilter,
           JihadistBot.RegimeChangePriority,
-          JihadistBot.HighestResourcePriority
+          JihadistBot.HighestPrintedResourcePriority
         )
         val target = JihadistBot.topPriority(getEnhJihadistBotCandidates, priorities)
           .get

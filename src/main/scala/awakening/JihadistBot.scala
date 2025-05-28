@@ -201,27 +201,27 @@ object JihadistBot extends BotHelpers {
     if (PriorityCountries.autoRecruitPrioritySet == false) {
       val priorities = List(
         new HighestScoreNode(
-          "Poor Regime change w/ highest resource value",
+          "Poor Regime change w/ highest printed resource*",
           muslimTest(m => m.isPoor && m.inRegimeChange),
-          muslimScore(m => m.resourceValue)),
+          muslimScore(enhBotResourceValue)),
         new CriteriaFilter("Poor Caliphate Capital",
           muslimTest(m => m.isPoor && game.isCaliphateCapital(m.name))),
         new HighestScoreNode(
-          "Poor Caliphate country w/ highest resource value",
+          "Poor Caliphate country w/ highest printed resource*",
           muslimTest(m => m.isPoor && game.isCaliphateMember(m.name)),
-          muslimScore(m => m.resourceValue)),
+          muslimScore(enhBotResourceValue)),
         new CriteriaFilter("Poor country w/ Training Camps",
           muslimTest(m => m.isPoor && m.hasMarker(TrainingCamps))),
         new HighestScoreNode(
-          "Poor Civil War country w/ highest resource value",
+          "Poor Civil War country w/ highest printed resource*",
           muslimTest(m => m.isPoor && m.civilWar),
-          muslimScore(m => m.resourceValue)),
+          muslimScore(enhBotResourceValue)),
         new CriteriaFilter("Islamist Rule Caliphate Capital",
           muslimTest(m => m.isIslamistRule && game.isCaliphateCapital(m.name))),
         new HighestScoreNode(
-          "Islamist Rule country w/ highest resource value",
+          "Islamist Rule country w/ highest printed resource*",
           muslimTest(m => m.isIslamistRule),
-          muslimScore(m => m.resourceValue)),
+          muslimScore(enhBotResourceValue)),
         BestJihadDRMPriority(false),
         HighestCellsMinusTandM,
         LowestTandM,
@@ -298,7 +298,7 @@ object JihadistBot extends BotHelpers {
 
     lazy val hardNonMuslims = nonMuslims.filter(_.isHard)
 
-    lazy val fair3ResourceMuslims = muslims.filter(m => m.isFair && m.resourceValue >= 3)
+    lazy val fair3ResourceMuslims = muslims.filter(m => m.isFair && enhBotResourceValue(m) >= 3)
 
     lazy val fairPakistan = muslims.exists(m => m.name == Pakistan && m.isFair)
 
@@ -850,7 +850,7 @@ object JihadistBot extends BotHelpers {
     if (game.botEnhancements)
       List(
         WithTroopsPriority, GoodPriority, BestJihadDRMPriority(major = false), WithAidPriority, RegimeChangeTroopsPriority,
-        HighestResourcePriority, MostCellsPriority, AdjacentIslamistRulePriority
+        HighestPrintedResourcePriority, MostCellsPriority, AdjacentIslamistRulePriority
       )
     else
       List(
@@ -864,7 +864,7 @@ object JihadistBot extends BotHelpers {
     if (game.botEnhancements)
       List(
         BestJihadDRMPriority(major = true), WithAidPriority, RegimeChangeTroopsPriority,
-        HighestResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority
+        HighestPrintedResourcePriority, WithTroopsPriority, MostCellsPriority, AdjacentIslamistRulePriority
       )
     else
       List(
@@ -1010,7 +1010,7 @@ object JihadistBot extends BotHelpers {
       case LabyrinthMode if game.botEnhancements =>
         List(USPriority, WithPrestigeTroopsPriority, PhilippinesPriority,
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, NeutralPriority,
+             HighestPrintedResourcePriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority)
 
@@ -1024,7 +1024,7 @@ object JihadistBot extends BotHelpers {
       case AwakeningMode if game.botEnhancements =>
         List(USPriority, WithPrestigeTroopsPriority,
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, CivilWarPriority, NeutralPriority,
+             HighestPrintedResourcePriority, CivilWarPriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority)
 
@@ -1038,7 +1038,7 @@ object JihadistBot extends BotHelpers {
       case ForeverWarMode if game.botEnhancements =>
         List(USPriority, WithPrestigeTroopsPriority,
              MostActveCellsPriority, WithAidPriority, RegimeChangeTroopsPriority,
-             HighestResourcePriority, CivilWarPriority, NeutralPriority,
+             HighestPrintedResourcePriority, CivilWarPriority, NeutralPriority,
              AdjacentGoodAllyPriority, FairNonMuslimPriority, SamePostureAsUSPriority,
              LowestRECPriority, AdjacentIslamistRulePriority)
 
@@ -1243,14 +1243,14 @@ object JihadistBot extends BotHelpers {
       new CriteriaFilter("Regime Change", muslimTest(_.inRegimeChange)),
       new CriteriaFilter("Poor", _.isPoor),
       new HighestScorePriority("Most cells", _.totalCells),
-      new LowestScorePriority("Lowest Resource Value", muslimScore(_.resourceValue, nonMuslimScore = 100)),
+      new LowestScorePriority("Lowest Resource Value", muslimScore(enhBotResourceValue, nonMuslimScore = 100)),
     )
     val muslimPriorities = List(
       new CriteriaFilter("Poor", _.isPoor),
       new CriteriaFilter("Fair", _.isPoor),
       new CriteriaFilter("Good", _.isPoor),
       new LowestScorePriority("Worst DRM", muslimScore(m => jihadDRM(m, false).abs)), // Favorable DRM is negative, to take the absolute value
-      new LowestScorePriority("Lowest Resource Value", muslimScore(_.resourceValue, nonMuslimScore = 100)),
+      new LowestScorePriority("Lowest Resource Value", muslimScore(enhBotResourceValue, nonMuslimScore = 100)),
       new HighestScorePriority("Most cells", _.totalCells),
     )
     val nonMuslimPriorities = List(
@@ -1309,52 +1309,7 @@ object JihadistBot extends BotHelpers {
     topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
-  // If we have one or more Muslim countries at Islamist Rule
-  // that have 3 or more cells, then return the top priority one.
-  def irCountryWith3PlusCells: Option[String] = {
-    def hasAdjacent(country: Country, test: Country => Boolean): Boolean =
-       game.adjacentCountries(country.name).exists(test)
-
-    val priorities = List(
-      new HighestScoreNode(
-        "Adjacent to Poor Muslim with 1-4 more cells than TandM and Major JSP",
-        hasAdjacent(_, muslimTest(poorMuslimNeedsCellsForMajorJihad)),
-        muslimScore(m => m.resourceValue)),
-      new HighestScoreNode(
-        "Adjacent to Poor Muslim where Major JSP",
-        hasAdjacent(_, muslimTest(poorMuslimWhereMajorJihadPossible)),
-        muslimScore(m => m.resourceValue)),
-      new HighestScoreNode(
-        "Adjacent to Untested Muslim where Major JSP",
-        hasAdjacent(_, muslimTest(poorOrUnmarkedMuslimWhereMajorJihadPossible)),
-        muslimScore(m => m.resourceValue)),
-      new HighestScoreNode(
-        "Adjacent to Fair Muslim where Major JSP and no TandM",
-        hasAdjacent(_, muslimTest(m => fairMuslimWhereMajorJihadPossible(m) && m.totalTroopsAndMilitia == 0)),
-        muslimScore(m => m.resourceValue)),
-      new HighestScoreNode(
-        "Adjacent to Fair Muslim where JSP",
-        hasAdjacent(_, muslimTest(m => m.isFair && minorJihadSuccessPossible(m))),
-        muslimScore(m => m.resourceValue)),
-      new HighestScoreNode(
-        "Adjacent to Good Muslim where JSP",
-        hasAdjacent(_, muslimTest(m => m.isGood && minorJihadSuccessPossible(m))),
-        muslimScore(m => m.resourceValue)),
-    )
-
-    game.muslims.filter(m => m.isIslamistRule &&  m.totalCells > 2) match {
-      case Nil => None
-      case candidates =>
-        // If we still have  more than one candidate, then select the
-        // first one alphabetically.  (Note: countryNames alphabetizes the list)
-        // We do this so that we always select same target.
-        countryNames(narrowCandidates(candidates, priorities, allowBotLog = false)).headOption
-    }
-  }
-
-
-
-
+  
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
     val autoRecruitPriorityIsIR = autoRecruitPriorityCountry.map(name => game.getCountry(name).isIslamistRule).getOrElse(false)
     // Only recruit in IR if:
@@ -2023,17 +1978,17 @@ object JihadistBot extends BotHelpers {
   def caliphatePriorityTarget(names: List[String]): Option[String] = {
     val priorities = List(
       new HighestScoreNode(
-        "IR w/ highest resource value",
+        "IR w/ highest printed resource*",
         _.isIslamistRule,
-        muslimScore(m => m.resourceValue)),
+        muslimScore(enhBotResourceValue)),
       new HighestScoreNode(
         "Poor Civil War w/ highest resource value",
         muslimTest(m => m.isPoor && m.civilWar),
-        muslimScore(m => m.resourceValue)),
+        muslimScore(enhBotResourceValue)),
       new HighestScoreNode(
-        "Poor Regime Change w/ highest resource value",
+        "Poor Regime Change w/ highest printed resource*",
         muslimTest(m => m.isPoor && m.inRegimeChange),
-        muslimScore(m => m.resourceValue)),
+        muslimScore(enhBotResourceValue)),
     ) ::: recruitAndTravelToPriorities
 
     if (game.caliphateDeclared)
@@ -2118,10 +2073,10 @@ object JihadistBot extends BotHelpers {
       majorJihadPriorityCountry
         .filter(underTruce)
         .foreach { name =>
-          val muslim = game.getMuslim(name)
-          if (game.funding >= muslim.resourceValue) {
+          val resValue = enhBotResourceValue(game.getMuslim(name))
+          if (game.funding >= resValue) {
             log(s"\nThe $Jihadist chooses to end the TRUCE in $name.")
-            decreaseFunding(muslim.resourceValue)
+            decreaseFunding(resValue)
             removeTruceMarker(name)
             pause()
           }

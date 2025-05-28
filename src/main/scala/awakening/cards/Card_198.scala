@@ -102,7 +102,7 @@ object Card_198 extends Card(198, "US Atrocities", Jihadist, 3, NoRemove, NoLaps
     val enhBotMuslimPriorities = List(
       JihadistBot.RegimeChangePriority,
       JihadistBot.NeutralPriority,
-      JihadistBot.HighestResourcePriority,
+      JihadistBot.HighestPrintedResourcePriority,
     )
     val enhBotNonMuslimPriorities = List(
       JihadistBot.PoorPriority,

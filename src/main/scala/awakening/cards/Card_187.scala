@@ -120,7 +120,7 @@ object Card_187 extends Card(187, "Foreign Fighters", Jihadist, 3, NoRemove, NoL
       //   JihadistBot.cellPlacementPriority(game.cellsAvailable >= 3)(getCandidates).get
       val numCells = 5 min game.cellsAvailable
       val target = if (game.botEnhancements) {
-        val priorities = List(JihadistBot.HighestResourcePriority)
+        val priorities = List(JihadistBot.HighestPrintedResourcePriority)
         if (getAidCandidates.nonEmpty)
           JihadistBot.topPriority(getAidCandidates, priorities)
             .map(_.name)

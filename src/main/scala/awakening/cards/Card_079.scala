@@ -78,7 +78,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
 
   def enhGoodMuslimCadidates = game.muslims
     .filter(m => !m.truce && m.isGood && m.totalTroops == 0)
-    .sortBy(-_.resourceValue)  // Highest resources values first
+    .sortBy(-JihadistBot.enhBotResourceValue(_))  // Highest resources values first
     .map(_.name)
 
   def enhSchengenCandidates = {

@@ -92,7 +92,7 @@ object Card_077 extends Card(77, "Al-Jazeera", Jihadist, 3, NoRemove, NoLapsing,
         JihadistBot.NeutralPriority,
         JihadistBot.RegimeChangePriority,
         JihadistBot.FairPriority,
-        JihadistBot.HighestResourcePriority,
+        JihadistBot.HighestPrintedResourcePriority,
       )
       JihadistBot.topPriority(getEnhBotCandidates, priorities).map(_.name).get
     }

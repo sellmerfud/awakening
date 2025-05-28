@@ -80,7 +80,7 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
     val priorities = List(
       JihadistBot.NoTandMFilter,
       JihadistBot.HighestReactionMinusAwakeningPriority,
-      JihadistBot.HighestResourcePriority,
+      JihadistBot.HighestPrintedResourcePriority,
     )
 
     // Pick the best target from a list of candidates by narrowing them

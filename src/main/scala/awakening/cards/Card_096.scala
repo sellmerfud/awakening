@@ -76,8 +76,8 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
   // Else unplayable
   def enhBotCandidates: Option[(List[Country], List[JihadistBot.CountryFilter])] = {
     val buf = new ListBuffer[(List[Country], List[JihadistBot.CountryFilter])]
-    val goodPriorities = List(JihadistBot.HighestResourcePriority, JihadistBot.WithTroopsPriority)
-    val fairAutoRecruitPriorities = List(JihadistBot.HighestResourcePriority, JihadistBot.WithTroopsPriority)
+    val goodPriorities = List(JihadistBot.HighestPrintedResourcePriority, JihadistBot.WithTroopsPriority)
+    val fairAutoRecruitPriorities = List(JihadistBot.HighestPrintedResourcePriority, JihadistBot.WithTroopsPriority)
     val poorWithTroopsPriorities = List(JihadistBot.RegimeChangePriority, JihadistBot.WithAidPriority)
     val poorPriorities = List(JihadistBot.WithTroopsPriority, JihadistBot.WithAidPriority,
       JihadistBot.AdversaryPriority, JihadistBot.NeutralPriority)

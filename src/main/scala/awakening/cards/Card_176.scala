@@ -78,12 +78,12 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
       isCandidate(m) &&
       !m.isAdversary &&
       !game.isTrainingCamp(m.name) &&
-      m.resourceValue >= 2 &&
+      JihadistBot.enhBotResourceValue(m) >= 2 &&
       (delta > 1 || (delta >= 0 && m.cells < 3))
     }
   
   val enhBotFairPriorities = List(
-    JihadistBot.HighestResourcePriority,
+    JihadistBot.HighestPrintedResourcePriority,
     JihadistBot.HighestAwakeningMinusReactionPriority,
     JihadistBot.WithAidPriority,
     JihadistBot.AllyPriority,
@@ -98,14 +98,14 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
       isCandidate(m) &&
       !m.isAdversary &&
       !game.isTrainingCamp(m.name) &&
-      m.resourceValue >= 2 &&
+      JihadistBot.enhBotResourceValue(m) >= 2 &&
       m.awakening - m.reaction > 1
     }
 
 
   val enhBotPoorPriorities = List(
     JihadistBot.HighestAwakeningMinusReactionPriority,
-    JihadistBot.HighestResourcePriority,
+    JihadistBot.HighestPrintedResourcePriority,
     JihadistBot.WithAidPriority,
     JihadistBot.AllyPriority,    
   )

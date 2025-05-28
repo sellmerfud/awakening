@@ -112,7 +112,7 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
         val priorites = List(
           JihadistBot.IsMajorJihadPriority,
           JihadistBot.PoorPriority,
-          JihadistBot.HighestResourcePriority,
+          JihadistBot.HighestPrintedResourcePriority,
           JihadistBot.MostMilitiaPriority
         )
         JihadistBot.topPriority(game.getCountries(getEnhJihadistCandidates), priorites)

@@ -96,9 +96,9 @@ object Card_312 extends Card(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLap
   def botTarget(candidates: List[MuslimCountry]): String = {
     // Enh Bot uses printed reource(*) value which considers Tehran-Beirut Land Corridor
     val priorities = if (game.botEnhancements)
-      List(JihadistBot.HighestCellsMinusTandM, JihadistBot.HighestPrintedResourcePriority);
+      List(JihadistBot.HighestCellsMinusTandM, JihadistBot.HighestPrintedResourcePriority)
     else
-      List(JihadistBot.HighestCellsMinusTandM, JihadistBot.HighestResourcePriority);
+      List(JihadistBot.HighestCellsMinusTandM, JihadistBot.HighestResourcePriority)
 
     JihadistBot.botLog("Find \"Hama Offensive\" target", Color.Debug)
     JihadistBot.topPriority(candidates, priorities)

@@ -116,7 +116,7 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
   else {  // Bot
     val numCells = 5 min game.cellsAvailable
     val target = if (game.botEnhancements) {
-      val priorities = List(JihadistBot.HighestResourcePriority)
+      val priorities = List(JihadistBot.HighestPrintedResourcePriority)
       if (getAidCandidates.nonEmpty)
         JihadistBot.topPriority(getAidCandidates, priorities)
           .map(_.name)

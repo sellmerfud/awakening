@@ -95,13 +95,17 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
 
   def jihadBotTarget(names: List[String]): Option[String] = {
     import JihadistBot._
+    val highResPri = if (game.botEnhancements)
+      HighestPrintedResourcePriority
+    else
+      HighestResourcePriority
     val priorities = List(
       new CriteriaFilter("Fair, Regime Change", muslimTest(m => m.isFair && m.inRegimeChange)),
       GoodPriority,
       FairPriority,
       WithAidPriority,
       new CriteriaFilter("Untested Muslim", muslimTest(_.isUntested)),
-      HighestResourcePriority,
+      highResPri,
     )
     botLog("Find \"Iran\" target", Color.Debug)
     topPriority(game.getMuslims(names), priorities).map(_.name)

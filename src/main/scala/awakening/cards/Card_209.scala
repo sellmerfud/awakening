@@ -122,7 +122,7 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
         val priorities = List(
           JihadistBot.IsMajorJihadPriority,
           JihadistBot.PoorPriority,
-          JihadistBot.HighestResourcePriority,
+          JihadistBot.HighestPrintedResourcePriority,
           JihadistBot.MostMilitiaPriority
         )
         JihadistBot.topPriority(getMilitiaCandidates.map(game.getCountry), priorities)

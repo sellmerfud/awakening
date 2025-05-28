@@ -121,7 +121,7 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
 
       case Jihadist if game.botEnhancements =>  // Enhanced Jihadist Bot
         val name = if (goodNoTroopsCandidates.nonEmpty) {
-          val priorities = List(JihadistBot.HighestResourcePriority)
+          val priorities = List(JihadistBot.HighestPrintedResourcePriority)
           JihadistBot.topPriority(goodNoTroopsCandidates, priorities)
             .map(_.name)
             .get

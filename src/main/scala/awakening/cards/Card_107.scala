@@ -86,7 +86,7 @@ object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLaps
   def enhBotTarget(names: List[String]): Option[String] = {
     val priorities = List(
       JihadistBot.GoodPriority,
-      JihadistBot.HighestResourcePriority,
+      JihadistBot.HighestPrintedResourcePriority,
     )
     JihadistBot.botLog("Find \"Kurdistan\" target", Color.Debug)
     JihadistBot.topPriority(game.getMuslims(getJihadistCandidates), priorities).map(_.name)
