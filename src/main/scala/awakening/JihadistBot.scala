@@ -256,6 +256,7 @@ object JihadistBot extends BotHelpers {
     PriorityCountries.autoRecruitPriority
   }
 
+  def isAutoRecruitPriority(name: String) = (autoRecruitPriorityCountry == Some(name))
 
   val SoftPosturePriority = new CriteriaFilter("Posture is Soft", nonMuslimTest(_.isSoft))
   val HardPosturePriority = new CriteriaFilter("Posture is Hard", nonMuslimTest(_.isHard))
@@ -1316,14 +1317,14 @@ object JihadistBot extends BotHelpers {
     //  1. This is the auto-recruit priority country OR The auto-recruit priority country is not IR
     //  2. The country has less than 6 cells.
     val irCheck = (m: MuslimCountry) =>
-      !m.isIslamistRule ||
-      ((autoRecruitPriorityCountry == Some(m.name) || !autoRecruitPriorityIsIR) && m.totalCells < 6)
+      (isAutoRecruitPriority(m.name) || !autoRecruitPriorityIsIR) &&
+      m.totalCells < 6
 
     val criteria = if (game.botEnhancements)
       (c: Country) => c match {
         case m: MuslimCountry =>                     // Only recruit in Muslim countries
           (m.isPoor || m.autoRecruit) &&             // Only recruit in Good/Fair if auto-recruit
-          irCheck(m) &&
+          (!m.isIslamistRule || irCheck(m)) &&
           (!muslimWithCadreOnly || m.hasCadre)       // Special radicalization test
         case n: NonMuslimCountry => false
       }
@@ -2073,7 +2074,9 @@ object JihadistBot extends BotHelpers {
       majorJihadPriorityCountry
         .filter(underTruce)
         .foreach { name =>
-          val resValue = enhBotResourceValue(game.getMuslim(name))
+          // The bot must have enough funding to cover the
+          // countries current resource value.
+          val resValue = game.getMuslim(name).resourceValue
           if (game.funding >= resValue) {
             log(s"\nThe $Jihadist chooses to end the TRUCE in $name.")
             decreaseFunding(resValue)
