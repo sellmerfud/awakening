@@ -9605,18 +9605,22 @@ object LabyrinthAwakening {
     }
 
     sealed trait PerformOption {
+      def isPrimary: Boolean
       def menuText: String
     }
     case class PerformCardActivity(action: String) extends PerformOption {
+      override def isPrimary = true
       override def menuText = if (action == ExecuteEvent)
         s"Execute the ${card.cardName} event"
       else
         s"Perform $action operation with ${opsString(opsAvailable)}"
     }
     case object UseReserves extends PerformOption {
+      override def isPrimary = true
       override def menuText = s"Expend reserves (${opsString(game.reserves.us)})"
     }
     case class TriggerCardEvent(card: Card) extends PerformOption {
+      override def isPrimary = true
       override def menuText = if (card.association == Jihadist)
         s"Trigger $Jihadist event [${card.cardName}]"
       else
@@ -9624,12 +9628,21 @@ object LabyrinthAwakening {
 
     }
     case object AbortOption extends PerformOption {
+      override def isPrimary = false
       override def menuText = s"Abort card"
     }
 
     def processOptions(options: List[PerformOption]): Unit = {
+      // If there is only 1 primary then set the options to
+      // a single entry so the menu is not displayed.
+      val choices = {
+        val primary = options.filter(_.isPrimary)
+        if (primary.size == 1)
+          primary.map(o => o -> o.menuText)
+        else
+          options.map(o => o -> o.menuText)
+      }
       // Ask what happens next
-      val choices = options.map(o => o -> o.menuText)
       val option = askMenu("What happens next:", choices).head
 
       val updatedOptions = option match {
@@ -9653,13 +9666,7 @@ object LabyrinthAwakening {
           reservesUsed = game.reserves.us
           log(s"\n$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
           game = game.copy(reserves = game.reserves.copy(us = 0))
-          // After spending reserves is there is an option to trigger an event
-          // then remove the UseReserves option.  If not, then the only relevent option
-          // left is the card activity which will be the first option in the list.
-          if (options.exists(o => o.isInstanceOf[TriggerCardEvent]))
-            options.filterNot(_ == option)
-          else
-            options.take(1)
+          options.filterNot(_ == option)
 
         case AbortOption =>
           if (askYorN("Really abort? (y/n) "))
@@ -9667,8 +9674,8 @@ object LabyrinthAwakening {
           options
       }
 
-        // If only abort is left then we are finished.
-      if (updatedOptions.nonEmpty && updatedOptions != List(AbortOption))
+      // If only abort is left then we are finished.
+      if (updatedOptions.exists(_.isPrimary))
           processOptions(updatedOptions)
     }
 
@@ -10052,37 +10059,52 @@ object LabyrinthAwakening {
     }
 
     sealed trait PerformOption {
+      def isPrimary: Boolean
       def menuText: String
     }
     case class PerformCardActivity(action: String) extends PerformOption {
+      override def isPrimary = true
       override def menuText = if (action == ExecuteEvent)
         s"Execute the ${card.cardName} event"
       else
         s"Perform $action operation with ${opsString(opsAvailable)}"
     }
     case object UseReserves extends PerformOption {
-      override def menuText = s"Expend reserves (${opsString(game.reserves.us)})"
+      override def isPrimary = true
+      override def menuText = s"Expend reserves (${opsString(game.reserves.jihadist)})"
     }
     case class TriggerCardEvent(card: Card) extends PerformOption {
+      override def isPrimary = true
       override def menuText = if (card.association == US)
-        s"Trigger $Jihadist event [${card.cardName}]"
+        s"Trigger $US event [${card.cardName}]"
       else
         s"Trigger automatic event [${card.cardName}]"
     }
     case object CadreOption extends PerformOption {
+      override def isPrimary = true
       override def menuText = s"Remove cadre"
     }
     case object FinishedOption extends PerformOption {
+      override def isPrimary = true
       override def menuText = s"Finished with card"
     }
     case object AbortOption extends PerformOption {
+      override def isPrimary = false
       override def menuText = s"Abort card"
     }
 
     // If there is only one option in the list then it is the AbortOption
     // so we are finished.
     def processOptions(options: List[PerformOption]): Unit = {
-      val choices = options.map(o => o -> o.menuText)
+      // If there is only 1 primary then set the options to
+      // a single entry so the menu is not displayed.
+      val choices = {
+        val primary = options.filter(_.isPrimary)
+        if (primary.size == 1)
+          primary.map(o => o -> o.menuText)
+        else
+          options.map(o => o -> o.menuText)
+      }
       val option = askMenu("What happens next:", choices).head
 
       val updatedOptions = option match {
@@ -10118,14 +10140,6 @@ object LabyrinthAwakening {
           game = game.copy(reserves = game.reserves.copy(jihadist = 0))
           options.filterNot(_ == option)
 
-          // After spending reserves is there is an option to trigger an event or remove a cadre
-          // then remove the UseReserves option.  If not, then the only relevent option
-          // left is the card activity which will be the first option in the list.
-          if (options.exists(o => o.isInstanceOf[TriggerCardEvent] || o == CadreOption))
-            options.filterNot(_ == option)
-          else
-            options.take(1)
-
         case FinishedOption =>
           Nil
 
@@ -10135,15 +10149,16 @@ object LabyrinthAwakening {
           options
       }
 
+      // If the only options remaining are CadreOption and AbortOption
+      // Then insert a Finished Option
+      val finalOptions = if (updatedOptions == List(CadreOption, AbortOption))
+        List(FinishedOption, CadreOption, AbortOption)
+      else
+        updatedOptions
+
       // If only abort is left then we are finished.
-      if (updatedOptions.nonEmpty && updatedOptions != List(AbortOption)) {
-        // If the only options remaining are CadreOption and AbortOption
-        // Then insert a Finished Option
-        if (updatedOptions == List(CadreOption, AbortOption))
-          processOptions(List(FinishedOption, CadreOption, AbortOption))
-        else
-          processOptions(updatedOptions)
-      }
+      if (updatedOptions.exists(_.isPrimary))
+        processOptions(finalOptions)
     }
 
     val activity = getCardActivity()
