@@ -70,7 +70,7 @@ object Card_352 extends Card(352, "al-Baghdadi", Unassociated, 3, USRemove, NoLa
     case Jihadist => true
   }
 
-  def placeCellsCandidates() = countryNames(game.muslims.filter(m => !m.truce && m.isPoor))
+  def placeCellsCandidates = countryNames(game.muslims.filter(m => !m.truce && m.isPoor))
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -80,7 +80,7 @@ object Card_352 extends Card(352, "al-Baghdadi", Unassociated, 3, USRemove, NoLa
     case US =>
       true
     case Jihadist =>
-      globalEventNotInPlay(AlBaghdadi) || (game.cellsAvailable > 0 && placeCellsCandidates().nonEmpty)
+      globalEventNotInPlay(AlBaghdadi) || (game.cellsAvailable > 0 && placeCellsCandidates.nonEmpty)
   }
 
   // Carry out the event for the given role.
@@ -95,16 +95,15 @@ object Card_352 extends Card(352, "al-Baghdadi", Unassociated, 3, USRemove, NoLa
     }
     else {  // role == Jihadist
       playExtraCellsEvent(AlBaghdadi)
-      if (game.cellsAvailable > 0 && placeCellsCandidates().nonEmpty) {
+      if (game.cellsAvailable > 0 && placeCellsCandidates.nonEmpty) {
         val target = if (isHuman(role))
-          askCountry("Place cells in which country: ", placeCellsCandidates())
-        else if (game.cellsAvailable >= 3 && (game.botEnhancements || game.islamistResources == 5)) {
-          // If we are placing 3 cells and we can declare caliphate then
-          // select that country
-          JihadistBot.cellPlacementPriority(true)(placeCellsCandidates()).get
-        }
+          askCountry("Place cells in which country: ", placeCellsCandidates)
+        else if (game.cellsAvailable >= 3 &&  JihadistBot.possibleToDeclareCaliphate(placeCellsCandidates))
+          JihadistBot.cellPlacementPriority(true)(placeCellsCandidates).get
+        else if (game.botEnhancements && placeCellsCandidates.exists(name => Some(name) == JihadistBot.majorJihadPriorityCountry))
+          JihadistBot.majorJihadPriorityCountry.get
         else
-          JihadistBot.cellPlacementPriority(false)(placeCellsCandidates()).get
+          JihadistBot.cellPlacementPriority(false)(placeCellsCandidates).get
 
         val cellsToAdd = game.cellsAvailable min 3
         addEventTarget(target)
