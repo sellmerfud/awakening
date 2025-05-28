@@ -3475,7 +3475,7 @@ object JihadistBot extends BotHelpers {
         m.totalTroops == 0 &&
         !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
         canAdjacentTravelTo(m) &&
-        modifyWoiRoll(6, m, silent = true) - 1 >= 5
+        modifyWoiRoll(6, m, silent = true) - 1 < 5
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
