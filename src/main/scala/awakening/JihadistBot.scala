@@ -3463,7 +3463,7 @@ object JihadistBot extends BotHelpers {
     // -----------------------------------------------------------
     // Radicalization Action -  Adjacent Travel to Good Muslim countries with no Troops.
     // Travel as many adjacent cells as possible to one or more Good counties where a WoI
-    // roll would not be possible if the country were worsened to Fair.
+    // roll would be possible if the country were worsened to Fair.
   
     case object AdjacentTravelToGoodMuslims extends RadicalizationAction {
       // We must subtract 1 from the value calculated by modifyWoiRoll()
@@ -3475,7 +3475,7 @@ object JihadistBot extends BotHelpers {
         m.totalTroops == 0 &&
         !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
         canAdjacentTravelTo(m) &&
-        modifyWoiRoll(6, m, silent = true) - 1 < 5
+        modifyWoiRoll(6, m, silent = true) - 1 >= 5
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
