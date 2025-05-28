@@ -1079,6 +1079,7 @@ object JihadistBot extends BotHelpers {
 
   def RecruitFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
+         PoorAutoRecruitNoTandM,
          PoorLessThan2TamdM,
          AutoRecruitPriorityCountry,
          IslamistRulePriority
@@ -1093,6 +1094,7 @@ object JihadistBot extends BotHelpers {
 
   def TravelToFlowchart = if (game.botEnhancements)
     List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
+         PoorAutoRecruitNoTandM,
          UnmarkedOrPoorLessThan2TamdM)
   else
     List(PoorNeedCellsforMajorJihad,
