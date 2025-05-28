@@ -76,7 +76,11 @@ object Card_234 extends Card(234, "Free Syrian Army", Unassociated, 3, Remove, N
         syria.awakening <= syria.reaction &&
         !(game.militiaAvailable == 0 && game.cellsAvailable > 0)
       case Jihadist if game.botEnhancements =>
-        !syria.truce && (syria.isGood || (!syria.autoRecruit && syria.reaction - syria.awakening < 1))
+        !syria.truce && (
+          syria.isGood ||
+          (syria.isPoor && !syria.autoRecruit && syria.awakening - syria.reaction > 1) ||
+          (syria.isFair && !syria.autoRecruit && syria.awakening - syria.reaction > 0)
+        )
       case Jihadist =>
         !syria.truce &&
         !syria.isIslamistRule &&
