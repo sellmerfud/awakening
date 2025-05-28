@@ -71,7 +71,8 @@ object Card_312 extends Card(312, "Hama Offensive", Jihadist, 3, NoRemove, NoLap
 
     getCandidates
       .filter { m =>
-        m.totalTroopsAndMilitia == 0 &&
+        m.totalTroopsAndMilitia < 3 &&
+        m.totalCells - m.totalTroopsAndMilitia > 2 &&
         m.totalCells + addedCells > 3
       }
   }
