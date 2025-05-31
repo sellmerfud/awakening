@@ -3423,17 +3423,21 @@ object JihadistBot extends BotHelpers {
     // Travel as many adjacent cells as possible to one or more Good counties where a WoI
     // roll would be possible if the country were worsened to Fair.
   
+    // The Bot will travel adjacent cells to Good Muslim countries
+    // without troops where a WoI roll of 1-5 would fail if the 
+    // country's governance was worsened to Fair.
     case object AdjacentTravelToGoodMuslims extends RadicalizationAction {
       // We must subtract 1 from the value calculated by modifyWoiRoll()
       // because the country is currently at Good governance, but if it
       // were at Fair then there would be -1 modifier for trying to improve
-      // it to Good.
+      // it to Good.  We test a roll of 5.  If that would fail
+      // then by definition a  roll of 1-4 would also fail.
       val destCandidate = (m: MuslimCountry) =>
         m.isGood &&
         m.totalTroops == 0 &&
         !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
         canAdjacentTravelTo(m) &&
-        modifyWoiRoll(6, m, silent = true) - 1 >= 5
+        modifyWoiRoll(5, m, silent = true) - 1 < 5
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
