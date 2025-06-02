@@ -1336,6 +1336,25 @@ object JihadistBot extends BotHelpers {
       .map(_.name)
   }
 
+  // Get all Poor Muslims where a Major Jihad could be successful
+  def majorJihadPoorMuslimTargets(totalOps: Int) = {
+    val sufficentOps = (muslim: MuslimCountry) =>
+      muslim.majorJihadOK(totalOps) &&
+      (muslim.besiegedRegime || (totalOps >= 3) || (totalOps >= 2 && muslim.jihadDRM < 0))
+
+    game.majorJihadTargets(totalOps) 
+      .map(game.getMuslim)
+      .filter { m =>
+        !m.truce &&
+        m.isPoor &&
+        sufficentOps(m) &&
+        totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5 &&
+        majorJihadSuccessPossible(m)
+      }
+      .map(_.name)
+  }
+
+
   // To try and make the Bot AI a bit smarter, we don't
   // allow the Bot to recruit into an Islamist Rule country if it
   // already contains 7 or more cells.
@@ -1486,21 +1505,11 @@ object JihadistBot extends BotHelpers {
       def condition(ops: Int) = game.totalCellsOnMap == 0
     }
 
-
     object MajorJihadInPoorDecision extends OperationDecision {
       def desc = "Major Jihad Success possible at Poor (regardless of Ops)?"
       def yesPath = MajorJihadInPoorDesireableDecision
       def noPath  = TravelToAvoidEasyPrestigeGain
-      def condition(ops: Int) =  {
-        game.majorJihadTargets(3) // regardless of Ops available
-          .map(game.getMuslim)
-          .exists { m =>
-            !m.truce &&
-            m.isPoor &&
-            totalUnused(m, includeSadr = true) - m.totalTroopsAndMilitia >= 5 &&
-            majorJihadSuccessPossible(m)
-          }
-      }
+      def condition(ops: Int) = majorJihadPoorMuslimTargets(3).nonEmpty // regardless of Ops available
     }
 
     object MajorJihadInPoorDesireableDecision extends OperationDecision {
@@ -1513,19 +1522,7 @@ object JihadistBot extends BotHelpers {
       def noPath  = AddToReservesOp
       // Note: ops already accounts for any availabe reserves
       def condition(ops: Int) =  {
-        val sufficentOps = (muslim: MuslimCountry) =>
-          (muslim.besiegedRegime || (ops >= 3) || (ops >= 2 && muslim.jihadDRM < 0))
-
-        val candidates = game.muslims
-          .filter { m =>
-            m.isPoor &&
-            m.majorJihadOK(ops) &&  // Passes game criteria for given ops
-            majorJihadSuccessPossible(m)  && // Bot deems success possible
-            sufficentOps(m) // Sufficent Ops for the current card
-          }
-          .map(_.name)
-
-        designatedTarget = majorJihadTarget(candidates)
+        designatedTarget = majorJihadTarget(majorJihadPoorMuslimTargets(ops))
         designatedTarget.nonEmpty
       }
     }
@@ -2121,114 +2118,170 @@ object JihadistBot extends BotHelpers {
   // Starting point for Jihadist bot card play.
   // The playable argument indicates if the
   def cardPlay(card: Card, ignoreEvent: Boolean): Unit = {
+    // Carry an operation as determined by the operations flowchart
+    // possibly followed by radicalization.
+    def performOperation(): Unit = {
+      val opsUsed = operationsFlowchart(maxOpsPlusReserves(card)) match {
+        case RecruitOp(target) =>
+          recruitOperation(card, target)
+        case TravelOp(source, target, maxAttempts, adjOnly) =>
+          travelOperation(card, source, target, maxAttempts, adjOnly)
+        case PlotOpFunding =>
+          plotOperation(card, prestigeFocus = false)
+        case PlotOpPrestige =>
+          plotOperation(card, prestigeFocus = true)
+        case MinorJihadOp =>
+          minorJihadOperation(card)
+        case MajorJihadOp(target) =>
+          majorJihadOperation(card, target)
+        case PlaceRandomCells =>  // Enhanced bot only
+          placeRandomCellsOnMap(card)
+        case EnhancedTravelOp =>  // Enhanced bot only
+          enhancedTravelOperation(card)
+        case AddToReservesOp =>  // Enhanced bot only
+          addToReservesOperation(card)
+        case Radicalization =>
+          0 // Enhanced bot only
+      }
+
+      if (opsUsed < card.ops)
+        radicalization(card, opsUsed)
+    }
+
+    // Start of card play
     resetStaticData()
     val eventPlayable =
       !ignoreEvent &&
       lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks all Non-US events
-      card.eventIsPlayable(Jihadist) &&
-      card.botWillPlayEvent(Jihadist)
-    // If the event is playable then the event is always executed
-    if (eventPlayable) {
-      performCardEvent(card, Jihadist)
-      // If the card event is Unassociated add ops to the Bot's reserves.
-      // Note: The Enhanced Jihadist bot does not add to reserves
-      // after playing an Unassociated event.
-      if (card.association == Unassociated && !game.botEnhancements)
-        addToReserves(Jihadist, card.ops)
-    }
-    else {
-      val eventTriggerOption = if (card.association == US && (enhBotEasiest() || enhBotEasier())) {
-        // If the event conditions are not currently met, then
-        // the bot will carry out the event first since it will have
-        // no effect.  If difficulty is medium and we will subtract from reserves,
-        // then alwasy evaluate the event after conduction operations.
-        if (card.eventConditionsMet(US) || (enhBotEasier() && game.reserves.jihadist > 0)) {
-          log(s"\nThe $Jihadist Bot will evaluate the $US associated event after peforming operations.", Color.Info)
-          EventTriggerAfter
-        }
-        else {
-          log(s"\nThe $Jihadist Bot will evaluate the $US associated event before peforming operations.", Color.Info)
-          EventTriggerBefore
-        }
+      card.eventIsPlayable(Jihadist)
+      
+    // True if a major jihad would win the game if 3 ops were available
+    def majorJihadWouldWinGame: Boolean = majorJihadTarget(majorJihadPoorMuslimTargets(3))
+      .map(game.getMuslim(_).resourceValue + game.islamistResources >= 6)
+      .getOrElse(false)
+    
+    if (game.botEnhancements) {
+      sealed trait CardActivity
+      case object PerformEvent extends CardActivity
+      case object UseEvO extends CardActivity
+      case object MajorJihadForWin extends CardActivity
+
+      // 1. If the event is playable and if playing it could result in a Jihadist victory then play it!
+      // 2. If Major Jihad 
+      val activity = if (eventPlayable && card.eventWouldResultInVictoryFor(Jihadist)) {
+        botLog("Playing event because it can result in auto victory!")
+        PerformEvent
       }
+      else if (majorJihadWouldWinGame) {
+        botLog("Major Jihad could potentially win the game")
+        MajorJihadForWin
+      }
+      else if (eventPlayable && card.botWillPlayEvent(Jihadist))
+        PerformEvent
       else
-        EventTriggerNone
+        UseEvO
 
-      // US Elections is the only auto trigger event.
-      // The Bot will execute the event first.
-      if (card.autoTrigger) {
+      if (activity == PerformEvent)
         performCardEvent(card, Jihadist)
-        log()
-      }
-
-      if (eventTriggerOption == EventTriggerBefore) {
-        if (performCardEvent(card, US, triggered = true)) {
-          pause()
-          log(s"\nOps on the \"${card.cardName}\" card are added to $Jihadist reserves.", Color.Info)
-          addToReserves(Jihadist, card.printedOps)
-          pause()
+      else {
+        val eventTriggerOption = if (card.association == US && (enhBotEasiest() || enhBotEasier())) {
+          // If the event conditions are not currently met, then
+          // the bot will carry out the event first since it will have
+          // no effect.  If difficulty is medium and we will subtract from reserves,
+          // then alwasy evaluate the event after conduction operations.
+          if (card.eventConditionsMet(US) || (enhBotEasier() && game.reserves.jihadist > 0)) {
+            log(s"\nThe $Jihadist Bot will evaluate the $US associated event after performing operations.", Color.Info)
+            EventTriggerAfter
+          }
+          else {
+            log(s"\nThe $Jihadist Bot will evaluate the $US associated event before performing operations.", Color.Info)
+            EventTriggerBefore
+          }
         }
-      }
+        else
+          EventTriggerNone
 
-      // There is an unlikely, but possible chance that there are no cells or cadres on
-      // the map. (The Bot does not lose when there are no cells on the map).
-      // In this case the Bot cannot do anything except add Ops to reserves and wait
-      // for an event that places a cell.
-      // The Enhanced Bot uses a special Random cell placement instead
-      if (!game.botEnhancements && !(game.hasCountry(c => c.totalCells > 0 || c.hasCadre))) {
-        val opsAdded = card.ops min (2 - game.reserves.jihadist)
-        log("There are no cells or cadres on the map.")
-        log(s"The $Jihadist Bot cannot execute an operation until an event places a cell.")
-        addToReserves(Jihadist, card.ops)
+        // US Elections is the only auto trigger event.
+        // The Bot will execute the event first.
+        if (card.autoTrigger) {
+          performCardEvent(card, Jihadist)
+          log()
+        }
+
+        if (eventTriggerOption == EventTriggerBefore) {
+          if (performCardEvent(card, US, triggered = true)) {
+            pause()
+            log(s"\nOps on the \"${card.cardName}\" card are added to $Jihadist reserves.", Color.Info)
+            addToReserves(Jihadist, card.printedOps)
+            pause()
+          }
+        }
+
+        if (activity == UseEvO)
+          performOperation()
+        else 
+          majorJihadPoorMuslimTargets(maxOpsPlusReserves(card)) match {
+            case Nil =>
+              // Not enough Ops on current card so add to reserves
+              botLog("Major Jihad would win game, but not enough Ops on current card + reserves")
+              addToReservesOperation(card)
+            case candidates =>
+              // Perform Major Jihad in best candidate
+              botLog("Performing Major Jihad to attempt winning the game")
+              majorJihadOperation(card, majorJihadTarget(candidates))
+          }          
+
+        if (eventTriggerOption == EventTriggerAfter) {
+          pause()
+          if (enhBotEasier() && game.reserves.jihadist > 0) {
+            // Its possible that the event conditions are no longer satisfied
+            if (card.eventConditionsMet(US)) {
+              log(s"\n$Jihadist reserves are not empty so the \"${card.cardName}\" event does not trigger.", Color.Info)
+              log(s"Ops on the \"${card.cardName}\" card are removed from $Jihadist reserves.", Color.Info)
+              subtractFromReserves(Jihadist, card.printedOps)
+            }
+            else
+              log("\n%s event \"%s\" does not trigger. The event conditions are not satisfied. ".format(card.association, card.cardName))
+          }
+          else if (card.eventConditionsMet(US) && card.eventWouldResultInVictoryFor(US))
+            log(s"\nThe \"${card.cardName}\" event will not trigger because it could result in an immediate $US victory.", Color.Info)
+          else if (performCardEvent(card, US, triggered = true)) {
+            pause()
+            log(s"\nOps on the \"${card.cardName}\" card are added to $Jihadist reserves.", Color.Info)
+            addToReserves(Jihadist, card.printedOps)
+          }
+        }
+      }        
+    }
+    else { // Standard Bot
+      // If the event is playable then the event is always executed
+      if (eventPlayable && card.botWillPlayEvent(Jihadist)) {
+        performCardEvent(card, Jihadist)
+        // If the card event is Unassociated add ops to the Bot's reserves.
+        if (card.association == Unassociated)
+          addToReserves(Jihadist, card.ops)
       }
       else {
-        val opsUsed = operationsFlowchart(maxOpsPlusReserves(card)) match {
-          case RecruitOp(target) =>
-            recruitOperation(card, target)
-          case TravelOp(source, target, maxAttempts, adjOnly) =>
-            travelOperation(card, source, target, maxAttempts, adjOnly)
-          case PlotOpFunding =>
-            plotOperation(card, prestigeFocus = false)
-          case PlotOpPrestige =>
-            plotOperation(card, prestigeFocus = true)
-          case MinorJihadOp =>
-            minorJihadOperation(card)
-          case MajorJihadOp(target) =>
-            majorJihadOperation(card, target)
-          case PlaceRandomCells =>  // Enhanced bot only
-            placeRandomCellsOnMap(card)
-          case EnhancedTravelOp =>  // Enhanced bot only
-            enhancedTravelOperation(card)
-          case AddToReservesOp =>  // Enhanced bot only
-            addToReservesOperation(card)
-          case Radicalization =>
-            0 // Enhanced bot only
+        // US Elections is the only auto trigger event.
+        // The Bot will execute the event first.
+        if (card.autoTrigger) {
+          performCardEvent(card, Jihadist)
+          log()
         }
 
-        if (opsUsed < card.ops)
-          radicalization(card, opsUsed)
-      }
-
-      if (eventTriggerOption == EventTriggerAfter) {
-        pause()
-        if (enhBotEasier() && game.reserves.jihadist > 0) {
-          // Its possible that the event conditions are no longer satisfied
-          if (card.eventConditionsMet(US)) {
-            log(s"\n$Jihadist reserves are not empty so the \"${card.cardName}\" event does not trigger.", Color.Info)
-            log(s"Ops on the \"${card.cardName}\" card are removed from $Jihadist reserves.", Color.Info)
-            subtractFromReserves(Jihadist, card.printedOps)
-          }
-          else
-            log("\n%s event \"%s\" does not trigger. The event conditions are not satisfied. ".format(card.association, card.cardName))
+        // There is an unlikely, but possible chance that there are no cells or cadres on
+        // the map. (The Bot does not lose when there are no cells on the map).
+        // In this case the Bot cannot do anything except add Ops to reserves and wait
+        // for an event that places a cell.
+        if (!(game.hasCountry(c => c.totalCells > 0 || c.hasCadre))) {
+          val opsAdded = card.ops min (2 - game.reserves.jihadist)
+          log("There are no cells or cadres on the map.")
+          log(s"The $Jihadist Bot cannot execute an operation until an event places a cell.")
+          addToReserves(Jihadist, card.ops)
         }
-        else if (card.eventConditionsMet(US) && card.eventWouldResultInVictoryFor(US))
-          log(s"\nThe \"${card.cardName}\" event will not trigger because it could result in an immediate $US victory.", Color.Info)
-        else if (performCardEvent(card, US, triggered = true)) {
-          pause()
-          log(s"\nOps on the \"${card.cardName}\" card are added to $Jihadist reserves.", Color.Info)
-          addToReserves(Jihadist, card.printedOps)
-        }
-      }
+        else
+          performOperation()
+      }      
     }
   }
 
