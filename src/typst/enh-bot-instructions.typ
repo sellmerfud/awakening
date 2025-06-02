@@ -40,6 +40,16 @@ This document explains the instructions used in implementing the Enhanced Jihadi
 The Enhanced Bot works similarly to the Standard Bot that was introduced in *Labyrinth: The Awakening*, however the
 Enhanced Bot is intended to be implemented in software and would therefore be a bit more complicated to use manually.
 
+= Card Play
+When playing a card the Enhanced Bot follows these steps to determine how to use the card:
++ If the event is playable and if playing it has the potential cause an auto victory for the Jihadit, then the Bot will play the event.
++ If the there is Poor Muslim country where it would be possible to conduct a Major Jihad if 3 Ops were available and if doing so would cause an auto victory for the Jihadist:
+  - If there are enough Ops on the card plus reserves then the Bot will peform the Major Jihad.
+  - If there are not sufficent Ops then the Bot will add the card's Ops to its reserves.
++ If the event is playable and the Bot deems it beneficial, then it will play the event.
++ The Bot will use the Enhanced EvO to determine which operation it will peform.
+
+
 = Radicalization
 These instructions replace the Standard Jihadist Bot instructions for radicalization listed in Rule *12.4.3 Radicalization* in the _Labyrinth: The Awakening_
 rulebook.  Like the Standard Bot, the Enhanced Bot uses *Radicalization* when it performs either no Operation or it performs an Operation using fewer Ops than the
