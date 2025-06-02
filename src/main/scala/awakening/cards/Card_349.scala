@@ -65,6 +65,18 @@ object Card_349 extends Card(349, "Turkish Coup", Unassociated, 2, JihadistRemov
     globalEventInPlay(GulenMovement) && !turkey.truce && turkey.isTested
   }
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = (role, game.getMuslim(Turkey)) match {
+    case (Jihadist, turkey) if turkey.isPoor =>
+      game.islamistResources + 1 >= 6 && (game.islamistAdjacency || isBot(Jihadist))
+
+    // Include untested because it could test to Fair
+    case (US, turkey) if turkey.isFair || turkey.isUntested =>
+      game.goodResources + 1 >= 12
+
+    case _ => false
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

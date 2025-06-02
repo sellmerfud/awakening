@@ -57,6 +57,9 @@ object Card_118 extends Card(118, "Oil Price Spike", Unassociated, 3, NoRemove, 
   override
   def eventConditionsMet(role: Role) = Card_117.eventConditionsMet(role)
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = Card_117.eventWouldResultInVictoryFor(role)
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

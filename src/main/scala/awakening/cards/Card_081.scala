@@ -76,6 +76,18 @@ object Card_081 extends Card(81, "Foreign Fighters", Jihadist, 3, NoRemove, NoLa
     }
   )
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist =>
+      !game.caliphateDeclared &&
+      getCandidates.nonEmpty &&
+      game.cellsAvailable >= 3
+      game.islamistResources == 5 &&
+      (game.islamistAdjacency || isBot(Jihadist))
+
+    case _ => false
+  }
+
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

@@ -78,6 +78,20 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
       case m: MuslimCountry if m.isGood && m.totalTroops == 0 => m
     }
 
+  def maliNigeria = List(Mali, Nigeria).filter(!underTruce(_))
+
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist =>
+      !game.caliphateDeclared &&
+      maliNigeria.nonEmpty &&
+      game.cellsAvailable >= 3
+      game.islamistResources == 5 &&
+      (game.islamistAdjacency || isBot(Jihadist))
+
+    case _ => false
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -104,6 +118,7 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
       choice(canPlaceMilitia, MilitiaAction, "Place militia"),
       choice(canPlaceCells, CellsAction, "Place cells")
     ).flatten
+    
 
     val (target, action) = role match {
       case r if isHuman(r) =>
@@ -120,21 +135,23 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
         (name, Some(MilitiaAction))
 
       case Jihadist if game.botEnhancements =>  // Enhanced Jihadist Bot
-        val name = if (goodNoTroopsCandidates.nonEmpty) {
+        val name = if (eventWouldResultInVictoryFor(Jihadist))
+          JihadistBot.caliphatePriorityTarget(maliNigeria).get
+        else if (goodNoTroopsCandidates.nonEmpty) {
           val priorities = List(JihadistBot.HighestPrintedResourcePriority)
           JihadistBot.topPriority(goodNoTroopsCandidates, priorities)
             .map(_.name)
             .get
         }
         else
-          JihadistBot.caliphatePriorityTarget(Mali::Nigeria::Nil) match {
+          JihadistBot.caliphatePriorityTarget(maliNigeria) match {
             case Some(name) if game.cellsAvailable >= 3 => name
             case _ => JihadistBot.cellPlacementPriority(false)(getCellsCandidates).get
           }
         (name, Some(CellsAction))
 
       case Jihadist => // Jihadist Bot
-        val name = JihadistBot.caliphatePriorityTarget(Mali::Nigeria::Nil) match {
+        val name = JihadistBot.caliphatePriorityTarget(maliNigeria) match {
           case Some(name) if game.cellsAvailable >= 3 => name
           case _ => JihadistBot.cellPlacementPriority(false)(getCellsCandidates).get
         }

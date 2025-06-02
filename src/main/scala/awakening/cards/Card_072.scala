@@ -62,6 +62,17 @@ object Card_072 extends Card(72, "Opium", Jihadist, 2, NoRemove, NoLapsing, NoAu
     !game.getCountry(Afghanistan).truce &&
     game.getCountry(Afghanistan).totalCells > 0
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist =>
+      !game.caliphateDeclared &&
+      game.cellsAvailable >= 3
+      game.islamistResources == 5 &&
+      (game.islamistAdjacency || isBot(Jihadist))
+
+    case _ => false
+  }    
+  
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

@@ -68,6 +68,18 @@ object Card_051 extends Card(51, "FREs", Jihadist, 1, NoRemove, NoLapsing, NoAut
   override
   def botWillPlayEvent(role: Role): Boolean = game.cellsAvailable > 0
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist =>
+      !game.caliphateDeclared &&
+      globalEventInPlay(SaddamCaptured) &&
+      game.cellsAvailable >= 3
+      game.islamistResources == 5 &&
+      (game.islamistAdjacency || isBot(Jihadist))
+
+    case _ => false
+  }
+  
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.

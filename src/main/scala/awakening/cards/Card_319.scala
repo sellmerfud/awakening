@@ -62,6 +62,24 @@ object Card_319 extends Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Re
   override
   def eventConditionsMet(role: Role) = tehranBeirutLandCorridorSatisfied
 
+
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = if (!underTruce(Iran) && isMuslim(Iran)) {
+    val iran = game.getMuslim(Iran)
+    role match {
+      case Jihadist if iran.isIslamistRule =>
+      game.islamistResources + 1 >= 6 && (game.islamistAdjacency || isBot(Jihadist))
+
+      case US if iran.isGood =>
+        game.goodResources + 1 >= 12
+
+      case _ =>
+        false
+    }
+  }
+  else
+    false
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -77,9 +95,10 @@ object Card_319 extends Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Re
 
     // Plyable if either Iran Special case and Funding <7, or Iran Poor Muslim or IR.
     if (game.botEnhancements)
-      !iran.truce && ((isIranSpecialCase && game.funding < 7) || iranPoorMuslimOrIR)
+      eventWouldResultInVictoryFor(Jihadist) ||
+      (!iran.truce && ((isIranSpecialCase && game.funding < 7) || iranPoorMuslimOrIR) && !eventWouldResultInVictoryFor(US))
     else
-      !iran.truce || game.funding < 9
+      (!iran.truce || game.funding < 9 && !eventWouldResultInVictoryFor(US))
   }
 
   // Carry out the event for the given role.

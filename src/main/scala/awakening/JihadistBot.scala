@@ -2141,7 +2141,7 @@ object JihadistBot extends BotHelpers {
         // If the event conditions are not currently met, then
         // the bot will carry out the event first since it will have
         // no effect.  If difficulty is medium and we will subtract from reserves,
-        // then alwasy evvaluate the event after conduction operations.
+        // then alwasy evaluate the event after conduction operations.
         if (card.eventConditionsMet(US) || (enhBotEasier() && game.reserves.jihadist > 0)) {
           log(s"\nThe $Jihadist Bot will evaluate the $US associated event after peforming operations.", Color.Info)
           EventTriggerAfter

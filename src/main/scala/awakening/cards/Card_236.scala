@@ -173,6 +173,12 @@ object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, 
     game.islamistResources + irExporters >= 6
   }
 
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist => wouldCauseJihadistWin
+    case US => wouldCauseUSWin
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.

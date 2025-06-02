@@ -59,6 +59,18 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   override
   def eventRemovesLastCell(): Boolean = false
 
+  def removingHormuzIsJihadistVictory = {
+    val newLapsing = game.eventsLapsing.filterNot(e => e.cardNumber == StraitofHormuz)
+    val newGame = game.copy(eventsLapsing = newLapsing)
+    newGame.islamistResources >= 6
+  }
+
+  def removingOPECProductionCutIsJihadistVictory = {
+    val newLapsing = game.eventsLapsing.filterNot(e => e.cardNumber == OPECProductionCut)
+    val newGame = game.copy(eventsLapsing = newLapsing)
+    newGame.islamistResources >= 6
+  }
+
   // Has country marker and can be targeted (not truce or caliphate member)
   def hasCountryMarker(marker: String) = (c: Country) =>
     c.hasMarker(marker) &&
@@ -104,17 +116,6 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   // 7. Expanded ROE (Lapsing)
   // 8. Advisors. (Country Marker)
   def enhJihadBotPriorityEvent: Option[Either[String, Int]] = {
-    def removingHormuzIsJihadistVictory = {
-      val newLapsing = game.eventsLapsing.filterNot(e => e.cardNumber == StraitofHormuz)
-      val newGame = game.copy(eventsLapsing = newLapsing)
-      newGame.islamistResources >= 6
-    }
-    def removingOPECProductionCutIsJihadistVictory = {
-      val newLapsing = game.eventsLapsing.filterNot(e => e.cardNumber == OPECProductionCut)
-      val newGame = game.copy(eventsLapsing = newLapsing)
-      newGame.islamistResources >= 6
-    }
-
     if (lapsingEventInPlay(StraitofHormuz) && removingHormuzIsJihadistVictory)
       Some(Right(StraitofHormuz))
     else if (lapsingEventInPlay(OPECProductionCut) && removingOPECProductionCutIsJihadistVictory)
@@ -138,6 +139,12 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = bowlingGreenTargetEventInPlay
+
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist => removingHormuzIsJihadistVictory || removingOPECProductionCutIsJihadistVictory
+    case US => false
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

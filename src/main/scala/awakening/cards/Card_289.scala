@@ -62,6 +62,26 @@ object Card_289 extends Card(289, "Strait of Hormuz", Jihadist, 1, NoRemove, Lap
   override
   def eventConditionsMet(role: Role) = isIranSpecialCase || game.getMuslim(Iran).isAdversary
 
+  def wouldCauseJihadistWin = {    
+    val irGulfExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter && isPersionGulflExporter(m.name))
+    val irOtherExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter && isNonPersionGulflExporter(m.name))
+    game.islamistResources - irGulfExporters + irOtherExporters >= 6 && (game.islamistAdjacency || isBot(Jihadist))
+
+  }
+
+  def wouldCauseUSWin = {
+    val goodGulfExporters = game.muslims.count(m => m.isGood && m.oilExporter && isPersionGulflExporter(m.name))
+    val goodOtherExporters = game.muslims.count(m => m.isGood && m.oilExporter && isNonPersionGulflExporter(m.name))
+    game.goodResources - goodGulfExporters + goodOtherExporters >= 12
+  }
+
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist => wouldCauseJihadistWin
+    case US => wouldCauseUSWin
+
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -72,9 +92,8 @@ object Card_289 extends Card(289, "Strait of Hormuz", Jihadist, 1, NoRemove, Lap
     val irUp = nonPersianGulfExporters.count(_.isIslamistRule)
     val goodUp = nonPersianGulfExporters.count(_.isGood)
 
-    if (game.botEnhancements)
-      // Playable if triggering the event would result in an instant game win.
-      (game.islamistResources - irDown + irUp >= 6) && (game.goodResources - goodDown + goodUp < 12)
+    if (game.botEnhancements)  // Playable if triggering the event would result in an instant game win.
+      wouldCauseJihadistWin
     else
       // Bot only plays if it would increase IR resources and not increase Good resources
       (irUp - irDown) > 0 && (goodUp - goodDown) <= 0

@@ -188,7 +188,13 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
 
   def wouldCauseJihadistWin = {
     val irExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter)
-    game.islamistResources + irExporters >= 6
+    game.islamistResources + irExporters >= 6 && (game.islamistAdjacency || isBot(Jihadist))
+  }
+
+  override
+  def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
+    case Jihadist => wouldCauseJihadistWin
+    case US => wouldCauseUSWin
   }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -198,9 +204,8 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
       // Will not play if it would cause immediate victory for the Jihadist player
-      val IR_OilExporters = game.muslims.count(m => m.isIslamistRule && m.oilExporter)
-      (game.islamistResources + IR_OilExporters < 6 || !game.islamistAdjacency) &&
-      candidateCards(US).nonEmpty
+      wouldCauseUSWin ||
+      (!wouldCauseJihadistWin && candidateCards(US).nonEmpty)
 
     case Jihadist if game.botEnhancements =>
       // Will not play if it would cause immediate victory for the US player
@@ -208,7 +213,7 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       // of 3 that are at Good governance.
       val Good3ResExporters = game.muslims.count(m => m.isGood && m.oilExporter && m.printedResources == 3)
       wouldCauseJihadistWin ||
-      !wouldCauseUSWin && (Good3ResExporters < 2) && enhancedJihadistBotEntries().nonEmpty
+      (!wouldCauseUSWin && (Good3ResExporters < 2) && enhancedJihadistBotEntries().nonEmpty)
 
     case Jihadist =>
       // Will not play if it would cause immediate victory for the US player
