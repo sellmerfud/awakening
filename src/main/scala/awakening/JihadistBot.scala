@@ -2155,10 +2155,9 @@ object JihadistBot extends BotHelpers {
       lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks all Non-US events
       card.eventIsPlayable(Jihadist)
       
-    // True if a major jihad would win the game if 3 ops were available
-    def majorJihadWouldWinGame: Boolean = majorJihadTarget(majorJihadPoorMuslimTargets(3))
-      .map(game.getMuslim(_).resourceValue + game.islamistResources >= 6)
-      .getOrElse(false)
+    // True if a sucessful major jihad would win the game
+    val wouldWinGame = (name: String) =>
+      game.getMuslim(name).resourceValue + game.islamistResources >= 6
     
     if (game.botEnhancements) {
       sealed trait CardActivity
@@ -2172,7 +2171,7 @@ object JihadistBot extends BotHelpers {
         botLog("Playing event because it can result in auto victory!")
         PerformEvent
       }
-      else if (majorJihadWouldWinGame) {
+      else if (majorJihadPoorMuslimTargets(3).exists(wouldWinGame)) {
         botLog("Major Jihad could potentially win the game")
         MajorJihadForWin
       }
@@ -2219,17 +2218,20 @@ object JihadistBot extends BotHelpers {
 
         if (activity == UseEvO)
           performOperation()
-        else 
-          majorJihadPoorMuslimTargets(maxOpsPlusReserves(card)) match {
-            case Nil =>
-              // Not enough Ops on current card so add to reserves
+        else {
+          // It is possible that we do not have enough Ops on the current
+          // card + reserves to complete a Major Jihad to win the game.
+          val candidates = majorJihadPoorMuslimTargets(maxOpsPlusReserves(card))
+            .filter(wouldWinGame)
+          majorJihadTarget(candidates) match {
+            case None =>
               botLog("Major Jihad would win game, but not enough Ops on current card + reserves")
               addToReservesOperation(card)
-            case candidates =>
-              // Perform Major Jihad in best candidate
+            case target =>
               botLog("Performing Major Jihad to attempt winning the game")
-              majorJihadOperation(card, majorJihadTarget(candidates))
-          }          
+              majorJihadOperation(card, target)
+          }
+        }
 
         if (eventTriggerOption == EventTriggerAfter) {
           pause()
