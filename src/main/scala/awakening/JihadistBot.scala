@@ -1996,7 +1996,8 @@ object JihadistBot extends BotHelpers {
       val WireTapping = Set(UnitedStates, UnitedKingdom, Canada)
       country match {
         case m: MuslimCountry =>
-          (m.isGood || m.isFair) && !m.autoRecruit
+          ((m.isGood || m.isFair) && !m.autoRecruit) ||
+          (m.isFair && m.autoRecruit && !game.isTrainingCamp(m.name))
 
         case n: NonMuslimCountry if game.startingMode == LabyrinthMode =>
           n.name match {
@@ -2020,6 +2021,7 @@ object JihadistBot extends BotHelpers {
   // prestige or to execute the Wiretapping Event.
   // Cadres are removed:
   // - In Muslim countries at Good/Fair that are NOT auto-recruit countries.
+  // - In Fair Auto-Recruit countries (unless Training Camps is present)
   // - In Philippines (to prevent disrupt if Abu Sayyaf marker is or becomes present).
   // - US, UK, Canada (unless Wiretapping has been blocked by Leak)
   // Note: Abu Sayyaf and Wiretapping are only available in Labyrinth games / campaigns.
