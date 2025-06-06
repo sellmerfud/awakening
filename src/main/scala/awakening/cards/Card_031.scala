@@ -99,7 +99,7 @@ object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAu
       .map(deck(_)
       .numAndName).foreach { cardDisplay =>
         if (isHuman(role))
-          log(s"Add $cardDisplay to you r ($US) hand.", Color.Event)
+          log(s"Add $cardDisplay to your ($US) hand.", Color.Event)
         else
           log(s"Place $cardDisplay on top of the $US Bot's hand.", Color.Event)
       }

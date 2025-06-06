@@ -3117,13 +3117,13 @@ object LabyrinthAwakening {
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
     log()
     if (syria.isIslamistRule) {
-      log("Syria is now Shia-Mix country, place the Syria country mat on the board.", Color.Info)
+      log("Syria is now a Shia-Mix country, place the Syria country mat on the board.", Color.Info)
       log("Because Syria is under Islamist Rule, add the two WMD plots", Color.Info)
       log("from the Syria cache to the available plots box.", Color.Info)
       addRemovedWMDToAvailable(2)
     }
     else {
-      log("Syria is now Shia-Mix country, place the Syria country mat on the board.", Color.Info)
+      log("Syria is now a Shia-Mix country, place the Syria country mat on the board.", Color.Info)
       addRemovedWMDToCache(Syria, 2)
     }
     log()
@@ -7146,7 +7146,7 @@ object LabyrinthAwakening {
     val c = game.getCountry(name)
     val numToRemove = num min c.cadres
     if (numToRemove > 0) {
-      log(s"Remove ${amountOf(numToRemove, "cadre")} marker from $name.", Color.MapPieces)
+      log(s"Remove ${amountOf(numToRemove, "cadre marker")} from $name.", Color.MapPieces)
       c match {
         case m: MuslimCountry    =>
           game = game.updateCountry(m.copy(cadres = m.cadres - numToRemove))

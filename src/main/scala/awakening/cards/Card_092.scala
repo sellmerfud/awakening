@@ -77,7 +77,11 @@ object Card_092 extends Card(92, "Saddam", Jihadist, 3, NoRemove, NoLapsing, NoA
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    log("\nSet funding to 9", Color.Event)
-    game = game.copy(funding = 9)
+    if (game.funding < 9) {
+      log("\nSet funding to 9", Color.Event)
+      game = game.copy(funding = 9)
+    }
+    else
+      log("\nFunding is already at 9", Color.Event)
   }
 }
