@@ -70,8 +70,12 @@ object Card_112 extends Card(112, "Bin Ladin", Unassociated, 3, USRemove, NoLaps
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.funding > 1 || game.prestige < 12
-    case Jihadist => game.prestige > 1
+    case US =>
+      game.funding > 1 || game.prestige < 12
+    case Jihadist if game.botEnhancements =>
+      game.prestige > 2
+    case Jihadist =>
+      game.prestige > 1
   }
 
   // Carry out the event for the given role.

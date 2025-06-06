@@ -2884,6 +2884,10 @@ object LabyrinthAwakening {
       .sorted
   }
 
+  def isCardinDrawPileOrHands(cardNum: Int): Boolean =
+    cardsInDrawPileOrHands().contains(cardNum)
+
+
   // The number of cards currently in the deck.
   def numCardsInDrawPile(): Int =
     cardsInDrawPileOrHands().size - game.cardsInHand.us - game.cardsInHand.jihadist

@@ -68,7 +68,12 @@ object Card_179 extends Card(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsin
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    val chinaPosture = game.getNonMuslim(China).posture
+    game.troopsAvailable > 1 && (chinaPosture == PostureUntested || chinaPosture == game.usPosture)
+  }
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

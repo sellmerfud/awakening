@@ -1869,30 +1869,6 @@ object JihadistBot extends BotHelpers {
     topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
-  // ------------------------------------------------------------------
-  // Get target for the Status Quo event
-  def changeOfStateTarget(names: List[String]): Option[String] = {
-    val flowchart = List(
-      new CriteriaFilter("Fair Ally", muslimTest(m => m.isFair && m.isAlly)))
-    val priorities =
-      List(WorstJihadDRMPriority,
-           FairPriority,
-           HighestResourcePriority,
-           // Ths No Troops is on the event card but does not make sense to me
-           // since the troop would be removed when the country becomes unmarked?
-           new CriteriaFilter("No Troops", muslimTest(m => m.totalTroops == 0)))
-
-    botLog("Find \"Change of State\" target", Color.Debug)
-    val candidates = game.getCountries(names)
-    val favorableCandidates = selectCandidates(candidates, flowchart)
-    // If the event was triggered by US play then there the flowchart may
-    // fail to find a "favorable candidate"
-    if (favorableCandidates.nonEmpty)
-      topPriority(favorableCandidates, priorities).map(_.name)
-    else
-      topPriority(candidates, priorities).map(_.name)
-  }
-
   def criticalMiddleShiftPossibilities(names: List[String]): List[String] = {
     val flowchart = List(
       new CriteriaFilter("Not Adversary", muslimTest(m => !m.isAdversary)),

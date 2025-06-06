@@ -63,11 +63,15 @@ object Card_056 extends Card(56, "Vieira de Mello Slain", Jihadist, 1, Remove, N
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
+  val UNNationBuilding = 30
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = true
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    game.prestige > 1 || isCardinDrawPileOrHands(UNNationBuilding)
+  else
+    true
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
