@@ -57,6 +57,8 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
   // This list order is significant as it is the priority order
   // used by the enhanced Bot:
   // Enhanced draws using this priority: Abu Bakr al-Baghdadi-->Osama Bin Ladin-->Jihadi John-->Ayman al-Zawahiri-->Abu Sayyaf (ISIL)
+  // In  campaign game there may be other "personality" cards from other decks.  In that case we will select
+  // the card closest to the top of the discard pile.
   val UnconfirmedCandidates = List(
     AbuBakralBaghdadi,
     OsamaBinLadin,
@@ -69,13 +71,13 @@ object Card_197 extends Card(197, "Unconfirmed", Jihadist, 3, Remove, NoLapsing,
 
   // This returns the cards such that the most recently removed are at the
   // front of the list.
-  def getRemovedCandidates = game.cardsRemoved.filter(UnconfirmedCandidates.contains)
+  def getRemovedCandidates = game.cardsRemoved.filter(PersonalityCards.contains)
 
   // This should not be called if getRemovedCandidates returns an empty list!
-  // Returns the first entry in the UnconfirmedCandidates list that 
+  // Returns the first entry in the PersonalityCards list that 
   def enhBotCardPick(candidates: List[Int]) = UnconfirmedCandidates
     .find(candidates.contains)
-    .get
+    .getOrElse(getRemovedCandidates.head)
 
   // Used by the US Bot to determine if the executing the event would alert a plot
   // in the given country

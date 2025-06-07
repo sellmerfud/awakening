@@ -60,11 +60,9 @@ object Card_160 extends Card(160, "Operation Neptune Spear", US, 3, NoRemove, No
   override
   def eventRemovesLastCell(): Boolean = false
 
-  val candidateCards = List(219, 215, 216, 225, 237)
-
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = candidateCards.exists(game.cardsDiscarded.contains)
+  def eventConditionsMet(role: Role) = PersonalityCards.exists(game.cardsDiscarded.contains)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -79,7 +77,7 @@ object Card_160 extends Card(160, "Operation Neptune Spear", US, 3, NoRemove, No
   def executeEvent(role: Role): Unit = {
     log(s"\nThe $role player draws one of the listed cards from the discard pile.", Color.Event)
     if (isHuman(role))
-      askCardDrawnFromDiscardPile(role, only = candidateCards.toSet)
+      askCardDrawnFromDiscardPile(role, only = PersonalityCards.toSet)
         .map(deck(_).numAndName)
         .foreach { cardDisplay =>
           log(s"\nAdd $cardDisplay to your hand.", Color.Event)
@@ -87,7 +85,7 @@ object Card_160 extends Card(160, "Operation Neptune Spear", US, 3, NoRemove, No
     else {
       // See Event Instructions table
       // Bot takes the candidate card closes to the bottom of the discard pile
-      val cardNum = game.cardsDiscarded.reverse.find(candidateCards.contains).get
+      val cardNum = game.cardsDiscarded.reverse.find(PersonalityCards.contains).get
       processCardDrawn(role, cardNum, FromDiscard)
       log(s"\nTake ${cardNumAndName(cardNum)} from the discard pile and", Color.Event)
       log(s"place it on top of the $role hand.", Color.Event)
