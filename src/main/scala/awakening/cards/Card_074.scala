@@ -66,13 +66,17 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
-    game.getCountries(Schengen).find(_.cells == 0) match {
-      case None => false  // Should not happend
+    val schengens = game.getCountries(Schengen)
+    // We must have a schengen country without cells as the target
+    // and we must have either a schengen with a cell or a moveable
+    // cell outside in schengen countries.
+    schengens.find(_.cells == 0) match {
+      case None => false  // Should not happen
       case Some(schengen) =>
         val totalTravellers = game.countries
           .map(c => JihadistBot.numCellsForTravel(c, schengen.name))
           .sum
-        totalTravellers > 1
+        totalTravellers > 1 || schengens.exists(_.cells > 0)
     }
   }
   else
