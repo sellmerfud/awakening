@@ -3128,6 +3128,7 @@ object LabyrinthAwakening {
     }
     log()
     // Add WMD to Iran cache
+    log("Place the Iran country mat on the board.", Color.Info)
     addRemovedWMDToCache(Iran, 1)
 
 
@@ -8257,8 +8258,8 @@ object LabyrinthAwakening {
         false  // No enhanced US Bot so don't bother asking
 
       if (enhancedBot) {
-        log("\nNote:")
-        log(separator())
+        log("\nNote:", Color.Info)
+        log(separator(), Color.Info)
         log("The victory conditions when playing against the Enhanced Jihadist Bot")
         log("are identical to those when playing against the Standard Jihadist Bot.")
       }
@@ -8309,6 +8310,14 @@ object LabyrinthAwakening {
 
       logSummary(game.scenarioSummary)
       printSummary(game.scoringSummary)
+
+      if (campaign && scenario.startingMode == LabyrinthMode) {
+        log("\nNote:", Color.Info)
+        log(separator(), Color.Info)
+        log("In a campign game, both Mali and Nigeria begin the game as active countries.")
+        log("Place their respective country mats on the board in the lapsing boxes")
+        log("as instructed in rules 11.3.3.2 and 11.3.3.3")
+      }
 
       if (scenario.cardsRemoved.nonEmpty) {
         log()
