@@ -3110,10 +3110,14 @@ object LabyrinthAwakening {
     log()
     if (numCardsInDrawPile() == 0)
       log("Shuffle the Awakening cards to form a new draw pile.", Color.Info)
-    else
+    else {
       log("Shuffle the Awakening cards and place them beneath the existing draw pile.", Color.Info)
+      if (game.botEnhancements)
+        log("\nAfter drawing cards for the Enhanced Bot, shuffle the Bot's hand.", Color.Info)
+    }
     log("\nThe Awakening expansion rules are now in effect.", Color.Info)
-    log("The Bot will now use the Awakening priorities.", Color.Info)
+    if (!game.botEnhancements)
+      log("The Bot will now use the Awakening priorities.", Color.Info)
     // If Syria is under Islamist rule then the WMD cache should be added to the available plots.
     log()
     if (syria.isIslamistRule) {
@@ -3161,10 +3165,14 @@ object LabyrinthAwakening {
     log()
     if (numCardsInDrawPile() == 0)
       log("Shuffle the Forever War cards to form a new draw pile.", Color.Info)
-    else
+    else {
       log("Shuffle the Forever War cards and place them beneath the existing draw pile.", Color.Info)
+      if (game.botEnhancements)
+        log("\nAfter drawing cards for the Enhanced Bot, shuffle the Bot's hand.", Color.Info)
+    }
 
-    log("\nThe Bot will now use the Forever War priorities.", Color.Info)
+    if (!game.botEnhancements)
+      log("\nThe Bot will now use the Forever War priorities.", Color.Info)
   }
 
   // This function is called when a card must be drawn from the
