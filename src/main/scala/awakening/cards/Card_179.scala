@@ -68,8 +68,13 @@ object Card_179 extends Card(179, "Korean Crisis", Jihadist, 2, NoRemove, Lapsin
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) 
-    game.troopsAvailable > 1 && game.getNonMuslim(China).posture == game.usPosture
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Playable if China's Posture same as US or if US is hard AND
+    // there is not GWOT penalty AND the GWOT marker would move.
+    (game.getNonMuslim(China).posture == game.usPosture || game.usPosture == Hard) &&
+    game.gwotPenalty == 0 &&
+    postureChangeWouldMoveGwot
+  } 
   else
     true
 
