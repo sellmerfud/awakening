@@ -60,71 +60,174 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
   def eventConditionsMet(role: Role) = game.cellsOnMap > 0
 
   // Enhanced Bot instructions:
-  // If WMD available and no cells in or adjacent to US: to US
-  // If any [Good Muslim countries without troops]: to Good Muslim without troops (max. 1 cell per country, priority to highest Resource)
-  // If [US hard, no GWOT penalty and no cells in Schengen/US/Canada/UK]: to Schengen. Select different targets: Unmarked, then hard, then soft
-  // If [US hard and no GWOT penalty]: to Unmarked non-Muslim countries, priority to highest Gov
-  // If any [3 resource* Fair Muslim countries without troops: to 3 resource* Fair Muslim without troops], priority to AID
-  // Else unplayable
+  // Playable if two cells "moveable" cells can be used and can arrive in two different
+  // destinations as selected by these priorities:
+  // 1. If WMD available and no cells in or adjacent to US: to US
+  // 2. To Good Muslim countries without troops or cells, priority to highest Resource
+  // 3. If [US hard, no GWOT penalty and no cells in Schengen/US/Canada/UK]: to Schengen
+  //    Priorities: Unmarked, Hard, Soft
+  // 4. If [US hard and no GWOT penalty]: to Unmarked non-Muslim countries, priority to highest Gov
+  // 5. To 3 resource* Fair Muslim country without troops, priority to AID
+  // 6. If [triggered during US card play] travel to MJP (1 or 2 cells)
+  // 7. If [triggered during US card play] travel cells in place, priority to active cells, then non-Muslim, then highest gov.
 
-  def enhUSCandidates = {
-    val conditionMet = game.availablePlots.contains(PlotWMD) &&
-      !(UnitedStates :: getAdjacent(UnitedStates)).exists(name => game.getCountry(name).cells > 0)
-    if (conditionMet)
-      List(UnitedStates)
-    else
-      Nil
+  // We use a custom function to build travel attempts because we want to ignore preserving 3 cells in
+  // the Auto-Recruit-Priority country.
+  def travelAttempt(destination: String, prev: Option[TravelAttempt]): Option[TravelAttempt] = {
+    val sources = game.countries
+      .filter(source => JihadistBot.numCellsForTravel(source, destination, prev.toList, ignoreARP = true) > 0)
+      .map(_.name)
+
+      // If we find a "moveable" cell source, then create a Travel attempt
+      JihadistBot.enhancedTravelFromTarget(destination, sources, prev.toList, autoSuccess = true, ignoreARP = true)
+        .map { source =>
+          val prevActive = prev
+            .filter(_.from == source)
+            .map(p => if (p.active) 1 else 0)
+            .getOrElse(0)
+          val active = JihadistBot.activeCells(game.getCountry(source)) - prevActive > 0
+          TravelAttempt(source, destination, active)
+        }
   }
 
-  def enhGoodMuslimCadidates = game.muslims
-    .filter(m => !m.truce && m.isGood && m.totalTroops == 0)
-    .sortBy(-JihadistBot.enhBotResourceValue(_))  // Highest resources values first
-    .map(_.name)
+  def notPrevTarget(name: String, prev: Option[TravelAttempt]) = !prev.exists(_.to == name)
 
-  def enhSchengenCandidates = {
+  def enhBotUSTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = {
+    val cellInOrAdjtoUS = (UnitedStates :: getAdjacent(UnitedStates))
+      .exists(name => game.getCountry(name).cells > 0)
+    
+    if (!underTruce(UnitedStates) && game.availablePlots.contains(PlotWMD) && !cellInOrAdjtoUS && notPrevTarget(UnitedStates, prev))
+      travelAttempt(UnitedStates, prev)
+    else
+      None
+  }
+
+  def enhBotGoodMuslimTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = {
+    val candidates = game.muslims
+      .filter { m =>
+        !m.truce &&
+        m.isGood &&
+        m.totalTroops == 0 &&
+        m.cells == 0 &&
+        notPrevTarget(m.name, prev)
+      }
+
+    JihadistBot.topPriority(candidates, JihadistBot.HighestPrintedResourcePriority::Nil)
+      .flatMap(dest => travelAttempt(dest.name, prev))
+  }
+
+  def enhBotSchengenTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = {
+    val priorities = List(
+      JihadistBot.UnmarkedPriority, JihadistBot.HardPosturePriority, JihadistBot.SoftPosturePriority)
     val cellsCloseToSchengen = (UnitedStates::UnitedKingdom::Canada::Schengen)
       .exists(name => game.getCountry(name).cells > 0)
 
-    if (game.usPosture == Hard && game.gwotPenalty == 0 && !cellsCloseToSchengen)
-      game.getNonMuslims(Schengen)
-        .filter(_.cells == 0)
-        .sortWith { case (l, r) => (l.isUntested && !r.isUntested) || (l.isHard && r.isSoft) }
-        .map(_.name)
+    if (game.usPosture == Hard && game.gwotPenalty == 0 && !cellsCloseToSchengen) {
+      val candidates = game.getNonMuslims(Schengen)
+        .filter { n =>
+          !n.truce &&
+          notPrevTarget(n.name, prev)
+        }
+      JihadistBot.topPriority(candidates, priorities)
+        .flatMap(dest => travelAttempt(dest.name, prev))
+    }
     else
-      Nil
+      None
   }
 
-  def enhUnmarkedNonMuslimCandidates = {
-    if (game.usPosture == Hard && game.gwotPenalty == 0)
-      game.nonMuslims
-        .filter(_.isUntested)
-        .sortBy(-_.governance) // Highest governance first
-        .map(_.name)
+  def enhBotUnmarkedNoMuslimTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = {
+    if (game.usPosture == Hard && game.gwotPenalty == 0) {
+      val candidates = game.nonMuslims
+        .filter { n =>
+          !n.truce &&
+          n.isUntested &&
+          notPrevTarget(n.name, prev)
+        }
+      JihadistBot.topPriority(candidates, JihadistBot.HighestPrintedResourcePriority::Nil)
+        .flatMap(dest => travelAttempt(dest.name, prev))
+    }
     else
-      Nil
+      None
   }
 
-  def enhFairMuslimCandidates = game.muslims
-    .filter(m => !m.truce && m.isFair && m.totalTroops == 0 && JihadistBot.enhBotResourceValue(m) == 3)
-    .sortWith { case (l, r) => l.aidMarkers > 0 && r.aidMarkers == 0}
-    .map(_.name)
+  def enhBot3ResFairMuslimTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = {
+    val candidates = game.muslims
+      .filter { m =>
+        !m.truce &&
+        m.isFair &&
+        m.totalTroops == 0 &&
+        JihadistBot.enhBotResourceValue(m) == 3
+        notPrevTarget(m.name, prev)
+      }
+      JihadistBot.topPriority(candidates, JihadistBot.WithAidPriority::Nil)
+        .flatMap(dest => travelAttempt(dest.name, prev))
+    }
 
-  def enhBotHasCandidate = (
-    enhUSCandidates:::
-    enhGoodMuslimCadidates:::
-    enhSchengenCandidates:::
-    enhUnmarkedNonMuslimCandidates:::
-    enhFairMuslimCandidates
-  ).exists(JihadistBot.canTravelTo)
+  // This will only produce a target when the event was triggered
+  // during a US card play.
+  def enhBotMJPTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] =
+    (JihadistBot.majorJihadPriorityCountry.map(game.getMuslim), getActiveRole()) match {
+      case (Some(mjp), US)  if !mjp.truce =>
+        travelAttempt(mjp.name, prev)
+      case _ =>
+        None
+    }
+
+  // This will only produce a target when the event was triggered
+  // during a US card play.
+  // 7. If [triggered during US card play] travel cells in place, priority to active cells, then non-Muslim, then highest gov.
+  def enhBotInplaceTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = if (getActiveRole() == US) {
+    val priorities = List(
+      new JihadistBot.CriteriaFilter("With active cells", c => JihadistBot.activeCells(c) > 0),
+      new JihadistBot.CriteriaFilter("Non-Muslim", c => c.isNonMuslim),
+      JihadistBot.HighestGovernance
+    )
+    val candidates = game.countries
+      .filter { c =>
+        val unusedCells = JihadistBot.unusedCells(c) - prev.count(_.from == c.name)
+        !c.truce && unusedCells > 0
+      }
+
+    JihadistBot.topPriority(candidates, priorities)
+      .map { target =>
+        val prevActive = prev
+          .filter(_.from == target.name)
+          .map(p => if (p.active) 1 else 0)
+          .getOrElse(0)
+        val active = JihadistBot.activeCells(target) - prevActive > 0
+        TravelAttempt(target.name, target.name, active)
+      }
+  }
+  else
+    None
+
+  def enhBotTargets: List[TravelAttempt] = {
+
+    def nextTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = {
+      enhBotUSTarget(prev) orElse
+      enhBotGoodMuslimTarget(prev) orElse
+      enhBotSchengenTarget(prev) orElse
+      enhBotUnmarkedNoMuslimTarget(prev) orElse
+      enhBot3ResFairMuslimTarget(prev) orElse
+      enhBotMJPTarget(prev) orElse
+      enhBotInplaceTarget(prev)
+    }
+
+    nextTarget(None) match {
+      case None => Nil
+      case first => first.toList ::: nextTarget(first).toList
+    }
+  }
+
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    enhBotHasCandidate
+    enhBotTargets.size == 2
   else
-    JihadistBot.canTravelTo(UnitedStates)
+    JihadistBot.canTravelTo(UnitedStates, autoTravel = false)
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -158,55 +261,22 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
       }
     }
   }
-  else if (game.botEnhancements && enhBotHasCandidate) {
-
-    def attemptTravel(target: String): Boolean = {
-      val preferredTravellers = countryNames(
-        game.countries.filter(c => c.name != target && JihadistBot.hasCellForTravel(c, target))
-      )
-      val allTravellers = countryNames(
-        game.countries.filter(c => c.name != target && JihadistBot.unusedCells(c) > 0)
-      )
-      val from = JihadistBot.enhancedTravelFromTarget(target, preferredTravellers, autoSuccess = true) orElse {
-        // If event triggered during US turn then there may not be a preferred travel source,
-        // so fall back to the standard Bot selection
-        JihadistBot.standardTravelFromTarget(target, allTravellers, inPlaceOk = false)
-      }
-
-      from match {
-        case None => false
-        case Some(from) =>
-          addEventTarget(target)
-          val active = JihadistBot.activeCells(game.getCountry(from)) > 0
-          moveCellsBetweenCountries(from, target, 1, active, forTravel = true)
-          JihadistBot.usedCells(target).addSleepers(1)
-          true
-      }
-    }
-
-    def travelOnePer(remaining: Int, targets: List[String]): Int = targets match {
-      case _ if remaining == 0 => 0
-      case Nil => 0
-      case target::others =>
-        if (attemptTravel(target))
-          1 + travelOnePer(remaining - 1, others)
+  else if (game.botEnhancements) {
+    for (TravelAttempt(from, target, active) <- enhBotTargets) {
+      addEventTarget(target)
+      if (from == target) {
+        if (active) {
+          log(s"\nJihadist travels an active cell in place in $target")
+          hideActiveCells(target, 1)
+        }
         else
-          travelOnePer(remaining, others)
+          log(s"\nJihadist travels a sleeper cell in place in $target (no effect)")
+      }
+      else {
+        moveCellsBetweenCountries(from, target, 1, active, forTravel = true)
+        JihadistBot.usedCells(target).addSleepers(1)
+      }
     }
-
-    var numTravelled = 0
-    if (enhUSCandidates.nonEmpty)
-      while (numTravelled < 2 && attemptTravel(UnitedStates))
-        numTravelled += 1
-
-    numTravelled += travelOnePer((2 - numTravelled) max 0, enhGoodMuslimCadidates)
-    numTravelled += travelOnePer((2 - numTravelled) max 0, enhSchengenCandidates)
-    numTravelled += travelOnePer((2 - numTravelled) max 0, enhUnmarkedNonMuslimCandidates)
-    numTravelled += travelOnePer((2 - numTravelled) max 0, enhFairMuslimCandidates)
-    // In case we did not use up both travels then just attempt to
-    // travel to US by default.
-    while (numTravelled < 2 && attemptTravel(UnitedStates))
-      numTravelled += 1
   }
   else {
     def nextTravel(numTravels: Int): Int = {
@@ -221,14 +291,9 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
 
       addEventTarget(UnitedStates)
       if (numTravels < 2) {
-        val from = if (game.botEnhancements) {
-          JihadistBot.enhancedTravelFromTarget(UnitedStates, preferredTravellers, autoSuccess = true) orElse {
-            JihadistBot.standardTravelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates), inPlaceOk = false)
-          }
-        }
-        else
-          JihadistBot.standardTravelFromTarget(UnitedStates, allTravellers.filterNot(_ == UnitedStates), inPlaceOk = false)
-          
+        val from = JihadistBot.standardTravelFromTarget(
+          UnitedStates, allTravellers.filterNot(_ == UnitedStates), inPlaceOk = false)
+
         from match {
           case Some(from) =>
             val fromCountry = game.getCountry(from)
