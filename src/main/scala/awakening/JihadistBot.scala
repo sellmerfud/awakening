@@ -3459,6 +3459,68 @@ object JihadistBot extends BotHelpers {
       }
     }
 
+    
+    case object PlotToIncreaseFunding extends RadicalizationAction {
+      override
+      def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = game.funding < 6
+
+      // cardsOps   - The number of unused Ops remaining from the card
+      // reserveOps - The number of unused Ops remaining from reserves
+      // Returns the number of ops used
+      override
+      def perform(cardOps: Int, reserveOps: Int): Int = {
+        var headerDisplayed = false
+        def displayHeader(): Unit = if (!headerDisplayed) {
+          headerDisplayed = true
+          log()
+          log(s"Radicalization: Plot")
+        }
+        val maxOps = cardOps + reserveOps
+        val plotCandidate = (c: Country) =>
+          (game.isNonMuslim(c.name) || !game.getMuslim(c.name).isIslamistRule) &&
+          totalUnused(c, includeSadr = true) > 0
+
+        def nextPlot(completed: Int): Int = {
+          val candidates = countryNames(game.countries.filter(plotCandidate))
+          if (completed == maxOps || candidates.isEmpty || game.availablePlots.isEmpty)
+            completed
+          else {
+            val remaining = maxOps - completed
+            val name = plotTarget(candidates, prestigeFocus = false).get
+            val c = game.getCountry(name)
+            val numAttempts = totalUnused(c, includeSadr = true) min remaining min game.availablePlots.size
+            val reservesUsed = completed + numAttempts - cardOps
+            val actives     = activeCells(c) min numAttempts
+            val sadr        = sadrAvailable(c) && actives < numAttempts
+            val sleepers    = numAttempts - actives - sadrValue(sadr)
+            val attempts = List.fill(actives + sadrValue(sadr))(PlotAttempt(name, true)) :::
+                           List.fill(sleepers)(PlotAttempt(name, false))
+
+            displayHeader()
+            if (reservesUsed > 0)
+              expendBotReserves(reservesUsed)
+            addOpsTarget(name)
+            performPlots(3, attempts)
+            // All sleepers used will have been flipped to active by performPlots()
+            if (numAttempts <= actives)
+              usedCells(name).addActives(numAttempts)
+            else {
+              // Mark the originally active as used
+              // Mark sadr if present, then finally
+              // account for any sleepers that were used.
+              usedCells(name).addActives(actives)
+              if (sadr)
+                usedCells.sadrUsed = true
+              usedCells(name).addActives(numAttempts - actives - sadrValue(sadr))
+            }
+            nextPlot(completed + numAttempts)
+          }
+        }
+
+        nextPlot(0)
+      }
+    }
+
     // -----------------------------------------------------------
     // Radicalization Action -  Adjacent Travel to Good Muslim countries with no Troops.
     // Travel as many adjacent cells as possible to one or more Good counties where a WoI
@@ -3779,6 +3841,7 @@ object JihadistBot extends BotHelpers {
       List(
         addAction(true, EnhancedRadicalizationActions.PlotWMDInUS),
         addAction(!biometrics, EnhancedRadicalizationActions.TravelToUSForWMD),
+        addAction(true, EnhancedRadicalizationActions.PlotToIncreaseFunding),
         addAction(true, EnhancedRadicalizationActions.PerformMinorJihadIfPossible),
         addAction(!biometrics, EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims),
         addAction(true, EnhancedRadicalizationActions.Recruit),
