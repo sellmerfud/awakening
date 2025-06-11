@@ -6785,12 +6785,30 @@ object LabyrinthAwakening {
         if (m.inRegimeChange)
           log(s"Remove regime change marker from $name", Color.MapPieces)
         if (m.awakening > 0) {
-          log(s"${amountOf(m.awakening, "awakening marker")} replaced by militia", Color.Info)
+          game.militiaAvailable match {
+            case 0 =>
+              log("There are no militia available to replace awakening markers", Color.Info)
+            case 1 =>
+              log("There is only 1 militia available to replace an awakening marker", Color.Info)
+            case n if n < m.reaction =>
+              log(s"There are only $n militia available to replace awakening markers.", Color.Info)
+            case _ =>
+              log(s"${amountOf(m.awakening, "awakening marker")} replaced by militia", Color.Info)
+          }
           removeAwakeningMarker(name, m.awakening)
           addMilitiaToCountry(name, m.awakening min game.militiaAvailable)
         }
         if (m.reaction > 0) {
-          log(s"${amountOf(m.reaction, "reaction marker")} replaced by cells", Color.Info)
+          game.cellsAvailable match {
+            case 0 =>
+              log("There are no cells available to replace reaction markers", Color.Info)
+            case 1 =>
+              log("There is only 1 cells available to replace a reaction marker", Color.Info)
+            case n if n < m.reaction =>
+              log(s"There are only $n cells available to replace reaction markers.", Color.Info)
+            case _ =>
+              log(s"${amountOf(m.reaction, "reaction marker")} replaced by cells", Color.Info)
+            }
           removeReactionMarker(name, m.reaction)
           addSleeperCellsToCountry(name, m.reaction min game.cellsAvailable)
         }
