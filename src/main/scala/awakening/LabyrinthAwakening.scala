@@ -8129,19 +8129,20 @@ object LabyrinthAwakening {
 
   // Returns (gameLength, campaign)
   def askGameStyle(scenario: Scenario): Option[(Int, Boolean)] = {
-    val campLen = (scenario.allowsCampaign, scenario.startingMode) match {
-      case (true, LabyrinthMode) => 3
-      case (true, AwakeningMode) => 2
-      case _ => 0
+    val singleChoices: List[(Option[(Int, Boolean)], String)] = List(
+      Some(1 -> false) -> "Single scenario (1 deck)",
+      Some(2 -> false) -> "Single scenario (2 decks)",
+      Some(3 -> false) -> "Single scenario (3 decks)",
+    )
+    val campLengths = (scenario.allowsCampaign, scenario.startingMode) match {
+      case (true, LabyrinthMode) => List(2, 3)
+      case (true, AwakeningMode) => List(2)
+      case _ => Nil
     }
+    val campChoices: List[(Option[(Int, Boolean)], String)] = campLengths
+      .map(len => Some(len -> true) -> s"Campaign game   ($len decks)")
 
-    val choices = List(
-      choice(true,        Some(1 -> false),        "Single scenario (1 deck)"),
-      choice(true,        Some(2 -> false),        "Single scenario (2 decks)"),
-      choice(true,        Some(3 -> false),        "Single scenario (3 decks)"),
-      choice(campLen > 0, Some(campLen -> true),  s"Campaign game   ($campLen decks)"),
-      choice(true,        None,                    "Cancel"),
-    ).flatten
+    val choices = singleChoices:::campChoices:::(None, "Cancel")::Nil
 
     askMenu("Choose game style:", choices, allowAbort = false).head
   }
