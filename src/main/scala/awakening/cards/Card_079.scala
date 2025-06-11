@@ -63,7 +63,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
   // Playable if two cells "moveable" cells can be used and can arrive in two different
   // destinations as selected by these priorities:
   // 1. If WMD available and no cells in or adjacent to US: to US
-  // 2. To Good Muslim countries without troops or cells, priority to highest Resource
+  // 2. To Good Muslim countries without troops, priority to highest Resource
   // 3. If [US hard, no GWOT penalty and no cells in Schengen/US/Canada/UK]: to Schengen
   //    Priorities: Unmarked, Hard, Soft
   // 4. If [US hard and no GWOT penalty]: to Unmarked non-Muslim countries, priority to highest Gov
@@ -108,7 +108,6 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
         !m.truce &&
         m.isGood &&
         m.totalTroops == 0 &&
-        m.cells == 0 &&
         notPrevTarget(m.name, prev)
       }
 
