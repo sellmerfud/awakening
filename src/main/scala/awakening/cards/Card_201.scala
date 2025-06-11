@@ -85,7 +85,7 @@ object Card_201 extends Card(201, "Cross Border Support", Unassociated, 1, NoRem
     case Jihadist =>
       !game.caliphateDeclared &&
       maliNigeria.nonEmpty &&
-      game.cellsAvailable >= 3
+      game.cellsAvailable >= 3 &&
       game.islamistResources == 5 &&
       (game.islamistAdjacency || isBot(Jihadist))
 
