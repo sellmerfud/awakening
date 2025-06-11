@@ -64,7 +64,7 @@ may only participate in one Radicalization Operation.
 + / Plot in US: If a WMD plot is available, plot as many times as possible in the US as long as there are unused cells there.
 + / Adjacent Travel to US: If a WMD plot is available and there are no cells in the US and there is an unused cell adjacent to the US, travel 1 _(max)_ adjacent cell to the US. (Skip if _Biometrics_ is in play)
 + / Minor Jihad: Perform one or more Minor Jihads if possible. (In a Fair country with the _Training Camps_ marker, preserve the last cell in the country unless _Sadr_ is also present.)
-+ / Adjacent Travel to Good Muslim countries with no Troops: Travel a single adjacent cell to as many Good countries without troops as possible where a _War of Ideas_ roll would succeed if the country were worsened to Fair. (Skip if _Biometrics_ is in play)
++ / Adjacent Travel to Good Muslim 2+ resource\* countries with no Troops: Travel a single adjacent cell to as many Good countries without troops as possible where a _War of Ideas_ roll would succeed if the country were worsened to Fair. (Skip if _Biometrics_ is in play)
 + / Recruit: Recruit as many cells as possible in Poor or Auto-Recruit Muslim countries.  Do not recruit in Islamist Rule countries unless the country has fewer than 6 cells and either the country is the _Auto Recruit Priority_ or the _Auto Recruit Priority_  is not Islamist Rule.  Priority to the _Major Jihad Priority_, then using _Recruit/Travel To_ priorities.
 + / Add to reserves: Add surplus card Ops to reserves if there are not already 2 Ops in reserve.
 
