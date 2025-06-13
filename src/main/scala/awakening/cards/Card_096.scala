@@ -141,7 +141,7 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
 
     val plotCandidates = getPlotCandidates
     if (plotCandidates.nonEmpty) {
-      if (game.numIslamistRule == 0)
+      if (game.numIslamistRule > 0)
         log(s"\n$Jihadist places any available plot in a Non-Islamist Rule muslim country.", Color.Event)
       else
         log(s"\n$Jihadist places an available Plot-1 in a Non-Islamist Rule muslim country.", Color.Event)
@@ -167,9 +167,9 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
       addEventTarget(name)
       addAvailablePlotToCountry(name, plot)
     }
-    else if (game.numIslamistRule == 0)
-      log("\nThere is no available level 1 plot.", Color.Event)
-    else
+    else if (game.numIslamistRule > 0)
       log("\nThere are no available Plots.", Color.Event)
+    else
+      log("\nThere is no available level 1 plot.", Color.Event)
   }
 }
