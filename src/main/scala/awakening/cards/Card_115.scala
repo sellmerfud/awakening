@@ -89,13 +89,17 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
 
   def enhBotTarget(names: List[String]): String = {
     import JihadistBot.{ CriteriaFilter, muslimTest, nonMuslimTest }
-    val priorities = List(
+    val muslimPriorities = List(
       new CriteriaFilter("Indonesia with Good governance", muslimTest(m => m.name == IndonesiaMalaysia && m.isGood)),
       new CriteriaFilter("Pakistan with Good governance", muslimTest(m => m.name == Pakistan && m.isGood)),
       new CriteriaFilter("Indonesia with Fair governance", muslimTest(m => m.name == IndonesiaMalaysia && m.isFair)),
       new CriteriaFilter("Pakistan with Fair governance", muslimTest(m => m.name == Pakistan && m.isFair)),
-      new CriteriaFilter("Non-Muslim", nonMuslimTest(_ => true)),
     )
+    val nonMuslimPriorities = if (game.funding < 8)
+      List(new CriteriaFilter("Non-Muslim", nonMuslimTest(_ => true)))
+    else
+      Nil
+    val priorities = muslimPriorities:::nonMuslimPriorities
     JihadistBot.botLog("Find \"Hambali\" target", Color.Debug)
     JihadistBot.topPriority(game.getCountries(getCandidates), priorities).map(_.name).get
   }
