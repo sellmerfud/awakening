@@ -46,4 +46,4 @@ game_info path:
        }' '{{path}}'
 
 @saved_game path:
-  ouch decompress -d games '{{path}}'
+  mkdir -p games && cd games && ouch decompress '{{path}}'
