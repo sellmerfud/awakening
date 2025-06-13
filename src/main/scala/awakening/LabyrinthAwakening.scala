@@ -8158,7 +8158,16 @@ object LabyrinthAwakening {
       case _ => Nil
     }
     val campChoices: List[(Option[(Int, Boolean)], String)] = campLengths
-      .map(len => Some(len -> true) -> s"Campaign game   ($len decks)")
+      .map { len =>
+        val startIdx = GameMode.ALL
+          .indexOf(scenario.startingMode)
+        val modes = GameMode.ALL
+          .drop(startIdx)
+          .take(len)
+          .map(_.toString)
+          .mkString("/")
+        Some(len -> true) -> s"Campaign game   ($len decks, $modes)"
+      }
 
     val choices = singleChoices:::campChoices:::(None, "Cancel")::Nil
 
