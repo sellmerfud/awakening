@@ -111,6 +111,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
         notPrevTarget(m.name, prev)
       }
 
+    JihadistBot.botLog("Select: Good Muslims without troops")
     JihadistBot.topPriority(candidates, JihadistBot.HighestPrintedResourcePriority::Nil)
       .flatMap(dest => travelAttempt(dest.name, prev))
   }
@@ -127,6 +128,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
           !n.truce &&
           notPrevTarget(n.name, prev)
         }
+      JihadistBot.botLog("Select: Schengen")
       JihadistBot.topPriority(candidates, priorities)
         .flatMap(dest => travelAttempt(dest.name, prev))
     }
@@ -142,6 +144,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
           n.isUntested &&
           notPrevTarget(n.name, prev)
         }
+      JihadistBot.botLog("Select: Unmarked NonMuslims")
       JihadistBot.topPriority(candidates, JihadistBot.HighestPrintedResourcePriority::Nil)
         .flatMap(dest => travelAttempt(dest.name, prev))
     }
@@ -158,15 +161,17 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
         JihadistBot.enhBotResourceValue(m) == 3
         notPrevTarget(m.name, prev)
       }
-      JihadistBot.topPriority(candidates, JihadistBot.WithAidPriority::Nil)
-        .flatMap(dest => travelAttempt(dest.name, prev))
-    }
+    JihadistBot.botLog("Select: 3 resource* Muslims without troops")
+    JihadistBot.topPriority(candidates, JihadistBot.WithAidPriority::Nil)
+      .flatMap(dest => travelAttempt(dest.name, prev))
+  }
 
   // This will only produce a target when the event was triggered
   // during a US card play.
   def enhBotMJPTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] =
     (JihadistBot.majorJihadPriorityCountry.map(game.getMuslim), getActiveRole()) match {
       case (Some(mjp), US)  if !mjp.truce =>
+        JihadistBot.botLog(s"Select Major Jihad Priority: ${mjp.name}")
         travelAttempt(mjp.name, prev)
       case _ =>
         None
@@ -187,6 +192,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
         !c.truce && unusedCells > 0
       }
 
+    JihadistBot.botLog("Select: In place travel target")
     JihadistBot.topPriority(candidates, priorities)
       .map { target =>
         val prevActive = prev
