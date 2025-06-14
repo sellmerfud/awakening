@@ -99,12 +99,12 @@ trait BotHelpers {
   // And then the code that carries out the event can use the cached
   // target to ensure it uses the same target that was used when
   // determining if the event was playable.
-  var cachedTargets: Map[String, String] = Map.empty
+  var cachedTargets: Map[String, Any] = Map.empty
 
-  def cachedTarget(id: String)(targetValue: => String): String = {
+  def cachedTarget[T](id: String)(targetValue: => T): T = {
     cachedTargets.get(id) match {
       case Some(target) =>
-        target
+        target.asInstanceOf[T]
       case None => 
         val target = targetValue
         cachedTargets += (id -> target)

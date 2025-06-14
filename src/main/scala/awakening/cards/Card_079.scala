@@ -158,7 +158,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
         !m.truce &&
         m.isFair &&
         m.totalTroops == 0 &&
-        JihadistBot.enhBotResourceValue(m) == 3
+        JihadistBot.enhBotResourceValue(m) == 3 &&
         notPrevTarget(m.name, prev)
       }
     JihadistBot.botLog("Select: 3 resource* Muslims without troops")
@@ -206,7 +206,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
   else
     None
 
-  def enhBotTargets: List[TravelAttempt] = {
+  def enhBotTargets: List[TravelAttempt] = JihadistBot.cachedTarget("clean-ops-target") {
 
     def nextTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = {
       enhBotUSTarget(prev) orElse
