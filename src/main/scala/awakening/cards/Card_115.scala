@@ -52,13 +52,20 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
   override
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
-  def getCandidates = {
-    val possibles = game.getCountries(IndonesiaMalaysia :: getAdjacent(IndonesiaMalaysia))
-    countryNames(possibles.filter {
-      case m: MuslimCountry    => !m.truce && m.totalCells > 0 && m.isAlly
-      case n: NonMuslimCountry => n.totalCells > 0 && n.isHard
-    })
-  }
+  def validCountries = game.getCountries(IndonesiaMalaysia :: getAdjacent(IndonesiaMalaysia))
+  def getMuslimCandidates = validCountries
+    .filter {
+      case m: MuslimCountry => !m.truce && m.totalCells > 0 && m.isAlly
+      case _ => false
+    }
+
+  def getNonMuslimCandidates = validCountries
+    .filter {
+      case n: NonMuslimCountry => !n.truce && n.totalCells > 0 && n.isHard
+      case _ => false
+    }
+
+  def getCandidates = countryNames(getMuslimCandidates:::getNonMuslimCandidates)
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
@@ -80,8 +87,11 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
     case Jihadist if game.botEnhancements =>
       val indonesia = game.getMuslim(IndonesiaMalaysia)
       val pakistan = game.getMuslim(Pakistan)
-      game.availablePlots.nonEmpty &&
-      (indonesia.governance < Poor || pakistan.governance < Poor || game.funding < 8)
+      game.availablePlots.nonEmpty && (
+        (indonesia.governance < Poor && getMuslimCandidates.exists(_.name == IndonesiaMalaysia)) ||
+        (pakistan.governance < Poor && getMuslimCandidates.exists(_.name == Pakistan)) ||
+        (game.funding < 8 && getNonMuslimCandidates.nonEmpty)
+      )
 
     case Jihadist =>
       game.availablePlots.nonEmpty
