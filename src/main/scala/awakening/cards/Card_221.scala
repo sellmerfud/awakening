@@ -103,9 +103,11 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
   }
 
   // Enhanced bot ignores normal bot prefereances about immovable cells
+  // Note: A cell may be removed from the target country to be placed again,
+  // for example to establish a caliphate.
   def getJihadistCellSources(target: String) = {
     val countries = if (game.botEnhancements)
-      game.countries.filter(c => c.name != target && !c.truce && c.cells > 0)
+      game.countries.filter(c => !c.truce && c.cells > 0)
     else
       game.countries.filter(c => !c.truce && JihadistBot.hasCellForTravel(c, target, placement = true))
     countryNames(countries)
