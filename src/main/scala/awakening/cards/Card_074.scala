@@ -61,6 +61,11 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   def eventConditionsMet(role: Role) = true
 
 
+  def numMoveableCellsOutsideSchengen = game.countries
+    .filterNot(c => Schengen.contains(c.name))
+    .map(c => JihadistBot.numCellsForTravel(c, France))
+    .sum
+    
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -70,8 +75,7 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
     // Playable if US is hard and there are no cells in Schengen/US/Canada/UK and
     // there are at least 2 "moveable" cells
     val noCellsNearSchengen = !(UnitedStates::Canada::UnitedKingdom::Schengen).exists(game.getCountry(_).totalCells > 0)
-    val moveableCells = game.countries.count(c => JihadistBot.canTravelTo(c.name, autoTravel = true))
-    game.usPosture == Hard && noCellsNearSchengen && moveableCells > 1
+    game.usPosture == Hard && noCellsNearSchengen && numMoveableCellsOutsideSchengen > 1
   }
   else
     Schengen.exists(name => JihadistBot.canTravelTo(name, autoTravel = true))
@@ -113,39 +117,56 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   else if (game.botEnhancements) {    
     // We use France as the target to satisfy the call to hasCellForTravel() but it could be
     // any Schengen country.
-    val numForTravel = (c: Country) => JihadistBot.numCellsForTravel(c, France)
-    import JihadistBot.unusedCells
-    val HardPriorities = List(
+    val TargetPrioritiesUSHard = List(
       JihadistBot.WithoutCellsPriority, JihadistBot.UnmarkedPriority,
       JihadistBot.HardPosturePriority, JihadistBot.SoftPosturePriority)
-    val SoftPriorities = List(
+    val TargetPrioritiesUSSoft = List(
       JihadistBot.WithoutCellsPriority, JihadistBot.SoftPosturePriority,
       JihadistBot.HardPosturePriority, JihadistBot.UnmarkedPriority)
-
-    def travelCell(target: String): Boolean = {
+  def travelCell(target: String): Boolean = {
       // The Bot will not play this event is there are any cells already in Shengen countries.
-      // If the event is triggered during a US card play an there are cells in Schengen countries,
-      // then we will travel those first before using the travelFrom priorities.
-      val schengenWithCells = game.getNonMuslims(Schengen).filter(c => c.name != target && JihadistBot.unusedCells(c) > 0)
-      val schengenSource = if (game.usPosture == Hard)
-        JihadistBot.topPriority(schengenWithCells, JihadistBot.SoftPosturePriority::Nil).map(_.name)
-      else
-        JihadistBot.topPriority(schengenWithCells, JihadistBot.HardPosturePriority::Nil).map(_.name)
+      // If the event is triggered during a US card play and there are cells in Schengen countries,
+      // then we will travel those first before using AutoRecuitePrioroty and finally the travelFrom priorities.
+      val source = if (getActiveRole() == Jihadist) 
+      {
+        val candidates = game.countries
+          .filter (c => !Schengen.contains(c.name) && JihadistBot.numCellsForTravel(c, France) > 0)
+        // US will always be hard if event played by Enhanced Jihadist
+        JihadistBot.topPriority(candidates, JihadistBot.SoftPosturePriority::Nil)
+          .map(_.name)
+      }
+      else {
+        // Event triggered during US turn
+        val schengenWithCells = game.getNonMuslims(Schengen).filter(c => !c.truce && c.name != target && JihadistBot.unusedCells(c) > 0)
+        val schengenSource = if (game.usPosture == Hard)
+          JihadistBot.topPriority(schengenWithCells, JihadistBot.SoftPosturePriority::Nil).map(_.name)
+        else
+          JihadistBot.topPriority(schengenWithCells, JihadistBot.HardPosturePriority::Nil).map(_.name)
+  
+        val arpSource = JihadistBot.autoRecruitPriorityCountry
+          .filter { name =>
+            val c = game.getMuslim(name)
+            !c.truce && JihadistBot.numCellsForTravel(c, target, Nil, ignoreARP = true) > 0
+          }
+  
+        val otherSource = {
+          // If the event was triggered during US turn then the Bot may be forced
+          // to travel a cell that it normally would not use
+          val sources = countryNames(game.countries.filter(c => !c.truce && c.name != target && JihadistBot.hasCellForTravel(c, target))) match {
+            case Nil => countryNames(game.countries.filter(c => !c.truce && c.name != target && JihadistBot.unusedCells(c) > 0))
+            case s => s
+          }
+          JihadistBot.enhancedTravelFromTarget(target, sources, autoSuccess = true).orElse {
+            // If no enhanced preferred travel source then fall back to standard rules
+            JihadistBot.standardTravelFromTarget(target, sources, inPlaceOk = false)
+          }
+        }
 
-      val otherSource = {
-        // If the event was triggered during US turn then the Bot may be forced
-        // to travel a cell that it normally would not use
-        val sources = countryNames(game.countries.filter(c => c.name != target && JihadistBot.hasCellForTravel(c, target))) match {
-          case Nil => countryNames(game.countries.filter(c => c.name != target && JihadistBot.unusedCells(c) > 0))
-          case s => s
-        }
-        JihadistBot.enhancedTravelFromTarget(target, sources, autoSuccess = true).orElse {
-          // If no enhanced preferred travel source then fall back to standard rules
-          JihadistBot.standardTravelFromTarget(target, sources, inPlaceOk = false)
-        }
+        schengenSource.orElse(arpSource).orElse(otherSource)
       }
 
-      schengenSource.orElse(otherSource) match {
+
+      source match {
         case Some(source) =>
           val fromCountry = game.getCountry(source)
           val active = JihadistBot.activeCells(fromCountry) > 0
@@ -166,9 +187,9 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
       //   If US hard, select different targets: Unmarked, then hard, then soft.
       //   If US Soft: select the same target: soft, then hard, then Unmarked
       val candidates = if (game.usPosture == Hard)
-        JihadistBot.narrowCandidates(game.getNonMuslims(Schengen), HardPriorities).take(2)
+        JihadistBot.narrowCandidates(game.getNonMuslims(Schengen), TargetPrioritiesUSHard).take(2)
       else
-        JihadistBot.narrowCandidates(game.getNonMuslims(Schengen), SoftPriorities).take(1)
+        JihadistBot.narrowCandidates(game.getNonMuslims(Schengen), TargetPrioritiesUSSoft).take(1)
 
       // If only one target then use it twice
       candidates match {
