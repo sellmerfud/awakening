@@ -70,6 +70,7 @@ object Card_165 extends Card(165, "Coup", Jihadist, 1, NoRemove, NoLapsing, NoAu
   // Playable in non-RC, non-IR countries with r-a<1
   def isEnhBotCandidate = (m: MuslimCountry) =>
     isCandidate(m) &&
+    !(m.civilWar && m.besiegedRegime) &&
     !m.inRegimeChange &&
     !m.isIslamistRule &&
     (m.reaction - m.awakening < 1)
