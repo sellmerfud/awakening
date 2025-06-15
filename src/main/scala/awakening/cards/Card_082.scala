@@ -57,26 +57,28 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   override
   def eventRemovesLastCell(): Boolean = false
 
-  def getCandidates = countryNames(game.countries.filter(c => !c.truce && c.totalCells == 0))
+  val isCandidate = (c: Country) => !c.truce && c.totalCells == 0
+
+  def getCandidates = countryNames(game.countries.filter(isCandidate))
 
   // Returns true if the printed conditions of the event are satisfied
   override
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
-  def unmarkedNonMuslimCandidates = if (game.usPosture == Hard && game.gwotPenalty == 0)
-    game.nonMuslims.filter(m => m.isUntested && m.totalCells == 0).map(_.name)
+  def enhBotUnmarkedNonMuslimCandidates = if (game.usPosture == Hard && game.hardSoftDelta < 2 && game.gwotPenalty == 0)
+    game.nonMuslims.filter(n => isCandidate(n) && n.isUntested)
   else
     Nil
+
+  def enhBotMuslimCandidates = game.muslims.filter(isCandidate)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
-    // If US hard and no GWOT penalty: Unmarked non-Muslim, using the same priorities
-    // as with EvO/GWOT travel: 1.highest Gov, 2. Caucasus, 3. Russia, 4.Philippines, 5. Thailand, 6. Schengen, 7. random
-    // Then, only playable if at least 3 cells on track: Use Recruit Priorities
-    unmarkedNonMuslimCandidates.nonEmpty || game.cellsAvailable > 2
+    // Playable if 3+ cells on track.
+    game.cellsAvailable > 2
   }
   else
     game.cellsAvailable > 0
@@ -89,28 +91,32 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
     var targets = if (isHuman(role))
       askCountries(3, getCandidates)
     else if (game.botEnhancements) {
+      import JihadistBot.{ CriteriaFilter, SchengenPriority, topPriority, recruitAndTravelToPriorities }
+      def namedPriority(name: String) = new CriteriaFilter(name, _.name == name)
 
-      def nextTarget(num: Int, targets: List[String]): List[String] = {
-        val nonMuslim = unmarkedNonMuslimCandidates
-          .filterNot(targets.contains)
-          .map(game.getCountry)
-        val forRecruit = getCandidates
-          .filterNot(targets.contains)
-          .map(game.getCountry)
-        val maxTargets = game.cellsAvailable min 3
+      // If US hard and hard/soft delta < 2 and no GWOT penalty: then place one cell in an Unmarked non-Muslim country.
+      // priority: UK, Philippines, non-Muslim Nigeria, Caucasus, Russia, Thailand, China, Kenya, France, Spain, Schengen, random
+      // Then use Recruit priorites to select between muslim countries.
+      val UnmarkedPriorities = List(
+        namedPriority(UnitedKingdom), namedPriority(Philippines), namedPriority(Nigeria), namedPriority(Caucasus),
+        namedPriority(Russia), namedPriority(Thailand), namedPriority(China), namedPriority(KenyaTanzania),
+        namedPriority(France), namedPriority(Spain), SchengenPriority
+      )
 
-        if (num < 3 && (nonMuslim.nonEmpty || forRecruit.nonEmpty)) {
-          import JihadistBot.EnhUnmarkedNonMuslimTravelPriorities
-          import JihadistBot.{ topPriority, recruitAndTravelToPriorities }
-          if (nonMuslim.nonEmpty)
-            nextTarget(num + 1, topPriority(nonMuslim, EnhUnmarkedNonMuslimTravelPriorities).map(_.name).get::targets)
-          else
-            nextTarget(num + 1, topPriority(forRecruit, recruitAndTravelToPriorities).map(_.name).get::targets)
-        }
-        else
-          targets
+      def nextMuslimTarget(targets: Vector[String]): Vector[String] = if (targets.size < 3) {
+        val candidates = enhBotMuslimCandidates.filterNot(m => targets.contains(m.name))
+        val target = topPriority(candidates, recruitAndTravelToPriorities)
+          .map(_.name)
+          .get
+          nextMuslimTarget(targets :+ target)
       }
-      nextTarget(0, Nil)
+      else
+        targets
+
+      // Start with one unmarked Non-Muslim if possible
+      val unmarkedNonMuslim = JihadistBot.topPriority(enhBotUnmarkedNonMuslimCandidates, UnmarkedPriorities)
+        .map(_.name)
+      nextMuslimTarget(unmarkedNonMuslim.toVector)
     }
     else {
       // See Event Instructions table
@@ -127,38 +133,44 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
         JihadistBot.multipleTargets(3, candidates)(JihadistBot.cellPlacementPriority(false))
     }
 
-    val numCells = if (isBot(role) && game.jihadistIdeology(Potent)) {
+    val numCellsPerRecruit = if (isBot(role) && game.jihadistIdeology(Potent)) {
       log(s"\n$Jihadist Bot with Potent Ideology places two cells for each recruit success", Color.Event)
       2
     }
     else
       1
 
-    // Process all of the targets
+    log(s"\n$Jihadist selects: ${andList(targets)}", Color.Event)
     for (target <- targets) {
       addEventTarget(target)
-      testCountry(target)  // Event text says to test countries (so even if not cell placed)
+      testCountry(target)
+    }
+
+    // Process all of the targets
+    for (target <- targets) {
+      log(s"\nRecruit in $target")
+      log(separator())
       val c = game.getCountry(target)
-      if (game.cellsAvailable > 0) {
-        val cells = numCells min game.cellsAvailable
-        if (c.autoRecruit) {
-          log(s"Recruit in $target succeeds automatically")
-          addSleeperCellsToCountry(target, cells)
+      val numCells = numCellsPerRecruit min game.cellsAvailable
+      if (numCells == 0) {
+        log(s"No cells on the track.", Color.Event)
+        addCadreToCountry(target)
+      }
+      else if (c.autoRecruit) {
+          log(s"Recruit succeeds automatically", Color.Event)
+          addSleeperCellsToCountry(target, numCells)
+      }
+      else {
+        val die = getDieRoll("Enter event die roll: ", Some(role))
+        if (c.recruitSucceeds(die)) {
+          log(s"Recruit succeeds with a die roll of $die", Color.Event)
+          addSleeperCellsToCountry(target, numCells)
         }
         else {
-          val die = getDieRoll("Enter event die roll: ", Some(role))
-          if (c.recruitSucceeds(die)) {
-            log(s"Recruit in $target succeeds with a die roll of $die", Color.Event)
-            addSleeperCellsToCountry(target, cells)
-          }
-          else {
-            log(s"Recruit in $target fails with a die roll of $die", Color.Event)
-            addCadreToCountry(target)
-          }
+          log(s"Recruit fails with a die roll of $die", Color.Event)
+          addCadreToCountry(target)
         }
       }
-      else
-        addCadreToCountry(target)
     }
   }
 }
