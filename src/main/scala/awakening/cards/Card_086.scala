@@ -64,34 +64,59 @@ object Card_086 extends Card(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    hasCardInHand(US) ||
-    game.prestige > 1 ||
-    game.cellsAvailable > 0
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
+    hasCardInHand(US)
+  else
+    hasCardInHand(US) || game.prestige > 1 || game.cellsAvailable > 0
 
+  val isCandidate = (m: MuslimCountry) => !m.truce && m.isShiaMix
+
+  // Place cell in Good Muslim without troops, if possible (priority to highest res*).
+  // Otherwise choose among all Shia-Mix countries using Recruit/Travel To priorities
+  def enhBotShiaMixTarget: String = {
+    import JihadistBot.{ HighestPrintedResourcePriority, recruitAndTravelToPriorities}
+    val goodNoTroopsCandidates = game.muslims
+      .filter(m => isCandidate(m) && m.isGood && m.totalTroops == 0)
+    val allCanididates = game.muslims
+      .filter(isCandidate)
+
+    if (goodNoTroopsCandidates.nonEmpty)
+      JihadistBot.topPriority(goodNoTroopsCandidates, HighestPrintedResourcePriority::Nil)
+        .map(_.name)
+        .get
+    else
+      JihadistBot.topPriority(allCanididates, recruitAndTravelToPriorities)
+        .map(_.name)
+        .get
+  }
+  
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (isHuman(role))
-      log(s"\nDiscard the top card of the $US Bot's hand", Color.Event)
-    else
-      log(s"\nYou ($US) must randomly discard one card", Color.Event)
-    if (hasCardInHand(US))
+    if (hasCardInHand(US)) {
+      if (isHuman(role))
+        log(s"\nDiscard the top card of the $US Bot's hand", Color.Event)
+      else
+        log(s"\nYou ($US) must randomly discard one card", Color.Event)
       askCardsDiscarded(US, 1)
+    }
     else
       log(s"\nThe $US does not have a card to discard.", Color.Event)
     decreasePrestige(1)
 
     if (game.cellsAvailable > 0) {
-      val candidates = countryNames(game.muslims.filter(m => !m.truce && m.isShiaMix))
+      val candidates = countryNames(game.muslims.filter(isCandidate))
       val name = if (isHuman(role))
         askCountry("Select a Shia-Mix country: ", candidates)
+      else if (game.botEnhancements)
+        enhBotShiaMixTarget
       else
         JihadistBot.cellPlacementPriority(false)(candidates).get
 
       addEventTarget(name)
+      testCountry(name)
       addSleeperCellsToCountry(name, 1)
     }
     else
