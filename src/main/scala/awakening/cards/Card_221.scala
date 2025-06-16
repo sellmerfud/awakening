@@ -113,16 +113,46 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
     countryNames(countries)
   }
 
+  // Used if bot can Win the game
+  def countriesWithCells = game.countries
+    .filter(c => !c.truce && c.cells > 0)
+
+  def countriesWithReaction = game.muslims
+    .filter(m => !m.truce && m.reaction > 0)
+  
+
+  // Used if bot wishes to establish Calipate but cannot win the game
+  def countriesWithMoveableCells(target: String) = game.countries
+    .filter(c => !c.truce && JihadistBot.numCellsForTravel(c, target) > 0)
+
+  // When removing reaction markers (when not to win the game)
+  // The Enhanced Bot will only remove from countries with a
+  // single reaction marker and never from the Major Jihad Priority
+  // country or from a 3 resource* country.
+  def countriesWithSingleRemovableReaction = game.muslims
+    .filter { m =>
+      !m.truce &&
+      m.reaction == 1 &&
+      JihadistBot.enhBotResourceValue(m) < 3 &&
+      Some(m.name) != JihadistBot.majorJihadPriorityCountry
+    }
+
+
   override
   def eventWouldResultInVictoryFor(role: Role): Boolean = role match {
     case Jihadist =>
+      game.islamistResources == 5 &&
+      (game.islamistAdjacency || isBot(Jihadist)) &&
       !game.caliphateDeclared &&
       getCandidates.nonEmpty &&
-      getJihadistCellSources(getJihadistBotTarget).size >= 3 &&
-      game.islamistResources == 5 &&
-      (game.islamistAdjacency || isBot(Jihadist))
+      countriesWithCells.size + countriesWithReaction.size > 2 && // must be able to remove 3 cells/reaction markers
+      countriesWithCells.size + game.cellsAvailable > 2      // must be 3 cells that can be placed
 
     case _ => false
+  }
+
+  def enhBotTarget = JihadistBot.cachedTarget("flypaper-target") {
+    JihadistBot.caliphatePriorityTarget(getCandidates).get
   }
 
   // Returns true if the Bot associated with the given role will execute the event
@@ -135,13 +165,31 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       game.hasCountry(c => c.name != target && isSource(c))
 
     case Jihadist if game.botEnhancements =>
+      // Playable if no Calipate on the board AND a total of 3 cells/reaction markers can be
+      // safely removed and 3 cells can be place to declare the Caliphate.
       // Enhanced bot will only select the event if it can remove 3 cells
-      getJihadistCellSources(getJihadistBotTarget).size >= 3
+      if (game.caliphateDeclared)
+        false
+      else {
+        val numMoveableCells = countriesWithMoveableCells(enhBotTarget).size
+        val inplace = if (game.getCountry(enhBotTarget).cells > 0)  // Not sadr
+          1
+        else
+          0
+        inplace + numMoveableCells + countriesWithSingleRemovableReaction.size > 2 && // must be able to remove 3 cells/reaction markers
+        inplace + numMoveableCells + game.cellsAvailable > 2      // must be 3 cells that can be placed
+      }
 
     case Jihadist =>
       getJihadistCellSources(getJihadistBotTarget).size >= 1
   }
 
+
+  def botRemoveCell(source: String): Unit = {
+    val (a, s, sadr) = JihadistBot.chooseCellsToRemove(source, 1)
+    addEventTarget(source)
+    removeCellsFromCountry(source, a, s, sadr, addCadre = true)
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -198,6 +246,73 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       }
       else
         log("\nThere are no available cells to place on the map.", Color.Event)
+    }
+    else if (role == Jihadist && game.botEnhancements && eventWouldResultInVictoryFor(Jihadist)) {
+      // The Bot can win the game, so remove any available cells/reaction markers in order
+      // to place 3 cells and establish the caliphate.
+      // Remove cells first then reaction markers, no need to prioritize since the game
+      // will end.
+      val cellSources = countriesWithCells.take(3).map(_.name)
+      val reactionSources = countriesWithReaction.take(3 - cellSources.size).map(_.name)
+
+      for (name <- cellSources)
+        botRemoveCell(name)
+
+      for (name <- reactionSources) {
+        addEventTarget(name)
+        removeReactionMarker(name)
+      }
+
+      addEventTarget(enhBotTarget)
+      addSleeperCellsToCountry(enhBotTarget, 3)
+      if (jihadistChoosesToDeclareCaliphate(enhBotTarget, 3))
+        declareCaliphate(enhBotTarget)
+    }
+    else if (role == Jihadist && game.botEnhancements) {
+      // The Enhanced Bot is using this event to establish a Caliphate
+      // but doing so will not result in automatic victory.
+      // We have already determined that we can remove 3 cells/reaction markers
+      // and that after doing so there will be 3 cells available to place.
+      // Remove cells first using travelFrom priorities, then if necessary remove reaction
+      // markers using markerAlignGovPriorities
+      val target = JihadistBot.caliphatePriorityTarget(getCandidates)
+
+      def nextCellRemoval(numRemoved: Int, candidates: List[String]): Int = {
+        if (numRemoved == 3 || candidates.isEmpty)
+          numRemoved
+        else {
+          val source = JihadistBot.travelFromPriorities(enhBotTarget, candidates).get
+          botRemoveCell(source)
+          nextCellRemoval(numRemoved + 1, candidates.filterNot(_ == source))
+        }
+      }
+
+      def nextReactionRemoval(numRemoved: Int, candidates: List[String]): Int = {
+        if (numRemoved == 3 || candidates.isEmpty)
+          numRemoved
+        else {
+          val source = JihadistBot.markerTarget(candidates).get
+          addEventTarget(source)
+          removeReactionMarker(source)
+          nextReactionRemoval(numRemoved + 1, candidates.filterNot(_ == source))
+        }
+      }
+
+      // Remove a cell from the target first if possible (not Sadr)
+      val inplace = if (game.getCountry(enhBotTarget).cells > 0) {
+        botRemoveCell(enhBotTarget)
+        1
+      }
+      else
+        0
+
+      val numCells = nextCellRemoval(inplace, countriesWithMoveableCells(enhBotTarget).map(_.name))
+      nextReactionRemoval(numCells, countriesWithSingleRemovableReaction.map(_.name))
+
+      addEventTarget(enhBotTarget)
+      addSleeperCellsToCountry(enhBotTarget, 3)
+      if (jihadistChoosesToDeclareCaliphate(enhBotTarget, 3))
+        declareCaliphate(enhBotTarget)
     }
     else if (role == Jihadist) {
       // Jihadist Bot removes only "cells""
