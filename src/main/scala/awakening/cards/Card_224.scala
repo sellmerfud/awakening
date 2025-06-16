@@ -69,8 +69,12 @@ object Card_224 extends Card(224, "Je Suis Charlie", Unassociated, 2, NoRemove, 
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.hasNonMuslim(n => n.canChangePosture && n.posture != game.usPosture)
-    case Jihadist => (game.usPosture == Hard && game.worldPosture == Hard) || game.prestige > 1
+    case US =>
+      game.hasNonMuslim(n => n.canChangePosture && n.posture != game.usPosture)
+    case Jihadist if game.botEnhancements => 
+      (game.usPosture == game.worldPosture) || game.prestige > 1
+    case Jihadist =>
+      (game.usPosture == Hard && game.worldPosture == Hard) || game.prestige > 1
   }
 
   // Carry out the event for the given role.
@@ -142,6 +146,16 @@ object Card_224 extends Card(224, "Je Suis Charlie", Unassociated, 2, NoRemove, 
               log(s"\nDie roll for prestige loss: $die", Color.Event)
               decreasePrestige((die + 1)/ 2)
           }
+        }
+      }
+      else if (game.botEnhancements) {
+        // Enhanced Jihadist Bot
+        if (game.usPosture == game.worldPosture)
+          setUSPosture(oppositePosture(game.usPosture))
+        else {
+          val die = getDieRoll("Enter prestige die roll: ")
+          log(s"\nDie roll for prestige loss: $die", Color.Event)
+          decreasePrestige((die + 1)/ 2)
         }
       }
       else {
