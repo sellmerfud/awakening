@@ -80,6 +80,16 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
     case _ => false
   }
 
+  def enhGoodMuslimWithoutTroopsTarget(candidates: List[String]): Option[String] = {
+    val goodMuslims = candidates
+      .map(game.getMuslim)
+      .filter(m => m.isGood && m.totalTroops == 0)
+
+    JihadistBot.topPriority(goodMuslims, JihadistBot.HighestPrintedResourcePriority::Nil)
+      .map(_.name)
+  }
+
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
@@ -131,6 +141,8 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
         // then select that country
         val botTarget = if (maxCells == 3 && JihadistBot.possibleToDeclareCaliphate(placeCellCandidates))
             JihadistBot.cellPlacementPriority(true)(placeCellCandidates).get
+        else if (game.botEnhancements && enhGoodMuslimWithoutTroopsTarget(placeCellCandidates).nonEmpty)
+          enhGoodMuslimWithoutTroopsTarget(placeCellCandidates).get
         else if (game.botEnhancements && placeCellCandidates.exists(name => Some(name) == JihadistBot.majorJihadPriorityCountry))
           JihadistBot.majorJihadPriorityCountry.get
         else
