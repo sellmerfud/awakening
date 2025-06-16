@@ -71,6 +71,7 @@ object Card_226 extends Card(226, "Operation Serval", Unassociated, 2, NoRemove,
     case m: MuslimCountry =>
       m.isPoor &&
       JihadistBot.enhBotResourceValue(m) == 2 &&
+      !m.civilWar &&
       !m.inRegimeChange &&
       (m.reaction - m.awakening < 1)
     case _ => false
