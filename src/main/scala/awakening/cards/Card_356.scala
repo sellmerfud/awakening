@@ -61,23 +61,76 @@ object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemo
   override
   def eventConditionsMet(role: Role) = true
 
+  // The enhanced Bot will select one of the following cards if possible
+  // ranked from top to bottom:
+  // #349 Turkish Coup (if #341 Gülen Movement in effect and Turkey poor)
+  // #352 al-Baghdadi (if 3+ cells available)
+  // #338 Abu Muhammad al-Shimali (if 3+ cells available)
+  // #321 Ungoverned Spaces (if no Caliphate on board and 3+ cells available)
+  // #313 Hayat Tahir al-Sham (If no Caliphate on board, Syria in CW and 3+ cells available)
+  // #317 Qatari Crisis (if any Shia-Mix country is in Civil War and Gulf States Good)
+  // #342 Gumurod Khalimov (if Caliphate on board and any Good countries on board)
+  // #354 Election Meddling  (if World Posture same as US posture AND either: [US hard and Russia not hard] or [US soft and Russia not soft])
+  // #315 Khashoggi Crisis (if Saudi Arabia Neutral or Unmarked)
+  // #316 Martyrdom Operation
+  // #353 Bowling Green Massacre (if any Lapsing or Marked events in play that are not in Caliphate countries) [note: This is because Bowling Green Massacre is only playable in non-Caliphate countries]
+  // #298 False Flag Attacks (if a non-WMD plot marker is available)
+  def enhBotCardTarget: Option[Int] = {
+    def canBeDrawn(cardNum: Int) = cardFoundIn(List(FromDiscard, FromLapsing, From1stPlot), cardNum)
+    val candidates = List(
+      (349, globalEventInPlay(GulenMovement) && game.getMuslim(Turkey).isPoor),
+      (352, game.cellsAvailable > 2),
+      (338, game.cellsAvailable > 2),
+      (321, game.cellsAvailable > 2 && !game.caliphateDeclared),
+      (313, game.cellsAvailable > 2 && !game.caliphateDeclared && game.getMuslim(Syria).civilWar),
+      (317, game.getMuslim(GulfStates).isGood && game.muslims.exists(m => m.isShiaMix && m.civilWar)),
+      (342, game.caliphateDeclared && game.muslims.exists(_.isGood)),
+      (354, game.worldPosture == game.usPosture && game.usPosture != game.getNonMuslim(Russia).posture),
+      (315, game.getMuslim(SaudiArabia).isUntested || game.getMuslim(SaudiArabia).isNeutral),
+      (316, true),
+      (353, Card_353.bowlingGreenTargetEventInPlay),
+      (298, game.availablePlots.exists(_ != PlotWMD)))
+
+    candidates
+      .filter { case (num, playable) => canBeDrawn(num) && playable}
+      .map(_._1)
+      .headOption
+  }
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = false // Bot treats as unplayable
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements =>
+      enhBotCardTarget.nonEmpty
+    case _ =>
+      false // Standard Bots treat as unplayable
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236, 357))
-      .foreach { cardNum =>
-        val cardDisplay = deck(cardNum).numAndName
-        log(s"\n$role selects $cardDisplay", Color.Event)
-        displayLine(s"\nAdd $cardDisplay to your ($role) hand", Color.Info)
-      }
+    if (isHuman(role)) {
+      askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236, 357))
+        .foreach { cardNum =>
+          val source = cardLocation(cardNum).get
+          val cardDisplay = deck(cardNum).numAndName
+          log(s"\n$role selects $cardDisplay from the $source", Color.Event)
+          displayLine(s"\nAdd $cardDisplay to your ($role) hand", Color.Info)
+        }
+    }
+    else {
+      // Enhanced Jihadist Bot
+      val cardNum = enhBotCardTarget.get
+      val source = cardLocation(cardNum).get
+      val cardDisplay = deck(cardNum).numAndName
+      log(s"\n$role selects $cardDisplay from the $source", Color.Event)
+      displayLine(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
+    }
+    
     log("\nThe Resource value of each Oil Exporter is reduced by 1 for the rest of the turn.", Color.Event)
   }
 }

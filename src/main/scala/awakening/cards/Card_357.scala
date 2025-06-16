@@ -65,22 +65,42 @@ object Card_357 extends Card(357, "Peace Dividend", Unassociated, 3, NoRemove, N
     case Jihadist => game.totalCellsOnMap <= 10
   }
 
+  // This event uses the same card draw options as #356 "OPEC Production Cut"
+  def enhBotCardTarget: Option[Int] = Card_356.enhBotCardTarget
+
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = false // Bot treats as unplayable
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements =>
+      enhBotCardTarget.nonEmpty
+    case _ =>
+      false // Standard Bots treat as unplayable
+  }
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236, 356))
-      .foreach { cardNum =>
-        val cardDisplay = deck(cardNum).numAndName
-        log(s"\n$role selects $cardDisplay", Color.Event)
-        displayLine(s"\nAdd $cardDisplay to your ($role) hand", Color.Info)
-      }
+    if (isHuman(role)) {
+      askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236, 356))
+        .foreach { cardNum =>
+          val source = cardLocation(cardNum).get
+          val cardDisplay = deck(cardNum).numAndName
+          log(s"\n$role selects $cardDisplay from the $source", Color.Event)
+          displayLine(s"\nAdd $cardDisplay to your ($role) hand", Color.Info)
+        }
+    }
+    else {
+      // Enhanced Jihadist Bot
+      val cardNum = enhBotCardTarget.get
+      val source = cardLocation(cardNum).get
+      val cardDisplay = deck(cardNum).numAndName
+      log(s"\n$role selects $cardDisplay from the $source", Color.Event)
+      displayLine(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
+
+    }
   }
 }
