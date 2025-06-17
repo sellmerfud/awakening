@@ -2256,7 +2256,7 @@ object LabyrinthAwakening {
       val summary = new Summary
       summary.add("Cards in the discard pile", Color.Info)
       summary.add(separator(char = '='), Color.Info)
-      summary.addSeq(wrapInColumns("", cardsDiscarded.map(deck(_).numAndName), maxWidth = 120))
+      summary.addSeq(wrapInColumns("", cardsDiscarded.sorted.map(deck(_).numAndName), maxWidth = 120))
       summary
     }
 
