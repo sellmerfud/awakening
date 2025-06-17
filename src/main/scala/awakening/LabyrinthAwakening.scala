@@ -11420,7 +11420,7 @@ object LabyrinthAwakening {
         )
         var choices = actions.keysIterator.toList
           .filter {
-            case "posture" => !List(UnitedStates, Israel, Iran).contains(name)
+            case "posture" => !List(Israel, Iran).contains(name)
             case "flip to muslim" => (name == Iran || name == Nigeria)
             case _ => true
           }
@@ -11451,12 +11451,21 @@ object LabyrinthAwakening {
       case n: NonMuslimCountry if n.iranSpecialCase =>
         println("Iran is a special case that does not have a posture.")
         pause()
+      case n: NonMuslimCountry if name == UnitedStates =>
+        val newValue = oppositePosture(game.usPosture)
+        logAdjustment("US posture", game.usPosture, newValue)
+        game = game.copy(usPosture = newValue)
+        saveAdjustment("US posture")
+    
       case n: NonMuslimCountry =>
         val choices = (PostureUntested::Soft::Hard::Nil).filterNot(_ == n.posture)
         val prompt = s"New posture (${orList(choices)}): "
         askOneOf(prompt, choices, allowNone = true, allowAbort = false) foreach { newPosture =>
           logAdjustment(name, "Posture", n.posture, newPosture)
-          game = game.updateCountry(n.copy(postureValue = newPosture))
+          if (name == UnitedStates)
+            game = game.copy(usPosture = newPosture)
+          else
+            game = game.updateCountry(n.copy(postureValue = newPosture))
           saveAdjustment(name, "Posture")
         }
     }
