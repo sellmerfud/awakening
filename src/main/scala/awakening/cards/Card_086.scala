@@ -120,6 +120,6 @@ object Card_086 extends Card(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing
       addSleeperCellsToCountry(name, 1)
     }
     else
-      log("\nNo cells available to place in a Shix-Mix country", Color.Event)
+      log("\nNo cells available to place in a Shia-Mix country", Color.Event)
   }
 }

@@ -150,7 +150,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
 
     case Jihadist =>
       val name = if (isHuman(role))
-        askCountry("Select a Shix-Mix country: ", shixMixCandidates())
+        askCountry("Select a Shia-Mix country: ", shixMixCandidates())
       else
         getBotJihadCandidates match {
           case Nil =>

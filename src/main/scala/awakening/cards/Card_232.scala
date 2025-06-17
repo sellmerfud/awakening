@@ -105,7 +105,7 @@ object Card_232 extends Card(232, "Trade Embargo", Unassociated, 2, USRemove, No
       if (lapsingEventInPlay(ArabWinter))
         log("\nCannot place a reaction marker. [Arab Winter]", Color.Event)
       else if (getReactionCandidates.isEmpty)
-        log("\nThere are no Shix-Mix countries that can take a reaction marker.", Color.Event)
+        log("\nThere are no Shia-Mix countries that can take a reaction marker.", Color.Event)
       else {
         val target = if (isHuman(role))
           askCountry("Select Shia-Mix country to place reaction marker: ", getReactionCandidates)
