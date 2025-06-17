@@ -108,6 +108,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
         !m.truce &&
         m.isGood &&
         m.totalTroops == 0 &&
+        !(m.name == Pakistan && m.hasMarker(BenazirBhutto)) &&
         notPrevTarget(m.name, prev)
       }
 

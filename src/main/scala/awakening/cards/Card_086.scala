@@ -76,7 +76,12 @@ object Card_086 extends Card(86, "Lebanon War", Jihadist, 3, NoRemove, NoLapsing
   def enhBotShiaMixTarget: String = {
     import JihadistBot.{ HighestPrintedResourcePriority, recruitAndTravelToPriorities}
     val goodNoTroopsCandidates = game.muslims
-      .filter(m => isCandidate(m) && m.isGood && m.totalTroops == 0)
+      .filter { m =>
+        isCandidate(m) &&
+        m.isGood &&
+        m.totalTroops == 0 &&
+        !(m.name == Pakistan && m.hasMarker(BenazirBhutto))
+      }
     val allCanididates = game.muslims
       .filter(isCandidate)
 
