@@ -769,17 +769,17 @@ object JihadistBot extends BotHelpers {
   //   )
   // )
 
-  val UnmarkedOrPoorLessThan2TamdM = new CriteriaFilter(
-    "Unmarked OR Poor Muslim with < 2 TandM",
+  val UnmarkedOrPoorLessThan3TamdM = new CriteriaFilter(
+    "Unmarked OR Poor Muslim with < 3 TandM",
     muslimTest( m =>
       m.isUntested ||
-      (m.isPoor && m.totalTroopsAndMilitia < 2)
+      (m.isPoor && m.totalTroopsAndMilitia < 3)
     )
   )
 
-  val PoorLessThan2TamdM = new CriteriaFilter(
-    "Poor Muslim with < 2 TandM",
-    muslimTest( m => m.isPoor && m.totalTroopsAndMilitia < 0)
+  val PoorLessThan3TamdM = new CriteriaFilter(
+    "Poor Muslim with < 3 TandM",
+    muslimTest( m => m.isPoor && m.totalTroopsAndMilitia < 3)
   )
 
   val AutoRecruitPriorityCountry = new CriteriaFilter(
@@ -1083,24 +1083,24 @@ object JihadistBot extends BotHelpers {
   }
 
   def RecruitFlowchart = if (game.botEnhancements)
-    List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
-        //  PoorAutoRecruitNoTandM,
-         PoorLessThan2TamdM,
-         AutoRecruitPriorityCountry,
-         IslamistRulePriority
-    )
+    List(
+      PoorCellsOutnumberTroopsMilitiaByAtLeast3,
+      PoorLessThan3TamdM,
+      AutoRecruitPriorityCountry,
+      IslamistRulePriority)
   else
-    List(PoorNeedCellsforMajorJihad,
-         AutoRecruitBestJihadDRM,
-         GoodMuslimFilter,
-         FairMuslimBestJihadDRM,
-         NonMuslimFilter,
-         PoorMuslimBestJihadDRM)
+    List(
+      PoorNeedCellsforMajorJihad,
+      AutoRecruitBestJihadDRM,
+      GoodMuslimFilter,
+      FairMuslimBestJihadDRM,
+      NonMuslimFilter,
+      PoorMuslimBestJihadDRM)
 
   def TravelToFlowchart = if (game.botEnhancements)
-    List(PoorCellsOutnumberTroopsMilitiaByAtLeast3,
-        //  PoorAutoRecruitNoTandM,
-         UnmarkedOrPoorLessThan2TamdM)
+    List(
+      PoorCellsOutnumberTroopsMilitiaByAtLeast3,
+      UnmarkedOrPoorLessThan3TamdM)
   else
     List(PoorNeedCellsforMajorJihad,
          GoodMuslimFilter,
@@ -1234,7 +1234,7 @@ object JihadistBot extends BotHelpers {
         .filter(c => !fromAdjacentOnly || areAdjacent(c.name, toCountry))
         .filter(c => numCellsForTravel(c, toCountry, prevAttempts, autoSuccess, ignoreARP) > 0)
 
-        
+
     type FromTest = (Country => Boolean, String)
     type TravelFromCriteria = (FromTest, List[CountryFilter])
 
@@ -1318,7 +1318,7 @@ object JihadistBot extends BotHelpers {
     topPriority(game.getCountries(names), priorities).map(_.name)
   }
 
-  
+
   def botRecruitTargets(muslimWithCadreOnly: Boolean): List[String] = {
     val autoRecruitPriorityIsIR = autoRecruitPriorityCountry.map(name => game.getCountry(name).isIslamistRule).getOrElse(false)
     // Only recruit in IR if:
@@ -1350,7 +1350,7 @@ object JihadistBot extends BotHelpers {
       muslim.majorJihadOK(totalOps) &&
       (muslim.besiegedRegime || (totalOps >= 3) || (totalOps >= 2 && muslim.jihadDRM < 0))
 
-    game.majorJihadTargets(totalOps) 
+    game.majorJihadTargets(totalOps)
       .map(game.getMuslim)
       .filter { m =>
         !m.truce &&
@@ -1982,7 +1982,7 @@ object JihadistBot extends BotHelpers {
     }
   }
 
-  def possibleToDeclareCaliphate(candidates: List[String]): Boolean = 
+  def possibleToDeclareCaliphate(candidates: List[String]): Boolean =
     !game.caliphateDeclared &&
     game.cellsAvailable >= 3 &&
     candidates.exists(willDeclareCaliphate)
@@ -2140,11 +2140,11 @@ object JihadistBot extends BotHelpers {
       !ignoreEvent &&
       lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks all Non-US events
       card.eventIsPlayable(Jihadist)
-      
+
     // True if a sucessful major jihad would win the game
     val wouldWinGame = (name: String) =>
       game.getMuslim(name).resourceValue + game.islamistResources >= 6
-    
+
     if (game.botEnhancements) {
       sealed trait CardActivity
       case object PerformEvent extends CardActivity
@@ -2152,7 +2152,7 @@ object JihadistBot extends BotHelpers {
       case object MajorJihadForWin extends CardActivity
 
       // 1. If the event is playable and if playing it could result in a Jihadist victory then play it!
-      // 2. If Major Jihad 
+      // 2. If Major Jihad
       val activity = if (eventPlayable && card.eventWouldResultInVictoryFor(Jihadist)) {
         botLog("Playing event because it can result in auto victory!")
         PerformEvent
@@ -2239,7 +2239,7 @@ object JihadistBot extends BotHelpers {
             addToReserves(Jihadist, card.printedOps)
           }
         }
-      }        
+      }
     }
     else { // Standard Bot
       // If the event is playable then the event is always executed
@@ -2269,7 +2269,7 @@ object JihadistBot extends BotHelpers {
         }
         else
           performOperation()
-      }      
+      }
     }
   }
 
@@ -3446,20 +3446,20 @@ object JihadistBot extends BotHelpers {
               addOpsTarget(name)
               for ((name, successes, _) <- performJihads(target::Nil))
                 usedCells(name).addActives(successes)
-        
+
               opsUsed + nextJihad(cardOpsRemaining - cardOpsUsed,  resOpsRemaining - resOpsUsed, alreadyTried + name)
           }
           else
             0
         }
-    
+
         log(s"\nRadicalization: Minor Jihad")
         log(separator())
         nextJihad(cardOps, reserveOps, Set.empty)
       }
     }
 
-    
+
     case object PlotToIncreaseFunding extends RadicalizationAction {
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = game.funding < 6
@@ -3525,9 +3525,9 @@ object JihadistBot extends BotHelpers {
     // Radicalization Action -  Adjacent Travel to Good Muslim countries with no Troops.
     // Travel as many adjacent cells as possible to one or more Good counties where a WoI
     // roll would be possible if the country were worsened to Fair.
-  
+
     // The Bot will travel adjacent cells to Good Muslim 2+ resource countries
-    // without troops where a WoI roll of 1-5 would fail if the 
+    // without troops where a WoI roll of 1-5 would fail if the
     // country's governance was worsened to Fair.
     case object AdjacentTravelToGoodMuslims extends RadicalizationAction {
       // We must subtract 1 from the value calculated by modifyWoiRoll()
@@ -3545,7 +3545,7 @@ object JihadistBot extends BotHelpers {
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
-        // game.prestigeModifier - game.gwotPenalty < 0 &&  
+        // game.prestigeModifier - game.gwotPenalty < 0 &&
         game.muslims.filter(destCandidate).nonEmpty
 
       // Travel 1 cell to the US from an adjacent country.
