@@ -8820,7 +8820,14 @@ object LabyrinthAwakening {
     override def perform(param: Option[String]): Unit = {
       askCardNumber(FromRole(US)::Nil, "Card # to discard (blank to cancel): ", param, allowAbort = false)
         .foreach { cardNumber =>
+          val card = deck(cardNumber)
           decreaseCardsInHand(US, 1)
+          // Auto-trigger events will trigger
+          if (card.autoTrigger) {
+            log(s"\n\"${card.cardName}\" is being discarded, so the event triggers", Color.Event)
+            log(separator())
+            card.executeEvent(US)  // Role does not matter
+          }
           addCardToDiscardPile(cardNumber)
           game = game.copy(turnActions = USDiscardedLastCard(cardNumber)::game.turnActions)
           saveGameState(Some(s"US player discards last card [${cardNumAndName(cardNumber)}]"))
