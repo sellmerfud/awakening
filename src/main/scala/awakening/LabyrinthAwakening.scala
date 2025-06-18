@@ -5204,11 +5204,39 @@ object LabyrinthAwakening {
         .sorted
         .foreach(event => b += s"  $event")
     }
-    if (from.cardsRemoved.sorted != to.cardsRemoved.sorted) {
-      b += "The following cards have been removed from play:"
-      if (to.cardsRemoved.isEmpty)
-        b += "  None"
-      to.cardsRemoved
+    val (fromDiscard, toDiscard) = (from.cardsDiscarded.toSet, to.cardsDiscarded.toSet)
+    val noLongerDiscarded = fromDiscard -- toDiscard
+    val newlyDiscarded = toDiscard -- fromDiscard
+    val (fromRemoved, toRemoved) = (from.cardsRemoved.toSet, to.cardsRemoved.toSet)
+    val noLongerRemoved = fromRemoved -- toRemoved
+    val newlyRemoved = toRemoved -- fromRemoved
+    if (noLongerDiscarded.nonEmpty) {
+      b += "The following cards should be retrieved from the Discard pile:"
+      noLongerDiscarded
+        .toSeq
+        .sorted
+        .foreach(c => b += s"  ${cardNumAndName(c)}")
+    }
+
+    if (noLongerRemoved.nonEmpty) {
+      b += "The following cards should be retrieved from the Removed pile:"
+      noLongerRemoved
+        .toSeq
+        .sorted
+        .foreach(c => b += s"  ${cardNumAndName(c)}")
+    }
+    
+    if (newlyDiscarded.nonEmpty) {
+      b += "The following cards should be added to the Discard pile:"
+      newlyDiscarded
+        .toSeq
+        .sorted
+        .foreach(c => b += s"  ${cardNumAndName(c)}")
+    }
+    if (newlyRemoved.nonEmpty) {
+      b += "The following cards should be added to the Removed pile:"
+      newlyRemoved
+        .toSeq
         .sorted
         .foreach(c => b += s"  ${cardNumAndName(c)}")
     }
