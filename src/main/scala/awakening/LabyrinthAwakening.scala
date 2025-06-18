@@ -2163,7 +2163,7 @@ object LabyrinthAwakening {
             descItems += amountOf(m.resourceValue, "resource")
           else
             descItems += s"${amountOf(m.resourceValue, "resource")} (${m.printedResources})"
-          if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist)) 
+          if (m.oilExporter && !m.hasMarker(TradeEmbargoJihadist))
             descItems += "Oil exporter"
 
           if (m.autoRecruit)
@@ -2177,7 +2177,7 @@ object LabyrinthAwakening {
           val muslimType = if (m.isShiaMix) "Shia-Mix" else "Sunni"
           nameItems += name
           nameItems += "-"
-          nameItems += s"Muslim, $muslimType" 
+          nameItems += s"Muslim, $muslimType"
           if (isCaliphateCapital(name))
             nameItems += "(Caliphate capital)"
           else if (isCaliphateMember(name))
@@ -4214,12 +4214,12 @@ object LabyrinthAwakening {
       try {
         val prevGame = game
 
-        evaluatingCaliphateChanges = true        
+        evaluatingCaliphateChanges = true
         code  // Run the code
 
         val prevCaliphate = prevGame.allCaliphateMembers.toSet
         val newCaliphate = game.allCaliphateMembers.toSet
-        
+
         // Determine if the caliphate has been changed by the preceeding code.
         prevGame.caliphateCapital match {
           case Some(previousCapital) if !game.isMuslim(previousCapital) || !game.getMuslim(previousCapital).caliphateCandidate =>
@@ -5830,7 +5830,7 @@ object LabyrinthAwakening {
         }
         else
           false
-        
+
         val totalOps = if (addReserves) {
           log(s"\n$US player expends their reserves of ${opsString(usReserves)}", Color.Info)
           game = game.copy(reserves = game.reserves.copy(us = 0))
@@ -9515,7 +9515,7 @@ object LabyrinthAwakening {
     val Reassess      = "Reassessment"
     val AddReserves   = "Add to reserves"
     val AbortCard     = "Abort card"
-    
+
     var reservesUsed  = 0
     var secondCard: Option[Card] = None  // For reassessment only
     def opsAvailable = (card.ops + reservesUsed) min 3
@@ -9562,13 +9562,13 @@ object LabyrinthAwakening {
     // Prompt for which activity the US player wishes to conduct.
     // Event (if possible) or a specific type of Operation.
     @tailrec def getCardActivity(): String = {
-      val oppEventCanTrigger = card.eventWillTrigger(Jihadist)
+      val oppOrAutoTrigger = card.eventWillTrigger(Jihadist) || card.autoTrigger
       val eventPlayable = !ignoreEvent && card.eventIsPlayable(US)
-      val showDeploy = game.deployPossible(maxOps)
-      val showRegimeChange = maxOps >= 3 && game.usPosture == Hard && (game.regimeChangeTargets.nonEmpty || oppEventCanTrigger)
-      val showWithdraw = maxOps >= 3 && game.usPosture == Soft && (game.withdrawFromTargets.nonEmpty || oppEventCanTrigger)
-      val showDisrupt = game.disruptTargets(maxOps).nonEmpty || oppEventCanTrigger
-      val showAlert = maxOps >= 3 && (game.alertTargets.nonEmpty || oppEventCanTrigger)
+      val showDeploy = game.deployPossible(maxOps) || oppOrAutoTrigger
+      val showRegimeChange = maxOps >= 3 && ((game.usPosture == Hard && game.regimeChangeTargets.nonEmpty) || oppOrAutoTrigger)
+      val showWithdraw = maxOps >= 3 && ((game.usPosture == Soft && game.withdrawFromTargets.nonEmpty) || oppOrAutoTrigger)
+      val showDisrupt = game.disruptTargets(maxOps).nonEmpty || oppOrAutoTrigger
+      val showAlert = maxOps >= 3 && (game.alertTargets.nonEmpty || oppOrAutoTrigger)
       val showReassess = firstCardOfPhase(US) && card.ops == 3 && hasCardInHand(US)
       val showAddReserves = card.ops < 3 && game.reserves.us < 2
       val actions = List(
@@ -9602,11 +9602,12 @@ object LabyrinthAwakening {
     }
 
     def performCardActivity(activity: String): Boolean = {
-      def doit(condition: Boolean, code: => Unit, msg: String): Boolean = {
+      def doit(condition: Boolean, msg: String)(code: => Unit): Boolean = {
         if (condition)
           code
         else
           log(msg, Color.Info)
+
         condition
       }
 
@@ -9623,36 +9624,41 @@ object LabyrinthAwakening {
         case Deploy =>
           doit(
             game.deployPossible(opsAvailable),
-            humanDeploy(opsAvailable),
-            s"A deploy operation is not currently possible with ${opsString(opsAvailable)}."
-          )
+            s"\nA deploy operation is not currently possible with ${opsString(opsAvailable)}."
+          ) {
+            humanDeploy(opsAvailable)
+          }
         case Disrupt =>
           doit(
             game.disruptTargets(opsAvailable).nonEmpty,
-            humanDisrupt(opsAvailable),
-            s"A disrupt operation is not currently possible with ${opsString(opsAvailable)}."
-          )
+            s"\nA disrupt operation is not currently possible with ${opsString(opsAvailable)}."
+          ) {
+            humanDisrupt(opsAvailable)
+          }
         case Reassess =>
           humanReassess()
           true
         case RegimeChg =>
           doit(
             game.regimeChangePossible(opsAvailable),
-            humanRegimeChange(),
-            s"A regime change operation is not currently possible with ${opsString(opsAvailable)}."
-          )
+            "\nA regime change operation is not currently possible."
+          ) {
+            humanRegimeChange()
+          }
         case Withdraw =>
           doit(
             game.withdrawPossible(opsAvailable),
-            humanWithdraw(),
-            s"A withdraw operation is not currently possible with ${opsString(opsAvailable)}."
-          )
+            "\nA withdraw operation is not currently possible."
+          ) {
+            humanWithdraw()
+          }
         case Alert =>
           doit(
             game.alertPossible(opsAvailable),
-            humanAlert(),
-            s"An alert operation is not currently possible with ${opsString(opsAvailable)}."
-          )
+            s"\nAn alert operation is not currently possible with ${opsString(opsAvailable)}."
+          ) {
+            humanAlert()
+          }
         case _ =>
           throw new IllegalStateException(s"performCardActivity() - Invalid US activity: $activity")
       }
@@ -9741,7 +9747,7 @@ object LabyrinthAwakening {
     // If the card does not have three Ops then we go ahead and
     // and have the player expend the reserves as a convenience.
 
-    if ((activity == RegimeChg || activity == Alert || activity == Withdraw) && card.ops < 3) {    
+    if ((activity == RegimeChg || activity == Alert || activity == Withdraw) && card.ops < 3) {
       displayLine(s"\nThe $activity operation requires 3 Ops.", Color.Info)
       reservesUsed = game.reserves.us
       log(s"$US player expends their reserves of ${opsString(reservesUsed)}", Color.Info)
@@ -10059,11 +10065,12 @@ object LabyrinthAwakening {
     }
 
     def performCardActivity(activity: String): Boolean = {
-      def doit(condition: Boolean, code: => Unit, msg: String): Boolean = {
+      def doit(condition: Boolean, msg: String)(code: => Unit): Boolean = {
         if (condition)
           code
         else
           log(msg, Color.Info)
+
         condition
       }
 
@@ -10077,36 +10084,39 @@ object LabyrinthAwakening {
         case Recruit =>
           doit(
             game.recruitPossible,
-            humanRecruit(opsAvailable),
             s"A recruit operation is not currently possible."
-          )
+          ) {
+            humanRecruit(opsAvailable)
+          }
         case Travel =>
           doit(
             game.travelSources.nonEmpty,
-            humanTravel(opsAvailable),
             s"A travel operation is not currently possible."
-          )
+          ) {
+            humanTravel(opsAvailable)
+          }
+
         case Jihad =>
           doit(
             game.jihadPossible,
-            humanJihad(opsAvailable),
             s"A jihad operation is not currently possible."
-          )
+          ) {
+            humanJihad(opsAvailable)
+          }
         case PlotAction =>
           doit(
             game.plotPossible(maxOps),
-            {
-              humanPlot(opsAvailable)
-              // The first plot used in a turn is placed in the 1st plot box
-              // The Ruthless US bot resolve does not allow this.
-              if (game.firstPlotEntry.isEmpty && !game.usResolve(Ruthless)) {
-                firstPlotUsed = true
-                log(s"\nPlace the $card card in the first plot box", Color.Info)
-                game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
-              }
-            },
             s"A plot operation is not currently possible with ${opsString(opsAvailable)}."
-          )
+          ) {
+            humanPlot(opsAvailable)
+            // The first plot used in a turn is placed in the 1st plot box
+            // The Ruthless US bot resolve does not allow this.
+            if (game.firstPlotEntry.isEmpty && !game.usResolve(Ruthless)) {
+              firstPlotUsed = true
+              log(s"\nPlace the $card card in the first plot box", Color.Info)
+              game = game.copy(firstPlotEntry = Some(LapsingEntry(card.number)))
+            }
+          }
 
         case _ => throw new IllegalStateException(s"Invalid Jihadist action: $activity")
       }
@@ -10452,7 +10462,7 @@ object LabyrinthAwakening {
         val two = askMenu("Roll two dice in which country:", choices).head
         multi.map(c => if (c.name == two.name) TargetRolls(c, 2) else TargetRolls(c, 1))
       }
-      singles ::: multis  
+      singles ::: multis
     }
 
     for (TargetRolls(country, numRolls) <- targetRolls) yield {
@@ -11463,7 +11473,7 @@ object LabyrinthAwakening {
         logAdjustment("US posture", game.usPosture, newValue)
         game = game.copy(usPosture = newValue)
         saveAdjustment("US posture")
-    
+
       case n: NonMuslimCountry =>
         val choices = (PostureUntested::Soft::Hard::Nil).filterNot(_ == n.posture)
         val prompt = s"New posture (${orList(choices)}): "
