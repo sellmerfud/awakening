@@ -57,24 +57,31 @@ crossing-thickness: 8,
   ]]
   node((1, 3), name: <travel-from-afghan>, shape: pill)[Travel 1 cell to\ C. Asia/Iran/Pakistan]
   edge(<from-afghan>, <travel-from-afghan>, "-|>", [Yes])
-  edge(<from-afghan>, <cell-jsp>, "-|>", [No])
+  edge(<from-afghan>, <mission-accomplished>, "-|>", [No])
   
-  node((0, 4), name: <cell-jsp>, shape: diamond)[Cell in Good/Fair\ where JSP?]
-  node((1, 4), name: <minor-jihad>, shape: pill)[Perform Minor Jihad]
+  node((0, 4), name: <mission-accomplished>, shape: diamond)[Mission Accomp.\ & 1 cell, 2+ troops Phillipines\ & Abu SAyyaf?]
+  node((1, 4), name: <travel-indonesia>, shape: pill)[Travel cell to\ Indonesia]
+  edge(<mission-accomplished>, <travel-indonesia>, "-|>", [Yes])
+  edge(<mission-accomplished>, <cell-jsp>, "-|>", [No])
+
+  node((0, 5), name: <cell-jsp>, shape: diamond)[Cell in Good/Fair\ where JSP?]
+  node((1, 5), name: <minor-jihad>, shape: pill)[Perform Minor Jihad]
   edge(<cell-jsp>, <minor-jihad>, "-|>", [Yes])
   edge(<cell-jsp>, <ir-res-1-scenarios>, "-|>", [No])
 
-  node((0, 5), name: <ir-res-1-scenarios>, shape: diamond)[Let's Roll/Call Me Al\ & IR Res = 1?]
-  edge(<ir-res-1-scenarios>, <move-to-c-asia>, "-|>", [Yes])
 
-  node((0, 6), name: <move-to-c-asia>, shape: diamond)[C. Asia unmarked &\ moveable adj. cell?]
-  node((0, 7), name: <d6-A>, shape: hexagon)[Roll d6]
-  node((0.8, 6), name: <d6-B>, shape: hexagon)[Roll d6]
-  node((0, 8), name: <gwot-test>, shape: diamond)[US Hard,\ GWOT = 0,\ Hard - Soft < 2\ w/ travel cells]
-  node((2, 6), name: <travel-c-asia>, shape: pill)[Travel to\ C. Asia]
-  node((1, 8), name: <travel-unmarked>, shape: pill)[Travel to\ Unmarked Non-Muslim]
-  node((1, 7), name: <pakistan-test>, shape: diamond)[Pakistan Fair,\ no troops &\ moveable adj. cell]
-  node((2, 7), name: <travel-pakistan>, shape: pill)[Travel to\ Pakistan]
+  node((0, 6), name: <ir-res-1-scenarios>, shape: diamond)[Let's Roll/Call Me Al\ & IR Res = 1?]
+  edge(<ir-res-1-scenarios>, <move-to-c-asia>, "-|>", [Yes])
+  edge(<ir-res-1-scenarios.west>, (-0.75, 6), (-0.75, 9), <gwot-test.west>, "-|>", [No])
+
+  node((0, 7), name: <move-to-c-asia>, shape: diamond)[C. Asia unmarked &\ moveable adj. cell?]
+  node((0, 8), name: <d6-A>, shape: hexagon)[Roll d6]
+  node((0.8, 7), name: <d6-B>, shape: hexagon)[Roll d6]
+  node((0, 9), name: <gwot-test>, shape: diamond)[US Hard,\ GWOT = 0,\ Hard - Soft < 2\ w/ travel cells]
+  node((2, 7), name: <travel-c-asia>, shape: pill)[Travel to\ C. Asia]
+  node((1, 9), name: <travel-unmarked-2>, shape: pill)[Travel to\ Unmarked Non-Muslim]
+  node((1, 8), name: <pakistan-test>, shape: diamond)[Pakistan Fair,\ no troops &\ moveable adj. cell]
+  node((2, 8), name: <travel-pakistan>, shape: pill)[Travel to\ Pakistan]
   edge(<move-to-c-asia>, <d6-A>, "-|>", [No])
   edge(<move-to-c-asia>, <d6-B>, "-|>", [Yes])
   edge(<d6-A>, <gwot-test>, "-|>", [1-3])
@@ -84,17 +91,17 @@ crossing-thickness: 8,
   edge(<d6-B>, <gwot-test>, "-|>", label-pos: 10%, crossing: true, [5-6])
   edge(<pakistan-test>, <gwot-test>, "-|>", [No])
   edge(<pakistan-test>, <travel-pakistan>, "-|>", [Yes])
-  edge(<gwot-test>, <travel-unmarked>, "-|>", [Yes])
+  edge(<gwot-test>, <travel-unmarked-2>, "-|>", [Yes])
   edge(<gwot-test>, <arp-cells>, "-|>", [No])
   
-  node((0, 9), name: <arp-cells>, shape: diamond)[ARP \ with < 3 cells?]
-  node((1, 9), name: <arp-recruit-low-test>, shape: diamond)[Can recruit \ at ARP?]
-  node((1, 10), name: <arp-adj-travel-test>, shape: diamond)[Can adj. travel\ to ARP?]
-  node((0, 10.5), name: <funding-less-7>, shape: diamond)[Funding < 7?]
-  node((1, 11.25), name: <funding7-no-cards>, shape: diamond)[Funding = 7 &\ No cards\ in Bot hand?]
-  node((2, 9), name: <arp-recruit-low>, shape: pill)[Recruit at\ ARP]
-  node((2, 10), name: <arp-travel>, shape: pill)[Adj. travel to\ ARP]
-  node((0, 11.25), name: <plot-funding>, shape: pill)[Perform Plot\ (funding)]
+  node((0, 10), name: <arp-cells>, shape: diamond)[ARP \ with < 3 cells?]
+  node((1, 10), name: <arp-recruit-low-test>, shape: diamond)[Can recruit \ at ARP?]
+  node((1, 11), name: <arp-adj-travel-test>, shape: diamond)[Can adj. travel\ to ARP?]
+  node((0, 11.5), name: <funding-less-7>, shape: diamond)[Funding < 7?]
+  node((1, 12.25), name: <funding7-no-cards>, shape: diamond)[Funding = 7 &\ No cards\ in Bot hand?]
+  node((2, 10), name: <arp-recruit-low>, shape: pill)[Recruit at\ ARP]
+  node((2, 11), name: <arp-travel>, shape: pill)[Adj. travel to\ ARP]
+  node((0, 12.25), name: <plot-funding>, shape: pill)[Perform Plot\ (funding)]
   edge(<arp-cells>, <arp-recruit-low-test>, "-|>", [Yes])
   edge(<arp-cells>, <funding-less-7>, "-|>", [No])
   edge(<arp-recruit-low-test>, <arp-recruit-low>, "-|>", [Yes])
@@ -104,7 +111,7 @@ crossing-thickness: 8,
   edge(<funding-less-7>, <plot-funding>, "-|>", [Yes])
   edge(<funding-less-7>, <funding7-no-cards>, "-|>", [No])
   edge(<funding7-no-cards>, <plot-funding>, "-|>", [Yes])
-  edge(<funding7-no-cards>, (2.4, 11.25), (2.4, 1),<cell-w-troops.west>, "-|>", label-pos: 10%, [No])
+  edge(<funding7-no-cards>, (2.4, 12.25), (2.4, 1),<cell-w-troops.west>, "-|>", label-pos: 10%, [No])
 
   node((3, 1), name: <cell-w-troops>, shape: diamond)[Prestige > 3 &\ cell w/ troops?]
   node((4, 1), name: <plot-prestige>, shape: pill)[Perform Plot\ (prestige)]

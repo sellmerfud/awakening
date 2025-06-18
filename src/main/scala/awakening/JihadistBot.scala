@@ -1551,7 +1551,7 @@ object JihadistBot extends BotHelpers {
 
         TravelOp(source = Some(Afghanistan), target = Some(dest), maxAttempts = Some(1), adjacentOnly = true)
       }
-      def noPath  = CellInGoodFairWhereJSP
+      def noPath  = MissionAccomplishedAbuSayyaf
       def condition(ops: Int) = {
         val afghan = game.getMuslim(Afghanistan)
         targetScenarios.contains(game.scenarioName) &&
@@ -1561,7 +1561,23 @@ object JihadistBot extends BotHelpers {
       }
     }
 
+    // Special case for Mission Acccomplished scenario when
+    // Abu Sayyaf is in effect.
+    object MissionAccomplishedAbuSayyaf extends OperationDecision {
+      def desc = "Mission Accomplished, Abu Sayyaf, 1 cell, 2+ troops in Philippines?"
+      def yesPath = TravelOp(source = Some(Philippines), target = Some(IndonesiaMalaysia), maxAttempts = None, adjacentOnly = true)
+      def noPath  = CellInGoodFairWhereJSP
+      def condition(ops: Int) = {
+        import awakening.scenarios.MissionAccomplished
+        val philippines = game.getNonMuslim(Philippines)
 
+        game.scenarioName == MissionAccomplished.name &&
+        philippines.hasMarker(AbuSayyaf) &&
+        philippines.cells == 1 &&
+        philippines.totalTroops > 1
+      }
+    }
+    
     object CellInGoodFairWhereJSP extends OperationDecision {
       def desc = "Cells in Good or Fair* Muslim where Jihad Success Possible?"
       def yesPath = MinorJihadOp
