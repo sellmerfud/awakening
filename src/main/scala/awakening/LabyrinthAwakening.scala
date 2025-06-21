@@ -8798,31 +8798,37 @@ object LabyrinthAwakening {
     // When victory Occurs as a result of Oil Price Spike being played, and both sides victory
     // conditon is met.  The side that played the card wins.
     if (!game.ignoreVictory) {
-      if (oilPriceRole == Some(US) && game.goodResources >= 12)
-        gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance")
-      else if (oilPriceRole == Some(Jihadist) && game.islamistResources >= 6 && isBot(Jihadist))
-        gameOver(Jihadist, s"${game.islamistResources} resources controlled by countries with Islamist Rule governance")
-      else if (oilPriceRole == Some(Jihadist) && game.islamistResources >= 6 && game.islamistAdjacency)
-        gameOver(
-          Jihadist,
-          s"${game.islamistResources} resources controlled by countries with Islamist Rule governance\n" +
-            "and at least two of the countries are adjacent")
-      else if (game.goodResources >= 12)
-        gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance")
-      else if (game.islamistResources >= 6 && isBot(Jihadist))
-        gameOver(Jihadist, s"${game.islamistResources} resources controlled by countries with Islamist Rule governance")
-      else if (game.islamistResources >= 6 && game.islamistAdjacency)
-        gameOver(
-          Jihadist,
-          s"${game.islamistResources} resources controlled by countries with Islamist Rule governance\n" +
-            "and at least two of the countries are adjacent")
+      val usVictoryMet = game.goodResources >= 12
+      val jihadistVictoryMet = game.islamistResources >= 6 && (game.islamistAdjacency || isBot(Jihadist))
+      val usHasMoreThanTwice = game.goodResources > game.islamistResources * 2
+      val jihadistWinMsg = if (isBot(Jihadist))
+        s"${game.islamistResources} resources controlled by countries with Islamist Rule governance."
+      else
+        s"${game.islamistResources} resources controlled by countries with Islamist Rule governance\n" +
+          "and at least two of the countries are adjacent."
+
+      if (oilPriceRole == Some(US) && usVictoryMet)
+        gameOver(US, s"${game.goodResources} resources controlled by countries with Good governance.")
+      else if (oilPriceRole == Some(Jihadist) && jihadistVictoryMet) {
+        gameOver(Jihadist, jihadistWinMsg)
+      }
+      else if (usVictoryMet && (!jihadistVictoryMet || usHasMoreThanTwice)) {
+        val msg = if (jihadistVictoryMet)
+          s"${game.goodResources} resources controlled by countries with Good governance and this more\n" +
+          "than twice the resources controlled by countries with Islamist Rule."
+        else
+          s"${game.goodResources} resources controlled by countries with Good governance."
+        gameOver(US, msg)
+      }
+      else if (jihadistVictoryMet)
+        gameOver(Jihadist, jihadistWinMsg)
       else if (game.numGoodOrFair >= 15)
-        gameOver(US, s"${game.numGoodOrFair} Muslim countries have Fair or Good governance")
+        gameOver(US, s"${game.numGoodOrFair} Muslim countries have Fair or Good governance.")
       else if (game.totalCellsOnMap == 0 && isHuman(Jihadist))
-        gameOver(US, s"There are no cells on the map")
+        gameOver(US, s"There are no cells on the map.")
       else if (game.numPoorOrIslamic >= 15 && game.prestige == 1) {
         val reason = s"${game.numPoorOrIslamic} Muslim countries have Poor or Islamist rule governance " +
-                      "and US prestige is 1"
+                      "and US prestige is 1."
         gameOver(Jihadist, reason)
       }
     }
