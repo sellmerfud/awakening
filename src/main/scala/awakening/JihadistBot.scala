@@ -1565,8 +1565,18 @@ object JihadistBot extends BotHelpers {
     // Special case for Mission Acccomplished scenario when
     // Abu Sayyaf is in effect.
     object MissionAccomplishedAbuSayyaf extends OperationDecision {
-      def desc = "Mission Accomplished, Abu Sayyaf, 1 cell, 2+ troops in Philippines?"
-      def yesPath = TravelOp(source = Some(Philippines), target = Some(IndonesiaMalaysia), maxAttempts = None, adjacentOnly = true)
+      def desc = "Abu Sayyaf, 1 cell, 2+ troops in Philippines?"
+      def yesPath = {
+        val indonesia = game.getMuslim(IndonesiaMalaysia)
+        val target = if (globalEventNotInPlay(PatriotAct) && lapsingEventNotInPlay(Biometrics))
+          UnitedStates
+        else if (indonesia.totalTroops == 0 || majorJihadPriorityCountry == Some(IndonesiaMalaysia))
+          IndonesiaMalaysia
+        else
+          Thailand
+
+        TravelOp(source = Some(Philippines), target = Some(target), maxAttempts = None, adjacentOnly = true)
+      }
       def noPath  = CellInGoodFairWhereJSP
       def condition(ops: Int) = {
         import awakening.scenarios.MissionAccomplished
