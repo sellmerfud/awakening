@@ -1325,16 +1325,18 @@ object JihadistBot extends BotHelpers {
     // Only recruit in IR if:
     //  1. This is the auto-recruit priority country OR The auto-recruit priority country is not IR
     //  2. The country has less than 6 cells.
-    val irCheck = (m: MuslimCountry) =>
-      (isAutoRecruitPriority(m.name) || !autoRecruitPriorityIsIR) &&
-      m.totalCells < 6
+    // This is ignored if Biometrics is in play.
+    val irRestriction = (m: MuslimCountry) =>
+      !m.isIslamistRule ||  // This restriction only applies to IR countries
+      lapsingEventInPlay(Biometrics) ||  // Ignored when Biometrics in play
+      ((isAutoRecruitPriority(m.name) || !autoRecruitPriorityIsIR) && m.totalCells < 6)
 
     val criteria = if (game.botEnhancements)
       (c: Country) => c match {
-        case m: MuslimCountry =>                     // Only recruit in Muslim countries
-          (m.isPoor || m.autoRecruit) &&             // Only recruit in Good/Fair if auto-recruit
-          (!m.isIslamistRule || irCheck(m)) &&
-          (!muslimWithCadreOnly || m.hasCadre)       // Special radicalization test
+        case m: MuslimCountry =>                             // Only recruit in Muslim countries
+          (m.autoRecruit || m.isPoor || m.isIslamistRule) && // Only recruit in Good/Fair if auto-recruit
+          irRestriction(m) &&                                // Restriction for Islamist Rule countries 
+          (!muslimWithCadreOnly || m.hasCadre)               // Special radicalization test
         case n: NonMuslimCountry => false
       }
     else
