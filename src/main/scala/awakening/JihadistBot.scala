@@ -956,7 +956,7 @@ object JihadistBot extends BotHelpers {
       //
       // target       condition                       instructions
       // -------      --------------                  ----------------------
-      // US           WMD available                   select randomly
+      // US           WMD available                   while 2+ WMD use WMD, once only 1 WMD then select randomly
       // US           WMD NOT available               lowest plot marker
       // Non-Muslim   Funding > 7                     lowest plot marker
       // Non-Muslim   Funding <= 7                    highest plot marker (not WMD)
@@ -965,8 +965,9 @@ object JihadistBot extends BotHelpers {
 
       target match {
         case UnitedStates if plotCandidates.contains(PlotWMD) =>
-          // Random
-          shuffle(plotCandidates)
+          val (wmd, others) = plotCandidates.sorted.partition(_ == PlotWMD)
+          // Take all but one WMD first, then shuffle the last WMD with others and take them randomly.
+          (wmd.tail ::: shuffle(wmd.head::others))
             .take(numPlots)
 
         case UnitedStates =>
