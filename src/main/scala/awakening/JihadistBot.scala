@@ -1570,8 +1570,10 @@ object JihadistBot extends BotHelpers {
       def desc = "Abu Sayyaf, 1 cell, 2+ troops in Philippines?"
       def yesPath = {
         val indonesia = game.getMuslim(IndonesiaMalaysia)
-        val target = if (globalEventNotInPlay(PatriotAct) && lapsingEventNotInPlay(Biometrics))
+        val target = if (countryEventNotInPlay(UnitedStates, PatriotAct) && lapsingEventNotInPlay(Biometrics)) {
+          debug(s"hello: US, patriot act=${globalEventNotInPlay(PatriotAct)}, bio=${lapsingEventNotInPlay(Biometrics)}")
           UnitedStates
+        }
         else if (indonesia.totalTroops == 0 || majorJihadPriorityCountry == Some(IndonesiaMalaysia))
           IndonesiaMalaysia
         else
