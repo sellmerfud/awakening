@@ -64,7 +64,7 @@ object StatusOfForces extends Scenario {
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultFrance.copy(postureValue = Hard),
     DefaultBenelux.copy(postureValue = Soft))
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = 133::185::237::Nil
   val offMapTroops = 0
 }

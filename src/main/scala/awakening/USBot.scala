@@ -551,7 +551,7 @@ object USBot extends BotHelpers {
                   
   //  9. Philippines (if Abu Sayyaf)  (Base game only)
   val PhilippinesPriority = new CriteriaFilter("Philippines (if Abu Sayyaf)",
-                  c => c.name == Philippines && globalEventInPlay(AbuSayyaf))
+                  c => c.name == Philippines && countryEventInPlay(Philippines, AbuSayyaf))
                   
   // 10. Good
   val GoodPriority = new CriteriaFilter("Good Muslim", _.isGood)
@@ -913,7 +913,7 @@ object USBot extends BotHelpers {
   // ------------------------------------------------------------------
   val RegimeChangeFromFlowchart = List(
     new CriteriaFilter("Philippines if Moro Talks",  // Base game only
-        muslimTest(m => globalEventInPlay(MoroTalks) && m.name == Philippines)),
+        muslimTest(m => countryEventInPlay(Philippines, MoroTalks) && m.name == Philippines)),
     new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
     new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 

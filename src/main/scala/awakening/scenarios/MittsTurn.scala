@@ -62,7 +62,7 @@ object MittsTurn extends Scenario {
     DefaultFrance.copy(postureValue = Hard),
     DefaultBenelux.copy(postureValue = Soft),
     DefaultRussia.copy(postureValue = Soft))
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List.empty[Int]
   val offMapTroops = 0
 }

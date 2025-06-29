@@ -84,12 +84,13 @@ object Card_084 extends Card(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAut
       shuffle(markers).head
     log()
     removeGlobalEventMarker(marker)
-    val leakMarker = marker match {
-      case EnhancedMeasures => LeakEnhancedMeasures
-      case Renditions       => LeakRenditions
-      case Wiretapping      => LeakWiretapping
-    }
-    addGlobalEventMarker(leakMarker)
+    if (marker == EnhancedMeasures)
+      addGlobalEventMarker(LeakEnhancedMeasures)
+    else if (marker == Renditions)
+      addGlobalEventMarker(LeakRenditions)
+    else
+      addGlobalEventMarker(LeakWiretapping)
+
     log()
     rollUSPosture()
     log()

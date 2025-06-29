@@ -1571,7 +1571,6 @@ object JihadistBot extends BotHelpers {
       def yesPath = {
         val indonesia = game.getMuslim(IndonesiaMalaysia)
         val target = if (countryEventNotInPlay(UnitedStates, PatriotAct) && lapsingEventNotInPlay(Biometrics)) {
-          debug(s"hello: US, patriot act=${globalEventNotInPlay(PatriotAct)}, bio=${lapsingEventNotInPlay(Biometrics)}")
           UnitedStates
         }
         else if (indonesia.totalTroops == 0 || majorJihadPriorityCountry == Some(IndonesiaMalaysia))

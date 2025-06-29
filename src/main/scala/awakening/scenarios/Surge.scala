@@ -98,7 +98,7 @@ object Surge extends Scenario {
     DefaultScandinavia.copy(
       postureValue = Soft)
   )
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List.empty[Int]
   val offMapTroops = 0
 

@@ -713,7 +713,9 @@ object LabyrinthAwakening {
 
   // Used to describe event markers that represent troops.
   // prestigeLoss: if true, the marker's presence during a plot will cause loss of prestige
-  case class TroopsMarker(name: String, num: Int, canDeploy: Boolean, prestigeLoss: Boolean)
+  case class TroopsMarker(marker: CountryMarker, num: Int, canDeploy: Boolean, prestigeLoss: Boolean) {
+    val name = marker.name
+  }
   // When removing troop markers, the Bot will choose the first one
   // based on the following sort order.
   // - markers represent smaller numbers of troops come first
@@ -726,72 +728,94 @@ object LabyrinthAwakening {
         x.num compare y.num
   }
 
+  sealed trait EventMarker {
+    val name: String
+  }
+
+  implicit val EventMarkerOrdering: Ordering[EventMarker] =
+    Ordering.by { m: EventMarker => m.name }
+
+  case class GlobalMarker(name: String) extends EventMarker {
+    override def toString() = name
+  }
+
+  implicit val GlobalMarkerOrdering: Ordering[GlobalMarker] =
+    Ordering.by { m: GlobalMarker => m.name }
+
+  case class CountryMarker(name: String) extends EventMarker {
+    override def toString() = name
+  }
+  
+  implicit val CountryMarkerOrdering: Ordering[CountryMarker] =
+      Ordering.by { m: CountryMarker => m.name }
+  
   // Global Markers
-  val Abbas                     = "Abbas"
-  val AnbarAwakening            = "Anbar Awakening"
-  val SaddamCaptured            = "Saddam Captured"
-  val Wiretapping               = "Wiretapping"
-  val EnhancedMeasures          = "Enhanced Measures"
-  val Renditions                = "Renditions"
-  val LeakWiretapping           = "Leak-Wiretapping"
-  val LeakEnhancedMeasures      = "Leak-Enhanced Measures"
-  val LeakRenditions            = "Leak-Renditions"
-  val VieiraDeMelloSlain        = "Vieira de Mello Slain"
-  val AlAnbar                   = "Al-Anbar"
-  val MaerskAlabama             = "Maersk Alabama"
-  val Fracking                  = "Fracking"
-  val BloodyThursday            = "Bloody Thursday"
-  val Censorship                = "Censorship"
-  val Pirates1                  = "Pirates1"  // From the base game
-  val Pirates2                  = "Pirates2"  // From the awakening expansion
-  val Sequestration             = "Sequestration"
-  val Smartphones               = "Smartphones"
-  val ThreeCupsOfTea            = "3 Cups of Tea"
-  val TradeEmbargoUS            = "Trade Embargo-US"
-  val TradeEmbargoJihadist      = "Trade Embargo-Jihadist"
-  val TrumpTweetsON             = "Trump Tweets ON"
-  val TrumpTweetsOFF            = "Trump Tweets OFF"
-  val Euroscepticism            = "Populism/Euroscepticism"
-  val EarlyExit                 = "Early Exit"
-  val QatariCrisis              = "Qatari Crisis"
-  val SouthChinaSeaCrisis       = "South China Sea Crisis"
-  val USNKSummit                = "US/NK Summit" // Blocks play of Korean Crisis from Awakening Cards
-  val GulenMovement             = "Gulen Movement"
-  val TravelBan                 = "Travel Ban"
-  val AlBaghdadi                = "al-Baghdadi"
-  val PoliticalIslamismUS       = "Political Islamism-US"
-  val PoliticalIslamismJihadist = "Political Islamism-Jihadist"
-  val USChinaTradeWar           = "US China Trade War"
+  val Abbas                     = GlobalMarker("Abbas")
+  val AnbarAwakening            = GlobalMarker("Anbar Awakening")
+  val SaddamCaptured            = GlobalMarker("Saddam Captured")
+  val Wiretapping               = GlobalMarker("Wiretapping")
+  val EnhancedMeasures          = GlobalMarker("Enhanced Measures")
+  val Renditions                = GlobalMarker("Renditions")
+  val LeakWiretapping           = GlobalMarker("Leak-Wiretapping")
+  val LeakEnhancedMeasures      = GlobalMarker("Leak-Enhanced Measures")
+  val LeakRenditions            = GlobalMarker("Leak-Renditions")
+  val VieiraDeMelloSlain        = GlobalMarker("Vieira de Mello Slain")
+  val AlAnbar                   = GlobalMarker("Al-Anbar")
+  val MaerskAlabama             = GlobalMarker("Maersk Alabama")
+  val Fracking                  = GlobalMarker("Fracking")
+  val BloodyThursday            = GlobalMarker("Bloody Thursday")
+  val Censorship                = GlobalMarker("Censorship")
+  val Pirates1                  = GlobalMarker("Pirates1") // From the base game
+  val Pirates2                  = GlobalMarker("Pirates2")  // From the awakening expansion
+  val Sequestration             = GlobalMarker("Sequestration")
+  val Smartphones               = GlobalMarker("Smartphones")
+  val ThreeCupsOfTea            = GlobalMarker("3 Cups of Tea")
+  val TrumpTweetsON             = GlobalMarker("Trump Tweets ON")
+  val TrumpTweetsOFF            = GlobalMarker("Trump Tweets OFF")
+  val Euroscepticism            = GlobalMarker("Populism/Euroscepticism")
+  val EarlyExit                 = GlobalMarker("Early Exit")
+  val QatariCrisis              = GlobalMarker("Qatari Crisis")
+  val SouthChinaSeaCrisis       = GlobalMarker("South China Sea Crisis")
+  val USNKSummit                = GlobalMarker("US/NK Summit") // Blocks play of Korean Crisis from Awakening Cards
+  val GulenMovement             = GlobalMarker("Gulen Movement")
+  val TravelBan                 = GlobalMarker("Travel Ban")
+  val AlBaghdadi                = GlobalMarker("al-Baghdadi")
+  val PoliticalIslamismUS       = GlobalMarker("Political Islamism-US")
+  val PoliticalIslamismJihadist = GlobalMarker("Political Islamism-Jihadist")
+  val USChinaTradeWar           = GlobalMarker("US China Trade War")
+
 
   // Country Markers
-  val Sadr                     = "Sadr"
-  val CTR                      = "CTR"
-  val MoroTalks                = "Moro Talks"
-  val NEST                     = "NEST"
-  val BenazirBhutto            = "Benazir Bhutto"
-  val Indo_PakistaniTalks      = "Indo-Pakistani Talks"
-  val IraqiWMD                 = "Iraqi WMD"
-  val LibyanDeal               = "Libyan Deal"
-  val LibyanWMD                = "Libyan WMD"
-  val PatriotAct               = "Patriot Act"
-  val AbuSayyaf                = "Abu Sayyaf"
-  val BhuttoShot               = "Bhutto Shot"
-  val FATA                     = "FATA"
-  val Advisors                 = "Advisors"
-  val UNSCR_1973               = "UNSCR 1973"
-  val NATO                     = "NATO"
-  val NATO2                    = "NATO-2" // NATO marker from Awakening.  In campaign game, both NATO markers can be in play
-  val TrainingCamps            = "Training Camps"
-  val OperationServal          = "Operation Serval"
-  val TehranBeirutLandCorridor = "Tehran-Beirut Land Corridor"
-  val BREXIT                   = "BREXIT"
+  val Sadr                     = CountryMarker("Sadr")
+  val CTR                      = CountryMarker("CTR")
+  val MoroTalks                = CountryMarker("Moro Talks")
+  val NEST                     = CountryMarker("NEST")
+  val BenazirBhutto            = CountryMarker("Benazir Bhutto")
+  val Indo_PakistaniTalks      = CountryMarker("Indo-Pakistani Talks")
+  val IraqiWMD                 = CountryMarker("Iraqi WMD")
+  val LibyanDeal               = CountryMarker("Libyan Deal")
+  val LibyanWMD                = CountryMarker("Libyan WMD")
+  val PatriotAct               = CountryMarker("Patriot Act")
+  val AbuSayyaf                = CountryMarker("Abu Sayyaf")
+  val BhuttoShot               = CountryMarker("Bhutto Shot")
+  val FATA                     = CountryMarker("FATA")
+  val Advisors                 = CountryMarker("Advisors")
+  val UNSCR_1973               = CountryMarker("UNSCR 1973")
+  val NATO                     = CountryMarker("NATO")
+  val NATO2                    = CountryMarker("NATO-2") // NATO marker from Awakening.  In campaign game, both NATO markers can be in play
+  val TradeEmbargoUS           = CountryMarker("Trade Embargo-US")
+  val TradeEmbargoJihadist     = CountryMarker("Trade Embargo-Jihadist")
+  val TrainingCamps            = CountryMarker("Training Camps")
+  val OperationServal          = CountryMarker("Operation Serval")
+  val TehranBeirutLandCorridor = CountryMarker("Tehran-Beirut Land Corridor")
+  val BREXIT                   = CountryMarker("BREXIT")
 
   //  Map Markers to their Card Associations.
   //  This is needed by the "Bowling Green Massacre" event so
   //  we can determine which role the marker is associated with for
   //  the Bot decision
 
-  val GlobalMarkers: Map[String, CardAssociation] = Map(
+  val GlobalMarkers: Map[GlobalMarker, CardAssociation] = Map(
     Abbas -> US, AnbarAwakening -> US, SaddamCaptured -> US, Wiretapping -> US, EnhancedMeasures -> US,
     Renditions -> US, VieiraDeMelloSlain -> Jihadist, AlAnbar -> Jihadist, MaerskAlabama -> US,
     Fracking -> US, BloodyThursday -> Jihadist, Censorship -> Jihadist, Pirates1 -> Jihadist,
@@ -804,7 +828,7 @@ object LabyrinthAwakening {
     PoliticalIslamismJihadist -> Jihadist, USChinaTradeWar -> Unassociated
   )
 
-  val CountryMarkers: Map[String, CardAssociation] = Map(
+  val CountryMarkers: Map[CountryMarker, CardAssociation] = Map(
     Sadr -> Jihadist, CTR -> US, MoroTalks -> US, NEST -> US, BenazirBhutto -> US,
     Indo_PakistaniTalks -> US, IraqiWMD -> US, LibyanDeal -> US, LibyanWMD -> US, PatriotAct -> US,
     AbuSayyaf -> Jihadist, BhuttoShot -> Jihadist, FATA -> Jihadist, Advisors -> US, UNSCR_1973 -> US,
@@ -1159,7 +1183,7 @@ object LabyrinthAwakening {
     val cadres: Int
     val troops: Int
     val plots: List[PlotOnMap]
-    val markers: List[String]
+    val markers: List[CountryMarker]
     val wmdCache: Int        // Number of WMD plots cached
     val truce: Boolean
 
@@ -1174,8 +1198,8 @@ object LabyrinthAwakening {
     def isPoor         = governance == Poor
     def isIslamistRule = governance == IslamistRule
 
-    def hasMarker(name: String) = markers contains name
-    def countMarker(name: String) = markers count (_ == name)
+    def hasMarker(marker: CountryMarker) = markers.contains(marker)
+    def countMarker(marker: CountryMarker) = markers.count(_ == marker)
 
     def cells      = sleeperCells + activeCells
     def hasSadr    = hasMarker(Sadr)
@@ -1222,17 +1246,17 @@ object LabyrinthAwakening {
 
   case class NonMuslimCountry(
     name: String,
-    governance: Int            = Good,
-    sleeperCells: Int          = 0,
-    activeCells: Int           = 0,
-    cadres: Int                = 0,
-    troops: Int                = 0,
-    plots: List[PlotOnMap] = Nil,
-    markers: List[String]      = Nil,
-    postureValue: String       = PostureUntested,
-    recruitOverride: Int       = 0,
-    wmdCache: Int              = 0,  // Number of WMD plots cached
-    iranSpecialCase: Boolean   = false
+    governance: Int              = Good,
+    sleeperCells: Int            = 0,
+    activeCells: Int             = 0,
+    cadres: Int                  = 0,
+    troops: Int                  = 0,
+    plots: List[PlotOnMap]       = Nil,
+    markers: List[CountryMarker] = Nil,
+    postureValue: String         = PostureUntested,
+    recruitOverride: Int         = 0,
+    wmdCache: Int                = 0,  // Number of WMD plots cached
+    iranSpecialCase: Boolean     = false
   ) extends Country {
 
     override val truce: Boolean = false  // Never Truce in Non-Muslim country
@@ -1259,11 +1283,11 @@ object LabyrinthAwakening {
 
     def autoRecruit = false
     def recruitSucceeds(die: Int) = die <= recruitNumber
-    def addMarkers(names: String*): NonMuslimCountry = this.copy(markers = markers ++ names)
-    def removeMarkers(names: String*): NonMuslimCountry = {
+    def addMarkers(toAdd: CountryMarker*): NonMuslimCountry = this.copy(markers = markers ++ toAdd)
+    def removeMarkers(toRemove: CountryMarker*): NonMuslimCountry = {
       var updatedMarkers = markers
-      for (name <- names)
-        updatedMarkers.indexOf(name) match {
+      for (marker <- toRemove)
+        updatedMarkers.indexOf(marker) match {
           case -1 =>
           case x  => updatedMarkers = updatedMarkers.patch(x, Seq.empty, 1)
         }
@@ -1289,26 +1313,26 @@ object LabyrinthAwakening {
 
   case class MuslimCountry(
     name: String,
-    governance: Int            = GovernanceUntested,
-    sleeperCells: Int          = 0,
-    activeCells: Int           = 0,
-    cadres: Int                = 0,
-    plots: List[PlotOnMap]     = Nil,
-    markers: List[String]      = Nil,
-    isSunni: Boolean           = true,
-    printedResources: Int       = 0,
-    alignment: String          = Neutral,
-    troops: Int                = 0,
-    militia: Int               = 0,
-    oilExporter: Boolean       = false,
-    aidMarkers: Int            = 0,
-    regimeChange: String       = NoRegimeChange,
-    besiegedRegime: Boolean    = false,
-    civilWar: Boolean          = false,
-    awakening: Int             = 0,  // number of awakening markers
-    reaction: Int              = 0,  // number of reaction markers
-    wmdCache: Int              = 0,  // Number of WMD plots cached
-    truce: Boolean             = false,
+    governance: Int              = GovernanceUntested,
+    sleeperCells: Int            = 0,
+    activeCells: Int             = 0,
+    cadres: Int                  = 0,
+    plots: List[PlotOnMap]       = Nil,
+    markers: List[CountryMarker] = Nil,
+    isSunni: Boolean             = true,
+    printedResources: Int        = 0,
+    alignment: String            = Neutral,
+    troops: Int                  = 0,
+    militia: Int                 = 0,
+    oilExporter: Boolean         = false,
+    aidMarkers: Int              = 0,
+    regimeChange: String         = NoRegimeChange,
+    besiegedRegime: Boolean      = false,
+    civilWar: Boolean            = false,
+    awakening: Int               = 0,  // number of awakening markers
+    reaction: Int                = 0,  // number of reaction markers
+    wmdCache: Int                = 0,  // Number of WMD plots cached
+    truce: Boolean               = false,
   ) extends Country {
 
     override def isMuslim: Boolean = true
@@ -1384,11 +1408,11 @@ object LabyrinthAwakening {
         (isFair && (ops >= 3 || (ops == 2 && besiegedRegime)))
       )
 
-    def addMarkers(names: String*): MuslimCountry = this.copy(markers = markers ++ names)
-    def removeMarkers(names: String*): MuslimCountry = {
+    def addMarkers(toAdd: CountryMarker*): MuslimCountry = this.copy(markers = markers ++ toAdd)
+    def removeMarkers(toRemove: CountryMarker*): MuslimCountry = {
       var updatedMarkers = markers
-      for (name <- names)
-        updatedMarkers.indexOf(name) match {
+      for (marker <- toRemove)
+        updatedMarkers.indexOf(marker) match {
           case -1 =>
           case x  => updatedMarkers = updatedMarkers.patch(x, Seq.empty, 1)
         }
@@ -1411,7 +1435,7 @@ object LabyrinthAwakening {
     val availablePlots: List[Plot]     // 1, 2, 3, 4 == WMD
     val removedPlots: List[Plot]
     val countries: List[Country]
-    val markersInPlay: List[String]
+    val markersInPlay: List[GlobalMarker]
     val cardsRemoved: List[Int]
     val offMapTroops: Int
     val notes: Seq[String] = Seq.empty
@@ -1576,7 +1600,7 @@ object LabyrinthAwakening {
     usPosture: String,
     funding: Int,
     countries: List[Country],
-    markers: List[String],
+    markers: List[GlobalMarker],
     plotData: PlotData,
     offMapTroops: Int                    = 0,
     reserves: Reserves                   = Reserves(0, 0),
@@ -1710,8 +1734,8 @@ object LabyrinthAwakening {
       this.copy(countries = countries.map(c => updates.getOrElse(c.name, c)))
     }
 
-    def addMarker(name: String): GameState = this.copy(markers = name :: markers)
-    def removeMarker(name: String): GameState = this.copy(markers = markers.filterNot(_ == name))
+    def addMarker(marker: GlobalMarker): GameState = this.copy(markers = marker :: markers)
+    def removeMarker(marker: GlobalMarker): GameState = this.copy(markers = markers.filterNot(_ == marker))
 
     // List of countries that are valid targets for War of Ideas
     def woiTargets: List[Country] = countries.filter {
@@ -1780,7 +1804,7 @@ object LabyrinthAwakening {
     def isTrainingCamp(name: String) = trainingCamp == Some(name)
 
     def extraCellCapacity   = {
-      if (markers contains AlBaghdadi) {
+      if (markers.contains(AlBaghdadi)) {
         if (caliphateDeclared) 5 else 3
       }
       else if (trainingCamp.nonEmpty) {
@@ -2108,9 +2132,9 @@ object LabyrinthAwakening {
           summary.add(fmt.format(c.name, mapPlotsDisplay(c.plots, visible)))
         }
       }
-      val countryMarkers = for (c <- countries; m <- c.markers)
-        yield (s"$m (${c.name})")
-      summary.addSeq(wrap("Event markers   : ", markers ::: countryMarkers))
+      val countryMarkerNames = for (c <- countries; m <- c.markers)
+        yield (s"${m.name} (${c.name})")
+      summary.addSeq(wrap("Event markers   : ", markers.map(_.name) ::: countryMarkerNames))
       summary.addSeq(wrap("Lapsing         : ", eventsLapsing.sorted))
       summary.add(s"1st plot        : ${firstPlotEntry.map(_.toString).getOrElse("none")}")
       summary
@@ -4533,10 +4557,15 @@ object LabyrinthAwakening {
 
   def separator(length: Int = 72, char: Char = '-'): String = char.toString * length
 
-  def markersString(markers: List[String]): String = if (markers.isEmpty)
+  def markersString(markers: List[EventMarker]): String = if (markers.isEmpty)
     "none"
   else
-    markers mkString ", "
+    markers
+      .map {
+        case GlobalMarker(name) => name
+        case CountryMarker(name) => name
+      }
+      .mkString(", ")
 
   // Return a sorted list of the names of the given countries
   def countryNames(candidates: List[Country]) = candidates
@@ -5525,7 +5554,7 @@ object LabyrinthAwakening {
         // then allow the user to choose which units absorb the losses.
         val mixedCubes = m.troops > 0 && m.militia > 0
         if (losses >= m.totalTroopsAndMilitia)
-           (m.troopsMarkers.map(_.name), m.troops, m.militia)
+           (m.troopsMarkers.map(tm => CountryMarker(tm.name)), m.troops, m.militia)
         else if (!mixedCubes && m.troopsMarkers.isEmpty) {
           if (m.troops > 0)
             (Nil, m.troops min losses, 0)
@@ -5533,7 +5562,7 @@ object LabyrinthAwakening {
             (Nil, 0, m.militia min losses)
         }
         else {
-          var (troopsLost, militiaLost, markersLost) = (0, 0, List.empty[String])
+          var (troopsLost, militiaLost, markersLost) = (0, 0, List.empty[CountryMarker])
 
           def nextHit(lossesRemaining: Int, markers: List[TroopsMarker], troops: Int, militia: Int): Unit = {
             if (lossesRemaining > 0 && (markers.nonEmpty || troops > 0 || militia > 0)) {
@@ -5551,7 +5580,7 @@ object LabyrinthAwakening {
                 case TroopMarker(name) =>
                   val marker = markers.find(_.name == name).get
                   val lossesAbsorbed = marker.num
-                  markersLost = name :: markersLost
+                  markersLost = CountryMarker(name) :: markersLost
                   nextHit(lossesRemaining - lossesAbsorbed, markers.filterNot(_.name == name), troops, militia)
               }
             }
@@ -5565,19 +5594,22 @@ object LabyrinthAwakening {
         // Calculate the losses for the bot.
         // [Rule 13.3.7] The bot removes troops cubes first.
         // Then militia, then troops markers
+        val markers = new ListBuffer[CountryMarker]
         var lossesRemaining = losses
         val troopsLost = lossesRemaining min m.troops
         lossesRemaining -= troopsLost
         val militiaLost = lossesRemaining min m.militia
         lossesRemaining -= militiaLost
 
-        val markersLost = for (TroopsMarker(name, num, _, _) <- m.troopsMarkers.sorted; if lossesRemaining > 0)
-          yield {
-            lossesRemaining = lossesRemaining - num
-            name
-          }
 
-        (markersLost, troopsLost, militiaLost)
+        for (TroopsMarker(marker, num, _, _) <- m.troopsMarkers.sorted) {
+          if (lossesRemaining > 0) {
+            lossesRemaining = lossesRemaining - num
+            markers.append(marker)
+          }
+        }
+
+        (markers.toList, troopsLost, militiaLost)
       }
 
       removeEventMarkersFromCountry(m.name, markersLost:_*)
@@ -5943,9 +5975,9 @@ object LabyrinthAwakening {
       rollPrestige()
       endCivilWar(dest)  // Can't have civil war in regime change performed due to event, etc.
       if (dest == Iraq)
-        removeEventMarkersFromCountry(Iraq, "Iraqi WMD")
+        removeEventMarkersFromCountry(Iraq, IraqiWMD)
       if (dest == Libya)
-        removeEventMarkersFromCountry(Libya, "Libyan WMD")
+        removeEventMarkersFromCountry(Libya, LibyanWMD)
     }
 
     logSummary(game.scoringSummary)
@@ -6615,45 +6647,46 @@ object LabyrinthAwakening {
     }
   }
 
-  def countryEventInPlay(countryName: String, markerName: String) =
-    (game getCountry countryName).hasMarker(markerName)
-  def countryEventNotInPlay(countryName: String, markerName: String) =
-    !(countryEventInPlay(countryName, markerName))
-  def countryEventInPlayAnywhere(markerName: String) =
-    game.countries.exists(c => countryEventInPlay(c.name, markerName))
+  def countryEventInPlay(countryName: String, marker: CountryMarker) =
+    game.getCountry(countryName).hasMarker(marker)
 
-  def globalEventInPlay(name: String)     = game.markers contains name
-  def globalEventNotInPlay(name: String)  = !globalEventInPlay(name)
+  def countryEventNotInPlay(countryName: String, marker: CountryMarker) =
+    !(countryEventInPlay(countryName, marker))
+
+  def countryEventInPlayAnywhere(marker: CountryMarker) =
+    game.countries.exists(c => countryEventInPlay(c.name, marker))
+
+  def globalEventInPlay(marker: GlobalMarker) = game.markers.contains(marker)
+  def globalEventNotInPlay(marker: GlobalMarker) = !globalEventInPlay(marker)
+
   def lapsingEventInPlay(cardNum: Int)    = game.eventIsLapsing(cardNum)
   def lapsingEventNotInPlay(cardNum: Int) = !lapsingEventInPlay(cardNum)
 
-  def addGlobalEventMarker(marker: String): Unit = {
+  def addGlobalEventMarker(marker: GlobalMarker): Unit = {
     if (globalEventNotInPlay(marker)) {
       game = game.addMarker(marker)
       log(s"""Place "$marker" marker in the Events In Play box""", Color.MapMarker)
     }
   }
 
-  def removeGlobalEventMarker(marker: String): Unit = {
+  def removeGlobalEventMarker(marker: GlobalMarker): Unit = {
     if (globalEventInPlay(marker)) {
       val priorGameState = game
       game = game.removeMarker(marker)
 
       // Handle any board state changes caused by the
       // marker removal
-      marker match {
+      if (marker == SouthChinaSeaCrisis) {
         // Move troops from out of play to track when
         // South China Seas Crisis marker is removed.
-        case SouthChinaSeaCrisis =>
-          log(s"\nSouth China Seas Crisis ends", Color.Event)
-          moveOfMapTroopsToTrack(2)
-
-        case Sequestration =>
-          log("Sequestration ends", Color.Event)
-          moveOfMapTroopsToTrack(3)
-
-        case _ =>
+        log(s"\nSouth China Seas Crisis ends", Color.Event)
+        moveOfMapTroopsToTrack(2)
       }
+      else if (marker == Sequestration) {
+        log("Sequestration ends", Color.Event)
+        moveOfMapTroopsToTrack(3)
+      }
+
       log(s"""Remove "$marker" marker from the Events In Play box""", Color.MapMarker)
       logExtraCellCapacityChange(priorGameState)
     }
@@ -6675,10 +6708,10 @@ object LabyrinthAwakening {
     log(s"""Flip the "Trump Tweets" marker to OFF""", Color.FlipPieces)
   }
 
-  def addEventMarkersToCountry(countryName: String, markers: String*): Unit = {
+  def addEventMarkersToCountry(countryName: String, markers: CountryMarker*): Unit = {
     for (marker <- markers) {
       val c = game.getCountry(countryName)
-      if (!(c hasMarker marker)) {
+      if (!(c.hasMarker(marker))) {
         log(s"""Place "$marker" marker in $countryName""", Color.MapMarker)
         c match {
           case m: MuslimCountry    => game = game.updateCountry(m.addMarkers(marker))
@@ -6689,10 +6722,10 @@ object LabyrinthAwakening {
   }
 
 
-  def removeEventMarkersFromCountry(countryName: String, markers: String*): Unit = {
+  def removeEventMarkersFromCountry(countryName: String, markers: CountryMarker*): Unit = {
     for (marker <- markers) {
       val c = game.getCountry(countryName)
-      if (c hasMarker marker) {
+      if (c.hasMarker(marker)) {
         log(s"""Remove "$marker" marker from $countryName""", Color.MapMarker)
         c match {
           case m: MuslimCountry    => game = game.updateCountry(m.removeMarkers(marker))
@@ -6702,7 +6735,7 @@ object LabyrinthAwakening {
     }
   }
 
-  def removeCountryEventMarkerAnywhere(marker: String): Unit = {
+  def removeCountryEventMarkerAnywhere(marker: CountryMarker): Unit = {
      game.countries
       .filter(c => countryEventInPlay(c.name, marker))
       .foreach(c => removeEventMarkersFromCountry(c.name, marker))
@@ -6711,7 +6744,7 @@ object LabyrinthAwakening {
   // A country can have more than one Advisors counter
   // so we cannot call addEventMarkersToCountry() as it
   // only adds a marker if it is not already present.
-  def addAdvisorsToCountry(countryName: String): Unit = if (game isMuslim countryName) {
+  def addAdvisorsToCountry(countryName: String): Unit = if (game.isMuslim(countryName)) {
     val m = game.getMuslim(countryName)
     log(s"""Place "$Advisors" marker in $countryName""", Color.MapPieces)
     game = game.updateCountry(m.addMarkers(Advisors))
@@ -6728,27 +6761,26 @@ object LabyrinthAwakening {
   // Set up the extra cells for Training Camps/al-Baghdadi
   // It is caller's responsibility to avoid calling this
   // if the when the other event (Training Camp/al-Baghdadi) is still in play.
-  def playExtraCellsEvent(event: String, targetCountry: String = ""): Unit = {
+  def playExtraCellsEvent(event: EventMarker, targetCountry: String = ""): Unit = {
 
     val priorGameState = game
     //  Place the appropriate event marker on the board
-    event match {
-      case TrainingCamps =>
-        game.trainingCamp match {
-          case Some(existing) if existing == targetCountry =>
-            log(s"Training Camps marker remains in $targetCountry")
-          case Some(existing) =>
-            removeEventMarkersFromCountry(existing, TrainingCamps)
-            addEventMarkersToCountry(targetCountry, TrainingCamps)
-          case None =>
-            addEventMarkersToCountry(targetCountry, TrainingCamps)
-        }
-      case AlBaghdadi =>
-        addGlobalEventMarker(AlBaghdadi)
-
-      case e =>
-        throw new IllegalArgumentException("placeExtraCells() invalid event")
+    if (event == TrainingCamps) {
+      game.trainingCamp match {
+        case Some(existing) if existing == targetCountry =>
+          log(s"Training Camps marker remains in $targetCountry")
+        case Some(existing) =>
+          removeEventMarkersFromCountry(existing, TrainingCamps)
+          addEventMarkersToCountry(targetCountry, TrainingCamps)
+        case None =>
+          addEventMarkersToCountry(targetCountry, TrainingCamps)
+      }
     }
+    else if (event == AlBaghdadi) {
+      addGlobalEventMarker(AlBaghdadi)
+    }
+    else
+      throw new IllegalArgumentException(s"placeExtraCells() invalid event: $event")
 
     logExtraCellCapacityChange(priorGameState)
   }
@@ -6901,14 +6933,14 @@ object LabyrinthAwakening {
   }
 
   def removeAllTroopsMarkers(name: String): Unit = {
-    val markers = game.getMuslim(name).troopsMarkers.map(_.name)
+    val markers = game.getMuslim(name).troopsMarkers.map(tm => CountryMarker(tm.name))
     removeEventMarkersFromCountry(name: String, markers:_*)
   }
 
   //  Move all troops cubes in the country to the track
   //  and remove all troops markers
   def removeAllTroopsFromCountry(name: String): Unit = {
-    val c = game getCountry name
+    val c = game.getCountry(name)
     moveTroops(name, "track", c.troops)
     removeAllTroopsMarkers(name)
   }
@@ -7572,9 +7604,9 @@ object LabyrinthAwakening {
         log(separator())
         log(s"Unblocked $mapPlot in $name", Color.Info)
         if (name == Israel)
-          removeGlobalEventMarker("Abbas")
+          removeGlobalEventMarker(Abbas)
         if (name == India)
-          removeEventMarkersFromCountry(Pakistan, "Indo-Pakistani Talks")
+          removeEventMarkersFromCountry(Pakistan, Indo_PakistaniTalks)
 
 
         country match {
@@ -7822,7 +7854,7 @@ object LabyrinthAwakening {
         case world if world == game.usPosture => 1
         case _ => -1
       }
-      usCards.append((USChinaTradeWar, modifier))
+      usCards.append((USChinaTradeWar.name, modifier))
     }
 
     val jihadistNum = jihadistCards.map(_._2).sum
@@ -9909,7 +9941,7 @@ object LabyrinthAwakening {
       moveTroops(source, dest, numTroops)
     }
     // Troops markers that deploy are simply removed
-    removeEventMarkersFromCountry(source, markersRemoved:_*)
+    removeEventMarkersFromCountry(source, markersRemoved.map(name => CountryMarker(name)):_*)
   }
 
   def humanRegimeChange(): Unit = {
@@ -11231,9 +11263,9 @@ object LabyrinthAwakening {
   }
 
   def adjustEventMarkers(): Unit = {
-    case class OopTroops(marker: String, numTroops: Int)
+    case class OopTroops(marker: GlobalMarker, numTroops: Int)
     val OutOfPlayTroops = List(OopTroops(Sequestration, 3), OopTroops(SouthChinaSeaCrisis, 2))
-    def countOopTrrops(inplayMarkers: List[String]): Int =
+    def countOopTrrops(inplayMarkers: List[GlobalMarker]): Int =
       inplayMarkers.foldLeft(0) { (sum, marker) =>
         sum + OutOfPlayTroops
           .find(_.marker == marker)
@@ -11245,9 +11277,9 @@ object LabyrinthAwakening {
     var inPlay = game.markers
     val priorGameState = game
     def available = AllMarkers.filterNot(inPlay.contains)
-    def showColums(xs: List[String]): Unit = {
+    def showColums(xs: List[GlobalMarker]): Unit = {
       if (xs.isEmpty) println("none")
-      else columnFormat(xs, 4) foreach println
+      else columnFormat(xs.map(_.name), 4) foreach println
     }
     @tailrec def getNextResponse(): Unit = {
       println()
@@ -11261,14 +11293,15 @@ object LabyrinthAwakening {
       println("Enter a marker name to move it between in play and out of play.")
       askOneOf("Marker: ", AllMarkers, allowNone = true, allowAbort = false) match {
         case None =>
-        case Some(name) if inPlay contains name =>
-          inPlay = inPlay.filterNot(_ == name)
+        case Some(name) if inPlay.contains(GlobalMarker(name)) =>
+          inPlay = inPlay.filterNot(_.name == name)
           getNextResponse()
         case Some(name) =>
-          inPlay = name :: inPlay
-          if (name == TrumpTweetsON)
+          val marker = GlobalMarker(name)
+          inPlay = marker :: inPlay
+          if (marker == TrumpTweetsON)
             inPlay = inPlay.filterNot(_ == TrumpTweetsOFF)
-          else if (name == TrumpTweetsOFF)
+          else if (marker == TrumpTweetsOFF)
             inPlay = inPlay.filterNot(_ == TrumpTweetsON)
           getNextResponse()
       }
@@ -12021,9 +12054,9 @@ object LabyrinthAwakening {
     var inPlay = country.markers
     val AllMarkers = CountryMarkers.keys.toList.sorted
     def available = AllMarkers.filterNot(inPlay.contains)
-    def showColums(xs: List[String]): Unit = {
+    def showColums(xs: List[CountryMarker]): Unit = {
       if (xs.isEmpty) println("none")
-      else columnFormat(xs, 4) foreach println
+      else columnFormat(xs.map(_.name), 4) foreach println
     }
     @tailrec def getNextResponse(): Unit = {
       println()
@@ -12036,14 +12069,14 @@ object LabyrinthAwakening {
       println(s"Enter a marker name to move it between $name and out of play.")
       askOneOf("Marker: ", AllMarkers, allowNone = true, allowAbort = false) match {
         case None =>
-        case Some(Advisors) =>
+        case Some(Advisors.name) =>
           println("use 'adjust advisors' to adjust Advisors Markers")
           getNextResponse()
-        case Some(name) if inPlay contains name =>
-          inPlay = inPlay.filterNot(_ == name)
+        case Some(name) if inPlay.contains(GlobalMarker(name)) =>
+          inPlay = inPlay.filterNot(_.name == name)
           getNextResponse()
         case Some(name) =>
-          inPlay = name :: inPlay
+          inPlay = CountryMarker(name) :: inPlay
           getNextResponse()
       }
     }

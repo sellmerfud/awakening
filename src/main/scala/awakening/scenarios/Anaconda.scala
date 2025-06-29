@@ -63,7 +63,7 @@ object Anaconda extends Scenario {
     DefaultSomalia.copy(besiegedRegime = true),
     DefaultCentralAsia.copy(governance = Poor, alignment = Ally),
     DefaultUnitedStates.copy(markers = List(PatriotAct)))
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List(43, 109)
   val offMapTroops = 0
   

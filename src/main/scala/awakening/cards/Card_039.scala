@@ -62,7 +62,7 @@ object Card_039 extends Card(39, "Libyan WMD", US, 3, Remove, NoLapsing, NoAutoT
     !game.getMuslim(Libya).truce &&
     game.getMuslim(Libya).isAdversary &&
     game.usPosture == Hard &&
-    countryEventNotInPlay(Libya, "Libyan Deal")
+    countryEventNotInPlay(Libya, LibyanDeal)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

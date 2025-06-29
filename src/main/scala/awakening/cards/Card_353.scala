@@ -72,7 +72,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   }
 
   // Has country marker and can be targeted (not truce or caliphate member)
-  def hasCountryMarker(marker: String) = (c: Country) =>
+  def hasCountryMarker(marker: CountryMarker) = (c: Country) =>
     c.hasMarker(marker) &&
     !c.truce &&
     !game.isCaliphateMember(c.name)
@@ -86,10 +86,10 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
     game.countries.exists(c => c.markers.nonEmpty && !c.truce && !game.isCaliphateMember(c.name)) ||
     lapsingCandidates.nonEmpty
 
-  def bowlingGreenBotMarkers(role: Role): List[String] = {
-    val globalMarkers = game.markers
+  def bowlingGreenBotMarkers(role: Role): List[EventMarker] = {
+    val globalMarkers: List[EventMarker] = game.markers
       .filter(GlobalMarkers(_) == role.opponent)
-    val countryMarkers =
+    val countryMarkers: List[EventMarker] =
       game.countries
       .filterNot(c => c.truce || game.isCaliphateMember(c.name))
       .flatMap(_.markers)
@@ -115,7 +115,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   // 6. Trump Tweets (Global Marker)
   // 7. Expanded ROE (Lapsing)
   // 8. Advisors. (Country Marker)
-  def enhJihadBotPriorityEvent: Option[Either[String, Int]] = {
+  def enhJihadBotPriorityEvent: Option[Either[EventMarker, Int]] = {
     if (lapsingEventInPlay(StraitofHormuz) && removingHormuzIsJihadistVictory)
       Some(Right(StraitofHormuz))
     else if (lapsingEventInPlay(OPECProductionCut) && removingOPECProductionCutIsJihadistVictory)
@@ -163,13 +163,13 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val countryMarkers = game.countries
+    val countryMarkers: List[EventMarker] = game.countries
       .filterNot(c => game.isCaliphateMember(c.name))
       .flatMap (_.markers)
     val markerChoices = (game.markers ::: countryMarkers)
       .sorted
       .distinct
-      .map(m => m -> m)
+      .map(m => m -> m.name)
     val lapsingChoices = lapsingCandidates
       .map(event => event.cardNumber -> deck(event.cardNumber).numAndName)
     sealed trait Choice
@@ -181,7 +181,7 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
     ).flatten
 
     // Left: marker name, Right: Lapsing card number
-    val eventSelection: Either[String, Int] = if (isHuman(role)) {
+    val eventSelection: Either[EventMarker, Int] = if (isHuman(role)) {
       askMenu("Choose one:", eventTypechoices).head match {
         case Marker =>
           Left(askMenu("Remove which event marker:", markerChoices).head)
@@ -201,10 +201,10 @@ object Card_353 extends Card(353, "Bowling Green Massacre", Unassociated, 3, NoR
     }
 
     eventSelection match {
-      case Left(marker) if GlobalMarkers.contains(marker) =>
+      case Left(marker: GlobalMarker) =>
         removeGlobalEventMarker(marker)
 
-      case Left(marker) =>
+      case Left(marker: CountryMarker) =>
         // Advisors marker can exist in multiple countries
         val target = countryNames(game.countries.filter(hasCountryMarker(marker))) match {
           case single::Nil => single

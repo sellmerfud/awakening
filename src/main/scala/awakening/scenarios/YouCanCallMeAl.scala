@@ -58,7 +58,7 @@ object YouCanCallMeAl extends Scenario {
     DefaultPakistan.copy(governance = Fair, alignment = Neutral),
     DefaultAfghanistan.copy(governance = IslamistRule, alignment = Adversary, sleeperCells = 4),
     DefaultSomalia.copy(besiegedRegime = true))
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List(78)
   val offMapTroops = 0
 }

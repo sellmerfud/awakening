@@ -139,7 +139,7 @@ override
         usUnit match {
           case MilitiaCube         => removeMilitiaFromCountry(target, 1)
           case TroopCube           => moveTroops(target, "track", 1)
-          case TroopMarker(marker) => removeEventMarkersFromCountry(target, marker)
+          case TroopMarker(name)   => removeEventMarkersFromCountry(target, CountryMarker(name))
         }
         nextRemoval()
       }

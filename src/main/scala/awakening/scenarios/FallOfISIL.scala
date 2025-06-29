@@ -60,7 +60,7 @@ object FallOfISIL extends Scenario {
     DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
     DefaultIran.copy(wmdCache = 2),
     DefaultBenelux.copy(postureValue = Hard))
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List.empty[Int]
   val offMapTroops = 0
 }
