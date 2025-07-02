@@ -99,7 +99,8 @@ object Card_357 extends Card(357, "Peace Dividend", Unassociated, 3, NoRemove, N
       val source = cardLocation(cardNum).get
       val cardDisplay = deck(cardNum).numAndName
       log(s"\n$role selects $cardDisplay from the $source", Color.Event)
-      displayLine(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
+      if (processCardDrawn(role, cardNum, source))
+        displayLine(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
 
     }
   }

@@ -128,7 +128,8 @@ object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemo
       val source = cardLocation(cardNum).get
       val cardDisplay = deck(cardNum).numAndName
       log(s"\n$role selects $cardDisplay from the $source", Color.Event)
-      displayLine(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
+      if (processCardDrawn(role, cardNum, source))
+        displayLine(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
     }
     
     log("\nThe Resource value of each Oil Exporter is reduced by 1 for the rest of the turn.", Color.Event)
