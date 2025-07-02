@@ -94,15 +94,17 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
       USBot.deployToPriority(advisorCandidates).get
 
     addEventTarget(target)
-    if (game.militiaAvailable > 0)
-      addMilitiaToCountry(target, 1)
-    else
+    if (game.militiaAvailable == 0)
       log(s"\nThere are no available militia to add to $target.", Color.Event)
-
-    if (game.advisorsAvailable > 0)
-      addAdvisorsToCountry(target)
     else
+      addMilitiaToCountry(target, 1)
+        
+    if (game.advisorsAvailable == 0)
       log(s"\nAll three Advisors are already on the map.", Color.Event)
+    else if (game.getMuslim(target).isAdversary)
+      log(s"\nCannot place Advisors in $target because its alignment is Adversary.", Color.Event)
+    else
+      addAdvisorsToCountry(target)
 
     if (cellCandidates.isEmpty)
       log(s"\nThere are no cells to remove in ${orList(advisorCandidates)}.", Color.Event)
