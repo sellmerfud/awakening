@@ -238,7 +238,7 @@ object LabyrinthAwakening {
     }
   }
 
-    sealed abstract class EnhBotDifficulty(val name: String) {
+  sealed abstract class EnhBotDifficulty(val name: String) {
     override def toString() = name
   }
 
@@ -745,10 +745,10 @@ object LabyrinthAwakening {
   case class CountryMarker(name: String) extends EventMarker {
     override def toString() = name
   }
-  
+
   implicit val CountryMarkerOrdering: Ordering[CountryMarker] =
       Ordering.by { m: CountryMarker => m.name }
-  
+
   // Global Markers
   val Abbas                     = GlobalMarker("Abbas")
   val AnbarAwakening            = GlobalMarker("Anbar Awakening")
@@ -5260,7 +5260,7 @@ object LabyrinthAwakening {
         .sorted
         .foreach(c => b += s"  ${cardNumAndName(c)}")
     }
-    
+
     if (newlyDiscarded.nonEmpty) {
       b += "The following cards should be added to the Discard pile:"
       newlyDiscarded
@@ -9055,21 +9055,32 @@ object LabyrinthAwakening {
   // the game.
   def actionPhasePrompt(): (UserAction, Option[String]) = {
     val PlayCardName = "Play card"
-    def getResponse(prompt: String, options: Seq[String], allowInt: Boolean): Option[(String, Option[String])] = {
+    def getResponse(prompt: String, options: Seq[String], allowInt: Boolean, allow2Ints: Boolean): Option[(String, Option[String])] = {
       val HELP = raw"(?i)(?:\?|he|hel|help)".r
-
+      val TWO_INTS = raw"(\d+)(?:,\s*|\s+,?\s*)(\d+)".r
       readLine(prompt) match {
         case null | "" => None
+        case TWO_INTS(i, j) if allow2Ints =>
+          Some((PlayCardName, Some(s"$i $j")))
+        case TWO_INTS(_, _) =>
+          println("You cannot play 2 cards at this time.")
+          getResponse(prompt, options, allowInt, allow2Ints)
+        case INTEGER(i) if allowInt =>
+          Some((PlayCardName, Some(i)))
+        case INTEGER(_) =>
+          println("You cannot play a card at this time.")
+          getResponse(prompt, options, allowInt, allow2Ints)
         case input =>
           val (cmd::param) = input.trim.split(" ", 2).toList
           cmd match {
-            case "" => None
-            case INTEGER(i) if allowInt => Some((PlayCardName, Some(i)))
-            case HELP() => Some(("?", None))
+            case "" =>
+              None
+            case HELP() =>
+              Some(("?", None))
             case s =>
               matchOne(s.trim, options) match {
                 case Some(c) => Some((c, param.lastOption))
-                case _ => getResponse(prompt, options, allowInt)
+                case _ => getResponse(prompt, options, allowInt, allow2Ints)
               }
           }
       }
@@ -9080,7 +9091,9 @@ object LabyrinthAwakening {
     val numInHand = numCardsInHand(activeRole)
     val isUSHuman = activeRole == US && isHuman(US)
     val isJihadistHuman = activeRole == Jihadist && isHuman(Jihadist)
+    val isEnhJihadistBot = activeRole == Jihadist && isBot(Jihadist) && game.botEnhancements
     val canPlay = numCardsPlayed < 2 && numInHand > 0
+    val canPlay2 = numCardsPlayed == 0 && numInHand > 1 && isEnhJihadistBot && game.enhBotDifficulty == EnhBotNormal
     val canDiscard = isUSHuman && numInHand == 1 && !game.jihadistIdeology(Infectious)
     val canEndPhase = numCardsPlayed == 2 || numInHand == 0 ||
       (isUSHuman && numInHand == 1 && !game.jihadistIdeology(Infectious))
@@ -9145,8 +9158,7 @@ object LabyrinthAwakening {
     displayLine(separator(lineLen), Color.Info)
     displayLine(otherChoices.keysIterator.mkString(" | "))
     displayLine(separator(lineLen, char = '='), Color.Info)
-    val numericItem = if (canPlay) Some(PlayCard) else None
-    getResponse("Action: ", options, allowInt = canPlay) match {
+    getResponse("Action: ", options, canPlay, canPlay2) match {
       case Some((actionName, param)) =>
         val action = mainChoices.getOrElse(actionName, otherChoices(actionName))
         (action, param)
@@ -9485,7 +9497,7 @@ object LabyrinthAwakening {
   // the action phase.  Hence the `additional` parameter.
   def usCardPlay(param: Option[String], additional: Boolean = false): Unit = {
 
-    askCardNumber(FromRole(US)::Nil, "Card # ", param, allowAbort = false) foreach { cardNumber =>
+    askCardNumber(FromRole(US)::Nil, "US Card # ", param, allowAbort = false) foreach { cardNumber =>
       val card = deck(cardNumber)
       val savedState = game
 
@@ -10014,61 +10026,109 @@ object LabyrinthAwakening {
   def firstCardOfPhase(role: Role): Boolean =
     role == getActiveRole() && numCardsPlayedInCurrentPhase() == 1
 
+
+  // With the Enhanced Bot then we allow for the param to
+  // have two card numbers if this is the first play of the Jihadist
+  // turn and the Bot has another card in hand.
+  // The card numbers must be separated by by whitespace and/or a comma.
+  def enhancedJihadistBotCardDraw(param: Option[String]): List[Int] = {
+    val TwoParams = """\s*([^\s,]+)\s*,?\s*([^\s,]+)?\s*""".r
+    val (firstParam, secondParam) = param match {
+      case Some(TwoParams(first, null)) => (Some(first), None)
+      case Some(TwoParams(first, second)) => (Some(first), Some(second))
+      case _ => (None, None)
+    }
+
+    askCardNumber(FromRole(Jihadist)::Nil, "1st Jihadist Card # ", firstParam, allowAbort = false) match {
+      case None =>
+        Nil
+      case Some(firstNumber) =>
+        askCardNumber(FromRole(Jihadist)::Nil, "2nd Jihadist Card # ", secondParam, except = Set(firstNumber), allowAbort = false) match {
+          case None =>
+            Nil
+          case Some(secondNumber) =>
+            List(firstNumber, secondNumber)
+        }
+    }
+  }
+
   def jihadistCardPlay(param: Option[String]): Unit = {
+    val enhBot2Cards =
+      isBot(Jihadist) &&
+      game.botEnhancements &&
+      game.enhBotDifficulty == EnhBotNormal &&
+      numCardsPlayedInCurrentPhase() == 0 &&
+      numCardsInHand(Jihadist) > 1
 
-    askCardNumber(FromRole(Jihadist)::Nil, "Card # ", param, allowAbort = false) foreach { cardNumber =>
-      val card = deck(cardNumber)
+    val cards = if (enhBot2Cards)
+      enhancedJihadistBotCardDraw(param)
+    else
+      askCardNumber(FromRole(Jihadist)::Nil, "Jihadist Card # ", param, allowAbort = false).toList
+
+    // User can cancel the card play by entering a blank card number
+    if (cards.nonEmpty) {
+      // usages are only used by the Bot
+      // Only the enhanced Bot will have two cards here
+      val cardUsages = if (cards.size == 2)
+        JihadistBot.determineCardUsage(cards)
+      else
+        cards.map(num => (num, JihadistBot.UseCardNormally))
       val savedState = game
-
-      decreaseCardsInHand(Jihadist, 1)
-      // Add the card to the list of plays for the turn.
-      addPlayedCard(Jihadist, card.number)
-
-      cachedEventPlayableAnswer = None
-      // If TheDoorOfItjihad lapsing card is in effect,
-      // then Jihadist cannot play any events (except autoTrigger events)
-      logCardPlay(Jihadist, card)
       try {
-        // When the Ferguson event is in effect, the Jihadist player
-        // may cancel the play of any US associated card.
-        // If the JihadistBot is playing it will only cancel those played by the US.
-        if (lapsingEventInPlay(Ferguson)    &&
-            card.association == US          &&
-            game.humanRole == Jihadist      &&
-            askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
-          log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
-          removeLapsingEvent(Ferguson)
-        }
-        else
-          game.humanRole match {
-            case Jihadist => humanJihadistCardPlay(card, ignoreEvent = false)
-            case _        => JihadistBot.cardPlay(card, ignoreEvent = false)
-          }
+        for ((cardNumber, botUsage) <- cardUsages) {
+          val card = deck(cardNumber)
 
-        // Boko Haram allows the card to be returned to hand
-        if (ignoreDiscardAtEndOfTurn()) {
-          increaseCardsInHand(Jihadist, 1)
-        }
-        else {
-          // some events allow the use of a second card
-          // so we discard all cards in play for the current action
-          // rather than just use the `cardNumber` variable.
-          // Note: A `second` card is not the same as an `additional` card.
-          //        Curently no event playablle by the Jihadist allows
-          //        for an `additional` card to be played.
-          for (n <- cardsInPlay(ignoreAdditional = true)) {
-            // The discard process is a bit complicated because
-            // some when an event is played the card may have been removed from the game
-            // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
-            if (!game.cardsRemoved.contains(n) &&
-                !game.cardsLapsing().contains(n) &&
-                !game.isFirstPlot(n)) {
-              addCardToDiscardPile(n)
+          decreaseCardsInHand(Jihadist, 1)
+          // Add the card to the list of plays for the turn.
+          addPlayedCard(Jihadist, card.number)
+
+          cachedEventPlayableAnswer = None
+          // If TheDoorOfItjihad lapsing card is in effect,
+          // then Jihadist cannot play any events (except autoTrigger events)
+          logCardPlay(Jihadist, card)
+          // When the Ferguson event is in effect, the Jihadist player
+          // may cancel the play of any US associated card.
+          // If the JihadistBot is playing it will only cancel those played by the US.
+          if (lapsingEventInPlay(Ferguson)    &&
+              card.association == US          &&
+              game.humanRole == Jihadist      &&
+              askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
+            log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
+            removeLapsingEvent(Ferguson)
+          }
+          else
+            game.humanRole match {
+              case Jihadist => humanJihadistCardPlay(card, ignoreEvent = false)
+              case _        => JihadistBot.cardPlay(card, botUsage)
+            }
+
+          // Boko Haram allows the card to be returned to hand
+          if (ignoreDiscardAtEndOfTurn()) {
+            increaseCardsInHand(Jihadist, 1)
+          }
+          else {
+            // some events allow the use of a second card
+            // so we discard all cards in play for the current action
+            // rather than just use the `cardNumber` variable.
+            // Note: A `second` card is not the same as an `additional` card.
+            //        Curently no event playablle by the Jihadist allows
+            //        for an `additional` card to be played.
+            for (n <- cardsInPlay(ignoreAdditional = true)) {
+              // The discard process is a bit complicated because
+              // some when an event is played the card may have been removed from the game
+              // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
+              if (!game.cardsRemoved.contains(n) &&
+                  !game.cardsLapsing().contains(n) &&
+                  !game.isFirstPlot(n)) {
+                addCardToDiscardPile(n)
+              }
             }
           }
+          setIgnoreDiscardAtEndOfTurn(false)  // Reset for next turn
+          saveGameState()
+          if (cardUsages.size == 2 && cardNumber == cardUsages.head._1)
+            pause()
         }
-        setIgnoreDiscardAtEndOfTurn(false)  // Reset for next turn
-        saveGameState()
       }
       catch {
         case AbortAction =>

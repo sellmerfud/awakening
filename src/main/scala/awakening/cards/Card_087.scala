@@ -62,12 +62,15 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
   def eventConditionsMet(role: Role) = getCandidates.nonEmpty
 
 
+  def enhBotTarget = JihadistBot.cachedTarget("martyrdom-target") {
+    JihadistBot.enhMartyrdomKSMTarget(getCandidates, martyrdom = true)
+  }
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.availablePlots.nonEmpty && JihadistBot.enhMartyrdomKSMTarget(getCandidates, martyrdom = true).nonEmpty
+    game.availablePlots.nonEmpty && enhBotTarget.nonEmpty
   else
     game.availablePlots.nonEmpty
 
@@ -78,7 +81,6 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
   override
   def executeEvent(role: Role): Unit = {
     val candidates = getCandidates
-    lazy val enhBotTarget = JihadistBot.enhMartyrdomKSMTarget(getCandidates, martyrdom = true)
     if (candidates.nonEmpty) {
       val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
         val targetName = askCountry("Select country: ", candidates)
@@ -89,7 +91,7 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
         // The enhBotTarget will only come up empty, if we were triggered
         // during the US turn.  Fall back to normal Bot code.
         val targetName = enhBotTarget.get
-        val c = game.getCountry(enhBotTarget.get)
+        val c = game.getCountry(targetName)
         val cell = if (c.activeCells > 0) (1, 0, false)
                    else                   (0, 1, false)
         (targetName, cell, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))

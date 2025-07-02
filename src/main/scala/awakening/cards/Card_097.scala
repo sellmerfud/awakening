@@ -98,7 +98,7 @@ object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, 
       case Jihadist if isHuman(role) =>
         humanJihadistCardPlay(thisCard, ignoreEvent = true)
       case Jihadist =>
-        JihadistBot.cardPlay(thisCard, ignoreEvent = true)
+        JihadistBot.cardPlay(thisCard, JihadistBot.UseCardForOps)
     }
   }
 }

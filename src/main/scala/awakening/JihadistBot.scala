@@ -284,6 +284,7 @@ object JihadistBot extends BotHelpers {
       .collect { case name if game.isMuslim(name) => game.getMuslim(name) }
 
     lazy val goodMuslims = muslims.filter(_.isGood)
+    lazy val goodMuslimPriorities = List(HighestResourcePriority, WithTroopsPriority)
 
     lazy val fairAutoRecruits = muslims.filter(m => m.isFair && m.autoRecruit)
 
@@ -307,12 +308,14 @@ object JihadistBot extends BotHelpers {
 
     if (candidatesWithCells.isEmpty)
       None
+    else if (candidatesWithCells.contains(UnitedStates) && game.availablePlots.contains(PlotWMD))
+      Some(UnitedStates)
+    else if (goodMuslims.nonEmpty && game.availablePlots.contains(Plot3))
+      topPriority(goodMuslims, goodMuslimPriorities).map(_.name)
     else if (candidatesWithCells.contains(UnitedStates))
       Some(UnitedStates)
-    else if (goodMuslims.nonEmpty) {
-      val priorities = List(HighestResourcePriority, WithTroopsPriority)
-      topPriority(goodMuslims, priorities).map(_.name)
-    }
+    else if (goodMuslims.nonEmpty)
+      topPriority(goodMuslims, goodMuslimPriorities).map(_.name)
     else if (fairAutoRecruits.nonEmpty) {
       val priorities = List(RegimeChangePriority)
       topPriority(fairAutoRecruits, priorities).map(_.name)
@@ -654,6 +657,11 @@ object JihadistBot extends BotHelpers {
     c => JihadistBot.majorJihadPriorityCountry
       .map(mjp => areAdjacent(mjp, c.name))
       .getOrElse(false)
+  )
+
+  val AdjacentToMoveableCell = new CriteriaFilter(
+    "Adjacent to moveable cell",
+    c => game.adjacentCountries(c.name).exists(adj => hasCellForTravel(adj, c.name))
   )
 
   val HighestCellsMinusTandM = new HighestScorePriority(
@@ -1335,7 +1343,7 @@ object JihadistBot extends BotHelpers {
       (c: Country) => c match {
         case m: MuslimCountry =>                             // Only recruit in Muslim countries
           (m.autoRecruit || m.isPoor || m.isIslamistRule) && // Only recruit in Good/Fair if auto-recruit
-          irRestriction(m) &&                                // Restriction for Islamist Rule countries 
+          irRestriction(m) &&                                // Restriction for Islamist Rule countries
           (!muslimWithCadreOnly || m.hasCadre)               // Special radicalization test
         case n: NonMuslimCountry => false
       }
@@ -1591,7 +1599,7 @@ object JihadistBot extends BotHelpers {
         philippines.totalTroops > 1
       }
     }
-    
+
     object CellInGoodFairWhereJSP extends OperationDecision {
       def desc = "Cells in Good or Fair* Muslim where Jihad Success Possible?"
       def yesPath = MinorJihadOp
@@ -2126,6 +2134,183 @@ object JihadistBot extends BotHelpers {
     performCardEvent(card, Jihadist, triggered = true)
   }
 
+  // Perform a travel operation to the given destination
+  // traveling 1 cell from an adjacent country.
+  // We will use a "moveable" cell if possible, but will use
+  // a non-"moveable" cell if necesary.
+  //
+  // This function is used by the Enhanced Bot.
+  // Returns the number of Ops used: 1 or 0 if there are no
+  // adjacent cells.
+  def performPriorityAdjacentTravel(destination: String): Int = {
+    val sourcesWithMoveableCells = game.adjacentCountries(destination)
+      .filter(c => hasCellForTravel(c, destination))
+      .map(_.name)
+    val sourcesWithCells = game.adjacentCountries(destination)
+      .filter(_.cells > 0)
+      .map(_.name)
+
+    val sourceName = if (sourcesWithMoveableCells.nonEmpty)
+      travelFromPriorities(destination, sourcesWithMoveableCells)
+    else if (sourcesWithCells.nonEmpty)
+      travelFromPriorities(destination, sourcesWithCells)
+    else
+      None
+  
+    sourceName
+      .map { source =>
+        val attempt = TravelAttempt(source, destination, game.getCountry(source).activeCells > 0)
+        log(s"\n$Jihadist performs a Travel operation (from adjacent countries)")
+        log(separator())
+        val (_, success)::Nil = performTravels(attempt::Nil)
+        if (success)
+          usedCells(destination).addSleepers(1)
+        1 // 1 Op used
+      }
+      .getOrElse(0)
+  }
+
+
+  // For the Enhanced Bot the cardPlay() function will sometimes receive
+  // a parametere dictating how the card should be used.
+  sealed trait CardUsage
+  // Go through the normal process of Event if possible then EvO...
+  case object UseCardNormally extends CardUsage
+  // Use the card for its event
+  case object UseCardForEvent extends CardUsage
+  // Use the card for Ops
+  case object UseCardForOps extends CardUsage
+  // A special adjacent travel operation where we travel a single
+  // cell using a "non-moveable" cell if necessary.
+  case class UseCardForPriorityAdjacentTravel(destination: String) extends CardUsage
+
+  type UsageList = List[(Int, CardUsage)]
+
+  // This is used when the Enhanced Bot has two cards to play during an action
+  // phase.  This function makes some decisions on how to best play the two cards.
+  def determineCardUsage(cardNums: List[Int]): UsageList = {
+    assert(cardNums.size == 2, "determineCardUsage() requires exactly two card numbers")
+    val Fatwa = 97
+    val Musharraf = 108
+    val JayshAlMahdi = 106
+    val Martyrdom = Set(87, 88, 89, 190, 316)
+    def otherCardNum(cardNum: Int) = if (cardNums.head == cardNum) cardNums.last else cardNums.head
+    val eventsBlocked =
+      lapsingEventInPlay(TheDoorOfItjihad) ||  // Blocks all Non-US events
+      lapsingEventInPlay(FakeNews)             // Blocks next non-auto event
+
+    def eventPlayable(card: Card) = !eventsBlocked && card.eventIsPlayable(Jihadist)
+
+    // If either of of the events can be played to win the game then
+    // play that event first.
+    def gameWinner: Option[UsageList] = cardNums
+      .map(n => deck(n))
+      .find(card => eventPlayable(card) && card.eventWouldResultInVictoryFor(Jihadist))
+      .map(card => List((card.number, UseCardForEvent), (otherCardNum(card.number), UseCardNormally)))
+
+    def hasAdjacentCell(name: String) = 
+      game.adjacentCountries(name).exists(c => !c.truce && c.cells > 0)
+      
+    // If either card is #108 Musharraf and Pakistan is Good and Benazir Bhutto is not present:
+    // 1. The play Musharraf first if possible (cells present in Pakistan).
+    // 2. If there is a cell adjacent to Pakistan, then use first card to travel the cell
+    //    to Pakistan (even if not "moveable"), then play Musharraf event second
+    // 3. Play other card normally (Ops only if #97 Fatwa), then Musharraf second.
+    def musharraf: Option[UsageList] = {
+      val pakistan = game.getMuslim(Pakistan)
+      cardNums
+        .find(card => card == Musharraf && !eventsBlocked && !pakistan.truce && pakistan.isGood && !pakistan.hasMarker(BenazirBhutto))
+        .map { card =>
+          if (pakistan.cells > 0)
+            List((card, UseCardForEvent), (otherCardNum(card), UseCardNormally))
+          else if (hasAdjacentCell(Pakistan))
+            List((otherCardNum(card), UseCardForPriorityAdjacentTravel(Pakistan)), (card, UseCardForEvent))
+          else if (otherCardNum(card) == Fatwa)
+            List((otherCardNum(card), UseCardForOps), (card, UseCardNormally))
+          else
+            List((otherCardNum(card), UseCardNormally), (card, UseCardNormally))
+        }
+    }
+
+    // If either card is #106 Jaysh al-Mahdi and troops are present in a Good 2+ res* Shia-Mix country:
+    // 1. The play Jaysh al-Mahdi first if possible (candidate country has a cell).
+    // 2. If there is a cell adjacent to a canididate country, then use first card to travel the cell
+    //    to to the country (even if not "moveable"), then play Jaysh al-Mahdi event second
+    // 3. Play other card normally (Ops only if #97 Fatwa), then Jaysh al-Mahdi second.
+    def jayshAlMahdi: Option[UsageList] = {
+      val isCandidate = (m: MuslimCountry) =>
+        !m.truce && m.isGood && m.isShiaMix && m.totalTroops > 0 && enhBotResourceValue(m) > 1
+      val candidates = game.muslims.filter(isCandidate)
+      val candidatesWithCells = candidates.filter(_.totalCells > 0)
+      val candidatesWithAdjCells = candidates.filter(m => hasAdjacentCell(m.name))
+      val priorities = List(HighestPrintedResourcePriority, AdjacentToMoveableCell)
+      cardNums
+        .find(card => card == JayshAlMahdi && !eventsBlocked && candidates.nonEmpty)
+        .map { card =>
+          if (candidatesWithCells.nonEmpty)
+            List((card, UseCardForEvent), (otherCardNum(card), UseCardNormally))
+          else if (candidatesWithAdjCells.nonEmpty) {
+            val target = topPriority(candidatesWithAdjCells, priorities).map(_.name).get
+            List((otherCardNum(card), UseCardForPriorityAdjacentTravel(target)), (card, UseCardForEvent))
+          }
+          else if (otherCardNum(card) == Fatwa)
+            List((otherCardNum(card), UseCardForOps), (card, UseCardNormally))
+          else
+            List((otherCardNum(card), UseCardNormally), (card, UseCardNormally))
+        }
+    }
+
+    // If either card is a Martyrdom event:
+    // A: If two plots available: 
+    // 1. If a cell in US or a Good 2+ res* country, play the event
+    // 2. If a cell adjacent to US or Good 2+ res* country, then use first card to
+    //    travel the cell to country (even if not "moveable"), then play Martyrdom event second
+    // B: If Plot 3 or Plot WMD available
+    //    Play other card normally (Ops only if #97 Fatwa), then Martyrdom second.
+
+    def martyrdom: Option[UsageList] = {
+      val bigPlot = game.availablePlots.exists(p => p == Plot3 || p == PlotWMD)
+      val candidates = if (game.availablePlots.size > 1)
+        UnitedStates :: game.muslims.filter(m => m.isGood && enhBotResourceValue(m) > 1).map(_.name)
+      else
+        Nil
+      val candidatesWithCells = game.getCountries(candidates).filter(_.cells > 0)
+      val candidatesWithAdjCells = game.getCountries(candidates).filter(c => hasAdjacentCell(c.name))
+      val useIt = candidatesWithCells.nonEmpty || candidatesWithAdjCells.nonEmpty || bigPlot
+      val USFilter = new CriteriaFilter("United States", _.name == UnitedStates)
+
+      cardNums
+        .find(num => Martyrdom(num) && !eventsBlocked && useIt)
+        .map { card =>
+          if (candidatesWithCells.nonEmpty)
+            List((card, UseCardForEvent), (otherCardNum(card), UseCardNormally))
+          else if (candidatesWithAdjCells.nonEmpty) {
+            val priorities = List(
+              if (game.availablePlots.contains(PlotWMD)) Some(USFilter) else None,
+              if (game.availablePlots.contains(Plot3)) Some(HighestPrintedResourcePriority) else None,
+              Some(AdjacentToMoveableCell),
+              Some(USFilter)
+            ).flatten
+            val target = topPriority(candidatesWithAdjCells, priorities).map(_.name).get
+            
+            List((otherCardNum(card), UseCardForPriorityAdjacentTravel(target)), (card, UseCardForEvent))
+          }
+          else if (otherCardNum(card) == Fatwa)
+            List((otherCardNum(card), UseCardForOps), (card, UseCardNormally))
+          else
+            List((otherCardNum(card), UseCardNormally), (card, UseCardNormally))
+        }
+    }
+
+
+    gameWinner orElse
+    musharraf orElse
+    jayshAlMahdi orElse
+    martyrdom getOrElse
+    cardNums
+      .map(num => (num, UseCardNormally))
+  }
+
   sealed trait EventTriggerOption
   case object EventTriggerNone extends EventTriggerOption
   case object EventTriggerBefore extends EventTriggerOption
@@ -2133,7 +2318,7 @@ object JihadistBot extends BotHelpers {
 
   // Starting point for Jihadist bot card play.
   // The playable argument indicates if the
-  def cardPlay(card: Card, ignoreEvent: Boolean): Unit = {
+  def cardPlay(card: Card, usage: CardUsage): Unit = {
     // Carry an operation as determined by the operations flowchart
     // possibly followed by radicalization.
     def performOperation(): Unit = {
@@ -2167,8 +2352,8 @@ object JihadistBot extends BotHelpers {
     // Start of card play
     resetStaticData()
     val eventPlayable =
-      !ignoreEvent &&
       lapsingEventNotInPlay(TheDoorOfItjihad) &&  // Blocks all Non-US events
+      lapsingEventNotInPlay(FakeNews) && // Blocks next non-auto event
       card.eventIsPlayable(Jihadist)
 
     // True if a sucessful major jihad would win the game
@@ -2180,21 +2365,32 @@ object JihadistBot extends BotHelpers {
       case object PerformEvent extends CardActivity
       case object UseEvO extends CardActivity
       case object MajorJihadForWin extends CardActivity
+      case class PriorityAdjacentTravel(target: String)
 
-      // 1. If the event is playable and if playing it could result in a Jihadist victory then play it!
-      // 2. If Major Jihad
-      val activity = if (eventPlayable && card.eventWouldResultInVictoryFor(Jihadist)) {
-        botLog("Playing event because it can result in auto victory!")
-        PerformEvent
+      // Determine the proper activity to use for this card
+      val activity = usage match {
+        case UseCardForEvent|UseCardNormally if (eventPlayable && card.eventWouldResultInVictoryFor(Jihadist)) =>
+          botLog("Playing event because it can result in auto victory!")
+          PerformEvent
+
+        case UseCardForEvent =>
+          botLog("Playing event (special event instructions)")
+          PerformEvent
+
+        case UseCardForPriorityAdjacentTravel(target) =>
+          PriorityAdjacentTravel(target)
+        
+        case UseCardForOps|UseCardNormally if majorJihadPoorMuslimTargets(3).exists(wouldWinGame) =>
+          botLog("Major Jihad could potentially win the game")
+          MajorJihadForWin
+
+        case UseCardNormally if eventPlayable && card.botWillPlayEvent(Jihadist) =>
+          PerformEvent
+
+        // UseCardNormall or UseCardForOps
+        case UseCardNormally|UseCardForOps =>
+          UseEvO
       }
-      else if (majorJihadPoorMuslimTargets(3).exists(wouldWinGame)) {
-        botLog("Major Jihad could potentially win the game")
-        MajorJihadForWin
-      }
-      else if (eventPlayable && card.botWillPlayEvent(Jihadist))
-        PerformEvent
-      else
-        UseEvO
 
       if (activity == PerformEvent)
         performCardEvent(card, Jihadist)
@@ -2216,8 +2412,7 @@ object JihadistBot extends BotHelpers {
         else
           EventTriggerNone
 
-        // US Elections is the only auto trigger event.
-        // The Bot will execute the event first.
+        // The Bot will execute auto trigger events first.
         if (card.autoTrigger) {
           performCardEvent(card, Jihadist)
           log()
@@ -2232,21 +2427,31 @@ object JihadistBot extends BotHelpers {
           }
         }
 
-        if (activity == UseEvO)
-          performOperation()
-        else {
-          // It is possible that we do not have enough Ops on the current
-          // card + reserves to complete a Major Jihad to win the game.
-          val candidates = majorJihadPoorMuslimTargets(maxOpsPlusReserves(card))
-            .filter(wouldWinGame)
-          majorJihadTarget(candidates) match {
-            case None =>
-              botLog("Major Jihad would win game, but not enough Ops on current card + reserves")
-              addToReservesOperation(card)
-            case target =>
-              botLog("Performing Major Jihad to attempt winning the game")
-              majorJihadOperation(card, target)
-          }
+        activity match {
+          case UseEvO =>
+            performOperation()
+
+          case PriorityAdjacentTravel(target) =>
+            val opsUsed = performPriorityAdjacentTravel(target)
+            if (opsUsed < card.ops)
+              radicalization(card, opsUsed)
+
+          case MajorJihadForWin =>
+            // It is possible that we do not have enough Ops on the current
+            // card + reserves to complete a Major Jihad to win the game.
+            val candidates = majorJihadPoorMuslimTargets(maxOpsPlusReserves(card))
+              .filter(wouldWinGame)
+            majorJihadTarget(candidates) match {
+              case None =>
+                botLog("Major Jihad would win game, but not enough Ops on current card + reserves")
+                addToReservesOperation(card)
+              case target =>
+                botLog("Performing Major Jihad to attempt winning the game")
+                majorJihadOperation(card, target)
+            }
+
+          case PerformEvent =>
+            throw new IllegalStateException("activity should never be 'PerformEvent' here!")
         }
 
         if (eventTriggerOption == EventTriggerAfter) {
