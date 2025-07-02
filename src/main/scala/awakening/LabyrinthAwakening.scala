@@ -1706,9 +1706,15 @@ object LabyrinthAwakening {
         }
       }
 
-      val m = getMuslim(name)
-      if (m.caliphateCandidate)
-        tryNext(List(m), Nil)
+      // Nigeria can switch from Muslim to nonMuslim so we
+      // much be sure it is Muslim before calling getMuslim()
+      if (isMuslim(name)) {
+        val m = getMuslim(name)
+        if (m.caliphateCandidate)
+          tryNext(List(m), Nil)
+        else
+          Nil
+      }
       else
         Nil
     }
@@ -7507,14 +7513,14 @@ object LabyrinthAwakening {
     }
   }
 
-  def makeNigeriaNonMuslim_?(): Unit = {
-    if ((game isMuslim Nigeria) &&
-        (game getMuslim Nigeria).isAlly &&
-        (game getMuslim Nigeria).totalCells == 0) {
+  def makeNigeriaNonMuslim_?(): Unit = evaluateCaliphateChanges {
+    if (game.isMuslim(Nigeria) &&
+        game.getMuslim(Nigeria).isAlly &&
+        game.getMuslim(Nigeria).totalCells == 0) {
       log("Nigeria is an Ally with no cells, so it becomes a non-Muslim country")
       endCivilWar(Nigeria)
       endRegimeChange(Nigeria)
-      val m = game getMuslim Nigeria
+      val m = game.getMuslim(Nigeria)
       removeCadresFromCountry(Nigeria, m.cadres)
       if (m.militia > 0)
         removeMilitiaFromCountry(Nigeria, m.militia)
