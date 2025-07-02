@@ -9501,7 +9501,7 @@ object LabyrinthAwakening {
         // When the Ferguson event is in effect, the Jihadist player
         // may cancel the play of any US associated card.
         // If the JihadistBot is playing it will cancel the next one played by the US.
-        if (lapsingEventInPlay(Ferguson) &&card.association == US && cancelForFerguson) {
+        if (lapsingEventInPlay(Ferguson) && card.association == US && cancelForFerguson) {
           log(s"\nThe Jihadist chooses to use Ferguson to cancel ${card.numAndName}.", Color.Info)
           log(s"It is discarded without effect.", Color.Info)
           addCardToDiscardPile(card.number)
@@ -9520,28 +9520,29 @@ object LabyrinthAwakening {
           increaseCardsInHand(US, 1)
         }
         else {
-          // The discard process is a bit complicated because
-          // some when an event is played the card may have been removed from the game
-          // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
-          if (!game.cardsRemoved.contains(cardNumber) &&
-              !game.cardsLapsing().contains(cardNumber) &&
-              !game.isFirstPlot(cardNumber)) {
-            // If Reassessment was done, or if a seond card was used by the evnet
-            // then there is a second card to discard.
-            // Note: A second card being used by an event is NOT the same
-            // as an event allowing an additional card to be played.
-            // An additional card will come through here on its own and be
-            // discarded at that time.
-            // If we are processing an "additional" card then there will
-            // never be another card to discard.
-            val toDiscard = if (additional)
-              List(cardNumber)
-            else
-              cardsInPlay(ignoreAdditional = true)
+          // If Reassessment was done, or if a seond card was used by the evnet
+          // then there is a second card to discard.
+          // Note: A second card being used by an event is NOT the same
+          // as an event allowing an additional card to be played.
+          // An additional card will come through here on its own and be
+          // discarded at that time.
+          // If we are processing an "additional" card then there will
+          // never be another card to discard.
+          val toDiscard = if (additional)
+            List(cardNumber)
+          else
+            cardsInPlay(ignoreAdditional = true)
 
-            for (n <- toDiscard)
+          for (n <- toDiscard) {
+            // The discard process is a bit complicated because
+            // some when an event is played the card may have been removed from the game
+            // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
+            if (!game.cardsRemoved.contains(n) &&
+                !game.cardsLapsing().contains(n) &&
+                !game.isFirstPlot(n)) {
               addCardToDiscardPile(n)
-          }
+            }
+          }        
         }
 
 
@@ -10043,22 +10044,22 @@ object LabyrinthAwakening {
           increaseCardsInHand(Jihadist, 1)
         }
         else {
-          // The discard process is a bit complicated because
-          // some when an event is played the card may have been removed from the game
-          // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
-          if (!game.cardsRemoved.contains(cardNumber) &&
-              !game.cardsLapsing().contains(cardNumber) &&
-              !game.isFirstPlot(cardNumber)) {
-                // There may be a second card to discard be cause
-                // some eventa allow the use of a second card
-                // so we discard all cards in play for the current action
-                // rather than just use the `cardNumber` variable.
-                // Note: A `second` card is not the same as an `additional` card.
-                //        Curently no event playablle by the Jihadist allows
-                //        for an `additional` card to be played.
-                for (n <- cardsInPlay(ignoreAdditional = true))
-                  addCardToDiscardPile(n)
-              }
+          // some events allow the use of a second card
+          // so we discard all cards in play for the current action
+          // rather than just use the `cardNumber` variable.
+          // Note: A `second` card is not the same as an `additional` card.
+          //        Curently no event playablle by the Jihadist allows
+          //        for an `additional` card to be played.
+          for (n <- cardsInPlay(ignoreAdditional = true)) {
+            // The discard process is a bit complicated because
+            // some when an event is played the card may have been removed from the game
+            // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
+            if (!game.cardsRemoved.contains(n) &&
+                !game.cardsLapsing().contains(n) &&
+                !game.isFirstPlot(n)) {
+              addCardToDiscardPile(n)
+            }
+          }
         }
         setIgnoreDiscardAtEndOfTurn(false)  // Reset for next turn
         saveGameState()
