@@ -3483,8 +3483,9 @@ object LabyrinthAwakening {
     else if (triggerRole.nonEmpty)
       log(s"\nThe \"$eventName\" event does not trigger.", Color.Event)
     // Finally, place the card in the discard pile
-    // unless it has been removed from the game after it's event triggered
-    if (!game.cardsRemoved.contains(cardNum))
+    // unless it has been removed from the game or placed in the lapsing box
+    // after it's event triggered
+    if (!game.cardsRemoved.contains(cardNum) && !game.cardsLapsing().contains(cardNum))
       addCardToDiscardPile(cardNum)
   }
 
