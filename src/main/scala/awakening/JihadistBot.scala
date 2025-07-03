@@ -2302,11 +2302,24 @@ object JihadistBot extends BotHelpers {
         }
     }
 
+    // The Fatwa event allows the player to trade cards with the US player.
+    // To avoid the complication of having to put one of the two current cards
+    // back on the Jihadist Bot's "hand", we will always ensure that Fatwa is
+    // played second.
+    def fatwa: Option[UsageList] = {
+      cardNums
+        .find(card => card == Fatwa)
+        .map { card =>
+          List((otherCardNum(card), UseCardNormally), (card, UseCardNormally))
+        }
+    }
+
 
     gameWinner orElse
     musharraf orElse
     jayshAlMahdi orElse
-    martyrdom getOrElse
+    martyrdom orElse
+    fatwa getOrElse
     cardNums
       .map(num => (num, UseCardNormally))
   }
