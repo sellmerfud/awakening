@@ -89,20 +89,13 @@ object Card_090 extends Card(90, "Quagmire", Jihadist, 3, NoRemove, NoLapsing, N
     }
 
     if (numCards > 0)
-      if (isHuman(US))
         msgs += s"Playable $Jihadist events on the discards are triggered."
-      else
-        msgs += s"$Jihadist associated events are not triggered."
         
     for (msg <- msgs)
       log(msg, Color.Event)
 
-    if (numCards > 0) {
-      if (isHuman(US))
-        askCardsDiscarded(US, numCards, triggerRole = Some(Jihadist))
-      else
-        askCardsDiscarded(US, numCards)
-    }
+    if (numCards > 0)
+      askCardsDiscarded(US, numCards, triggerRole = Some(Jihadist))
   
     if (game.usPosture != Soft) {
       log(s"\nThe Quagmire event affects the $US posture.", Color.Event)
