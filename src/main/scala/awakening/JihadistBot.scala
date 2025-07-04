@@ -2184,7 +2184,8 @@ object JihadistBot extends BotHelpers {
   // cell using a "non-moveable" cell if necessary.
   case class UseCardForPriorityAdjacentTravel(destination: String) extends CardUsage
 
-  type UsageList = List[(Int, CardUsage)]
+  case class CardWithUsage(cardNum: Int, usage: CardUsage)
+  type UsageList = List[CardWithUsage]
 
   // This is used when the Enhanced Bot has two cards to play during an action
   // phase.  This function makes some decisions on how to best play the two cards.
@@ -2206,7 +2207,7 @@ object JihadistBot extends BotHelpers {
     def gameWinner: Option[UsageList] = cardNums
       .map(n => deck(n))
       .find(card => eventPlayable(card) && card.eventWouldResultInVictoryFor(Jihadist))
-      .map(card => List((card.number, UseCardForEvent), (otherCardNum(card.number), UseCardNormally)))
+      .map(card => List(CardWithUsage(card.number, UseCardForEvent), CardWithUsage(otherCardNum(card.number), UseCardNormally)))
 
     def hasAdjacentCell(name: String) = 
       game.adjacentCountries(name).exists(c => !c.truce && c.cells > 0)
@@ -2222,13 +2223,13 @@ object JihadistBot extends BotHelpers {
         .find(card => card == Musharraf && !eventsBlocked && !pakistan.truce && pakistan.isGood && !pakistan.hasMarker(BenazirBhutto))
         .map { card =>
           if (pakistan.cells > 0)
-            List((card, UseCardForEvent), (otherCardNum(card), UseCardNormally))
+            List(CardWithUsage(card, UseCardForEvent), CardWithUsage(otherCardNum(card), UseCardNormally))
           else if (hasAdjacentCell(Pakistan))
-            List((otherCardNum(card), UseCardForPriorityAdjacentTravel(Pakistan)), (card, UseCardForEvent))
+            List(CardWithUsage(otherCardNum(card), UseCardForPriorityAdjacentTravel(Pakistan)), CardWithUsage(card, UseCardForEvent))
           else if (otherCardNum(card) == Fatwa)
-            List((otherCardNum(card), UseCardForOps), (card, UseCardNormally))
+            List(CardWithUsage(otherCardNum(card), UseCardForOps), CardWithUsage(card, UseCardNormally))
           else
-            List((otherCardNum(card), UseCardNormally), (card, UseCardNormally))
+            List(CardWithUsage(otherCardNum(card), UseCardNormally), CardWithUsage(card, UseCardNormally))
         }
     }
 
@@ -2248,15 +2249,15 @@ object JihadistBot extends BotHelpers {
         .find(card => card == JayshAlMahdi && !eventsBlocked && candidates.nonEmpty)
         .map { card =>
           if (candidatesWithCells.nonEmpty)
-            List((card, UseCardForEvent), (otherCardNum(card), UseCardNormally))
+            List(CardWithUsage(card, UseCardForEvent), CardWithUsage(otherCardNum(card), UseCardNormally))
           else if (candidatesWithAdjCells.nonEmpty) {
             val target = topPriority(candidatesWithAdjCells, priorities).map(_.name).get
-            List((otherCardNum(card), UseCardForPriorityAdjacentTravel(target)), (card, UseCardForEvent))
+            List(CardWithUsage(otherCardNum(card), UseCardForPriorityAdjacentTravel(target)), CardWithUsage(card, UseCardForEvent))
           }
           else if (otherCardNum(card) == Fatwa)
-            List((otherCardNum(card), UseCardForOps), (card, UseCardNormally))
+            List(CardWithUsage(otherCardNum(card), UseCardForOps), CardWithUsage(card, UseCardNormally))
           else
-            List((otherCardNum(card), UseCardNormally), (card, UseCardNormally))
+            List(CardWithUsage(otherCardNum(card), UseCardNormally), CardWithUsage(card, UseCardNormally))
         }
     }
 
@@ -2283,7 +2284,7 @@ object JihadistBot extends BotHelpers {
         .find(num => Martyrdom(num) && !eventsBlocked && useIt)
         .map { card =>
           if (candidatesWithCells.nonEmpty)
-            List((card, UseCardForEvent), (otherCardNum(card), UseCardNormally))
+            List(CardWithUsage(card, UseCardForEvent), CardWithUsage(otherCardNum(card), UseCardNormally))
           else if (candidatesWithAdjCells.nonEmpty) {
             val priorities = List(
               if (game.availablePlots.contains(PlotWMD)) Some(USFilter) else None,
@@ -2293,35 +2294,21 @@ object JihadistBot extends BotHelpers {
             ).flatten
             val target = topPriority(candidatesWithAdjCells, priorities).map(_.name).get
             
-            List((otherCardNum(card), UseCardForPriorityAdjacentTravel(target)), (card, UseCardForEvent))
+            List(CardWithUsage(otherCardNum(card), UseCardForPriorityAdjacentTravel(target)), CardWithUsage(card, UseCardForEvent))
           }
           else if (otherCardNum(card) == Fatwa)
-            List((otherCardNum(card), UseCardForOps), (card, UseCardNormally))
+            List(CardWithUsage(otherCardNum(card), UseCardForOps), CardWithUsage(card, UseCardNormally))
           else
-            List((otherCardNum(card), UseCardNormally), (card, UseCardNormally))
+            List(CardWithUsage(otherCardNum(card), UseCardNormally), CardWithUsage(card, UseCardNormally))
         }
     }
-
-    // The Fatwa event allows the player to trade cards with the US player.
-    // To avoid the complication of having to put one of the two current cards
-    // back on the Jihadist Bot's "hand", we will always ensure that Fatwa is
-    // played second.
-    def fatwa: Option[UsageList] = {
-      cardNums
-        .find(card => card == Fatwa)
-        .map { card =>
-          List((otherCardNum(card), UseCardNormally), (card, UseCardNormally))
-        }
-    }
-
 
     gameWinner orElse
     musharraf orElse
     jayshAlMahdi orElse
-    martyrdom orElse
-    fatwa getOrElse
+    martyrdom getOrElse
     cardNums
-      .map(num => (num, UseCardNormally))
+      .map(num =>CardWithUsage(num, UseCardNormally))
   }
 
   sealed trait EventTriggerOption

@@ -74,7 +74,11 @@ object Card_097 extends Card(97, "Fatwa", Unassociated, 1, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     val prompt = ("\nWhat is the card# of the card that was drawn: (blank if none) ")
-    
+
+    // When played by the Enh Bot there may be a second
+    // card cached...
+    returnAnyEnhJihadistBotSecondCardToHand()
+        
     log(s"\nTake the top card of the ${game.botRole} Bot's hand.", Color.Event)
     val cannotGive = askCardDrawnFromOpponent(game.humanRole).toSet
     

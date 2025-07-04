@@ -9563,7 +9563,7 @@ object LabyrinthAwakening {
                 !game.isFirstPlot(n)) {
               addCardToDiscardPile(n)
             }
-          }        
+          }
         }
 
 
@@ -10055,91 +10055,141 @@ object LabyrinthAwakening {
     }
   }
 
+  // The Enhanced Jihadist Bot will consider two
+  // cards during its action phase is possible.
+  // This variable is used to store that second card along
+  // with its intended usage.  It is possible that the second
+  // card will have to be returned to the Jihadist hand
+  // by the the event of the first card being played.
+  private var enhJihadistBotSecondCard: Option[JihadistBot.CardWithUsage] = None
+
+  def setEnhJihadistBotSecondCard(card: JihadistBot.CardWithUsage): Unit =
+    enhJihadistBotSecondCard = Some(card)
+
+  def clearEnhJihadistBotSecondCard(): Unit =
+    enhJihadistBotSecondCard = None
+
+  def getEnhJihadistBotHasSecondCard() = enhJihadistBotSecondCard
+
+  // This function should be called by any code that is going to
+  // allow a card to be drawn from the Jihadist hand.
+  // It ensures that any cached second card is returned to the hand
+  // before a card is selected.
+  def returnAnyEnhJihadistBotSecondCardToHand(): Unit = {
+    if (isBot(Jihadist) && game.botEnhancements)
+      getEnhJihadistBotHasSecondCard() match {
+        case Some(JihadistBot.CardWithUsage(num, _)) =>
+          displayLine(s"\nShuffle ${cardNumAndName(num)} back into the Jihadist Bot's hand", Color.Info)
+          clearEnhJihadistBotSecondCard()
+        case _ =>
+      }
+  }
+  
+  // Since the Enhance Jihadist Bot prompts for two cards up front  and
+  // plays them both during an action phase, the processing of each card
+  // is encapsulated in this function.
+  def processJihadistCardUsage(cardWithUsage: JihadistBot.CardWithUsage): Unit = {
+    val savedState = game
+    val card = deck(cardWithUsage.cardNum)
+    val botUsage = cardWithUsage.usage
+
+    try {
+      decreaseCardsInHand(Jihadist, 1)
+      // Add the card to the list of plays for the turn.
+      addPlayedCard(Jihadist, card.number)
+
+      cachedEventPlayableAnswer = None
+      // If TheDoorOfItjihad lapsing card is in effect,
+      // then Jihadist cannot play any events (except autoTrigger events)
+      logCardPlay(Jihadist, card)
+
+      // When the Ferguson event is in effect, the Jihadist player
+      // may cancel the play of any US associated card.
+      // If the JihadistBot is playing it will only cancel those played by the US.
+      if (lapsingEventInPlay(Ferguson)    &&
+          card.association == US          &&
+          game.humanRole == Jihadist      &&
+          askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
+        log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
+        removeLapsingEvent(Ferguson)
+      }
+      else
+        game.humanRole match {
+          case Jihadist => humanJihadistCardPlay(card, ignoreEvent = false)
+          case _        => JihadistBot.cardPlay(card, botUsage)
+        }
+
+      // Boko Haram allows the card to be returned to hand
+      if (ignoreDiscardAtEndOfTurn()) {
+        increaseCardsInHand(Jihadist, 1)
+      }
+      else {
+        // some events allow the use of a second card
+        // so we discard all cards in play for the current action
+        // rather than just use the `cardNumber` variable.
+        // Note: A `second` card is not the same as an `additional` card.
+        //        Curently no event playablle by the Jihadist allows
+        //        for an `additional` card to be played.
+        for (n <- cardsInPlay(ignoreAdditional = true)) {
+          // The discard process is a bit complicated because
+          // some when an event is played the card may have been removed from the game
+          // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
+          if (!game.cardsRemoved.contains(n) &&
+              !game.cardsLapsing().contains(n) &&
+              !game.isFirstPlot(n)) {
+            addCardToDiscardPile(n)
+          }
+        }
+      }
+      setIgnoreDiscardAtEndOfTurn(false)  // Reset for next turn
+      saveGameState()
+
+      // Process the Enh Bot has a second card if there is one.
+      getEnhJihadistBotHasSecondCard() match {
+        case Some(secondCard) =>
+          clearEnhJihadistBotSecondCard()
+          processJihadistCardUsage(secondCard)
+        case _ =>
+      }
+    }
+    catch {
+      case AbortAction =>
+        println("\n>>>> Aborting the current card play <<<<")
+        println(separator())
+        displayGameStateDifferences(game, savedState)
+        game = savedState
+    }
+  }
+
   def jihadistCardPlay(param: Option[String]): Unit = {
+    import JihadistBot.CardWithUsage
     val enhBot2Cards =
       isBot(Jihadist) &&
       game.botEnhancements &&
       game.enhBotDifficulty == EnhBotNormal &&
       numCardsPlayedInCurrentPhase() == 0 &&
       numCardsInHand(Jihadist) > 1
-
     val cards = if (enhBot2Cards)
       enhancedJihadistBotCardDraw(param)
     else
       askCardNumber(FromRole(Jihadist)::Nil, "Jihadist Card # ", param, allowAbort = false).toList
 
-    // User can cancel the card play by entering a blank card number
+    clearEnhJihadistBotSecondCard()        
+
+      // User can cancel the card play by entering a blank card number
     if (cards.nonEmpty) {
       // usages are only used by the Bot
       // Only the enhanced Bot will have two cards here
-      val cardUsages = if (cards.size == 2)
-        JihadistBot.determineCardUsage(cards)
+      val firstCard = if (cards.size == 2) {
+        val first::second::Nil = JihadistBot.determineCardUsage(cards)
+        setEnhJihadistBotSecondCard(second)
+        first
+      }
       else
-        cards.map(num => (num, JihadistBot.UseCardNormally))
-      val savedState = game
-      try {
-        for ((cardNumber, botUsage) <- cardUsages) {
-          val card = deck(cardNumber)
+        CardWithUsage(cards.head, JihadistBot.UseCardNormally)
 
-          decreaseCardsInHand(Jihadist, 1)
-          // Add the card to the list of plays for the turn.
-          addPlayedCard(Jihadist, card.number)
-
-          cachedEventPlayableAnswer = None
-          // If TheDoorOfItjihad lapsing card is in effect,
-          // then Jihadist cannot play any events (except autoTrigger events)
-          logCardPlay(Jihadist, card)
-          // When the Ferguson event is in effect, the Jihadist player
-          // may cancel the play of any US associated card.
-          // If the JihadistBot is playing it will only cancel those played by the US.
-          if (lapsingEventInPlay(Ferguson)    &&
-              card.association == US          &&
-              game.humanRole == Jihadist      &&
-              askYorN("Do you wish to cancel the play of this US associated card? (y/n) ")) {
-            log(s"${card.numAndName} is discarded without effect due to Ferguson being in effect", Color.Event)
-            removeLapsingEvent(Ferguson)
-          }
-          else
-            game.humanRole match {
-              case Jihadist => humanJihadistCardPlay(card, ignoreEvent = false)
-              case _        => JihadistBot.cardPlay(card, botUsage)
-            }
-
-          // Boko Haram allows the card to be returned to hand
-          if (ignoreDiscardAtEndOfTurn()) {
-            increaseCardsInHand(Jihadist, 1)
-          }
-          else {
-            // some events allow the use of a second card
-            // so we discard all cards in play for the current action
-            // rather than just use the `cardNumber` variable.
-            // Note: A `second` card is not the same as an `additional` card.
-            //        Curently no event playablle by the Jihadist allows
-            //        for an `additional` card to be played.
-            for (n <- cardsInPlay(ignoreAdditional = true)) {
-              // The discard process is a bit complicated because
-              // some when an event is played the card may have been removed from the game
-              // moved to the lapsing box/1st plot box, kept in the user's hand, etc.
-              if (!game.cardsRemoved.contains(n) &&
-                  !game.cardsLapsing().contains(n) &&
-                  !game.isFirstPlot(n)) {
-                addCardToDiscardPile(n)
-              }
-            }
-          }
-          setIgnoreDiscardAtEndOfTurn(false)  // Reset for next turn
-          saveGameState()
-          if (cardUsages.size == 2 && cardNumber == cardUsages.head._1)
-            pause()
-        }
-      }
-      catch {
-        case AbortAction =>
-          println("\n>>>> Aborting the current card play <<<<")
-          println(separator())
-          displayGameStateDifferences(game, savedState)
-          game = savedState
-      }
+      // Process the first card (and possibly a second card)
+      processJihadistCardUsage(firstCard)
     }
   }
 
