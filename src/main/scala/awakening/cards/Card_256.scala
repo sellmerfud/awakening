@@ -64,7 +64,7 @@ object Card_256 extends Card(256, "White Helmets", US, 1, NoRemove, NoLapsing, N
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.prestige < 12 || game.funding > 1
+  def botWillPlayEvent(role: Role): Boolean = game.prestige < MaxPrestige || game.funding > 1
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -72,15 +72,15 @@ object Card_256 extends Card(256, "White Helmets", US, 1, NoRemove, NoLapsing, N
   override
   def executeEvent(role: Role): Unit = {
     val choices = List(
-      choice(game.prestige < 12, increasePrestige _, "+1 Prestige"),
+      choice(game.prestige < MaxPrestige, increasePrestige _, "+1 Prestige"),
       choice(game.funding > 1,   decreaseFunding _, "-1 Funding")
     ).flatten
 
-    val action = if (game.prestige == 12 && game.funding == 1)
+    val action = if (game.prestige == MaxPrestige && game.funding == 1)
       None
     else if (isHuman(role))
       askMenu("Choose one:", choices).headOption
-    else if (game.prestige < 12)
+    else if (game.prestige < MaxPrestige)
       Some(increasePrestige _)
     else
       Some(decreaseFunding _)

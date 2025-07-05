@@ -83,7 +83,7 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.usPosture == Soft && game.funding < 9 // Playable if US soft and Funding<9. Always raise Funding.
+    game.usPosture == Soft && game.funding < MaxFunding // Playable if US soft and Funding<9. Always raise Funding.
   else
     game.funding < 8 || game.cellsAvailable > 0
 
@@ -101,7 +101,7 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
         1
     val (target, action) = if (isHuman(role)) {
       val target = askCountry("Select country: ", getCandidates)
-      val action = if (game.cellsAvailable == 0 && game.funding == 9)
+      val action = if (game.cellsAvailable == 0 && game.funding == MaxFunding)
         None
       else {
         val choices = List(
@@ -138,7 +138,7 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
         addSleeperCellsToCountry(target, number(target) min game.cellsAvailable)
 
       case None =>
-        log("\nThere are no cells available to place and funding is at 9.", Color.Event)
+        log(s"\nThere are no cells available to place and funding is at $MaxFunding.", Color.Event)
     }
 
     addEventTarget(Serbia)

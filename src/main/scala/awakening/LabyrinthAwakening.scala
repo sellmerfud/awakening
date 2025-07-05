@@ -114,6 +114,14 @@ object LabyrinthAwakening {
     case _ => false
   }
 
+  object Manifest {
+    val Troops = 15
+    val Militia = 15
+    val Cells = 15
+    val ExtraCells = 5    
+    val Advisors = 3
+  }
+
   val MaxPrestige = 12
   val MaxFunding = 9
 
@@ -1655,7 +1663,7 @@ object LabyrinthAwakening {
     def resolvedPlotTargets = plotData.resolvedTargets
 
     def totalAdvisorsOnMap = muslims.map(_.numAdvisors).sum
-    def advisorsAvailable = (3 - totalAdvisorsOnMap ) max 0
+    def advisorsAvailable = (Manifest.Advisors - totalAdvisorsOnMap ) max 0
 
     // The methods assume a valid name and will throw an exception if an invalid name is used!
     def getCountry(name: String) = {
@@ -1797,8 +1805,8 @@ object LabyrinthAwakening {
     def totalTroopsOnMap   = countries.foldLeft(0) { (a, c) => a + c.totalTroops }
     def militiaOnMap  = muslims.foldLeft(0) { (a, m) => a + m.militia }
 
-    def troopsAvailable  = 15 - offMapTroops - troopsCubesOnMap
-    def militiaAvailable = 15 - militiaOnMap
+    def troopsAvailable  = Manifest.Troops - offMapTroops - troopsCubesOnMap
+    def militiaAvailable = Manifest.Militia - militiaOnMap
 
     // Extra cells are only usable when funding is at 9 or by event or civil war attrition.
     // If some of those cells are on the map and the training camp/al-Baghdadai is removed, those
@@ -1820,7 +1828,7 @@ object LabyrinthAwakening {
         0
     }
 
-    def totalCellCapacity   = 15 + extraCellCapacity
+    def totalCellCapacity   = Manifest.Cells + extraCellCapacity
     def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.cells }
     // totalCellsOnMap includes Sadr
     def totalCellsOnMap     = countries.foldLeft(0) { (a, c) => a + c.totalCells }
@@ -1839,7 +1847,7 @@ object LabyrinthAwakening {
 
     // Number of cells available for recruit operations.
     def cellsToRecruit = {
-      if (funding == 9)
+      if (funding == MaxFunding)
         cellsAvailable
       else
         fundingLevel match {
@@ -2119,7 +2127,7 @@ object LabyrinthAwakening {
         }
         summary.add(separator())
         summary.add(s"Extra cells$eventDisplay")
-        val extraOnMap = (cellsOnMap - 15) max 0
+        val extraOnMap = (cellsOnMap - Manifest.Cells) max 0
         summary.add(f"Available       : ${extraCellsAvailable}%2d   | Capacity          : ${extraCellCapacity}%2d")
         summary.add(f"On map          : ${extraOnMap}%2d   |")
       }
@@ -5946,7 +5954,7 @@ object LabyrinthAwakening {
           log(s"Posture of $name remains $newPosture", Color.MapPieces)
         else
           log(s"Change posture of $name from ${n.posture} to $newPosture", Color.MapPieces)
-        if (newPosture == game.usPosture && game.prestige < 12) {
+        if (newPosture == game.usPosture) {
           log(s"Increase US prestige by 1 (New posture matches US posture)")
           increasePrestige(1)
         }
@@ -7706,12 +7714,12 @@ object LabyrinthAwakening {
               increaseFunding(1)
             }
             else if (name == UnitedStates) {
-              game = game.copy(funding = 9)
-              log(s"Set funding to 9.  (Plot in the United States)", Color.MapMarker)
+              game = game.copy(funding = MaxFunding)
+              log(s"Set funding to $MaxFunding.  (Plot in the United States)", Color.MapMarker)
             }
             else if (mapPlot.plot == PlotWMD) {
-              game = game.copy(funding = 9)
-              log(s"Set funding to 9.  (WMD plot in a non-Muslim country)", Color.MapMarker)
+              game = game.copy(funding = MaxFunding)
+              log(s"Set funding to $MaxFunding.  (WMD plot in a non-Muslim country)", Color.MapMarker)
             }
             else if (n.isGood) {
               val delta = mapPlot.plot.number * 2
@@ -10956,7 +10964,7 @@ object LabyrinthAwakening {
   }
 
   def adjustPrestige(): Unit = {
-    adjustInt("Prestige", game.prestige, 1 to 12) foreach { value =>
+    adjustInt("Prestige", game.prestige, 1 to MaxPrestige) foreach { value =>
       logAdjustment("Prestige", game.prestige, value)
       game = game.copy(prestige = value)
       saveAdjustment("Prestige")
@@ -10971,7 +10979,7 @@ object LabyrinthAwakening {
   }
 
   def adjustFunding(): Unit = {
-    adjustInt("Funding", game.funding, 1 to 9) foreach { value =>
+    adjustInt("Funding", game.funding, 1 to MaxFunding) foreach { value =>
       logAdjustment("Funding", game.funding, value)
       game = game.copy(funding = value)
       saveAdjustment("Funding")
@@ -12220,10 +12228,10 @@ object LabyrinthAwakening {
     val m = game.getMuslim(name)
     var inPlace = m.markers.filter(_ == Advisors)
     val origNumAdvisors = inPlace.size
-    var available = List.fill(3 - numInOtherCountries - inPlace.size)(Advisors)
+    var available = List.fill(Manifest.Advisors - numInOtherCountries - inPlace.size)(Advisors)
 
     if (inPlace.isEmpty && available.isEmpty)
-      println("All 3 of the Advisors markers are in other countries")
+      println("All of the Advisors markers are in other countries")
     else {
       def getNextResponse(): Unit = {
         println()

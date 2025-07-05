@@ -65,8 +65,8 @@ object Card_208 extends Card(208, "Kinder - Gentler", Unassociated, 1, NoRemove,
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.troopCommitment == LowIntensity && (game.funding > 1 || game.prestige < 12)
-    case Jihadist => game.troopCommitment == Overstretch  && (game.funding < 9 || game.prestige > 1)
+    case US => game.troopCommitment == LowIntensity && (game.funding > 1 || game.prestige < MaxPrestige)
+    case Jihadist => game.troopCommitment == Overstretch  && (game.funding < MaxFunding || game.prestige > 1)
   }
 
   // Carry out the event for the given role.

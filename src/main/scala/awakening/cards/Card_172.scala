@@ -171,7 +171,7 @@ object Card_172 extends Card(172, "Al-Shabaab", Jihadist, 2, NoRemove, NoLapsing
   def enhBotActions: List[Action] = {
     val actions = new ListBuffer[Action]()
     var havePlot = game.availablePlots.exists(p => p == Plot1 || p == Plot2)
-    val plotInKenya = game.funding < 9 || (game.usPosture == Hard && game.getNonMuslim(KenyaTanzania).isHard)
+    val plotInKenya = game.funding < MaxFunding || (game.usPosture == Hard && game.getNonMuslim(KenyaTanzania).isHard)
 
     // First draw one or two cards if possible
     if (candidateCards.nonEmpty)

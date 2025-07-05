@@ -64,7 +64,7 @@ object Card_100 extends Card(100, "Hizb Ut-Tahrir", Unassociated, 1, NoRemove, N
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean =
-    (role == Jihadist && game.troopCommitment == Overstretch  && game.funding < 9) ||
+    (role == Jihadist && game.troopCommitment == Overstretch  && game.funding < MaxFunding) ||
     (role == US       && game.troopCommitment == LowIntensity && game.funding > 1)
 
   // Carry out the event for the given role.

@@ -87,7 +87,7 @@ object Card_110 extends Card(110, "Zarqawi", Unassociated, 2, USRemove, NoLapsin
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.prestige < 12
+    case US => game.prestige < MaxPrestige
     case Jihadist => game.cellsAvailable > 0 || game.availablePlots.contains(Plot2)
   }
 

@@ -67,9 +67,9 @@ object Card_216 extends Card(216, "Abu Sayyaf (ISIL)", Unassociated, 2, USRemove
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.prestige < 12 || game.funding > 1
-    case Jihadist if game.botEnhancements => game.funding < 8
-    case Jihadist => game.funding < 9
+    case US => game.prestige < MaxPrestige || game.funding > 1
+    case Jihadist if game.botEnhancements => game.funding < MaxFunding - 1
+    case Jihadist => game.funding < MaxFunding
   }
 
   // Carry out the event for the given role.

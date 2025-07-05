@@ -325,8 +325,8 @@ object USBot extends BotHelpers {
   def alertTable(card: Card, plots: List[PlotInCountry]): Boolean = {
     val plot = priorityPlot(plots)
     val (fundingMod, prestigeMod) = alertTableMods(plots.filterNot(_.id == plot.id))
-    val funding     = (game.funding  + fundingMod)  max 1 min 9
-    val prestige    = (game.prestige + prestigeMod) max 1 min 12
+    val funding     = (game.funding  + fundingMod)  max 1 min MaxFunding
+    val prestige    = (game.prestige + prestigeMod) max 1 min MaxPrestige
     val alertResult = if (game isMuslim plot.country.name)
       muslimTable(funding - 1)(prestige - 1)
     else

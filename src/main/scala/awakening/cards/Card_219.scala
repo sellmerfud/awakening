@@ -62,7 +62,7 @@ object Card_219 extends Card(219, "Ayman al-Zawahiri", Unassociated, 2, USRemove
   def eventConditionsMet(role: Role) = true
 
   def isEffective(role: Role) = role match {
-    case US => game.funding > 1 || game.prestige < 12
+    case US => game.funding > 1 || game.prestige < MaxPrestige
     case Jihadist => game.prestige > 1 && game.hasMuslim(_.reaction > 0)
   }
   // Returns true if the Bot associated with the given role will execute the event

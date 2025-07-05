@@ -64,11 +64,11 @@ object Card_327 extends Card(327, "Gaza Aid", Unassociated, 1, NoRemove, NoLapsi
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
-      game.prestige < 12
+      game.prestige < MaxPrestige
     case Jihadist if game.botEnhancements => 
       game.fundingLevel == Tight || !hasCardInHand(Jihadist) && game.funding == 7
     case Jihadist =>
-      game.funding < 9
+      game.funding < MaxFunding
   }
 
   // Carry out the event for the given role.

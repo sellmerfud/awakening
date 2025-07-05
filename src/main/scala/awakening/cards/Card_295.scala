@@ -65,17 +65,17 @@ object Card_295 extends Card(295, "Black Gold", Jihadist, 2, NoRemove, NoLapsing
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.funding < 8
+    game.funding < MaxFunding - 1
   else
-    game.funding < 9
+    game.funding < MaxFunding
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (game.funding == 9)
-      log("\nJihadist funding is at 9.  The event has no effect.", Color.Event)
+    if (game.funding == MaxFunding)
+      log(s"\nJihadist funding is at $MaxFunding.  The event has no effect.", Color.Event)
     else {
       val die = getDieRoll(s"Enter event die roll: ")
       log(s"\nDie roll for funding increase: $die", Color.Event)

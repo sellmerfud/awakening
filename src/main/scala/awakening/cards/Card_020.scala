@@ -65,7 +65,7 @@ object Card_020 extends Card(20, "King Abdullah", US, 2, Remove, NoLapsing, NoAu
   def botWillPlayEvent(role: Role): Boolean = {
     val jordan = game getMuslim Jordan
     !jordan.isGood &&
-    (!(jordan.isFair && jordan.isAlly) || game.prestige < 12 || game.funding > 1)
+    (!(jordan.isFair && jordan.isAlly) || game.prestige < MaxPrestige || game.funding > 1)
   }
 
   // Carry out the event for the given role.

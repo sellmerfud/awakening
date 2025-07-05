@@ -70,8 +70,8 @@ object Card_225 extends Card(225, "Jihadi John", Unassociated, 2, USRemove, NoLa
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.prestige < 12
-    case Jihadist => game.funding < 9 || getBotSchengenCandidates.nonEmpty
+    case US => game.prestige < MaxPrestige
+    case Jihadist => game.funding < MaxFunding || getBotSchengenCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.

@@ -103,7 +103,7 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
     case Jihadist if game.botEnhancements =>
       getEnhJihadistBotCandidates.nonEmpty
     case Jihadist =>
-      game.funding < 9 || getJihadistBotCandidates.nonEmpty
+      game.funding < MaxFunding || getJihadistBotCandidates.nonEmpty
   }
 
   // Carry out the event for the given role.
@@ -152,7 +152,7 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
           case Nil => getCandidates
           case cs => cs
         }
-        val name = if (game.funding == 9)
+        val name = if (game.funding == MaxFunding)
           JihadistBot.alignGovTarget(possibleCandidates).get
         else {
           val candidates = game.getMuslims(possibleCandidates).sortBy(-_.totalCells)

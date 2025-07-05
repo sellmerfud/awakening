@@ -86,7 +86,7 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
-      game.prestige < 12 || game.funding > 1
+      game.prestige < MaxPrestige || game.funding > 1
     case Jihadist if game.botEnhancements =>
       game.muslims.exists(isEnhBotCandidate)
     case Jihadist =>

@@ -71,7 +71,7 @@ object Card_112 extends Card(112, "Bin Ladin", Unassociated, 3, USRemove, NoLaps
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
-      game.funding > 1 || game.prestige < 12
+      game.funding > 1 || game.prestige < MaxPrestige
     case Jihadist if game.botEnhancements =>
       game.prestige > 2
     case Jihadist =>
@@ -83,7 +83,7 @@ object Card_112 extends Card(112, "Bin Ladin", Unassociated, 3, USRemove, NoLaps
   // and it associated with the Bot player.
   override
     def executeEvent(role: Role): Unit = role match {
-      case US if game.funding > 1 || game.prestige < 12 =>
+      case US if game.funding > 1 || game.prestige < MaxPrestige =>
         decreaseFunding(4)
         increasePrestige(1)
 

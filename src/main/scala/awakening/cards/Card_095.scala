@@ -64,9 +64,9 @@ object Card_095 extends Card(95, "Wahhabism", Jihadist, 3, NoRemove, NoLapsing, 
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.funding < 8 && !game.getMuslim(SaudiArabia).isGood
+    game.funding < MaxFunding - 1 && !game.getMuslim(SaudiArabia).isGood
   else
-    game.funding < 9
+    game.funding < MaxFunding
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -74,9 +74,11 @@ object Card_095 extends Card(95, "Wahhabism", Jihadist, 3, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit = {
     val saudi = game.getMuslim(SaudiArabia)
-    if (saudi.isIslamistRule) {
-      log("\nSet funding to 9", Color.Event)
-      game = game.copy(funding = 9)
+    if (saudi.isIslamistRule && game.funding == MaxFunding)
+      log(s"\nFunding is already at $MaxFunding", Color.Event)
+    else if (saudi.isIslamistRule) {
+      log(s"\nSet funding to $MaxFunding", Color.Event)
+      game = game.copy(funding = MaxFunding)
     }
     else
       increaseFunding(saudi.governance)

@@ -82,7 +82,7 @@ object Card_328 extends Card(328, "Hafiz Saeed Khan", Unassociated, 1, USRemove,
       shuffle(rcCandidates)
         .headOption
         .map(_.name)
-    else if (game.funding < 9)
+    else if (game.funding < MaxFunding)
       shuffle(getCandidates)
         .headOption
     else

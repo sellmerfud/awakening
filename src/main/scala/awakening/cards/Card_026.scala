@@ -67,7 +67,7 @@ object Card_026 extends Card(26, "Quartet", US, 2, NoRemove, NoLapsing, NoAutoTr
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.prestige < 12 || game.funding > 1
+  def botWillPlayEvent(role: Role): Boolean = game.prestige < MaxPrestige || game.funding > 1
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

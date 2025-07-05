@@ -72,7 +72,7 @@ object Card_291 extends Card(291, "Vehicle-ramming Attacks", Jihadist, 1, NoRemo
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.availablePlots.contains(Plot1) && (game.usPosture == Hard || game.funding < 9)
+    game.availablePlots.contains(Plot1) && (game.usPosture == Hard || game.funding < MaxFunding)
   else
     game.availablePlots.contains(Plot1)
 

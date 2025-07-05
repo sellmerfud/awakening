@@ -70,7 +70,7 @@ object Card_314 extends Card(314, "Jihadist African Safari", Jihadist, 3, Remove
   case class EventAction(name: String, item: Either[Cell.type, Plot])
 
   def getStandardBotActions: List[EventAction] = {
-    val plotsFirst = game.funding < 9
+    val plotsFirst = game.funding < MaxFunding
     val numPlotsToPlace = if (plotsFirst)
       game.availablePlots.size min 3
     else

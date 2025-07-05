@@ -62,7 +62,7 @@ object Card_141 extends Card(141, "Malala Yousafzai", US, 2, Remove, NoLapsing, 
 
   def isEffective = {
     val pakistan = game.getMuslim(Pakistan)
-    game.prestige < 12 ||
+    game.prestige < MaxPrestige ||
     game.funding > 1   ||
     (!pakistan.truce && pakistan.canTakeAwakeningOrReactionMarker)
 

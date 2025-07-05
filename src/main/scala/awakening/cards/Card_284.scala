@@ -67,7 +67,7 @@ object Card_284 extends Card(284, "Manchester Bombing", Jihadist, 1, Remove, NoL
   override
   def botWillPlayEvent(role: Role): Boolean =
     game.getNonMuslim(UnitedKingdom).posture == game.usPosture &&
-    game.funding < 9
+    game.funding < MaxFunding
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

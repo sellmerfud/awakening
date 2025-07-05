@@ -86,7 +86,7 @@ object Card_101 extends Card(101, "Kosovo", Unassociated, 1, NoRemove, NoLapsing
   override
   def executeEvent(role: Role): Unit = {
     addEventTarget(Serbia)
-     if (game.prestige == 12 && game.getNonMuslim(Serbia).isOppositeUsPosture)
+     if (game.prestige == MaxPrestige && game.getNonMuslim(Serbia).isOppositeUsPosture)
       log("\nThe event has no effect.", Color.Event)
     else {
       increasePrestige(1)

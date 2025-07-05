@@ -99,7 +99,7 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    // US Bot will play event if Presting == 12 to remove the card from the game.
+    // US Bot will play event even if Prestige == 12 to remove the card from the game.
     case US => true
     case Jihadist if game.botEnhancements => enhJihadistBotAbuBakrPlayable
     case Jihadist => game.cellsAvailable > 0

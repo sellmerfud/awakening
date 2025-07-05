@@ -71,7 +71,7 @@ object Card_237 extends Card(237, "Osama bin Ladin", Unassociated, 3, USRemove, 
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
-      game.funding > 1 || game.prestige < 12
+      game.funding > 1 || game.prestige < MaxPrestige
 
     case Jihadist if game.botEnhancements =>
       // Playable if Prestige would drop at least two steps

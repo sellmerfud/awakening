@@ -124,7 +124,7 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
         val choices = List(
           choice(canPlaceAwakening && !used(Awakening), Awakening, "Place 1 Awakening marker"),
           choice(!used(Aid),                            Aid,       "Place 1 Aid marker"),
-          choice(game.prestige < 12 && !used(Prestige), Prestige,  "+1 Prestige"),
+          choice(game.prestige < MaxPrestige && !used(Prestige), Prestige,  "+1 Prestige"),
           choice(game.funding > 1 && !used(Funding),    Funding,   "-1 Funding"),
           choice(!used(Posture),                        Posture,   "Select posture of 1 Schengen country"),
           choice(canDraw && !used(Draw),                Draw,      "Select Reaper, Operation New Dawn, or Advisors from discard pile.")
@@ -176,9 +176,9 @@ object Card_143 extends Card(143, "Obama Doctrine", US, 2, NoRemove, NoLapsing, 
     else {
       // See Event Instructions table
       var actions = List(
-        if (game.prestige < 12) Some("prestige") else None,
-        if (game.funding  >  1) Some("funding") else None,
-        if (canPlaceAwakening ) Some("awakening") else None,
+        if (game.prestige < MaxPrestige) Some("prestige") else None,
+        if (game.funding  >  1)          Some("funding") else None,
+        if (canPlaceAwakening )          Some("awakening") else None,
         Some("aid")
       ).flatten.take(numActions)
 

@@ -96,7 +96,7 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US =>
-      removeCellCandidates.nonEmpty || game.prestige < 12
+      removeCellCandidates.nonEmpty || game.prestige < MaxPrestige
     case Jihadist if game.botEnhancements =>      
       game.cellsAvailable > 1  // Playable if 2+ cells available. Priority to MJP.
     case Jihadist =>

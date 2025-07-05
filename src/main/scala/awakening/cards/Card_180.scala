@@ -63,7 +63,7 @@ object Card_180 extends Card(180, "Mosul Central Bank", Jihadist, 2, Remove, NoL
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean = game.funding < 9
+  def botWillPlayEvent(role: Role): Boolean = game.funding < MaxFunding
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn

@@ -67,9 +67,9 @@ object Card_092 extends Card(92, "Saddam", Jihadist, 3, NoRemove, NoLapsing, NoA
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.funding < 8
+    game.funding < MaxFunding - 1
   else
-    game.funding < 9
+    game.funding < MaxFunding
 
 
   // Carry out the event for the given role.
@@ -77,11 +77,11 @@ object Card_092 extends Card(92, "Saddam", Jihadist, 3, NoRemove, NoLapsing, NoA
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    if (game.funding < 9) {
-      log("\nSet funding to 9", Color.Event)
-      game = game.copy(funding = 9)
+    if (game.funding < MaxFunding) {
+      log(s"\nSet funding to $MaxFunding", Color.Event)
+      game = game.copy(funding = MaxFunding)
     }
     else
-      log("\nFunding is already at 9", Color.Event)
+      log(s"\nFunding is already at $MaxFunding", Color.Event)
   }
 }

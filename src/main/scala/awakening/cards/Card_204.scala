@@ -69,7 +69,7 @@ object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLaps
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.prestige < 12
+    case US => game.prestige < MaxPrestige
     case Jihadist => true
   }
 

@@ -98,7 +98,7 @@ object Card_319 extends Card(319, "Tehran-Beirut Land Corridor", Jihadist, 3, Re
       eventWouldResultInVictoryFor(Jihadist) ||
       (!iran.truce && ((isIranSpecialCase && game.funding < 7) || iranPoorMuslimOrIR) && !eventWouldResultInVictoryFor(US))
     else
-      (!iran.truce || game.funding < 9 && !eventWouldResultInVictoryFor(US))
+      (!iran.truce || game.funding < MaxFunding && !eventWouldResultInVictoryFor(US))
   }
 
   // Carry out the event for the given role.

@@ -67,7 +67,7 @@ object Card_281 extends Card(281, "Drone Swarms", Jihadist, 1, NoRemove, NoLapsi
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements)
-    game.funding < 9 && game.availablePlots.contains(Plot1)
+    game.funding < MaxFunding && game.availablePlots.contains(Plot1)
   else
     game.availablePlots.contains(Plot1)
 
