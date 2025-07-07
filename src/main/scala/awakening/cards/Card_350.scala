@@ -101,6 +101,7 @@ override
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
     case US => eventRemovesLastCell() || getUSBotCandidates.nonEmpty
+    case Jihadist if game.botEnhancements => false
     case Jihadist => getJihadistBotCandidates.nonEmpty
   }
 
