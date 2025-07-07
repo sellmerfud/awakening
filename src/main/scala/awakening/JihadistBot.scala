@@ -2593,8 +2593,8 @@ object JihadistBot extends BotHelpers {
   //   are two or more other auto-recruit countries.
   // - If the country contains the "Training Camps" marker
   //   will not allow the last cell to travel.
-  // - Nigeria, If Nigeria is Muslim and is an Ally then
-  //   will not allow the last cell to travel (as this would
+  // - Nigeria, If Nigeria is Muslim and is a Fair Ally with reaction - awakening < 2
+  //   then we will not allow the last cell to travel (as this would
   //   cause Nigeria to revert to Non-Muslim)
   //
   // Since we must determine all travels up front before executing
@@ -2615,9 +2615,11 @@ object JihadistBot extends BotHelpers {
     else {
       def prevTravellers(name: String) = prevAttempts.count(_.from == name)
       val unusedCellsInCountry = (unusedCells(c) - prevTravellers(c.name)) max 0
-      val isNigeriaMuslimAlly = c match {
-        case m: MuslimCountry => m.name == Nigeria && m.isAlly
-        case _ => false
+      val nigeriaCheck = c match {
+        case m: MuslimCountry =>
+          m.name == Nigeria && m.isFair && m.isAlly && m.reactionDelta < 2
+        case _ =>
+          false
       }
       val totalAutoRecruitWithCells =
           game.muslims.count(m => m.autoRecruit && m.totalCells - prevTravellers(m.name) > 0) // Including Sadr
@@ -2639,7 +2641,7 @@ object JihadistBot extends BotHelpers {
             (c.name == UnitedStates && game.plotData.availablePlots.contains(PlotWMD)) ||
             (c.autoRecruit && totalAutoRecruitWithCells < 3) ||
             c.hasMarker(TrainingCamps) ||
-            isNigeriaMuslimAlly
+            nigeriaCheck
           // The enhanced bot will not move that last three cells (arpLimit unless overridden)
           // out of the Priority Auto Recruit country.
           val numToPreserve = if (!ignoreARP && PriorityCountries.autoRecruitPrioritySet && Some(c.name) == autoRecruitPriorityCountry)
@@ -2652,6 +2654,10 @@ object JihadistBot extends BotHelpers {
         }
       }
       else {
+        val isNigeriaMuslimAlly = c match {
+          case m: MuslimCountry => m.name == Nigeria && m.isAlly
+          case _ => false
+        }
         // Standard Bot
         // Always preseve one cell if the country is:
         // - last cell in United States if there is a WMD plot available
