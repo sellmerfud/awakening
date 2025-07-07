@@ -64,6 +64,7 @@ object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemo
   // The enhanced Bot will select one of the following cards if possible
   // ranked from top to bottom:
   // #349 Turkish Coup (if #341 Gülen Movement in effect and Turkey poor)
+  // #316 Martyrdom Operation
   // #352 al-Baghdadi (if 3+ cells available)
   // #338 Abu Muhammad al-Shimali (if 3+ cells available)
   // #321 Ungoverned Spaces (if no Caliphate on board and 3+ cells available)
@@ -72,29 +73,68 @@ object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemo
   // #342 Gumurod Khalimov (if Caliphate on board and any Good countries on board)
   // #354 Election Meddling  (if World Posture same as US posture AND either: [US hard and Russia not hard] or [US soft and Russia not soft])
   // #315 Khashoggi Crisis (if Saudi Arabia Neutral or Unmarked)
-  // #316 Martyrdom Operation
   // #353 Bowling Green Massacre (if any Lapsing or Marked events in play that are not in Caliphate countries) [note: This is because Bowling Green Massacre is only playable in non-Caliphate countries]
   // #298 False Flag Attacks (if a non-WMD plot marker is available)
   def enhBotCardTarget: Option[Int] = {
     def canBeDrawn(cardNum: Int) = cardFoundIn(List(FromDiscard, FromLapsing, From1stPlot), cardNum)
+    abstract class EnhJihadCardEntry(val cardNums: Set[Int]) {
+      def this(cardNum: Int) = this(Set(cardNum))
+      def conditionsMet: Boolean
+      def willTake: Boolean = conditionsMet && deck(cardNums.head).botWillPlayEvent(Jihadist)
+    }
+  
     val candidates = List(
-      (349, globalEventInPlay(GulenMovement) && game.getMuslim(Turkey).isPoor),
-      (352, game.cellsAvailable > 2),
-      (338, game.cellsAvailable > 2),
-      (321, game.cellsAvailable > 2 && !game.caliphateDeclared),
-      (313, game.cellsAvailable > 2 && !game.caliphateDeclared && game.getMuslim(Syria).civilWar),
-      (317, game.getMuslim(GulfStates).isGood && game.muslims.exists(m => m.isShiaMix && m.civilWar)),
-      (342, game.caliphateDeclared && game.muslims.exists(_.isGood)),
-      (354, game.worldPosture == game.usPosture && game.usPosture != game.getNonMuslim(Russia).posture),
-      (315, game.getMuslim(SaudiArabia).isUntested || game.getMuslim(SaudiArabia).isNeutral),
-      (316, true),
-      (353, Card_353.bowlingGreenTargetEventInPlay),
-      (298, game.availablePlots.exists(_ != PlotWMD)))
+      new EnhJihadCardEntry(349) {  // Turkish Coup
+        override def conditionsMet = globalEventInPlay(GulenMovement) && game.getMuslim(Turkey).isPoor
+      }, 
+      new EnhJihadCardEntry(316) {  // Martyrdom Operation
+        override def conditionsMet = true
+      }, 
+      new EnhJihadCardEntry(352) {  // al-Baghdadi
+        override def conditionsMet = game.cellsAvailable > 2
+      }, 
+      new EnhJihadCardEntry(338) {  // Abu Muhammad al-Shimali
+        override def conditionsMet = game.cellsAvailable > 2
+      }, 
+      new EnhJihadCardEntry(321) {  // Ungoverned Spaces
+        override def conditionsMet = game.cellsAvailable > 2 && !game.caliphateDeclared
+      }, 
+      new EnhJihadCardEntry(313) {  // Hayat Tahir al-Sham
+        override def conditionsMet =
+          game.cellsAvailable > 2 &&
+          !game.caliphateDeclared &&
+          game.getMuslim(Syria).civilWar
+      }, 
+      new EnhJihadCardEntry(317) {  // Qatari Crisis
+        override def conditionsMet =
+          game.getMuslim(GulfStates).isGood &&
+          game.muslims.exists(m => m.isShiaMix && m.civilWar)
+      }, 
+      new EnhJihadCardEntry(342) {  // Gumurod Khalimov
+        override def conditionsMet = game.caliphateDeclared && game.muslims.exists(_.isGood)
+      }, 
+      new EnhJihadCardEntry(354) {  // Election Meddling
+        override def conditionsMet =
+          game.worldPosture == game.usPosture &&
+          game.usPosture != game.getNonMuslim(Russia).posture
+      }, 
+      new EnhJihadCardEntry(315) {  // Khashoggi Crisis
+        override def conditionsMet =
+          game.getMuslim(SaudiArabia).isUntested ||
+          game.getMuslim(SaudiArabia).isNeutral
+      }, 
+      new EnhJihadCardEntry(353) {  // Bowling Green Massacre
+        override def conditionsMet = true
+      }, 
+      new EnhJihadCardEntry(298) {  // False Flag Attacks
+        override def conditionsMet = true
+      }, 
+    )  
 
+    val available = game.cardsDiscarded.toSet ++ game.cardsLapsing().toSet ++ game.firstPlotCard().toSet
     candidates
-      .filter { case (num, playable) => canBeDrawn(num) && playable}
-      .map(_._1)
-      .headOption
+      .find(entry => available.intersect(entry.cardNums).nonEmpty && entry.willTake)
+      .map(entry => available.intersect(entry.cardNums).head)
   }
 
   // Returns true if the Bot associated with the given role will execute the event

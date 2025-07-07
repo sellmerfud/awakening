@@ -86,6 +86,7 @@ object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, 
       cardEntry(234, game.getMuslim(Syria).isGood), // Free Syrian Army (if Syria [Good])
       cardEntry(191, true), // Muslim Brotherhood
       cardEntry(176, true), // Change of State
+      cardEntry(190, true), // Martyrdom Operation
       cardEntry(215, true), // Abu Bakr al-Baghdadi
       cardEntry(187, game.hasMuslim(_.inRegimeChange) && !game.caliphateDeclared), // Foreign Fighters (if any RC on board and no Caliphate marker on board)
       cardEntry(192, game.hasMuslim(_.inRegimeChange)), // Quagmire (if any RC on board)
@@ -98,7 +99,6 @@ object Card_236 extends Card(236, "Oil Price Spike", Unassociated, 3, NoRemove, 
       cardEntry(171, true), // Abu Ghraib Jail Break
       cardEntry(170, true), // Theft of State
       cardEntry(221, true), // Flypaper
-      cardEntry(190, true), // Martyrdom Operation
       cardEntry(173, true), // Arab Winter
       cardEntry(188, true)) // ISIL
       .flatten

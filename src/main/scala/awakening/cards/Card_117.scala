@@ -82,6 +82,9 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
         game.getMuslim(Iraq).isFair ||
         game.getMuslim(Turkey).isGood
     }, 
+    new EnhJihadCardEntry(Set(87,88,89)) {  // Martyrdom Operations
+      override def conditionsMet = true
+    }, 
     new EnhJihadCardEntry(Set(104, 105)) {  // Iran
       override def conditionsMet = true
     }, 
@@ -120,9 +123,6 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       override def conditionsMet = true
     }, 
     new EnhJihadCardEntry(63) {  // Gaza War
-      override def conditionsMet = true
-    }, 
-    new EnhJihadCardEntry(Set(87,88,89)) {  // Martyrdom Operations
       override def conditionsMet = true
     }, 
     new EnhJihadCardEntry(92) {  // Saddam
