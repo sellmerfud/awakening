@@ -80,6 +80,12 @@ object Card_084 extends Card(84, "Leak", Jihadist, 3, NoRemove, NoLapsing, NoAut
       markers.head
     else if (isHuman(role))
       askSimpleMenu(s"Block which marker:", markers)
+    else if (game.botEnhancements) {
+      val markerPriorities = List(EnhancedMeasures, Wiretapping, Renditions)
+      markerPriorities
+        .find(globalEventInPlay)
+        .get
+    }
     else
       shuffle(markers).head
     log()
