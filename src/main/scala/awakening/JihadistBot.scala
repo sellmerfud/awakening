@@ -2209,13 +2209,15 @@ object JihadistBot extends BotHelpers {
       .find(card => eventPlayable(card) && card.eventWouldResultInVictoryFor(Jihadist))
       .map(card => List(CardWithUsage(card.number, UseCardForEvent), CardWithUsage(otherCardNum(card.number), UseCardNormally)))
 
-    def hasAdjacentCell(name: String) = 
+    def hasAdjacentCell(name: String) =
+      lapsingEventNotInPlay(Biometrics) &&
       game.adjacentCountries(name).exists(c => !c.truce && c.cells > 0)
       
     // If either card is #108 Musharraf and Pakistan is Good and Benazir Bhutto is not present:
     // 1. The play Musharraf first if possible (cells present in Pakistan).
     // 2. If there is a cell adjacent to Pakistan, then use first card to travel the cell
     //    to Pakistan (even if not "moveable"), then play Musharraf event second
+    //    Not if Biometrics is active
     // 3. Play other card normally (Ops only if #97 Fatwa), then Musharraf second.
     def musharraf: Option[UsageList] = {
       val pakistan = game.getMuslim(Pakistan)
@@ -2237,6 +2239,7 @@ object JihadistBot extends BotHelpers {
     // 1. The play Jaysh al-Mahdi first if possible (candidate country has a cell).
     // 2. If there is a cell adjacent to a canididate country, then use first card to travel the cell
     //    to to the country (even if not "moveable"), then play Jaysh al-Mahdi event second
+    //    Not if Biometrics is active
     // 3. Play other card normally (Ops only if #97 Fatwa), then Jaysh al-Mahdi second.
     def jayshAlMahdi: Option[UsageList] = {
       val isCandidate = (m: MuslimCountry) =>
@@ -2266,6 +2269,7 @@ object JihadistBot extends BotHelpers {
     // 1. If a cell in US or a Good 2+ res* country, play the event
     // 2. If a cell adjacent to US or Good 2+ res* country, then use first card to
     //    travel the cell to country (even if not "moveable"), then play Martyrdom event second
+    //    Not if Biometrics is active
     // B: If Plot 3 or Plot WMD available
     //    Play other card normally (Ops only if #97 Fatwa), then Martyrdom second.
 
