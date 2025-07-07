@@ -240,7 +240,15 @@ object JihadistBot extends BotHelpers {
 
       botLog("Selecting Auto Recruit Priority...", Color.Debug)
       botLog("Start with Auto-recruit Muslim countries worse than Fair")
-      val target = game.muslims.filter(m => m.autoRecruit && !m.isFair) match {
+      // Exclude IR Iran unless: prestige > 6, US hard and GWOT hard-soft > 2
+      val iranCheck = (m: MuslimCountry) =>
+        m.name != Iran ||
+        m.governance != IslamistRule ||
+        (game.prestige > 6 && game.usPosture == Hard && game.hardSoftDelta > 2)
+
+      val candidates = game.muslims
+        .filter (m => m.autoRecruit && !m.isFair && iranCheck(m))
+      val target = candidates match {
         case Nil =>
           botLog("None found")
           None
