@@ -65,9 +65,14 @@ object Card_083 extends Card(83, "Kashmir", Jihadist, 3, NoRemove, NoLapsing, No
   // on its turn.  This implements the special Bot instructions for the event.
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
-  def botWillPlayEvent(role: Role): Boolean =
-    game.cellsAvailable > 0 ||
-    !game.getMuslim(Pakistan).isAdversary
+  def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
+    // Pakistan must not be Adversary.  And if the governance is Good then
+    // then there must also be an available cell.
+    val pakistan = game.getMuslim(Pakistan)
+    !pakistan.isAdversary && (game.cellsAvailable > 0 || pakistan.isFair || pakistan.isPoor)
+  }
+  else
+    !game.getMuslim(Pakistan).isAdversary || game.cellsAvailable > 0
 
 
   // Carry out the event for the given role.
