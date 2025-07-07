@@ -124,7 +124,7 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
       JihadistBot.WithoutCellsPriority, JihadistBot.SoftPosturePriority,
       JihadistBot.HardPosturePriority, JihadistBot.UnmarkedPriority)
   def travelCell(target: String): Boolean = {
-      // The Bot will not play this event is there are any cells already in Shengen countries.
+      // The Bot will not play this event is there are any cells already in Schengen countries.
       // If the event is triggered during a US card play and there are cells in Schengen countries,
       // then we will travel those first before using AutoRecuitePrioroty and finally the travelFrom priorities.
       val source = if (getActiveRole() == Jihadist) 
