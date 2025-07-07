@@ -82,6 +82,12 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
         game.getMuslim(Iraq).isFair ||
         game.getMuslim(Turkey).isGood
     }, 
+    new EnhJihadCardEntry(108) {  // Musharraf
+      override def conditionsMet =
+        game.getMuslim(Pakistan).isGood &&
+        !game.getMuslim(Pakistan).hasMarker(BenazirBhutto) &&
+        lapsingEventNotInPlay(Biometrics)
+    }, 
     new EnhJihadCardEntry(Set(87,88,89)) {  // Martyrdom Operations
       override def conditionsMet = true
     }, 
@@ -92,18 +98,13 @@ object Card_117 extends Card(117, "Oil Price Spike", Unassociated, 3, NoRemove, 
       override def conditionsMet = game.worldPosture == game.usPosture
     }, 
     new EnhJihadCardEntry(112) {  // Bin Ladin
-      override def conditionsMet = game.prestigeLevel != Low
+      override def conditionsMet = game.prestigeLevel != Low && game.hasMuslim(_.isIslamistRule)
     }, 
     new EnhJihadCardEntry(93) {  // Taliban
-      override def conditionsMet = game.prestigeLevel != Low
+      override def conditionsMet = game.prestigeLevel != Low && game.hasMuslim(_.isIslamistRule)
     }, 
     new EnhJihadCardEntry(111) {  // Zawahiri
-      override def conditionsMet = game.prestigeLevel != Low
-    }, 
-    new EnhJihadCardEntry(108) {  // Musharraf
-      override def conditionsMet =
-        game.getMuslim(Pakistan).isGood &&
-        !game.getMuslim(Pakistan).hasMarker(BenazirBhutto)
+      override def conditionsMet = game.prestigeLevel != Low && game.hasMuslim(_.isIslamistRule)
     }, 
     new EnhJihadCardEntry(Set(84, 85)) {  // Leak
       override def conditionsMet =
