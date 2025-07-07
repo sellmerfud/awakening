@@ -69,9 +69,10 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
 
   // Good Muslim, priority to highest Resource, then with troops
   // Fair Auto-Recruit Muslim, priority to RC
-  // If [Prestige>low]: Poor Muslim with troops, priority to RC, then AID
   // Fair 3 Resource Muslim
   // Fair Pakistan
+  // Fair Central Asia
+  // If [Prestige>low]: Poor Muslim with troops, priority to RC, then AID
   // If [Funding <8]: Poor Muslim, priority to Troops, then AID, then Adversary, then Neutral.
   // Else unplayable
   def enhBotCandidates: Option[(List[Country], List[JihadistBot.CountryFilter])] = {
@@ -84,12 +85,13 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
 
     val good = game.muslims.filter(_.isGood)
     val fairAutoRecruit = game.muslims.filter(m => m.isFair && m.autoRecruit)
+    val fair3Resource = game.muslims.filter(m => m.isFair && m.printedResources == 3)
+    val fairPakistan = game.muslims.filter(m => m.isFair && m.name == Pakistan)
+    val fairCentralAsia = game.muslims.filter(m => m.isFair && m.name == CentralAsia)
     val poorWithTroops = if (game.prestigeLevel != Low)
       game.muslims.filter(m => m.isPoor && m.totalTroops > 0)
     else
       Nil
-    val fair3Resource = game.muslims.filter(m => m.isFair && m.printedResources == 3)
-    val fairPakistan = game.muslims.filter(m => m.isFair && m.name == Pakistan)
     val poor = if (game.funding < 8)
       game.muslims.filter(m => m.isPoor)
     else
@@ -98,9 +100,10 @@ object Card_096 extends Card(96, "Danish Cartoons", Unassociated, 1, Remove, NoL
 
     buf.append(good -> goodPriorities)
     buf.append(fairAutoRecruit -> fairAutoRecruitPriorities)
-    buf.append(poorWithTroops -> poorWithTroopsPriorities)
     buf.append(fair3Resource -> Nil)
     buf.append(fairPakistan -> Nil)
+    buf.append(fairCentralAsia -> Nil)
+    buf.append(poorWithTroops -> poorWithTroopsPriorities)
     buf.append(poor -> poorPriorities)
     buf.toList
       .filter(_._1.nonEmpty)
