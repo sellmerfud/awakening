@@ -103,8 +103,13 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
       removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
     }
     else {  // Jihadist
+      val enhPriorities = List(JihadistBot.HighestPrintedResourcePriority)
       val name = if (isHuman(role))
         askCountry("Select a Shia-Mix country with troops and cells: ", getCandidates)
+      else if (game.botEnhancements)
+        JihadistBot.topPriority(game.getCountries(getJihadistBotCandidates), enhPriorities)
+          .map(_.name)
+          .get
       else
         JihadistBot.alignGovTarget(getJihadistBotCandidates).get
 
