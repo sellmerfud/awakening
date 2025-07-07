@@ -923,8 +923,22 @@ object JihadistBot extends BotHelpers {
 
   def alignGovTarget(names: List[String]): Option[String] = {
     botLog("Find \"Align/Gov\" target", Color.Debug)
-    if (game.botEnhancements)
-      topPriority(game.getCountries(names), recruitAndTravelToPriorities).map(_.name)
+    if (game.botEnhancements) {
+      val rcPriorities = List(FairPriority, HighestPrintedResourcePriority)
+      val candidates = game.getCountries(names)
+      val rcCandidates = candidates
+        .filter {
+          case m: MuslimCountry => m.inRegimeChange
+          case _ => false
+        }
+
+      if (rcCandidates.nonEmpty)
+        topPriority(narrowCandidates(rcCandidates, rcPriorities), recruitAndTravelToPriorities)
+          .map(_.name)
+      else
+        topPriority(candidates, recruitAndTravelToPriorities)
+          .map(_.name)
+    }
     else
       topPriority(game.getCountries(names), markerAlignGovPriorities()).map(_.name)
   }
