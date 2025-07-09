@@ -120,6 +120,8 @@ object LabyrinthAwakening {
     val Cells = 15
     val ExtraCells = 5    
     val Advisors = 3
+    val awakening = 15
+    val reaction = 15
   }
 
   val MaxPrestige = 12
@@ -1664,6 +1666,9 @@ object LabyrinthAwakening {
 
     def totalAdvisorsOnMap = muslims.map(_.numAdvisors).sum
     def advisorsAvailable = (Manifest.Advisors - totalAdvisorsOnMap ) max 0
+
+    def totalAwakeningMarkersOnMap = muslims.map(_.awakening).sum
+    def totalReactionMarkersOnMap = muslims.map(_.awakening).sum
 
     // The methods assume a valid name and will throw an exception if an invalid name is used!
     def getCountry(name: String) = {
@@ -7301,20 +7306,37 @@ object LabyrinthAwakening {
   }
 
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
+    val numMarkers = Manifest.awakening - game.totalAwakeningMarkersOnMap
     if (num > 0) {
       game.getCountry(target) match {
         case m: MuslimCountry =>
           if (lapsingEventInPlay(ArabWinter))
             log(s"\nAwakening markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
-          else if (m.canTakeAwakeningOrReactionMarker) {
+          else if (m.canTakeAwakeningOrReactionMarker && numMarkers > 0) {
             testCountry(target)
             // Need a fresh copy after testing the country.
             val fresh = game.getMuslim(target)
-            game = game.updateCountry(fresh.copy(awakening = fresh.awakening + num))
-            log(s"Add ${amountOf(num, "awakening marker")} to $target", Color.MapPieces)
+            game = game.updateCountry(fresh.copy(awakening = fresh.awakening + numMarkers))
+            if (numMarkers < num)
+              if (numMarkers == 1)
+                log(s"There is only 1 available awakening marker", Color.Info)
+              else
+                log(s"There are only ${amountOf(numMarkers, "available awakening marker")}", Color.Info)
+            log(s"Add ${amountOf(numMarkers, "awakening marker")} to $target", Color.MapPieces)
           }
-          else
-            log(s"\n$target cannot take an awakening marker.", Color.Event)
+          else {
+            val reason = if (underTruce(target))
+              "it is under TRUCE"
+            else if (m.isGood)
+              "it has Good governance"
+            else if (m.civilWar)
+              "it is in Civil War"
+            else if (numMarkers == 0)
+              "there are no available Awakening markers"
+            else 
+              "it is under Islamist Rule"
+            log(s"\n$target cannot take an awakening marker because $reason.", Color.Event)
+          }
         case _ =>
             log(s"$target cannot take an awakening marker because it is Non-Muslim.", Color.Event)
       }
@@ -7331,17 +7353,24 @@ object LabyrinthAwakening {
   }
 
   def addReactionMarker(target: String, num: Int = 1): Unit = {
+    val numMarkers = Manifest.reaction - game.totalReactionMarkersOnMap
     if (num > 0) {
       game.getCountry(target) match {
         case m: MuslimCountry =>
           if (lapsingEventInPlay(ArabWinter))
             log(s"\nReaction markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
-          else if (m.canTakeAwakeningOrReactionMarker) {
+          else if (m.canTakeAwakeningOrReactionMarker && numMarkers > 0) {
             testCountry(target)
             // Need a fresh copy after testing the country.
             val fresh = game.getMuslim(target)
-            game = game.updateCountry(fresh.copy(reaction = fresh.reaction + num))
-            log(s"Add ${amountOf(num, "reaction marker")} to $target", Color.MapPieces)
+            game = game.updateCountry(fresh.copy(reaction = fresh.reaction + numMarkers))
+            if (numMarkers < num)
+              if (numMarkers == 1)
+                log(s"There is only 1 available reaction marker", Color.Info)
+              else
+                log(s"There are only ${amountOf(numMarkers, "available reaction marker")}", Color.Info)
+
+            log(s"Add ${amountOf(numMarkers, "reaction marker")} to $target", Color.MapPieces)
           }
           else {
             val reason = if (underTruce(target))
@@ -7350,7 +7379,9 @@ object LabyrinthAwakening {
               "it has Good governance"
             else if (m.civilWar)
               "it is in Civil War"
-            else
+            else if (numMarkers == 0)
+              "there are no available Reaction markers"
+            else 
               "it is under Islamist Rule"
             log(s"\n$target cannot take a reaction marker because $reason.", Color.Event)
           }
