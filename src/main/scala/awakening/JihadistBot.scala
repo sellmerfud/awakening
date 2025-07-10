@@ -4070,11 +4070,12 @@ object JihadistBot extends BotHelpers {
 
     case object AdjacentTravelToNonGoodMuslimWithoutTroops extends RadicalizationAction {
       def candidates = game.muslims
-        .filter(m=> !m.isGood && m.totalTroops == 0 && hasAdjacentTravelCells(m))
+        .filter(m => !m.isGood && m.totalTroops == 0 && hasAdjacentTravelCells(m))
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
-        lapsingEventInPlay(Biometrics) && candidates.nonEmpty
+        (lapsingEventInPlay(Biometrics) || lapsingEventInPlay(GTMO)) &&
+        candidates.nonEmpty
         
       // Make as many travel attempts as possible to the MJP
       //
@@ -4091,7 +4092,6 @@ object JihadistBot extends BotHelpers {
           ),
           new CriteriaFilter("Iran", _.name == Iran)
         )
-        val mjpName = majorJihadPriorityCountry.get
         var headerDisplayed = false
         def displayHeader(): Unit = if (!headerDisplayed) {
           headerDisplayed = true
@@ -4114,7 +4114,7 @@ object JihadistBot extends BotHelpers {
             addOpsTarget(destination)
             val source = optSource.get
             val activeCell = activeCells(game.getCountry(source)) > 0
-            val attempt = TravelAttempt(source, mjpName, activeCell)
+            val attempt = TravelAttempt(source, destination, activeCell)
             performTravels(attempt::Nil) match {
               case (_, true)::Nil => usedCells(destination).addSleepers(1)
               case _ =>
