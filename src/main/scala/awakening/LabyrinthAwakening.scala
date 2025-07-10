@@ -8458,7 +8458,7 @@ object LabyrinthAwakening {
       if (campaign && scenario.startingMode == LabyrinthMode) {
         log("\nNote:", Color.Info)
         log(separator(), Color.Info)
-        log("In a campign game, both Mali and Nigeria begin the game as active countries.")
+        log("In a campaign game, both Mali and Nigeria begin the game as active countries.")
         log("Place their respective country mats on the board in the lapsing boxes")
         log("as instructed in rules 11.3.3.2 and 11.3.3.3")
       }

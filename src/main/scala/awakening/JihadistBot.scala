@@ -4096,7 +4096,7 @@ object JihadistBot extends BotHelpers {
         def displayHeader(): Unit = if (!headerDisplayed) {
           headerDisplayed = true
           log()
-          log(s"Radicalization: Adjcent Travel to non-Good Muslim country when Biometrics is active")
+          log(s"Radicalization: Adjacent Travel to non-Good Muslim country when Biometrics/GTMO is active")
         }
         val maxOps = cardOps + reserveOps
         val destination = topPriority(candidates, priorities)
