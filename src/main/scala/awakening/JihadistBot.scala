@@ -4062,23 +4062,21 @@ object JihadistBot extends BotHelpers {
 
     // -----------------------------------------------------------
     // Radicalization Action -
-    // Adjacent Travel to non-Good Muslim countrie without Troops when Biometrics is active
-    // When the Biometrics event is lapsing, select a non-Good Muslim Country and travel
+    // Adjacent Travel to non-Good countries without Troops when Biometrics and/or GTMO is active
+    // When the Biometrics/GTMO event is lapsing, select a non-Good Country and travel
     // as many adjacent cells as possible to it.
     // Destination priorites: Adjacent to MJP, then Iran, then random
     // Use TravelFrom Priorites for cell sources.
 
-    case object AdjacentTravelToNonGoodMuslimWithoutTroops extends RadicalizationAction {
-      def candidates = game.muslims
-        .filter(m => !m.isGood && m.totalTroops == 0 && hasAdjacentTravelCells(m))
+    case object AdjacentTravelToNonGoodWithoutTroops extends RadicalizationAction {
+      def candidates = game.countries
+        .filter(c => !c.isGood && c.totalTroops == 0 && hasAdjacentTravelCells(c))
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
         (lapsingEventInPlay(Biometrics) || lapsingEventInPlay(GTMO)) &&
         candidates.nonEmpty
         
-      // Make as many travel attempts as possible to the MJP
-      //
       // cardsOps   - The number of unused Ops remaining from the card
       // reserveOps - The number of unused Ops remaining from reserves
       // Returns the number of ops used
@@ -4096,7 +4094,7 @@ object JihadistBot extends BotHelpers {
         def displayHeader(): Unit = if (!headerDisplayed) {
           headerDisplayed = true
           log()
-          log(s"Radicalization: Adjacent Travel to non-Good Muslim country when Biometrics/GTMO is active")
+          log(s"Radicalization: Adjacent Travel to non-Good country when Biometrics/GTMO is active")
         }
         val maxOps = cardOps + reserveOps
         val destination = topPriority(candidates, priorities)
@@ -4180,7 +4178,7 @@ object JihadistBot extends BotHelpers {
         addAction(!biometrics, EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims),
         addAction(true, EnhancedRadicalizationActions.Recruit),
         addAction(true, EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry),
-        addAction(biometrics, EnhancedRadicalizationActions.AdjacentTravelToNonGoodMuslimWithoutTroops),
+        addAction(biometrics, EnhancedRadicalizationActions.AdjacentTravelToNonGoodWithoutTroops),
         addAction(true, EnhancedRadicalizationActions.AddToReserves),
       ).flatten
     else // Standard Bot
