@@ -2730,14 +2730,16 @@ object LabyrinthAwakening {
       else {
         if (sleeperFocus) {
           val smax     = maxCells min sleeperCells
+          val smin     = (maxCells - activeCells) max 0
           val prompt   = "\nHow many sleeper cells? "
-          val sleepers = askInt(prompt, 1, smax, Some(smax))
+          val sleepers = askInt(prompt, smin, smax, Some(smax))
           (maxCells - sleepers , sleepers)
         }
         else {
           val amax    = maxCells min activeCells
+          val amin     = (maxCells - sleeperCells) max 0
           val prompt  = "\nHow many active cells? "
-          val actives = askInt(prompt, 1, amax, Some(amax))
+          val actives = askInt(prompt, amin, amax, Some(amax))
           (actives, maxCells - actives)
         }
       }
@@ -2760,23 +2762,32 @@ object LabyrinthAwakening {
         (activeCells, sleeperCells, true)  // Remove the lot
       else {
         val (a, s) = (amountOf(activeCells, "active cell"), amountOf(sleeperCells, "sleeper cell"))
-        println(s"\n$countryName has $a and $s and Sadr is present")
+        println(s"\n$countryName has $a, $s and Sadr is present")
         val sadr = askYorN("\nDo you want to select Sadr? (y/n) ")
         if (maxCells == 1 && sadr)
           (0, 0, true)
-        else if (maxCells == 1)
+        else if (maxCells == 1) // Not selecting Sadr
           askMenu("Which cell:", List((1, 0, false) -> "Active", (0, 1, false) -> "Sleeper")).head
         else {
-          if (sleeperFocus) {
-            val smax     = maxCells min sleeperCells
+          val adjustedMax = if (sadr) maxCells - 1 else maxCells
+          if (adjustedMax == activeCells + sleeperCells)
+            (activeCells, sleeperCells, sadr)
+          else if (activeCells  == 0)
+            (0, adjustedMax, sadr)
+          else if (sleeperCells == 0)
+            (adjustedMax, 0, sadr)
+          else if (sleeperFocus) {
+            val smax     = adjustedMax min sleeperCells
+            val smin     = (adjustedMax - activeCells) max 0
             val prompt   = "\nHow many sleeper cells? "
-            val sleepers = askInt(prompt, 1, smax, Some(smax))
+            val sleepers = askInt(prompt, smin, smax, Some(smax))
             (maxCells - sleepers , sleepers, sadr)
           }
           else {
-            val amax    = maxCells min activeCells
+            val amax    = adjustedMax min activeCells
+            val amin     = (adjustedMax - sleeperCells) max 0
             val prompt  = "\nHow many active cells? "
-            val actives = askInt(prompt, 1, amax, Some(amax))
+            val actives = askInt(prompt, amin, amax, Some(amax))
             (actives, maxCells - actives, sadr)
           }
         }
