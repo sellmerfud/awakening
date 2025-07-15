@@ -7306,23 +7306,24 @@ object LabyrinthAwakening {
   }
 
   def addAwakeningMarker(target: String, num: Int = 1): Unit = {
-    val numMarkers = Manifest.awakening - game.totalAwakeningMarkersOnMap
     if (num > 0) {
+      val numAvail = Manifest.awakening - game.totalAwakeningMarkersOnMap
+      val numToAdd = num min numAvail
       game.getCountry(target) match {
         case m: MuslimCountry =>
           if (lapsingEventInPlay(ArabWinter))
             log(s"\nAwakening markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
-          else if (m.canTakeAwakeningOrReactionMarker && numMarkers > 0) {
+          else if (m.canTakeAwakeningOrReactionMarker && numAvail > 0) {
             testCountry(target)
             // Need a fresh copy after testing the country.
             val fresh = game.getMuslim(target)
-            game = game.updateCountry(fresh.copy(awakening = fresh.awakening + numMarkers))
-            if (numMarkers < num)
-              if (numMarkers == 1)
+            game = game.updateCountry(fresh.copy(awakening = fresh.awakening + numToAdd))
+            if (numToAdd < num)
+              if (numToAdd == 1)
                 log(s"There is only 1 available awakening marker", Color.Info)
               else
-                log(s"There are only ${amountOf(numMarkers, "available awakening marker")}", Color.Info)
-            log(s"Add ${amountOf(numMarkers, "awakening marker")} to $target", Color.MapPieces)
+                log(s"There are only ${amountOf(numToAdd, "available awakening marker")}", Color.Info)
+            log(s"Add ${amountOf(numToAdd, "awakening marker")} to $target", Color.MapPieces)
           }
           else {
             val reason = if (underTruce(target))
@@ -7331,7 +7332,7 @@ object LabyrinthAwakening {
               "it has Good governance"
             else if (m.civilWar)
               "it is in Civil War"
-            else if (numMarkers == 0)
+            else if (numAvail == 0)
               "there are no available Awakening markers"
             else 
               "it is under Islamist Rule"
@@ -7353,24 +7354,25 @@ object LabyrinthAwakening {
   }
 
   def addReactionMarker(target: String, num: Int = 1): Unit = {
-    val numMarkers = Manifest.reaction - game.totalReactionMarkersOnMap
     if (num > 0) {
+      val numAvail = Manifest.reaction - game.totalReactionMarkersOnMap
+      val numToAdd = num min numAvail
       game.getCountry(target) match {
         case m: MuslimCountry =>
           if (lapsingEventInPlay(ArabWinter))
             log(s"\nReaction markers cannot be placed in $target because \"Arab Winter\" is in effect", Color.Event)
-          else if (m.canTakeAwakeningOrReactionMarker && numMarkers > 0) {
+          else if (m.canTakeAwakeningOrReactionMarker && numAvail > 0) {
             testCountry(target)
             // Need a fresh copy after testing the country.
             val fresh = game.getMuslim(target)
-            game = game.updateCountry(fresh.copy(reaction = fresh.reaction + numMarkers))
-            if (numMarkers < num)
-              if (numMarkers == 1)
+            game = game.updateCountry(fresh.copy(reaction = fresh.reaction + numToAdd))
+            if (numToAdd < num)
+              if (numToAdd == 1)
                 log(s"There is only 1 available reaction marker", Color.Info)
               else
-                log(s"There are only ${amountOf(numMarkers, "available reaction marker")}", Color.Info)
+                log(s"There are only ${amountOf(numToAdd, "available reaction marker")}", Color.Info)
 
-            log(s"Add ${amountOf(numMarkers, "reaction marker")} to $target", Color.MapPieces)
+            log(s"Add ${amountOf(numToAdd, "reaction marker")} to $target", Color.MapPieces)
           }
           else {
             val reason = if (underTruce(target))
@@ -7379,7 +7381,7 @@ object LabyrinthAwakening {
               "it has Good governance"
             else if (m.civilWar)
               "it is in Civil War"
-            else if (numMarkers == 0)
+            else if (numAvail == 0)
               "there are no available Reaction markers"
             else 
               "it is under Islamist Rule"
