@@ -70,8 +70,16 @@ object Card_111 extends Card(111, "Zawahiri", Unassociated, 2, USRemove, NoLapsi
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => game.funding > 1
-    case Jihadist => game.prestige > 1
+    case US =>
+      game.funding > 1
+    case Jihadist if  game.botEnhancements =>
+      // Must drop at least two steps or if no IR on board and prestige level would change
+      if (game.numIslamistRule > 0)
+        game.prestige > 2
+      else
+        game.prestige > 3 && (getPrestigeLevel(game.prestige) != getPrestigeLevel(game.prestige - 1))
+    case Jihadist =>
+      game.prestige > 1
   }
 
   // Carry out the event for the given role.
