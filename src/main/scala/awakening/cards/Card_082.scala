@@ -70,7 +70,56 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   else
     Nil
 
-  def enhBotMuslimCandidates = game.muslims.filter(isCandidate)
+  // The Enhance Bot will select targets using the following rules:
+  // - First if the US is Hard and hard - soft countries < 2 and there is not GWOT penalty,
+  //   select ONE Unmarked non-Muslim country.
+  //   Priorities: UK --> Philippines —> non-Muslim Nigeria —> Caucasus —> Russia —> Thailand —>
+  //               China —> Kenya —> France —> Spain —> Schengen —> random
+  // - Select Muslim countries: Priority MJP -> Poor adjacent to MJP -> Unmarked adjacent to MJP
+  //   Priorites: If multiple in a category, use Recruit Priorities
+  // -
+  def enhBotTargets: List[String] = JihadistBot.cachedTarget("jihadist-videos-targets") {
+    import JihadistBot.{ CriteriaFilter, SchengenPriority, topPriority, recruitAndTravelToPriorities }
+    def namedPriority(name: String) = new CriteriaFilter(name, _.name == name)
+
+    // If US hard and hard/soft delta < 2 and no GWOT penalty: then place one cell in an Unmarked non-Muslim country.
+    // priority: UK, Philippines, non-Muslim Nigeria, Caucasus, Russia, Thailand, China, Kenya, France, Spain, Schengen, random
+    // Then use Recruit priorites to select between muslim countries.
+    val UnmarkedPriorities = List(
+      namedPriority(UnitedKingdom), namedPriority(Philippines), namedPriority(Nigeria), namedPriority(Caucasus),
+      namedPriority(Russia), namedPriority(Thailand), namedPriority(China), namedPriority(KenyaTanzania),
+      namedPriority(France), namedPriority(Spain), SchengenPriority
+    )
+
+    def nextAdjToMjpTarget(candidates: List[MuslimCountry]): List[String] = {
+      topPriority(candidates, recruitAndTravelToPriorities).map(_.name) match {
+        case None =>
+          Nil
+        case Some(name) =>
+          name :: nextAdjToMjpTarget(candidates.filterNot(_.name == name))
+      }
+    }
+  
+    val nonMuslimTarget = JihadistBot.topPriority(enhBotUnmarkedNonMuslimCandidates, UnmarkedPriorities)
+        .map(_.name)
+        .toList
+    val muslimTargets = JihadistBot.PriorityCountries.majorJihadPriority match {
+      case None =>
+        Nil
+      case Some(mjpName) =>
+        val mjpTarget = if (isCandidate(game.getMuslim(mjpName)))
+          mjpName :: Nil
+        else
+          Nil
+        val adjPoorTargets = game.adjacentMuslims(mjpName)
+          .filter(m => m.isPoor && isCandidate(m))
+        val adjUnmarkedTargets = game.adjacentMuslims(mjpName)
+          .filter(m => m.isUntested && isCandidate(m))
+        mjpTarget ::: nextAdjToMjpTarget(adjPoorTargets) ::: nextAdjToMjpTarget(adjUnmarkedTargets)
+    }
+
+    (nonMuslimTarget ::: muslimTargets).take(3)
+  }
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.
@@ -78,7 +127,8 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
     // Playable if 3+ cells on track.
-    game.cellsAvailable > 2
+    JihadistBot.botLog(s"Jihadist Videos targets: $enhBotTargets")
+    game.cellsAvailable > 2 && enhBotTargets.size == 3
   }
   else
     game.cellsAvailable > 0
@@ -90,34 +140,8 @@ object Card_082 extends Card(82, "Jihadist Videos", Jihadist, 3, NoRemove, NoLap
   def executeEvent(role: Role): Unit = {
     var targets = if (isHuman(role))
       askCountries(3, getCandidates)
-    else if (game.botEnhancements) {
-      import JihadistBot.{ CriteriaFilter, SchengenPriority, topPriority, recruitAndTravelToPriorities }
-      def namedPriority(name: String) = new CriteriaFilter(name, _.name == name)
-
-      // If US hard and hard/soft delta < 2 and no GWOT penalty: then place one cell in an Unmarked non-Muslim country.
-      // priority: UK, Philippines, non-Muslim Nigeria, Caucasus, Russia, Thailand, China, Kenya, France, Spain, Schengen, random
-      // Then use Recruit priorites to select between muslim countries.
-      val UnmarkedPriorities = List(
-        namedPriority(UnitedKingdom), namedPriority(Philippines), namedPriority(Nigeria), namedPriority(Caucasus),
-        namedPriority(Russia), namedPriority(Thailand), namedPriority(China), namedPriority(KenyaTanzania),
-        namedPriority(France), namedPriority(Spain), SchengenPriority
-      )
-
-      def nextMuslimTarget(targets: Vector[String]): Vector[String] = if (targets.size < 3) {
-        val candidates = enhBotMuslimCandidates.filterNot(m => targets.contains(m.name))
-        val target = topPriority(candidates, recruitAndTravelToPriorities)
-          .map(_.name)
-          .get
-          nextMuslimTarget(targets :+ target)
-      }
-      else
-        targets
-
-      // Start with one unmarked Non-Muslim if possible
-      val unmarkedNonMuslim = JihadistBot.topPriority(enhBotUnmarkedNonMuslimCandidates, UnmarkedPriorities)
-        .map(_.name)
-      nextMuslimTarget(unmarkedNonMuslim.toVector)
-    }
+    else if (game.botEnhancements)
+      enhBotTargets
     else {
       // See Event Instructions table
       val nonIR = countryNames(game.countries.filter(m => m.totalCells == 0 && !m.isIslamistRule))
