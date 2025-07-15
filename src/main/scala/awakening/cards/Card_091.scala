@@ -68,7 +68,7 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
   override
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
     // Playable if any IR on board and 3+ cells available
-    game.hasMuslim(_.isIslamistRule) && game.cellsAvailable > 2
+    game.numIslamistRule > 0 && game.cellsAvailable > 2
   }
   else
     game.cellsAvailable > 0
@@ -99,11 +99,18 @@ object Card_091 extends Card(91, "Regional al-Qaeda", Jihadist, 3, NoRemove, NoL
           val target = askCountry(s"\nSelect ${ordinal(num)} unmarked Muslim country: ", candidates)
           (target, maxPerTarget min available)
         }
+        else if (game.botEnhancements) {
+          val target = if (candidates.exists(name => Some(name) == JihadistBot.PriorityCountries.majorJihadPriority))
+            JihadistBot.PriorityCountries.majorJihadPriority.get
+          else if (adjacentToMjp(candidates).nonEmpty)
+            JihadistBot.recruitTravelToPriority(adjacentToMjp(candidates)).get
+          else
+            JihadistBot.recruitTravelToPriority(candidates).get
+          (target, maxPerTarget min available)
+        }
         else {
-          val target = adjacentToMjp(candidates) match {
-            case Nil    => JihadistBot.recruitTravelToPriority(candidates).get
-            case adjMjp => JihadistBot.recruitTravelToPriority(adjMjp).get
-          }
+          // Standard Bot
+          val target = JihadistBot.recruitTravelToPriority(candidates).get
           (target, maxPerTarget min available)
         }
 
