@@ -3178,7 +3178,8 @@ object LabyrinthAwakening {
     log("Place the Iran country mat on the board.", Color.Info)
     addRemovedWMDToCache(Iran, 1)
 
-
+    log("\nPlace the 'Off Map Forces' mat on the boaard", Color.Info)
+    log()
     //  Place an awakening marker in Algeria/Tunisia if possible
     //  otherwise in a random muslim country
     val awakeningTarget = if (algeria.canTakeAwakeningOrReactionMarker)
