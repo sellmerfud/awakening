@@ -259,7 +259,7 @@ object LabyrinthAwakening {
   object EnhBotDifficulty {
     lazy val All = List(EnhBotEasiest, EnhBotEasier, EnhBotNormal)
 
-    def fromStringOpt(name: String): Option[EnhBotDifficulty] = All.find(_.name == name)
+    def fromStringOpt(name: String): Option[EnhBotDifficulty] = All.find(_.name.toLowerCase == name.toLowerCase())
 
     def fromString(name: String): EnhBotDifficulty =
       fromStringOpt(name).getOrElse {
