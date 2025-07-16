@@ -67,7 +67,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
     val jihadTest   = (m: MuslimCountry) =>
       !m.truce &&
       m.isShiaMix &&
-      (m.isUntested || m.isGood || m.isFair || m.aidMarkers > 0)
+      (m.isGood || m.isFair )
     countryNames(game.muslims.filter(jihadTest))
   }
 
@@ -86,25 +86,31 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
   // When the event is triggered as part of the Human players turn, this is NOT used.
   override
   def botWillPlayEvent(role: Role): Boolean = role match {
-    case US => getBotCellCandidates.nonEmpty
-    case Jihadist => getBotJihadCandidates.nonEmpty
+    case US =>
+      getBotCellCandidates.nonEmpty
+    case Jihadist if game.botEnhancements =>
+      getBotJihadCandidates.nonEmpty
+    case Jihadist => 
+      getBotJihadCandidates.nonEmpty
   }
 
-  def shixMixCandidates() =
+  def shixMixCandidates =
     countryNames(game.muslims.filter(_.isShiaMix))
 
-  def jihadBotTarget(names: List[String]): Option[String] = {
+  def jihadStandardBotTarget(names: List[String]): Option[String] = {
     import JihadistBot._
-    val highResPri = if (game.botEnhancements)
-      HighestPrintedResourcePriority
-    else
-      HighestResourcePriority
+    val priorities = List(GoodPriority, FairPriority) ::: minorJihadPriorities()
+    botLog("Find \"Iran\" target", Color.Debug)
+    topPriority(game.getMuslims(names), priorities).map(_.name)
+  }
+  
+  def jihadEnhBotTarget(names: List[String]): Option[String] = {
+    import JihadistBot._
     val priorities = List(
       new CriteriaFilter("Fair, Regime Change", muslimTest(m => m.isFair && m.inRegimeChange)),
       GoodPriority,
       FairPriority,
-      new CriteriaFilter("Untested Muslim", muslimTest(_.isUntested)),
-      highResPri,
+      HighestPrintedResourcePriority,
       WithAidPriority,
     )
     botLog("Find \"Iran\" target", Color.Debug)
@@ -118,7 +124,7 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
   def executeEvent(role: Role): Unit = role match {
     case US if isHuman(role) =>
       val iranHasCell = game.getCountry(Iran).totalCells > 0
-      val target = askCountry("Select a Shia-Mix country: ", shixMixCandidates())
+      val target = askCountry("Select a Shia-Mix country: ", shixMixCandidates)
       val targetHasCell = game.getCountry(target).totalCells > 0
       addEventTarget(target)
       testCountry(target)  // Event specifically says to test
@@ -150,14 +156,11 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
 
     case Jihadist =>
       val name = if (isHuman(role))
-        askCountry("Select a Shia-Mix country: ", shixMixCandidates())
+        askCountry("Select a Shia-Mix country: ", shixMixCandidates)
+      else if (game.botEnhancements)
+        jihadEnhBotTarget(getBotJihadCandidates).get
       else
-        getBotJihadCandidates match {
-          case Nil =>
-            jihadBotTarget(shixMixCandidates()).get
-          case candidates =>
-            jihadBotTarget(candidates).get
-        }
+        jihadStandardBotTarget(getBotJihadCandidates).get
 
       addEventTarget(name)
       testCountry(name) // Event specifically says to test
