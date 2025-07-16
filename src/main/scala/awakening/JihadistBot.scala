@@ -3616,9 +3616,11 @@ object JihadistBot extends BotHelpers {
     // -----------------------------------------------------------
     // Radicalization Action -  Adjacent Travel to US in order to attempt WMD plot.  MAX 1 cell.
     // If WMD available and there are no cells in the US and there is an unused adjacent cell.
+    // Skip of Biometrics in play
     case object TravelToUSForWMD extends RadicalizationAction {
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
+        lapsingEventNotInPlay(Biometrics) &&
         game.availablePlots.contains(PlotWMD) &&
         game.getCountry(UnitedStates).totalCells == 0 &&
         canAdjacentTravelTo(UnitedStates)
@@ -3792,6 +3794,7 @@ object JihadistBot extends BotHelpers {
     // Radicalization Action -  Adjacent Travel to Good Muslim countries with no Troops.
     // Travel as many adjacent cells as possible to one or more Good counties where a WoI
     // roll would be possible if the country were worsened to Fair.
+    // Skip if Biometrics in play
 
     // The Bot will travel adjacent cells to Good Muslim 2+ resource countries
     // without troops where a WoI roll of 1-5 would fail if the
@@ -3812,7 +3815,7 @@ object JihadistBot extends BotHelpers {
 
       override
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
-        // game.prestigeModifier - game.gwotPenalty < 0 &&
+        lapsingEventNotInPlay(Biometrics) &&
         game.muslims.filter(destCandidate).nonEmpty
 
       // Travel 1 cell to the US from an adjacent country.
@@ -4164,23 +4167,19 @@ object JihadistBot extends BotHelpers {
     val unusedOps   = card.ops - opsUsed
     val maxReserves = (3 - card.ops) min game.reserves.jihadist
     val maxRadOps   = unusedOps + maxReserves
-    val biometrics = lapsingEventInPlay(Biometrics)
-
-    def addAction(test: Boolean, action: RadicalizationAction): Option[RadicalizationAction] =
-      if (test) Some(action) else None
 
     val actionsToConsider = if (game.botEnhancements)
       List(
-        addAction(true, EnhancedRadicalizationActions.PlotWMDInUS),
-        addAction(!biometrics, EnhancedRadicalizationActions.TravelToUSForWMD),
-        addAction(true, EnhancedRadicalizationActions.PlotToIncreaseFunding),
-        addAction(true, EnhancedRadicalizationActions.PerformMinorJihadIfPossible),
-        addAction(!biometrics, EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims),
-        addAction(true, EnhancedRadicalizationActions.Recruit),
-        addAction(true, EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry),
-        addAction(biometrics, EnhancedRadicalizationActions.AdjacentTravelToNonGoodWithoutTroops),
-        addAction(true, EnhancedRadicalizationActions.AddToReserves),
-      ).flatten
+        EnhancedRadicalizationActions.PlotWMDInUS,
+        EnhancedRadicalizationActions.TravelToUSForWMD,
+        EnhancedRadicalizationActions.PlotToIncreaseFunding,
+        EnhancedRadicalizationActions.PerformMinorJihadIfPossible,
+        EnhancedRadicalizationActions.AdjacentTravelToGoodMuslims,
+        EnhancedRadicalizationActions.Recruit,
+        EnhancedRadicalizationActions.TravelToMajorJihadPriorityCountry,
+        EnhancedRadicalizationActions.AdjacentTravelToNonGoodWithoutTroops,
+        EnhancedRadicalizationActions.AddToReserves,
+      )
     else // Standard Bot
       List(
       StandardRadicalizationActions.PlotWMDInUS,
