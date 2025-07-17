@@ -41,7 +41,7 @@ package awakening
 import java.io.{ IOException, BufferedReader, InputStreamReader }
 import scala.util.Random.{shuffle, nextInt}
 import scala.annotation.tailrec
-import scala.util.Properties.{lineSeparator, isWin}
+import scala.util.Properties.lineSeparator
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 import scala.io.StdIn.readLine
@@ -1631,7 +1631,7 @@ object LabyrinthAwakening {
     manualDieRolls: Boolean              = false,  // Overrides humanAutoRoll
     history: Vector[GameSegment]         = Vector.empty,
     description: String                  = "",
-    showColor: Boolean                   = !scala.util.Properties.isWin, // Default true except on Windows
+    showColor: Boolean                   = true,
     log: Vector[LogEntry]                = Vector.empty, // Log of the current game segment
     saveName: String                     = "") {         // The name is not saved to disk it is set when the game is loaded
 
@@ -2400,7 +2400,7 @@ object LabyrinthAwakening {
     US,
     true,
     Muddled :: Nil,
-    !scala.util.Properties.isWin,
+    true,
     false,
     EnhBotNormal
   )
@@ -8452,7 +8452,7 @@ object LabyrinthAwakening {
         .getOrElse(throw CancelNewGame)
 
       val showColor = params.showColor
-        .getOrElse(!scala.util.Properties.isWin)
+        .getOrElse(true)
 
       game = initialGameState(
         saveName,
