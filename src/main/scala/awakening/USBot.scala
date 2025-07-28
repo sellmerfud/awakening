@@ -62,8 +62,8 @@ object USBot extends BotHelpers {
       val c = game getCountry name
       val sadr     = c.hasSadr
       val numCells = num - (if (sadr) 1 else 0)
-      val sleepers = numCells min c.sleeperCells
-      val actives  = (numCells - sleepers) min c.activeCells
+      val sleepers = numCells min c.pieces.sleeperCells
+      val actives  = (numCells - sleepers) min c.pieces.activeCells
       (actives, sleepers, sadr)
     }
   }
@@ -75,17 +75,17 @@ object USBot extends BotHelpers {
       (0, 0)
     else {
       val c = game getCountry name
-      val actives    = num min c.activeCells
-      val sleepers  = (num - actives) min c.sleeperCells
+      val actives    = num min c.pieces.activeCells
+      val sleepers  = (num - actives) min c.pieces.sleeperCells
       (actives, sleepers)
     }
   }
   
   def chooseTroopOrMilitiaToRemove(name: String): TroopOrMilitia = {
     val c = game.getCountry(name)
-    if (game.isMuslim(name) && game.getMuslim(name).militia > 0)
+    if (game.isMuslim(name) && game.getMuslim(name).pieces.militia > 0)
      MilitiaCube
-    else if (c.troops > 0)
+    else if (c.pieces.usTroops > 0)
       TroopCube
     else if (c.troopsMarkers.nonEmpty)
       TroopMarker(c.troopsMarkers.sorted.head.name)
@@ -107,7 +107,7 @@ object USBot extends BotHelpers {
       game.deployTargets(ops)  // Normal deploy targets only
   }
   
-  val onlyOneActiveCell = (c: Country) => c.activeCells == 1 && c.sleeperCells == 0
+  val onlyOneActiveCell = (c: Country) => c.pieces.activeCells == 1 && c.pieces.sleeperCells == 0
   val numPlotDice = (m: MuslimCountry) => m.plots.map { case PlotOnMap(plot, _) => plot.number }.sum
 
   // This class is used when determining the priority plot to alert.
@@ -878,10 +878,10 @@ object USBot extends BotHelpers {
     new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
     new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 
-             (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
+             (m.totalCells == 0 || m.pieces.militia > 0 || m.markerTroops > 0))),
     new CriteriaFilter("Fair Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isFair && m.isAlly && 
-             (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0)))
+             (m.totalCells == 0 || m.pieces.militia > 0 || m.markerTroops > 0)))
   )
   
   def deployFromTarget(names: List[String]): Option[String] = {
@@ -891,7 +891,7 @@ object USBot extends BotHelpers {
     val track = names.find(_ == "track" && game.troopsAvailable > 1)
     // The bot will not deploy markers so get rid of any countries without troops cubes
     val countryNames = names
-      .filter(name => name != "track" && game.getCountry(name).troops > 0)
+      .filter(name => name != "track" && game.getCountry(name).pieces.usTroops > 0)
     val target = selectCandidates(game getCountries countryNames, DeployFromFlowchart) match {
       case Nil        => track
       case candidates => topPriority(candidates, DeployFromPriorities).map(_.name)
@@ -917,10 +917,10 @@ object USBot extends BotHelpers {
     new CriteriaFilter("Islamist Rule", muslimTest(_.isIslamistRule)),
     new CriteriaFilter("Good Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isGood && m.isAlly && 
-             (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
+             (m.totalCells == 0 || m.pieces.militia > 0 || m.markerTroops > 0))),
     new CriteriaFilter("Fair Ally without cells OR with troop markers/militia",
         muslimTest(m => m.isFair && m.isAlly && 
-             (m.totalCells == 0 || m.militia > 0 || m.markerTroops > 0))),
+             (m.totalCells == 0 || m.pieces.militia > 0 || m.markerTroops > 0))),
     new CriteriaFilter("Good", _.isGood),         
     new CriteriaFilter("Fair", _.isFair),         
     new CriteriaFilter("Poor", _.isPoor)
@@ -1062,7 +1062,7 @@ object USBot extends BotHelpers {
   
   def unCeasefireTarget(names: List[String]): Option[String] = {
     val priorities = List(
-      new HighestScorePriority("Most militia - cells", muslimScore(m => m.militia - m.totalCells)),
+      new HighestScorePriority("Most militia - cells", muslimScore(m => m.pieces.militia - m.totalCells)),
       new CriteriaFilter("Adversary", muslimTest(m => m.isAdversary)),
       new CriteriaFilter("Neutral", muslimTest(m => m.isNeutral)))
       
@@ -1129,7 +1129,7 @@ object USBot extends BotHelpers {
         case Some(Left(numCells)) =>
           //  If we would disrupt the last cells on the map and they are
           //  not sleeper cells, then we would remove last cell from the map
-          numCells == game.totalCellsOnMap && game.getCountry(name).sleeperCells == 0
+          numCells == game.totalCellsOnMap && game.getCountry(name).pieces.sleeperCells == 0
         
         case _ => false  // Would only disrupt a cadre
       }
@@ -1345,7 +1345,7 @@ object USBot extends BotHelpers {
     
     val numTroops = from match {
       case "track"          => 2 min game.troopsAvailable  // Always deploy exactly 2 troops from track
-      case name if withdraw => (game getCountry name).troops  // Withdraw all troop
+      case name if withdraw => (game getCountry name).pieces.usTroops  // Withdraw all troop
       case name             => (game getCountry name).maxDeployFrom
     }
     
@@ -1433,7 +1433,7 @@ object USBot extends BotHelpers {
   // The DisruptMuslimToRemoveCadre, WoiNonMuslimOpposite, WoiNonMuslimUntested actions cannot use reserves.
   def getHomelandSecurityAction(cardOps: Int, maxOps: Int): Option[HomelandSecurityAction] = {
     val canDisruptUS =
-      (game getNonMuslim UnitedStates).cells > 0 ||
+      (game getNonMuslim UnitedStates).pieces.totalCells > 0 ||
       (game getNonMuslim UnitedStates).hasCadre
     val canWoiSoftNonMuslim =
       game.usPosture == Hard &&

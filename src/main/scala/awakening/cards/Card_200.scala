@@ -144,7 +144,7 @@ object Card_200 extends Card(200, "Critical Middle", Unassociated, 1, NoRemove, 
           askMenu("Choose one:", choices).headOption
         val from = action match {
           case Some(Cells) =>
-            val sources = countryNames(game.countries.filter(c => c.name != target && c.cells > 0))
+            val sources = countryNames(game.countries.filter(c => c.name != target && c.pieces.totalCells > 0))
             askCellsFromAnywhere(2, trackOK = true, sources, sleeperFocus = false)
           case _ => Nil
         }

@@ -81,7 +81,7 @@ object Card_337 extends Card(337, "US Border Crisis", Unassociated, 1, NoRemove,
   def executeEvent(role: Role): Unit = if (role == US) {
     setTrumpTweetsOFF()
 
-    val withTroops = countryNames(game.countries.filter(c => !c.truce && c.troops > 0))
+    val withTroops = countryNames(game.countries.filter(c => !c.truce && c.pieces.usTroops > 0))
     val source = if (game.troopsAvailable > 0)
       "track"
     else if (isHuman(role))

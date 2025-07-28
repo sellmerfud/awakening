@@ -60,7 +60,7 @@ object Card_285 extends Card(285, "Mohamed Morsi Supporters", Jihadist, 1, Remov
   def getCandidates = countryNames(
     game.muslims.filter { m =>
       !m.truce &&
-      (m.name == Egypt || m.militia > 0) &&
+      (m.name == Egypt || m.pieces.militia > 0) &&
       m.canTakeAwakeningOrReactionMarker
     }
   )

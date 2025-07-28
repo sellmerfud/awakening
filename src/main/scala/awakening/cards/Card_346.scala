@@ -67,7 +67,7 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
   // least 1 Militia present and a cell is available.
   // Priority to highest res*.
   val isEnhJihadCandidate = (m: MuslimCountry) =>
-    !m.truce && m.civilWar && m.militia > 0
+    !m.truce && m.civilWar && m.pieces.militia > 0
 
   def possibleCountries =
     game.getMuslim(Pakistan) :: game.adjacentCountries(Pakistan)
@@ -161,7 +161,7 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
     }
     else {
         addSleeperCellsToCountry(target, 1)
-        if (game.isMuslim(target) && game.getMuslim(target).militia > 0)
+        if (game.isMuslim(target) && game.getMuslim(target).pieces.militia > 0)
           removeMilitiaFromCountry(target, 1)
     }
   }

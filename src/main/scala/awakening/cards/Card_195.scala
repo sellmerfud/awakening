@@ -68,7 +68,7 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
   def enhBotCandidates = game.muslims
     .filter { m =>
       isCandidate(m) &&
-      m.isFair || (m.isPoor && m.cells >= 5 && game.funding < 8)
+      m.isFair || (m.isPoor && m.pieces.totalCells >= 5 && game.funding < 8)
     }
 
   // Returns true if the printed conditions of the event are satisfied
@@ -114,7 +114,7 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
       val plots = askPlots(game.availablePlots.filterNot(_ == PlotWMD), 2)
       val m = game.getMuslim(name)
       if (m.totalCells == 3)
-        (name, plots, (m.activeCells, m.sleeperCells, m.hasSadr))
+        (name, plots, (m.pieces.activeCells, m.pieces.sleeperCells, m.hasSadr))
       else {
         println("\nChoose cells to remove:")
         (name, plots, askCells(name, 3, sleeperFocus = false))

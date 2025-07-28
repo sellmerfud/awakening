@@ -79,7 +79,7 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
     }
 
   def militiaInGulfUnion =
-    GulfUnionCountries.exists(name => !game.getMuslim(name).truce && game.getMuslim(name).militia > 0)
+    GulfUnionCountries.exists(name => !game.getMuslim(name).truce && game.getMuslim(name).pieces.militia > 0)
 
   def getBotPlaceCandidates = getPlaceCandidates
     .filter { name =>
@@ -130,12 +130,12 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
 
         case Reposition => // Reposition militia with the Gulf Union countries
           val totalMilitia = GulfUnionCountries.foldLeft(0) { (sum, name) =>
-            sum + game.getMuslim(name).militia
+            sum + game.getMuslim(name).pieces.militia
           }
 
           println("\nThe Gulf Union countries that can take militia are:")
           println(separator())
-          for (name <- getReposCandidates; num = game.getMuslim(name).militia)
+          for (name <- getReposCandidates; num = game.getMuslim(name).pieces.militia)
             println(s"$name: $num militia")
           println()
           println(s"There are a total of $totalMilitia militia in these countries.")
@@ -144,7 +144,7 @@ object Card_156 extends Card(156, "Gulf Union", US, 3, NoRemove, NoLapsing, NoAu
           println("Specify the number of militia that you would like in each country:")
 
           case class GulfUnion(name: String, newMilitia: Int) {
-            val delta = newMilitia - game.getMuslim(name).militia
+            val delta = newMilitia - game.getMuslim(name).pieces.militia
           }
 
           def nextCountry(members: List[String], remaining: Int): List[GulfUnion] = {

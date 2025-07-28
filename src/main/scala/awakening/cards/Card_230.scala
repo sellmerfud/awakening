@@ -77,8 +77,8 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
   val isEnhJihadistBotCandidate = (m: MuslimCountry) =>
     isCandidate(m) &&
     !m.isAdversary &&
-    m.cells >= 2 &&
-    m.cells <= 4
+    m.pieces.totalCells >= 2 &&
+    m.pieces.totalCells <= 4
 
   def getEnhJihadistBotCandidates = game.muslims.filter(isEnhJihadistBotCandidate)
 

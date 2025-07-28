@@ -56,43 +56,41 @@ object Surge extends Scenario {
     DefaultSyria.copy(
       isSunni = false,
       wmdCache = 2,
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultIraq.copy(
       governance = Poor, 
       alignment = Ally,
-      troops = 5,
-      sleeperCells = 3,
+      pieces = Pieces(usTroops = 5, sleeperCells = 3),
       regimeChange = TanRegimeChange),
     DefaultIran.copy(
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultSaudiArabia.copy(
       governance = Poor,
       alignment = Ally,
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultGulfStates.copy(
       governance = Fair,
       alignment = Ally,
-      troops = 2),
+      pieces = Pieces(usTroops = 2)),
     DefaultPakistan.copy(
       governance = Fair,
       alignment = Ally,
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultAfghanistan.copy(
       governance = Poor,
       alignment = Ally,
-      troops = 3,
-      sleeperCells = 2,
+      pieces = Pieces(usTroops = 3, sleeperCells = 2),
       aidMarkers = 1,
       regimeChange = TanRegimeChange),
     DefaultSomalia.copy(
       governance = Poor,
       alignment = Neutral,
-      sleeperCells = 1,
+      pieces = Pieces(sleeperCells = 1),
       besiegedRegime = true),
     DefaultIndonesiaMalaysia.copy(
       governance = Fair,
       alignment = Neutral,
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultUnitedKingdom.copy(
       postureValue = Hard),
     DefaultScandinavia.copy(

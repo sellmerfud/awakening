@@ -92,7 +92,7 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
         // during the US turn.  Fall back to normal Bot code.
         val targetName = enhBotTarget.get
         val c = game.getCountry(targetName)
-        val cell = if (c.activeCells > 0) (1, 0, false)
+        val cell = if (c.pieces.activeCells > 0) (1, 0, false)
                    else                   (0, 1, false)
         (targetName, cell, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))
                     
@@ -102,7 +102,7 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
         // See Event Instructions table
         val targetName = JihadistBot.plotPriority(candidates).get
         val c = game.getCountry(targetName)
-        val cell = if (c.activeCells > 0) (1, 0, false)
+        val cell = if (c.pieces.activeCells > 0) (1, 0, false)
                    else if (c.hasSadr)    (0, 0, true)
                    else                   (0, 1, false)
         (targetName, cell, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))

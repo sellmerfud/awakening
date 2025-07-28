@@ -84,7 +84,7 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
 
   def removeTwoMilitiaCandidates =
     muslimCandidates
-      .filter(name => game.getMuslim(name).militia > 1)
+      .filter(name => game.getMuslim(name).pieces.militia > 1)
 
   def removeHardPostureCandidates = if (game.usPosture == Hard)
     nonMuslimCandidates
@@ -173,7 +173,7 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
             choice(canAwake,                AddReaction, "Place reaction marker"),
             choice(m.reaction > 0,          DelReaction, "Remove reaction marker"),
             choice(canMilitia,              AddMilitia, "Place 2 militia"),
-            choice(m.militia > 0,           DelMilitia, "Remove 2 militia"),
+            choice(m.pieces.militia > 0,           DelMilitia, "Remove 2 militia"),
             choice(game.cellsAvailable > 0, AddCells, "Place 2 cells"),
             choice(m.totalCells > 0,        DelCells, "Remove 2 cells")
           ).flatten
@@ -204,7 +204,7 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
           case AddReaction => addReactionMarker(name)
           case DelReaction => removeReactionMarker(name)
           case AddMilitia => addMilitiaToCountry(name, 2 min game.militiaAvailable)
-          case DelMilitia => removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
+          case DelMilitia => removeMilitiaFromCountry(name, 2 min game.getMuslim(name).pieces.militia)
           case AddCells => addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
           case DelCells =>
             val (actives, sleepers, sadr) = askCells(name, 2, role == US)

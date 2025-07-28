@@ -64,7 +64,7 @@ object Card_241 extends Card(241, "Abdel Fattah el-Sisi", US, 1, Remove, NoLapsi
   def getCandidates = countryNames(game.muslims.filter { m =>
     !m.truce &&
     m.canTakeAwakeningOrReactionMarker &&
-    (m.name == Egypt || m.militia > 0)
+    (m.name == Egypt || m.pieces.militia > 0)
   })
 
   def arabWinter = lapsingEventInPlay(ArabWinter)

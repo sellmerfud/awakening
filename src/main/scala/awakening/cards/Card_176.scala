@@ -106,7 +106,7 @@ object Card_176 extends Card(176, "Change of State", Jihadist, 2, NoRemove, NoLa
         JihadistBot.enhBotResourceValue(m) >= 2 &&
         isCandidate(m) &&
         nonAdversaryOrTC(m) &&
-        (delta > 1 || (delta >= 0 && m.cells < 3))
+        (delta > 1 || (delta >= 0 && m.pieces.totalCells < 3))
       }
     val poorCandidates = game.muslims
       .filter { m =>

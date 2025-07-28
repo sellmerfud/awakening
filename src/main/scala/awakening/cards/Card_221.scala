@@ -107,7 +107,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
   // for example to establish a caliphate.
   def getJihadistCellSources(target: String) = {
     val countries = if (game.botEnhancements)
-      game.countries.filter(c => !c.truce && c.cells > 0)
+      game.countries.filter(c => !c.truce && c.pieces.totalCells > 0)
     else
       game.countries.filter(c => !c.truce && JihadistBot.hasCellForTravel(c, target, placement = true))
     countryNames(countries)
@@ -115,7 +115,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
 
   // Used if bot can Win the game
   def countriesWithCells = game.countries
-    .filter(c => !c.truce && c.cells > 0)
+    .filter(c => !c.truce && c.pieces.totalCells > 0)
 
   def countriesWithReaction = game.muslims
     .filter(m => !m.truce && m.reaction > 0)
@@ -172,7 +172,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
         false
       else {
         val numMoveableCells = countriesWithMoveableCells(enhBotTarget).size
-        val inplace = if (game.getCountry(enhBotTarget).cells > 0)  // Not sadr
+        val inplace = if (game.getCountry(enhBotTarget).pieces.totalCells > 0)  // Not sadr
           1
         else
           0
@@ -299,7 +299,7 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       }
 
       // Remove a cell from the target first if possible (not Sadr)
-      val inplace = if (game.getCountry(enhBotTarget).cells > 0) {
+      val inplace = if (game.getCountry(enhBotTarget).pieces.totalCells > 0) {
         botRemoveCell(enhBotTarget)
         1
       }

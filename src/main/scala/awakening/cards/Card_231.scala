@@ -56,7 +56,7 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
 
   def getCellsCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar && m.totalCells > 0))
 
-  def getMilitiaCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar && m.militia > 0))
+  def getMilitiaCandidates = countryNames(game.muslims.filter(m => !m.truce && m.civilWar && m.pieces.militia > 0))
 
   // Used by the US Bot to determine if the executing the event would remove
   // the last cell on the map resulting in victory.
@@ -122,7 +122,7 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
           case candidates =>
             val name = askCountry("Select country: ", candidates)
             addEventTarget(name)
-            removeMilitiaFromCountry(name, 2 min (game getMuslim name).militia)
+            removeMilitiaFromCountry(name, 2 min (game getMuslim name).pieces.militia)
         }
 
       case Militia if game.botEnhancements =>
@@ -137,12 +137,12 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
           .map(_.name)
           .get
         addEventTarget(name)
-        removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
+        removeMilitiaFromCountry(name, 2 min game.getMuslim(name).pieces.militia)
 
       case Militia =>
         val name = JihadistBot.minorJihadTarget(getMilitiaCandidates).get
         addEventTarget(name)
-        removeMilitiaFromCountry(name, 2 min game.getMuslim(name).militia)
+        removeMilitiaFromCountry(name, 2 min game.getMuslim(name).pieces.militia)
     }
   }
 }

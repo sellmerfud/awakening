@@ -73,7 +73,7 @@ object Card_332 extends Card(332, "Khan Shaykhun Chemical Attack", Unassociated,
       case Jihadist if game.botEnhancements =>
         false
       case Jihadist =>
-        !syria.truce && syria.militia > 0
+        !syria.truce && syria.pieces.militia > 0
     }
   }
 
@@ -94,7 +94,7 @@ object Card_332 extends Card(332, "Khan Shaykhun Chemical Attack", Unassociated,
 
     case Jihadist =>
       addEventTarget(Syria)
-      if (game.getMuslim(Syria).militia > 0)
+      if (game.getMuslim(Syria).pieces.militia > 0)
         removeMilitiaFromCountry(Syria, 1)
       else
         log("\nThere are no militia in Syria.", Color.Event)

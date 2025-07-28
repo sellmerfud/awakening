@@ -118,7 +118,7 @@ object LabyrinthAwakening {
     val Troops = 15
     val Militia = 15
     val Cells = 15
-    val ExtraCells = 5    
+    val ExtraCells = 5
     val Advisors = 3
     val awakening = 15
     val reaction = 15
@@ -651,7 +651,7 @@ object LabyrinthAwakening {
   def closestWithCells(target: String, allowSadr: Boolean = false): List[String] = {
     val isCandidate = (c: Country) =>
       c.name != target &&
-      (if (allowSadr) c.totalCells > 0 else c.cells > 0)
+      (if (allowSadr) c.totalCells > 0 else c.pieces.totalCells > 0)
     val candidates = countryNames(game.countries.filter(isCandidate))
     val ordered = (candidates.map(name => (name, distance(name, target))))
       .sortWith((a, b) => a._2 < b._2)
@@ -1185,13 +1185,164 @@ object LabyrinthAwakening {
     game = game.copy(turnActions = newActions)
   }
 
+  sealed abstract class PieceType(val name: String) {
+    def singular        = name
+    def plural          = s"${name}s"
+
+    override def toString() = plural
+  }
+
+  object PieceType {
+    def apply(name: String): PieceType = AllPieceTypes find (_.name == name) getOrElse {
+      throw new IllegalArgumentException(s"Invalid name for PieceType: $name")
+    }
+  }
+
+  case object USTroops extends PieceType("US Troop")
+  case object Militia extends PieceType("Militia") {
+    override def plural = singular
+  }
+  case object SleeperCells extends PieceType("Sleeper Cell")
+  case object ActiveCells extends PieceType("Active Cell")
+
+  val USPieces        = List(USTroops, Militia)
+  val JihadistPieces  = List(SleeperCells, ActiveCells)
+  val Cells           = List(SleeperCells, ActiveCells)
+  val FlippablePieces = List(SleeperCells, ActiveCells)
+  val AllPieceTypes   = USPieces ::: JihadistPieces
+
+  val rolePieces: Map[Role, List[PieceType]] = Map(
+    US       -> USPieces,
+    Jihadist -> JihadistPieces,
+  )
+
+  def owner(pieceType: PieceType): Role = pieceType match {
+    case t if USPieces contains t   => US
+    case _                          => Jihadist
+  }
+
+  def getFlippedPieceType(pieceType: PieceType): PieceType = {
+    pieceType match {
+      case SleeperCells => ActiveCells
+      case ActiveCells => SleeperCells
+      case _ => throw new IllegalArgumentException(s"getFlippedPieceType called with $pieceType")
+    }
+  }
+
+  def amtPiece(num: Int, pieceType: PieceType) =
+    amountOf(num, pieceType.singular, Some(pieceType.plural))
+
+  // Class to keep track of the pieces in a particular country
+  case class Pieces(
+    usTroops: Int     = 0,
+    militia: Int      = 0,
+    sleeperCells: Int = 0,
+    activeCells: Int  = 0,
+  ) {
+    val totalTroops = usTroops
+    val totalCells = sleeperCells + activeCells
+    val troopsAndMilitia = usTroops + militia
+
+    def totalOf(pieceType: PieceType): Int = pieceType match {
+      case USTroops     => usTroops
+      case Militia      => militia
+      case SleeperCells => sleeperCells
+      case ActiveCells  => activeCells
+    }
+
+    def totalOf(pieceTypes: Iterable[PieceType]): Int = pieceTypes
+      .foldLeft(0) { (num, piece) => num + totalOf(piece) }
+
+    def totalForRole(role: Role) = totalOf(rolePieces(role))
+    def total = totalOf(AllPieceTypes)
+    def isEmpty = (total == 0)
+    def nonEmpty = !isEmpty
+    def descriptions = AllPieceTypes
+      .filter(totalOf(_) > 0)
+      .map(t => amtPiece(totalOf(t), t))
+
+    override def toString() =
+      if (isEmpty) "none"
+      else descriptions.mkString(", ")
+
+    // Return true of this Pieces instance contains at least all of the specified pieces.
+    def contains(query: Pieces): Boolean = AllPieceTypes
+      .forall(t => totalOf(t) >= query.totalOf(t))
+
+    // Return true if this Pieces instance has at least one of the given piece type
+    def has(pt: PieceType): Boolean = totalOf(pt) > 0
+
+    // Return true if this Pieces instance has at least one of any of the given piece types
+    def has(pts: Iterable[PieceType]): Boolean = totalOf(pts) > 0
+
+    def set(num: Int, pieceType: PieceType): Pieces = pieceType match {
+      case USTroops     => copy(usTroops = num)
+      case Militia      => copy(militia = num)
+      case SleeperCells => copy(sleeperCells = num)
+      case ActiveCells  => copy(activeCells = num)
+    }
+
+    def add(num: Int, pieceType: PieceType): Pieces = pieceType match {
+      case USTroops     => copy(usTroops = usTroops + num)
+      case Militia      => copy(militia = militia + num)
+      case SleeperCells => copy(sleeperCells = sleeperCells + num)
+      case ActiveCells  => copy(activeCells = activeCells + num)
+    }
+
+    def remove(num: Int, pieceType: PieceType): Pieces = pieceType match {
+      case USTroops     => copy(usTroops = (usTroops - num) max 0)
+      case Militia      => copy(militia = (militia - num) max 0)
+      case SleeperCells => copy(sleeperCells = (sleeperCells - num) max 0)
+      case ActiveCells  => copy(activeCells = (activeCells - num) max 0)
+    }
+
+    def only(pieceTypes: Iterable[PieceType]): Pieces = pieceTypes
+      .foldLeft(Pieces()) { (pieces, t) => pieces.add(totalOf(t), t) }
+
+    def only(pieceType: PieceType): Pieces = Pieces()
+      .add(totalOf(pieceType), pieceType)
+
+    def except(pieceTypes: Iterable[PieceType]): Pieces = pieceTypes
+      .foldLeft(this) { (pieces, t) => pieces.set(0, t) }
+
+    def except(pieceType: PieceType): Pieces = except(Seq(pieceType))
+
+    def + (added: Pieces): Pieces = Pieces(
+      usTroops     = usTroops + added.usTroops,
+      militia      = militia + added.militia,
+      sleeperCells = sleeperCells + added.sleeperCells,
+      activeCells  = activeCells + added.activeCells,
+    )
+
+    def - (removed: Pieces): Pieces = Pieces(
+      usTroops     = (usTroops - removed.usTroops) max 0,
+      militia      = (militia - removed.militia) max 0,
+      sleeperCells = (sleeperCells - removed.sleeperCells) max 0,
+      activeCells  = (activeCells - removed.activeCells) max 0,
+    )
+
+    def getTypes: List[PieceType] = AllPieceTypes.filter(has)
+
+    // Convert to a list where each the piece type of each piece occupies
+    // and entry in the list.
+    def explode(order: List[PieceType] = AllPieceTypes): List[PieceType] =
+      order
+        .flatMap { pieceType => List.fill(totalOf(pieceType))(pieceType) }
+  }
+
+  object Pieces {
+    def fromTypes(collection: Iterable[PieceType]) =
+      collection
+        .foldLeft(Pieces()) {
+          (pieces, t) => pieces.add(1, t)
+        }
+  }
+
   sealed trait Country extends PriorityItem {
     val name: String
     val governance: Int
-    val sleeperCells: Int
-    val activeCells: Int
+    val pieces: Pieces
     val cadres: Int
-    val troops: Int
     val plots: List[PlotOnMap]
     val markers: List[CountryMarker]
     val wmdCache: Int        // Number of WMD plots cached
@@ -1211,9 +1362,9 @@ object LabyrinthAwakening {
     def hasMarker(marker: CountryMarker) = markers.contains(marker)
     def countMarker(marker: CountryMarker) = markers.count(_ == marker)
 
-    def cells      = sleeperCells + activeCells
+    def cellPieces = pieces.totalCells
     def hasSadr    = hasMarker(Sadr)
-    def totalCells = cells + (if (hasSadr) 1 else 0)
+    def totalCells = cellPieces + (if (hasSadr) 1 else 0)
     def hasCadre   = cadres > 0
     def troopsMarkers: List[TroopsMarker] = markers collect {
       case NATO            => TroopsMarker(NATO,            2, canDeploy = true,  prestigeLoss = true)
@@ -1228,12 +1379,12 @@ object LabyrinthAwakening {
       .foldLeft(0) { (total, tm) => total + tm.num }
     def markerTroopsThatAffectPrestige: Int = troopsMarkers
       .foldLeft(0) { (total, tm) => total + (if (tm.prestigeLoss) tm.num else 0) }
-    def totalTroops = troops + markerTroops
+    def totalTroops = pieces.totalTroops + markerTroops
     def totalDeployableTroops = if (game.humanRole == US)
-      troops + deployableMarkerTroops
+      pieces.usTroops + deployableMarkerTroops
     else
-      troops  // Bot never deploys marker troops
-    def totalTroopsThatAffectPrestige = troops + markerTroopsThatAffectPrestige
+      pieces.usTroops  // Bot never deploys marker troops
+    def totalTroopsThatAffectPrestige = pieces.usTroops + markerTroopsThatAffectPrestige
     def numAdvisors = countMarker(Advisors)
 
     def canDeployTo(ops: Int): Boolean
@@ -1257,10 +1408,8 @@ object LabyrinthAwakening {
   case class NonMuslimCountry(
     name: String,
     governance: Int              = Good,
-    sleeperCells: Int            = 0,
-    activeCells: Int             = 0,
+    pieces: Pieces               = Pieces(),
     cadres: Int                  = 0,
-    troops: Int                  = 0,
     plots: List[PlotOnMap]       = Nil,
     markers: List[CountryMarker] = Nil,
     postureValue: String         = PostureUntested,
@@ -1319,21 +1468,22 @@ object LabyrinthAwakening {
     def maxDeployFrom = totalDeployableTroops
     def disruptAffectsPrestige = totalTroopsThatAffectPrestige > 1
 
+    def addPieces(newPieces: Pieces): NonMuslimCountry = copy(pieces = pieces + newPieces)
+    def removePieces(removedPieces: Pieces): NonMuslimCountry = copy(pieces = pieces - removedPieces)
+    def setPieces(newPieces: Pieces): NonMuslimCountry = copy(pieces = newPieces)
+
   }
 
   case class MuslimCountry(
     name: String,
     governance: Int              = GovernanceUntested,
-    sleeperCells: Int            = 0,
-    activeCells: Int             = 0,
+    pieces: Pieces               = Pieces(),
     cadres: Int                  = 0,
     plots: List[PlotOnMap]       = Nil,
     markers: List[CountryMarker] = Nil,
     isSunni: Boolean             = true,
     printedResources: Int        = 0,
     alignment: String            = Neutral,
-    troops: Int                  = 0,
-    militia: Int                 = 0,
     oilExporter: Boolean         = false,
     aidMarkers: Int              = 0,
     regimeChange: String         = NoRegimeChange,
@@ -1368,6 +1518,10 @@ object LabyrinthAwakening {
     def awakeningDelta = awakening - reaction
     def reactionDelta = reaction - awakening
 
+    def addPieces(newPieces: Pieces): MuslimCountry = copy(pieces = pieces + newPieces)
+    def removePieces(removedPieces: Pieces): MuslimCountry = copy(pieces = pieces - removedPieces)
+    def setPieces(newPieces: Pieces): MuslimCountry = copy(pieces = newPieces)
+
     // If a muslim country is untest, then it is valid a WoI target.
     override def warOfIdeasOK(ops: Int, ignoreRegimeChange: Boolean = false) =
       !isIslamistRule  &&
@@ -1383,7 +1537,7 @@ object LabyrinthAwakening {
 
 
     def canTakeMilitia = !(isGood || isIslamistRule)
-    def totalTroopsAndMilitia = totalTroops + militia // Used to calculate hit for attrition
+    def totalTroopsAndMilitia = totalTroops + pieces.militia // Used to calculate hit for attrition
     def disruptAffectsPrestige = totalTroopsAndMilitia > 1 && totalTroopsThatAffectPrestige > 0
 
 
@@ -1694,7 +1848,7 @@ object LabyrinthAwakening {
     def adjacentCountries(name: String) = getCountries(getAdjacent(name))
     def adjacentMuslims(name: String) = getMuslims(getAdjacent(name).filter(isMuslim))
     def adjacentNonMuslims(name: String)  = getNonMuslims(getAdjacent(name).filter(isNonMuslim))
-    def adjacentCountriesWithCells(name: String) = getCountries(getAdjacent(name)).filter(_.cells > 0)
+    def adjacentCountriesWithCells(name: String) = getCountries(getAdjacent(name)).filter(_.pieces.totalCells > 0)
 
     def adjacentToGoodAlly(name: String) = game.adjacentMuslims(name).exists(m => m.isGood && m.isAlly)
     def adjacentToIslamistRule(name: String) = game.adjacentMuslims(name).exists(_.isIslamistRule)
@@ -1806,9 +1960,9 @@ object LabyrinthAwakening {
       case _          => Ample
     }
 
-    def troopsCubesOnMap   = countries.foldLeft(0) { (a, c) => a + c.troops }
+    def troopsCubesOnMap   = countries.foldLeft(0) { (a, c) => a + c.pieces.usTroops }
     def totalTroopsOnMap   = countries.foldLeft(0) { (a, c) => a + c.totalTroops }
-    def militiaOnMap  = muslims.foldLeft(0) { (a, m) => a + m.militia }
+    def militiaOnMap  = muslims.foldLeft(0) { (a, m) => a + m.pieces.militia }
 
     def troopsAvailable  = Manifest.Troops - offMapTroops - troopsCubesOnMap
     def militiaAvailable = Manifest.Militia - militiaOnMap
@@ -1834,7 +1988,7 @@ object LabyrinthAwakening {
     }
 
     def totalCellCapacity   = Manifest.Cells + extraCellCapacity
-    def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.cells }
+    def cellsOnMap          = countries.foldLeft(0) { (a, c) => a + c.pieces.totalCells }
     // totalCellsOnMap includes Sadr
     def totalCellsOnMap     = countries.foldLeft(0) { (a, c) => a + c.totalCells }
 
@@ -1861,7 +2015,7 @@ object LabyrinthAwakening {
           case _        => cellsOnTrack
         }
     }
-    def sleeperCellsOnMap = countries.foldLeft(0) { (sum, c) => sum + c.sleeperCells }
+    def sleeperCellsOnMap = countries.foldLeft(0) { (sum, c) => sum + c.pieces.sleeperCells }
 
     def numGoodOrFair    = muslims count (c => c.isGood || c.isFair)
     def numPoorOrIslamic = muslims count (c => c.isPoor || c.isIslamistRule)
@@ -1933,7 +2087,7 @@ object LabyrinthAwakening {
     }
 
     def withdrawFromTargets: List[String] = countryNames(
-      muslims.filter(m => !m.truce && m.inRegimeChange && m.troops > 0)
+      muslims.filter(m => !m.truce && m.inRegimeChange && m.pieces.usTroops > 0)
     )
 
     def withdrawToTargets: List[String] =
@@ -1957,8 +2111,8 @@ object LabyrinthAwakening {
           // Note only Philippines can have troops if AbuSayyaf marker is there
           if (n.isHard || n.totalTroops > 1) 2 else 1
       }
-      if (c.cells > 0)
-        Some(Left(numLosses min c.cells))
+      if (c.pieces.totalCells > 0)
+        Some(Left(numLosses min c.pieces.totalCells))
       else if (c.hasCadre && !alAnbar)
         Some(Right(()))
       else
@@ -1967,9 +2121,9 @@ object LabyrinthAwakening {
 
     def disruptMuslimTargets(ops: Int): List[String] = countryNames(muslims.filter { m =>
       val hasTarget = if (globalEventInPlay(AlAnbar) && (m.name == Iraq || m.name == Syria))
-        m.cells > 0
+        m.pieces.totalCells > 0
       else
-        (m.hasCadre || m.cells > 0)
+        (m.hasCadre || m.pieces.totalCells > 0)
       val fataCheck = m.name != Pakistan || countryEventNotInPlay(Pakistan, FATA) || m.inRegimeChange
       val opsCheck  = ops >= (m.governance min Poor) // Treat IslamicRule same as Poor for ops value
       !m.truce && !m.isIslamistRule && hasTarget && fataCheck && opsCheck && (m.isAlly || (m.totalTroopsAndMilitia) > 1)
@@ -1978,7 +2132,7 @@ object LabyrinthAwakening {
     def disruptNonMuslimTargets(ops: Int): List[String] = countryNames(nonMuslims.filter { n =>
       !n.iranSpecialCase  &&
       ops >= n.governance &&
-      (n.hasCadre || n.cells > 0)
+      (n.hasCadre || n.pieces.totalCells > 0)
     })
 
     def disruptTargets(ops: Int): List[String] =
@@ -2020,7 +2174,7 @@ object LabyrinthAwakening {
     def plotPossible(ops: Int) = plotsAvailableWith(ops).nonEmpty && plotTargets.nonEmpty
 
     def travelSources = game.countries
-      .filter(c => !c.truce && c.cells > 0)
+      .filter(c => !c.truce && c.pieces.totalCells > 0)
 
     // --- Summaries --------------------------------------
     def actionSummary: Summary = {
@@ -2093,9 +2247,9 @@ object LabyrinthAwakening {
     def statusSummary: Summary = {
       val activePlotCountries = countries.filter(_.hasPlots)
       val countriessWithCells = game.countries
-        .filter(_.cells > 0)
+        .filter(_.pieces.totalCells > 0)
         .sortBy(_.name)
-        .map(c => s"${c.name}:${c.cells}")
+        .map(c => s"${c.name}:${c.pieces.totalCells}")
       val summary = new Summary
       summary.add(s"Status", Color.Info)
       summary.add(separator(char = '='), Color.Info)
@@ -2180,10 +2334,10 @@ object LabyrinthAwakening {
           summary.add(s"$name - Non-Muslim$specialCase")
           summary.add(separator(length = 54))
           summary.add(s"${govToString(n.governance)}, ${n.posture}, Recruit ${n.recruitNumber}")
-          numItem(n.activeCells, "Active cell")
-          numItem(n.sleeperCells, "Sleeper cell")
+          numItem(n.pieces.activeCells, "Active cell")
+          numItem(n.pieces.sleeperCells, "Sleeper cell")
           numItem(n.cadres, "Cadre")
-          numItem(n.troops, "Troop")
+          numItem(n.pieces.usTroops, "Troop")
           addItems()
           if (n.hasPlots) {
             val visible = humanRole == Jihadist || (name == UnitedStates && n.hasMarker(NEST))
@@ -2231,11 +2385,11 @@ object LabyrinthAwakening {
           summary.add(nameItems.mkString(" "))
           summary.add(separator(length = 54))
           summary.add(descItems.mkString(", "))
-          numItem(m.activeCells, "Active cell")
-          numItem(m.sleeperCells, "Sleeper cell")
+          numItem(m.pieces.activeCells, "Active cell")
+          numItem(m.pieces.sleeperCells, "Sleeper cell")
           numItem(m.cadres, "Cadre")
-          numItem(m.troops, "Troop")
-          numItem(m.militia, "Militia", Some("Militia"))
+          numItem(m.pieces.usTroops, "Troop")
+          numItem(m.pieces.militia, "Militia", Some("Militia"))
           addItems()
 
           items.clear()
@@ -2714,7 +2868,7 @@ object LabyrinthAwakening {
   // Returns (actives, sleepers)
   def askCellsNotSadr(countryName: String, numCells: Int, sleeperFocus: Boolean): (Int, Int) = {
     val c = game.getCountry(countryName)
-    val (activeCells, sleeperCells) = (c.activeCells, c.sleeperCells)
+    val (activeCells, sleeperCells) = (c.pieces.activeCells, c.pieces.sleeperCells)
     val totalCells = activeCells + sleeperCells
     val maxCells = numCells min totalCells
 
@@ -2754,7 +2908,7 @@ object LabyrinthAwakening {
       (a, s, false)
     }
     else {
-      val (activeCells, sleeperCells) = (c.activeCells, c.sleeperCells)
+      val (activeCells, sleeperCells) = (c.pieces.activeCells, c.pieces.sleeperCells)
       val totalCells = activeCells + sleeperCells + 1 // +1 for Sadr
       val maxCells   = numCells min totalCells
 
@@ -2806,19 +2960,19 @@ object LabyrinthAwakening {
   def askTroopOrMilitia(prompt: String, target: String): TroopOrMilitia = {
     val c = game.getCountry(target)
     val militia = if (game.isMuslim(target))
-      game.getMuslim(target).militia
+      game.getMuslim(target).pieces.militia
     else
       0
 
     assert(c.totalTroops + militia > 0, s"askTroopOrMilitia($target) called but no units present")
 
-    if (c.troops == 0 && c.troopsMarkers.isEmpty)
+    if (c.pieces.usTroops == 0 && c.troopsMarkers.isEmpty)
       MilitiaCube
     else if (militia == 0 && c.troopsMarkers.isEmpty)
       TroopCube
     else {
       val choices = List(
-        choice(c.troops > 0, TroopCube,   s"Troop cube (${c.troops} present)"),
+        choice(c.pieces.usTroops > 0, TroopCube,   s"Troop cube (${c.pieces.usTroops} present)"),
         choice(militia > 0,  MilitiaCube, s"Militia cube (${militia} present)")
       ).flatten ++ (c.troopsMarkers.sorted.map(x => TroopMarker(x.name) -> x.name))
       askMenu("Choose one:", choices).head
@@ -3873,7 +4027,7 @@ object LabyrinthAwakening {
         Nil
       val countrySrcs = game.getCountries(names)
         .filter(_.totalCells > 0)
-        .map(c => CellsItem(c.name, c.activeCells, c.sleeperCells))
+        .map(c => CellsItem(c.name, c.pieces.activeCells, c.pieces.sleeperCells))
       nextChoice(num, trackSrc ::: countrySrcs)
     }
   }
@@ -3906,7 +4060,7 @@ object LabyrinthAwakening {
           (name, _) <- choices.toVector
           c = game.getCountry(name)
         } yield
-          CellsToRemove(name, (c.activeCells, c.sleeperCells, c.hasSadr))
+          CellsToRemove(name, (c.pieces.activeCells, c.pieces.sleeperCells, c.hasSadr))
 
         removed :++ remainder
       }
@@ -3940,10 +4094,10 @@ object LabyrinthAwakening {
       if c.totalCells > 0
     } yield {
       val b = new ListBuffer[String]
-      if (c.sleeperCells > 0)
-        b += amountOf(c.sleeperCells, "sleeper")
-      if (c.activeCells > 0)
-        b += amountOf(c.activeCells, "active")
+      if (c.pieces.sleeperCells > 0)
+        b += amountOf(c.pieces.sleeperCells, "sleeper")
+      if (c.pieces.activeCells > 0)
+        b += amountOf(c.pieces.activeCells, "active")
       if (c.hasSadr)
         b += "Sadr"
       name -> s"$name ${b.toList.mkString("(", ", ", ")")}"
@@ -5343,11 +5497,11 @@ object LabyrinthAwakening {
         b += s"Flip the country mat to the non-Muslim side"
       showC(fromM, toM orElse toN, m => govToString(m.governance), "governance")
       showM(fromM, toM, _.alignment, "alignment")
-      showC(fromM, toM orElse toN, _.sleeperCells, "sleeper cells")
-      showC(fromM, toM orElse toN, _.activeCells, "active cells")
+      showC(fromM, toM orElse toN, _.pieces.sleeperCells, "sleeper cells")
+      showC(fromM, toM orElse toN, _.pieces.activeCells, "active cells")
       showC(fromM, toM orElse toN, _.cadres, "cadre markers")
-      showC(fromM, toM orElse toN, _.troops, "troops")
-      showM(fromM, toM, _.militia, "militia")
+      showC(fromM, toM orElse toN, _.pieces.usTroops, "troops")
+      showM(fromM, toM, _.pieces.militia, "militia")
 
       showM(fromM, toM, _.aidMarkers, "aid markers")
       showM(fromM, toM, _.awakening, "awakening markers")
@@ -5392,10 +5546,10 @@ object LabyrinthAwakening {
       val toN = if (to isNonMuslim fromN.name) Some(to getNonMuslim fromN.name) else None
 
       showN(fromN, toN, _.posture, "posture")
-      showC(fromN, toN orElse toM, _.sleeperCells, "sleeper cells")
-      showC(fromN, toN orElse toM, _.activeCells, "active cells")
+      showC(fromN, toN orElse toM, _.pieces.sleeperCells, "sleeper cells")
+      showC(fromN, toN orElse toM, _.pieces.activeCells, "active cells")
       showC(fromN, toN orElse toM, _.cadres, "cadre marker")
-      showC(fromN, toN orElse toM, _.troops, "troops")
+      showC(fromN, toN orElse toM, _.pieces.usTroops, "troops")
       showC(fromN, toN orElse toM, _.wmdCache, "WMD cache")
       (toN orElse toM) foreach { t =>
         val newVal = t.plots.sorted
@@ -5570,7 +5724,7 @@ object LabyrinthAwakening {
     if (hits == 0 || m.totalTroopsAndMilitia == 0)
       hits
     else {
-      val maxAbsorb     = m.troops + m.militia + m.troopsMarkers.map(_.num).sum
+      val maxAbsorb     = m.pieces.usTroops + m.pieces.militia + m.troopsMarkers.map(_.num).sum
       val multiplier    = if (hamaOffensive) 2 else 1
       val losses        = hits * multiplier
       val unfulfilled   = (losses - maxAbsorb) max 0
@@ -5586,14 +5740,14 @@ object LabyrinthAwakening {
         // if there is a mix of multiple type of cubes that can take losses (troops and militia),
         // and the hits are not sufficient to eliminate all forces present,
         // then allow the user to choose which units absorb the losses.
-        val mixedCubes = m.troops > 0 && m.militia > 0
+        val mixedCubes = m.pieces.usTroops > 0 && m.pieces.militia > 0
         if (losses >= m.totalTroopsAndMilitia)
-           (m.troopsMarkers.map(tm => CountryMarker(tm.name)), m.troops, m.militia)
+           (m.troopsMarkers.map(tm => CountryMarker(tm.name)), m.pieces.usTroops, m.pieces.militia)
         else if (!mixedCubes && m.troopsMarkers.isEmpty) {
-          if (m.troops > 0)
-            (Nil, m.troops min losses, 0)
+          if (m.pieces.usTroops > 0)
+            (Nil, m.pieces.usTroops min losses, 0)
           else
-            (Nil, 0, m.militia min losses)
+            (Nil, 0, m.pieces.militia min losses)
         }
         else {
           var (troopsLost, militiaLost, markersLost) = (0, 0, List.empty[CountryMarker])
@@ -5620,7 +5774,7 @@ object LabyrinthAwakening {
             }
           }
 
-          nextHit(losses, m.troopsMarkers, m.troops, m.militia)
+          nextHit(losses, m.troopsMarkers, m.pieces.usTroops, m.pieces.militia)
           (markersLost, troopsLost, militiaLost)
         }
       }
@@ -5630,9 +5784,9 @@ object LabyrinthAwakening {
         // Then militia, then troops markers
         val markers = new ListBuffer[CountryMarker]
         var lossesRemaining = losses
-        val troopsLost = lossesRemaining min m.troops
+        val troopsLost = lossesRemaining min m.pieces.usTroops
         lossesRemaining -= troopsLost
-        val militiaLost = lossesRemaining min m.militia
+        val militiaLost = lossesRemaining min m.pieces.militia
         lossesRemaining -= militiaLost
 
 
@@ -5678,7 +5832,7 @@ object LabyrinthAwakening {
         log(s"$multiplier losses per hit [$desc]", Color.Info)
 
       val (activesLost, sleepersLost, sadr) = if (m.totalCells <= losses)
-        (m.activeCells, m.sleeperCells, m.hasSadr)
+        (m.pieces.activeCells, m.pieces.sleeperCells, m.hasSadr)
       else if (game.humanRole == Jihadist)
         askCells(m.name, losses, sleeperFocus = false)
       else
@@ -5714,12 +5868,12 @@ object LabyrinthAwakening {
       // If Siege of Mosul in play then cells are halved and (troops + militia)
       // are doubled
       val usPresence = List(
-        if (m.militia > 0) Some(s"${m.militia} militia") else None,
+        if (m.pieces.militia > 0) Some(s"${m.pieces.militia} militia") else None,
         if (m.numAdvisors > 0) Some(amountOf(m.numAdvisors, "Advisors marker")) else None,
-        if (m.troops > 0) Some(amountOf(m.troops, "troop")) else None,
+        if (m.pieces.usTroops > 0) Some(amountOf(m.pieces.usTroops, "troop")) else None,
       ).flatten ::: m.troopsMarkers
       val jihadistPresence = List(
-          if (m.cells > 0) Some(amountOf(m.cells, "cell")) else None,
+          if (m.pieces.totalCells > 0) Some(amountOf(m.pieces.totalCells, "cell")) else None,
           if (m.hasSadr) Some("Sadr marker") else None,
       ).flatten
       val totalCells = if (siegeOfMosul) m.totalCells / 2 else m.totalCells
@@ -5994,13 +6148,17 @@ object LabyrinthAwakening {
       log(s"Governance die roll: $die")
       val newGov = if (die < 5) Poor else Fair
       addOpsTarget(dest)
+      val updatedPieces = m.pieces
+        .add(m.pieces.sleeperCells, ActiveCells)
+        .set(0, SleeperCells)
+
       game = game.updateCountry(m.copy(
         governance   = newGov,
         alignment    = Ally,
         regimeChange = GreenRegimeChange,
-        activeCells  = m.activeCells + m.sleeperCells,
-        sleeperCells = 0
+        pieces       = updatedPieces
       ))
+
       if (newGov == Fair)
         addTestedOrImprovedToFairOrGood(dest)
       log(s"Place a green regime change marker in $dest", Color.MapPieces)
@@ -6431,11 +6589,16 @@ object LabyrinthAwakening {
           if (m.aidMarkers > 0) log(s"Remove ${amountOf(m.aidMarkers, "aid marker")} from $name", Color.MapPieces)
           if (m.awakening > 0 ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name", Color.MapPieces)
           if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name", Color.MapPieces)
-          if (m.militia > 0   ) log(s"Remove ${m.militia} militia from $name", Color.MapPieces)
+          if (m.pieces.militia > 0   ) log(s"Remove ${m.pieces.militia} militia from $name", Color.MapPieces)
 
           evaluateCaliphateChanges {
-            val improved = m.copy(governance = Good, awakening = 0, reaction = 0, aidMarkers = 0,
-                  militia = 0, besiegedRegime = false)
+            val improved = m.copy(
+              governance = Good,
+              awakening = 0,
+              reaction = 0,
+              aidMarkers = 0,
+              pieces = m.pieces.set(0, Militia),
+              besiegedRegime = false)
             game = game.updateCountry(improved)
             removeTrainingCamp_?(name)
             endRegimeChange(name)
@@ -6493,11 +6656,16 @@ object LabyrinthAwakening {
           if (m.aidMarkers > 0) log(s"Remove ${amountOf(m.aidMarkers, "aid marker")} from $name", Color.MapPieces)
           if (m.awakening > 0 ) log(s"Remove ${amountOf(m.awakening, "awakening marker")} from $name", Color.MapPieces)
           if (m.reaction > 0  ) log(s"Remove ${amountOf(m.reaction, "reaction marker")} from $name", Color.MapPieces)
-          if (m.militia > 0   ) log(s"Remove ${m.militia} militia from $name", Color.MapPieces)
+          if (m.pieces.militia > 0   ) log(s"Remove ${m.pieces.militia} militia from $name", Color.MapPieces)
           // When a country becomes IR, any plots in the country remain
           val degraded = m.copy(
-            governance = IslamistRule, alignment = Adversary, awakening = 0, reaction = 0,
-            aidMarkers = 0, militia = 0, besiegedRegime = false)
+            governance = IslamistRule,
+            alignment = Adversary,
+            awakening = 0,
+            reaction = 0,
+            aidMarkers = 0,
+            pieces = m.pieces.set(0, Militia),
+            besiegedRegime = false)
           evaluateCaliphateChanges {
             game = game.updateCountry(degraded)
             endRegimeChange(name)
@@ -6594,10 +6762,10 @@ object LabyrinthAwakening {
     log(separator())
     if (game isMuslim name) {
       val m = game.getMuslim(name)
-      removeCellsFromCountry(name, m.activeCells, m.sleeperCells, true, addCadre = false)
+      removeCellsFromCountry(name, m.pieces.activeCells, m.pieces.sleeperCells, true, addCadre = false)
       removeCadresFromCountry(name, 1)
-      moveTroops(name, "track", m.troops)
-      removeMilitiaFromCountry(name, m.militia)
+      moveTroops(name, "track", m.pieces.usTroops)
+      removeMilitiaFromCountry(name, m.pieces.militia)
       for (p <- m.plots)
         removePlotFromCountry(name, p, toAvailable = true)
       removeEventMarkersFromCountry(name, m.markers:_*)
@@ -6614,9 +6782,9 @@ object LabyrinthAwakening {
     }
     else {
       val n = game.getNonMuslim(name)
-      removeCellsFromCountry(name, n.activeCells, n.sleeperCells, true, addCadre = false)
+      removeCellsFromCountry(name, n.pieces.activeCells, n.pieces.sleeperCells, true, addCadre = false)
       removeCadresFromCountry(name, 1)
-      moveTroops(name, "track", n.troops)
+      moveTroops(name, "track", n.pieces.usTroops)
       for (p <- n.plots)
         removePlotFromCountry(name, p, toAvailable = true)
       removeEventMarkersFromCountry(name, n.markers:_*)
@@ -6649,8 +6817,7 @@ object LabyrinthAwakening {
     log("Set Iran to Fair Adversary", Color.MapPieces)
     val iran = game.getNonMuslim(Iran)
     game = game.updateCountry(DefaultMuslimIran.copy(
-      sleeperCells = iran.sleeperCells,
-      activeCells  = iran.activeCells,
+      pieces       = iran.pieces,
       cadres       = iran.cadres,
       plots        = iran.plots,
       markers      = iran.markers,
@@ -6919,7 +7086,7 @@ object LabyrinthAwakening {
       if (m.civilWar) {
         game = game.updateCountry(m.copy(civilWar = false))
         log(s"Remove civil war marker from $name", Color.MapPieces)
-        removeMilitiaFromCountry(name, m.militia)
+        removeMilitiaFromCountry(name, m.pieces.militia)
         removeEventMarkersFromCountry(name, UNSCR_1973)
         removeAllAdvisorsFromCountry(name)
       }
@@ -6941,6 +7108,7 @@ object LabyrinthAwakening {
   def moveTroops(source: String, dest: String, num: Int): Unit = {
     if (num > 0) {
       assert(source != dest, "The source and destination for moveTroops() cannot be the same.")
+      val movers = Pieces(usTroops = num)
       val startingCommitment = game.troopCommitment
       def disp(name: String) = if (name == "track") "the troops track" else name
       log(s"Move ${amountOf(num, "troop")} from ${disp(source)} to ${disp(dest)}", Color.MapPieces)
@@ -6948,16 +7116,20 @@ object LabyrinthAwakening {
         assert(game.troopsAvailable >= num, "moveTroop(): Not enough troops available on track")
       else {
         val c = game.getCountry(source)
-        assert(c.troops >= num, s"moveTroop(): Not enough troops available in $source")
+        assert(c.pieces.usTroops >= num, s"moveTroop(): Not enough troops available in $source")
         c match {
-          case m: MuslimCountry    => game = game.updateCountry(m.copy(troops = m.troops - num))
-          case n: NonMuslimCountry => game = game.updateCountry(n.copy(troops = n.troops - num))
+          case m: MuslimCountry    =>
+            game = game.updateCountry(m.removePieces(movers))
+          case n: NonMuslimCountry =>
+            game = game.updateCountry(n.removePieces(movers))
         }
       }
       if (dest != "track") {
         game.getCountry(dest) match {
-          case m: MuslimCountry    => game = game.updateCountry(m.copy(troops = m.troops + num))
-          case n: NonMuslimCountry => game = game.updateCountry(n.copy(troops = n.troops + num))
+          case m: MuslimCountry    =>
+            game = game.updateCountry(m.addPieces(movers))
+          case n: NonMuslimCountry =>
+            game = game.updateCountry(n.addPieces(movers))
         }
         removeAllAdvisorsFromCountry(dest)
       }
@@ -6975,7 +7147,7 @@ object LabyrinthAwakening {
   //  and remove all troops markers
   def removeAllTroopsFromCountry(name: String): Unit = {
     val c = game.getCountry(name)
-    moveTroops(name, "track", c.troops)
+    moveTroops(name, "track", c.pieces.usTroops)
     removeAllTroopsMarkers(name)
   }
 
@@ -6983,7 +7155,7 @@ object LabyrinthAwakening {
     game.troopsAvailable +
     game.countries
       .filter(!_.truce)
-      .map(_.troops)
+      .map(_.pieces.usTroops)
       .sum
 
   // Test for the unlikely case that all troops are currently in
@@ -7002,8 +7174,8 @@ object LabyrinthAwakening {
         assert(game.troopsAvailable >= num, "putTroopsInOffMapBox(): Not enough troops available on track")
       else {
         val m = game.getMuslim(source)
-        assert(m.troops >= num, s"putTroopsInOffMapBox(): Not enough troops available in $source")
-        game  = game.updateCountry(m.copy(troops = m.troops - num))
+        assert(m.pieces.usTroops >= num, s"putTroopsInOffMapBox(): Not enough troops available in $source")
+        game  = game.updateCountry(m.copy(pieces = m.pieces.remove(num, USTroops)))
       }
       game = game.copy(offMapTroops = game.offMapTroops + num)
 
@@ -7032,7 +7204,7 @@ object LabyrinthAwakening {
     if (num > 0) {
       assert(game.militiaAvailable >= num, "addMilitiaToCountry(): Not enough militia available on track")
       val m = game.getMuslim(name)
-      game = game.updateCountry(m.copy(militia = m.militia + num))
+      game = game.updateCountry(m.addPieces(Pieces(militia = num)))
       log(s"Add $num militia to $name from the track", Color.MapPieces)
     }
   }
@@ -7041,8 +7213,8 @@ object LabyrinthAwakening {
   def removeMilitiaFromCountry(name: String, num: Int): Unit = {
     if (num > 0) {
       val m = game.getMuslim(name)
-      assert(m.militia >= num, s"removeMilitiaFromCountry(): Not enough militia in $name")
-      game = game.updateCountry(m.copy(militia = m.militia - num))
+      assert(m.pieces.militia >= num, s"removeMilitiaFromCountry(): Not enough militia in $name")
+      game = game.updateCountry(m.copy(pieces = m.pieces.remove(num, Militia)))
       log(s"Remove $num militia from $name to the track", Color.MapPieces)
     }
   }
@@ -7059,7 +7231,10 @@ object LabyrinthAwakening {
   def addCellsToCountry(name: String, active: Boolean, num: Int, logPrefix: String = ""): Unit = {
     if (num > 0) {
       val isActive  = active || game.isCaliphateMember(name)
-      val cellType  = if (isActive) "active cell" else "sleeper cell"
+      val cellsToAdd = if (isActive)
+        Pieces(activeCells = num)
+      else
+        Pieces(sleeperCells = num)
       val available = game.cellsAvailable
       val hasCadre  = game.getCountry(name).hasCadre
 
@@ -7067,13 +7242,10 @@ object LabyrinthAwakening {
 
       val fromTrack = num min game.cellsOnTrack  // Take as many as possible from the track first
       val fromCamp  = num - fromTrack            // Any left over come from the camp
-
       testCountry(name)
       val updated = game.getCountry(name) match {
-        case m: MuslimCountry    if isActive => m.copy(activeCells  = m.activeCells  + num)
-        case m: MuslimCountry                => m.copy(sleeperCells = m.sleeperCells + num)
-        case n: NonMuslimCountry if isActive => n.copy(activeCells  = n.activeCells  + num)
-        case n: NonMuslimCountry             => n.copy(sleeperCells = n.sleeperCells + num)
+        case m: MuslimCountry    => m.addPieces(cellsToAdd)
+        case n: NonMuslimCountry => n.addPieces(cellsToAdd)
       }
       game = game.updateCountry(updated)
 
@@ -7081,11 +7253,11 @@ object LabyrinthAwakening {
         removeCadresFromCountry(name, 1)
       if (fromTrack > 0)
         log(
-          "%sAdd %s to %s from the funding track".format(logPrefix, amountOf(fromTrack, cellType), name),
+          "%sAdd %s to %s from the funding track".format(logPrefix, cellsToAdd, name),
           Color.MapPieces)
       if (fromCamp > 0)
         log(
-          "%sAdd %s to %s from the \"extra cells\" available area".format(logPrefix, amountOf(fromCamp, cellType), name),
+          "%sAdd %s to %s from the \"extra cells\" available area".format(logPrefix, cellsToAdd, name),
           Color.MapPieces)
     }
   }
@@ -7109,43 +7281,44 @@ object LabyrinthAwakening {
     sadr: Boolean,
     addCadre: Boolean,
     logPrefix: String = ""): Unit = {
+    val cellPieces = Pieces(activeCells = actives, sleeperCells = sleepers)
     val c = game.getCountry(name)
-    if (actives + sleepers > 0 || sadr) {
-      assert(c.activeCells >= actives, s"removeCellsFromCountry(): not enough active cells present")
-      assert(c.sleeperCells >= sleepers, s"removeCellsFromCountry(): not enough sleeper cells present")
+    if (cellPieces.nonEmpty || sadr) {
+      assert(c.pieces.activeCells >= actives, s"removeCellsFromCountry(): not enough active cells present")
+      assert(c.pieces.sleeperCells >= sleepers, s"removeCellsFromCountry(): not enough sleeper cells present")
 
       val cadreAdded =
         addCadre &&
         c.cadres == 0 &&
-        c.cells == (actives + sleepers) &&
+        c.pieces.totalCells == cellPieces.totalCells &&
         (sadr || !c.hasMarker(Sadr))
-      for ((num, active) <- List((actives, true), (sleepers, false)); if num > 0) {
-        val cellType    = if (active) "active cell" else "sleeper cell"
-        val toOutOfPlay = num min game.excessExtraCellsOnMap
-        val toExtra     = (num - toOutOfPlay) min (game.extraCellCapacity - game.extraCellsAvailable)
-        val toTrack     = (num - toOutOfPlay - toExtra)
 
-        val updated = game.getCountry(name) match {
-          case m: MuslimCountry    if active => m.copy(activeCells  = m.activeCells  - num)
-          case m: MuslimCountry              => m.copy(sleeperCells = m.sleeperCells - num)
-          case n: NonMuslimCountry if active => n.copy(activeCells  = n.activeCells  - num)
-          case n: NonMuslimCountry           => n.copy(sleeperCells = n.sleeperCells - num)
+      for (cellType <- List(ActiveCells, SleeperCells); if cellPieces.has(cellType)) {
+        val cellsRemoved = cellPieces.only(cellType)
+        val num          = cellsRemoved.total
+        val toOutOfPlay  = num min game.excessExtraCellsOnMap
+        val toExtra      = (num - toOutOfPlay) min (game.extraCellCapacity - game.extraCellsAvailable)
+        val toTrack      = (num - toOutOfPlay - toExtra)
+        val updated      = game.getCountry(name) match {
+          case m: MuslimCountry    => m.removePieces(cellsRemoved)
+          case n: NonMuslimCountry => n.removePieces(cellsRemoved)
         }
-        game = game.updateCountry(updated)
 
+        game = game.updateCountry(updated)
         if (toOutOfPlay > 0)
-           log(
-            "%sRemove %s from %s to out of play".format(logPrefix, amountOf(toOutOfPlay, cellType), name),
+          log(
+            "%sRemove %s from %s to out of play".format(logPrefix, amtPiece(toOutOfPlay, cellType), name),
             Color.MapPieces)
         if (toExtra > 0)
           log(
-            "%sRemove %s from %s to the \"extra cells\" area".format(logPrefix, amountOf(toExtra, cellType), name),
+            "%sRemove %s from %s to the \"extra cells\" area".format(logPrefix, amtPiece(toExtra, cellType), name),
             Color.MapPieces)
         if (toTrack > 0)
           log(
-            "%sRemove %s from %s to the funding track".format(logPrefix, amountOf(toTrack, cellType), name),
+            "%sRemove %s from %s to the funding track".format(logPrefix, amtPiece(toTrack, cellType), name),
             Color.MapPieces)
       }
+
       if (sadr)
         removeEventMarkersFromCountry(name, Sadr)
       if (cadreAdded)
@@ -7165,42 +7338,44 @@ object LabyrinthAwakening {
     forTravel: Boolean): Unit = {
     if (num > 0) {
       testCountry(toName)
+      val (from, to) = (game.getCountry(fromName), game.getCountry(toName))
       val makeActive =
         game.isCaliphateMember(toName) ||
         (forTravel && toName == UnitedStates && globalEventInPlay(TravelBan))
-      val fromType = if (active)     "active cell" else "sleeper cell"
-      val toType1  = if (makeActive) "an active cell" else "a sleeper cell"
-      val toType   = if (makeActive) "active cells" else "sleeper cells"
-      val (from, to) = (game.getCountry(fromName), game.getCountry(toName))
-      if (active)
-        assert(from.activeCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num active cells")
+      val movers = if (active)
+        Pieces(activeCells = num)
       else
-        assert(from.sleeperCells >= num, s"moveCellsBetweenCountries(): $fromName does not have $num sleeper cells")
+        Pieces(sleeperCells = num)
+      val arrivers = if (makeActive)
+        Pieces(activeCells = num)
+      else
+        Pieces(sleeperCells = num)
+      val (travel, become) = if (num == 1)
+        ("travels", "becomes")
+      else
+         ("travel", "become")
+
+      assert(from.pieces.contains(movers), s"moveCellsBetweenCountries(): $fromName does not contain: $movers")
 
       if (fromName == toName)
-        num match {
-          case 1 => log(s"1 $fromType in $fromName travels in place and becomes $toType1", Color.MapPieces)
-          case n => log(s"$n ${fromType}s in $fromName travel in place and become $toType", Color.MapPieces)
-        }
-      else {
-        num match {
-          case 1 => log(s"Move 1 $fromType from $fromName to $toName as $toType1", Color.MapPieces)
-          case n => log(s"Move $n ${fromType}s from $fromName to $toName as $toType", Color.MapPieces)
-        }
-      }
+        log(s"$movers in $fromName $travel in place and $become $arrivers", Color.MapPieces)
+      else
+        log(s"Move $movers from $fromName to $toName as $arrivers", Color.MapPieces)
 
       from match {
-        case m: MuslimCountry    if active => game = game.updateCountry(m.copy(activeCells  = m.activeCells  - num))
-        case m: MuslimCountry              => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells - num))
-        case n: NonMuslimCountry if active => game = game.updateCountry(n.copy(activeCells  = n.activeCells  - num))
-        case n: NonMuslimCountry           => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells - num))
+        case m: MuslimCountry =>
+          game = game.updateCountry(m.removePieces(movers))
+        case n: NonMuslimCountry =>
+          game = game.updateCountry(n.removePieces(movers))
       }
+
       to match {
-        case m: MuslimCountry    if makeActive => game = game.updateCountry(m.copy(activeCells = m.activeCells + num))
-        case m: MuslimCountry                  => game = game.updateCountry(m.copy(sleeperCells = m.sleeperCells + num))
-        case n: NonMuslimCountry if makeActive => game = game.updateCountry(n.copy(activeCells = n.activeCells + num))
-        case n: NonMuslimCountry               => game = game.updateCountry(n.copy(sleeperCells = n.sleeperCells + num))
+        case m: MuslimCountry =>
+          game = game.updateCountry(m.addPieces(arrivers))
+        case n: NonMuslimCountry =>
+          game = game.updateCountry(n.addPieces(arrivers))
       }
+
       removeTrainingCamp_?(fromName)
       if (fromName == Nigeria)
         makeNigeriaNonMuslim_?() // rule 11.3.3.3
@@ -7211,44 +7386,46 @@ object LabyrinthAwakening {
   def flipSleeperCells(name: String, num: Int): Unit = {
     if (num > 0) {
       val c = game.getCountry(name)
-      assert(c.sleeperCells >= num, s"Cannot flip $num sleepers cells in $name, only ${c.sleeperCells} present")
-      log("Flip %s in %s to active".format(amountOf(num, "sleeper cell"), name), Color.FlipPieces)
-      c match {
-        case m: MuslimCountry    => game = game.updateCountry(
-          m.copy(sleeperCells = m.sleeperCells - num, activeCells = m.activeCells  + num))
-        case n: NonMuslimCountry => game = game.updateCountry(
-          n.copy(sleeperCells = n.sleeperCells - num, activeCells = n.activeCells  + num))
+      assert(c.pieces.sleeperCells >= num, s"Cannot flip $num sleepers cells in $name, only ${c.pieces.sleeperCells} present")
+      log(s"Flip ${amtPiece(num, SleeperCells)} in $name to active", Color.FlipPieces)
+      val updated = c match {
+        case m: MuslimCountry =>
+          m.removePieces(Pieces(sleeperCells = num)).addPieces(Pieces(activeCells = num))
+        case n: NonMuslimCountry =>
+          n.removePieces(Pieces(sleeperCells = num)).addPieces(Pieces(activeCells = num))
       }
+       game = game.updateCountry(updated)
     }
   }
 
   def flipAllSleepersCells(name: String): Unit = {
     val c = game.getCountry(name)
-    if (c.sleeperCells > 0) {
+    val num = c.pieces.sleeperCells
+    if (num > 0) {
       log(s"Flip all sleeper cells in $name to active", Color.FlipPieces)
-      c match {
-        case m: MuslimCountry => game = game.updateCountry(
-          m.copy(sleeperCells = 0, activeCells  = m.activeCells + m.sleeperCells))
-        case n: NonMuslimCountry => game = game.updateCountry(
-          n.copy(sleeperCells = 0, activeCells  = n.activeCells + n.sleeperCells))
+      val updated = c match {
+        case m: MuslimCountry => 
+          m.removePieces(Pieces(sleeperCells = num)).addPieces(Pieces(activeCells = num))
+        case n: NonMuslimCountry => 
+          n.removePieces(Pieces(sleeperCells = num)).addPieces(Pieces(activeCells = num))
+
       }
+      game = game.updateCountry(updated)
     }
   }
 
   def hideActiveCells(name: String, num: Int): Unit = {
     if (num > 0) {
       val c = game.getCountry(name)
-      assert(c.activeCells >= num, s"Cannot hide $num active cells in $name, only ${c.activeCells} present")
-      if (num == 1)
-        log(s"Flip 1 active cell in $name to a sleeper cell", Color.FlipPieces)
-      else
-        log(s"Flip $num active cells in $name to sleeper cells", Color.FlipPieces)
-      c match {
-        case m: MuslimCountry    => game = game.updateCountry(
-          m.copy(sleeperCells = m.sleeperCells + num, activeCells = m.activeCells - num))
-        case n: NonMuslimCountry => game = game.updateCountry(
-          n.copy(sleeperCells = n.sleeperCells + num, activeCells = n.activeCells - num))
+      assert(c.pieces.activeCells >= num, s"Cannot hide $num active cells in $name, only ${c.pieces.activeCells} present")
+      log(s"Flip ${amtPiece(num, ActiveCells)} in $name to hidden", Color.FlipPieces)
+      val updated = c match {
+        case m: MuslimCountry =>
+          m.addPieces(Pieces(sleeperCells = num)).removePieces(Pieces(activeCells = num))
+        case n: NonMuslimCountry =>
+          n.addPieces(Pieces(sleeperCells = num)).removePieces(Pieces(activeCells = num))
       }
+      game = game.updateCountry(updated)
     }
   }
 
@@ -7257,8 +7434,10 @@ object LabyrinthAwakening {
     val c = game.getCountry(name)
     log(s"Add cadre marker to $name.", Color.MapPieces)
     c match {
-      case m: MuslimCountry    => game = game.updateCountry(m.copy(cadres = m.cadres + 1))
-      case n: NonMuslimCountry => game = game.updateCountry(n.copy(cadres = n.cadres + 1))
+      case m: MuslimCountry =>
+        game = game.updateCountry(m.copy(cadres = m.cadres + 1))
+      case n: NonMuslimCountry =>
+        game = game.updateCountry(n.copy(cadres = n.cadres + 1))
     }
   }
 
@@ -7346,7 +7525,7 @@ object LabyrinthAwakening {
               "it is in Civil War"
             else if (numAvail == 0)
               "there are no available Awakening markers"
-            else 
+            else
               "it is under Islamist Rule"
             log(s"\n$target cannot take an awakening marker because $reason.", Color.Event)
           }
@@ -7395,7 +7574,7 @@ object LabyrinthAwakening {
               "it is in Civil War"
             else if (numAvail == 0)
               "there are no available Reaction markers"
-            else 
+            else
               "it is under Islamist Rule"
             log(s"\n$target cannot take a reaction marker because $reason.", Color.Event)
           }
@@ -7578,10 +7757,10 @@ object LabyrinthAwakening {
       endRegimeChange(Nigeria)
       val m = game.getMuslim(Nigeria)
       removeCadresFromCountry(Nigeria, m.cadres)
-      if (m.militia > 0)
-        removeMilitiaFromCountry(Nigeria, m.militia)
-      if (m.troops > 0)
-        moveTroops(Nigeria, "track", m.troops)
+      if (m.pieces.militia > 0)
+        removeMilitiaFromCountry(Nigeria, m.pieces.militia)
+      if (m.pieces.usTroops > 0)
+        moveTroops(Nigeria, "track", m.pieces.usTroops)
       if (m.aidMarkers > 0)
         removeAidMarker(Nigeria, m.aidMarkers)
       if (m.awakening > 0)
@@ -7713,7 +7892,7 @@ object LabyrinthAwakening {
               if (mapPlot.plot == PlotWMD && m.civilWar) {
                 // First WMD in civil war, remove a militia.
                 wmdsInCivilWars += m.name
-                if (m.militia > 0) {
+                if (m.pieces.militia > 0) {
                   log("A WMD plot in a civil war country removes a militia", Color.Event)
                   removeMilitiaFromCountry(m.name, 1)
                 }
@@ -7783,12 +7962,11 @@ object LabyrinthAwakening {
             else if (n.name == Nigeria && mapPlot.plot != Plot1) {
               // rule 11.3.3.3  (Nigeria)
               game = game.updateCountry(DefaultMuslimNigeria.copy(
-                sleeperCells = n.sleeperCells,
-                activeCells  = n.activeCells,
+                pieces       = n.pieces,
                 cadres       = n.cadres,
                 plots        = n.plots,
                 markers      = n.markers,
-                wmdCache     = n.wmdCache
+                wmdCache     = n.wmdCache,
               ))
               log("Flip Nigeria over to its Muslim side", Color.Event)
               log("Nigeria is now a Poor Neutral Muslim country", Color.Event)
@@ -8133,8 +8311,8 @@ object LabyrinthAwakening {
 
     if (numFromMap > 0) {
       val candidates = game.countries
-        .filter(m => !m.truce && m.troops > 0)
-        .map(c => MapItem(c.name, c.troops))
+        .filter(m => !m.truce && m.pieces.usTroops > 0)
+        .map(c => MapItem(c.name, c.pieces.usTroops))
         .sortBy(_.country)
 
       if (numFromTrack == 0)
@@ -9967,7 +10145,7 @@ object LabyrinthAwakening {
     val (maxCanLeave, troopCubesPresent) = if (source == "track")
       (game.troopsAvailable, game.troopsAvailable)
     else
-      (game.getCountry(source).maxDeployFrom, game.getCountry(source).troops)
+      (game.getCountry(source).maxDeployFrom, game.getCountry(source).pieces.usTroops)
 
     // If th NATO or NATO-2 marker is present, the player has the option
     // of deploying it out of the country and removing it from the game.
@@ -10036,7 +10214,7 @@ object LabyrinthAwakening {
     log(separator())
     val source = askCountry("Withdraw troops from which country: ", game.withdrawFromTargets)
     val dest   = askCountry("Deploy withdrawn troops to: ", game.withdrawToTargets.filter(_ != source))
-    val numTroops = askInt("How many troops: ", 1, game.getCountry(source).troops)
+    val numTroops = askInt("How many troops: ", 1, game.getCountry(source).pieces.usTroops)
     addOpsTarget(source)
     performWithdraw(source, dest, numTroops)
   }
@@ -10137,7 +10315,7 @@ object LabyrinthAwakening {
         case _ =>
       }
   }
-  
+
   // Since the Enhance Jihadist Bot prompts for two cards up front  and
   // plays them both during an action phase, the processing of each card
   // is encapsulated in this function.
@@ -10227,7 +10405,7 @@ object LabyrinthAwakening {
     else
       askCardNumber(FromRole(Jihadist)::Nil, "Jihadist Card # ", param, allowAbort = false).toList
 
-    clearEnhJihadistBotSecondCard()        
+    clearEnhJihadistBotSecondCard()
 
       // User can cancel the card play by entering a blank card number
     if (cards.nonEmpty) {
@@ -10581,7 +10759,7 @@ object LabyrinthAwakening {
     // Keep track of where cells have been selected. They can only be selected once!
     case class Source(name: String, sleepers: Int, actives: Int)
     var sourceCountries = game.travelSources
-      .map(c => c.name -> Source(c.name, c.sleeperCells, c.activeCells))
+      .map(c => c.name -> Source(c.name, c.pieces.sleeperCells, c.pieces.activeCells))
       .toMap
 
     // All of the travelling cells must be declared before rolling any dice.
@@ -10709,9 +10887,9 @@ object LabyrinthAwakening {
       val major = country.majorJihadOK(numRolls) && askYorN(s"\nConduct Major Jihad in $name? (y/n) ")
       val (actives, sleepers, sadr) =
       if (major) (numRolls, 0, country.hasSadr)  // All sleeping will be active
-      else if (country.totalCells == numRolls) (country.activeCells, country.sleeperCells, country.hasSadr)
-      else if (country.activeCells == 0 && !country.hasSadr)  (0, numRolls, false)
-      else if (country.sleeperCells == 0 && !country.hasSadr) (numRolls, 0, false)
+      else if (country.totalCells == numRolls) (country.pieces.activeCells, country.pieces.sleeperCells, country.hasSadr)
+      else if (country.pieces.activeCells == 0 && !country.hasSadr)  (0, numRolls, false)
+      else if (country.pieces.sleeperCells == 0 && !country.hasSadr) (numRolls, 0, false)
       else askCells(name, numRolls, sleeperFocus = false)
 
       JihadTarget(name, major, actives, sleepers, sadr)
@@ -10753,7 +10931,7 @@ object LabyrinthAwakening {
     // Keep track of where cells have been selected. They can only be selected once!
     case class Target(name: String, actives: Int, sleepers: Int)
     var targetCountries = (for (name <- game.plotTargets; c = game.getCountry(name))
-      yield name -> Target(name, c.activeCells + (if (c.hasSadr) 1 else 0), c.sleeperCells)).toMap
+      yield name -> Target(name, c.pieces.activeCells + (if (c.hasSadr) 1 else 0), c.pieces.sleeperCells)).toMap
     // All of the plotting cells must be declared before rolling any dice.
     val attempts = for (i <- (1 to numAttempts).toList) yield {
       println()
@@ -11830,24 +12008,24 @@ object LabyrinthAwakening {
 
   def adjustActiveCells(name: String): Unit = {
     val c = game.getCountry(name)
-    val maxCells = c.activeCells + game.cellsAvailable
+    val maxCells = c.pieces.activeCells + game.cellsAvailable
     if (maxCells == 0) {
       println("There are no cells available to add to this country.")
       pause()
     }
     else
-      adjustInt("Active cells", c.activeCells, 0 to maxCells) foreach { value =>
-        if (value < c.activeCells)
-          removeCellsFromCountry(name, c.activeCells - value, 0, false, addCadre = false, s"$name adjusted: ")
-        else if (value > c.activeCells)
-          addActiveCellsToCountry(name, value - c.activeCells, s"$name adjusted: ")
+      adjustInt("Active cells", c.pieces.activeCells, 0 to maxCells) foreach { value =>
+        if (value < c.pieces.activeCells)
+          removeCellsFromCountry(name, c.pieces.activeCells - value, 0, false, addCadre = false, s"$name adjusted: ")
+        else if (value > c.pieces.activeCells)
+          addActiveCellsToCountry(name, value - c.pieces.activeCells, s"$name adjusted: ")
         saveAdjustment(name, "Active cells")
       }
   }
 
   def adjustSleeperCells(name: String): Unit = {
     val c = game.getCountry(name)
-    val maxCells = c.sleeperCells + game.cellsAvailable
+    val maxCells = c.pieces.sleeperCells + game.cellsAvailable
     if (game.isCaliphateMember(name)) {
       println(s"$name is a Caliphate member and therefore cannot have sleeper cells.")
       pause()
@@ -11858,11 +12036,11 @@ object LabyrinthAwakening {
       pause()
     }
     else
-      adjustInt("Sleeper cells", c.sleeperCells, 0 to maxCells) foreach { value =>
-        if (value < c.sleeperCells)
-          removeCellsFromCountry(name, 0, c.sleeperCells - value, false, addCadre = false, s"$name adjusted: ")
-        else if (value > c.sleeperCells)
-          addSleeperCellsToCountry(name, value - c.sleeperCells, s"$name adjusted: ")
+      adjustInt("Sleeper cells", c.pieces.sleeperCells, 0 to maxCells) foreach { value =>
+        if (value < c.pieces.sleeperCells)
+          removeCellsFromCountry(name, 0, c.pieces.sleeperCells - value, false, addCadre = false, s"$name adjusted: ")
+        else if (value > c.pieces.sleeperCells)
+          addSleeperCellsToCountry(name, value - c.pieces.sleeperCells, s"$name adjusted: ")
         saveAdjustment(name, "Sleeper cells")
       }
   }
@@ -11880,19 +12058,22 @@ object LabyrinthAwakening {
   }
 
   def adjustTroops(name: String): Unit = {
-    val c = game getCountry name
-    val maxTroops = c.troops + game.troopsAvailable
+    val c = game.getCountry(name)
+    val maxTroops = c.pieces.usTroops + game.troopsAvailable
     if (maxTroops == 0) {
       println("There are no troops available to add to this country.")
       pause()
     }
     else {
-      adjustInt("Troops", c.troops, 0 to maxTroops) foreach { value =>
-        logAdjustment(name, "Troops", c.troops, value)
-        c match {
-          case m: MuslimCountry    => game = game.updateCountry(m.copy(troops = value))
-          case n: NonMuslimCountry => game = game.updateCountry(n.copy(troops = value))
+      adjustInt("Troops", c.pieces.usTroops, 0 to maxTroops) foreach { value =>
+        logAdjustment(name, "Troops", c.pieces.usTroops, value)
+        val updated = c match {
+          case m: MuslimCountry =>
+            m.removePieces(c.pieces.only(USTroops)).addPieces(Pieces(usTroops = value))
+          case n: NonMuslimCountry =>
+            n.removePieces(c.pieces.only(USTroops)).addPieces(Pieces(usTroops = value))
         }
+        game.updateCountry(updated)
         saveAdjustment(name, "Troops")
       }
     }
@@ -11903,15 +12084,17 @@ object LabyrinthAwakening {
       case _: NonMuslimCountry =>
         throw new IllegalArgumentException(s"Cannot add militia to non-Muslim country: $name")
       case m: MuslimCountry =>
-        val maxMilitia = m.militia + game.militiaAvailable
+        val maxMilitia = m.pieces.militia + game.militiaAvailable
         if (maxMilitia == 0) {
           println("There are no troops available to add to this country.")
           pause()
         }
         else {
-          adjustInt("Militia", m.militia, 0 to maxMilitia) foreach { value =>
-            logAdjustment(name, "Militia", m.militia, value)
-            game = game.updateCountry(m.copy(militia = value))
+          adjustInt("Militia", m.pieces.militia, 0 to maxMilitia) foreach { value =>
+            logAdjustment(name, "Militia", m.pieces.militia, value)
+            game = game.updateCountry(
+              m.removePieces(m.pieces.only(Militia)).addPieces(Pieces(militia = value))
+            )
           }
           saveAdjustment(name, "Militia")
         }

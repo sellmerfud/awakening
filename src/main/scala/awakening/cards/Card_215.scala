@@ -135,7 +135,7 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         val targets = List((Syria, inSyria),(Iraq, inIraq)).filterNot(_._2 == 0)
         for ((target, num) <- targets) {
           addEventTarget(target)
-          val withCells = countryNames(game.countries.filter(c => c.name != target && c.cells > 0))
+          val withCells = countryNames(game.countries.filter(c => c.name != target && c.pieces.totalCells > 0))
           println(s"\nChoose ${amountOf(num, "cell")} to place in $target")
           val sources = askCellsFromAnywhere(num, trackOK = true, withCells, sleeperFocus = false)
           println()

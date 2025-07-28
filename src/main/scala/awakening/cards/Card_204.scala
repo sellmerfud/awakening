@@ -99,7 +99,7 @@ object Card_204 extends Card(204, "Ebola Scare", Unassociated, 1, Remove, USLaps
         if (game.troopsAvailable > 0)
           "track"
         else {
-          val withTroops = countryNames(game.countries.filter(c => !c.truce && c.troops > 0))
+          val withTroops = countryNames(game.countries.filter(c => !c.truce && c.pieces.usTroops > 0))
           USBot.ebolaScareTarget(withTroops).get
         }
       }

@@ -173,7 +173,7 @@ object SavedGame {
 
   private def cardsInHandFromMap(data: Map[String, Any]): CardsInHand =
     CardsInHand(asInt(data("us")), asInt(data("jihadist")))
-
+    
   private def phaseTargetsToMap(data: PhaseTargets): Map[String, Any] =
     Map(
       "ops"                          -> data.ops,
@@ -245,16 +245,13 @@ object SavedGame {
         ("MuslimCountry", Map(
           "name"             -> m.name,
           "governance"       -> m.governance,
-          "sleeperCells"     -> m.sleeperCells,
-          "activeCells"      -> m.activeCells,
+          "pieces"           -> m.pieces.explode().map(_.name),
           "cadres"           -> m.cadres,
           "plots"            -> m.plots.map(plotOnMapToMap),
           "markers"          -> m.markers.map(_.name),
           "isSunni"          -> m.isSunni,
           "resources"        -> m.printedResources,
           "alignment"        -> m.alignment,
-          "troops"           -> m.troops,
-          "militia"          -> m.militia,
           "oilExporter"      -> m.oilExporter,
           "aidMarkers"       -> m.aidMarkers,
           "regimeChange"     -> m.regimeChange,
@@ -269,10 +266,8 @@ object SavedGame {
         ("NonMuslimCountry", Map(
           "name"            -> n.name,
           "governance"      -> n.governance,
-          "sleeperCells"    -> n.sleeperCells,
-          "activeCells"     -> n.activeCells,
+          "pieces"          -> n.pieces.explode().map(_.name),
           "cadres"          -> n.cadres,
-          "troops"          -> n.troops,
           "plots"           -> n.plots.map(plotOnMapToMap),
           "markers"         -> n.markers.map(_.name),
           "postureValue"    -> n.postureValue,
@@ -284,6 +279,7 @@ object SavedGame {
     Map("countryType" -> countryType, "params" -> params)
   }
 
+
   private def countryFromMap(data: Map[String, Any]): Country = {
     val params = asMap(data("params"))
     asString(data("countryType")) match {
@@ -291,16 +287,13 @@ object SavedGame {
         MuslimCountry(
           asString(params("name")),
           asInt(params("governance")),
-          asInt(params("sleeperCells")),
-          asInt(params("activeCells")),
+          Pieces.fromTypes(asList(data("pieces")).map(name => PieceType(name.toString))),
           asInt(params("cadres")),
           asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
           asList(params("markers")).map(name => CountryMarker(asString(name))),
           asBoolean(params("isSunni")),
           asInt(params("resources")),
           asString(params("alignment")),
-          asInt(params("troops")),
-          asInt(params("militia")),
           asBoolean(params("oilExporter")),
           asInt(params("aidMarkers")),
           asString(params("regimeChange")),
@@ -315,10 +308,8 @@ object SavedGame {
         NonMuslimCountry(
           asString(params("name")),
           asInt(params("governance")),
-          asInt(params("sleeperCells")),
-          asInt(params("activeCells")),
+          Pieces.fromTypes(asList(data("pieces")).map(name => PieceType(name.toString))),
           asInt(params("cadres")),
-          asInt(params("troops")),
           asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
           asList(params("markers")).map(name => CountryMarker(asString(name))),
           asString(params("postureValue")),

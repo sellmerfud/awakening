@@ -52,14 +52,14 @@ object IslamicStateOfIraq extends Scenario {
   override val caliphateCapital = Some(Syria)
   val countries = List(
     DefaultSyria.copy(isSunni = false, governance = Fair, alignment = Neutral, civilWar = true, 
-                      militia = 3, activeCells = 4, wmdCache = 0),
+      pieces = Pieces(militia = 3, activeCells = 4), wmdCache = 0),
     DefaultIran.copy(wmdCache = 1),
-    DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 2,
-                      activeCells = 3),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultAfghanistan.copy(governance = Fair, alignment = Ally, troops = 2, sleeperCells = 1),
+    DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true,
+      pieces = Pieces(militia = 2, activeCells = 3)),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultAfghanistan.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2, sleeperCells = 1)),
     DefaultPakistan.copy(governance = Poor, alignment = Ally, cadres = 1),
-    DefaultMuslimNigeria.copy(sleeperCells = 2),
+    DefaultMuslimNigeria.copy(pieces = Pieces(sleeperCells = 2)),
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultFrance.copy(postureValue = Hard),
     DefaultBenelux.copy(postureValue = Hard))

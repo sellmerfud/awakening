@@ -71,7 +71,7 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
   override
   def botWillPlayEvent(role: Role): Boolean =
     plotTargets.nonEmpty ||
-    (game.sleeperCellsOnMap >= 5 && game.hasCountry(c => !c.truce && c.sleeperCells > 0))
+    (game.sleeperCellsOnMap >= 5 && game.hasCountry(c => !c.truce && c.pieces.sleeperCells > 0))
 
   // Carry out the event for the given role.
   // forTrigger will be true if the event was triggered during the human player's turn
@@ -96,8 +96,8 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
             val numToFlip = (game.sleeperCellsOnMap + 1) / 2  // half rounded up
             // Ask which cells to activate
             val withSleepers = game.countries
-              .filter(c => !c.truce && c.sleeperCells > 0)
-              .map(c => MapItem(c.name, c.sleeperCells))
+              .filter(c => !c.truce && c.pieces.sleeperCells > 0)
+              .map(c => MapItem(c.name, c.pieces.sleeperCells))
 
             println(s"Activate a total of ${amountOf(numToFlip, "sleeper cell")}")
             val toFlip = askMapItems(withSleepers.sortBy(_.country), numToFlip, "sleeper cell")
@@ -135,13 +135,13 @@ object Card_161 extends Card(161, "PRISM", US, 3, NoRemove, NoLapsing, NoAutoTri
           performAlert(c.name, humanPickPlotToAlert(c.name))
         }
       else {
-        val candidates = countryNames(game.countries.filter(_.sleeperCells > 0))
+        val candidates = countryNames(game.countries.filter(_.pieces.sleeperCells > 0))
         def flipNext(numLeft: Int, targets: List[String]): Unit = {
           if (numLeft > 0 && targets.nonEmpty) {
             var name = USBot.disruptPriority(targets).get
             val c = game getCountry name
             addEventTarget(name)
-            val num = numLeft min c.sleeperCells
+            val num = numLeft min c.pieces.sleeperCells
             flipSleeperCells(name, num)
             flipNext(numLeft - num, targets.filterNot(_ == name))
           }

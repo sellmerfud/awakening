@@ -57,7 +57,7 @@ object Card_144 extends Card(144, "Operation New Dawn", US, 2, NoRemove, NoLapsi
 
   val isCandidate = (m: MuslimCountry) =>
     !m.truce &&
-    m.troops > 0 &&
+    m.pieces.usTroops > 0 &&
     m.canTakeMilitia
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
@@ -91,7 +91,7 @@ object Card_144 extends Card(144, "Operation New Dawn", US, 2, NoRemove, NoLapsi
       USBot.topPriority(candidates, priorities, allowBotLog = false).get.name
     }
 
-    val numTroops  = 2 min game.getMuslim(target).troops
+    val numTroops  = 2 min game.getMuslim(target).pieces.usTroops
     val numMilitia = numTroops min game.militiaAvailable
     println()
     addEventTarget(target)

@@ -87,8 +87,8 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
   def executeEvent(role: Role): Unit = if (isHuman(role)) {
     val num = 2 min game.cellsOnMap
     val travellers = if (num == 1) {
-      for (c <- game.countries; if c.cells > 0)
-        yield CellsItem(c.name, c.activeCells, c.sleeperCells)
+      for (c <- game.countries; if c.pieces.totalCells > 0)
+        yield CellsItem(c.name, c.pieces.activeCells, c.pieces.sleeperCells)
     }
     else {
       println(s"Select 2 cells to travel to Schengen countries: ")

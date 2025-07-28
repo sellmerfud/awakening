@@ -62,16 +62,16 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
     !m.truce &&
     (m.civilWar || m.inRegimeChange) &&
     m.totalCells > 0 &&
-    m.militia > 0
+    m.pieces.militia > 0
 
   val isUSCandidate = (m: MuslimCountry) =>
-    isCandidate(m) && m.totalCells > m.militia
+    isCandidate(m) && m.totalCells > m.pieces.militia
 
   val isJihadistCandidate = (m: MuslimCountry) =>
-    isCandidate(m) && m.militia - m.totalCells > 0
+    isCandidate(m) && m.pieces.militia - m.totalCells > 0
 
   val isEnhJihadistCandidate = (m: MuslimCountry) =>
-    isCandidate(m) && m.militia - m.totalCells > 1
+    isCandidate(m) && m.pieces.militia - m.totalCells > 1
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
@@ -124,15 +124,15 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
 
     addEventTarget(target)
     val m = game.getMuslim(target)
-    if (m.totalCells > m.militia) {
+    if (m.totalCells > m.pieces.militia) {
       val (actives, sleepers, sadr) = if (isHuman(role))
-        askCells(target, m.totalCells - m.militia, sleeperFocus = true)
+        askCells(target, m.totalCells - m.pieces.militia, sleeperFocus = true)
       else
-        USBot.chooseCellsToRemove(target, m.totalCells - m.militia)
+        USBot.chooseCellsToRemove(target, m.totalCells - m.pieces.militia)
       removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
     }
-    else if (m.militia > m.totalCells)
-      removeMilitiaFromCountry(target, m.militia - m.totalCells)
+    else if (m.pieces.militia > m.totalCells)
+      removeMilitiaFromCountry(target, m.pieces.militia - m.totalCells)
     else
       log(s"\nEqual number of cells and militia in $target.  The event has no effect", Color.Event)
   }

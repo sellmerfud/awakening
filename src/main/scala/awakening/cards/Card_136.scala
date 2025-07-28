@@ -64,7 +64,7 @@ object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLap
     // so only successful if there is no sleeper to flip
     getCandidates match {
       case name::Nil =>
-        game.getMuslim(name).sleeperCells == 0 && USBot.wouldRemoveLastCell(name, 2)
+        game.getMuslim(name).pieces.sleeperCells == 0 && USBot.wouldRemoveLastCell(name, 2)
       case _ => false
     }
 
@@ -95,9 +95,9 @@ object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLap
           USBot.disruptPriority(USBot.highestCellsMinusTandM(candidates)).get
 
         val m = game.getMuslim(target)
-        val hasSleeper = m.sleeperCells > 0
-        val otherSleepers = (m.sleeperCells - 1) max 0
-        val (actives, sleepers, sadr) = (m.activeCells, otherSleepers, m.hasSadr) match {
+        val hasSleeper = m.pieces.sleeperCells > 0
+        val otherSleepers = (m.pieces.sleeperCells - 1) max 0
+        val (actives, sleepers, sadr) = (m.pieces.activeCells, otherSleepers, m.hasSadr) match {
           case (0, 0, true)  => (0, 0, true)
           case (0, s, true)  => (0, 1, true)
           case (a, _, true)  => (1, 0, true)

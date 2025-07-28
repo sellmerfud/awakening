@@ -103,7 +103,7 @@ object Card_324 extends Card(324, "BREXIT", Unassociated, 1, USRemove, NoLapsing
         }
 
         source.foreach { name =>
-          moveCellsBetweenCountries(name, UnitedKingdom, 1, game.getCountry(name).activeCells > 0, forTravel = false)
+          moveCellsBetweenCountries(name, UnitedKingdom, 1, game.getCountry(name).pieces.activeCells > 0, forTravel = false)
         }
     }
 }

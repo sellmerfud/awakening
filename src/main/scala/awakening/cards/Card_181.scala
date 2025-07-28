@@ -87,7 +87,7 @@ object Card_181 extends Card(181, "NPT Safeguards Ignored", Jihadist, 2, NoRemov
     }
     else {
       log(s"\nDie roll: $die - Failure", Color.Event)
-      if (game.getCountry(Iran).activeCells > 0)
+      if (game.getCountry(Iran).pieces.activeCells > 0)
         removeCellsFromCountry(Iran, 1, 0, sadr = false, addCadre = true)
       else
         removeCellsFromCountry(Iran, 0, 1, sadr = false, addCadre = true)

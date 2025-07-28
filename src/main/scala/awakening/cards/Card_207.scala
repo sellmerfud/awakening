@@ -162,7 +162,7 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
         if (eventRemovesLastCell()) {
           val c = game.getCountry(getRemoveCellCandidates.head)
           addEventTarget(c.name)
-          removeCellsFromCountry(c.name, c.activeCells, c.sleeperCells, c.hasSadr, addCadre = true)
+          removeCellsFromCountry(c.name, c.pieces.activeCells, c.pieces.sleeperCells, c.hasSadr, addCadre = true)
         }
         else {
           val name = if (getUSCandidates.contains(UnitedStates))

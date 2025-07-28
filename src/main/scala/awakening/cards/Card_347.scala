@@ -53,7 +53,7 @@ object Card_347 extends Card(347, "Switching Jerseys", Unassociated, 2, NoRemove
   def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
-    !m.truce && m.civilWar && m.totalCells > 0 && m.militia > 0
+    !m.truce && m.civilWar && m.totalCells > 0 && m.pieces.militia > 0
 
   val isUSCandidate = (m: MuslimCountry) =>
     isCandidate(m) && m.totalTroopsAndMilitia > m.totalCells

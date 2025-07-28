@@ -87,8 +87,7 @@ object Card_303 extends Card(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, N
         log("\nFlip Iran country mat to its Shia-Mix Muslim side and set it to Fair Adversary.", Color.Event)
         val iran = game.getNonMuslim(Iran)
         game = game.updateCountry(DefaultMuslimIran.copy(
-          sleeperCells = iran.sleeperCells,
-          activeCells  = iran.activeCells,
+          pieces       = iran.pieces,
           cadres       = iran.cadres,
           plots        = iran.plots,
           markers      = iran.markers,

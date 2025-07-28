@@ -62,7 +62,7 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
     countryNames(game.muslims.filter(m => !m.truce && m.isShiaMix && m.totalCells > 0))
       .exists(name => USBot.wouldRemoveLastCell(name, 2))
 
-  def getMilitiaCandidates = countryNames(game.muslims.filter(m => !m.truce && m.militia > 0))
+  def getMilitiaCandidates = countryNames(game.muslims.filter(m => !m.truce && m.pieces.militia > 0))
 
   def getCellCandidates = countryNames(game.muslims.filter(m => !m.truce && m.totalCells > 0))
 
@@ -142,7 +142,7 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
     }
     else {
         addEventTarget(target)
-        val numMilitia = numToRemove(target) min game.getMuslim(target).militia
+        val numMilitia = numToRemove(target) min game.getMuslim(target).pieces.militia
         removeMilitiaFromCountry(target, numMilitia)
     }
   }

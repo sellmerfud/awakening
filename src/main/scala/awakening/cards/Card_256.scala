@@ -58,7 +58,7 @@ object Card_256 extends Card(256, "White Helmets", US, 1, NoRemove, NoLapsing, N
 
   // Returns true if the printed conditions of the event are satisfied
   override
-  def eventConditionsMet(role: Role) = game.hasMuslim(m => m.militia > 0 && m.civilWar)
+  def eventConditionsMet(role: Role) = game.hasMuslim(m => m.pieces.militia > 0 && m.civilWar)
 
   // Returns true if the Bot associated with the given role will execute the event
   // on its turn.  This implements the special Bot instructions for the event.

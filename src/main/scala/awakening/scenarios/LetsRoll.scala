@@ -53,10 +53,10 @@ object LetsRoll extends Scenario {
     DefaultLibya.copy(governance = Poor, alignment = Adversary),
     DefaultSyria.copy(governance = Fair, alignment = Adversary),
     DefaultIraq.copy(governance = Poor, alignment = Adversary),
-    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, troops = 2),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
+    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
     DefaultPakistan.copy(governance = Fair, alignment = Neutral),
-    DefaultAfghanistan.copy(governance = IslamistRule, alignment = Adversary, sleeperCells = 4),
+    DefaultAfghanistan.copy(governance = IslamistRule, alignment = Adversary, pieces = Pieces(sleeperCells = 4)),
     DefaultSomalia.copy(besiegedRegime = true))
   val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List.empty[Int]

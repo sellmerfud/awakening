@@ -57,12 +57,12 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
   def eventRemovesLastCell(): Boolean = false
 
   val isCandidate = (m: MuslimCountry) =>
-    !m.truce && m.militia > 0 && (m.civilWar || m.inRegimeChange)
+    !m.truce && m.pieces.militia > 0 && (m.civilWar || m.inRegimeChange)
 
   def getCandidates = countryNames(game.muslims.filter(isCandidate))
 
   // Bot will only pick candidate where it can remove 2 or more militia
-  def getEnhBotCandidates = game.muslims.filter(m => isCandidate(m) && (m.militia + 1)/2 >= 2)
+  def getEnhBotCandidates = game.muslims.filter(m => isCandidate(m) && (m.pieces.militia + 1)/2 >= 2)
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -105,7 +105,7 @@ object Card_178 extends Card(178, "Ghost Soldiers", Jihadist, 2, NoRemove, NoLap
       JihadistBot.troopsMilitiaTarget(getCandidates).get
 
     addEventTarget(target)
-    val militia = game.getMuslim(target).militia
+    val militia = game.getMuslim(target).pieces.militia
     removeMilitiaFromCountry(target, (militia + 1) / 2) // Half rounded up
   }
 }

@@ -59,7 +59,7 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
   def getCandidates = countryNames(
     game.muslims.filter { m =>
       !m.truce &&
-      m.militia > 0 &&
+      m.pieces.militia > 0 &&
       (m.inRegimeChange || m.civilWar)
     }
   )
@@ -75,7 +75,7 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
   def botWillPlayEvent(role: Role): Boolean = if (game.botEnhancements) {
     // Playable if 3 Militia would be removed.
     val totalMilitia = game.getMuslims(getCandidates)
-      .map(_.militia)
+      .map(_.pieces.militia)
       .sum
     totalMilitia >= 3
   }
@@ -91,7 +91,7 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
       def nextMilitia(numLeft: Int): Unit = {
         if (numLeft > 0 && getCandidates.nonEmpty) {
           val target = askCountry("Remove militia from which country: ", getCandidates)
-          val maxNum = game.getMuslim(target).militia min numLeft
+          val maxNum = game.getMuslim(target).pieces.militia min numLeft
           val num    = askInt(s"Remove how many from $target", 1, maxNum)
           addEventTarget(target)
           removeMilitiaFromCountry(target, num)
@@ -99,7 +99,7 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
         }
       }
 
-      val maxRemoval = getCandidates.map(game.getMuslim(_).militia).sum min 3
+      val maxRemoval = getCandidates.map(game.getMuslim(_).pieces.militia).sum min 3
       askInt("\nRemove how many total militia from the map", 0, maxRemoval) match {
         case 0 => log("\nJihadist choose to remove no milita.", Color.Event)
         case num => nextMilitia(num)
@@ -110,7 +110,7 @@ object Card_320 extends Card(320, "Tribal Leaders Withdraw Support", Jihadist, 3
       def nextMilitia(numLeft: Int): Unit = {
         if (numLeft > 0 && getCandidates.nonEmpty) {
           val target = JihadistBot.troopsMilitiaTarget(getCandidates).get
-          val num    = game.getMuslim(target).militia min numLeft
+          val num    = game.getMuslim(target).pieces.militia min numLeft
           addEventTarget(target)
           removeMilitiaFromCountry(target, num)
           nextMilitia(numLeft - num)

@@ -91,7 +91,7 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
 
   def canReposition =
     getReposCandidates.size > 1 &&
-    getReposCandidates.exists(name => game.getMuslim(name).militia > 0)
+    getReposCandidates.exists(name => game.getMuslim(name).pieces.militia > 0)
 
   // Returns true if the printed conditions of the event are satisfied
   override
@@ -156,8 +156,8 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
         // Reposition militia
         case class MilitiaCountry(name: String, newMilitia: Int) {
           val muslim   = game.getMuslim(name)
-          def hasLess  = newMilitia < muslim.militia
-          def noChange = newMilitia == muslim.militia
+          def hasLess  = newMilitia < muslim.pieces.militia
+          def noChange = newMilitia == muslim.pieces.militia
         }
 
         def nextCountry(members: List[String], remaining: Int): List[MilitiaCountry] = {
@@ -172,9 +172,9 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
         }
 
         val reposCandidates = getReposCandidates
-        val totalMilitia = reposCandidates.foldLeft(0) { (sum, name) => sum + game.getMuslim(name).militia }
+        val totalMilitia = reposCandidates.foldLeft(0) { (sum, name) => sum + game.getMuslim(name).pieces.militia }
         val starting = reposCandidates.map { name =>
-          MilitiaCountry(name, game.getMuslim(name).militia)
+          MilitiaCountry(name, game.getMuslim(name).pieces.militia)
         }
         val width = longestString(reposCandidates)
         println(s"\nThere are a total of $totalMilitia militia in the target countries.")
@@ -193,14 +193,14 @@ object Card_259 extends Card(259, "Arab NATO", US, 2, NoRemove, NoLapsing, NoAut
           for (p <- placements; if p.hasLess) {
             addEventTarget(p.name)
             val m = game.getMuslim(p.name)
-            game = game.updateCountry(m.copy(militia = p.newMilitia))
-            log(s"Remove ${p.muslim.militia - p.newMilitia} militia from ${p.name}", Color.MapPieces)
+            game = game.updateCountry(m.setPieces(m.pieces.set(p.newMilitia, Militia)))
+            log(s"Remove ${p.muslim.pieces.militia - p.newMilitia} militia from ${p.name}", Color.MapPieces)
           }
           for (p <- placements; if !p.hasLess) {
             addEventTarget(p.name)
             val m = game.getMuslim(p.name)
-            game = game.updateCountry(m.copy(militia = p.newMilitia))
-            log(s"Add ${p.newMilitia - p.muslim.militia} militia to ${p.name}", Color.MapPieces)
+            game = game.updateCountry(m.setPieces(m.pieces.set(p.newMilitia, Militia)))
+            log(s"Add ${p.newMilitia - p.muslim.pieces.militia} militia to ${p.name}", Color.MapPieces)
           }
         }
       }

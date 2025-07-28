@@ -51,17 +51,17 @@ object HillaryWins extends Scenario {
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::PlotWMD::Nil
   val removedPlots   = List.fill(4)(PlotWMD) // 1 per scenario rules plus 3 extra
   val countries = List(
-    DefaultNigeria.copy(postureValue = Soft, sleeperCells = 1),
+    DefaultNigeria.copy(postureValue = Soft, pieces = Pieces(sleeperCells = 1)),
     DefaultAlgeriaTunisia.copy(governance = Good, alignment = Neutral),
-    DefaultLibya.copy(governance = Poor, alignment = Adversary, civilWar = true, sleeperCells = 1),
-    DefaultLebanon.copy(governance = Poor, alignment = Adversary, sleeperCells = 1),
+    DefaultLibya.copy(governance = Poor, alignment = Adversary, civilWar = true, pieces = Pieces(sleeperCells = 1)),
+    DefaultLebanon.copy(governance = Poor, alignment = Adversary, pieces = Pieces(sleeperCells = 1)),
     DefaultSyria.copy(isSunni = false, governance = Fair, alignment = Neutral, civilWar = true,
-                      militia = 2, sleeperCells = 1, wmdCache = 1, markers = Advisors :: Nil),
-    DefaultMuslimIran.copy(governance = IslamistRule, alignment = Adversary, sleeperCells = 3, wmdCache = 0),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 2, militia = 1, sleeperCells = 1, reaction = 1),
-    DefaultPakistan.copy(militia = 2),
-    DefaultYemen.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 1, sleeperCells = 2),
+      pieces = Pieces(militia = 2, sleeperCells = 1), wmdCache = 1, markers = Advisors :: Nil),
+    DefaultMuslimIran.copy(governance = IslamistRule, alignment = Adversary, pieces = Pieces(sleeperCells = 3), wmdCache = 0),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, pieces = Pieces(usTroops = 2, militia = 1, sleeperCells = 1), reaction = 1),
+    DefaultPakistan.copy(pieces = Pieces(militia = 2)),
+    DefaultYemen.copy(governance = Poor, alignment = Neutral, civilWar = true, pieces = Pieces(militia = 1, sleeperCells = 2)),
     DefaultKenyaTanzania.copy(postureValue = Hard, cadres = 1),
     DefaultRussia.copy(postureValue = Hard))
   val markersInPlay = List(TrumpTweetsON)

@@ -51,13 +51,13 @@ object FallOfISIL extends Scenario {
   val removedPlots   = List.fill(3)(PlotWMD)  // 3 extra
   override val caliphateCapital = Some(Syria)
   val countries = List(
-    DefaultMuslimNigeria.copy(governance = Poor, alignment = Ally, sleeperCells = 1),
+    DefaultMuslimNigeria.copy(governance = Poor, alignment = Ally, pieces = Pieces(sleeperCells = 1)),
     DefaultSyria.copy(isSunni = false, governance = Fair, alignment = Neutral, civilWar = true,
-                      militia = 2, activeCells = 4, wmdCache = 1),
-    DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 2, 
-                     activeCells = 3, markers = Advisors :: Nil), // cells active because part of caliphate
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
+      pieces = Pieces(militia = 2, activeCells = 4), wmdCache = 1),
+    DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true,
+      pieces = Pieces(militia = 2, activeCells = 3), markers = Advisors :: Nil), // cells active because part of caliphate
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, pieces = Pieces(usTroops = 2, sleeperCells = 1)),
     DefaultIran.copy(wmdCache = 2),
     DefaultBenelux.copy(postureValue = Hard))
   val markersInPlay = List.empty[GlobalMarker]

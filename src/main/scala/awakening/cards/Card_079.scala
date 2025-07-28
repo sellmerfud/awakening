@@ -94,7 +94,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
 
   def enhBotUSTarget(prev: Option[TravelAttempt]): Option[TravelAttempt] = {
     val cellInOrAdjtoUS = (UnitedStates :: getAdjacent(UnitedStates))
-      .exists(name => game.getCountry(name).cells > 0)
+      .exists(name => game.getCountry(name).pieces.totalCells > 0)
     
     if (!underTruce(UnitedStates) && game.availablePlots.contains(PlotWMD) && !cellInOrAdjtoUS && notPrevTarget(UnitedStates, prev))
       travelAttempt(UnitedStates, prev)
@@ -121,7 +121,7 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
     val priorities = List(
       JihadistBot.UnmarkedPriority, JihadistBot.HardPosturePriority, JihadistBot.SoftPosturePriority)
     val cellsCloseToSchengen = (UnitedStates::UnitedKingdom::Canada::Schengen)
-      .exists(name => game.getCountry(name).cells > 0)
+      .exists(name => game.getCountry(name).pieces.totalCells > 0)
 
     if (game.usPosture == Hard && game.gwotPenalty == 0 && !cellsCloseToSchengen) {
       val candidates = game.getNonMuslims(Schengen)
@@ -244,8 +244,8 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
     val destCountries = countryNames(game.countries.filter(!_.truce))
     val num = 2 min game.cellsOnMap
     val travellers = if (num == 1) {
-      for (c <- game.countries; if c.cells > 0)
-        yield CellsItem(c.name, c.activeCells, c.sleeperCells)
+      for (c <- game.countries; if c.pieces.totalCells > 0)
+        yield CellsItem(c.name, c.pieces.activeCells, c.pieces.sleeperCells)
     }
     else {
       println(s"Select 2 cells to travel anywhere: ")

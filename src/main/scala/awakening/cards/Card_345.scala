@@ -58,7 +58,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
 
   val isStdJihadBotCandidate = (m: MuslimCountry) =>
     isCandidate(m) && (
-      m.militia > 0 ||
+      m.pieces.militia > 0 ||
       (!m.besiegedRegime && JihadistBot.hasCellForTravel(m, "", placement = true)) // Target is "" here because the cell will be removed
     )
 
@@ -66,7 +66,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
 
   // Play in a poor CW country if a Militia can be removed. Priority to highest res*.
   val isEnhJihadBotCandidate = (m: MuslimCountry) =>
-    isCandidate(m) && m.isPoor && m.militia > 0
+    isCandidate(m) && m.isPoor && m.pieces.militia > 0
 
   def enhJihadBotCandidates = game.muslims.filter(isEnhJihadBotCandidate)
 
@@ -106,7 +106,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
     case object Besiege extends PlaceChoice
     def removeChoices(target: String) = {
       val cellOK = game.getMuslim(target).totalCells > 0
-      val miliiaOK = game.getMuslim(target).militia > 0
+      val miliiaOK = game.getMuslim(target).pieces.militia > 0
       val list = List(
         choice(cellOK, Cell, "Remove a cell"),
         choice(miliiaOK, Militia, "Remove a militia"),
@@ -133,7 +133,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
 
       case US =>
         val withCellCandidates = getCandidates.filter(name => game.getMuslim(name).totalCells > 0)
-        val noMilitiaCandidates = getCandidates.filter(name => game.getMuslim(name).militia == 0)
+        val noMilitiaCandidates = getCandidates.filter(name => game.getMuslim(name).pieces.militia == 0)
         val (target, removeAction) = if (withCellCandidates.nonEmpty)
           (USBot.disruptPriority(withCellCandidates).get, Cell)
         else if (noMilitiaCandidates.nonEmpty)
@@ -151,7 +151,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
           (target, Militia, placeAction)
         
       case Jihadist =>
-        val withMilitiaCandidates = countryNames(stdJihadBotCandidates.filter(_.militia > 0))
+        val withMilitiaCandidates = countryNames(stdJihadBotCandidates.filter(_.pieces.militia > 0))
         val notBesieged = countryNames(stdJihadBotCandidates.filter(!_.besiegedRegime))
         val (target, removeAction) =  if (withMilitiaCandidates.nonEmpty)
           (JihadistBot.troopsMilitiaTarget(withMilitiaCandidates).get, Militia)
@@ -170,7 +170,7 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
         USBot.chooseCellsToRemove(target, 1)
       removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
     }
-    else if (removeAction == Militia && m.militia > 0)
+    else if (removeAction == Militia && m.pieces.militia > 0)
       removeMilitiaFromCountry(target, 1)
 
     if (placeAction == Aid)

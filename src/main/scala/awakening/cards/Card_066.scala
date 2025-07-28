@@ -66,7 +66,7 @@ object Card_066 extends Card(66, "Homegrown", Jihadist, 2, NoRemove, NoLapsing, 
     // Playable if [WMD available] or [US hard and no cells in Schengen/US/Canada/UK]
     val canididates = game.getCountries(UnitedStates::Canada::UnitedKingdom::Schengen)
     game.availablePlots.contains(PlotWMD) ||
-    (game.usPosture == Hard && canididates.forall(_.cells == 0))
+    (game.usPosture == Hard && canididates.forall(_.pieces.totalCells == 0))
   }
   else
     game.cellsAvailable > 0

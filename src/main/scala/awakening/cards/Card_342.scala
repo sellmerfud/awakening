@@ -64,7 +64,7 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
   def eventConditionsMet(role: Role) = game.caliphateDeclared
 
   def cellSources(target: String) = countryNames(
-    game.countries.filter(c => !c.truce && c.name != target && c.cells > 0)
+    game.countries.filter(c => !c.truce && c.name != target && c.pieces.totalCells > 0)
   )
 
   def jihadistCandidates = countryNames(game.muslims.filter(!_.truce))

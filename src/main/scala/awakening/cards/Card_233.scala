@@ -80,11 +80,11 @@ object Card_233 extends Card(233, "UN Ceasefire", Unassociated, 2, NoRemove, NoL
     isCandidate(m) &&
     (m.totalCells == game.totalCellsOnMap ||
     arabWinter ||
-    (m.militia >= m.totalCells && !arabWinter))
+    (m.pieces.militia >= m.totalCells && !arabWinter))
 
   val isJihadistBotCandidate = (m: MuslimCountry) =>
     isCandidate(m) &&
-    ((m.totalCells >= m.militia && !arabWinter) ||
+    ((m.totalCells >= m.pieces.militia && !arabWinter) ||
     (m.totalTroopsAndMilitia >= m.totalCells && arabWinter))
 
   def getUSBotCandidates = countryNames(game.muslims.filter(isUSBotCandidate))
@@ -122,17 +122,17 @@ object Card_233 extends Card(233, "UN Ceasefire", Unassociated, 2, NoRemove, NoL
     // the cells being "replaced"
     // Note: any milita will have been removed when the Civil War ended above
     if (lapsingEventInPlay(ArabWinter)) {
-      if (m.militia > 0)
+      if (m.pieces.militia > 0)
         log("\nMilitia are not replaced by awakening markers. [Arab Winter]", Color.Event)
       if (m.totalCells > 0)
         log("\nCells are not replaced with reaction markers. [Arab Winter]", Color.Event)
     }
     else {
-      addAwakeningMarker(name, m.militia)
-      removeCellsFromCountry(name, m.activeCells, m.sleeperCells, m.hasSadr, addCadre = true)
+      addAwakeningMarker(name, m.pieces.militia)
+      removeCellsFromCountry(name, m.pieces.activeCells, m.pieces.sleeperCells, m.hasSadr, addCadre = true)
       addReactionMarker(name, m.totalCells)
     }
-    moveTroops(name, "track", m.troops)
+    moveTroops(name, "track", m.pieces.usTroops)
     setAlignment(name, Neutral)
     rollGovernance(name)
   }
