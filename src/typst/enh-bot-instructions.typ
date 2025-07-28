@@ -41,8 +41,13 @@ The Enhanced Bot works similarly to the Standard Bot that was introduced in *Lab
 Enhanced Bot is intended to be implemented in software and would therefore be a bit more complicated to use manually.
 
 = Card Play
-When playing a card the Enhanced Bot follows these steps to determine how to use the card:
-+ If the event is playable and if playing it has the potential cause an auto victory for the Jihadit, then the Bot will play the event.
+The Enhanced Bot considers two cards when carrying out its action round _(unless it has only one card in hand)_.
+The Enhanced Bot follows these steps to determine how to use these cards:
++ If either event is playable and if playing it has the potential cause an auto victory for the Jihadist, then the Bot will play that event first.
++ If either card is \#108 _Musharraf_ and it is playable, then play it for the event first.
++ If either card is \#_108 Musharraf_ and there is a cell adjacent to Pakistan, then use the other card to travel the cell to Pakistan.  Then play _Musharraf_ second.
++ If either card is \#106 _Jaysh al-Mahdi_ and troops are present in a Good 2+ res Shia-Mix country with a cell, then play _Jaysh al-Mahdi_ first.
++ If either card is \#106 _Jaysh al-Mahdi_ and troops are present in a Good 2+ res Shia-Mix country and there is a cell adjacent to that country, then use the other card to travel the cell to the target country.  Then play _Jaysh al-Mahdi_ second.
 + If the there is Poor Muslim country where it would be possible to conduct a Major Jihad if 3 Ops were available and if doing so would cause an auto victory for the Jihadist:
   - If there are enough Ops on the card plus reserves then the Bot will peform the Major Jihad.
   - If there are not sufficent Ops then the Bot will add the card's Ops to its reserves.
@@ -68,6 +73,7 @@ may only participate in one Radicalization Operation.
 + / Adjacent Travel to Good Muslim 2+ resource\* countries with no Troops: Travel a single adjacent cell to as many Good 2+ resource\* countries without troops as possible where a _War of Ideas_ roll would succeed if the country were worsened to Fair. (Skip if _Biometrics_ is in play. Skip Pakistan if Benazir Bhutto marker present.)
 + / Recruit: Recruit as many cells as possible in Poor or Auto-Recruit Muslim countries.  Do not recruit in Islamist Rule countries unless the country has fewer than 6 cells and either the country is the _Auto Recruit Priority_ or the _Auto Recruit Priority_  is not Islamist Rule.  Priority to the _Major Jihad Priority_, then using _Recruit/Travel To_ priorities.
 + / Travel to _Major Jihad Priority_ country: As many cells a possible.
++ / Adjacent Travel to non-Good countries without Troops: _(only if Biometrics and/or GTMO lapsing)_ select a non-Good Country and travel as many adjacent cells as possible to it. Destination priorites: Adjacent to MJP, then Iran, then random.
 + / Add to reserves: Add surplus card Ops to reserves if there are not already 2 Ops in reserve.
 
 

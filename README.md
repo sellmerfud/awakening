@@ -42,7 +42,7 @@ When you first run the program, it will prompt you to enter:
 4. The difficulty level
 5. A name for your game (so your progress can be saved)
 
-Your game is saved after each action: card play, plot resolution, etc.  You can use the 
+Your game is saved after each action.  You can use the 
 `show actions` command to see the actions that have been performed during the current turn.
 
 When you run the program after you have one or more saved games then you will be asked
@@ -86,6 +86,7 @@ play 85
 p 85
 85
 ```
+*Note: when playing against the [Enhanced Jihadist Bot](#enh-jihad-bot) you may enter two card numbers.*
 
 Once two cards have been played during an action round you will be asked if the action phase should
 be ended.  Normally you will answer yes so that the game is advanced to the next action round for the
@@ -140,6 +141,42 @@ the software will instruct you to add the next deck for the appropriate expansio
 When moving from the *Labyrinth* deck to the *Awakening* deck, the software will begin to
 enforce the appropriate rule changes associated with the *Awakening* expansion.
 
+## Color on Windows
+
+The software uses different colors when displaying log messages so that it is easier to follow what it happening.  On older versions of Windows the command prompt did not support color.  If your log messages look garbled with ANSI color codes then your version of the Windows command prompt does not support color.  You can use the command: `adjust color` to turn off the use of color.
+
+To avoid having to type this command for every new game you can
+create a file called `C:\Users\<user name>\awakening_config` with the following:
+```
+color = no
+```
+
+It is my understanding that color support started with *Windows 10 version 1909 (Nov 2019 Update)*.
+
+If you are using a version from *Windows 10 version 1511 (November Update, 2015-11-03)* to *Windows 10 version 1903 (May 2019 Update)* then
+color support can be enabled using a registry setting. See [this post](https://ss64.com/nt/syntax-ansi.html) for more information.
+
+
+## <a id="enh-jihad-bot">Enhanced Jihadist Bot</a>
+
+In addition to the standard US and Jihadist Bots described in the *Labyrinth: The Awakening, 2010 – ?* rulebook, the
+software also impements an Enhanced Jihadist Bot designed by Florian Ottich.  When playing a game as
+the US player, you will be prompted for which Jihadist Bot you wish to play.
+
+When it is the Enhanced Jihadit Bot's action phase and the Bot has 2 or more cards in hand, you will be prompted
+to enter the top *two* cards from the Bot's hand.  The Enhanced Bot will decide which card to play first.  To speed
+things up you can avoid the second prompt by entering both card numbers.  
+For example if the top two cards on the Bot's hand are \#85 and \#12 you could enter both cards using any of the
+following:
+```
+play 85 12
+p 85 12
+85 12
+```
+If you forget to enter two cards, the software will prompt you for the second card.
+
+For more details on how the Enhanced Bot is implemented see the pdf files in the `doc` directory of installed
+software.
 
 
 ## License

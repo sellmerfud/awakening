@@ -11,6 +11,7 @@
 # <app-directory>/awakening_config
 # <home-directory>/awakening_config
 # <home-directory>/.awakening_config
+# $XDG_CONFIG_HOME/awakening/awakening_config (default: <home-directory>/.config/awakening/awakening_config)
 #
 # Copy this sample file to one of the these locations
 # and modify it to suit your preferences.
@@ -77,10 +78,21 @@ us-resolve =
 # of each die roll during your turn.
 dice =
 
-# By default color is logged on non-Windows systems.
+# By default log message use ANSI color escape codes.
 # The Windows command console on older (Windows 10) versions
-# of Windows does not support color, so color is disabled by default
-# on Windows systems.  If you are running a version of Windows that
-# supports color in the console, then you can set this value to yes.
-# Or if you want to disable color on your system then set it to no.
+# of Windows does not support color, so if your log messages are 
+# displaying the ANSI codes rather than displaying color then
+# you are running a version of Windows that does not support color
+# in the console.
+# Set this value to: yes or no
 color =
+
+# To avoid being prompted to use the Enhanced Jihadist Bot
+# you can set the following to one of: yes, no
+enhanced-bot =
+
+# You can specify the difficulty level used by the 
+# Enhanced Jihadist Bot.
+# This can be set to one of: Normal, Easier, Easiest
+enhanced-bot-difficulty =
+

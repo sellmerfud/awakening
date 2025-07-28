@@ -26,8 +26,12 @@ To run the program
 More Details
 -----------------------------------------------------------------------
 1. You will be presented with a Command: prompt.  You can type
-   'help' to get a list of valid commands.  You can type 
-   'help <command>' to get more detailed help on a particular command.
+   'help' for some general help on how to use the program.  You can type 
+   follow any command with 'help' or '?' to get more detailed help on a particular command.
+   For example to get help on using the history command you could type:
+   history ?
+   or more succinctly:
+   h ?
    
 2. Any time the game prompts you for a value (a command, a country name, etc.),  
    you only need to enter the first few characters of the value.  For example,
@@ -41,19 +45,11 @@ More Details
    in the same directory as this README file.  Each game will have
    its own subdirectory within 'games'.  To delete a saved game,
    simply delete its corresponding subdirectory.
-   
-4. There is a 'resolve plot' command, but you should rarely need to 
-   use it.  The game will detect when plots need to be resolved
-   automatically.
- 
-5. Once all cards have been played by both sides, use the 'end turn'
-   command to do all the end of turn stuff.  If there are
-   unresolved plots on the map, they will be resolved first.  
-   
-6. You can use the 'rollback' command to roll back to the beginning
+      
+4. You can use the 'rollback' command to roll back to the beginning
    of a previous card play, or the beginning of a previous turn.
    
-7. Look at the help for the 'show' and 'history' commands.  They are
+5. Look at the help for the 'show' and 'history' commands.  They are
    very useful for making sure your board is in sync with the game.
    If you find any inconsistencies, you can use the 'adjust' command.
    
