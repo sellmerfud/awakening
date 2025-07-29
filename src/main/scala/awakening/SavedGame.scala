@@ -287,7 +287,7 @@ object SavedGame {
         MuslimCountry(
           asString(params("name")),
           asInt(params("governance")),
-          Pieces.fromTypes(asList(data("pieces")).map(name => PieceType(name.toString))),
+          Pieces.fromTypes(asList(params("pieces")).map(name => PieceType(name.toString))),
           asInt(params("cadres")),
           asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
           asList(params("markers")).map(name => CountryMarker(asString(name))),
@@ -308,7 +308,7 @@ object SavedGame {
         NonMuslimCountry(
           asString(params("name")),
           asInt(params("governance")),
-          Pieces.fromTypes(asList(data("pieces")).map(name => PieceType(name.toString))),
+          Pieces.fromTypes(asList(params("pieces")).map(name => PieceType(name.toString))),
           asInt(params("cadres")),
           asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
           asList(params("markers")).map(name => CountryMarker(asString(name))),
