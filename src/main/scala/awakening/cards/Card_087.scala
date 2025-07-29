@@ -82,34 +82,38 @@ object Card_087 extends Card(87, "Martyrdom Operation", Jihadist, 3, NoRemove, N
   def executeEvent(role: Role): Unit = {
     val candidates = getCandidates
     if (candidates.nonEmpty) {
-      val (target, (active, sleeper, sadr), plots) = if (isHuman(role)) {
+      val (target, cell, sadr, plots) = if (isHuman(role)) {
         val targetName = askCountry("Select country: ", candidates)
-        val cell = askCells(targetName, 1, sleeperFocus = false)
-        (targetName, cell, askAvailablePlots(2, ops = 3))
+        val (cell, sadr) = askCells(targetName, 1, sleeperFocus = false)
+        (targetName, cell, sadr, askAvailablePlots(2, ops = 3))
       }
       else if (game.botEnhancements && enhBotTarget.nonEmpty) {
         // The enhBotTarget will only come up empty, if we were triggered
         // during the US turn.  Fall back to normal Bot code.
         val targetName = enhBotTarget.get
         val c = game.getCountry(targetName)
-        val cell = if (c.pieces.activeCells > 0) (1, 0, false)
-                   else                   (0, 1, false)
-        (targetName, cell, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))
-                    
-
+        val cell = if (c.pieces.activeCells > 0)
+          Pieces(activeCells = 1)
+        else
+          Pieces(sleeperCells = 1)
+        (targetName, cell, false, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))
       }
       else {
         // See Event Instructions table
         val targetName = JihadistBot.plotPriority(candidates).get
         val c = game.getCountry(targetName)
-        val cell = if (c.pieces.activeCells > 0) (1, 0, false)
-                   else if (c.hasSadr)    (0, 0, true)
-                   else                   (0, 1, false)
-        (targetName, cell, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))
+        val (cell, sadr) = if (c.pieces.activeCells > 0)
+          (Pieces(activeCells = 1), false)
+        else if (c.hasSadr)
+          (Pieces(), true)
+        else
+          (Pieces(sleeperCells = 1), false)
+
+        (targetName, cell, sadr, JihadistBot.selectPlotMarkers(targetName, 2, game.availablePlots))
       }
 
       addEventTarget(target)
-      removeCellsFromCountry(target, active, sleeper, sadr, addCadre = true)
+      removeCellsFromCountry(target, cell, sadr, addCadre = true)
       for (plot <- plots)
         addAvailablePlotToCountry(target, plot)
     }

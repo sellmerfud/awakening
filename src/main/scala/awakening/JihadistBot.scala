@@ -1977,15 +1977,15 @@ object JihadistBot extends BotHelpers {
 
   // Pick actives before sleepers
   // Return (actives, sleepers, sadr)
-  def chooseCellsToRemove(name: String, num: Int): (Int, Int, Boolean) = {
+  def chooseCellsToRemove(name: String, num: Int): (Pieces, Boolean) = {
     if (num == 0)
-      (0, 0, false)
+      (Pieces(), false)
     else {
-      val c = game getCountry name
+      val c = game.getCountry(name)
       val actives   = num min c.pieces.activeCells
       val sleepers  = (num - actives) min c.pieces.sleeperCells
       val sadr      = c.hasSadr && (num - actives - sleepers > 0)
-      (actives, sleepers, sadr)
+      (Pieces(activeCells = actives, sleeperCells = sleepers), sadr)
     }
   }
 
@@ -2178,7 +2178,7 @@ object JihadistBot extends BotHelpers {
       travelFromPriorities(destination, sourcesWithCells)
     else
       None
-  
+
     sourceName
       .map { source =>
         val attempt = TravelAttempt(source, destination, game.getCountry(source).pieces.activeCells > 0)
@@ -2234,7 +2234,7 @@ object JihadistBot extends BotHelpers {
     def hasAdjacentCell(name: String) =
       lapsingEventNotInPlay(Biometrics) &&
       game.adjacentCountries(name).exists(c => !c.truce && c.pieces.totalCells > 0)
-      
+
     // If either card is #108 Musharraf and Pakistan is Good and Benazir Bhutto is not present:
     // 1. The play Musharraf first if possible (cells present in Pakistan).
     // 2. If there is a cell adjacent to Pakistan, then use first card to travel the cell
@@ -2287,7 +2287,7 @@ object JihadistBot extends BotHelpers {
     }
 
     // If either card is a Martyrdom event:
-    // A: If two plots available: 
+    // A: If two plots available:
     // 1. If a cell in US or a Good 2+ res* country, play the event
     // 2. If a cell adjacent to US or Good 2+ res* country, then use first card to
     //    travel the cell to country (even if not "moveable"), then play Martyrdom event second
@@ -2319,7 +2319,7 @@ object JihadistBot extends BotHelpers {
               Some(USFilter)
             ).flatten
             val target = topPriority(candidatesWithAdjCells, priorities).map(_.name).get
-            
+
             List(CardWithUsage(otherCardNum(card), UseCardForPriorityAdjacentTravel(target)), CardWithUsage(card, UseCardForEvent))
           }
           else if (otherCardNum(card) == Fatwa)
@@ -2405,7 +2405,7 @@ object JihadistBot extends BotHelpers {
 
         case UseCardForPriorityAdjacentTravel(target) =>
           PriorityAdjacentTravel(target)
-        
+
         case UseCardForOps|UseCardNormally if majorJihadPoorMuslimTargets(3).exists(wouldWinGame) =>
           botLog("Major Jihad could potentially win the game")
           MajorJihadForWin
@@ -3092,15 +3092,16 @@ object JihadistBot extends BotHelpers {
             val actives  = numAttempts min activeCells(m)
             val sleepers = (numAttempts - actives) min sleeperCells(m)
             val sadr     = numAttempts - actives - sleepers > 0
-            val target = JihadTarget(name, false, actives, sleepers, sadr)
+            val cells    = Pieces(activeCells = actives, sleeperCells = sleepers)
+            val target = JihadTarget(name, false, cells, sadr)
             target :: nextJihadTarget(completed + numAttempts, alreadyTried + name)
         }
       }
     }
 
     val targets = nextJihadTarget(0, Set.empty)
-    val opsUsed = (for (JihadTarget(_, _, a, s, sadr, _, _) <- targets)
-      yield(a + s + (if (sadr) 1 else 0))).sum
+    val opsUsed = (for (JihadTarget(_, _, cells, sadr, _, _) <- targets)
+      yield(cells.total + (if (sadr) 1 else 0))).sum
     if (card.ops < opsUsed)
       expendBotReserves(opsUsed - card.ops)
     for (t <- targets)
@@ -3131,7 +3132,7 @@ object JihadistBot extends BotHelpers {
         if (card.ops < opsUsed)
           expendBotReserves(opsUsed - card.ops)
         addOpsTarget(name)
-        val target = JihadTarget(name, true, opsUsed, 0, false)
+        val target = JihadTarget(name, true, Pieces(activeCells = opsUsed), false)
         for ((_, successes, _) <- performJihads(target::Nil))
               usedCells(name).addActives(successes)
         opsUsed
@@ -3704,7 +3705,8 @@ object JihadistBot extends BotHelpers {
               val numAttempts = totalUnused(m, includeSadr = false) min limit
               val actives  = numAttempts min activeCells(m)
               val sleepers = (numAttempts - actives) min sleeperCells(m)
-              val target = JihadTarget(name, false, actives, sleepers, false)
+              val cells    = Pieces(activeCells = actives, sleeperCells = sleepers)
+              val target = JihadTarget(name, false, cells, false)
               val opsUsed = actives + sleepers
               val cardOpsUsed = cardOpsRemaining min opsUsed
               val resOpsUsed = opsUsed - cardOpsUsed
@@ -4079,7 +4081,7 @@ object JihadistBot extends BotHelpers {
       def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
         (lapsingEventInPlay(Biometrics) || lapsingEventInPlay(GTMO)) &&
         candidates.nonEmpty
-        
+
       // cardsOps   - The number of unused Ops remaining from the card
       // reserveOps - The number of unused Ops remaining from reserves
       // Returns the number of ops used
@@ -4248,16 +4250,15 @@ object JihadistBot extends BotHelpers {
             val n = remaining min JihadistBot.numCellsForTravel(c, destination)
             val a = n min activeCells(c)
             val s = n - a
-            CellsItem(name, a, s) :: nextFromMap(countries.filterNot(_ == name), remaining - n)
+            CellsItem(name, Pieces(activeCells = a, sleeperCells = s)) :: nextFromMap(countries.filterNot(_ == name), remaining - n)
           case None => Nil
         }
 
-      val numFromTrack = numCells min game.cellsAvailable
-      val fromMap = nextFromMap(sources, numCells - numFromTrack)
-      if (numFromTrack > 0)
-        CellsItem("track", 0, numFromTrack) :: fromMap
+      val cellsFromTrack = Pieces(sleeperCells = numCells min game.cellsAvailable)
+      val fromMap = nextFromMap(sources, numCells - cellsFromTrack.total)
+      if (cellsFromTrack.nonEmpty)
+        CellsItem("track", cellsFromTrack) :: fromMap
       else
         fromMap
   }
-
 }

@@ -91,13 +91,13 @@ object Card_069 extends Card(69, "Kazakh Strain", Jihadist, 2, Remove, NoLapsing
       addRemovedWMDToAvailable(1)
     }
     else {
-      val (active, sleeper, sadr) = if (isHuman(role)) {
+      val (cell, sadr) = if (isHuman(role)) {
         displayLine("\nYou must remove a cell", Color.Event)
         askCells(CentralAsia, 1, sleeperFocus = false)
       }
       else
         JihadistBot.chooseCellsToRemove(CentralAsia, 1)
-      removeCellsFromCountry(CentralAsia, active, sleeper, sadr, addCadre = true)
+      removeCellsFromCountry(CentralAsia, cell, sadr, addCadre = true)
     }
   }
 }

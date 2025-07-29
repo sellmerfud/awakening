@@ -77,7 +77,7 @@ object Card_262 extends Card(262, "MOAB", US, 2, NoRemove, NoLapsing, NoAutoTrig
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+    val (target, (cell, sadr)) = if (isHuman(role)) {
       val name = askCountry("Remove a cell from which country: ", getCandidates)
       (name, askCells(name, 1, true))
     }
@@ -94,7 +94,7 @@ object Card_262 extends Card(262, "MOAB", US, 2, NoRemove, NoLapsing, NoAutoTrig
       log(s"\nCannot remove cell from $target because it is under a TRUCE.", Color.Event)
     else {
       addEventTarget(target)
-      removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      removeCellsFromCountry(target, cell, sadr, addCadre = true)
     }
     
     increasePrestige(1)

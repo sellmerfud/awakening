@@ -114,7 +114,7 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
     sealed trait Choice
     case object Governance extends Choice
     case object Alignment extends Choice
-    val (name, (actives, sleepers, sadr), action) = role match {
+    val (name, (cells, sadr), action) = role match {
       case _ if isHuman(role) =>
         val name = askCountry("Select country: ", getCandidates)
         val m = game.getMuslim(name)
@@ -170,8 +170,8 @@ object Card_230 extends Card(230, "Sellout", Unassociated, 2, NoRemove, NoLapsin
     }
 
     addEventTarget(name)
-    removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
-    val totalCells = actives + sleepers + (if (sadr) 1 else 0)
+    removeCellsFromCountry(name, cells, sadr, addCadre = true)
+    val totalCells = cells.total + (if (sadr) 1 else 0)
     increaseFunding((totalCells + 1) / 2)  // half of removed cells rounded up
     action match {
       case Some(Governance) => worsenGovernance(name, 1, canShiftToIR = false)

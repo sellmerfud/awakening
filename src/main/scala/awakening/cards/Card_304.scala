@@ -90,12 +90,12 @@ object Card_304 extends Card(304, "Loose Chemicals", Jihadist, 2, NoRemove, NoLa
     }
     else {
       log(s"\nDie roll: $die - Remove a cell", Color.Event)
-      val (actives, sleepers, sadr) = if (isHuman(role))
+      val (cell, sadr) = if (isHuman(role))
         askCells(Syria, 1, sleeperFocus = false)
       else
           JihadistBot.chooseCellsToRemove(Syria, 1)
 
-      removeCellsFromCountry(Syria, actives, sleepers, sadr, addCadre = true)
+      removeCellsFromCountry(Syria, cell, sadr, addCadre = true)
     }
   }
 }

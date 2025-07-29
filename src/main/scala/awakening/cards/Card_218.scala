@@ -125,11 +125,11 @@ object Card_218 extends Card(218, "Al-Nusra Front", Unassociated, 2, NoRemove, N
     addEventTarget(target)
     val m = game.getMuslim(target)
     if (m.totalCells > m.pieces.militia) {
-      val (actives, sleepers, sadr) = if (isHuman(role))
+      val (cells, sadr) = if (isHuman(role))
         askCells(target, m.totalCells - m.pieces.militia, sleeperFocus = true)
       else
         USBot.chooseCellsToRemove(target, m.totalCells - m.pieces.militia)
-      removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      removeCellsFromCountry(target, cells, sadr, addCadre = true)
     }
     else if (m.pieces.militia > m.totalCells)
       removeMilitiaFromCountry(target, m.pieces.militia - m.totalCells)

@@ -138,18 +138,18 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
       }
 
       if (removeCellFrom != "") {
-        val (active, sleeper, sadr) = askCells(removeCellFrom, 1, sleeperFocus = true)
-        removeCellsFromCountry(removeCellFrom, active, sleeper, sadr, addCadre = true)
+        val (cell, sadr) = askCells(removeCellFrom, 1, sleeperFocus = true)
+        removeCellsFromCountry(removeCellFrom, cell, sadr, addCadre = true)
       }
       else
         log(s"\nThere is no cell to remove in either $target or $Iran.", Color.Event)
 
     case US if getBotCellCandidates.nonEmpty => // Bot
         val name = USBot.disruptPriority(getBotCellCandidates).get
-        val (active, sleeper, sadr) = USBot.chooseCellsToRemove(name, 1)
+        val (cell, sadr) = USBot.chooseCellsToRemove(name, 1)
         addEventTarget(name)
         testCountry(name) // Event specifically says to test
-        removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+        removeCellsFromCountry(name, cell, sadr, addCadre = true)
 
     case US => // Should never get here!
       log("\nThere are cells in Shia-Mix countries or in Iran.  The event has no effect.", Color.Event)
@@ -164,6 +164,6 @@ object Card_104 extends Card(104, "Iran", Unassociated, 2, NoRemove, NoLapsing, 
 
       addEventTarget(name)
       testCountry(name) // Event specifically says to test
-      performJihads(JihadTarget(name, false, 0, 0, false, phantoms = 2, ignoreFailures = true)::Nil)
+      performJihads(JihadTarget(name, false, Pieces(), false, phantoms = 2, ignoreFailures = true)::Nil)
   }
 }

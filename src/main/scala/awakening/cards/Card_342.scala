@@ -143,7 +143,7 @@ object Card_342 extends Card(342, "Gulmurod Khalimov", Unassociated, 2, USRemove
 
       val m = game.getMuslim(target)
       if (m.jihadOK)
-        performJihads(JihadTarget(target, false, 0, 0, false, phantoms = 2, ignoreFailures = true)::Nil)
+        performJihads(JihadTarget(target, false, Pieces(), false, phantoms = 2, ignoreFailures = true)::Nil)
     }
   }
 }

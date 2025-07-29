@@ -76,7 +76,7 @@ object Card_023 extends Card(23, "Predator", US, 2, NoRemove, NoLapsing, NoAutoT
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
+    val (name, (cells, sadr)) = if (isHuman(role)) {
       val target = askCountry("Select country with a cell: ", getCandidates)
       (target, askCells(target, 1, sleeperFocus = true))
     }
@@ -86,6 +86,6 @@ object Card_023 extends Card(23, "Predator", US, 2, NoRemove, NoLapsing, NoAutoT
     }
     
     addEventTarget(name)
-    removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+    removeCellsFromCountry(name, cells, sadr, addCadre = true)
   }
 }

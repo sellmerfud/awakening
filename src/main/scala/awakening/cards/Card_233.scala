@@ -129,7 +129,7 @@ object Card_233 extends Card(233, "UN Ceasefire", Unassociated, 2, NoRemove, NoL
     }
     else {
       addAwakeningMarker(name, m.pieces.militia)
-      removeCellsFromCountry(name, m.pieces.activeCells, m.pieces.sleeperCells, m.hasSadr, addCadre = true)
+      removeCellsFromCountry(name, m.pieces.only(Cells), m.hasSadr, addCadre = true)
       addReactionMarker(name, m.totalCells)
     }
     moveTroops(name, "track", m.pieces.usTroops)

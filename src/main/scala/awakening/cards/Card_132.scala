@@ -77,7 +77,7 @@ object Card_132 extends Card(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing,
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+    val (target, (cell, sadr)) = if (isHuman(role)) {
       val target = askCountry("Select civil war country: ", getCandidates)
       (target, askCells(target, 1, sleeperFocus = true))
     }
@@ -94,7 +94,7 @@ object Card_132 extends Card(132, "Battle of Sirte", US, 2, NoRemove, NoLapsing,
 
     println()
     addEventTarget(target)
-    removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    removeCellsFromCountry(target, cell, sadr, addCadre = true)
     addMilitiaToCountry(target, game.militiaAvailable min 2)
   }
 }

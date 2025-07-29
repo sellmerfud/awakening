@@ -90,7 +90,7 @@ object Card_347 extends Card(347, "Switching Jerseys", Unassociated, 2, NoRemove
   override
   def executeEvent(role: Role): Unit = {
     if (role == US) {
-      val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+      val (target, (cell, sadr)) = if (isHuman(role)) {
         val name = askCountry("Which country: ", getUSCandidates)
         (name, askCells(name, 1, true))
       }
@@ -100,7 +100,7 @@ object Card_347 extends Card(347, "Switching Jerseys", Unassociated, 2, NoRemove
       }
 
       addEventTarget(target)
-      removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      removeCellsFromCountry(target, cell, sadr, addCadre = true)
       addMilitiaToCountry(target, 1)
     }
     else { // Jihadist

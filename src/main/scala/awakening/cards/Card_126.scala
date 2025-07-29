@@ -92,10 +92,10 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
 
           case Remove =>
             val target = askCountry("Remove 2 cells in which country? ", getCandidates)
-            val (actives, sleepers, sadr) = askCells(target, 2, sleeperFocus = true)
+            val (cells, sadr) = askCells(target, 2, sleeperFocus = true)
             addEventTarget(target)
             println()
-            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+            removeCellsFromCountry(target, cells, sadr, addCadre = true)
         }
       }
       else {
@@ -104,9 +104,9 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
         if (candidates.size == 1 && USBot.wouldRemoveLastCell(candidates.head, 2)) {
           val target = candidates.head
           addEventTarget(target)
-          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
+          val (cells, sadr) = USBot.chooseCellsToRemove(target, 2)
           println()
-          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          removeCellsFromCountry(target, cells, sadr, addCadre = true)
         }
         else {
           val nonIRWith5Cells = countryNames(game.muslims.filter(m => !m.isIslamistRule && m.totalCells >= 5))
@@ -121,9 +121,9 @@ object Card_126 extends Card(126, "Reaper", US, 1, NoRemove, NoLapsing, NoAutoTr
             else
               USBot.disruptPriority(candidates).get
             addEventTarget(target)
-            val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 2)
+            val (cells, sadr) = USBot.chooseCellsToRemove(target, 2)
             println()
-            removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+            removeCellsFromCountry(target, cells, sadr, addCadre = true)
           }
         }
       }

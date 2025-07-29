@@ -94,7 +94,8 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
       val m = game.getMuslim(target)
       val active = m.pieces.activeCells min 2
       val sleeper = (2 - active) min 2
-      List(JihadTarget(target, true, active, sleeper, false))
+      val cells = Pieces(activeCells = active, sleeperCells = sleeper)
+      List(JihadTarget(target, true, cells, false))
     }
     else {
       def nextTarget(opsLeft: Int, candidates: List[String], targets: Vector[JihadTarget]): Vector[JihadTarget] = {
@@ -105,7 +106,8 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
           val country = game.getCountry(name)
           val active = opsLeft min country.pieces.activeCells
           val sleeper = ((opsLeft - active) max 0) min country.pieces.sleeperCells
-          val target = JihadTarget(name, false, active, sleeper, false)
+          val cells = Pieces(activeCells = active, sleeperCells = sleeper)
+          val target = JihadTarget(name, false, cells, false)
           val remainingCandidates = candidates.filterNot(_ == name)
           nextTarget(opsLeft - active - sleeper, remainingCandidates, targets :+ target)
         }
@@ -181,13 +183,15 @@ object Card_300 extends Card(300, "Going Underground", Jihadist, 2, NoRemove, No
         if (muslim.isPoor && muslim.majorJihadOK(opsLeft) && JihadistBot.majorJihadSuccessPossible(muslim)) {
           val active = muslim.pieces.activeCells min opsLeft
           val sleeper = (opsLeft - active) min opsLeft
-          val target = JihadTarget(muslim.name, true, active, sleeper, false)
+          val cells = Pieces(activeCells = active, sleeperCells = sleeper)
+          val target = JihadTarget(muslim.name, true, cells, false)
           nextTarget(0, Nil, targets :+ target)
         }
         else {
           val active = opsLeft min muslim.pieces.activeCells
           val sleeper = ((opsLeft - active) max 0) min muslim.pieces.sleeperCells
-          val target = JihadTarget(muslim.name, false, active, sleeper, false)
+          val cells = Pieces(activeCells = active, sleeperCells = sleeper)
+          val target = JihadTarget(muslim.name, false, cells, false)
           val remainingCandidates = candidates.filterNot(_.name == muslim.name)
           nextTarget(opsLeft - active - sleeper, remainingCandidates, targets :+ target)
         }

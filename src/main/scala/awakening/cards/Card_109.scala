@@ -82,7 +82,7 @@ object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsin
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val (name, (actives, sleepers, sadr)) = if (isHuman(role)) {
+    val (name, (cells, sadr)) = if (isHuman(role)) {
       val name = askCountry("Select a Regime Change country with 2+ cells: ", getCandidates)
       (name, askCells(name, 2, sleeperFocus = role == US))
     }
@@ -98,7 +98,7 @@ object Card_109 extends Card(109, "Tora Bora", Unassociated, 2, Remove, NoLapsin
     }
 
     addEventTarget(name)
-    removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+    removeCellsFromCountry(name, cells, sadr, addCadre = true)
     rollPrestige()
     log(s"\nThe $role player draws a card.", Color.Event)
     askCardDrawnFromDrawPile(role)

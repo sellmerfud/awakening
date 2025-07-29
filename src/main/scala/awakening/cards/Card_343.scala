@@ -104,12 +104,12 @@ object Card_343 extends Card(343, "JCPOA", Unassociated, 2, JihadistRemove, NoLa
       val die = getDieRoll(s"Enter event die roll: ")
       if (die < 4) {
         log(s"\nDie roll: $die - Remove cell and play WMD in available plots", Color.Event)
-        val (actives, sleepers, sadr) = if (isHuman(role))
+        val (cell, sadr) = if (isHuman(role))
           askCells(Iran, 1, false)
         else
           JihadistBot.chooseCellsToRemove(Iran, 1)
 
-        removeCellsFromCountry(Iran, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(Iran, cell, sadr, addCadre = true)
 
         if (game.getCountry(Iran).wmdCache > 0)
           moveWMDCacheToAvailable(Iran, 1)

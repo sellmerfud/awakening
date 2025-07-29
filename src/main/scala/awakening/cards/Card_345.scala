@@ -164,11 +164,11 @@ object Card_345 extends Card(345, "Operation Euphrates Shield", Unassociated, 2,
     val m = game.getMuslim(target)
     addEventTarget(target)
     if (removeAction == Cell && m.totalCells > 0) {
-      val (actives, sleepers, sadr) = if (isHuman(role))
+      val (cell, sadr) = if (isHuman(role))
         askCells(target, 1, true)
       else
         USBot.chooseCellsToRemove(target, 1)
-      removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      removeCellsFromCountry(target, cell, sadr, addCadre = true)
     }
     else if (removeAction == Militia && m.pieces.militia > 0)
       removeMilitiaFromCountry(target, 1)

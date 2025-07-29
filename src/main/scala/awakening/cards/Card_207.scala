@@ -148,8 +148,8 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
         addEventTarget(name)
         askMenu("Choose one:", choices).head match {
           case RemoveCell =>
-            val (actives, sleepers, sadr) = askCells(name, 1, sleeperFocus = true)
-            removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+            val (cell, sadr) = askCells(name, 1, sleeperFocus = true)
+            removeCellsFromCountry(name, cell, sadr, addCadre = true)
 
           case RemoveCadre =>
             removeCadresFromCountry(name, 1)
@@ -162,7 +162,7 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
         if (eventRemovesLastCell()) {
           val c = game.getCountry(getRemoveCellCandidates.head)
           addEventTarget(c.name)
-          removeCellsFromCountry(c.name, c.pieces.activeCells, c.pieces.sleeperCells, c.hasSadr, addCadre = true)
+          removeCellsFromCountry(c.name, c.pieces.only(Cells), c.hasSadr, addCadre = true)
         }
         else {
           val name = if (getUSCandidates.contains(UnitedStates))
@@ -175,8 +175,8 @@ object Card_207 extends Card(207, "JV / Copycat", Unassociated, 1, NoRemove, NoL
           if (n.hasPlots)
             performAlert(name, USBot.selectPriorityPlot(name::Nil).onMap)
           else if (n.totalCells > 0) {
-            val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 1)
-            removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+            val (cell, sadr) = USBot.chooseCellsToRemove(name, 1)
+            removeCellsFromCountry(name, cell, sadr, addCadre = true)
           }
           else
             removeCadresFromCountry(name, 1)

@@ -104,16 +104,16 @@ object Card_231 extends Card(231, "Siege of Kobanigrad", Unassociated, 2, NoRemo
             log("\nThere are no Civil War countries with cells.  The event has no effect.", Color.Event)
           case candidates =>
             val name = askCountry("Select country: ", candidates)
-            val (actives, sleepers, sadr) = askCells(name, 3 min game.getMuslim(name).totalCells, sleeperFocus = true)
+            val (cells, sadr) = askCells(name, 3 min game.getMuslim(name).totalCells, sleeperFocus = true)
             addEventTarget(name)
-            removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+            removeCellsFromCountry(name, cells, sadr, addCadre = true)
         }
 
       case Cells =>
         val name = USBot.disruptPriority(getCellsCandidates).get
-        val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 3 min game.getMuslim(name).totalCells)
+        val (cells, sadr) = USBot.chooseCellsToRemove(name, 3 min game.getMuslim(name).totalCells)
         addEventTarget(name)
-        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(name, cells, sadr, addCadre = true)
 
       case Militia  if isHuman(role) =>
         getMilitiaCandidates match {

@@ -99,12 +99,12 @@ object Card_303 extends Card(303, "Iranian Withdrawal", Jihadist, 2, NoRemove, N
     }
     else {
       log(s"\nDie roll: $die - Remove a cell", Color.Event)
-      val (actives, sleepers, sadr) = if (isHuman(role))
+      val (cells, sadr) = if (isHuman(role))
         askCells(Iran, 1, sleeperFocus = false)
       else
           JihadistBot.chooseCellsToRemove(Iran, 1)
 
-      removeCellsFromCountry(Iran, actives, sleepers, sadr, addCadre = true)
+      removeCellsFromCountry(Iran, cells, sadr, addCadre = true)
     }
   }
 }

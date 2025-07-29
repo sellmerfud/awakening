@@ -97,20 +97,20 @@ object Card_136 extends Card(136, "Factional Infighting", US, 2, NoRemove, NoLap
         val m = game.getMuslim(target)
         val hasSleeper = m.pieces.sleeperCells > 0
         val otherSleepers = (m.pieces.sleeperCells - 1) max 0
-        val (actives, sleepers, sadr) = (m.pieces.activeCells, otherSleepers, m.hasSadr) match {
-          case (0, 0, true)  => (0, 0, true)
-          case (0, s, true)  => (0, 1, true)
-          case (a, _, true)  => (1, 0, true)
+        val (cells, sadr) = (m.pieces.activeCells, otherSleepers, m.hasSadr) match {
+          case (0, 0, true)  => (Pieces(), true)
+          case (0, s, true)  => (Pieces(sleeperCells = 1), true)
+          case (a, _, true)  => (Pieces(activeCells = 1), true)
           case (a, s, false) =>
             val sleepers = s min 2
             val actives  = a min (2 - sleepers)
-            (actives, sleepers, false)
+            (Pieces(activeCells = actives, sleeperCells = sleepers), false)
         }
         println()
         addEventTarget(target)
         if (hasSleeper)
           flipSleeperCells(target, 1)
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(target, cells, sadr, addCadre = true)
       }
 
       // Also, decrease funding by 1 even if no cells affected.

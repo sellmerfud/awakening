@@ -82,7 +82,7 @@ object Card_022 extends Card(22, "Mossad & Shin Bet", US, 2, NoRemove, NoLapsing
     getCandidates.foreach { name =>
       val c = game.getCountry(name)
       addEventTarget(name)
-      removeCellsFromCountry(name, c.pieces.activeCells, c.pieces.sleeperCells, c.hasSadr, addCadre = true)
+      removeCellsFromCountry(name, c.pieces.only(Cells), c.hasSadr, addCadre = true)
     }
   }
 }

@@ -122,7 +122,7 @@ object Card_313 extends Card(313, "Hayat Tahir al-Sham", Jihadist, 3, Remove, No
               val actives  = cellsLeft min m.pieces.activeCells
               val sleepers = (cellsLeft - actives) min m.pieces.sleeperCells
               val remain   = cellsLeft - actives - sleepers
-              CellsItem(target, actives, sleepers) :: nextAdjacent(remain, candidates.filterNot(_ == target))
+              CellsItem(target, Pieces(activeCells = actives, sleeperCells = sleepers)) :: nextAdjacent(remain, candidates.filterNot(_ == target))
             }
           }
   

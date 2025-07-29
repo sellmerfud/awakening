@@ -84,13 +84,13 @@ object Card_071 extends Card(71, "Loose Nuke", Jihadist, 2, Remove, NoLapsing, N
       addRemovedWMDToAvailable(1)
     }
     else {
-      val (active, sleeper, sadr) = if (isHuman(role)) {
+      val (cell, sadr) = if (isHuman(role)) {
         println("You must remove a cell")
         askCells(Russia, 1, sleeperFocus = false)
       }
       else
         JihadistBot.chooseCellsToRemove(Russia, 1)
-      removeCellsFromCountry(Russia, active, sleeper, sadr, addCadre = true)
+      removeCellsFromCountry(Russia, cell, sadr, addCadre = true)
     }
   }
 }

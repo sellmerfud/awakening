@@ -88,15 +88,15 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
     val num = 2 min game.cellsOnMap
     val travellers = if (num == 1) {
       for (c <- game.countries; if c.pieces.totalCells > 0)
-        yield CellsItem(c.name, c.pieces.activeCells, c.pieces.sleeperCells)
+        yield CellsItem(c.name, c.pieces.only(Cells))
     }
     else {
       println(s"Select 2 cells to travel to Schengen countries: ")
       askCellsFromAnywhere(num, trackOK = false, countryNames(game.countries), sleeperFocus = false)
     }
     var i = 1
-    for (CellsItem(from, actives, sleepers) <- travellers) {
-      for (a <- 1 to actives) {
+    for (CellsItem(from, cells) <- travellers) {
+      for (a <- 1 to cells.activeCells) {
         val to = askCountry(s"Select destination country for active cell in $from: ", Schengen)
         addEventTarget(to)
         if (from == to)
@@ -106,7 +106,7 @@ object Card_074 extends Card(74, "Schengen Visas", Jihadist, 2, NoRemove, NoLaps
         i += 1
       }
 
-      for (a <- 1 to sleepers) {
+      for (a <- 1 to cells.sleeperCells) {
         val to = askCountry(s"Select destination country for sleeper cell in $from: ", Schengen.filterNot(_ == from))
         addEventTarget(to)
         moveCellsBetweenCountries(from, to, 1, false, forTravel = true)

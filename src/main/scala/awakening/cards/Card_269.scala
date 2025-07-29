@@ -110,9 +110,9 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
 
       println()
       val removed = askToRemoveCells(maxCells, upto, candidates, sleeperFocus = true)
-      for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
+      for (CellsToRemove(name, cells, sadr) <- removed) {
         addEventTarget(name)
-        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(name, cells, sadr, addCadre = true)
       }
     }
     else {
@@ -134,10 +134,10 @@ object Card_269 extends Card(269, "Air America", US, 3, NoRemove, NoLapsing, NoA
         val withCells = candidates.filter(name => game.getMuslim(name).totalCells > 0)
         if (remaining > 0 && withCells.nonEmpty) {
           val target = USBot.disruptPriority(withCells).get
-          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 1)
+          val (cell, sadr) = USBot.chooseCellsToRemove(target, 1)
 
           addEventTarget(target)
-          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          removeCellsFromCountry(target, cell, sadr, addCadre = true)
           nextRemoval(remaining - 1)
         }
       }

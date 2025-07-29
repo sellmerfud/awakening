@@ -127,7 +127,7 @@ override
     def nextRemoval(): Unit = {
       val m = game.getMuslim(target)
       if (m.totalCells > 0 && m.totalTroopsAndMilitia > 0) {
-        val ((actives, sleepers, sadr), usUnit) = role match {
+        val ((cell, sadr), usUnit) = role match {
           case _ if isHuman(role) =>
             (askCells(target, 1, role == US), askTroopOrMilitia("Remove which US piece:", target))
           case US =>
@@ -136,7 +136,7 @@ override
           (JihadistBot.chooseCellsToRemove(target, 1), JihadistBot.chooseTroopOrMilitiaToRemove(target))
         }
 
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(target, cell, sadr, addCadre = true)
         usUnit match {
           case MilitiaCube         => removeMilitiaFromCountry(target, 1)
           case TroopCube           => moveTroops(target, "track", 1)

@@ -104,13 +104,13 @@ object Card_065 extends Card(65, "HEU", Jihadist, 2, Remove, NoLapsing, NoAutoTr
       addRemovedWMDToAvailable(1)
     }
     else {
-      val (active, sleeper, sadr) = if (isHuman(role)) {
+      val (cell, sadr) = if (isHuman(role)) {
         displayLine("\nYou must remove a cell", Color.Event)
         askCells(name, 1, sleeperFocus = false)
       }
       else
         JihadistBot.chooseCellsToRemove(name, 1)
-      removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+      removeCellsFromCountry(name, cell, sadr, addCadre = true)
     }
   }
 }

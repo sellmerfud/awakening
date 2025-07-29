@@ -93,13 +93,13 @@ object Card_129 extends Card(129, "Special Forces", US, 1, NoRemove, NoLapsing, 
     else
       USBot.disruptPriority(getCandidates).get
 
-    val (actives, sleepers, sadr) = if (isHuman(role))
+    val (cell, sadr) = if (isHuman(role))
       askCells(target, 1, sleeperFocus = true)
     else
       USBot.chooseCellsToRemove(target, 1)
 
     println()
     addEventTarget(target)
-    removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    removeCellsFromCountry(target, cell, sadr, addCadre = true)
   }
 }

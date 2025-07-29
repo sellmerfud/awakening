@@ -110,9 +110,9 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
       log(s"\nThere are no cells to remove in ${orList(advisorCandidates)}.", Color.Event)
     else if (isHuman(role)) {
       val removed = askToRemoveCells(3, true, cellCandidates, sleeperFocus = true)
-      for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
+      for (CellsToRemove(name, cells, sadr) <- removed) {
         addEventTarget(name)
-        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(name, cells, sadr, addCadre = true)
       }
     }
     else {
@@ -123,10 +123,10 @@ object Card_275 extends Card(275, "Operation Inherent Resolve", US, 3, NoRemove,
         val withCells = cellCandidates.filter(name => game.getMuslim(name).totalCells > 0)
         if (remaining > 0 && cellCandidates.nonEmpty) {
           val target = USBot.disruptPriority(cellCandidates).get
-          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 1)
+          val (cell, sadr) = USBot.chooseCellsToRemove(target, 1)
 
           addEventTarget(target)
-          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          removeCellsFromCountry(target, cell, sadr, addCadre = true)
           nextRemoval(remaining - 1)
         }
       }

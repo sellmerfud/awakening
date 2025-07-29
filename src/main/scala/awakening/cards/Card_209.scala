@@ -134,11 +134,11 @@ object Card_209 extends Card(209, "Quds Force", Unassociated, 1, NoRemove, NoLap
 
     if (action == Cells) {
         addEventTarget(target)
-        val (actives, sleepers, sadr) = if (isHuman(role))
+        val (cells, sadr) = if (isHuman(role))
           askCells(target, numToRemove(target), sleeperFocus = true)
         else
           USBot.chooseCellsToRemove(target, numToRemove(target))
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(target, cells, sadr, addCadre = true)
     }
     else {
         addEventTarget(target)

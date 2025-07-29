@@ -207,8 +207,8 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
           case DelMilitia => removeMilitiaFromCountry(name, 2 min game.getMuslim(name).pieces.militia)
           case AddCells => addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
           case DelCells =>
-            val (actives, sleepers, sadr) = askCells(name, 2, role == US)
-            removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+            val (cells, sadr) = askCells(name, 2, role == US)
+            removeCellsFromCountry(name, cells, sadr, addCadre = true)
           case AddPosture =>
             val posture = askPosture(name)
             setCountryPosture(name, posture)
@@ -284,8 +284,8 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
         case candidates =>
           val name = USBot.disruptPriority(candidates).get
           addEventTarget(name)
-          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 2)
-          removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+          val (cells, sadr) = USBot.chooseCellsToRemove(name, 2)
+          removeCellsFromCountry(name, cells, sadr, addCadre = true)
       }
     }
   }

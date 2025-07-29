@@ -121,7 +121,7 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
   def executeEvent(role: Role): Unit =
     role match {
       case US =>
-        val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
+        val (name, (cell, sadr)) = if (isHuman(role)) {
           val name = askCountry("Select country: ", getCandidates)
           (name, askCells(name, 1, sleeperFocus = true))
         }
@@ -131,7 +131,7 @@ object Card_115 extends Card(115, "Hambali", Unassociated, 3, USRemove, NoLapsin
         }
 
         addEventTarget(name)
-        removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+        removeCellsFromCountry(name, cell, sadr, addCadre = true)
         log(s"\nThe $US player draws two cards", Color.Event)
         askMultipleCardsDrawnFromDrawPile(role, 2) match {
           case Nil =>

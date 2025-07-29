@@ -94,7 +94,7 @@ object Card_017 extends Card(17, "FSB", US, 2, NoRemove, NoLapsing, NoAutoTrigge
       log(s"\nThe $US does not have a card to discard.", Color.Event)
 
     // In the solo game, the discard option of the event it ignored.
-    val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
+    val (name, (cells, sadr)) = if (isHuman(role)) {
       val target = askCountry("Select country: ", getCandidates)
       (target, askCells(target, 1, sleeperFocus = true))
     }
@@ -103,5 +103,5 @@ object Card_017 extends Card(17, "FSB", US, 2, NoRemove, NoLapsing, NoAutoTrigge
       (target, USBot.chooseCellsToRemove(target, 1))
     }
     addEventTarget(name)
-    removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)  }
+    removeCellsFromCountry(name, cells, sadr, addCadre = true)  }
 }

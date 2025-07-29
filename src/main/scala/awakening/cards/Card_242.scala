@@ -109,9 +109,9 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
         case Remove =>
           val target = askCountry("Remove cells from which country: ", getCandidates)
           val num = game.getMuslim(target).totalCells min 2
-          val (actives, sleepers, sadr) = askCells(target, num, true)
+          val (cells, sadr) = askCells(target, num, true)
           addEventTarget(target)
-          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          removeCellsFromCountry(target, cells, sadr, addCadre = true)
       }
     }
     else {
@@ -134,9 +134,9 @@ object Card_242 extends Card(242, "Avenger", US, 1, NoRemove, NoLapsing, NoAutoT
           log("\nThere are no Muslim countries with cells.  The event has no effect.", Color.Event)
 
         case Some(name) =>
-          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(name, 2)
+          val (cells, sadr) = USBot.chooseCellsToRemove(name, 2)
           addEventTarget(name)
-          removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+          removeCellsFromCountry(name, cells, sadr, addCadre = true)
       }
     }
   }

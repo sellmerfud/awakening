@@ -104,7 +104,7 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
   def executeEvent(role: Role): Unit = {
     if (role == US) {
       if (getSunniUSCandidates.nonEmpty) {
-        val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+        val (target, (cell, sadr)) = if (isHuman(role)) {
           val t = askCountry("Remove cell from which Sunni country: ", getSunniUSCandidates)
           (t, askCells(t, 1, true))
         }
@@ -113,11 +113,11 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
           (t, USBot.chooseCellsToRemove(t, 1))
         }
         addEventTarget(target)
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(target, cell, sadr, addCadre = true)
       }
 
       if (getShiaUSCandidates.nonEmpty) {
-        val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+        val (target, (cell, sadr)) = if (isHuman(role)) {
           val t = askCountry("Remove cell from which Shia-Mix country: ", getShiaUSCandidates)
           (t, askCells(t, 1, true))
         }
@@ -126,7 +126,7 @@ object Card_358 extends Card(358, "Political Islamism/Pan Arab Nationalism", Una
           (t, USBot.chooseCellsToRemove(t, 1))
         }
         addEventTarget(target)
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(target, cell, sadr, addCadre = true)
       }
 
       println()

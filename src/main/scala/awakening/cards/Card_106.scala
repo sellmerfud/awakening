@@ -89,7 +89,7 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
   override
   def executeEvent(role: Role): Unit = {
     if (role == US) {
-      val (name, (actives, sleepers, sadr)) = if (isHuman(role)) {
+      val (name, (cells, sadr)) = if (isHuman(role)) {
         val name = askCountry("Select a Shia-Mix country with troops and cells: ", getCandidates)
         val num = 2 min game.getMuslim(name).totalCells
         (name, askCells(name, num, sleeperFocus = true))
@@ -100,7 +100,7 @@ object Card_106 extends Card(106, "Jaysh al-Mahdi", Unassociated, 2, NoRemove, N
         (name, USBot.chooseCellsToRemove(name, num))
       }
       addEventTarget(name)
-      removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+      removeCellsFromCountry(name, cells, sadr, addCadre = true)
     }
     else {  // Jihadist
       val enhPriorities = List(JihadistBot.HighestPrintedResourcePriority)

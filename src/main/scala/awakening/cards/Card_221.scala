@@ -186,9 +186,9 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
 
 
   def botRemoveCell(source: String): Unit = {
-    val (a, s, sadr) = JihadistBot.chooseCellsToRemove(source, 1)
+    val (cell, sadr) = JihadistBot.chooseCellsToRemove(source, 1)
     addEventTarget(source)
-    removeCellsFromCountry(source, a, s, sadr, addCadre = true)
+    removeCellsFromCountry(source, cell, sadr, addCadre = true)
   }
 
   // Carry out the event for the given role.
@@ -226,14 +226,14 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
         askCountries(numCells, cellSources)
       }
 
-      case class Cells(name: String, cells: (Int, Int, Boolean))
+      case class Cells(name: String, cells: (Pieces, Boolean))
 
       val cells = for (name <- cellCountries; c = askCells(name, 1, sleeperFocus = role == US))
         yield Cells(name, c)
 
-      for (Cells(name, (a, s, sadr)) <- cells) {
+      for (Cells(name, (cells, sadr)) <- cells) {
         addEventTarget(name)
-        removeCellsFromCountry(name, a, s, sadr, addCadre = true)
+        removeCellsFromCountry(name, cells, sadr, addCadre = true)
       }
 
       val numToPlace = (numReaction + numCells) min game.cellsAvailable
@@ -333,8 +333,8 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
       }
 
       for (name <- countries) {
-        val (a, s, sadr) = JihadistBot.chooseCellsToRemove(name, 1)
-        removeCellsFromCountry(name, a, s, sadr, addCadre = true)
+        val (cell, sadr) = JihadistBot.chooseCellsToRemove(name, 1)
+        removeCellsFromCountry(name, cell, sadr, addCadre = true)
       }
 
       addEventTarget(target)
@@ -355,13 +355,13 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
         }
       }
 
-      def nextCell(remaining: Int, countries: List[String]): List[(String, (Int, Int, Boolean))] = {
+      def nextCell(remaining: Int, countries: List[String]): List[(String, (Pieces, Boolean))] = {
         if (remaining == 0 || countries.isEmpty)
           Nil
         else {
           val name = USBot.disruptPriority(countries).get
-          val cell = USBot.chooseCellsToRemove(name, 1)
-          (name, cell) :: nextCell(remaining - 1, countries.filterNot(_ == name))
+          val cells = USBot.chooseCellsToRemove(name, 1)
+          (name, cells) :: nextCell(remaining - 1, countries.filterNot(_ == name))
         }
       }
 
@@ -379,8 +379,8 @@ object Card_221 extends Card(221, "FlyPaper", Unassociated, 2, NoRemove, NoLapsi
 
       val cellCountries = nextCell(2 - reactionCountries.size max 0, getCellSources.filterNot(_ == target))
 
-      for ((name, (active, sleeper, sadr)) <- cellCountries)
-        removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+      for ((name, (cells, sadr)) <- cellCountries)
+        removeCellsFromCountry(name, cells, sadr, addCadre = true)
 
       val toPlace = (reactionCountries.size + cellCountries.size) min game.cellsAvailable
       if (toPlace > 0) {

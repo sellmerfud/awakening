@@ -85,9 +85,9 @@ object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, N
     if (isHuman(role)) {
       println()
       val removed = askToRemoveCells(maxCellsToRemove, true, getCandidates, sleeperFocus = true)
-      for (CellsToRemove(name, (actives, sleepers, sadr)) <- removed) {
+      for (CellsToRemove(name, cells, sadr) <- removed) {
         addEventTarget(name)
-        removeCellsFromCountry(name, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(name, cells, sadr, addCadre = true)
       }
     }
     else {
@@ -98,10 +98,10 @@ object Card_280 extends Card(280, "Sunni-Shia Rift", US, 3, Remove, NoLapsing, N
         val withCells = getCandidates.filter(name => game.getMuslim(name).totalCells > 0)
         if (remaining > 0 && withCells.nonEmpty) {
           val target = USBot.disruptPriority(withCells).get
-          val (actives, sleepers, sadr) = USBot.chooseCellsToRemove(target, 1)
+          val (cell, sadr) = USBot.chooseCellsToRemove(target, 1)
 
           addEventTarget(target)
-          removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+          removeCellsFromCountry(target, cell, sadr, addCadre = true)
           nextRemoval(remaining - 1)
         }
       }

@@ -101,12 +101,12 @@ object Card_249 extends Card(249, "Saudi Air Strikes", US, 1, NoRemove, NoLapsin
       c.totalCells min 2
     else 1
       
-    val (actives, sleepers, sadr) = if (isHuman(role))
+    val (cells, sadr) = if (isHuman(role))
       askCells(target, num, true)
     else
       USBot.chooseCellsToRemove(target, num)
     
     addEventTarget(target)
-    removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    removeCellsFromCountry(target, cells, sadr, addCadre = true)
   }
 }

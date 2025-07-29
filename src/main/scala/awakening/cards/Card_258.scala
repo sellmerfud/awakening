@@ -80,12 +80,12 @@ object Card_258 extends Card(258, "75th Ranger Regiment", US, 2, NoRemove, NoLap
       USBot.disruptPriority(getCandidates).get
 
     val num = game.getMuslim(target).totalCells min 2
-    val (actives, sleepers, sadr) = if (isHuman(role))
+    val (cells, sadr) = if (isHuman(role))
       askCells(target, num, true)
     else
       USBot.chooseCellsToRemove(target, num)
 
     addEventTarget(target)
-    removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    removeCellsFromCountry(target, cells, sadr, addCadre = true)
   }
 }

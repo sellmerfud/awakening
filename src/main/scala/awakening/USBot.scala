@@ -55,29 +55,29 @@ object USBot extends BotHelpers {
   
   // Pick sleepers before actives
   // Return (actives, sleepers, sadr)
-  def chooseCellsToRemove(name: String, num: Int): (Int, Int, Boolean) = {
+  def chooseCellsToRemove(name: String, num: Int): (Pieces, Boolean) = {
     if (num == 0)
-      (0, 0, false)
+      (Pieces(), false)
     else {
       val c = game getCountry name
       val sadr     = c.hasSadr
       val numCells = num - (if (sadr) 1 else 0)
       val sleepers = numCells min c.pieces.sleeperCells
       val actives  = (numCells - sleepers) min c.pieces.activeCells
-      (actives, sleepers, sadr)
+      (Pieces(activeCells = actives, sleeperCells = sleepers), sadr)
     }
   }
   
   // Pick actives before sleepers
   // Return (actives, sleepers)
-  def chooseCellsToDisrupt(name: String, num: Int): (Int, Int) = {
+  def chooseCellsToDisrupt(name: String, num: Int): Pieces = {
     if (num == 0)
-      (0, 0)
+      Pieces()
     else {
       val c = game getCountry name
       val actives    = num min c.pieces.activeCells
       val sleepers  = (num - actives) min c.pieces.sleeperCells
-      (actives, sleepers)
+      Pieces(activeCells = actives, sleeperCells = sleepers)
     }
   }
   

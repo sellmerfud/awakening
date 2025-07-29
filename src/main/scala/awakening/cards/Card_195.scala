@@ -109,12 +109,12 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val (target, plots, (actives, sleepers, sadr)) = if (isHuman(role)) {
+    val (target, plots, (cells, sadr)) = if (isHuman(role)) {
       val name = askCountry("Select country: ", getCandidates)
       val plots = askPlots(game.availablePlots.filterNot(_ == PlotWMD), 2)
       val m = game.getMuslim(name)
       if (m.totalCells == 3)
-        (name, plots, (m.pieces.activeCells, m.pieces.sleeperCells, m.hasSadr))
+        (name, plots, (m.pieces.only(Cells), m.hasSadr))
       else {
         println("\nChoose cells to remove:")
         (name, plots, askCells(name, 3, sleeperFocus = false))
@@ -133,7 +133,7 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
     }
 
     addEventTarget(target)
-    removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+    removeCellsFromCountry(target, cells, sadr, addCadre = true)
     if (plots.isEmpty)
       log(s"\nThere are no available non-WMD plots to place in $target.", Color.Event)
     else
@@ -142,6 +142,6 @@ object Card_195 extends Card(195, "Taliban Resurgent", Jihadist, 3, NoRemove, No
     // It is possible that the country is no longer a Muslim country.
     // For example: Target is Nigeria and we jsut removed the last cell (rule 11.3.3.3)
     if (game.isMuslim(target))
-      performJihads(JihadTarget(target, false, 0, 0, false, phantoms = 2, ignoreFailures = true)::Nil)
+      performJihads(JihadTarget(target, false, Pieces(), false, phantoms = 2, ignoreFailures = true)::Nil)
   }
 }

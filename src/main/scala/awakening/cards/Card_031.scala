@@ -88,7 +88,7 @@ object Card_031 extends Card(31, "Wiretapping", US, 2, NoRemove, NoLapsing, NoAu
     for (name <- getCandidates; c = game.getCountry(name)) {
       addEventTarget(name)
       removeCadresFromCountry(name, c.cadres)
-      removeCellsFromCountry(name, c.pieces.activeCells, c.pieces.sleeperCells, c.hasSadr, addCadre = false)
+      removeCellsFromCountry(name, c.pieces.only(Cells), c.hasSadr, addCadre = false)
       for (plot <- c.plots)
         performAlert(name, plot)
     }

@@ -110,7 +110,7 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
   def executeEvent(role: Role): Unit = {
     if (role == US) {
       if (removeCellCandidates.nonEmpty) {
-        val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+        val (target, (cell, sadr)) = if (isHuman(role)) {
           val t = askCountry("Remove a Cell from which country: ", removeCellCandidates)
           (t, askCells(t, 1, true))
         }
@@ -120,7 +120,7 @@ object Card_338 extends Card(338, "Abu Muhammad al-Shimali", Unassociated, 2, US
         }
 
         addEventTarget(target)
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(target, cell, sadr, addCadre = true)
       }
       else
         log("\nThere are no cells on the map to remove.", Color.Event)

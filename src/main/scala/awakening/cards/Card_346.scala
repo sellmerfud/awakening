@@ -152,11 +152,11 @@ object Card_346 extends Card(346, "Pakistani Intelligence (ISI)", Unassociated, 
     if (pieceType == Militia) {
       addMilitiaToCountry(target, 1)
       if (game.getCountry(target).totalCells > 0) {
-        val (actives, sleepers, sadr) = if (isHuman(role))
+        val (cell, sadr) = if (isHuman(role))
           askCells(target, 1, true)
         else
           USBot.chooseCellsToRemove(target, 1)
-        removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+        removeCellsFromCountry(target, cell, sadr, addCadre = true)
       }
     }
     else {

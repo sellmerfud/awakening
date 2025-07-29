@@ -88,7 +88,7 @@ object Card_108 extends Card(108, "Musharraf", Unassociated, 2, NoRemove, NoLaps
   // and it associated with the Bot player.
   override
   def executeEvent(role: Role): Unit = {
-    val (active, sleeper, sadr) = if (isHuman(role))
+    val (cell, sadr) = if (isHuman(role))
       askCells(Pakistan, 1, sleeperFocus = role == US)
     else if (role == US)
       USBot.chooseCellsToRemove(Pakistan, 1)
@@ -96,7 +96,7 @@ object Card_108 extends Card(108, "Musharraf", Unassociated, 2, NoRemove, NoLaps
       JihadistBot.chooseCellsToRemove(Pakistan, 1)
 
     addEventTarget(Pakistan)
-    removeCellsFromCountry(Pakistan, active, sleeper, sadr, addCadre = true)
+    removeCellsFromCountry(Pakistan, cell, sadr, addCadre = true)
     setGovernance(Pakistan, Poor, Some(Ally))
   }
 }

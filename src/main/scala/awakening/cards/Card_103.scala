@@ -89,7 +89,7 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
   override
   def executeEvent(role: Role): Unit = role match {
     case US if getCandidates.nonEmpty =>
-      val (name, (active, sleeper, sadr)) = if (isHuman(role)) {
+      val (name, (cell, sadr)) = if (isHuman(role)) {
         val name = askCountry("Remove a cell from which country: ", getCandidates)
         (name, askCells(name, 1, sleeperFocus = true))
       }
@@ -98,7 +98,7 @@ object Card_103 extends Card(103, "Hizballah", Unassociated, 2, NoRemove, NoLaps
         (name, USBot.chooseCellsToRemove(name, 1))
       }
       addEventTarget(name)
-      removeCellsFromCountry(name, active, sleeper, sadr, addCadre = true)
+      removeCellsFromCountry(name, cell, sadr, addCadre = true)
 
     case US =>
       log("\nThere are no Shia-Mix countries will a cell within three countries of Lebanon.", Color.Event)

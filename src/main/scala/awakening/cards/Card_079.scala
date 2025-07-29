@@ -245,21 +245,21 @@ object Card_079 extends Card(79, "Clean Operatives", Jihadist, 3, NoRemove, NoLa
     val num = 2 min game.cellsOnMap
     val travellers = if (num == 1) {
       for (c <- game.countries; if c.pieces.totalCells > 0)
-        yield CellsItem(c.name, c.pieces.activeCells, c.pieces.sleeperCells)
+        yield CellsItem(c.name, c.pieces.only(Cells))
     }
     else {
       println(s"Select 2 cells to travel anywhere: ")
       askCellsFromAnywhere(num, trackOK = false, allCountries, sleeperFocus = false)
     }
     var i = 1
-    for (CellsItem(from, actives, sleepers) <- travellers) {
-      for (a <- 1 to actives) {
+    for (CellsItem(from, cells) <- travellers) {
+      for (a <- 1 to cells.activeCells) {
         val to = askCountry(s"Select ${ordinal(i)} destination country: ", destCountries)
         addEventTarget(to)
         moveCellsBetweenCountries(from, to, 1, true, forTravel = true)
         i += 1
       }
-      for (a <- 1 to sleepers) {
+      for (a <- 1 to cells.sleeperCells) {
         val to = askCountry(s"Select ${ordinal(i)} destination country: ", destCountries)
         addEventTarget(to)
         moveCellsBetweenCountries(from, to, 1, false, forTravel = true)

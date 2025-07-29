@@ -141,7 +141,7 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
           println()
           moveCellsToTarget(target, sources)
           // Count how many were actually placed (based on availability)
-          val totalPlaced = sources.map(_.total).sum
+          val totalPlaced = sources.map(_.cells.total).sum
           if (jihadistChoosesToDeclareCaliphate(target, num))
             declareCaliphate(target)
         }
@@ -183,7 +183,7 @@ object Card_215 extends Card(215, "Abu Bakr al-Baghdadi", Unassociated, 2, USRem
         addEventTarget(target)
 
         val placements = JihadistBot.selecCellsToPlace(target, sourceCountries, 3)
-        val totalPlaced = placements.map(_.total).sum
+        val totalPlaced = placements.map(_.cells.total).sum
         moveCellsToTarget(target, placements)
 
         if (jihadistChoosesToDeclareCaliphate(target, totalPlaced))

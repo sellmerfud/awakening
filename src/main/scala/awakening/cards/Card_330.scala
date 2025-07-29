@@ -86,7 +86,7 @@ object Card_330 extends Card(330, "IRGC", Unassociated, 1, NoRemove, NoLapsing, 
   override
   def executeEvent(role: Role): Unit =
     if (role == US) {
-      val (target, (actives, sleepers, sadr)) = if (isHuman(role)) {
+      val (target, (cell, sadr)) = if (isHuman(role)) {
         val t = askCountry("Remove a cell from which country: ", getCandidates(role))
         (t, askCells(t, 1, true))
       }
@@ -95,7 +95,7 @@ object Card_330 extends Card(330, "IRGC", Unassociated, 1, NoRemove, NoLapsing, 
         (t, USBot.chooseCellsToRemove(t, 1))
       }
       addEventTarget(target)
-      removeCellsFromCountry(target, actives, sleepers, sadr, addCadre = true)
+      removeCellsFromCountry(target, cell, sadr, addCadre = true)
     }
     else { // Jihadist
       val target = if (isHuman(role))

@@ -115,7 +115,7 @@ object Card_162 extends Card(162, "SCAF", US, 3, NoRemove, NoLapsing, NoAutoTrig
         worsenGovernance(target, 1, canShiftToIR = false)
       else if (m.isPoor)
         improveGovernance(target, 1, canShiftToGood = false)
-      removeCellsFromCountry(target, m.pieces.activeCells, m.pieces.sleeperCells, m.hasSadr, addCadre = true)
+      removeCellsFromCountry(target, m.pieces.only(Cells), m.hasSadr, addCadre = true)
       if (m.totalCells > 0)
         addReactionMarker(target, m.totalCells)
     }
