@@ -2334,11 +2334,10 @@ object LabyrinthAwakening {
           summary.add(s"$name - Non-Muslim$specialCase")
           summary.add(separator(length = 54))
           summary.add(s"${govToString(n.governance)}, ${n.posture}, Recruit ${n.recruitNumber}")
-          numItem(n.pieces.activeCells, "Active cell")
-          numItem(n.pieces.sleeperCells, "Sleeper cell")
-          numItem(n.cadres, "Cadre")
-          numItem(n.pieces.usTroops, "Troop")
-          addItems()
+          if (n.pieces.nonEmpty)
+            summary.add(n.pieces.toString)
+          if (n.cadres > 0)
+            summary.add(amountOf(n.cadres, "Cadre"))
           if (n.hasPlots) {
             val visible = humanRole == Jihadist || (name == UnitedStates && n.hasMarker(NEST))
             summary.add(s"Plots: ${mapPlotsDisplay(n.plots, visible)}")
@@ -2385,12 +2384,10 @@ object LabyrinthAwakening {
           summary.add(nameItems.mkString(" "))
           summary.add(separator(length = 54))
           summary.add(descItems.mkString(", "))
-          numItem(m.pieces.activeCells, "Active cell")
-          numItem(m.pieces.sleeperCells, "Sleeper cell")
-          numItem(m.cadres, "Cadre")
-          numItem(m.pieces.usTroops, "Troop")
-          numItem(m.pieces.militia, "Militia", Some("Militia"))
-          addItems()
+          if (m.pieces.nonEmpty)
+            summary.add(m.pieces.toString)
+          if (m.cadres > 0)
+            summary.add(amountOf(m.cadres, "Cadre"))
 
           items.clear()
           numItem(m.aidMarkers, "Aid marker")
@@ -2878,7 +2875,7 @@ object LabyrinthAwakening {
     else if (c.pieces.sleeperCells == 0)
       (maxCells, 0)
     else {
-      println(s"\n$countryName has $cellsPresent")
+      println(s"\n$countryName has ${andList(cellsPresent.descriptions)}")
 
       if (maxCells == 1) {
         val choices = List((1, 0) -> "Active", (0, 1) -> "Sleeper")
@@ -2917,7 +2914,7 @@ object LabyrinthAwakening {
       if (maxCells == totalCells)
         (cellsPresent, true)  // Remove the lot
       else {
-        println(s"\n$countryName has $cellsPresent. And Sadr is present.")
+        println(s"\n$countryName has ${andList(cellsPresent.descriptions)}. And Sadr is present.")
         val sadr = askYorN("\nDo you want to select Sadr? (y/n) ")
 
         val (actives, sleepers) = if (maxCells == 1 && sadr)
