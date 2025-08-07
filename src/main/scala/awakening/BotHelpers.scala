@@ -41,11 +41,14 @@ package awakening
 import scala.util.Random.shuffle
 import scala.annotation.tailrec
 import LabyrinthAwakening._
+import awakening.LabyrinthAwakening.Color.all
 
 // Common routines used by both of the Bots.
 
 trait BotHelpers {
-  def botLog(msg: => String) = if (game.botLogging) log(msg)
+  def botLog(msg: => String, color: Option[Color] = None) =
+    if (game.botLogging)
+      log(msg, color)
   
   // jihadDRM for a given Muslim country
   def jihadDRM(m: MuslimCountry, major: Boolean): Int = 
@@ -54,37 +57,88 @@ trait BotHelpers {
     else if (game.jihadistIdeology(Coherent) && !major)
       -m.reaction // Ignore awakening if Coherent and minor jihads
     else
-      m.awakening - m.reaction
+      -m.reactionDelta
 
+
+  def benazirBhuttoPreventsJihad(m: MuslimCountry) =
+    m.name == Pakistan && m.hasMarker(BenazirBhutto)
+
+  def enhBotJihadAllowed(m: MuslimCountry, major: Boolean): Boolean = {
+    val drm = jihadDRM(m, major)
+    m.governance match {
+      case Fair if m.totalTroops > 0    => drm <= 1
+      case Good|Fair|GovernanceUntested => drm <= 0
+      case Poor                         => drm <= 1
+      case _                            => false
+    }
+  }
+  // Return true if a die roll of 1 will succeed in the given country
+  def minorJihadSuccessPossible(m: MuslimCountry) = if (game.botEnhancements) {
+    !benazirBhuttoPreventsJihad(m) &&
+    enhBotJihadAllowed(m, false)
+  }
+  else {
+    !benazirBhuttoPreventsJihad(m) &&
+    (1 + jihadDRM(m, major = false)) <= m.governance  // At least 1/6 chance
+  }
 
   // Return true if a die roll of 1 will succeed in the given country
-  def jihadSuccessPossible(m: MuslimCountry, major: Boolean) =
-    (1 + jihadDRM(m, major)) <= m.governance
+  def majorJihadSuccessPossible(m: MuslimCountry) = if (game.botEnhancements) {
+    !benazirBhuttoPreventsJihad(m) &&
+    // m.totalTroopsAndMilitia < 7 &&
+    enhBotJihadAllowed(m, true)
+  }
+  else {
+    !benazirBhuttoPreventsJihad(m) &&
+    (1 + jihadDRM(m, major = true)) <= m.governance  // At least 1/6 chance
+  }
   
+  // This is used by the Bots to cache country targets.
+  // This allows the code that determines if the event is playable
+  // to select a target country (which may include random selection)
+  // And then the code that carries out the event can use the cached
+  // target to ensure it uses the same target that was used when
+  // determining if the event was playable.
+  var cachedTargets: Map[String, Any] = Map.empty
+
+  def cachedTarget[T](id: String)(targetValue: => T): T = {
+    cachedTargets.get(id) match {
+      case Some(target) =>
+        target.asInstanceOf[T]
+      case None => 
+        val target = targetValue
+        cachedTargets += (id -> target)
+        target
+    }
+  }
+
+  def clearCachedTargets(): Unit = cachedTargets = Map.empty
+
   // trait representing nodes in the 
   // - Jihadist EvO Flowchart
   // - US PAR Flowchart
   trait OpFlowchartNode
   
   trait OperationDecision extends OpFlowchartNode {
-    val desc: String
+    def desc: String
     def yesPath: OpFlowchartNode
     def noPath: OpFlowchartNode
     def condition(ops: Int): Boolean
     override def toString() = desc
   }
 
+  trait Filter[T] {
+    val desc: String
+    def filter(countries: List[T]): List[T]
+    override def toString() = desc
+  }
   // CountryFilters are used both when selecting a list of candidates and
   // when picking the top priority when following a Priorities Table.
   // Each filter simply takes a list of Countries as input and produces
   // a filtered list as output.
   // The see the selectCandidates() and topPriority() functions to see how
   // filters are used (slightly differently) in each type of situation.
-  trait CountryFilter {
-    val desc: String
-    def filter(countries: List[Country]): List[Country]
-    override def toString() = desc
-  }
+  type CountryFilter = Filter[Country]
   
   // This corresponds to following amn OpP Flowchart, but is also used for
   // finding specific event candidates.
@@ -97,28 +151,80 @@ trait BotHelpers {
   // results from that filter are returned.
   // If none of the filters finds at least one matching country we return Nil, 
   // which indicates that no valid candidates were found for the OpP flowchart.
-  @tailrec final def selectCandidates(countries: List[Country], filters: List[CountryFilter]): List[Country] = {
-    botLog(s"OpP Flowchart: [${(countries map (_.name)) mkString ", "}]")
+  @tailrec final def selectCandidates[T <: PriorityItem](countries: List[T], filters: List[Filter[T]], allowBotLog: Boolean = true): List[T] = {
+    if (allowBotLog)
+      botLog(s"OpP Flowchart: [${countries.map(_.itemDesc).mkString(", ")}]")
     (countries, filters) match {
       case (Nil, _) =>
-        botLog("OpP Flowchart: no countries to consider")
+        if (allowBotLog)
+          botLog("OpP Flowchart: no countries to consider")
         Nil    // No countries to consider
       case (_, Nil) => 
-        botLog("OpP Flowchart: no candidates found")
+        if (allowBotLog)
+          botLog("OpP Flowchart: no candidates found")
         Nil    // No filter found any candidates
       case (cs, f::fs) =>
-        (f filter cs) match {
+        f.filter(cs) match {
           case Nil =>            // Filter did not match anything, try the next filter
-            botLog(s"OpP Flowchart ($f): failed")
-            selectCandidates(cs, fs)
+            if (allowBotLog)
+              botLog(s"OpP Flowchart ($f): failed")
+            selectCandidates(cs, fs, allowBotLog)
           case results =>        // We got some results…
-            botLog(s"OpP Flowchart ($f): [${(results map (_.name) mkString ", ")}]")
+            if (allowBotLog)
+              botLog(s"OpP Flowchart ($f): [${(results.map(_.itemDesc).mkString(", "))}]")
             results
         }
     }
   }
   
+  // Narrow down the list of candidates to those that match best conform
+  // to the given priorities.
+  // Each filter in the list is used against the given candidates:
+  // - If the result is a single candidate then a list with just that candidate
+  //   is returned
+  // - If the result is more than one candidate then the resulting list is
+  //   then used with the next filter in the list.
+  // - If the result is that none of the candidates match the filter then
+  //   the samme list of candidates is used with the next filter in the list.
+  //   Effectivlely skipping that priority filter.
+  // This will only return Nil if the original list of candidates is Nil.
+  def narrowCandidates[T <: PriorityItem](
+    candidates: List[T],
+    priorities: List[Filter[T]],
+    allowBotLog: Boolean = true): List[T] = {
+    if (allowBotLog)
+      botLog(s"narrow candidates: [${candidates.map(_.itemDesc).mkString(", ")}]")
+    @tailrec def nextPriority(candidates: List[T], priorities: List[Filter[T]]): List[T] = {
+      (candidates, priorities) match {
+        case (Nil, _) => Nil  // Only happens if the initial list of canidates was empty.
+        case (sp :: Nil, _) =>
+          // Narrowed to a single candidate
+          List(sp)
+        case (best, Nil) =>
+          // No more priorities
+          best
+        case (list, f :: fs) =>
+          f.filter(list) match {
+            case Nil =>
+              if (allowBotLog)
+                botLog(s"$f: matched nothing")
+              nextPriority(list, fs) // Filter entire list by next priority
+            case best  =>
+              if (allowBotLog)
+                botLog(s"$f: matched [${best.map(_.itemDesc).mkString(", ")}]")
+              nextPriority(best, fs) // Filter matched list by next priority
+          }
+      }
+    }
+    nextPriority(candidates, priorities)
+  }
   
+  def narrowCountries(
+    candidates: List[String],
+    priorities: List[CountryFilter],
+    allowBotLog: Boolean = true): List[String] =
+      narrowCandidates(game.getCountries(candidates), priorities, allowBotLog).map(_.name)
+
   // Process the list of countries by each CountryFilter in the priorities list.
   // The priorities list represents a single column in a Priorities Table.
   // In this function each filter is processed in order until we have used all filters
@@ -127,25 +233,30 @@ trait BotHelpers {
   // random.
   // Note: The only time this function will return None, is if the original list of
   //       countries is empty.
-  def topPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
-    botLog(s"topPriority: [${(countries map (_.name)) mkString ", "}]")
-    @tailrec def nextPriority(countries: List[Country], priorities: List[CountryFilter]): Option[Country] = {
+  def topPriority[T <: PriorityItem](countries: List[T], priorities: List[Filter[T]], allowBotLog: Boolean = true): Option[T] = {
+    if (allowBotLog)
+      botLog(s"topPriority: [${countries.map(_.itemDesc).mkString(", ")}]")
+    @tailrec def nextPriority(countries: List[T], priorities: List[Filter[T]]): Option[T] = {
       (countries, priorities) match {
         case (Nil, _)    => None
         case (c::Nil, _) => 
-          botLog(s"topPriority: Picked a winner [${c.name}]")
+          if (allowBotLog)
+            botLog(s"topPriority: Picked a winner [${c.itemDesc}]")
           Some(c)                             // We've narrowed it to one
         case (cs, Nil)   =>
           val c = shuffle(cs).head              // Take one at random
-          botLog(s"topPriority: Picked random country [${c.name}]")
+          if (allowBotLog)
+            botLog(s"topPriority: Picked random country [${c.itemDesc}]")
           Some(c)
         case (cs, f::fs) =>
-          (f filter cs) match {
+          f.filter(cs) match {
             case Nil =>
-              botLog(s"topPriority ($f) failed")
+              if (allowBotLog)
+                botLog(s"topPriority ($f) failed")
               nextPriority(cs, fs) // Filter entire list by next priority
             case rs  =>
-              botLog(s"topPriority ($f) [${(rs map (_.name) mkString ", ")}]")
+              if (allowBotLog)
+                botLog(s"topPriority ($f) [${rs.map(_.itemDesc).mkString(", ")}]")
               nextPriority(rs, fs) // Filter matched list by next priority
           }
       }
@@ -186,7 +297,7 @@ trait BotHelpers {
   // A boolean criteria filter that is used in OpP flowcharts
   // Filters the given countries and returns the results.
   class CriteriaFilter(val desc: String, criteria: (Country) => Boolean) extends CountryFilter {
-    def filter(countries: List[Country]) = (countries filter criteria)
+    def filter(countries: List[Country]) = countries.filter(criteria)
   }
   
   // Highest integer score filter used with Priority Tables.
@@ -195,9 +306,9 @@ trait BotHelpers {
   // Then returns the list of countries whose score matches that highest value.
   class HighestScorePriority(val desc: String, score: (Country) => Int) extends CountryFilter {
     def filter(countries: List[Country]): List[Country] = {
-      val high = (countries map score).max
-      botLog(s"Highest ($desc): score = $high")
-      countries filter (c => score(c) == high)
+      val high = countries.map(score).max
+      // botLog(s"Highest ($desc): score = $high")
+      countries.filter(c => score(c) == high)
     }
   }
 
@@ -207,9 +318,9 @@ trait BotHelpers {
   // Then returns the list of countries whose score matches that lowest value.
   class LowestScorePriority(val desc: String, score: (Country) => Int) extends CountryFilter {
     def filter(countries: List[Country]): List[Country] = {
-      val low = (countries map score).min
-      botLog(s"Lowest ($desc): score = $low")
-      countries filter (c => score(c) == low)
+      val low = countries.map(score).min
+      // botLog(s"Lowest ($desc): score = $low")
+      countries.filter(c => score(c) == low)
     }
   }
   
@@ -222,11 +333,11 @@ trait BotHelpers {
   class HighestScoreNode(val desc: String,
                          criteria: (Country) => Boolean, 
                          score:    (Country) => Int) extends CountryFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
+    def filter(countries: List[Country]) = countries.filter(criteria) match {
       case Nil        => Nil
       case candidates =>
-        val high = (candidates map score).max
-        candidates filter (c => score(c) == high)
+        val high = candidates.map(score).max
+        candidates.filter(c => score(c) == high)
     }
   }
   
@@ -239,11 +350,11 @@ trait BotHelpers {
   class LowestScoreNode(val desc: String,
                         criteria: (Country) => Boolean, 
                         score:    (Country) => Int) extends CountryFilter {
-    def filter(countries: List[Country]) = (countries filter criteria) match {
+    def filter(countries: List[Country]) = countries.filter(criteria) match {
       case Nil        => Nil
       case candidates =>
-        val low = (candidates map score).min
-        candidates filter (c => score(c) == low)
+        val low = candidates.map(score).min
+        candidates.filter(c => score(c) == low)
     }
   }
   
@@ -251,8 +362,7 @@ trait BotHelpers {
   // Returns the list of countries that are adjacent to the given target Country.
   class AdjacentCountriesNode(target: String) extends CountryFilter {
     val desc = s"Adjacent to $target"
-    def filter(countries: List[Country]) = 
-      (countries filter (c => areAdjacent(c.name, target)))
+    def filter(countries: List[Country]) = countries.filter(c => areAdjacent(c.name, target))
   }
 
 
@@ -262,12 +372,13 @@ trait BotHelpers {
   // to choose from.
   // As each target is selected, it is removed from the list of candidates so that
   // a given target will not be picked more than once.
-  def multipleTargets(num: Int, candidates: List[String], pickBest: (List[String]) => Option[String]): List[String] = {
+  def multipleTargets(num: Int, candidates: List[String], allowDuplicates: Boolean = false)(pickBest: (List[String]) => Option[String]): List[String] = {
     def nextTarget(n: Int, targets: List[String]): List[String] = {
       if (n <= num && targets.nonEmpty) {
         pickBest(targets) match {
           case None => Nil
-          case Some(name) => name :: nextTarget(n + 1, targets filterNot (_ == name))
+          case Some(name) if allowDuplicates => name :: nextTarget(n + 1, targets)
+          case Some(name) => name :: nextTarget(n + 1, targets.filterNot(_ == name))
         }
       }
       else

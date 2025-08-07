@@ -48,7 +48,7 @@ object Surge extends Scenario {
   val usPosture      = Hard
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(3)(PlotWMD)  // 3 extra
   val countries = List(
     DefaultLibya.copy(
       governance = Poor,
@@ -56,54 +56,53 @@ object Surge extends Scenario {
     DefaultSyria.copy(
       isSunni = false,
       wmdCache = 2,
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultIraq.copy(
       governance = Poor, 
       alignment = Ally,
-      troops = 5,
-      sleeperCells = 3,
+      pieces = Pieces(usTroops = 5, sleeperCells = 3),
       regimeChange = TanRegimeChange),
     DefaultIran.copy(
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultSaudiArabia.copy(
       governance = Poor,
       alignment = Ally,
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultGulfStates.copy(
       governance = Fair,
       alignment = Ally,
-      troops = 2),
+      pieces = Pieces(usTroops = 2)),
     DefaultPakistan.copy(
       governance = Fair,
       alignment = Ally,
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultAfghanistan.copy(
       governance = Poor,
       alignment = Ally,
-      troops = 3,
-      sleeperCells = 2,
+      pieces = Pieces(usTroops = 3, sleeperCells = 2),
       aidMarkers = 1,
       regimeChange = TanRegimeChange),
     DefaultSomalia.copy(
       governance = Poor,
       alignment = Neutral,
-      sleeperCells = 1,
+      pieces = Pieces(sleeperCells = 1),
       besiegedRegime = true),
     DefaultIndonesiaMalaysia.copy(
       governance = Fair,
       alignment = Neutral,
-      sleeperCells = 1),
+      pieces = Pieces(sleeperCells = 1)),
     DefaultUnitedKingdom.copy(
       postureValue = Hard),
     DefaultScandinavia.copy(
       postureValue = Soft)
   )
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List.empty[Int]
   val offMapTroops = 0
 
   override
   val additionalSetup = () => {
+    log()
     addEventMarkersToCountry(Iraq, Sadr)
     addGlobalEventMarker(AlAnbar)
     addEventMarkersToCountry(Pakistan, FATA)

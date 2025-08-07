@@ -1,11 +1,14 @@
 import Path.FileMap
 import java.nio.file.{ Files, Paths }
 import java.nio.file.attribute.PosixFilePermissions
+import scala.sys.process._
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
-  version      := "5.6",
-  scalaVersion := "2.13.14"
+  version      := "6.0",
+  scalaVersion := "2.13.16",
+  javacOptions        ++= Seq("-source", "8", "-target",  "8"),
+  scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
 )
 
 lazy val stage       = taskKey[Unit]("Create distribution zip file")
@@ -16,7 +19,6 @@ lazy val awakening = (project in file("."))
     commonSettings,
     name        := "awakening",
     description := "A scala implementation of the solo AI for Labyrinth The Awakening",
-    scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
       "org.sellmerfud"         %% "optparse"       % "2.2",
@@ -39,6 +41,7 @@ lazy val awakening = (project in file("."))
       }
       val pkgDir     = target.value / s"awakening-${version.value}"
       val lib        = pkgDir / "lib"
+      val doc        = pkgDir / "doc"
       val loader_jar = (loader / Compile / packageBin / artifactPath).value
       val zipfile    = file(s"${pkgDir.getAbsolutePath}.zip")
       val jars       = (Compile / fullClasspathAsJars).value.files
@@ -48,8 +51,11 @@ lazy val awakening = (project in file("."))
       log.info(s"Staging to $pkgDir ...")
       IO.delete(pkgDir)
       IO.createDirectory(lib)
+      IO.createDirectory(doc)
       IO.copyFile(loader_jar, lib / loader_jar.getName)
       IO.copy(assets, CopyOptions().withOverwrite(true))
+      s"typst compile src/typst/enh-bot-instructions.typ ${doc}/enh-bot-instructions.pdf" ! log
+      s"typst compile src/typst/enhanced-evo-diagram.typ ${doc}/enhanced-evo-diagram.pdf" ! log
       IO.setPermissions(pkgDir / "awakening", "rwxr-xr-x") // Make bash script executable
       // Create zip file
       (pkgDir ** ".DS_Store").get foreach IO.delete

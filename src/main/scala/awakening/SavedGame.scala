@@ -43,7 +43,7 @@ import FUtil.Pathname
 import LabyrinthAwakening._
 
 object SavedGame {
-  val CurrentFileVersion = 2
+  val CurrentFileVersion = 3
   val CurrentLogVersion  = 1
 
   def save(filepath: Pathname, gameState: GameState): Unit = {
@@ -69,28 +69,6 @@ object SavedGame {
     Json.build(top)
   }
 
-  // // The path should be the full path to the file to load.
-  // // Will set the game global variable
-  // def load_old(filepath: Pathname): GameState = {
-  //   val gs = try fromGameJson(filepath.readFile())
-  //   catch {
-  //     case e: IOException =>
-  //       val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-  //       println(s"IO Error reading saved game ($filepath)$suffix")
-  //       sys.exit(1)
-  //     case e: Throwable =>
-  //       val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-  //       println(s"Error reading saved game ($filepath)$suffix")
-  //       sys.exit(1)
-  //   }
-  //   // If there are no plays then this a save file for the
-  //   // end of the turn.  In this case we increment the turn counter
-  //   if (gs.plays.isEmpty)
-  //     gs.copy(turn = gs.turn + 1)
-  //   else
-  //     gs
-  // }
-
   // The path should be the full path to the file to load.
   // Will set the game global variable
   def load(filepath: Pathname): GameState = {
@@ -98,12 +76,10 @@ object SavedGame {
     catch {
       case e: IOException =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"IO Error reading saved game ($filepath)$suffix")
-        sys.exit(1)
+        throw new IllegalStateException(s"IO Error reading saved game ($filepath)$suffix", e)
       case e: Throwable =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"Error reading saved game ($filepath)$suffix")
-        sys.exit(1)
+        throw new IllegalStateException(s"Error reading saved game ($filepath)$suffix", e)
     }
   }
 
@@ -116,33 +92,22 @@ object SavedGame {
       throw new IllegalArgumentException(s"Invalid save file - No game-state")
 
     asInt(top("file-version")) match {
-      case 2 => gameFromVersion2(asMap(top("game-state")))
+      case CurrentFileVersion => gameFromCurrentVersion(asMap(top("game-state")))
       case v => throw new IllegalArgumentException(s"Invalid save file version: $v")
     }
   }
 
   private def asString(x: Any): String = x.toString
-  private def asOptString(x: Any): Option[String] = x match {
-    case null => None
-    case s    => Some(s.toString)
-  }
 
   private def asBoolean(x: Any): Boolean = x match {
     case b: Boolean => b
     case _          => throw new Exception(s"Not a valid Boolean value: $x")
   }
+
   private def asInt(x: Any): Int = x match {
     case i: Int => i
     case _      => throw new Exception(s"Not a valid Integer value: $x")
   }
-
-  private def asOptInt(x: Any): Option[Int] = x match {
-    case null   => None
-    case i: Int => Some(i)
-    case _      => throw new Exception(s"Not a valid Integer value: $x")
-
-  }
-
 
   private def asMap(x: Any): Map[String, Any] = x match {
     case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
@@ -156,19 +121,19 @@ object SavedGame {
 
   private def plotDataToMap(data: PlotData): Map[String, Any] =
     Map(
-      "availablePlots"        -> (data.availablePlots map (_.name)),
-      "resolvedPlots"         -> (data.resolvedPlots map (_.name)),
-      "removedPlots"          -> (data.removedPlots map (_.name)),
+      "availablePlots"        -> data.availablePlots.map(_.name),
+      "resolvedPlots"         -> data.resolvedPlots.map(_.name),
+      "removedPlots"          -> data.removedPlots.map(_.name),
       "resolvedTargets"       -> data.resolvedTargets.toList.map(plotTargetToMap),
       "resolvedInGreenOnBlue" -> data.resolvedInGreenOnBlue
     )
 
   private def plotDataFromMap(data: Map[String, Any]): PlotData =
     PlotData(
-      asList(data("availablePlots")) map (x => Plot.apply(asString(x))),
-      asList(data("resolvedPlots")) map (x => Plot.apply(asString(x))),
-      asList(data("removedPlots")) map (x => Plot.apply(asString(x))),
-      (asList(data("resolvedTargets")) map (x => plotTargetFromMap(asMap(x)))).toSet,
+      asList(data("availablePlots")).map(x => Plot.apply(asString(x))),
+      asList(data("resolvedPlots")).map(x => Plot.apply(asString(x))),
+      asList(data("removedPlots")).map(x => Plot.apply(asString(x))),
+      (asList(data("resolvedTargets")).map(x => plotTargetFromMap(asMap(x)))).toSet,
       asBoolean(data("resolvedInGreenOnBlue"))
     )
 
@@ -190,6 +155,25 @@ object SavedGame {
   private def reservesFromMap(data: Map[String, Any]): Reserves =
     Reserves(asInt(data("us")), asInt(data("jihadist")))
 
+  private def lapsingEventToMap(data: LapsingEntry): Map[String, Any] =
+    Map("cardNumber" -> data.cardNumber, "discarded" -> data.discarded)
+
+  private def lapsingEventFromMap(data: Map[String, Any]): LapsingEntry =
+    LapsingEntry(asInt(data("cardNumber")), asBoolean(data("discarded")))
+
+
+  private def cardsInUseToMap(data: Range): Map[String, Any] =
+    Map("min" -> data.head, "max" -> data.last)
+
+  private def cardsInUseFromMap(data: Map[String, Any]): Range =
+    Range.inclusive(asInt(data("min")), asInt(data("max")))
+
+  private def cardsInHandToMap(data: CardsInHand): Map[String, Any] =
+    Map("us" -> data.us, "jihadist" -> data.jihadist)
+
+  private def cardsInHandFromMap(data: Map[String, Any]): CardsInHand =
+    CardsInHand(asInt(data("us")), asInt(data("jihadist")))
+    
   private def phaseTargetsToMap(data: PhaseTargets): Map[String, Any] =
     Map(
       "ops"                          -> data.ops,
@@ -200,32 +184,58 @@ object SavedGame {
 
   private def phaseTargetsFromMap(data: Map[String, Any]): PhaseTargets =
     PhaseTargets(
-      (asList(data("ops")) map asString).toSet,
-      (asList(data("disrupted")) map asString).toSet,
-      (asList(data("testedOrImprovedToFairOrGood")) map asString).toSet,
-      (asList(data("event")) map asString).toSet
+      asList(data("ops")).map(asString).toSet,
+      asList(data("disrupted")).map(asString).toSet,
+      asList(data("testedOrImprovedToFairOrGood")).map(asString).toSet,
+      asList(data("event")).map(asString).toSet
     )
 
-  private def playToMap(play: Play): Map[String, Any] = {
-    val params = play match {
-      case p: PlayedCard       => Map("role"  -> p.role.toString, "cardNum" -> p.cardNum)
-      case p: PlayedReassement => Map("card1" -> p.card1,         "card2"   -> p.card2)
-      case p: AdditionalCard   => Map("role"  -> p.role.toString, "cardNum" -> p.cardNum)
-      case p: PlotsResolved    => Map("num"   -> p.num)
-      case p: AdjustmentMade   => Map("desc"  -> p.desc)
+  private def turnActionToMap(turnAction: TurnAction): Map[String, Any] = {
+    val params = turnAction match {
+      case PlayedCard(role, cardNum, None) =>
+        Map("role" -> role.toString, "cardNum" -> cardNum)
+      case PlayedCard(role, cardNum, Some(SecondCard(card2))) =>
+        Map("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> card2)
+      case PlayedCard(role, cardNum, Some(AdditionalCard(card2))) =>
+        Map("role" -> role.toString, "cardNum" -> cardNum, "additionalCardNum" -> card2)
+      case PlayedReassement(card1, card2) =>
+        Map("card1" -> card1, "card2"   -> card2)
+      case VoluntaryCadreRemoval(num) =>
+        Map("num" -> num)
+      case USDiscardedLastCard(cardNum) =>
+        Map("cardNum" -> cardNum)
+      case EndOfActionPhase(role, phaseNum, numPlots) =>
+        Map("role" -> role.toString, "phaseNum" -> phaseNum, "numPlots" -> numPlots)
+      case AdjustmentMade(desc) =>
+        Map("desc" -> desc)
     }
-    Map("playType" -> play.name, "params" -> params)
+    Map("actionType" -> turnAction.name, "params" -> params)
   }
 
-  private def playFromMap(data: Map[String, Any]): Play = {
+  private def turnActionFromMap(data: Map[String, Any]): TurnAction = {
     val params = asMap(data("params"))
-    asString(data("playType")) match {
-      case "PlayedCard"       => PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")))
+    asString(data("actionType")) match {
+      case "PlayedCard" if params.contains("secondCardNum") && params("secondCardNum") != null =>
+        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(SecondCard(asInt(params("secondCardNum")))))
+      case "PlayedCard" if params.contains("additionalCardNum") && params("additionalCardNum") != null =>
+        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(AdditionalCard(asInt(params("additionalCardNum")))))
+      case "PlayedCard" =>
+        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), None)
       // Account for misspelling in earlier versions
-      case "PlayedReassessment" | "PlayedReassement" => PlayedReassement(asInt(params("card1")), asInt(params("card2")))
-      case "AdditionalCard"   => AdditionalCard(Role(asString(params("role"))), asInt(params("cardNum")))
-      case "PlotsResolved"    => PlotsResolved(asInt(params("num")))
-      case "AdjustmentMade"   => AdjustmentMade(asString(params("desc")))
+      case "PlayedReassessment" | "PlayedReassement" =>
+        PlayedReassement(asInt(params("card1")), asInt(params("card2")))
+      case "VoluntaryCadreRemoval" =>
+        VoluntaryCadreRemoval(asInt(params("num")))
+      case "USDiscardedLastCard" =>
+        USDiscardedLastCard(asInt(params("cardNum")))
+      case "EndOfActionPhase" =>
+        EndOfActionPhase(
+          Role(asString(params("role"))),
+          asInt(params("phaseNum")),
+          asInt(params("numPlots"))
+        )
+      case "AdjustmentMade" =>
+        AdjustmentMade(asString(params("desc")))
     }
   }
 
@@ -235,36 +245,31 @@ object SavedGame {
         ("MuslimCountry", Map(
           "name"             -> m.name,
           "governance"       -> m.governance,
-          "sleeperCells"     -> m.sleeperCells,
-          "activeCells"      -> m.activeCells,
-          "hasCadre"         -> m.hasCadre,
-          "plots"            -> (m.plots map plotOnMapToMap),
-          "markers"          -> m.markers,
+          "pieces"           -> m.pieces.explode().map(_.name),
+          "cadres"           -> m.cadres,
+          "plots"            -> m.plots.map(plotOnMapToMap),
+          "markers"          -> m.markers.map(_.name),
           "isSunni"          -> m.isSunni,
-          "resources"        -> m.resources,
+          "resources"        -> m.printedResources,
           "alignment"        -> m.alignment,
-          "troops"           -> m.troops,
-          "militia"          -> m.militia,
           "oilExporter"      -> m.oilExporter,
           "aidMarkers"       -> m.aidMarkers,
           "regimeChange"     -> m.regimeChange,
           "besiegedRegime"   -> m.besiegedRegime,
           "civilWar"         -> m.civilWar,
-          "caliphateCapital" -> m.caliphateCapital,
           "awakening"        -> m.awakening,
           "reaction"         -> m.reaction,
-          "wmdCache"         -> m.wmdCache
+          "wmdCache"         -> m.wmdCache,
+          "truce"            -> m.truce
         ))
       case n: NonMuslimCountry =>
         ("NonMuslimCountry", Map(
           "name"            -> n.name,
           "governance"      -> n.governance,
-          "sleeperCells"    -> n.sleeperCells,
-          "activeCells"     -> n.activeCells,
-          "hasCadre"        -> n.hasCadre,
-          "troops"          -> n.troops,
-          "plots"           -> (n.plots map plotOnMapToMap),
-          "markers"         -> n.markers,
+          "pieces"          -> n.pieces.explode().map(_.name),
+          "cadres"          -> n.cadres,
+          "plots"           -> n.plots.map(plotOnMapToMap),
+          "markers"         -> n.markers.map(_.name),
           "postureValue"    -> n.postureValue,
           "recruitOverride" -> n.recruitOverride,
           "wmdCache"        -> n.wmdCache,
@@ -274,6 +279,7 @@ object SavedGame {
     Map("countryType" -> countryType, "params" -> params)
   }
 
+
   private def countryFromMap(data: Map[String, Any]): Country = {
     val params = asMap(data("params"))
     asString(data("countryType")) match {
@@ -281,36 +287,31 @@ object SavedGame {
         MuslimCountry(
           asString(params("name")),
           asInt(params("governance")),
-          asInt(params("sleeperCells")),
-          asInt(params("activeCells")),
-          asBoolean(params("hasCadre")),
-          asList(params("plots")) map (x => plotOnMapFromMap(asMap(x))),
-          asList(params("markers")) map asString,
+          Pieces.fromTypes(asList(params("pieces")).map(name => PieceType(name.toString))),
+          asInt(params("cadres")),
+          asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
+          asList(params("markers")).map(name => CountryMarker(asString(name))),
           asBoolean(params("isSunni")),
           asInt(params("resources")),
           asString(params("alignment")),
-          asInt(params("troops")),
-          asInt(params("militia")),
           asBoolean(params("oilExporter")),
           asInt(params("aidMarkers")),
           asString(params("regimeChange")),
           asBoolean(params("besiegedRegime")),
           asBoolean(params("civilWar")),
-          asBoolean(params("caliphateCapital")),
           asInt(params("awakening")),
           asInt(params("reaction")),
-          asInt(params("wmdCache"))
+          asInt(params("wmdCache")),
+          asBoolean(params("truce"))
         )
       case "NonMuslimCountry" =>
         NonMuslimCountry(
           asString(params("name")),
           asInt(params("governance")),
-          asInt(params("sleeperCells")),
-          asInt(params("activeCells")),
-          asBoolean(params("hasCadre")),
-          asInt(params("troops")),
-          asList(params("plots")) map (x => plotOnMapFromMap(asMap(x))),
-          asList(params("markers")) map asString,
+          Pieces.fromTypes(asList(params("pieces")).map(name => PieceType(name.toString))),
+          asInt(params("cadres")),
+          asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
+          asList(params("markers")).map(name => CountryMarker(asString(name))),
           asString(params("postureValue")),
           asInt(params("recruitOverride")),
           asInt(params("wmdCache")),
@@ -323,83 +324,110 @@ object SavedGame {
 
   private def gameStateToMap(gameState: GameState) = {
     Map(
-      "scenarioName"        -> gameState.scenarioName,
-      "startingMode"        -> gameState.startingMode,
-      "campaign"            -> gameState.campaign,
-      "scenarioNotes"       -> gameState.scenarioNotes,
-      "currentMode"         -> gameState.currentMode,
-      "humanRole"           -> gameState.humanRole.toString,
-      "humanAutoRoll"       -> gameState.humanAutoRoll,
-      "botDifficulties"     -> (gameState.botDifficulties map (_.name)),
-      "turn"                -> gameState.turn,
-      "prestige"            -> gameState.prestige,
-      "usPosture"           -> gameState.usPosture,
-      "funding"             -> gameState.funding,
-      "countries"           -> (gameState.countries map countryToMap),
-      "markers"             -> gameState.markers,
-      "plotData"            -> plotDataToMap(gameState.plotData),
-      "sequestrationTroops" -> gameState.sequestrationTroops,
-      "history"             -> gameState.history,
-      "offMapTroops"        -> gameState.offMapTroops,
-      "reserves"            -> reservesToMap(gameState.reserves),
-      "plays"               -> (gameState.plays map playToMap),
-      "firstPlotCard"       -> (gameState.firstPlotCard getOrElse null),
-      "cardsLapsing"        -> gameState.cardsLapsing,
-      "cardsRemoved"        -> gameState.cardsRemoved,
-      "targetsThisPhase"    -> phaseTargetsToMap(gameState.targetsThisPhase),
-      "targetsLastPhase"    -> phaseTargetsToMap(gameState.targetsLastPhase),
-      "exitAfterWin"        -> game.exitAfterWin,
-      "botLogging"          -> gameState.botLogging,
-      "history"             -> (gameState.history map gameSegmentToMap),
-      "description"         -> gameState.description,
-      "showColor"           -> gameState.showColor
+      "scenarioName"         -> gameState.scenarioName,
+      "scenarioNotes"        -> gameState.scenarioNotes,
+      "startingMode"         -> gameState.startingMode,
+      "gameLength"           -> gameState.gameLength,
+      "deckNumber"           -> gameState.deckNumber,
+      "campaign"             -> gameState.campaign,
+      "currentMode"          -> gameState.currentMode,
+      "humanRole"            -> gameState.humanRole.toString,
+      "humanAutoRoll"        -> gameState.humanAutoRoll,
+      "botDifficulties"      -> gameState.botDifficulties.map(_.name),
+      "turn"                 -> gameState.turn,
+      "prestige"             -> gameState.prestige,
+      "usPosture"            -> gameState.usPosture,
+      "funding"              -> gameState.funding,
+      "countries"            -> gameState.countries.map(countryToMap),
+      "markers"              -> gameState.markers.map(_.name),
+      "plotData"             -> plotDataToMap(gameState.plotData),
+      "history"              -> gameState.history,
+      "offMapTroops"         -> gameState.offMapTroops,
+      "reserves"             -> reservesToMap(gameState.reserves),
+      "cardsInUse"           -> cardsInUseToMap(gameState.cardsInUse),
+      "cardsInHand"          -> cardsInHandToMap(gameState.cardsInHand),
+      "turnActions"          -> gameState.turnActions.map(turnActionToMap),
+      "firstPlotEntry"       -> gameState.firstPlotEntry.map(lapsingEventToMap).getOrElse(null),
+      "eventsLapsing"        -> gameState.eventsLapsing.map(lapsingEventToMap),
+      "cardsDiscarded"       -> gameState.cardsDiscarded,
+      "cardsRemoved"         -> gameState.cardsRemoved,
+      "targetsThisPhase"     -> phaseTargetsToMap(gameState.targetsThisPhase),
+      "targetsLastPhase"     -> phaseTargetsToMap(gameState.targetsLastPhase),
+      "caliphateCapital"     -> game.caliphateCapital.getOrElse(null),
+      "ignoreVictory"        -> game.ignoreVictory,
+      "botLogging"           -> gameState.botLogging,
+      "botEnhancements"      -> gameState.botEnhancements,
+      "enhBotDifficulty"     -> gameState.enhBotDifficulty.toString,
+      "manualDieRolls"       -> gameState.manualDieRolls,
+      "history"              -> gameState.history.map(gameSegmentToMap),
+      "description"          -> gameState.description,
+      "showColor"            -> gameState.showColor
       )
   }
   
   private def gameSegmentToMap(seg: GameSegment): Map[String, Any] =
     Map(
-      "save_number" -> seg.save_number,
-      "summary"     -> seg.summary
+      "saveNumber" -> seg.saveNumber,
+      "endOfTurn"  -> seg.endOfTurn,
+      "summary"    -> seg.summary
     )
 
   private def gameSegmentFromMap(data: Map[String, Any]): GameSegment = {
     GameSegment(
-      asInt(data("save_number")),
-      asList(data("summary")) map (_.toString)
+      asInt(data("saveNumber")),
+      asBoolean(data("endOfTurn")),
+      asList(data("summary")).map(_.toString)
     )
   }
-  // Note: We no longer support save file versions less than 2.
-  private def gameFromVersion2(data: Map[String, Any]): GameState = {
+  // Note: We no longer support save file versions less than 3.
+  private def gameFromCurrentVersion(data: Map[String, Any]): GameState = {
+    val caliphateCapital = if (data("caliphateCapital") == null)
+      None
+    else
+      Some(asString(data("caliphateCapital")))
+    val firstPlotEntry = if (data("firstPlotEntry") == null)
+      None
+    else
+      Some(lapsingEventFromMap(asMap(data("firstPlotEntry"))))
+
     GameState(
       asString(data("scenarioName")),
+      asList(data("scenarioNotes")).map(asString),
       GameMode(asString(data("startingMode"))),
+      asInt(data("gameLength")),
+      asInt(data("deckNumber")),
       asBoolean(data("campaign")),
-      asList(data("scenarioNotes")) map asString,
       GameMode(asString(data("currentMode"))),
       Role(asString(data("humanRole"))),
       asBoolean(data("humanAutoRoll")),
-      asList(data("botDifficulties")) map (x => BotDifficulty(asString(x))),
+      asList(data("botDifficulties")).map(x => BotDifficulty(asString(x))),
       asInt(data("turn")),
       asInt(data("prestige")),
       asString(data("usPosture")),
       asInt(data("funding")),
-      asList(data("countries")) map (c => countryFromMap(asMap(c))),
-      asList(data("markers")) map asString,
+      asList(data("countries")).map(c => countryFromMap(asMap(c))),
+      asList(data("markers")).map(name => GlobalMarker(asString(name))),
       plotDataFromMap(asMap(data("plotData"))),
-      asBoolean(data("sequestrationTroops")),
       asInt(data("offMapTroops")),
       reservesFromMap(asMap(data("reserves"))),
-      asList(data("plays")) map (p => playFromMap(asMap(p))),
-      if (data("firstPlotCard") == null) None else Some(asInt(data("firstPlotCard"))),
-      asList(data("cardsLapsing")) map asInt,
-      asList(data("cardsRemoved")) map asInt,
+      cardsInUseFromMap(asMap(data("cardsInUse"))),
+      cardsInHandFromMap(asMap(data("cardsInHand"))),
+      asList(data("turnActions")).map(p => turnActionFromMap(asMap(p))),
+      firstPlotEntry,
+      asList(data("eventsLapsing")).map(e => lapsingEventFromMap(asMap(e))),
+      asList(data("cardsDiscarded")).map(asInt),
+      asList(data("cardsRemoved")).map(asInt),
       phaseTargetsFromMap(asMap(data("targetsThisPhase"))),
       phaseTargetsFromMap(asMap(data("targetsLastPhase"))),
-      asBoolean(data("exitAfterWin")),
+      caliphateCapital,
+      asBoolean(data("ignoreVictory")),
       asBoolean(data("botLogging")),
-      (asList(data("history")) map (s => gameSegmentFromMap(asMap(s)))).toVector,
+      asBoolean(data("botEnhancements")),
+      EnhBotDifficulty.fromString(asString(data("enhBotDifficulty"))),
+      asBoolean(data("manualDieRolls")),
+      asList(data("history")).map(s => gameSegmentFromMap(asMap(s))).toVector,
       asString(data("description")),
-      asBoolean(data.get("showColor") getOrElse true)
+      asBoolean(data.get("showColor").getOrElse(true))
     )
   }
 
@@ -423,7 +451,7 @@ object SavedGame {
     val top = Map(
       "file-version"     -> CurrentLogVersion,
       "software-version" -> SOFTWARE_VERSION,
-      "log"              -> (entries map logEntryToMap)
+      "log"              -> entries.map(logEntryToMap)
     )
     Json.build(top)
   }
@@ -470,17 +498,15 @@ object SavedGame {
           // Older versions did not store the log as json
         // If we cannot parse the file then treat it as a regular
         // text file.
-        filepath.readLines.toVector map { line =>
+        filepath.readLines().toVector.map { line =>
           LogEntry(line, None)
         }
       case e: IOException =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"IO Error reading log file ($filepath)$suffix")
-        sys.exit(1)
+        throw new IllegalStateException(s"IO Error reading log file ($filepath)$suffix", e)
       case e: Throwable =>
         val suffix = if (e.getMessage == null) "" else s": ${e.getMessage}"
-        println(s"Error reading log file ($filepath)$suffix")
-        sys.exit(1)
+        throw new IllegalStateException(s"Error reading log file ($filepath)$suffix", e)
     }
   }
 }

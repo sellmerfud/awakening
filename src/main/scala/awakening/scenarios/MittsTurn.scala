@@ -48,21 +48,21 @@ object MittsTurn extends Scenario {
   val usPosture      = Hard
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(3)(PlotWMD)  // 3 extra
   val countries = List(
     DefaultSyria.copy(isSunni = false, wmdCache = 2),
     DefaultAlgeriaTunisia.copy(governance = Poor, alignment = Neutral, awakening = 1),
     DefaultIran.copy(wmdCache = 1),
-    DefaultIraq.copy(governance = Poor, alignment = Ally, troops = 2, sleeperCells = 1),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, troops = 6, sleeperCells = 2,
-                            regimeChange = TanRegimeChange),
-    DefaultPakistan.copy(governance = Fair, alignment = Neutral, sleeperCells = 2),
+    DefaultIraq.copy(governance = Poor, alignment = Ally, pieces = Pieces(usTroops = 2, sleeperCells = 1)),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, pieces = Pieces(usTroops = 6, sleeperCells = 2),
+      regimeChange = TanRegimeChange),
+    DefaultPakistan.copy(governance = Fair, alignment = Neutral, pieces = Pieces(sleeperCells = 2)),
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultFrance.copy(postureValue = Hard),
     DefaultBenelux.copy(postureValue = Soft),
     DefaultRussia.copy(postureValue = Soft))
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List.empty[Int]
   val offMapTroops = 0
 }

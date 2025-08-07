@@ -48,17 +48,17 @@ object LetsRoll extends Scenario {
   val usPosture      = Hard
   val funding        = 9
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(6)(PlotWMD)  // 3 unused until events and 3 extra
   val countries = List(
     DefaultLibya.copy(governance = Poor, alignment = Adversary),
     DefaultSyria.copy(governance = Fair, alignment = Adversary),
     DefaultIraq.copy(governance = Poor, alignment = Adversary),
-    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, troops = 2),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
+    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
     DefaultPakistan.copy(governance = Fair, alignment = Neutral),
-    DefaultAfghanistan.copy(governance = IslamistRule, alignment = Adversary, sleeperCells = 4),
+    DefaultAfghanistan.copy(governance = IslamistRule, alignment = Adversary, pieces = Pieces(sleeperCells = 4)),
     DefaultSomalia.copy(besiegedRegime = true))
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List.empty[Int]
   val offMapTroops = 0
 }

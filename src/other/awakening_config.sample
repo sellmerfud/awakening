@@ -1,0 +1,98 @@
+
+# You can set up default parameters in this file
+# to avoid being prompted when you start a new game.
+#
+# Note that any values you specify on the command line will
+# override values in this file.
+
+# The software will look for this file in the following
+# locations and will use the first one it finds in the
+# given order:
+# <app-directory>/awakening_config
+# <home-directory>/awakening_config
+# <home-directory>/.awakening_config
+# $XDG_CONFIG_HOME/awakening/awakening_config (default: <home-directory>/.config/awakening/awakening_config)
+#
+# Copy this sample file to one of the these locations
+# and modify it to suit your preferences.
+# I recommend putting it in your <home-directory> so that
+# it will automatically be used each time you install a
+# newer version.
+
+
+# Name of the scenario to play
+# Must be one of:
+#  LetsRoll, YouCanCallMeAl, Anaconda, MissionAccomplished
+#
+#  Awakening, MittsTurn, StatusOfForces, IslamicStateOfIraq
+#
+#  LetsRollCampaign, YouCanCallMeAlCampaign, AnacondaCampaign,
+#  MissionAccomplishedCampaign
+
+scenario =
+
+# The side that you wish to play:  US or Jihadist
+side =
+
+# Difficulty level.  Must be a number from 1 to 6.
+# For the Jihadist Bot:
+# 1 = Muddled
+# 2 = Muddled,Coherent
+# 3 = Muddled,Coherent,Attractive
+# 4 = Muddled,Coherent,Attractive,Potent
+# 5 = Muddled,Coherent,Attractive,Potent,Infectious
+# 6 = Muddled,Coherent,Attractive,Potent,Infectious,Virulent 
+#
+# For the US Bot:
+# 1 = Off Guard
+# 2 = Off Guard,Competent
+# 3 = Off Guard,Competent,Adept
+# 4 = Off Guard,Competent,Adept,Vigilant
+# 5 = Off Guard,Competent,Adept,Vigilant,Ruthless
+# 6 = Off Guard,Competent,Adept,Vigilant,Ruthless,NoMercy
+level =
+
+# You can specify non standard combinations of ideology that 
+# will be used when playing against the Jihadist Bot.
+# Note that setting the 'ideology' parameter will override any
+# value you have set for the 'level' parameter
+# The value can be any combination of the following
+# separated by commas:
+# Muddled,Coherent,Attractive,Potent,Infectious,Virulent 
+#
+# for example:  ideology = Coherent, Potent, Virulent
+ideology =
+
+# You can specify non standard combinations of US resolve that 
+# will be used when playing against the US Bot.
+# Note that setting the 'us-resolve' parameter will override any
+# value you have set for the 'level' parameter.
+# The value can be any combination of the following,
+# separated by commas:
+# Off Guard,Competent,Adept,Vigilant,Ruthless,NoMercy 
+us-resolve =
+
+# Set how the program handles dice rolled by the human player.
+# Can be set to one of: auto, human
+# If set to human, you will be prompted to enter the value
+# of each die roll during your turn.
+dice =
+
+# By default log message use ANSI color escape codes.
+# The Windows command console on older (Windows 10) versions
+# of Windows does not support color, so if your log messages are 
+# displaying the ANSI codes rather than displaying color then
+# you are running a version of Windows that does not support color
+# in the console.
+# Set this value to: yes or no
+color =
+
+# To avoid being prompted to use the Enhanced Jihadist Bot
+# you can set the following to one of: yes, no
+enhanced-bot =
+
+# You can specify the difficulty level used by the 
+# Enhanced Jihadist Bot.
+# This can be set to one of: Normal, Easier, Easiest
+enhanced-bot-difficulty =
+

@@ -1,0 +1,135 @@
+//  _          _                _       _   _
+// | |    __ _| |__  _   _ _ __(_)_ __ | |_| |__
+// | |   / _` | '_ \| | | | '__| | '_ \| __| '_ \
+// | |__| (_| | |_) | |_| | |  | | | | | |_| | | |
+// |_____\__,_|_.__/ \__, |_|  |_|_| |_|\__|_| |_|
+//                   |___/
+//     _                _              _
+//    / \__      ____ _| | _____ _ __ (_)_ __   __ _
+//   / _ \ \ /\ / / _` | |/ / _ \ '_ \| | '_ \ / _` |
+//  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
+// /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
+//                                             |___/
+// An scala implementation of the solo AI for the game
+// Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
+// published by GMT Games.
+//
+// Copyright (c) 2010-2017 Curt Sellmer
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+package awakening.cards
+
+import awakening.LabyrinthAwakening._
+import awakening.JihadistBot
+
+// Card Text:
+// ------------------------------------------------------------------
+// If US play, place 1 Aid in Iraq.
+// If jihadist, test Turkey and worsen its or Iraq's Governance 1
+// Level but not to Islamist Rule.
+// ------------------------------------------------------------------
+object Card_107 extends Card(107, "Kurdistan", Unassociated, 2, NoRemove, NoLapsing, NoAutoTrigger) {
+  // Used by the US Bot to determine if the executing the event would alert a plot
+  // in the given country
+  override
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
+
+  // Used by the US Bot to determine if the executing the event would remove
+  // the last cell on the map resulting in victory.
+  override
+  def eventRemovesLastCell(): Boolean = false
+
+  // Returns true if the printed conditions of the event are satisfied
+  override
+  def eventConditionsMet(role: Role) = true
+
+  def getJihadistCandidates = List(Iraq, Turkey)
+    .filter { name =>
+      val m = game.getMuslim(name)
+      !m.truce && !m.isPoor && !m.isIslamistRule
+    }
+
+  // Returns true if the Bot associated with the given role will execute the event
+  // on its turn.  This implements the special Bot instructions for the event.
+  // When the event is triggered as part of the Human players turn, this is NOT used.
+  override
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case US =>
+      !game.getCountry(Iraq).truce
+    case Jihadist if game.botEnhancements =>
+      val turkey = game.getMuslim(Turkey)
+      val iraq = game.getMuslim(Iraq)
+      (!turkey.truce && turkey.isGood) ||
+      (!iraq.truce && (iraq.isGood || iraq.isFair))
+    case Jihadist =>
+      getJihadistCandidates.nonEmpty
+  }
+
+  def enhBotTarget(names: List[String]): Option[String] = {
+    val priorities = List(
+      JihadistBot.GoodPriority,
+      JihadistBot.HighestPrintedResourcePriority,
+    )
+    JihadistBot.botLog("Find \"Kurdistan\" target", Color.Debug)
+    JihadistBot.topPriority(game.getMuslims(getJihadistCandidates), priorities).map(_.name)
+  }
+
+  // Carry out the event for the given role.
+  // forTrigger will be true if the event was triggered during the human player's turn
+  // and it associated with the Bot player.
+  override
+  def executeEvent(role: Role): Unit = {
+    if (role == US) {
+      if (game.getMuslim(Iraq).truce)
+        log("\nIraq under TRUCE. The event has not effect", Color.Event)
+      else {
+        addEventTarget(Iraq)
+        addAidMarker(Iraq)
+      }
+    }
+    else { // Jihadist
+      if (!game.getMuslim(Turkey).truce) {
+        addEventTarget(Turkey)
+        testCountry(Turkey)  // Specifically called for by event
+      }
+      val candidates = countryNames(
+        List(Turkey, Iraq)
+          .map(game.getMuslim)
+          .filter(m => !m.truce && !(m.isPoor || m.isIslamistRule))
+      )
+      // candidates could be empty if Iraq is Poor and Turkey just tested to Poor
+      if (getJihadistCandidates.nonEmpty) {
+        val name = if (isHuman(role))
+          askCountry("Select country degrade governance: ", getJihadistCandidates)
+        else if (game.botEnhancements)
+          enhBotTarget(getJihadistCandidates).get
+        else
+          JihadistBot.alignGovTarget(getJihadistCandidates).get
+
+        addEventTarget(name)
+        testCountry(name)  // If Iraq it may not have been tested
+        worsenGovernance(name, 1, canShiftToIR = false)
+      }
+      else
+        log("\nThe governance of Turkey and Iraq cannot be worsened.  The event has no effect.", Color.Event)
+    }
+  }
+}

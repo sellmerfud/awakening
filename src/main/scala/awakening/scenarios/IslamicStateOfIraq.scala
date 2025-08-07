@@ -48,17 +48,18 @@ object IslamicStateOfIraq extends Scenario {
   val usPosture      = Hard
   val funding        = 7
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(5)(PlotWMD)  // 2 removed from Syria and 3 extra
+  override val caliphateCapital = Some(Syria)
   val countries = List(
     DefaultSyria.copy(isSunni = false, governance = Fair, alignment = Neutral, civilWar = true, 
-                      militia = 3, caliphateCapital = true, activeCells = 4, wmdCache = 0),
+      pieces = Pieces(militia = 3, activeCells = 4), wmdCache = 0),
     DefaultIran.copy(wmdCache = 1),
-    DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true, militia = 2,
-                      activeCells = 3),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultAfghanistan.copy(governance = Fair, alignment = Ally, troops = 2, sleeperCells = 1),
-    DefaultPakistan.copy(governance = Poor, alignment = Ally, hasCadre = true),
-    DefaultMuslimNigeria.copy(sleeperCells = 2),
+    DefaultIraq.copy(governance = Poor, alignment = Neutral, civilWar = true,
+      pieces = Pieces(militia = 2, activeCells = 3)),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultAfghanistan.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2, sleeperCells = 1)),
+    DefaultPakistan.copy(governance = Poor, alignment = Ally, cadres = 1),
+    DefaultMuslimNigeria.copy(pieces = Pieces(sleeperCells = 2)),
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultFrance.copy(postureValue = Hard),
     DefaultBenelux.copy(postureValue = Hard))

@@ -49,21 +49,20 @@ object Anaconda extends Scenario {
   val usPosture      = Hard
   val funding        = 6
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(6)(PlotWMD)  // 3 unused until events and 3 extra
   val countries = List(
     DefaultLibya.copy(governance = Poor, alignment = Adversary),
     DefaultSyria.copy(governance = Fair, alignment = Adversary),
     DefaultIraq.copy(governance = Poor, alignment = Adversary),
-    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, troops = 2),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultPakistan.copy(governance = Poor, alignment = Ally, sleeperCells = 1, 
-                         markers = List(FATA)),
-    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, sleeperCells = 1, 
-                            troops = 6, regimeChange = TanRegimeChange),
+    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultPakistan.copy(governance = Poor, alignment = Ally, pieces = Pieces(sleeperCells = 1), markers = List(FATA)),
+    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, regimeChange = TanRegimeChange,
+      pieces = Pieces(sleeperCells = 1, usTroops = 6)),
     DefaultSomalia.copy(besiegedRegime = true),
     DefaultCentralAsia.copy(governance = Poor, alignment = Ally),
     DefaultUnitedStates.copy(markers = List(PatriotAct)))
-  val markersInPlay = List.empty[String]
+  val markersInPlay = List.empty[GlobalMarker]
   val cardsRemoved = List(43, 109)
   val offMapTroops = 0
   
@@ -71,12 +70,15 @@ object Anaconda extends Scenario {
     // The Jihadist player places one cell in each of three different
     // countries. (Not the United States)
     val candidates = countryNames(game.countries) filterNot (_ == UnitedStates)
-    val targets = if (game.humanRole == Jihadist) {
-      println("\nChoose three countries where you would like to place a sleeper cell:")
+    log()
+    val targets = if (isHuman(Jihadist)) {
+      println("Choose three countries where you would like to place a sleeper cell:")
       askCountries(3, candidates)
     }
+    else if (game.botEnhancements)
+      List(Caucasus, Iraq, Afghanistan)
     else
-      JihadistBot.multipleTargets(3, candidates, JihadistBot.recruitTravelToPriority)
+      JihadistBot.multipleTargets(3, candidates)(JihadistBot.recruitTravelToPriority)
     
     for (name <- targets) {
       testCountry(name)

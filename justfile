@@ -11,6 +11,39 @@ default:
 @release *ARGS:
   scripts/release.sh {{ARGS}}
 
+# Build a release for Florian and copy it to Dropbox
+to_florian:
+  #! /usr/bin/env bash
+  # VERS="6.0"
+  VERS="$(grep -E 'version\s*:=' build.sbt | sed -e '/ *version/s/^ *version *:= *"\([^"]*\)".*$/\1/')"
+  if test -n "$(git status --porcelain)"; then
+    echo "Working directory is not clean!"
+    exit
+  else
+    sbt stage
+    rm -f target/awakening-"$VERS"/commit_*
+    COMMIT=$(cat .git/refs/heads/florian | head -c 10)
+    COMMIT_FILE="awakening-"$VERS"/commit_$COMMIT"
+    echo "$COMMIT" > target/"$COMMIT_FILE"
+    (cd target; zip awakening-"$VERS".zip "$COMMIT_FILE")
+    cp target/awakening-"$VERS".zip ~/Dropbox/Public/
+  fi
 
+# Dumps the contents of a log-nnn file
+[no-cd]
+@dump_log path:
+  jq -r '.log[].text' '{{path}}'
 
+# Shows the software-version, and file-version of a save-nnn file
+[no-cd]
+game_info path:
+  #! /usr/bin/env bash
+   jq '{ "software-version",
+         "file-version",
+         "botEnhancements": ."game-state"."botEnhancements",
+         "scenarioName": ."game-state"."scenarioName",
+         "# turn actions": ."game-state"."turnActions" | length
+       }' '{{path}}'
 
+@saved_game path:
+  mkdir -p games && cd games && ouch decompress '{{path}}'

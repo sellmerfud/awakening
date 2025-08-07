@@ -1,0 +1,177 @@
+//  _          _                _       _   _
+// | |    __ _| |__  _   _ _ __(_)_ __ | |_| |__
+// | |   / _` | '_ \| | | | '__| | '_ \| __| '_ \
+// | |__| (_| | |_) | |_| | |  | | | | | |_| | | |
+// |_____\__,_|_.__/ \__, |_|  |_|_| |_|\__|_| |_|
+//                   |___/
+//     _                _              _
+//    / \__      ____ _| | _____ _ __ (_)_ __   __ _
+//   / _ \ \ /\ / / _` | |/ / _ \ '_ \| | '_ \ / _` |
+//  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
+// /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
+//                                             |___/
+// An scala implementation of the solo AI for the game
+// Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
+// published by GMT Games.
+//
+// Copyright (c) 2010-2017 Curt Sellmer
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+package awakening.cards
+
+import awakening.LabyrinthAwakening._
+
+// Card Text:
+// ------------------------------------------------------------------
+// Select, Reveal, and Draw a card other than Peace Dividend or
+// Oil Price Spike from the Discard pile or a box.
+// -1 to the Resource value of each Oil Exporter country for the
+// rest of the turn.
+// ------------------------------------------------------------------
+object Card_356 extends Card(356, "OPEC Production Cut", Unassociated, 3, NoRemove, Lapsing, NoAutoTrigger) {
+  // Used by the US Bot to determine if the executing the event would alert a plot
+  // in the given country
+  override
+  def eventAlertsPlot(countryName: String, plot: Plot): Boolean = false
+
+  // Used by the US Bot to determine if the executing the event would remove
+  // the last cell on the map resulting in victory.
+  override
+  def eventRemovesLastCell(): Boolean = false
+
+  // Returns true if the printed conditions of the event are satisfied
+  override
+  def eventConditionsMet(role: Role) = true
+
+  // The enhanced Bot will select one of the following cards if possible
+  // ranked from top to bottom:
+  // #349 Turkish Coup (if #341 Gülen Movement in effect and Turkey poor)
+  // #316 Martyrdom Operation
+  // #352 al-Baghdadi (if 3+ cells available)
+  // #338 Abu Muhammad al-Shimali (if 3+ cells available)
+  // #321 Ungoverned Spaces (if no Caliphate on board and 3+ cells available)
+  // #313 Hayat Tahir al-Sham (If no Caliphate on board, Syria in CW and 3+ cells available)
+  // #317 Qatari Crisis (if any Shia-Mix country is in Civil War and Gulf States Good)
+  // #342 Gumurod Khalimov (if Caliphate on board and any Good countries on board)
+  // #354 Election Meddling  (if World Posture same as US posture AND either: [US hard and Russia not hard] or [US soft and Russia not soft])
+  // #315 Khashoggi Crisis (if Saudi Arabia Neutral or Unmarked)
+  // #353 Bowling Green Massacre (if any Lapsing or Marked events in play that are not in Caliphate countries) [note: This is because Bowling Green Massacre is only playable in non-Caliphate countries]
+  // #298 False Flag Attacks (if a non-WMD plot marker is available)
+  def enhBotCardTarget: Option[Int] = {
+    def canBeDrawn(cardNum: Int) = cardFoundIn(List(FromDiscard, FromLapsing, From1stPlot), cardNum)
+    abstract class EnhJihadCardEntry(val cardNums: Set[Int]) {
+      def this(cardNum: Int) = this(Set(cardNum))
+      def conditionsMet: Boolean
+      def willTake: Boolean = conditionsMet && deck(cardNums.head).botWillPlayEvent(Jihadist)
+    }
+  
+    val candidates = List(
+      new EnhJihadCardEntry(349) {  // Turkish Coup
+        override def conditionsMet = globalEventInPlay(GulenMovement) && game.getMuslim(Turkey).isPoor
+      }, 
+      new EnhJihadCardEntry(316) {  // Martyrdom Operation
+        override def conditionsMet = true
+      }, 
+      new EnhJihadCardEntry(352) {  // al-Baghdadi
+        override def conditionsMet = game.cellsAvailable > 2
+      }, 
+      new EnhJihadCardEntry(338) {  // Abu Muhammad al-Shimali
+        override def conditionsMet = game.cellsAvailable > 2
+      }, 
+      new EnhJihadCardEntry(321) {  // Ungoverned Spaces
+        override def conditionsMet = game.cellsAvailable > 2 && !game.caliphateDeclared
+      }, 
+      new EnhJihadCardEntry(313) {  // Hayat Tahir al-Sham
+        override def conditionsMet =
+          game.cellsAvailable > 2 &&
+          !game.caliphateDeclared &&
+          game.getMuslim(Syria).civilWar
+      }, 
+      new EnhJihadCardEntry(317) {  // Qatari Crisis
+        override def conditionsMet =
+          game.getMuslim(GulfStates).isGood &&
+          game.muslims.exists(m => m.isShiaMix && m.civilWar)
+      }, 
+      new EnhJihadCardEntry(342) {  // Gumurod Khalimov
+        override def conditionsMet = game.caliphateDeclared && game.muslims.exists(_.isGood)
+      }, 
+      new EnhJihadCardEntry(354) {  // Election Meddling
+        override def conditionsMet =
+          game.worldPosture == game.usPosture &&
+          game.usPosture != game.getNonMuslim(Russia).posture
+      }, 
+      new EnhJihadCardEntry(315) {  // Khashoggi Crisis
+        override def conditionsMet =
+          game.getMuslim(SaudiArabia).isUntested ||
+          game.getMuslim(SaudiArabia).isNeutral
+      }, 
+      new EnhJihadCardEntry(353) {  // Bowling Green Massacre
+        override def conditionsMet = true
+      }, 
+      new EnhJihadCardEntry(298) {  // False Flag Attacks
+        override def conditionsMet = true
+      }, 
+    )  
+
+    val available = game.cardsDiscarded.toSet ++ game.cardsLapsing().toSet ++ game.firstPlotCard().toSet
+    candidates
+      .find(entry => available.intersect(entry.cardNums).nonEmpty && entry.willTake)
+      .map(entry => available.intersect(entry.cardNums).head)
+  }
+
+  // Returns true if the Bot associated with the given role will execute the event
+  // on its turn.  This implements the special Bot instructions for the event.
+  // When the event is triggered as part of the Human players turn, this is NOT used.
+  override
+  def botWillPlayEvent(role: Role): Boolean = role match {
+    case Jihadist if game.botEnhancements =>
+      enhBotCardTarget.nonEmpty
+    case _ =>
+      false // Standard Bots treat as unplayable
+  }
+
+  // Carry out the event for the given role.
+  // forTrigger will be true if the event was triggered during the human player's turn
+  // and it associated with the Bot player.
+  override
+  def executeEvent(role: Role): Unit = {
+    if (isHuman(role)) {
+      askCardDrawnFromDiscardOrBox(role, prohibited = Set(117, 118, 236, 357))
+        .foreach { cardNum =>
+          val source = cardLocation(cardNum).get
+          val cardDisplay = deck(cardNum).numAndName
+          log(s"\n$role selects $cardDisplay from the $source", Color.Event)
+          displayLine(s"\nAdd $cardDisplay to your ($role) hand", Color.Info)
+        }
+    }
+    else {
+      // Enhanced Jihadist Bot
+      val cardNum = enhBotCardTarget.get
+      val source = cardLocation(cardNum).get
+      val cardDisplay = deck(cardNum).numAndName
+      log(s"\n$role selects $cardDisplay from the $source", Color.Event)
+      if (processCardDrawn(role, cardNum, source))
+        displayLine(s"\nShuffle $cardDisplay into the $role Bot's hand", Color.Info)
+    }
+    
+    log("\nThe Resource value of each Oil Exporter is reduced by 1 for the rest of the turn.", Color.Event)
+  }
+}

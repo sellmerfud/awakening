@@ -49,23 +49,23 @@ object MissionAccomplished extends Scenario {
   val usPosture      = Hard
   val funding        = 5
   val availablePlots = Plot1::Plot1::Plot1::Plot2::Plot2::Plot3::Nil
-  val removedPlots   = Nil
+  val removedPlots   = List.fill(6)(PlotWMD)  // 3 extra to accomodate Awakening expansion
   val countries = List(
     DefaultLibya.copy(governance = Poor, alignment = Adversary),
-    DefaultSyria.copy(governance = Fair, alignment = Adversary, sleeperCells = 1),
-    DefaultIraq.copy(governance = Poor, alignment = Ally, sleeperCells = 3,
-                    troops = 6, regimeChange = TanRegimeChange),
-    DefaultIran.copy(sleeperCells = 1),
-    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, sleeperCells = 1),
-    DefaultGulfStates.copy(governance = Fair, alignment = Ally, troops = 2),
-    DefaultPakistan.copy(governance = Fair, alignment = Ally, sleeperCells = 1, 
-                         markers = List(FATA)),
-    DefaultAfghanistan.copy(governance = Poor, alignment = Ally, sleeperCells = 1, 
-                            troops = 5, regimeChange = TanRegimeChange),
+    DefaultSyria.copy(governance = Fair, alignment = Adversary, pieces = Pieces(sleeperCells = 1)),
+    DefaultIraq.copy(governance = Poor, alignment = Ally,
+      pieces = Pieces(sleeperCells = 3, usTroops = 6), regimeChange = TanRegimeChange),
+    DefaultIran.copy(pieces = Pieces(sleeperCells = 1)),
+    DefaultSaudiArabia.copy(governance = Poor, alignment = Ally, pieces = Pieces(sleeperCells = 1)),
+    DefaultGulfStates.copy(governance = Fair, alignment = Ally, pieces = Pieces(usTroops = 2)),
+    DefaultPakistan.copy(governance = Fair, alignment = Ally, pieces = Pieces(sleeperCells = 1), 
+      markers = List(FATA)),
+    DefaultAfghanistan.copy(governance = Poor, alignment = Ally,
+      pieces = Pieces(sleeperCells = 1, usTroops = 5), regimeChange = TanRegimeChange),
     DefaultSomalia.copy(besiegedRegime = true),
     DefaultCentralAsia.copy(governance = Fair, alignment = Neutral),
-    DefaultIndonesiaMalaysia.copy(governance = Fair, alignment = Neutral, sleeperCells = 1),
-    DefaultPhilippines.copy(postureValue = Soft, sleeperCells = 1, troops = 2,
+    DefaultIndonesiaMalaysia.copy(governance = Fair, alignment = Neutral, pieces = Pieces(sleeperCells = 1)),
+    DefaultPhilippines.copy(postureValue = Soft, pieces = Pieces(sleeperCells = 1, usTroops = 2),
                              markers = List(AbuSayyaf)),
     DefaultUnitedKingdom.copy(postureValue = Hard),
     DefaultUnitedStates.copy(markers = List(PatriotAct, NEST)))
@@ -74,6 +74,7 @@ object MissionAccomplished extends Scenario {
   val offMapTroops = 0
   
   override val additionalSetup: () => Unit = () => {
+    log()
     // The Jihadist player rolls the posture of each Schengen country.
     for (name <- Schengen)
       rollCountryPosture(name, logWorld = false)
