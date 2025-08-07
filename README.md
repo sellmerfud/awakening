@@ -29,7 +29,9 @@ the `java` command is on your `PATH`
 
 There are two scripts provided that will start the program.
 
-* `awakening` -- As bash script used on Mac and Linux
+* `awakening` -- As bash script used on Mac and Linux  
+*(Note: the code that creates the zip file does not preserve the executable bit
+on the script so you will need to make it executable or run it with bash)*
 * `awakening.cmd` -- A Windows command file for use on Windows
 
 ## Using the program
