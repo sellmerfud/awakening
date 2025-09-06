@@ -1,7 +1,7 @@
 
 [private]
 default:
-  @just --list --justfile {{justfile()}}
+  @just --list --unsorted --justfile {{justfile()}}
   
 # Show current version number
 @showvers:
