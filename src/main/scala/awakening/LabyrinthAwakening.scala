@@ -4857,6 +4857,10 @@ object LabyrinthAwakening {
     }
   }
 
+  def entireGameHistory(): Unit = {
+        printHistorySegment(0, game.history.size - 1, false)
+  }
+
   // Display some or all of the game log.
   // usage:
   // history            - Shows the log starting from the most recent save point (Same as history -1)
@@ -4895,7 +4899,6 @@ object LabyrinthAwakening {
       val NUM      = """(-?\d+)""".r
       val HELP     = """(?:\?|(?:--)?(?i:help)|-h)""".r
       val WORD     = """([a-z]+)""".r
-      val REDIR    = """>.*""".r
       val tokens   = cmdline
         .split("\\s+")
         .toList
@@ -4968,9 +4971,9 @@ object LabyrinthAwakening {
           case None =>
             printHistorySegment(startIndex, endIndex, true, None)
 
-          case Some(path) =>
-            if (path.isDirectory)
+          case Some(path) if (path.isDirectory) =>
               throw new HistoryError(s"Cannot redirect to a directory ($path)!")
+          case Some(path) =>
             path.writer { stream =>
               printHistorySegment(startIndex, endIndex, false, Some(stream))
             }
@@ -8721,6 +8724,10 @@ object LabyrinthAwakening {
       else if (finalParams.deleteName.nonEmpty) {
         (gamesDir/finalParams.deleteName.get).rmtree()
       }
+      else if (finalParams.historyName.nonEmpty) {
+        game = loadMostRecent(finalParams.historyName.get)
+        entireGameHistory()
+      }
       else
         programMainMenu(finalParams)
     }
@@ -8763,37 +8770,50 @@ object LabyrinthAwakening {
         this.separator("")
         this.separator("Options:")
         val saved = savedGames()
-        if (saved.isEmpty)
-          reqd[String]("-g", "--game=name", "Resume a game in progress")
-            { (v, c) => throw new InvalidArgumentException("  You do not have any saved games") }
-        else
-          reqd[String]("-g", "--game=name", saved, "Resume a game in progress")
-            { (v, c) => c.copy(resumeName = Some(v)) }
 
-        flag("-l", "--list", "Display a list of saved games")
-          { (c) => c.copy(listGames = true) }
+        reqd[String]("-g", "--game=name", "Resume a game in progress") { 
+          case (v, c) if saved.isEmpty =>
+            throw new InvalidArgumentException("  You do not have any saved games")
+          case (v, c) =>
+            c.copy(resumeName = Some(v))
+        }
 
-        if (saved.isEmpty)
-          reqd[String]("", "--delete=name", "Delete a game in progress")
-            { (v, c) => throw new InvalidArgumentException("  You do not have any saved games") }
-        else
-          reqd[String]("", "--delete=name", saved, "Delete a game in progress")
-            { (v, c) => c.copy(deleteName = Some(v)) }
+        flag("-l", "--list", "Display a list of saved games") {
+          (c) => c.copy(listGames = true)
+        }
+
+        reqd[String]("", "--history=name", "Display game history") {
+          case (v, c) if (saved.isEmpty) =>
+            throw new InvalidArgumentException("  You do not have any saved games")
+          case (v, c) =>
+            c.copy(historyName = Some(v))
+        }
+
+        reqd[String]("", "--delete=name", "Delete a game in progress") {
+          case (v, c) if (saved.isEmpty) =>
+            throw new InvalidArgumentException("  You do not have any saved games")
+          case (v, c) =>
+            c.copy(deleteName = Some(v))
+        }
 
         val scenarioHelp = "Select a scenario" +: scenarios.keys.toSeq
-        reqd[String]("", "--scenario=name", scenarios.keys.toSeq, scenarioHelp: _*)
-          { (v, c) => c.copy(scenarioName = Some(v)) }
+        reqd[String]("", "--scenario=name", scenarios.keys.toSeq, scenarioHelp: _*) {
+          (v, c) => c.copy(scenarioName = Some(v))
+        }
 
-        reqd[String]("", "--side=us|jihadist", Seq("us","jihadist"), "Select a side to play")
-          { (v, c) => c.copy(side = Some(if (v == "us") US else Jihadist)) }
+        reqd[String]("", "--side=us|jihadist", Seq("us","jihadist"), "Select a side to play") {
+          (v, c) => c.copy(side = Some(if (v == "us") US else Jihadist))
+        }
 
-        reqd[Int]("", "--level=n", Seq.range(1, 7), "Select difficulty level (1 - 6)")
-          { (v, c) => c.copy(level = Some(v)) }
+        reqd[Int]("", "--level=n", Seq.range(1, 7), "Select difficulty level (1 - 6)") {
+          (v, c) => c.copy(level = Some(v))
+        }
 
         reqd[String]("", "--dice=auto|human", Seq("auto", "human"), "How to roll the human player's dice",
                                                              "auto  - the program rolls them automatically",
-                                                             "human - you enter your dice rolls manually")
-          { (v, c) => c.copy(autoDice = Some(v == "auto")) }
+                                                             "human - you enter your dice rolls manually") {
+          (v, c) => c.copy(autoDice = Some(v == "auto"))
+        }
 
         list[JihadDiff]("", "--ideology=x,y,z",
                        ("Comma separated list of Jihadist ideology values" +: diffHelp(AllJihadistLevels)): _*) {
@@ -8801,26 +8821,32 @@ object LabyrinthAwakening {
             val values = v.map { case JihadDiff(diff) => diff }.sorted.distinct
             c.copy(ideology = values)
         }
+
         list[USDiff]("", "--us-resolve=x,y,z",
                      ("Comma separated list of US resolve values" +: diffHelp(AllUSLevels)): _*) {
           (v, c) =>
-          val values = v.map { case USDiff(diff) => diff }.sorted.distinct
-          c.copy(usResolve = values)
+            val values = v.map { case USDiff(diff) => diff }.sorted.distinct
+            c.copy(usResolve = values)
         }
         val enhBotDiffValues = EnhBotDifficulty.All.map(d => d.name -> d).toMap
-        reqd[EnhBotDifficulty]("", "--enh-bot-difficulty", enhBotDiffValues, "Enhanced Bot difficulty level")
-          { (v, c) => c.copy(enhBotDifficulty = Some(v)) }
-        bool("", "--color", "Show colored log messages")
-          { (v, c) => c.copy(showColor = Some(v)) }
-        bool("", "--enhanced-bot", "Use enhanced Bot (Jihadist Bot only)")
-          { (v, c) => c.copy(enhancedBot = Some(v)) }
-        flag("-s", "--show-config-loc", "Display the location of the configuration file and exit.") { (c) =>
-          c.copy(showConfigLoc = true)
+        reqd[EnhBotDifficulty]("", "--enh-bot-difficulty", enhBotDiffValues, "Enhanced Bot difficulty level") {
+          (v, c) => c.copy(enhBotDifficulty = Some(v))
         }
-        flag("-v", "--version", "Display program version and exit") { (c) =>
-          // The version is displayed when the program runs
-          // So we just exit
-          throw ExitProgram(0)
+        bool("", "--color", "Show colored log messages") {
+          (v, c) => c.copy(showColor = Some(v))
+        }
+        bool("", "--enhanced-bot", "Use enhanced Bot (Jihadist Bot only)") {
+          (v, c) => c.copy(enhancedBot = Some(v))
+        }
+        flag("-s", "--show-config-loc", "Display the location of the configuration file and exit.") {
+          (c) =>
+            c.copy(showConfigLoc = true)
+        }
+        flag("-v", "--version", "Display program version and exit") {
+          (c) =>
+            // The version is displayed when the program runs
+            // So we just exit
+            throw ExitProgram(0)
         }
       }.parse(args, UserParams())
     }
@@ -8831,11 +8857,11 @@ object LabyrinthAwakening {
   }
 
 
-
   case class UserParams(
     val resumeName: Option[String] = None,
     val deleteName: Option[String] = None,
     val listGames: Boolean = false,
+    val historyName: Option[String] = None,
     val scenarioName: Option[String] = None,
     val campaign: Option[Boolean] = None,
     val gameLength: Option[Int] = None,
@@ -8866,6 +8892,7 @@ object LabyrinthAwakening {
         other.resumeName.orElse(resumeName),
         other.deleteName.orElse(deleteName),
         other.listGames || listGames,
+        other.historyName.orElse(historyName),
         other.scenarioName.orElse(scenarioName),
         other.campaign.orElse(campaign),
         other.gameLength.orElse(gameLength),
