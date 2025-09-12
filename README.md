@@ -11,7 +11,7 @@ You can play as either the US or the Jihadist player and the AI will take the op
 
 ## Downloading the package
 
-You can use this link to download the latest release: [Version 6.0][1]
+You can use this link to download the latest release: [Version 6.1][1]
 
 If you are upgrading to a newer version and the **major** version numbers of the two versions
 are the same, then any saved games in progress will be compatible.
@@ -20,7 +20,7 @@ Simply copy the *games* folder from the older *awakening-x.x* directory to the
 new *awakening-x.x* directory.
 
 
-[1]: https://github.com/sellmerfud/awakening/releases/download/v6.0/awakening-6.0.zip
+[1]: https://github.com/sellmerfud/awakening/releases/download/v6.1/awakening-6.1.zip
 
 ## Running the program
 

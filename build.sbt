@@ -5,7 +5,7 @@ import scala.sys.process._
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
-  version      := "6.0",
+  version      := "6.1",
   scalaVersion := "2.13.16",
   javacOptions        ++= Seq("-source", "8", "-target",  "8"),
   scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
