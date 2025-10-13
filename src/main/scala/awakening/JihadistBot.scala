@@ -1216,10 +1216,8 @@ object JihadistBot extends BotHelpers {
   // The bot will never travel a SLEEPER cell within the same country
   def standardTravelFromTarget(toCountry: String, names: List[String], inPlaceOk: Boolean): Option[String] = {
     def wouldMoveOrTravelWithinToSleep(c: Country) =
-      inPlaceOk && (
-        c.name != toCountry ||
-        (activeCells(c) > 0 && !game.isCaliphateMember(c.name))
-      )
+      c.name != toCountry ||
+      (inPlaceOk && activeCells(c) > 0 && !game.isCaliphateMember(c.name))
 
     botLog(s"Find \"Travel From\" target for $toCountry", Color.Debug)
     val flowchart = List(
