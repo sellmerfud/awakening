@@ -2502,7 +2502,7 @@ object JihadistBot extends BotHelpers {
     }
     else { // Standard Bot
       // If the event is playable then the event is always executed
-      if (eventPlayable && card.botWillPlayEvent(Jihadist)) {
+      if (usage != UseCardForOps && eventPlayable && card.botWillPlayEvent(Jihadist)) {
         performCardEvent(card, Jihadist)
         // If the card event is Unassociated add ops to the Bot's reserves.
         if (card.association == Unassociated)
