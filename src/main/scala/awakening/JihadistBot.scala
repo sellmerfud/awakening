@@ -3367,11 +3367,25 @@ object JihadistBot extends BotHelpers {
     // -----------------------------------------------------------
     // Radicalization Action -  Recruit at Muslim country with Cadre
     case object RecruitAtMuslimCadre extends RadicalizationAction {
-      override
-      def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean = {
-        // I'm allowing recruit in IR countries, not sure if that is the intent?
-        botRecruitPossible(muslimWithCadreOnly = true)
+      // I'm allowing recruit in IR countries, not sure if that is the intent?
+
+      // List of Muslim recruit targets with best Jihad DRM
+      def muslimRecruitTargets = {
+        if (game.recruitPossible) {
+          val muslimTargets = botRecruitTargets(muslimWithCadreOnly = true)
+            .filter(game.isMuslim)
+            .map(game.getMuslim)
+          selectCandidates(muslimTargets, List(BestJihadDRMPriority(false)))
+            .map(_.name)
+        }
+        else
+          Nil
       }
+
+
+      override
+      def criteriaMet(onlyReserveOpsRemain: Boolean): Boolean =
+        muslimRecruitTargets.nonEmpty
 
       // Recruit in the Muslim county with a cadre that has the best
       // Jihad DRM.
@@ -3386,11 +3400,10 @@ object JihadistBot extends BotHelpers {
           log()
           log(s"Radicalization: Recruit in a Muslim country with a cadre")
         }
-        val maxOps     = cardOps + reserveOps
-        val candidates = game.getMuslims(botRecruitTargets(muslimWithCadreOnly = true)).sortBy(m => jihadDRM(m, m.isPoor))
-        val target     = recruitTarget(candidates.map(_.name)).get
+        val maxOps = cardOps + reserveOps
+        val target = recruitTarget(muslimRecruitTargets).get
         addOpsTarget(target)
-        val m = game getMuslim target
+        val c = game.getCountry(target)
         def nextAttempt(completed: Int): Int = {
           if (completed == maxOps || game.cellsToRecruit == 0)
             completed
@@ -3399,14 +3412,14 @@ object JihadistBot extends BotHelpers {
             if (completed >= cardOps)
               expendBotReserves(1)
             log(s"\n$Jihadist attempts to recruit a cell into $target")
-            if (m.autoRecruit) {
+            if (c.autoRecruit) {
               log(s"Recruit is automatically successful in $target")
               addSleeperCellsToCountry(target, 1)
               usedCells(target).addSleepers(1)
             }
             else {
               val die = getDieRoll(s"Enter die roll for recruit in $target: ")
-              val success = m.recruitSucceeds(die)
+              val success = c.recruitSucceeds(die)
               val result  = if (success) "succeeds" else "fails"
               log(s"Recruit $result in $target with a roll of $die")
               if (success) {
@@ -3473,21 +3486,21 @@ object JihadistBot extends BotHelpers {
         }
         val target = recruitTarget(botRecruitTargets(muslimWithCadreOnly = false)).get
         addOpsTarget(target)
-        val m = game getMuslim target
+        val c = game.getCountry(target)
         def nextAttempt(completed: Int): Int = {
           if (completed == cardOps || game.cellsToRecruit == 0)
             completed
           else {
             displayHeader()
             log(s"$Jihadist attempts to recruit a cell into $target")
-            if (m.autoRecruit) {
+            if (c.autoRecruit) {
               log(s"Recruit is automatically successful in $target")
               addSleeperCellsToCountry(target, 1)
               usedCells(target).addSleepers(1)
             }
             else {
               val die = getDieRoll(s"Enter die roll for recruit in $target: ")
-              val success = m.recruitSucceeds(die)
+              val success = c.recruitSucceeds(die)
               val result  = if (success) "succeeds" else "fails"
               log(s"Recruit $result in $target with a roll of $die")
               if (success) {
@@ -3980,7 +3993,7 @@ object JihadistBot extends BotHelpers {
             .get
         }
         addOpsTarget(target)
-        val m = game getMuslim target
+        val c = game.getCountry(target)
         def nextAttempt(completed: Int): Int = {
           if (completed == maxOps || game.cellsToRecruit == 0)
             completed
@@ -3989,14 +4002,14 @@ object JihadistBot extends BotHelpers {
             log(s"$Jihadist attempts to recruit a cell into $target")
             if (completed >= cardOps)
               expendBotReserves(1)
-            if (m.autoRecruit) {
+            if (c.autoRecruit) {
               log(s"Recruit is automatically successful in $target")
               addSleeperCellsToCountry(target, 1)
               usedCells(target).addSleepers(1)
             }
             else {
               val die = getDieRoll(s"Enter die roll for recruit in $target: ")
-              val success = m.recruitSucceeds(die)
+              val success = c.recruitSucceeds(die)
               val result  = if (success) "succeeds" else "fails"
               log(s"Recruit $result in $target with a roll of $die")
               if (success) {
