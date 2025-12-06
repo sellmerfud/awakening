@@ -2,6 +2,7 @@ import Path.FileMap
 import java.nio.file.{ Files, Paths }
 import java.nio.file.attribute.PosixFilePermissions
 import scala.sys.process._
+import Zip.createZipFile
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
@@ -47,7 +48,15 @@ lazy val awakening = (project in file("."))
       val jars       = (Compile / fullClasspathAsJars).value.files
       val others     = (sourceOther.value * "*").get
       val assets     = (others pair rebaseTo(pkgDir)) ++ (jars pair rebaseTo(lib))
-      
+      // Order zipfile entries alphabetically with directories first
+      val zipOrdering: Ordering[File] = new Ordering[File] {
+        def compare(x: File, y: File) = 
+          (x.isDirectory, y.isDirectory) match {
+            case (true, false) => -1
+            case (false, true) => 1
+            case _  => x.toString.compare(y.toString)
+          }
+      }
       log.info(s"Staging to $pkgDir ...")
       IO.delete(pkgDir)
       IO.createDirectory(lib)
@@ -57,10 +66,12 @@ lazy val awakening = (project in file("."))
       s"typst compile src/typst/enh-bot-instructions.typ ${doc}/enh-bot-instructions.pdf" ! log
       s"typst compile src/typst/enhanced-evo-diagram.typ ${doc}/enhanced-evo-diagram.pdf" ! log
       IO.setPermissions(pkgDir / "awakening", "rwxr-xr-x") // Make bash script executable
-      // Create zip file
-      (pkgDir ** ".DS_Store").get foreach IO.delete
-      val zipEntries = (pkgDir ** "*").get map (f => (f, IO.relativize(target.value, f).get) )
-      IO.zip(zipEntries, zipfile, None)
+      val zipEntries = (pkgDir ** "*")
+        .get
+        .filter(f => f.getName != ".DS_Store") // Skip any pesky .DS_Store files created by Mac OS
+        .sorted(zipOrdering)
+        .map(f => (f, IO.relativize(target.value, f).get))
+      createZipFile(zipEntries, zipfile)
     }
   )
   
