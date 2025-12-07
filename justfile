@@ -9,7 +9,7 @@ default:
 
 # Package up a new version
 @release *ARGS:
-  scripts/release.sh {{ARGS}}
+  python3 scripts/release.py {{ARGS}}
 
 # Build a release for Florian and copy it to Dropbox
 to_florian:
