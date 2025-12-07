@@ -262,17 +262,14 @@ object Card_205 extends Card(205, "Erdogan Effect", Unassociated, 1, NoRemove, N
       }
     }
     else if (role == Jihadist ) {
-      // Jihadist Bot only affects cells or reaction markers.
-      if (game.cellsAvailable > 0) {
-        val name = JihadistBot.cellPlacementPriority(false)(CandidateCountries).get
-        addEventTarget(name)
+      // Jihadist Bot only affects cells or reaction markers and the
+      // speical rule for this card says to use the cell placement priorities
+      val name = JihadistBot.cellPlacementPriority(false)(CandidateCountries).get
+      addEventTarget(name)
+      if (game.cellsAvailable > 0)
         addSleeperCellsToCountry(name, 2 min game.cellsAvailable)
-      }
-      else {
-        val name = JihadistBot.markerTarget(awakeReactCandidates).get
-        addEventTarget(name)
+      else
         addReactionMarker(name)
-      }
     }
     else {  // US Bot
       removeCellsCandidates match {
