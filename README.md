@@ -20,7 +20,7 @@ Simply copy the *games* folder from the older *awakening-x.x* directory to the
 new *awakening-x.x* directory.
 
 
-[1]: https://github.com/sellmerfud/awakening/releases/download/v6.5/awakening-6.5.zip
+[1]: https://github.com/sellmerfud/awakening/releases/download/v6.6/awakening-6.6.zip
 
 ## Running the program
 
