@@ -110,7 +110,7 @@ def update_readme(version):
   with open('README.md', 'r+') as f:
      contents = f.read()
      contents = re.sub(r'\[Version\s*\d+\.\d+\]', f'[Version {version}]', contents)
-     contents = re.sub(r'^\[1\]:.*$', f'[1]: {zip_file_url}', contents)
+     contents = re.sub(r'^\[1\]:.*$', f'[1]: {zip_file_url}', contents, flags = re.MULTILINE)
      f.seek(0)
      f.write(contents)
      f.truncate()
