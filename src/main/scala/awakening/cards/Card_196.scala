@@ -162,9 +162,10 @@ object Card_196 extends Card(196, "Training Camps", Jihadist, 3, NoRemove, NoLap
     else if (game.botEnhancements && enhBotTarget.nonEmpty)
       enhBotTarget.get
     else
+      // Event Special instruction is to used Recruit/Travel To Priorities Table
       getNonAutoRecruitCandidates match {
-        case Nil => JihadistBot.cellPlacementPriority(false)(getCandidates).get
-        case nonAutoRecruit => JihadistBot.cellPlacementPriority(false)(nonAutoRecruit).get
+        case Nil => JihadistBot.recruitTravelToPriority(getCandidates).get
+        case nonAutoRecruit => JihadistBot.recruitTravelToPriority(nonAutoRecruit).get
       }
 
     println() 
