@@ -22,18 +22,15 @@ class CmdFailedException(AbortException):
 def abort(msg):
   raise AbortException(msg)
 
-# cmd - a string with the command arguments
-# echo - print the command to stdout before running the command
-# pipe - use a pipe to caputre stdout and stderr
+# cmd - an array with the command arguments
 def capture_output(cmd):
   result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   if result.returncode != 0:
     raise CmdFailedException(result)
   return result.stdout.decode('utf-8')
 
-# cmd - a string with the command arguments
+# cmd  - an array with the command arguments
 # echo - print the command to stdout before running the command
-# pipe - use a pipe to caputre stdout and stderr
 def system_command(cmd, echo = False):
   if echo:
     print(" ".join(cmd))
@@ -82,7 +79,7 @@ def set_version(version):
      f.truncate()
   print(f'Version set to {version}')
 
-# name of zipfile base on given version
+# name of zipfile based on given version
 def zipfile_name(version):
    return f'{program_name}-{version}.zip'
 
@@ -178,7 +175,7 @@ try:
   print(f"\nCurrent version is {current_version}")
   match re.search(r'\A(\d+)\.(\d+)\z', current_version):
     case None:
-      abort('The current version does not have the correct format of <major.minor>')
+      abort('The current version does not have the correct format of <major>.<minor>')
     case match:
       major=match[1]
       minor=match[2]
@@ -191,11 +188,10 @@ try:
     case _:
       pass  # new_version was set explictly
 
-  if getYorN(f'Set the version to {new_version} and create a release?'):
-    set_version(new_version)
-  else:
+  if not getYorN(f'Set the version to {new_version} and create a release?'):
     sys.exit(0)
 
+  set_version(new_version)
   system_command(['sbt', 'stage'], echo = True)
   update_readme(new_version)
 
