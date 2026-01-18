@@ -9,6 +9,7 @@
 
 import sys, subprocess, re, os
 import argparse
+from textwrap import dedent
 
 class AbortException(Exception):
   def __init__(self, msg):
@@ -50,9 +51,9 @@ def working_directory_dirty():
 def getYorN(prompt):
   while True:
     response = input(f"\n{prompt} (y/n) ").lower().strip()
-    if re.search(r'^y.*', response):
+    if response.startswith('y'):
        return True
-    elif re.search(r'^n.*', response):
+    elif response.startswith('n'):
        return False
     else:
        print("Invalid response")
@@ -121,12 +122,12 @@ def update_readme(version):
 #                 next_major: Bump the major version number and set minor to zero
 #                 <major>.<minor>: where: major and minor are integers
 
-version_help =\
-'''next_minor      - Bump the minor version number
+version_help = dedent('''
+next_minor      - Bump the minor version number
 next_major      - Bump the major version number and set minor to zero
 <major>.<minor> - where major and minor are integers
 If omitted it defaults to next_minor
-'''
+''')
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('--commit', action=argparse.BooleanOptionalAction, default=True, help='Commit changes and push them to Github (Default=true)')
 parser.add_argument('version', metavar='VERSION', type=str,  nargs='?', default='next_minor', help=version_help)
@@ -134,8 +135,8 @@ parser.add_argument('version', metavar='VERSION', type=str,  nargs='?', default=
 # Main entry point of script
 # Program name and dropbox folder are used to
 # upload the zip file to dropbox
-repo_name='awakening'
-program_name='awakening'
+program_name = 'awakening'
+repo_name    = 'awakening'
 
 try:
   args = parser.parse_args()
