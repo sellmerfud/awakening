@@ -4,8 +4,16 @@ default:
   @just --list --unsorted --justfile {{justfile()}}
   
 # Show current version number
-@showvers:
-  grep '^\s*version' build.sbt
+showvers:
+  #! /usr/bin/env python3
+  import re
+  with open('build.sbt') as f:
+    contents = f.read()
+    match re.search(r'^\s*version\s*:=\s*"([^"]+)"', contents, re.MULTILINE):
+      case None:
+        print("Cannot determine current version!")
+      case match:
+        print(f"{match[1]}")
 
 # Package up a new version
 @release *ARGS:
