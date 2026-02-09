@@ -97,7 +97,7 @@ def commit_release(version):
     ['git', 'tag', f'-mRelease {version_label}', version_label],
     ['git', 'push', '--tags', 'origin', 'master'],
     # Create the release and upload the zip file to the release assests
-    ['gh', 'release', 'create', '--generate-notes', '--title', f'Version {version}', version_label, local_zip_file_path]
+    ['gh', 'release', 'create', '--generate-notes', '--verify-tag', '--title', f'Version {version}', version_label, local_zip_file_path]
   ]
   system_commands(cmds, echo = True)
 
