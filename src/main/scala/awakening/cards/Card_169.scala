@@ -116,7 +116,9 @@ object Card_169 extends Card(169, "Islamic Maghreb", Jihadist, 1, NoRemove, Laps
         case Nil => getCandidates
         case c => c
       }
-      val target = JihadistBot.cellPlacementPriority(false)(candidates).get
+      val target = JihadistBot.topPriority(game.getCountries(candidates), JihadistBot.recruitAndTravelToPriorities)
+        .map(_.name)
+        .get
       val action = (game.cellsAvailable > 0, game.funding) match {
         case (false, 9) => None
         case (false, _) => Some(Funding)
