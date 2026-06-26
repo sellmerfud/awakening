@@ -2052,7 +2052,7 @@ object JihadistBot extends BotHelpers {
     if (caliphatePossible)
       JihadistBot.caliphatePriorityTarget(candidates)
     else
-      JihadistBot.travelToTarget(candidates)
+      topPriority(game.getCountries(candidates), recruitAndTravelToPriorities).map(_.name)
   }
 
   // Note: this does not test for presence of a cadre, because
