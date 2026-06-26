@@ -6,7 +6,7 @@ import Zip.createZipFile
 
 lazy val commonSettings = Seq(
   organization := "org.sellmerfud",
-  version      := "6.7",
+  version      := "6.8",
   scalaVersion := "2.13.18",
   javacOptions        ++= Seq("-source", "8", "-target",  "8"),
   scalacOptions       ++= Seq( "-deprecation", "-unchecked", "-feature" ),
