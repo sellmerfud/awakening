@@ -1,7 +1,7 @@
 
 [private]
 default:
-  @just --list --unsorted --justfile {{justfile()}}
+  @just --list --list-prefix=' - ' --list-heading=$'' --unsorted --justfile {{justfile()}}
   
 # Show current version number
 showvers:
@@ -22,19 +22,21 @@ showvers:
 # Build a release for Florian and copy it to Dropbox
 to_florian:
   #! /usr/bin/env bash
-  # VERS="6.0"
-  VERS="$(grep -E 'version\s*:=' build.sbt | sed -e '/ *version/s/^ *version *:= *"\([^"]*\)".*$/\1/')"
+  vers="$(grep -E 'version\s*:=' build.sbt)"
+  pattern='[[:space:]]*version[[:space:]]*:=[[:space:]]"([^"]*)"'
+  [[ $vers =~ $pattern ]] && vers="${BASH_REMATCH[1]}"
+  exit
   if test -n "$(git status --porcelain)"; then
     echo "Working directory is not clean!"
     exit
   else
     sbt stage
-    rm -f target/awakening-"$VERS"/commit_*
-    COMMIT=$(cat .git/refs/heads/florian | head -c 10)
-    COMMIT_FILE="awakening-"$VERS"/commit_$COMMIT"
-    echo "$COMMIT" > target/"$COMMIT_FILE"
-    (cd target; zip awakening-"$VERS".zip "$COMMIT_FILE")
-    cp target/awakening-"$VERS".zip ~/Dropbox/Public/
+    rm -f target/awakening-"$vers"/commit_*
+    commit=$(cat .git/refs/heads/florian | head -c 10)
+    commit_file="awakening-"$vers"/commit_$commit"
+    echo "$commit" > target/"$commit_file"
+    (cd target; zip awakening-"$vers".zip "$commit_file")
+    cp target/awakening-"$vers".zip ~/Dropbox/Public/
   fi
 
 # Dumps the contents of a log-nnn file
@@ -53,5 +55,10 @@ game_info path:
          "# turn actions": ."game-state"."turnActions" | length
        }' '{{path}}'
 
-@saved_game path:
-  mkdir -p games && cd games && ouch decompress '{{path}}'
+[private]
+@make_games_dir:
+  mkdir -p games
+
+[working-directory: 'games']
+@extract_game path: make_games_dir
+  ouch decompress '{{path}}'
