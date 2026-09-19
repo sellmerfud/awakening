@@ -84,7 +84,7 @@ object SavedGame {
   }
 
   private def fromJson(jsonValue: String): GameState = {
-    val top = Json.parseOrException(jsonValue).obj
+    val top = Json.parse(jsonValue).obj
     if (!top.contains("file-version"))
       throw new IllegalArgumentException(s"Invalid save file - No file version number")
 
@@ -449,7 +449,7 @@ object SavedGame {
   }
 
   private def logFromJson(jsonValue: String): Vector[LogEntry] = {
-      val top = Json.parseOrException(jsonValue).obj
+      val top = Json.parse(jsonValue).obj
       if (!top.contains("file-version"))
         throw new IllegalArgumentException(s"Invalid save file - missing file version number")
 

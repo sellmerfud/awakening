@@ -21,9 +21,9 @@ lazy val awakening = (project in file("."))
     name        := "awakening",
     description := "A scala implementation of the solo AI for Labyrinth The Awakening",
     libraryDependencies ++= Seq(
-      "com.lihaoyi"     %% "fastparse" % "3.1.1",
-      "org.sellmerfud"  %% "optparse"  % "2.2",
-      "org.scalactic"   %% "scalactic" % "3.0.8"
+      "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
+      "org.sellmerfud" %% "optparse"  % "2.2",
+      "org.scalactic" %% "scalactic" % "3.0.8"
     ),
     sourceOther := sourceDirectory.value / "other",
     Compile / resourceGenerators += Def.task {

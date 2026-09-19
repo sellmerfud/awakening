@@ -40,11 +40,10 @@ package awakening
 
 import scala.language.implicitConversions
 import scala.collection.mutable
+import scala.util.parsing.combinator._
 
 
 object Json {
-  import fastparse._, NoWhitespace._
-
   sealed trait Value {
     def value: Any
 
@@ -197,15 +196,14 @@ object Json {
   case class JsonException(reason: String) extends Exception(reason)
   case class InvalidData(data: Value, msg: String) extends Exception(s"$msg (data: $data)")
 
-  def space[$: P] = P ( CharsWhileIn(" \r\n\t", 0))
-  def unicodeEscape[$: P] = {
-    P( "\\u" ~ CharIn("0-9a-fA-F").rep(4).! )
-    .map { hexVal =>
-      Character.toChars(Integer.parseInt(hexVal, 16)).mkString
+  private class EscapedStringParser extends JavaTokenParsers {
+    override protected val whiteSpace = "".r
+
+    def unicode: Parser[String] = rep1("\\u" ~> """[a-fA-F0-9]{4}""".r) ^^ { stringBytes =>
+      new String(stringBytes.map(Integer.valueOf(_, 16).intValue.asInstanceOf[Char]).toArray)
     }
-  }
-  def escapedChar[$: P] = P( "\\" ~ CharIn("""/\"bfnrt""").! )
-    .map { charStr =>
+
+    def escaped: Parser[String] = "\\" ~> """[\\/bfnrt"]""".r ^^ { charStr =>
       val char = charStr match {
         case "r" => '\r'
         case "n" => '\n'
@@ -216,52 +214,67 @@ object Json {
       }
       char.toString
     }
+
+    def characters: Parser[String] = """[^\"[\x00-\x1F]\\]+""".r // comment to fix emac parsing "
+
+    def string: Parser[String] = "\"" ~> rep(unicode | escaped | characters) <~ "\"" ^^ { list =>
+      list.mkString("")
+    }
+
+    def parse(s: String) = {
+      parseAll(string, s) match {
+        case Success(result, _) => result
+        case x @ Failure(msg, z) => throw new JsonException(x.toString)
+        case x @ Error(msg, _) => throw new JsonException(x.toString)
+      }
+    }
+  }
+
+  private class JsonParser extends JavaTokenParsers {
+    sealed trait KeyValueSeparators
+    object Colon extends KeyValueSeparators
     
-  def validStringChar(c: Char) = c != '\\' && c != '"' && c.toInt > 0x1F
-  def stringChars[$: P] = P( CharsWhile(validStringChar).! )
+    def obj: Parser[Obj] = "{" ~> repsep(pair, ",") <~ "}" ^^ {
+      pairs => Obj.from(pairs)
+    }
 
-  def string[$: P] = P ( space ~ "\"" ~ (unicodeEscape | escapedChar | stringChars).rep ~ "\"" )
-    .map(s => Str.apply(s.mkString))
+    def arr: Parser[Arr] = "[" ~> repsep(value, ",") <~ "]" ^^ {
+      items => Arr.from(items)
+    }
 
-  def `null`[$: P] = P ( "null" )
-    .map(_ => Null)
+    def pair: Parser[(String, Value)] = string ~ (":" ^^^ Colon) ~ value ^^ {
+      case name ~ Colon ~ value => (name.str, value)
+    }
 
-  def `true`[$: P] = P ( "true" )
-    .map(_ => True)
+    def number: Parser[Num] = floatingPointNumber ^^ {
+      num => Num(num.toDouble)
+    }
 
-  def `false`[$: P] = P ( "false" )
-    .map(_ => False)
+    lazy val stringParser = (new EscapedStringParser)
 
-  def digits[$: P]        = P( CharsWhileIn("0-9") )
-  def exponent[$: P]      = P( CharIn("eE") ~ CharIn("+\\-").? ~ digits )
-  def fractional[$: P]    = P( "." ~ digits )
-  def integral[$: P]      = P( "0" | CharIn("1-9")  ~ digits.? )
+    def string: Parser[Str] = """"(\\\\|\\"|[^"])*+"""".r ^^ { escapedStr =>
+        Str(stringParser.parse(escapedStr))
+      }
 
-  def number[$: P] = P(  CharIn("+\\-").? ~ integral ~ fractional.? ~ exponent.? ).!.map(
-    x => Num(x.toDouble)
-  )
+    def `null`: Parser[Json.Null.type] = "null" ^^ { _ => Json.Null }
 
-  def array[$: P] =
-    P( "[" ~/ jsonExpr.rep(sep=","./) ~ space ~ "]").map(Arr(_:_*))
+    def `true`: Parser[Json.Bool] = "true" ^^ { _ => Json.True }
 
-  def pair[$: P] = P( string.map(_.value) ~/ ":" ~/ jsonExpr )
+    def `false`: Parser[Json.Bool] = "false" ^^ { _ => Json.False }
 
-  def obj[$: P] =
-    P( "{" ~/ pair.rep(sep=","./) ~ space ~ "}").map(Obj.from(_))
-
-  def jsonExpr[$: P]: P[Value] = P(
-    space ~ (obj | array | string | `true` | `false` | `null` | number) ~ space
-  )
+    def value: Parser[Value] = obj | arr | string | number | `null` | `true` | `false`
+      
+    def parse(s: String): Value = {
+      parseAll(value, s) match {
+        case Success(result, _) => result
+        case x @ Failure(msg, z) => throw new JsonException(x.toString)
+        case x @ Error(msg, _) => throw new JsonException(x.toString)
+      }
+    }
+  }  
 
   // Parses a JSON String representation into its native Scala representation.
-  def parse(s: String): Parsed[Value] = fastparse.parse[Value](s, jsonExpr(using _))
-
-  def parseOrException(s: String): Value =
-    parse(s) match {
-      case Parsed.Success(value, _) => value
-      case f @ Parsed.Failure(label, index, extra) =>
-        throw JsonException(f.msg)
-    }
+  def parse(s: String) = new JsonParser().parse(s)
 
   // Returns a JSON representation of the given object.
   def output(topObject: Value, indent: Option[Int] = None): String = {
