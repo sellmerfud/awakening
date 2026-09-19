@@ -128,24 +128,26 @@ object LabyrinthAwakening {
   val MaxFunding = 9
 
   sealed trait GameMode {
+    val name: String
     val orderValue: Int
     val cardRange: Range
+    override def toString() = name
   }
   case object LabyrinthMode  extends GameMode {
     val orderValue = 1
-    override def toString() = "Labyrinth"
+    override val name = "Labyrinth"
     val cardRange: Range = Range.inclusive(1, 120)
   }
 
   case object AwakeningMode  extends GameMode {
     val orderValue = 2
-    override def toString() = "Awakening"
+    override val name = "Awakening"
     val cardRange: Range = Range.inclusive(121, 240)
   }
 
   case object ForeverWarMode extends GameMode {
     val orderValue = 3
-    override def toString() = "Forever War"
+    override val name = "Forever War"
     val cardRange: Range = Range.inclusive(241, 360)
   }
 
@@ -178,20 +180,21 @@ object LabyrinthAwakening {
   }
 
   sealed trait Role extends CardAssociation {
+    val name: String
+    override def toString() = name
     def opponent: Role = this match {
       case US => Jihadist
       case Jihadist => US
     }
   }
 
-  case object US extends Role
-  {
-    override def toString() = "US"
+  case object US extends Role {
+    override val name = "US"
     override def assocString = "US-Associated"
   }
 
   case object Jihadist extends Role {
-    override def toString() = "Jihadist"
+    override val name = "Jihadist"
     override def assocString = "Jihadist-Associated"
   }
 

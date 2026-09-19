@@ -91,7 +91,7 @@ object SavedGame {
     if (!top.contains("game-state"))
       throw new IllegalArgumentException(s"Invalid save file - No game-state")
 
-    top("file-version").num.toInt match {
+    top("file-version").int match {
       case CurrentFileVersion => gameFromCurrentVersion(top("game-state"))
       case v => throw new IllegalArgumentException(s"Invalid save file version: $v")
     }
@@ -131,26 +131,26 @@ object SavedGame {
     Json.Obj("us" -> data.us, "jihadist" -> data.jihadist)
 
   private def reservesFromObj(data: Json.Value): Reserves =
-    Reserves(data.obj("us").num.toInt, data.obj("jihadist").num.toInt)
+    Reserves(data.obj("us").int, data.obj("jihadist").int)
 
   private def lapsingEventToObj(data: LapsingEntry) =
     Json.Obj("cardNumber" -> data.cardNumber, "discarded" -> data.discarded)
 
   private def lapsingEventFromObj(data: Json.Value): LapsingEntry =
-    LapsingEntry(data.obj("cardNumber").num.toInt, data.obj("discarded").bool)
+    LapsingEntry(data.obj("cardNumber").int, data.obj("discarded").bool)
 
 
   private def cardsInUseToObj(data: Range) =
     Json.Obj("min" -> data.head, "max" -> data.last)
 
   private def cardsInUseFromObj(data: Json.Value): Range =
-    Range.inclusive(data.obj("min").num.toInt, data.obj("max").num.toInt)
+    Range.inclusive(data.obj("min").int, data.obj("max").int)
 
   private def cardsInHandToObj(data: CardsInHand) =
     Json.Obj("us" -> data.us, "jihadist" -> data.jihadist)
 
   private def cardsInHandFromObj(data: Json.Value): CardsInHand =
-    CardsInHand(data.obj("us").num.toInt, data.obj("jihadist").num.toInt)
+    CardsInHand(data.obj("us").int, data.obj("jihadist").int)
     
   private def phaseTargetsToObj(data: PhaseTargets) =
     Json.Obj(
@@ -171,11 +171,11 @@ object SavedGame {
   private def turnActionToObj(turnAction: TurnAction) = {
     val params = turnAction match {
       case PlayedCard(role, cardNum, None) =>
-        Json.Obj("role" -> role.toString, "cardNum" -> cardNum)
+        Json.Obj("role" -> role.name, "cardNum" -> cardNum)
       case PlayedCard(role, cardNum, Some(SecondCard(card2))) =>
-        Json.Obj("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> card2)
+        Json.Obj("role" -> role.name, "cardNum" -> cardNum, "secondCardNum" -> card2)
       case PlayedCard(role, cardNum, Some(AdditionalCard(card2))) =>
-        Json.Obj("role" -> role.toString, "cardNum" -> cardNum, "additionalCardNum" -> card2)
+        Json.Obj("role" -> role.name, "cardNum" -> cardNum, "additionalCardNum" -> card2)
       case PlayedReassement(card1, card2) =>
         Json.Obj("card1" -> card1, "card2"   -> card2)
       case VoluntaryCadreRemoval(num) =>
@@ -183,7 +183,7 @@ object SavedGame {
       case USDiscardedLastCard(cardNum) =>
         Json.Obj("cardNum" -> Json.Num(cardNum))
       case EndOfActionPhase(role, phaseNum, numPlots) =>
-        Json.Obj("role" -> role.toString, "phaseNum" -> phaseNum, "numPlots" -> numPlots)
+        Json.Obj("role" -> role.name, "phaseNum" -> phaseNum, "numPlots" -> numPlots)
       case AdjustmentMade(desc) =>
         Json.Obj("desc" -> Json.Str(desc))
     }
@@ -194,21 +194,21 @@ object SavedGame {
     val params = data.obj("params").obj
     data.obj("actionType").str match {
       case "PlayedCard" if params.contains("secondCardNum") && !params("secondCardNum").isNull =>
-        PlayedCard(Role(params("role").str), params("cardNum").num.toInt, Some(SecondCard(params("secondCardNum").num.toInt)))
+        PlayedCard(Role(params("role").str), params("cardNum").int, Some(SecondCard(params("secondCardNum").int)))
       case "PlayedCard" if params.contains("additionalCardNum") && !params("additionalCardNum").isNull =>
-        PlayedCard(Role(params("role").str), params("cardNum").num.toInt, Some(AdditionalCard(params("additionalCardNum").num.toInt)))
+        PlayedCard(Role(params("role").str), params("cardNum").int, Some(AdditionalCard(params("additionalCardNum").int)))
       case "PlayedCard" =>
-        PlayedCard(Role(params("role").str), params("cardNum").num.toInt, None)
+        PlayedCard(Role(params("role").str), params("cardNum").int, None)
       // Account for misspelling in earlier versions
       case "PlayedReassessment" | "PlayedReassement" =>
-        PlayedReassement(params("card1").num.toInt, params("card2").num.toInt)
+        PlayedReassement(params("card1").int, params("card2").int)
       case "VoluntaryCadreRemoval" =>
-        VoluntaryCadreRemoval(params("num").num.toInt)
+        VoluntaryCadreRemoval(params("num").int)
       case "USDiscardedLastCard" =>
-        USDiscardedLastCard(params("cardNum").num.toInt)
+        USDiscardedLastCard(params("cardNum").int)
       case "EndOfActionPhase" =>
         EndOfActionPhase(
-          Role(params("role").str), params("phaseNum").num.toInt, params("numPlots").num.toInt)
+          Role(params("role").str), params("phaseNum").int, params("numPlots").int)
       case "AdjustmentMade" =>
         AdjustmentMade(params("desc").str)
     }
@@ -261,35 +261,35 @@ object SavedGame {
       case "MuslimCountry" =>
         MuslimCountry(
           params("name").str,
-          params("governance").num.toInt,
+          params("governance").int,
           Pieces.fromTypes(params("pieces").arr.map(name => PieceType(name.str))),
-          params("cadres").num.toInt,
+          params("cadres").int,
           params("plots").arr.map(plotOnMapFromObj).toList,
           params("markers").arr.map(name => CountryMarker(name.str)).toList,
           params("isSunni").bool,
-          params("resources").num.toInt,
+          params("resources").int,
           params("alignment").str,
           params("oilExporter").bool,
-          params("aidMarkers").num.toInt,
+          params("aidMarkers").int,
           params("regimeChange").str,
           params("besiegedRegime").bool,
           params("civilWar").bool,
-          params("awakening").num.toInt,
-          params("reaction").num.toInt,
-          params("wmdCache").num.toInt,
+          params("awakening").int,
+          params("reaction").int,
+          params("wmdCache").int,
           params("truce").bool
         )
       case "NonMuslimCountry" =>
         NonMuslimCountry(
           params("name").str,
-          params("governance").num.toInt,
+          params("governance").int,
           Pieces.fromTypes(params("pieces").arr.map(name => PieceType(name.str))),
-          params("cadres").num.toInt,
+          params("cadres").int,
           params("plots").arr.map(plotOnMapFromObj).toList,
           params("markers").arr.map(name => CountryMarker(name.str)).toList,
           params("postureValue").str,
-          params("recruitOverride").num.toInt,
-          params("wmdCache").num.toInt,
+          params("recruitOverride").int,
+          params("wmdCache").int,
           params("iranSpecialCase").bool
         )
 
@@ -301,12 +301,12 @@ object SavedGame {
     Json.Obj(
       "scenarioName"         -> gameState.scenarioName,
       "scenarioNotes"        -> Json.Arr.from(gameState.scenarioNotes),
-      "startingMode"         -> gameState.startingMode.toString,
+      "startingMode"         -> gameState.startingMode.name,
       "gameLength"           -> gameState.gameLength,
       "deckNumber"           -> gameState.deckNumber,
       "campaign"             -> gameState.campaign,
-      "currentMode"          -> gameState.currentMode.toString,
-      "humanRole"            -> gameState.humanRole.toString,
+      "currentMode"          -> gameState.currentMode.name,
+      "humanRole"            -> gameState.humanRole.name,
       "humanAutoRoll"        -> gameState.humanAutoRoll,
       "botDifficulties"      -> Json.Arr.from(gameState.botDifficulties.map(_.name)),
       "turn"                 -> gameState.turn,
@@ -331,7 +331,7 @@ object SavedGame {
       "ignoreVictory"        -> game.ignoreVictory,
       "botLogging"           -> gameState.botLogging,
       "botEnhancements"      -> gameState.botEnhancements,
-      "enhBotDifficulty"     -> gameState.enhBotDifficulty.toString,
+      "enhBotDifficulty"     -> gameState.enhBotDifficulty.name,
       "manualDieRolls"       -> gameState.manualDieRolls,
       "history"              -> Json.Arr.from(gameState.history.map(gameSegmentToObj)),
       "description"          -> gameState.description,
@@ -348,7 +348,7 @@ object SavedGame {
 
   private def gameSegmentFromObj(data: Json.Value): GameSegment = {
     GameSegment(
-      data.obj("saveNumber").num.toInt,
+      data.obj("saveNumber").int,
       data.obj("endOfTurn").bool,
       data.obj("summary").arr.map(_.str).toList
     )
@@ -368,29 +368,29 @@ object SavedGame {
       data.obj("scenarioName").str,
       data.obj("scenarioNotes").arr.map(_.str).toSeq,
       GameMode(data.obj("startingMode").str),
-      data.obj("gameLength").num.toInt,
-      data.obj("deckNumber").num.toInt,
+      data.obj("gameLength").int,
+      data.obj("deckNumber").int,
       data.obj("campaign").bool,
       GameMode(data.obj("currentMode").str),
       Role(data.obj("humanRole").str),
       data.obj("humanAutoRoll").bool,
       data.obj("botDifficulties").arr.map(x => BotDifficulty(x.str)).toList,
-      data.obj("turn").num.toInt,
-      data.obj("prestige").num.toInt,
+      data.obj("turn").int,
+      data.obj("prestige").int,
       data.obj("usPosture").str,
-      data.obj("funding").num.toInt,
+      data.obj("funding").int,
       data.obj("countries").arr.map(countryFromObj).toList,
       data.obj("markers").arr.map(x => GlobalMarker(x.str)).toList,
       plotDataFromObj(data.obj("plotData")),
-      data.obj("offMapTroops").num.toInt,
+      data.obj("offMapTroops").int,
       reservesFromObj(data.obj("reserves")),
       cardsInUseFromObj(data.obj("cardsInUse")),
       cardsInHandFromObj(data.obj("cardsInHand")),
       data.obj("turnActions").arr.map(turnActionFromObj).toList,
       firstPlotEntry,
       data.obj("eventsLapsing").arr.map(lapsingEventFromObj).toList,
-      data.obj("cardsDiscarded").arr.map(_.num.toInt).toList,
-      data.obj("cardsRemoved").arr.map(_.num.toInt).toList,
+      data.obj("cardsDiscarded").arr.map(_.int).toList,
+      data.obj("cardsRemoved").arr.map(_.int).toList,
       phaseTargetsFromObj(data.obj("targetsThisPhase")),
       phaseTargetsFromObj(data.obj("targetsLastPhase")),
       caliphateCapital,
@@ -456,7 +456,7 @@ object SavedGame {
       if (!top.contains("log"))
         throw new IllegalArgumentException(s"Invalid save file - missing log entries")
 
-      top("file-version").num.toInt match {
+      top("file-version").int match {
         case 1 => logFromVersion1(top("log"))
         case v => throw new IllegalArgumentException(s"Invalid log file version: $v")
       }

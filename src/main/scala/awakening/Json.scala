@@ -11,10 +11,10 @@
 //  / ___ \ V  V / (_| |   <  __/ | | | | | | | (_| |
 // /_/   \_\_/\_/ \__,_|_|\_\___|_| |_|_|_| |_|\__, |
 //                                             |___/
-// An scala implementation of the solo AI for the game 
+// An scala implementation of the solo AI for the game
 // Labyrinth: The Awakening, 2010 - ?, designed by Trevor Bender and
 // published by GMT Games.
-// 
+//
 // Copyright (c) 2017 Curt Sellmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -35,7 +35,7 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-                                                                          
+
 package awakening
 
 import scala.language.implicitConversions
@@ -82,10 +82,26 @@ object Json {
       case _ => throw InvalidData(this, "Expected Json.Num")
     }
 
+    def int = num.toInt
+    def long = num.toLong
+    def short = num.toShort
+    def char = num.toChar
+    def byte = num.toByte
+    def float = num.toFloat
+    def double = num
+
     def numOpt = this match {
       case Json.Num(value) => Some(value)
       case _ => None
     }
+
+    def intOpt = numOpt.map(_.toInt)
+    def longOpt = numOpt.map(_.toLong)
+    def shortOpt = numOpt.map(_.toShort)
+    def charOpt = numOpt.map(_.toChar)
+    def byteOpt = numOpt.map(_.toByte)
+    def floatOpt = numOpt.map(_.toFloat)
+    def doubleOpt = numOpt
 
     def bool = this match {
       case Json.Bool(value) => value
@@ -173,7 +189,7 @@ object Json {
     val charCount = s.codePointCount(0, s.length)
     val escaped =
       for (idx <- 0 until charCount)
-      yield 
+      yield
         s.codePointAt(s.offsetByCodePoints(0, idx)) match {
           case 0x0d => "\\r"
           case 0x0a => "\\n"
@@ -233,7 +249,7 @@ object Json {
   private class JsonParser extends JavaTokenParsers {
     sealed trait KeyValueSeparators
     object Colon extends KeyValueSeparators
-    
+
     def obj: Parser[Obj] = "{" ~> repsep(pair, ",") <~ "}" ^^ {
       pairs => Obj.from(pairs)
     }
@@ -263,7 +279,7 @@ object Json {
     def `false`: Parser[Json.Bool] = "false" ^^ { _ => Json.False }
 
     def value: Parser[Value] = obj | arr | string | number | `null` | `true` | `false`
-      
+
     def parse(s: String): Value = {
       parseAll(value, s) match {
         case Success(result, _) => result
@@ -271,7 +287,7 @@ object Json {
         case x @ Error(msg, _) => throw new JsonException(x.toString)
       }
     }
-  }  
+  }
 
   // Parses a JSON String representation into its native Scala representation.
   def parse(s: String) = new JsonParser().parse(s)
