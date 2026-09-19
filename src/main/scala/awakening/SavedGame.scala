@@ -61,12 +61,12 @@ object SavedGame {
   }
 
   private def toJson(gameState: GameState): String = {
-    val top = Map(
+    val top = Json.Obj(
       "file-version"     -> CurrentFileVersion,
       "software-version" -> SOFTWARE_VERSION,
-      "game-state"       -> gameStateToMap(gameState)
+      "game-state"       -> gameStateToObj(gameState)
     )
-    Json.build(top)
+    Json.output(top, indent = Some(2))
   }
 
   // The path should be the full path to the file to load.
@@ -84,171 +84,146 @@ object SavedGame {
   }
 
   private def fromJson(jsonValue: String): GameState = {
-    val top = asMap(Json.parse(jsonValue))
+    val top = Json.parseOrException(jsonValue).obj
     if (!top.contains("file-version"))
       throw new IllegalArgumentException(s"Invalid save file - No file version number")
 
     if (!top.contains("game-state"))
       throw new IllegalArgumentException(s"Invalid save file - No game-state")
 
-    asInt(top("file-version")) match {
-      case CurrentFileVersion => gameFromCurrentVersion(asMap(top("game-state")))
+    top("file-version").num.toInt match {
+      case CurrentFileVersion => gameFromCurrentVersion(top("game-state"))
       case v => throw new IllegalArgumentException(s"Invalid save file version: $v")
     }
   }
 
-  private def asString(x: Any): String = x.toString
-
-  private def asBoolean(x: Any): Boolean = x match {
-    case b: Boolean => b
-    case _          => throw new Exception(s"Not a valid Boolean value: $x")
-  }
-
-  private def asInt(x: Any): Int = x match {
-    case i: Int => i
-    case _      => throw new Exception(s"Not a valid Integer value: $x")
-  }
-
-  private def asMap(x: Any): Map[String, Any] = x match {
-    case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
-    case _      => throw new Exception(s"Not a valid Map value!")
-  }
-  private def asList(x: Any): List[Any] = x match {
-    case l: List[_] => l.asInstanceOf[List[Any]]
-    case _      => throw new Exception(s"Not a valid List value!")
-  }
-
-
-  private def plotDataToMap(data: PlotData): Map[String, Any] =
-    Map(
-      "availablePlots"        -> data.availablePlots.map(_.name),
-      "resolvedPlots"         -> data.resolvedPlots.map(_.name),
-      "removedPlots"          -> data.removedPlots.map(_.name),
-      "resolvedTargets"       -> data.resolvedTargets.toList.map(plotTargetToMap),
+  private def plotDataToObj(data: PlotData) =
+    Json.Obj(
+      "availablePlots"        -> Json.Arr.from(data.availablePlots.map(_.name)),
+      "resolvedPlots"         -> Json.Arr.from(data.resolvedPlots.map(_.name)),
+      "removedPlots"          -> Json.Arr.from(data.removedPlots.map(_.name)),
+      "resolvedTargets"       -> Json.Arr.from(data.resolvedTargets.toList.map(plotTargetToObj)),
       "resolvedInGreenOnBlue" -> data.resolvedInGreenOnBlue
     )
 
-  private def plotDataFromMap(data: Map[String, Any]): PlotData =
+  private def plotDataFromObj(data: Json.Value): PlotData =
     PlotData(
-      asList(data("availablePlots")).map(x => Plot.apply(asString(x))),
-      asList(data("resolvedPlots")).map(x => Plot.apply(asString(x))),
-      asList(data("removedPlots")).map(x => Plot.apply(asString(x))),
-      (asList(data("resolvedTargets")).map(x => plotTargetFromMap(asMap(x)))).toSet,
-      asBoolean(data("resolvedInGreenOnBlue"))
+      data.obj("availablePlots").arr.map(p => Plot.apply(p.str)).toList,
+      data.obj("resolvedPlots").arr.map(p => Plot.apply(p.str)).toList,
+      data.obj("removedPlots").arr.map(p => Plot.apply(p.str)).toList,
+      data.obj("resolvedTargets").arr.map(plotTargetFromObj).toSet,
+      data.obj("resolvedInGreenOnBlue").bool
     )
 
-  private def plotTargetToMap(t: PlotTarget): Map[String, Any] = 
-    Map("name" -> t.name, "isMuslim" -> t.isMuslim)
+  private def plotTargetToObj(t: PlotTarget) = 
+    Json.Obj("name" -> t.name, "isMuslim" -> t.isMuslim)
 
-  private def plotTargetFromMap(data: Map[String, Any]): PlotTarget = 
-    PlotTarget(asString(data("name")), asBoolean(data("isMuslim")))
+  private def plotTargetFromObj(data: Json.Value): PlotTarget = 
+    PlotTarget(data.obj("name").str, data.obj("isMuslim").bool)
 
-  private def plotOnMapToMap(pom: PlotOnMap): Map[String, Any] =
-    Map("plot" -> pom.plot.name, "backlashed" -> pom.backlashed)
+  private def plotOnMapToObj(pom: PlotOnMap) =
+    Json.Obj("plot" -> pom.plot.name, "backlashed" -> pom.backlashed)
 
-  private def plotOnMapFromMap(data: Map[String, Any]): PlotOnMap =
-    PlotOnMap(Plot(asString(data("plot"))), asBoolean(data("backlashed")))
+  private def plotOnMapFromObj(data: Json.Value): PlotOnMap =
+    PlotOnMap(Plot(data.obj("plot").str), data.obj("backlashed").bool)
 
-  private def reservesToMap(data: Reserves): Map[String, Any] =
-    Map("us" -> data.us, "jihadist" -> data.jihadist)
+  private def reservesToObj(data: Reserves) =
+    Json.Obj("us" -> data.us, "jihadist" -> data.jihadist)
 
-  private def reservesFromMap(data: Map[String, Any]): Reserves =
-    Reserves(asInt(data("us")), asInt(data("jihadist")))
+  private def reservesFromObj(data: Json.Value): Reserves =
+    Reserves(data.obj("us").num.toInt, data.obj("jihadist").num.toInt)
 
-  private def lapsingEventToMap(data: LapsingEntry): Map[String, Any] =
-    Map("cardNumber" -> data.cardNumber, "discarded" -> data.discarded)
+  private def lapsingEventToObj(data: LapsingEntry) =
+    Json.Obj("cardNumber" -> data.cardNumber, "discarded" -> data.discarded)
 
-  private def lapsingEventFromMap(data: Map[String, Any]): LapsingEntry =
-    LapsingEntry(asInt(data("cardNumber")), asBoolean(data("discarded")))
+  private def lapsingEventFromObj(data: Json.Value): LapsingEntry =
+    LapsingEntry(data.obj("cardNumber").num.toInt, data.obj("discarded").bool)
 
 
-  private def cardsInUseToMap(data: Range): Map[String, Any] =
-    Map("min" -> data.head, "max" -> data.last)
+  private def cardsInUseToObj(data: Range) =
+    Json.Obj("min" -> data.head, "max" -> data.last)
 
-  private def cardsInUseFromMap(data: Map[String, Any]): Range =
-    Range.inclusive(asInt(data("min")), asInt(data("max")))
+  private def cardsInUseFromObj(data: Json.Value): Range =
+    Range.inclusive(data.obj("min").num.toInt, data.obj("max").num.toInt)
 
-  private def cardsInHandToMap(data: CardsInHand): Map[String, Any] =
-    Map("us" -> data.us, "jihadist" -> data.jihadist)
+  private def cardsInHandToObj(data: CardsInHand) =
+    Json.Obj("us" -> data.us, "jihadist" -> data.jihadist)
 
-  private def cardsInHandFromMap(data: Map[String, Any]): CardsInHand =
-    CardsInHand(asInt(data("us")), asInt(data("jihadist")))
+  private def cardsInHandFromObj(data: Json.Value): CardsInHand =
+    CardsInHand(data.obj("us").num.toInt, data.obj("jihadist").num.toInt)
     
-  private def phaseTargetsToMap(data: PhaseTargets): Map[String, Any] =
-    Map(
-      "ops"                          -> data.ops,
-      "disrupted"                    -> data.disrupted,
-      "testedOrImprovedToFairOrGood" -> data.testedOrImprovedToFairOrGood,
-      "event"                        -> data.event
+  private def phaseTargetsToObj(data: PhaseTargets) =
+    Json.Obj(
+      "ops"                          -> Json.Arr.from(data.ops),
+      "disrupted"                    -> Json.Arr.from(data.disrupted),
+      "testedOrImprovedToFairOrGood" -> Json.Arr.from(data.testedOrImprovedToFairOrGood),
+      "event"                        -> Json.Arr.from(data.event)
     )
 
-  private def phaseTargetsFromMap(data: Map[String, Any]): PhaseTargets =
+  private def phaseTargetsFromObj(data: Json.Value): PhaseTargets =
     PhaseTargets(
-      asList(data("ops")).map(asString).toSet,
-      asList(data("disrupted")).map(asString).toSet,
-      asList(data("testedOrImprovedToFairOrGood")).map(asString).toSet,
-      asList(data("event")).map(asString).toSet
+      data.obj("ops").arr.map(_.str).toSet,
+      data.obj("disrupted").arr.map(_.str).toSet,
+      data.obj("testedOrImprovedToFairOrGood").arr.map(_.str).toSet,
+      data.obj("event").arr.map(_.str).toSet
     )
 
-  private def turnActionToMap(turnAction: TurnAction): Map[String, Any] = {
+  private def turnActionToObj(turnAction: TurnAction) = {
     val params = turnAction match {
       case PlayedCard(role, cardNum, None) =>
-        Map("role" -> role.toString, "cardNum" -> cardNum)
+        Json.Obj("role" -> role.toString, "cardNum" -> cardNum)
       case PlayedCard(role, cardNum, Some(SecondCard(card2))) =>
-        Map("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> card2)
+        Json.Obj("role" -> role.toString, "cardNum" -> cardNum, "secondCardNum" -> card2)
       case PlayedCard(role, cardNum, Some(AdditionalCard(card2))) =>
-        Map("role" -> role.toString, "cardNum" -> cardNum, "additionalCardNum" -> card2)
+        Json.Obj("role" -> role.toString, "cardNum" -> cardNum, "additionalCardNum" -> card2)
       case PlayedReassement(card1, card2) =>
-        Map("card1" -> card1, "card2"   -> card2)
+        Json.Obj("card1" -> card1, "card2"   -> card2)
       case VoluntaryCadreRemoval(num) =>
-        Map("num" -> num)
+        Json.Obj("num" -> Json.Num(num))
       case USDiscardedLastCard(cardNum) =>
-        Map("cardNum" -> cardNum)
+        Json.Obj("cardNum" -> Json.Num(cardNum))
       case EndOfActionPhase(role, phaseNum, numPlots) =>
-        Map("role" -> role.toString, "phaseNum" -> phaseNum, "numPlots" -> numPlots)
+        Json.Obj("role" -> role.toString, "phaseNum" -> phaseNum, "numPlots" -> numPlots)
       case AdjustmentMade(desc) =>
-        Map("desc" -> desc)
+        Json.Obj("desc" -> Json.Str(desc))
     }
-    Map("actionType" -> turnAction.name, "params" -> params)
+    Json.Obj("actionType" -> turnAction.name, "params" -> params)
   }
 
-  private def turnActionFromMap(data: Map[String, Any]): TurnAction = {
-    val params = asMap(data("params"))
-    asString(data("actionType")) match {
-      case "PlayedCard" if params.contains("secondCardNum") && params("secondCardNum") != null =>
-        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(SecondCard(asInt(params("secondCardNum")))))
-      case "PlayedCard" if params.contains("additionalCardNum") && params("additionalCardNum") != null =>
-        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), Some(AdditionalCard(asInt(params("additionalCardNum")))))
+  private def turnActionFromObj(data: Json.Value): TurnAction = {
+    val params = data.obj("params").obj
+    data.obj("actionType").str match {
+      case "PlayedCard" if params.contains("secondCardNum") && !params("secondCardNum").isNull =>
+        PlayedCard(Role(params("role").str), params("cardNum").num.toInt, Some(SecondCard(params("secondCardNum").num.toInt)))
+      case "PlayedCard" if params.contains("additionalCardNum") && !params("additionalCardNum").isNull =>
+        PlayedCard(Role(params("role").str), params("cardNum").num.toInt, Some(AdditionalCard(params("additionalCardNum").num.toInt)))
       case "PlayedCard" =>
-        PlayedCard(Role(asString(params("role"))), asInt(params("cardNum")), None)
+        PlayedCard(Role(params("role").str), params("cardNum").num.toInt, None)
       // Account for misspelling in earlier versions
       case "PlayedReassessment" | "PlayedReassement" =>
-        PlayedReassement(asInt(params("card1")), asInt(params("card2")))
+        PlayedReassement(params("card1").num.toInt, params("card2").num.toInt)
       case "VoluntaryCadreRemoval" =>
-        VoluntaryCadreRemoval(asInt(params("num")))
+        VoluntaryCadreRemoval(params("num").num.toInt)
       case "USDiscardedLastCard" =>
-        USDiscardedLastCard(asInt(params("cardNum")))
+        USDiscardedLastCard(params("cardNum").num.toInt)
       case "EndOfActionPhase" =>
         EndOfActionPhase(
-          Role(asString(params("role"))),
-          asInt(params("phaseNum")),
-          asInt(params("numPlots"))
-        )
+          Role(params("role").str), params("phaseNum").num.toInt, params("numPlots").num.toInt)
       case "AdjustmentMade" =>
-        AdjustmentMade(asString(params("desc")))
+        AdjustmentMade(params("desc").str)
     }
   }
 
-  private def countryToMap(country: Country): Map[String, Any] = {
+  private def countryToObj(country: Country) = {
     val (countryType, params) = country match {
       case m: MuslimCountry =>
-        ("MuslimCountry", Map(
+        ("MuslimCountry", Json.Obj(
           "name"             -> m.name,
           "governance"       -> m.governance,
-          "pieces"           -> m.pieces.explode().map(_.name),
+          "pieces"           -> Json.Arr.from(m.pieces.explode().map(_.name)),
           "cadres"           -> m.cadres,
-          "plots"            -> m.plots.map(plotOnMapToMap),
-          "markers"          -> m.markers.map(_.name),
+          "plots"            -> Json.Arr.from(m.plots.map(plotOnMapToObj)),
+          "markers"          -> Json.Arr.from(m.markers.map(_.name)),
           "isSunni"          -> m.isSunni,
           "resources"        -> m.printedResources,
           "alignment"        -> m.alignment,
@@ -263,201 +238,200 @@ object SavedGame {
           "truce"            -> m.truce
         ))
       case n: NonMuslimCountry =>
-        ("NonMuslimCountry", Map(
+        ("NonMuslimCountry", Json.Obj(
           "name"            -> n.name,
           "governance"      -> n.governance,
-          "pieces"          -> n.pieces.explode().map(_.name),
+          "pieces"          -> Json.Arr.from(n.pieces.explode().map(_.name)),
           "cadres"          -> n.cadres,
-          "plots"           -> n.plots.map(plotOnMapToMap),
-          "markers"         -> n.markers.map(_.name),
+          "plots"           -> Json.Arr.from(n.plots.map(plotOnMapToObj)),
+          "markers"         -> Json.Arr.from(n.markers.map(_.name)),
           "postureValue"    -> n.postureValue,
           "recruitOverride" -> n.recruitOverride,
           "wmdCache"        -> n.wmdCache,
           "iranSpecialCase" -> n.iranSpecialCase
         ))
     }
-    Map("countryType" -> countryType, "params" -> params)
+    Json.Obj("countryType" -> countryType, "params" -> params)
   }
 
 
-  private def countryFromMap(data: Map[String, Any]): Country = {
-    val params = asMap(data("params"))
-    asString(data("countryType")) match {
+  private def countryFromObj(data: Json.Value): Country = {
+    val params = data.obj("params").obj
+    data.obj("countryType").str match {
       case "MuslimCountry" =>
         MuslimCountry(
-          asString(params("name")),
-          asInt(params("governance")),
-          Pieces.fromTypes(asList(params("pieces")).map(name => PieceType(name.toString))),
-          asInt(params("cadres")),
-          asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
-          asList(params("markers")).map(name => CountryMarker(asString(name))),
-          asBoolean(params("isSunni")),
-          asInt(params("resources")),
-          asString(params("alignment")),
-          asBoolean(params("oilExporter")),
-          asInt(params("aidMarkers")),
-          asString(params("regimeChange")),
-          asBoolean(params("besiegedRegime")),
-          asBoolean(params("civilWar")),
-          asInt(params("awakening")),
-          asInt(params("reaction")),
-          asInt(params("wmdCache")),
-          asBoolean(params("truce"))
+          params("name").str,
+          params("governance").num.toInt,
+          Pieces.fromTypes(params("pieces").arr.map(name => PieceType(name.str))),
+          params("cadres").num.toInt,
+          params("plots").arr.map(plotOnMapFromObj).toList,
+          params("markers").arr.map(name => CountryMarker(name.str)).toList,
+          params("isSunni").bool,
+          params("resources").num.toInt,
+          params("alignment").str,
+          params("oilExporter").bool,
+          params("aidMarkers").num.toInt,
+          params("regimeChange").str,
+          params("besiegedRegime").bool,
+          params("civilWar").bool,
+          params("awakening").num.toInt,
+          params("reaction").num.toInt,
+          params("wmdCache").num.toInt,
+          params("truce").bool
         )
       case "NonMuslimCountry" =>
         NonMuslimCountry(
-          asString(params("name")),
-          asInt(params("governance")),
-          Pieces.fromTypes(asList(params("pieces")).map(name => PieceType(name.toString))),
-          asInt(params("cadres")),
-          asList(params("plots")).map(x => plotOnMapFromMap(asMap(x))),
-          asList(params("markers")).map(name => CountryMarker(asString(name))),
-          asString(params("postureValue")),
-          asInt(params("recruitOverride")),
-          asInt(params("wmdCache")),
-          asBoolean(params("iranSpecialCase"))
+          params("name").str,
+          params("governance").num.toInt,
+          Pieces.fromTypes(params("pieces").arr.map(name => PieceType(name.str))),
+          params("cadres").num.toInt,
+          params("plots").arr.map(plotOnMapFromObj).toList,
+          params("markers").arr.map(name => CountryMarker(name.str)).toList,
+          params("postureValue").str,
+          params("recruitOverride").num.toInt,
+          params("wmdCache").num.toInt,
+          params("iranSpecialCase").bool
         )
 
       case x => throw new IllegalArgumentException(s"Invalid country type: $x")
     }
   }
 
-  private def gameStateToMap(gameState: GameState) = {
-    Map(
+  private def gameStateToObj(gameState: GameState) = {
+    Json.Obj(
       "scenarioName"         -> gameState.scenarioName,
-      "scenarioNotes"        -> gameState.scenarioNotes,
-      "startingMode"         -> gameState.startingMode,
+      "scenarioNotes"        -> Json.Arr.from(gameState.scenarioNotes),
+      "startingMode"         -> gameState.startingMode.toString,
       "gameLength"           -> gameState.gameLength,
       "deckNumber"           -> gameState.deckNumber,
       "campaign"             -> gameState.campaign,
-      "currentMode"          -> gameState.currentMode,
+      "currentMode"          -> gameState.currentMode.toString,
       "humanRole"            -> gameState.humanRole.toString,
       "humanAutoRoll"        -> gameState.humanAutoRoll,
-      "botDifficulties"      -> gameState.botDifficulties.map(_.name),
+      "botDifficulties"      -> Json.Arr.from(gameState.botDifficulties.map(_.name)),
       "turn"                 -> gameState.turn,
       "prestige"             -> gameState.prestige,
       "usPosture"            -> gameState.usPosture,
       "funding"              -> gameState.funding,
-      "countries"            -> gameState.countries.map(countryToMap),
-      "markers"              -> gameState.markers.map(_.name),
-      "plotData"             -> plotDataToMap(gameState.plotData),
-      "history"              -> gameState.history,
+      "countries"            -> Json.Arr.from(gameState.countries.map(countryToObj)),
+      "markers"              -> Json.Arr.from(gameState.markers.map(_.name)),
+      "plotData"             -> plotDataToObj(gameState.plotData),
       "offMapTroops"         -> gameState.offMapTroops,
-      "reserves"             -> reservesToMap(gameState.reserves),
-      "cardsInUse"           -> cardsInUseToMap(gameState.cardsInUse),
-      "cardsInHand"          -> cardsInHandToMap(gameState.cardsInHand),
-      "turnActions"          -> gameState.turnActions.map(turnActionToMap),
-      "firstPlotEntry"       -> gameState.firstPlotEntry.map(lapsingEventToMap).getOrElse(null),
-      "eventsLapsing"        -> gameState.eventsLapsing.map(lapsingEventToMap),
-      "cardsDiscarded"       -> gameState.cardsDiscarded,
-      "cardsRemoved"         -> gameState.cardsRemoved,
-      "targetsThisPhase"     -> phaseTargetsToMap(gameState.targetsThisPhase),
-      "targetsLastPhase"     -> phaseTargetsToMap(gameState.targetsLastPhase),
-      "caliphateCapital"     -> game.caliphateCapital.getOrElse(null),
+      "reserves"             -> reservesToObj(gameState.reserves),
+      "cardsInUse"           -> cardsInUseToObj(gameState.cardsInUse),
+      "cardsInHand"          -> cardsInHandToObj(gameState.cardsInHand),
+      "turnActions"          -> Json.Arr.from(gameState.turnActions.map(turnActionToObj)),
+      "firstPlotEntry"       -> gameState.firstPlotEntry.map(lapsingEventToObj).getOrElse(Json.Null),
+      "eventsLapsing"        -> Json.Arr.from(gameState.eventsLapsing.map(lapsingEventToObj)),
+      "cardsDiscarded"       -> Json.Arr.from(gameState.cardsDiscarded),
+      "cardsRemoved"         -> Json.Arr.from(gameState.cardsRemoved),
+      "targetsThisPhase"     -> phaseTargetsToObj(gameState.targetsThisPhase),
+      "targetsLastPhase"     -> phaseTargetsToObj(gameState.targetsLastPhase),
+      "caliphateCapital"     -> game.caliphateCapital.map(Json.Str).getOrElse(Json.Null),
       "ignoreVictory"        -> game.ignoreVictory,
       "botLogging"           -> gameState.botLogging,
       "botEnhancements"      -> gameState.botEnhancements,
       "enhBotDifficulty"     -> gameState.enhBotDifficulty.toString,
       "manualDieRolls"       -> gameState.manualDieRolls,
-      "history"              -> gameState.history.map(gameSegmentToMap),
+      "history"              -> Json.Arr.from(gameState.history.map(gameSegmentToObj)),
       "description"          -> gameState.description,
       "showColor"            -> gameState.showColor
       )
   }
   
-  private def gameSegmentToMap(seg: GameSegment): Map[String, Any] =
-    Map(
+  private def gameSegmentToObj(seg: GameSegment) =
+    Json.Obj(
       "saveNumber" -> seg.saveNumber,
       "endOfTurn"  -> seg.endOfTurn,
-      "summary"    -> seg.summary
+      "summary"    -> Json.Arr.from(seg.summary)
     )
 
-  private def gameSegmentFromMap(data: Map[String, Any]): GameSegment = {
+  private def gameSegmentFromObj(data: Json.Value): GameSegment = {
     GameSegment(
-      asInt(data("saveNumber")),
-      asBoolean(data("endOfTurn")),
-      asList(data("summary")).map(_.toString)
+      data.obj("saveNumber").num.toInt,
+      data.obj("endOfTurn").bool,
+      data.obj("summary").arr.map(_.str).toList
     )
   }
   // Note: We no longer support save file versions less than 3.
-  private def gameFromCurrentVersion(data: Map[String, Any]): GameState = {
-    val caliphateCapital = if (data("caliphateCapital") == null)
+  private def gameFromCurrentVersion(data: Json.Value): GameState = {
+    val caliphateCapital: Option[String] = if (data.obj("caliphateCapital").isNull)
       None
     else
-      Some(asString(data("caliphateCapital")))
-    val firstPlotEntry = if (data("firstPlotEntry") == null)
+      Some(data.obj("caliphateCapital").str)
+    val firstPlotEntry: Option[LapsingEntry] = if (data.obj("firstPlotEntry").isNull)
       None
     else
-      Some(lapsingEventFromMap(asMap(data("firstPlotEntry"))))
+      Some(lapsingEventFromObj(data.obj("firstPlotEntry")))
 
     GameState(
-      asString(data("scenarioName")),
-      asList(data("scenarioNotes")).map(asString),
-      GameMode(asString(data("startingMode"))),
-      asInt(data("gameLength")),
-      asInt(data("deckNumber")),
-      asBoolean(data("campaign")),
-      GameMode(asString(data("currentMode"))),
-      Role(asString(data("humanRole"))),
-      asBoolean(data("humanAutoRoll")),
-      asList(data("botDifficulties")).map(x => BotDifficulty(asString(x))),
-      asInt(data("turn")),
-      asInt(data("prestige")),
-      asString(data("usPosture")),
-      asInt(data("funding")),
-      asList(data("countries")).map(c => countryFromMap(asMap(c))),
-      asList(data("markers")).map(name => GlobalMarker(asString(name))),
-      plotDataFromMap(asMap(data("plotData"))),
-      asInt(data("offMapTroops")),
-      reservesFromMap(asMap(data("reserves"))),
-      cardsInUseFromMap(asMap(data("cardsInUse"))),
-      cardsInHandFromMap(asMap(data("cardsInHand"))),
-      asList(data("turnActions")).map(p => turnActionFromMap(asMap(p))),
+      data.obj("scenarioName").str,
+      data.obj("scenarioNotes").arr.map(_.str).toSeq,
+      GameMode(data.obj("startingMode").str),
+      data.obj("gameLength").num.toInt,
+      data.obj("deckNumber").num.toInt,
+      data.obj("campaign").bool,
+      GameMode(data.obj("currentMode").str),
+      Role(data.obj("humanRole").str),
+      data.obj("humanAutoRoll").bool,
+      data.obj("botDifficulties").arr.map(x => BotDifficulty(x.str)).toList,
+      data.obj("turn").num.toInt,
+      data.obj("prestige").num.toInt,
+      data.obj("usPosture").str,
+      data.obj("funding").num.toInt,
+      data.obj("countries").arr.map(countryFromObj).toList,
+      data.obj("markers").arr.map(x => GlobalMarker(x.str)).toList,
+      plotDataFromObj(data.obj("plotData")),
+      data.obj("offMapTroops").num.toInt,
+      reservesFromObj(data.obj("reserves")),
+      cardsInUseFromObj(data.obj("cardsInUse")),
+      cardsInHandFromObj(data.obj("cardsInHand")),
+      data.obj("turnActions").arr.map(turnActionFromObj).toList,
       firstPlotEntry,
-      asList(data("eventsLapsing")).map(e => lapsingEventFromMap(asMap(e))),
-      asList(data("cardsDiscarded")).map(asInt),
-      asList(data("cardsRemoved")).map(asInt),
-      phaseTargetsFromMap(asMap(data("targetsThisPhase"))),
-      phaseTargetsFromMap(asMap(data("targetsLastPhase"))),
+      data.obj("eventsLapsing").arr.map(lapsingEventFromObj).toList,
+      data.obj("cardsDiscarded").arr.map(_.num.toInt).toList,
+      data.obj("cardsRemoved").arr.map(_.num.toInt).toList,
+      phaseTargetsFromObj(data.obj("targetsThisPhase")),
+      phaseTargetsFromObj(data.obj("targetsLastPhase")),
       caliphateCapital,
-      asBoolean(data("ignoreVictory")),
-      asBoolean(data("botLogging")),
-      asBoolean(data("botEnhancements")),
-      EnhBotDifficulty.fromString(asString(data("enhBotDifficulty"))),
-      asBoolean(data("manualDieRolls")),
-      asList(data("history")).map(s => gameSegmentFromMap(asMap(s))).toVector,
-      asString(data("description")),
-      asBoolean(data.get("showColor").getOrElse(true))
+      data.obj("ignoreVictory").bool,
+      data.obj("botLogging").bool,
+      data.obj("botEnhancements").bool,
+      EnhBotDifficulty.fromString(data.obj("enhBotDifficulty").str),
+      data.obj("manualDieRolls").bool,
+      data.obj("history").arr.map(gameSegmentFromObj).toVector,
+      data.obj("description").str,
+      data.obj.get("showColor").map(_.bool).getOrElse(true)
     )
   }
 
   // Methods to save and load the log files
-  private def logEntryToMap(entry: LogEntry): Map[String, Any] =
-    Map(
+  private def logEntryToObj(entry: LogEntry) =
+    Json.Obj(
       "text" -> entry.text,
-      "color" -> entry.color.map(_.name).getOrElse(null)
+      "color" -> entry.color.map(x => Json.Str(x.name)).getOrElse(Json.Null)
     )
 
-  private def logEntryFromMap(data: Map[String, Any]): LogEntry = {
-    val color = if (data("color") == null)
+  private def logEntryFromObj(data: Json.Value): LogEntry = {
+    val color: Option[Color] = if (data.obj("color").isNull)
       None
     else
-      Some(Color.fromName(asString(data("color"))));
+      Some(Color.fromName(data.obj("color").str));
 
-    LogEntry(asString(data("text")), color)
+    LogEntry(data.obj("text").str, color)
   }
 
   private def logToJson(entries: Vector[LogEntry]): String = {
-    val top = Map(
+    val top = Json.Obj(
       "file-version"     -> CurrentLogVersion,
       "software-version" -> SOFTWARE_VERSION,
-      "log"              -> entries.map(logEntryToMap)
+      "log"              -> Json.Arr.from(entries.map(logEntryToObj))
     )
-    Json.build(top)
+    Json.output(top, Some(2))
   }
 
-  private def logFromVersion1(entries: List[Any]): Vector[LogEntry] = {
-    entries.map(e => logEntryFromMap(asMap(e))).toVector
+  private def logFromVersion1(entries: Json.Value): Vector[LogEntry] = {
+    entries.arr.map(logEntryFromObj).toVector
   }
 
   def saveLog(filepath: Pathname, entries: Vector[LogEntry]): Unit = {
@@ -475,15 +449,15 @@ object SavedGame {
   }
 
   private def logFromJson(jsonValue: String): Vector[LogEntry] = {
-      val top = asMap(Json.parse(jsonValue))
+      val top = Json.parseOrException(jsonValue).obj
       if (!top.contains("file-version"))
         throw new IllegalArgumentException(s"Invalid save file - missing file version number")
 
       if (!top.contains("log"))
         throw new IllegalArgumentException(s"Invalid save file - missing log entries")
 
-      asInt(top("file-version")) match {
-        case 1 => logFromVersion1(asList(top("log")))
+      top("file-version").num.toInt match {
+        case 1 => logFromVersion1(top("log"))
         case v => throw new IllegalArgumentException(s"Invalid log file version: $v")
       }
   }
@@ -494,7 +468,7 @@ object SavedGame {
   def loadLog(filepath: Pathname): Vector[LogEntry] = {
     try logFromJson(filepath.readFile())
     catch {
-      case e: JsonException =>
+      case e: Json.JsonException =>
           // Older versions did not store the log as json
         // If we cannot parse the file then treat it as a regular
         // text file.
